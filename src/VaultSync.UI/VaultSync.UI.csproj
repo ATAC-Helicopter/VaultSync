@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Optional: turn off compiled bindings by default until you opt in -->
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,15 +13,28 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.8" />
-    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0" />
+    <!-- Diagnostics visible only in Debug -->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.8">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj" />
   </ItemGroup>
+
+  <!-- Ensure XAML is compiled exactly once -->
+  <ItemGroup>
+    <!-- Remove default wildcard that would otherwise include all .axaml twice -->
+    <AvaloniaXaml Remove="**\*.axaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Explicitly include only the XAML files we want compiled -->
+    <AvaloniaXaml Include="App.axaml" />
+    <AvaloniaXaml Include="Views\**\*.axaml" />
+  </ItemGroup>
+
 </Project>

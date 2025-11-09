@@ -1,24 +1,21 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using VaultSync.UI.ViewModels;
-using VaultSync.UI.Views;   // <-- this now resolves
+using VaultSync.UI.Views;
 
-namespace VaultSync.UI;
-
-public partial class App : Application
+namespace VaultSync.UI
 {
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
-
-    public override void OnFrameworkInitializationCompleted()
+    public partial class App : Application
     {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        public override void Initialize() => AvaloniaXamlLoader.Load(this);
+
+        public override void OnFrameworkInitializationCompleted()
         {
-            desktop.MainWindow = new MainWindow
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                DataContext = new MainViewModel()
-            };
+                desktop.MainWindow = new ShellWindow();
+            }
+            base.OnFrameworkInitializationCompleted();
         }
-        base.OnFrameworkInitializationCompleted();
     }
 }

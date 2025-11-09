@@ -1,22 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="VaultSync.UI.App">
+             xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+             xmlns:views="clr-namespace:VaultSync.UI.Views"
+             x:Class="VaultSync.UI.App"
+             RequestedThemeVariant="Light">
+
+  <!-- Theme and global styles -->
   <Application.Styles>
-    <FluentTheme/>
+    <FluentTheme />
     <Styles>
       <Style Selector="TextBlock.title">
-        <Setter Property="FontSize" Value="18"/>
-        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontWeight" Value="Bold" />
       </Style>
+
       <Style Selector="Border.card">
-        <Setter Property="Padding" Value="12"/>
-        <Setter Property="Margin" Value="12"/>
-        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Margin" Value="12" />
+        <Setter Property="CornerRadius" Value="6" />
       </Style>
+
       <Style Selector="ListBox.log">
-        <Setter Property="FontFamily" Value="Consolas, Menlo, Monaco, monospace"/>
+        <Setter Property="FontFamily" Value="Consolas, Menlo, Monaco, monospace" />
       </Style>
     </Styles>
   </Application.Styles>
+
+  <!-- ViewModel to View templates -->
+  <Application.DataTemplates>
+    <DataTemplate DataType="vm:DashboardViewModel">
+      <views:DashboardView />
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:ProjectsViewModel">
+      <views:ProjectsView />
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:SyncViewModel">
+      <views:SyncView />
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:HistoryViewModel">
+      <views:HistoryView />
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:BackupViewModel">
+      <views:BackupView />
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:SettingsViewModel">
+      <views:SettingsView />
+    </DataTemplate>
+  </Application.DataTemplates>
 </Application>

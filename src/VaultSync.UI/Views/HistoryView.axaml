@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VaultSync.UI.Views.HistoryView">
+  <StackPanel Margin="16">
+    <TextBlock Text="History" Classes="title" />
+    <Border Classes="card">
+      <ListBox ItemsSource="{Binding Entries}" />
+    </Border>
+  </StackPanel>
+</UserControl>
