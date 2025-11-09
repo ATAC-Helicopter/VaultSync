@@ -1,0 +1,6 @@
+**/__pycache__/
+**/*.blend1
+**/*.blend2
+**/*.tmp
+**/*.autosave
+**/cache/

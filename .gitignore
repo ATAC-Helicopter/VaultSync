@@ -1,0 +1,40 @@
+# Build output
+bin/
+obj/
+out/
+*.log
+
+# User-specific files
+*.user
+*.suo
+*.userprefs
+*.csproj.user
+*.pidb
+*.booproj
+
+# IDEs
+.vscode/
+.idea/
+.vs/
+
+# macOS / system
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# VaultSync local config
+.vaultsync/
+.vaultsync_selftest/
+.vaultsync_write_test
