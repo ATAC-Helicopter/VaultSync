@@ -38,6 +38,8 @@ namespace VaultSync.CLI.Commands
 
     public sealed class WatchCommand : AsyncCommand<WatchSettings>
     {
+        private static readonly System.Threading.SemaphoreSlim _cycleGate = new(1, 1);
+
         public override async Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken ct)
         {
             var db = ConfigHelper.ResolveDb(null);
@@ -77,50 +79,62 @@ namespace VaultSync.CLI.Commands
 
             async Task RunCycle(CancellationToken token, string reason)
             {
-                if (token.IsCancellationRequested) return;
-
-                if (!s.Quiet)
-                    AnsiConsole.MarkupLine($"[dim]• change detected ({Markup.Escape(reason)}); snapshotting…[/]");
-
-                var snapSvc = new SnapshotService(repo, new HashService());
-                var snapId = await snapSvc.CreateSnapshotAsync(proj, fullHash: true, token);
-
-                if (!s.Quiet)
+                await _cycleGate.WaitAsync(token);
+                try
                 {
-                    var outcome = SnapshotService.LastOutcome;
-                    if (outcome is not null)
+                    if (token.IsCancellationRequested) return;
+
+                    if (!s.Quiet)
+                        AnsiConsole.MarkupLine($"[dim]• change detected ({Markup.Escape(reason)}); snapshotting…[/]");
+
+                    var snapSvc = new SnapshotService(repo, new HashService());
+                    var snapId = await snapSvc.CreateSnapshotAsync(proj, fullHash: true, token);
+
+                    if (!s.Quiet)
                     {
-                        AnsiConsole.MarkupLine(
-                            $"[green]Snapshot {snapId}[/] " +
-                            $"Added: {outcome.Added}, Modified: {outcome.Modified}, Deleted: {outcome.Deleted}, " +
-                            $"Unchanged: {outcome.Unchanged}, Bytes: {outcome.TotalBytes}");
+                        var outcome = SnapshotService.LastOutcome;
+                        if (outcome is not null)
+                        {
+                            AnsiConsole.MarkupLine(
+                                $"[green]Snapshot {snapId}[/] " +
+                                $"Added: {outcome.Added}, Modified: {outcome.Modified}, Deleted: {outcome.Deleted}, " +
+                                $"Unchanged: {outcome.Unchanged}, Bytes: {outcome.TotalBytes}");
+                        }
+                        else
+                        {
+                            AnsiConsole.MarkupLine($"[green]Snapshot {snapId} created[/]");
+                        }
                     }
-                    else
+
+                    if (!doSync) return;
+
+                    var dest = s.Destination!.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+                    var syncSvc = new SyncService();
+                    var code = await syncSvc.SyncAsync(proj, dest, s.DryRun, token);
+                    if (code != 0)
                     {
-                        AnsiConsole.MarkupLine($"[green]Snapshot {snapId} created[/]");
+                        AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {code})");
+                        return;
+                    }
+                    if (!s.Quiet) AnsiConsole.MarkupLine("[green]Sync complete[/]");
+
+                    if (doVerify)
+                    {
+                        var verifySvc = new VerifyService(repo, new HashService());
+                        var vr = await verifySvc.VerifyAsync(proj, dest, percent: 100, full: true, token);
+                        if (vr.Failures.Any())
+                            AnsiConsole.MarkupLine($"[red]Verify failed:[/] {vr.Failures.Count} issue(s)");
+                        else if (!s.Quiet)
+                            AnsiConsole.MarkupLine("[green]Verify OK[/]");
                     }
                 }
-
-                if (!doSync) return;
-
-                var dest = s.Destination!.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-                var syncSvc = new SyncService();
-                var code = await syncSvc.SyncAsync(proj, dest, s.DryRun, token);
-                if (code != 0)
+                catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.SqliteErrorCode == 19)
                 {
-                    AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {code})");
-                    return;
+                    AnsiConsole.MarkupLine("[red]Database error[/]: FOREIGN KEY constraint failed during snapshot write. This can occur if two cycles overlap. The watcher now enforces a single in-flight cycle.");
                 }
-                if (!s.Quiet) AnsiConsole.MarkupLine("[green]Sync complete[/]");
-
-                if (doVerify)
+                finally
                 {
-                    var verifySvc = new VerifyService(repo, new HashService());
-                    var vr = await verifySvc.VerifyAsync(proj, dest, percent: 100, full: true, token);
-                    if (vr.Failures.Any())
-                        AnsiConsole.MarkupLine($"[red]Verify failed:[/] {vr.Failures.Count} issue(s)");
-                    else if (!s.Quiet)
-                        AnsiConsole.MarkupLine("[green]Verify OK[/]");
+                    _cycleGate.Release();
                 }
             }
 
@@ -135,10 +149,16 @@ namespace VaultSync.CLI.Commands
 
             var debouncer = new AsyncDebouncer(Math.Max(100, s.DebounceMs));
             void OnChange(object? _, FileSystemEventArgs e)
-                => debouncer.Trigger(t => RunCycle(t, $"{e.ChangeType}: {e.FullPath}"));
+            {
+                if (ct.IsCancellationRequested) return;
+                debouncer.Trigger(t => RunCycle(t, $"{e.ChangeType}: {e.FullPath}"));
+            }
 
             void OnRename(object? _, RenamedEventArgs e)
-                => debouncer.Trigger(t => RunCycle(t, $"Renamed: {e.OldFullPath} → {e.FullPath}"));
+            {
+                if (ct.IsCancellationRequested) return;
+                debouncer.Trigger(t => RunCycle(t, $"Renamed: {e.OldFullPath} → {e.FullPath}"));
+            }
 
             void OnError(object? _, ErrorEventArgs e)
                 => AnsiConsole.MarkupLine($"[red]watch error:[/] {Markup.Escape(e.GetException().Message)}");
