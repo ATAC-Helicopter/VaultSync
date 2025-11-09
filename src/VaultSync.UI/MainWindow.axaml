@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:VaultSync.UI.ViewModels"
+        x:Class="VaultSync.UI.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Width="1100" Height="720"
+        Title="VaultSync UI">
+  <DockPanel>
+    <!-- Header -->
+    <Border Classes="card" DockPanel.Dock="Top">
+      <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+        <TextBlock Text="VaultSync" Classes="title" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="Dark" Margin="12,0" VerticalAlignment="Center"/>
+        <ToggleSwitch Grid.Column="2"
+                      IsChecked="{Binding IsDarkTheme}"
+                      VerticalAlignment="Center"/>
+      </Grid>
+    </Border>
+
+    <!-- Content -->
+    <Grid ColumnDefinitions="320,* ,420" RowDefinitions="*">
+      <!-- Left: Projects -->
+      <Border Classes="card" Grid.Column="0">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Projects" Classes="title"/>
+          <ListBox ItemsSource="{Binding Projects.Projects}"
+                   SelectedItem="{Binding Projects.SelectedProject}"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBox Width="120" Watermark="Name" Text="{Binding Projects.NewProjectName}"/>
+            <TextBox Width="150" Watermark="/path/to/project" Text="{Binding Projects.NewProjectPath}"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Preset" VerticalAlignment="Center"/>
+            <ComboBox Width="120" ItemsSource="{Binding Projects.Presets}" SelectedItem="{Binding Projects.SelectedPreset}"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Add" Command="{Binding Projects.AddProjectCommand}"/>
+            <Button Content="Remove" Command="{Binding Projects.RemoveSelectedCommand}"/>
+            <Button Content="Set Path" Command="{Binding Projects.SetPathCommand}"/>
+          </StackPanel>
+          <Button Content="Refresh" Command="{Binding Projects.RefreshCommand}" HorizontalAlignment="Left"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Middle: Actions -->
+      <Border Classes="card" Grid.Column="1">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Actions" Classes="title"/>
+          <TextBlock Text="Destination"/>
+          <TextBox Text="{Binding Actions.DestinationPath}" Watermark="/path/to/backup"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Snapshot"
+                    Command="{Binding Actions.SnapshotCommand}"
+                    CommandParameter="{Binding Projects.SelectedProject}"/>
+            <Button Content="Sync"
+                    Command="{Binding Actions.SyncCommand}"
+                    CommandParameter="{Binding Projects.SelectedProject}"/>
+            <Button Content="Verify"
+                    Command="{Binding Actions.VerifyCommand}"
+                    CommandParameter="{Binding Projects.SelectedProject}"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <CheckBox Content="Full Verify" IsChecked="{Binding Actions.FullVerify}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="Sample %"/>
+              <NumericUpDown Minimum="1" Maximum="100" Value="{Binding Actions.SamplePercent}"/>
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Right: Log -->
+      <Border Classes="card" Grid.Column="2">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Log" Classes="title"/>
+          <ListBox Classes="log" ItemsSource="{Binding Bus.Lines}"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Clear" Command="{Binding ClearLogCommand}"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>
