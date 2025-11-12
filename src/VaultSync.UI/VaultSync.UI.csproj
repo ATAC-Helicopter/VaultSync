@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <!-- Optional: turn off compiled bindings by default until you opt in -->
-    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,28 +13,15 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.8" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0" />
-    <!-- Diagnostics visible only in Debug -->
+    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.8">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
-  </ItemGroup>
+<PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.9" />
+<PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
+<PackageReference Include="ReactiveUI" Version="19.5.39" />
 
-  <ItemGroup>
-    <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj" />
-  </ItemGroup>
 
-  <!-- Ensure XAML is compiled exactly once -->
-  <ItemGroup>
-    <!-- Remove default wildcard that would otherwise include all .axaml twice -->
-    <AvaloniaXaml Remove="**\*.axaml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Explicitly include only the XAML files we want compiled -->
-    <AvaloniaXaml Include="App.axaml" />
-    <AvaloniaXaml Include="Views\**\*.axaml" />
-  </ItemGroup>
-
+ </ItemGroup>
 </Project>

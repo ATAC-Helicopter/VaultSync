@@ -1,12 +1,18 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace VaultSync.UI.Views;
-
-public partial class DashboardView : UserControl
+namespace VaultSync.UI.Views
 {
-    public DashboardView()
+    public partial class DashboardView : UserControl
     {
-        AvaloniaXamlLoader.Load(this);
+        public DashboardView()
+        {
+            InitializeComponent();
+        }
+
+        private void InitializeComponent()
+        {
+            AvaloniaXamlLoader.Load(this);
+        }
     }
 }

@@ -1,12 +1,14 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="VaultSync.UI.Views.SettingsView">
-  <StackPanel Margin="16">
-    <TextBlock Text="Settings" Classes="title" />
-    <Border Classes="card">
-      <StackPanel>
-        <TextBlock Text="Application Settings Placeholder" />
-      </StackPanel>
-    </Border>
-  </StackPanel>
+             xmlns:vm="using:VaultSync.UI"
+             x:Class="VaultSync.UI.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <Border Classes="card" CornerRadius="18" Padding="18">
+    <StackPanel Spacing="8">
+      <TextBlock Classes="section-title" Text="Settings" />
+      <TextBlock Text="(Placeholder — theme, paths, SMB/NAS settings, etc.)"
+                 Foreground="{StaticResource TextSecondary}"/>
+    </StackPanel>
+  </Border>
 </UserControl>

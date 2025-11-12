@@ -1,56 +1,117 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Application xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
-             xmlns:views="clr-namespace:VaultSync.UI.Views"
-             x:Class="VaultSync.UI.App"
-             RequestedThemeVariant="Light">
+<Application
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:fluent="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
+    xmlns:local="using:VaultSync.UI"
+    x:Class="VaultSync.UI.App"
+    RequestedThemeVariant="Dark">
 
-  <!-- Theme and global styles -->
-  <Application.Styles>
-    <FluentTheme />
-    <Styles>
-      <Style Selector="TextBlock.title">
-        <Setter Property="FontSize" Value="18" />
-        <Setter Property="FontWeight" Value="Bold" />
-      </Style>
+  <Application.Resources>
+    <ResourceDictionary>
+      <LinearGradientBrush x:Key="WindowBackground" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#101214" Offset="0"/>
+        <GradientStop Color="#0F1113" Offset="1"/>
+      </LinearGradientBrush>
 
-      <Style Selector="Border.card">
-        <Setter Property="Padding" Value="12" />
-        <Setter Property="Margin" Value="12" />
-        <Setter Property="CornerRadius" Value="6" />
-      </Style>
+      <SolidColorBrush x:Key="Surface0" Color="#0F1113"/>
+      <SolidColorBrush x:Key="Surface1" Color="#15181C"/>
+      <SolidColorBrush x:Key="Surface2" Color="#1B1F24"/>
+      <SolidColorBrush x:Key="BorderSoft" Color="#232730"/>
 
-      <Style Selector="ListBox.log">
-        <Setter Property="FontFamily" Value="Consolas, Menlo, Monaco, monospace" />
-      </Style>
-    </Styles>
-  </Application.Styles>
+      <SolidColorBrush x:Key="TextPrimary" Color="#F0F2F5"/>
+      <SolidColorBrush x:Key="TextSecondary" Color="#C2C8D2"/>
+      <SolidColorBrush x:Key="AccentBrush" Color="#5D80FF"/>
 
-  <!-- ViewModel to View templates -->
+      <SolidColorBrush x:Key="ItemBg" Color="#252B33"/>
+      <SolidColorBrush x:Key="ItemBgHover" Color="#2B313A"/>
+      <SolidColorBrush x:Key="ItemBgSelected" Color="#303744"/>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <!-- DataTemplates must include ViewLocator so ContentPresenter can resolve VM->View -->
   <Application.DataTemplates>
-    <DataTemplate DataType="vm:DashboardViewModel">
-      <views:DashboardView />
-    </DataTemplate>
-
-    <DataTemplate DataType="vm:ProjectsViewModel">
-      <views:ProjectsView />
-    </DataTemplate>
-
-    <DataTemplate DataType="vm:SyncViewModel">
-      <views:SyncView />
-    </DataTemplate>
-
-    <DataTemplate DataType="vm:HistoryViewModel">
-      <views:HistoryView />
-    </DataTemplate>
-
-    <DataTemplate DataType="vm:BackupViewModel">
-      <views:BackupView />
-    </DataTemplate>
-
-    <DataTemplate DataType="vm:SettingsViewModel">
-      <views:SettingsView />
-    </DataTemplate>
+    <local:ViewLocator/>
   </Application.DataTemplates>
+
+  <Application.Styles>
+    <fluent:FluentTheme />
+    <Style Selector="Window">
+      <Setter Property="Background" Value="{StaticResource WindowBackground}"/>
+    </Style>
+
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{StaticResource Surface1}"/>
+      <Setter Property="CornerRadius" Value="18"/>
+      <Setter Property="Padding" Value="16"/>
+      <Setter Property="Margin" Value="8"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Border.card:pointerover">
+      <Setter Property="Background" Value="{StaticResource Surface2}"/>
+    </Style>
+
+    <Style Selector="Border.sidebar">
+      <Setter Property="Background" Value="{StaticResource Surface0}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+      <Setter Property="BorderThickness" Value="0,0,1,0"/>
+    </Style>
+    <Style Selector="Border.header">
+      <Setter Property="Background" Value="{StaticResource Surface0}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+
+    <Style Selector="Button.nav">
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="12,10"/>
+      <Setter Property="Margin" Value="0,6,0,0"/>
+    </Style>
+    <Style Selector="Button.nav:pointerover">
+      <Setter Property="Background" Value="{StaticResource Surface2}"/>
+    </Style>
+    <Style Selector="Button.nav:pressed">
+      <Setter Property="Background" Value="#2A313C"/>
+    </Style>
+
+    <Style Selector="ListBox">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="ListBoxItem">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0"/>
+    </Style>
+    <Style Selector="ListBoxItem:pointerover">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+    <Style Selector="TextBlock.metric">
+      <Setter Property="FontSize" Value="36"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+      <Setter Property="Margin" Value="0,6,0,2"/>
+    </Style>
+    <Style Selector="TextBlock.metric-hint">
+      <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+      <Setter Property="Margin" Value="0,2,0,0"/>
+    </Style>
+    <Style Selector="TextBlock.section-title">
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+    <Style Selector="TextBlock.kicker">
+      <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+  </Application.Styles>
 </Application>

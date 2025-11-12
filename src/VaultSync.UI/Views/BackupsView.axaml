@@ -1,13 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VaultSync.UI"
-             x:Class="VaultSync.UI.ProjectsView"
-             x:DataType="vm:ProjectsViewModel">
+             x:Class="VaultSync.UI.BackupsView"
+             x:DataType="vm:BackupsViewModel">
 
   <Border Classes="card" CornerRadius="18" Padding="18">
     <StackPanel Spacing="8">
-      <TextBlock Classes="section-title" Text="Projects" />
-      <TextBlock Text="(Placeholder page — list of tracked Unity projects will appear here.)"
+      <TextBlock Classes="section-title" Text="Backups" />
+      <TextBlock Text="(Placeholder page — recent snapshots, integrity, parity status.)"
                  Foreground="{StaticResource TextSecondary}"/>
     </StackPanel>
   </Border>

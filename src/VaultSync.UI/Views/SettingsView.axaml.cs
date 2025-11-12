@@ -1,12 +1,11 @@
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
-namespace VaultSync.UI.Views;
+namespace VaultSync.UI;
 
 public partial class SettingsView : UserControl
 {
     public SettingsView()
     {
-        AvaloniaXamlLoader.Load(this);
+        InitializeComponent();
     }
 }

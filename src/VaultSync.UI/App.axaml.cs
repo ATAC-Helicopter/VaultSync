@@ -1,21 +1,28 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using VaultSync.UI.Views;
+using VaultSync.UI.ViewModels; // <-- ensure this matches the namespace above
 
-namespace VaultSync.UI
+namespace VaultSync.UI;
+
+public partial class App : Application
 {
-    public partial class App : Application
+    public override void Initialize()
     {
-        public override void Initialize() => AvaloniaXamlLoader.Load(this);
+        AvaloniaXamlLoader.Load(this);
+    }
 
-        public override void OnFrameworkInitializationCompleted()
+    public override void OnFrameworkInitializationCompleted()
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            // Use the root AppViewModel so MainWindow can bind to CurrentPage
+            desktop.MainWindow = new MainWindow
             {
-                desktop.MainWindow = new ShellWindow();
-            }
-            base.OnFrameworkInitializationCompleted();
+                DataContext = new AppViewModel()
+            };
         }
+
+        base.OnFrameworkInitializationCompleted();
     }
 }

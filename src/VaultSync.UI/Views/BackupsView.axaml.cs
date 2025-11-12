@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace VaultSync.UI;
 
-public partial class ProjectsView : UserControl
+public partial class BackupsView : UserControl
 {
-    public ProjectsView()
+    public BackupsView()
     {
         InitializeComponent();
     }

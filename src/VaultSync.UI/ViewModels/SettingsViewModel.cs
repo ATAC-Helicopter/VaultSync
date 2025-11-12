@@ -1,10 +1,6 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+namespace VaultSync.UI;
 
-namespace VaultSync.UI.ViewModels
+public sealed class SettingsViewModel
 {
-    public partial class SettingsViewModel : ObservableObject
-    {
-        public string Theme => "Light";
-        public string Version => "0.1.0";
-    }
+    // later: theme, paths, NAS credentials, advanced toggles, etc.
 }

@@ -1,164 +1,131 @@
-# VaultSync CLI
 
-Snapshot, sync, and verify project folders with rsync-backed mirroring.
+⸻
 
-## Commands
-- `vaultsync init`
-- `vaultsync add-project <name> <path> --preset <unity|dotnet|custom>`
-- `vaultsync snapshot <name>`
-- `vaultsync sync <name> <destination> [--dry-run]`
-- `vaultsync verify <name> <destination> [--full|--percent 10]`
-- `vaultsync list-projects [--json]`
-- `vaultsync doctor [--check-dest <PATH>]`
-- `vaultsync version`
+VaultSync
 
-# VaultSync CLI
+Snapshot • Sync • Verify — for Projects & Workspaces
 
-A cross‑platform command‑line tool for snapshotting, syncing, and verifying project folders with rsync‑ or robocopy‑backed mirroring.
+VaultSync is a cross-platform backup, sync, and project snapshot manager with:
+	•	Modern dashboard UI built with Avalonia
+	•	High-performance CLI powered by rsync / robocopy
+	•	Versioned snapshots stored in a fast local SQLite database
+	•	Smart presets for Unity, .NET, custom projects
+	•	Watch mode for automatic incremental syncing
 
-VaultSync keeps your project directories in sync with a mirror destination while maintaining versioned snapshots in a lightweight SQLite database.
+Designed for developers with large codebases, Unity projects, and multi-machine workflows.
 
----
+⸻
 
-## ✨ Features
+ Features
 
-- **Snapshot → Sync → Verify** workflow
-- Uses `rsync` (macOS/Linux) or `robocopy` (Windows) for efficient mirroring
-- **Presets** for Unity, .NET, and custom projects
-- **Watcher mode** for automatic snapshot + sync + verify on file changes
-- Local SQLite database for metadata and file hashes
-- Cross‑platform (.NET 8+)
 
----
+🔧 CLI (Powerful Command Line Tool)
+	•	snapshot → sync → verify pipeline
+	•	Uses rsync (macOS/Linux) or robocopy (Windows)
+	•	Hash-based verification
+	•	Watch mode for auto-syncing
+	•	JSON output modes
+	•	Unity/.NET/custom presets
 
-## ⚙️ Installation
+⸻
 
-From a local build:
+ Installation
 
-```bash
 cd ~/Desktop/Dev/VaultSync
 dotnet pack src/VaultSync.CLI -c Release
 export PATH="$PATH:$HOME/.dotnet/tools"
 dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli
-```
 
-Or, if already installed:
+Update:
 
-```bash
-dotnet tool update --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli
-```
+dotnet tool update --global vaultsync.cli
 
-Verify:
 
-```bash
-vaultsync version
-```
+⸻
 
----
+ Quick Start
 
-## 🚀 Quick Start
-
-```bash
 vaultsync init --db ~/.vaultsync/vault.db
 vaultsync add-project Demo ~/Projects/Demo --preset custom
 vaultsync snapshot Demo
 vaultsync sync Demo ~/Backup/Demo
 vaultsync verify Demo ~/Backup/Demo --full
-```
 
----
 
-## 🧩 Presets
+⸻
 
-| Name   | Includes / Excludes |
-|--------|----------------------|
-| `unity` | Skips Library/, Temp/, Builds/, Logs/ |
-| `dotnet` | Skips bin/, obj/, .vs/ |
-| `custom` | No filters, everything included |
+ Presets
 
----
+Preset	Rules
+unity	Skips Library/, Temp/, Builds/, Logs/
+dotnet	Skips bin/, obj/, .vs/
+custom	No exclusions
 
-## 🖥️ Commands
 
-### Core
+⸻
 
-| Command | Description |
-|----------|-------------|
-| `vaultsync init` | Initialize local configuration and database |
-| `vaultsync add-project <name> <path> --preset <unity|dotnet|custom>` | Register a folder |
-| `vaultsync remove-project <name>` | Remove a project and its data |
-| `vaultsync list-projects [--json]` | List all tracked projects |
-| `vaultsync set-path <name> <newPath>` | Update a project path |
-| `vaultsync snapshot <name>` | Create a snapshot (scan + hash) |
-| `vaultsync sync <name> <destination> [--dry-run]` | Mirror project to destination |
-| `vaultsync verify <name> <destination> [--full|--percent N]` | Compare destination vs snapshot |
-| `vaultsync history <name>` | Show snapshot history |
-| `vaultsync diff <name>` | Compare two snapshots |
-| `vaultsync prune <name> [--keep-last N | --before YYYY-MM-DD]` | Delete old snapshots |
-| `vaultsync restore <name> <destination>` | Restore files from a snapshot |
-| `vaultsync self-test` | Run a built‑in end‑to‑end smoke test |
-| `vaultsync doctor [--check-dest <PATH>]` | Environment check (tools, permissions, DB) |
-| `vaultsync version` | Show version and build info |
+ Useful Commands
 
----
+Core
 
-### Watch Mode
+Command	Description
+vaultsync init	Initialize config + DB
+vaultsync add-project <name> <path>	Register project folder
+vaultsync list-projects	List all tracked projects
+vaultsync snapshot <name>	Create snapshot
+vaultsync sync <name> <dest>	Mirror project folder
+vaultsync verify <name> <dest>	Compare against snapshot
+vaultsync history <name>	Snapshot history
+vaultsync diff <name>	Compare two snapshots
+vaultsync prune <name>	Remove old snapshots
+vaultsync restore <name> <dest>	Restore files
+vaultsync doctor	Environment check
 
-Automatically monitors a project for changes and triggers snapshot → sync → verify.
+Watch Mode
 
-```bash
-vaultsync watch <name> --dest <path> [--sync] [--verify] [--debounce-ms 500]
-```
+vaultsync watch Game --dest /Backups/Game --sync --verify --debounce-ms 2500
 
-- `--debounce-ms` controls how long to wait after the last change before running a cycle.
-- Each cycle is serialized — only one snapshot/sync/verify runs at a time.
-- Perfect for long‑running Unity or .NET projects.
 
----
+⸻
 
-## 📂 Configuration
+ Directory Structure
 
-All data lives under `~/.vaultsync` by default:
+VaultSync/
+ ├─ src/
+ │   ├─ VaultSync.Core/        # Core engine (DB, hashing, sync logic)
+ │   ├─ VaultSync.CLI/         # Command line interface
+ │   └─ VaultSync.UI/          # Avalonia dashboard UI
+ ├─ README.md
+ ├─ LICENSE
+ └─ build scripts...
 
-```
-~/.vaultsync/
- ├─ vault.db           # SQLite database
- ├─ config.json        # Global settings
- ├─ logs/              # Per-run logs
- ├─ selftest/          # Used by vaultsync self-test
- └─ e2e/               # Used for stress & integration tests
-```
 
----
+⸻
 
-## 🧰 Example Workflow
+ Roadmap
+	•	Multi-destination sync profiles
+	•	Incremental diff viewer
+	•	Version compare UI inside dashboard
+	•	Automated cloud sync (S3, Backblaze, OneDrive)
+	•	Encrypted snapshot packs
 
-```bash
-# Initialize
-vaultsync init --db ~/.vaultsync/vault.db
+⸻
 
-# Add project with preset
-vaultsync add-project Game ~/Projects/MyGame --preset unity
+ License
 
-# Snapshot
-vaultsync snapshot Game
+This project is licensed under the MIT License.
+See LICENSE￼ for details.
 
-# Sync to external drive
-vaultsync sync Game /Volumes/Backups/Game
+⸻
 
-# Verify 10% sample
-vaultsync verify Game /Volumes/Backups/Game --percent 10
+ Credits
 
-# Start automatic watch mode
-vaultsync watch Game --dest /Volumes/Backups/Game --sync --verify --debounce-ms 2500
-```
+Created by Flavio Giacchetti
+Built with:
+	•	.NET 8
+	•	Avalonia UI
+	•	LiveCharts
+	•	SQLite
+	•	rsync / robocopy
 
----
 
-## 🧾 Changelog
-
-See [CHANGELOG.md](../CHANGELOG.md) for version history and upcoming features.
-
----
-
-© 2025 VaultSync Project. MIT Licensed.
