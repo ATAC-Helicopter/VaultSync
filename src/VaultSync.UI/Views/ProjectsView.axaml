@@ -1,14 +1,432 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:VaultSync.UI"
-             x:Class="VaultSync.UI.ProjectsView"
-             x:DataType="vm:ProjectsViewModel">
+<UserControl
+    x:Class="VaultSync.UI.Views.ProjectsView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:CompileBindings="False">
 
-  <Border Classes="card" CornerRadius="18" Padding="18">
-    <StackPanel Spacing="8">
-      <TextBlock Classes="section-title" Text="Projects" />
-      <TextBlock Text="(Placeholder page — list of tracked Unity projects will appear here.)"
-                 Foreground="{StaticResource TextSecondary}"/>
-    </StackPanel>
-  </Border>
+  <UserControl.Styles>
+    <!-- Hover effect for snapshot bars -->
+    <Style Selector="Border.snapshot-bar:pointerover">
+      <Setter Property="Opacity" Value="0.85" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Margin="32,24,32,24" RowDefinitions="Auto,*" RowSpacing="16">
+
+    <!-- Inner content -->
+    <Grid Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="3*" />
+        <ColumnDefinition Width="32" />
+        <ColumnDefinition Width="4*" />
+      </Grid.ColumnDefinitions>
+
+      <!-- LEFT: All projects card -->
+      <Border Grid.Column="0"
+              Background="#0F1118"
+              CornerRadius="24"
+              Padding="24">
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
+
+          <!-- Title + search row -->
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="All projects"
+                       FontSize="22"
+                       FontWeight="SemiBold"
+                       Foreground="#FFFFFF" />
+          </StackPanel>
+
+          <Grid ColumnDefinitions="*,Auto" Row="1" ColumnSpacing="8">
+            <Border CornerRadius="10" Background="#151822" Padding="0,0,4,0">
+              <Grid ColumnDefinitions="Auto,*">
+                <Border Width="12" />
+                <TextBox
+                  Margin="0"
+                  Padding="8,6"
+                  Watermark="Search projects..."
+                  BorderThickness="0"
+                  Background="Transparent"
+                  Foreground="#FFFFFF" />
+              </Grid>
+            </Border>
+
+            <Button Grid.Column="1"
+                    Padding="12,6"
+                    CornerRadius="10"
+                    Background="#3A3F51"
+                    Foreground="#FFFFFF"
+                    Command="{Binding RefreshCommand}">
+              Refresh
+            </Button>
+          </Grid>
+
+          <!-- Projects list -->
+          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ListBox
+              x:Name="ProjectList"
+              ItemsSource="{Binding Projects}"
+              SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+              Background="Transparent"
+              BorderThickness="0"
+              HorizontalAlignment="Stretch">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border Margin="0,8,0,0"
+                          CornerRadius="18"
+                          Background="#151822"
+                          Padding="16">
+                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
+
+                      <!-- Name + last snapshot short + size -->
+                      <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock
+                          Grid.Column="0"
+                          Text="{Binding Name}"
+                          FontSize="18"
+                          FontWeight="Bold"
+                          Foreground="#FFFFFF"
+                          TextWrapping="NoWrap"
+                          TextTrimming="CharacterEllipsis" />
+
+                        <TextBlock
+                          Grid.Column="1"
+                          Text="{Binding LastSnapshotShort}"
+                          FontSize="13"
+                          Foreground="#C0C3CC" />
+
+                        <TextBlock
+                          Grid.Column="2"
+                          Text="{Binding SizeDisplay}"
+                          FontSize="13"
+                          FontWeight="SemiBold"
+                          Foreground="#FFFFFF" />
+                      </Grid>
+
+                      <!-- Path -->
+                      <TextBlock
+                        Grid.Row="1"
+                        Grid.ColumnSpan="2"
+                        Margin="0,6,0,0"
+                        Text="{Binding Path}"
+                        Foreground="#8B90A0"
+                        FontSize="13"
+                        TextWrapping="NoWrap"
+                        TextTrimming="CharacterEllipsis" />
+
+                      <!-- Health pill bar -->
+                      <Border
+                        Grid.Row="2"
+                        Grid.ColumnSpan="2"
+                        Margin="0,10,0,0"
+                        CornerRadius="999"
+                        Height="20"
+                        Background="#111319">
+                        <Border
+                          Margin="3"
+                          CornerRadius="999"
+                          Background="{Binding HealthBackground}">
+                          <TextBlock
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Text="{Binding HealthTag}"
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Foreground="#FFFFFF" />
+                        </Border>
+                      </Border>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <!-- RIGHT: details + stats -->
+      <Border Grid.Column="2"
+              Background="#0F1118"
+              CornerRadius="24"
+              Padding="24"
+              DataContext="{Binding SelectedItem, ElementName=ProjectList}">
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
+
+          <!-- Header: name + path -->
+          <StackPanel>
+            <TextBlock
+              Text="{Binding Name}"
+              FontSize="22"
+              FontWeight="SemiBold"
+              Foreground="#FFFFFF"
+              TextWrapping="NoWrap"
+              TextTrimming="CharacterEllipsis" />
+            <TextBlock
+              Margin="0,4,0,0"
+              Text="{Binding Path, StringFormat='Location · {0}'}"
+              FontSize="12"
+              Foreground="#8B90A0"
+              TextWrapping="NoWrap"
+              TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+
+          <!-- Stat badges row -->
+          <Grid Grid.Row="1"
+                ColumnDefinitions="*,*,*,*"
+                ColumnSpacing="12">
+            <!-- Preset -->
+            <Border CornerRadius="14" Background="#151822" Padding="10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Snapshot preset"
+                           FontSize="11"
+                           Foreground="#9AA0B3" />
+                <TextBlock Text="{Binding Preset}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="#FFFFFF"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Border>
+
+            <!-- Health -->
+            <Border Grid.Column="1"
+                    CornerRadius="14"
+                    Background="#151822"
+                    Padding="10">
+              <StackPanel Spacing="4">
+                <TextBlock Text="Project health"
+                           FontSize="11"
+                           Foreground="#9AA0B3" />
+                <Border CornerRadius="999"
+                        Background="{Binding HealthBackground}"
+                        Padding="6,2">
+                  <TextBlock Text="{Binding HealthTag}"
+                             FontSize="12"
+                             FontWeight="SemiBold"
+                             Foreground="#FFFFFF"
+                             HorizontalAlignment="Center"
+                             TextWrapping="NoWrap"
+                             TextTrimming="CharacterEllipsis" />
+                </Border>
+              </StackPanel>
+            </Border>
+
+            <!-- Last snapshot -->
+            <Border Grid.Column="2"
+                    CornerRadius="14"
+                    Background="#151822"
+                    Padding="10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Last snapshot taken"
+                           FontSize="11"
+                           Foreground="#9AA0B3" />
+                <TextBlock Text="{Binding LastSnapshotSummary}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="#FFFFFF"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Border>
+
+            <!-- Size -->
+            <Border Grid.Column="3"
+                    CornerRadius="14"
+                    Background="#151822"
+                    Padding="10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Project size on disk"
+                           FontSize="11"
+                           Foreground="#9AA0B3" />
+                <TextBlock Text="{Binding SizeDisplay}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="#FFFFFF"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <!-- Stats card -->
+          <Border Grid.Row="2"
+                  Margin="0,4,0,0"
+                  CornerRadius="18"
+                  Background="#151822"
+                  Padding="16">
+            <StackPanel Spacing="12">
+
+              <!-- Top metrics -->
+              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                <Border CornerRadius="10" Background="#191D29" Padding="10">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="Total snapshots"
+                               FontSize="11"
+                               Foreground="#9AA0B3" />
+                    <TextBlock Text="{Binding SnapshotCount}"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFF" />
+                  </StackPanel>
+                </Border>
+
+                <Border CornerRadius="10" Background="#191D29" Padding="10" Grid.Column="1">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="Snapshot storage"
+                               FontSize="11"
+                               Foreground="#9AA0B3" />
+                    <TextBlock Text="{Binding TotalSnapshotSizeDisplay}"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFF" />
+                  </StackPanel>
+                </Border>
+
+                <Border CornerRadius="10" Background="#191D29" Padding="10" Grid.Column="2">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="Average snapshot size"
+                               FontSize="11"
+                               Foreground="#9AA0B3" />
+                    <TextBlock Text="{Binding AverageSnapshotSizeDisplay}"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFF" />
+                  </StackPanel>
+                </Border>
+
+                <Border CornerRadius="10" Background="#191D29" Padding="10" Grid.Column="3">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="Time since last snapshot"
+                               FontSize="11"
+                               Foreground="#9AA0B3" />
+                    <TextBlock Text="{Binding DaysSinceLastSnapshotDisplay}"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFF" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+
+              <Border Margin="0,6,0,0" Height="1" Background="#202331" />
+
+              <!-- Snapshot size trend -->
+              <StackPanel Spacing="10">
+
+                <TextBlock
+                  Text="Snapshot size trend"
+                  FontSize="13"
+                  FontWeight="SemiBold"
+                  Foreground="#FFFFFF" />
+
+                <!-- subtle y-axis baseline -->
+                <Border Height="1" Background="#242836" Margin="0,0,0,4"/>
+
+                <!-- Chart area -->
+                <Grid RowDefinitions="Auto,Auto">
+
+                  <!-- Bars row -->
+                  <ItemsControl Grid.Row="0" ItemsSource="{Binding SnapshotHistory}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"/>
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Margin="6,0"
+                                    VerticalAlignment="Bottom"
+                                    HorizontalAlignment="Center">
+                          <Border
+                            Classes="snapshot-bar"
+                            Width="22"
+                            CornerRadius="6"
+                            Background="{Binding TrendColor}"
+                            Height="{Binding RelativeBarHeight}"
+                            VerticalAlignment="Bottom"
+                            Cursor="Hand"
+                            ToolTip.Tip="{Binding TooltipText}" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <!-- X-axis labels (dates) -->
+                  <ItemsControl Grid.Row="1" ItemsSource="{Binding SnapshotHistory}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left"/>
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock
+                          Text="{Binding Timestamp, StringFormat='{}{0:dd/MM}'}"
+                          FontSize="10"
+                          Foreground="#646B7A"
+                          HorizontalAlignment="Center"
+                          Margin="10,4,10,0"/>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                </Grid>
+
+                <!-- Legend -->
+                <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,0">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="10" Height="10" CornerRadius="3" Background="#2E6A3E"/>
+                    <TextBlock Text="Decreasing size" FontSize="10" Foreground="#747B8A"/>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="10" Height="10" CornerRadius="3" Background="#6A2E2E"/>
+                    <TextBlock Text="Increasing size" FontSize="10" Foreground="#747B8A"/>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="10" Height="10" CornerRadius="3" Background="#2F3650"/>
+                    <TextBlock Text="First snapshot / unchanged" FontSize="10" Foreground="#747B8A"/>
+                  </StackPanel>
+                </StackPanel>
+
+              </StackPanel>
+
+              <Border Margin="0,6,0,0" Height="1" Background="#202331" />
+
+              <!-- Recent snapshots list -->
+              <StackPanel Spacing="8">
+                <TextBlock
+                  Text="Recent snapshots"
+                  FontSize="13"
+                  FontWeight="SemiBold"
+                  Foreground="#FFFFFF" />
+
+                <ItemsControl ItemsSource="{Binding SnapshotHistory}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,2">
+                        <TextBlock
+                          Grid.Column="0"
+                          Text="{Binding DateDisplay}"
+                          FontSize="12"
+                          Foreground="#C0C3CC" />
+                        <TextBlock
+                          Grid.Column="1"
+                          Text="{Binding SizeDisplay}"
+                          FontSize="12"
+                          FontWeight="SemiBold"
+                          Foreground="#FFFFFF" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+            </StackPanel>
+          </Border>
+
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
 </UserControl>
