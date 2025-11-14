@@ -1,0 +1,598 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VaultSync.UI"
+             x:Class="VaultSync.UI.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="12">
+
+    <Viewbox Stretch="Uniform"
+             StretchDirection="DownOnly">
+      <Grid Width="1220"
+            RowDefinitions="Auto,*"
+            RowSpacing="12">
+
+        <!-- Header -->
+        <Border Grid.Row="0"
+                Classes="card"
+                CornerRadius="18"
+                Padding="18"
+                Margin="0,0,0,4">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="section-title"
+                       Text="Settings" />
+            <TextBlock Text="Tune how VaultSync behaves across projects, backups, and storage."
+                       Foreground="{StaticResource TextSecondary}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Content -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="16">
+
+          <!-- LEFT COLUMN -->
+          <StackPanel Grid.Column="0"
+                      Spacing="12">
+
+            <!-- General -->
+            <Border Classes="card"
+                    CornerRadius="18"
+                    Padding="16">
+              <StackPanel Spacing="10">
+
+                <StackPanel Spacing="2">
+                  <TextBlock Text="General" FontWeight="SemiBold" />
+                  <TextBlock Text="Project discovery, startup behaviour, and layout."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="12" />
+                </StackPanel>
+
+                <!-- Projects root -->
+                <Grid ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto"
+                      RowSpacing="4"
+                      ColumnSpacing="8">
+                  <StackPanel Grid.Row="0"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="2"
+                              Spacing="2">
+                    <TextBlock Text="Projects root" />
+                    <TextBlock Text="Default folder where VaultSync looks for Unity projects."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+
+                  <TextBox Grid.Row="1"
+                           Grid.Column="0"
+                           Margin="0,2,0,0"
+                           Text="{Binding ProjectsRootPath, Mode=TwoWay}"
+                           Watermark="Leave empty to use OS default" />
+
+                  <Button Grid.Row="1"
+                          Grid.Column="1"
+                          Margin="8,2,0,0"
+                          Padding="10,4"
+                          Command="{Binding BrowseProjectsRootCommand}">
+                    Browse…
+                  </Button>
+                </Grid>
+
+                <!-- Auto open last project -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Open last project on startup" />
+                    <TextBlock Text="Jump straight back into your most recent workspace."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding AutoOpenLastProject, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- Remember window layout -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Remember window size and layout" />
+                    <TextBlock Text="Restore the same layout next time you open VaultSync."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding RememberWindowLayout, Mode=TwoWay}" />
+                </Grid>
+
+              </StackPanel>
+            </Border>
+
+            <!-- Backups -->
+            <Border Classes="card"
+                    CornerRadius="18"
+                    Padding="16">
+              <StackPanel Spacing="10">
+
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Backups" FontWeight="SemiBold" />
+                  <TextBlock Text="Automatic snapshots, retention, and backup location."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="12" />
+                </StackPanel>
+
+                <!-- Enable auto backups -->
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Enable automatic backups" />
+                    <TextBlock Text="VaultSync will take snapshots in the background while you work."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding EnableAutoBackups, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- Interval -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Backup interval (minutes)" />
+                    <TextBlock Text="How often automatic snapshots are created."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <TextBox Grid.Column="1"
+                           Width="60"
+                           HorizontalContentAlignment="Center"
+                           Text="{Binding AutoBackupIntervalMinutes, Mode=TwoWay}"
+                           HorizontalAlignment="Right" />
+                </Grid>
+
+                <!-- Max snapshots per project -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Keep last N snapshots per project" />
+                    <TextBlock Text="Older snapshots will be pruned once this limit is reached."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <TextBox Grid.Column="1"
+                           Width="60"
+                           HorizontalContentAlignment="Center"
+                           Text="{Binding MaxSnapshotsPerProject, Mode=TwoWay}"
+                           HorizontalAlignment="Right" />
+                </Grid>
+
+                <!-- Backup location -->
+                <Grid ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto"
+                      RowSpacing="4"
+                      Margin="0,6,0,0"
+                      ColumnSpacing="8">
+                  <StackPanel Grid.Row="0"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="2"
+                              Spacing="2">
+                    <TextBlock Text="Backup location" />
+                    <TextBlock Text="Folder where VaultSync stores backup archives."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+
+                  <TextBox Grid.Row="1"
+                           Grid.Column="0"
+                           Margin="0,2,0,0"
+                           Text="{Binding BackupLocationPath, Mode=TwoWay}"
+                           Watermark="Leave empty to store backups next to projects" />
+
+                  <Button Grid.Row="1"
+                          Grid.Column="1"
+                          Margin="8,2,0,0"
+                          Padding="10,4"
+                          Command="{Binding BrowseBackupLocationCommand}">
+                    Browse…
+                  </Button>
+                </Grid>
+
+                <!-- Compression -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Compress backups" />
+                    <TextBlock Text="Smaller backups at the cost of slightly longer backup times."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding UseBackupCompression, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- Verify backups -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Verify backups after creation" />
+                    <TextBlock Text="Run a quick integrity check after each snapshot."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding VerifyBackupsAfterCreate, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- Pause on battery -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Pause auto-backups on battery" />
+                    <TextBlock Text="Avoid heavy disk operations while running on battery power."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding PauseBackupsOnBattery, Mode=TwoWay}" />
+                </Grid>
+
+              </StackPanel>
+            </Border>
+
+            <!-- Storage -->
+            <Border Classes="card"
+                    CornerRadius="18"
+                    Padding="16">
+              <StackPanel Spacing="10">
+
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Storage" FontWeight="SemiBold" />
+                  <TextBlock Text="NAS awareness, free space, and drive health."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="12" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Prefer NAS / external volumes" />
+                    <TextBlock Text="Use network or external drives as primary backup targets when available."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding PreferExternalDrives, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Show drive health warnings" />
+                    <TextBlock Text="Surface SMART / health warnings when VaultSync detects issues."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding ShowDriveHealthWarnings, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Reserve free space (%)" />
+                    <TextBlock Text="Stop creating new backups once a disk is below this threshold."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <TextBox Grid.Column="1"
+                           Width="60"
+                           HorizontalContentAlignment="Center"
+                           Text="{Binding MinimumFreeSpacePercent, Mode=TwoWay}"
+                           HorizontalAlignment="Right" />
+                </Grid>
+
+                <!-- Network share access (only shown for network paths) -->
+                <Border Margin="0,10,0,0"
+                        Padding="12"
+                        CornerRadius="10"
+                        Background="#151820"
+                        IsVisible="{Binding ShowNetworkShareOptions}">
+                  <StackPanel Spacing="8">
+
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Network share access" FontWeight="SemiBold" />
+                      <TextBlock Text="Use custom credentials for protected SMB / NAS shares."
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" Spacing="2">
+                        <TextBlock Text="Use custom credentials" />
+                        <TextBlock Text="Override the OS user when accessing this share."
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11" />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{Binding UseCustomNetworkCredentials, Mode=TwoWay}" />
+                    </Grid>
+
+                    <!-- Credentials section -->
+                    <StackPanel Spacing="6"
+                                Margin="8,4,0,0"
+                                IsVisible="{Binding UseCustomNetworkCredentials}">
+                      <Grid ColumnDefinitions="Auto,*"
+                            ColumnSpacing="8">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="User name" />
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding NetworkShareUserName, Mode=TwoWay}"
+                                 Watermark="user or DOMAIN\user" />
+                      </Grid>
+
+                      <Grid ColumnDefinitions="Auto,*"
+                            ColumnSpacing="8">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="Password" />
+                        <!-- Replaced PasswordBox with TextBox for compatibility -->
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding NetworkSharePassword, Mode=TwoWay}"
+                                 Watermark="Password" />
+                      </Grid>
+
+                      <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="8">
+                        <CheckBox Grid.Column="0"
+                                  Content="Remember credentials on this device"
+                                  IsChecked="{Binding RememberNetworkCredentials, Mode=TwoWay}" />
+                        <Button Grid.Column="1"
+                                Padding="10,4"
+                                Command="{Binding TestNetworkConnectionCommand}">
+                          Test connection
+                        </Button>
+                      </Grid>
+                    </StackPanel>
+
+                  </StackPanel>
+                </Border>
+
+              </StackPanel>
+            </Border>
+
+          </StackPanel>
+
+          <!-- RIGHT COLUMN -->
+          <StackPanel Grid.Column="1"
+                      Spacing="12">
+
+            <!-- Appearance -->
+            <Border Classes="card"
+                    CornerRadius="18"
+                    Padding="16">
+              <StackPanel Spacing="10">
+
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Appearance" FontWeight="SemiBold" />
+                  <TextBlock Text="Control theme, density, and small visual tweaks."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="12" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Theme" />
+                    <TextBlock Text="Follow system, or force light/dark."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+
+                  <ComboBox Grid.Column="1"
+                            Width="160"
+                            ItemsSource="{Binding ThemeOptions}"
+                            SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Compact mode" />
+                    <TextBlock Text="Use tighter spacing for dense project lists."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding UseCompactLayout, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Show project avatars" />
+                    <TextBlock Text="Use icons or initials next to project names where available."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding ShowProjectAvatars, Mode=TwoWay}" />
+                </Grid>
+
+              </StackPanel>
+            </Border>
+
+            <!-- Notifications -->
+            <Border Classes="card"
+                    CornerRadius="18"
+                    Padding="16">
+              <StackPanel Spacing="10">
+
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Notifications" FontWeight="SemiBold" />
+                  <TextBlock Text="Control when VaultSync grabs your attention."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="12" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="On backup success" />
+                    <TextBlock Text="Show a small toast when a snapshot completes."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding NotifyOnBackupSuccess, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="On backup failure" />
+                    <TextBlock Text="Always notify when a snapshot fails."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding NotifyOnBackupFailure, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="On low disk space" />
+                    <TextBlock Text="Warn when a backup target is nearly full."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding NotifyOnLowDiskSpace, Mode=TwoWay}" />
+                </Grid>
+
+              </StackPanel>
+            </Border>
+
+            <!-- Advanced -->
+            <Border Classes="card"
+                    CornerRadius="18"
+                    Padding="16">
+              <StackPanel Spacing="10">
+
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Advanced" FontWeight="SemiBold" />
+                  <TextBlock Text="Diagnostics, updates, and telemetry."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="12" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Enable verbose logging" />
+                    <TextBlock Text="Write more detailed logs to help when debugging issues."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding EnableVerboseLogging, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Check for updates on startup" />
+                    <TextBlock Text="Let VaultSync check for new versions when it launches."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding CheckForUpdatesOnStartup, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Send anonymous usage stats" />
+                    <TextBlock Text="Help improve VaultSync by sharing basic, anonymised metrics."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding SendAnonymousUsageStats, Mode=TwoWay}" />
+                </Grid>
+
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Margin="0,10,0,0"
+                            Spacing="8">
+                  <Button Command="{Binding ResetToDefaultsCommand}"
+                          Padding="10,4">
+                    Reset to defaults
+                  </Button>
+                </StackPanel>
+
+              </StackPanel>
+            </Border>
+
+            <!-- Danger zone -->
+            <Border Classes="card"
+                    CornerRadius="18"
+                    Padding="16">
+              <StackPanel Spacing="10">
+
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Danger zone"
+                             FontWeight="SemiBold"
+                             Foreground="Tomato" />
+                  <TextBlock Text="Destructive actions. These cannot be undone."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="12" />
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                  <Button Command="{Binding ClearLocalCacheCommand}"
+                          Padding="10,4">
+                    Clear local cache
+                  </Button>
+                  <TextBlock Text="Removes cached metadata and state. Project data is not deleted."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="11" />
+                </StackPanel>
+
+                <StackPanel Spacing="6"
+                            Margin="0,4,0,0">
+                  <Button Command="{Binding ForgetAllProjectsCommand}"
+                          Padding="10,4">
+                    Forget all projects
+                  </Button>
+                  <TextBlock Text="Clears the list of known/pinned projects. No files on disk are removed."
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="11" />
+                </StackPanel>
+
+              </StackPanel>
+            </Border>
+
+          </StackPanel>
+
+        </Grid>
+
+      </Grid>
+    </Viewbox>
+
+  </ScrollViewer>
+
+</UserControl>

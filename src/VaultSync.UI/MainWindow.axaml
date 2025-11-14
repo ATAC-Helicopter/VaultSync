@@ -1,0 +1,53 @@
+<Window
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    x:Class="VaultSync.UI.MainWindow"
+    x:DataType="vm:AppViewModel"
+    Width="1200" Height="800"
+    Title="VaultSync">
+
+  <Grid RowDefinitions="Auto,*" ColumnDefinitions="260,*">
+
+    <Border Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="4,6,4,16">
+          <TextBlock Text="VaultSync" FontSize="20" FontWeight="SemiBold"/>
+          <TextBlock Text="Navigation" Foreground="{StaticResource TextSecondary}" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <Button Classes="nav" Command="{CompiledBinding NavigateDashboard}">
+            <TextBlock Text="Dashboard"/>
+          </Button>
+
+          <Button Classes="nav" Command="{CompiledBinding NavigateProjects}">
+            <TextBlock Text="Projects"/>
+          </Button>
+
+          <Button Classes="nav" Command="{CompiledBinding NavigateBackups}">
+            <TextBlock Text="Backups"/>
+          </Button>
+
+          <Button Classes="nav" Command="{CompiledBinding NavigateSettings}">
+            <TextBlock Text="Settings"/>
+          </Button>
+        </StackPanel>
+
+      </DockPanel>
+    </Border>
+
+    <Border Grid.Row="0" Grid.Column="1" Classes="header" Padding="16">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="{CompiledBinding HeaderTitle}" FontSize="22" FontWeight="SemiBold"/>
+          <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{StaticResource TextSecondary}"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Grid.Column="1" Padding="16">
+<ContentControl x:Name="MainContent" Content="{CompiledBinding CurrentView}"/>    </Border>
+
+  </Grid>
+</Window>
