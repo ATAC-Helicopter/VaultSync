@@ -9,6 +9,28 @@
     <Style Selector="Border.snapshot-bar:pointerover">
       <Setter Property="Opacity" Value="0.85" />
     </Style>
+
+    <!-- Custom container template for project list items -->
+    <Style Selector="#ProjectList ListBoxItem">
+      <Setter Property="Template">
+        <ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="CardBorder"
+                  Margin="0,8,0,0"
+                  CornerRadius="18"
+                  Background="#151822"
+                  Padding="16">
+            <ContentPresenter
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <!-- Soft tint for selected project -->
+    <Style Selector="#ProjectList ListBoxItem:selected /template/ Border#CardBorder">
+      <Setter Property="Background" Value="#1A2335" />
+    </Style>
   </UserControl.Styles>
 
   <Grid Margin="32,24,32,24" RowDefinitions="Auto,*" RowSpacing="16">
@@ -69,73 +91,66 @@
               Background="Transparent"
               BorderThickness="0"
               HorizontalAlignment="Stretch">
+
               <ListBox.ItemTemplate>
                 <DataTemplate>
-                  <Border Margin="0,8,0,0"
-                          CornerRadius="18"
-                          Background="#151822"
-                          Padding="16">
-                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
-
-                      <!-- Name + last snapshot short + size -->
-                      <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                        <TextBlock
-                          Grid.Column="0"
-                          Text="{Binding Name}"
-                          FontSize="18"
-                          FontWeight="Bold"
-                          Foreground="#FFFFFF"
-                          TextWrapping="NoWrap"
-                          TextTrimming="CharacterEllipsis" />
-
-                        <TextBlock
-                          Grid.Column="1"
-                          Text="{Binding LastSnapshotShort}"
-                          FontSize="13"
-                          Foreground="#C0C3CC" />
-
-                        <TextBlock
-                          Grid.Column="2"
-                          Text="{Binding SizeDisplay}"
-                          FontSize="13"
-                          FontWeight="SemiBold"
-                          Foreground="#FFFFFF" />
-                      </Grid>
-
-                      <!-- Path -->
+                  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
+                    <!-- Name + last snapshot short + size -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                       <TextBlock
-                        Grid.Row="1"
-                        Grid.ColumnSpan="2"
-                        Margin="0,6,0,0"
-                        Text="{Binding Path}"
-                        Foreground="#8B90A0"
-                        FontSize="13"
+                        Grid.Column="0"
+                        Text="{Binding Name}"
+                        FontSize="18"
+                        FontWeight="Bold"
+                        Foreground="#FFFFFF"
                         TextWrapping="NoWrap"
                         TextTrimming="CharacterEllipsis" />
-
-                      <!-- Health pill bar -->
-                      <Border
-                        Grid.Row="2"
-                        Grid.ColumnSpan="2"
-                        Margin="0,10,0,0"
-                        CornerRadius="999"
-                        Height="20"
-                        Background="#111319">
-                        <Border
-                          Margin="3"
-                          CornerRadius="999"
-                          Background="{Binding HealthBackground}">
-                          <TextBlock
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            Text="{Binding HealthTag}"
-                            FontSize="11"
-                            FontWeight="SemiBold"
-                            Foreground="#FFFFFF" />
-                        </Border>
-                      </Border>
+                      <TextBlock
+                        Grid.Column="1"
+                        Text="{Binding LastSnapshotShort}"
+                        FontSize="13"
+                        Foreground="#C0C3CC" />
+                      <TextBlock
+                        Grid.Column="2"
+                        Text="{Binding SizeDisplay}"
+                        FontSize="13"
+                        FontWeight="SemiBold"
+                        Foreground="#FFFFFF" />
                     </Grid>
-                  </Border>
+
+                    <!-- Path -->
+                    <TextBlock
+                      Grid.Row="1"
+                      Grid.ColumnSpan="2"
+                      Margin="0,6,0,0"
+                      Text="{Binding Path}"
+                      Foreground="#8B90A0"
+                      FontSize="13"
+                      TextWrapping="NoWrap"
+                      TextTrimming="CharacterEllipsis" />
+
+                    <!-- Health pill bar -->
+                    <Border
+                      Grid.Row="2"
+                      Grid.ColumnSpan="2"
+                      Margin="0,10,0,0"
+                      CornerRadius="999"
+                      Height="20"
+                      Background="#111319">
+                      <Border
+                        Margin="3"
+                        CornerRadius="999"
+                        Background="{Binding HealthBackground}">
+                        <TextBlock
+                          VerticalAlignment="Center"
+                          HorizontalAlignment="Center"
+                          Text="{Binding HealthTag}"
+                          FontSize="11"
+                          FontWeight="SemiBold"
+                          Foreground="#FFFFFF" />
+                      </Border>
+                    </Border>
+                  </Grid>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>

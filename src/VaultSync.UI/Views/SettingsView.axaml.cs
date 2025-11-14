@@ -1,11 +1,12 @@
 using Avalonia.Controls;
 
-namespace VaultSync.UI;
-
-public partial class SettingsView : UserControl
+namespace VaultSync.UI
 {
-    public SettingsView()
+    public partial class SettingsView : UserControl
     {
-        InitializeComponent();
+        public SettingsView()
+        {
+            InitializeComponent();
+        }
     }
 }

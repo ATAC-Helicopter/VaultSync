@@ -1,14 +1,504 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:VaultSync.UI"
-             x:Class="VaultSync.UI.BackupsView"
-             x:DataType="vm:BackupsViewModel">
+             xmlns:vm="using:VaultSync.UI.ViewModels"
+             x:Class="VaultSync.UI.Views.BackupsView"
+             x:DataType="vm:BackupsViewModel"
+             x:CompileBindings="False">
 
-  <Border Classes="card" CornerRadius="18" Padding="18">
-    <StackPanel Spacing="8">
-      <TextBlock Classes="section-title" Text="Backups" />
-      <TextBlock Text="(Placeholder page — recent snapshots, integrity, parity status.)"
-                 Foreground="{StaticResource TextSecondary}"/>
+  <UserControl.Styles>
+    <!-- Remove OS-style blue selection highlight for list boxes in this view -->
+    <Style Selector="ListBox > ListBoxItem:selected">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+
+    <!-- Per-project backups list: card container + selected tint -->
+    <Style Selector="#PerProjectList ListBoxItem">
+      <Setter Property="Template">
+        <ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="CardBorder"
+                  Margin="0,6,0,6"
+                  CornerRadius="16"
+                  Background="#151822"
+                  Padding="16">
+            <ContentPresenter
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="#PerProjectList ListBoxItem:selected /template/ Border#CardBorder">
+      <Setter Property="Background" Value="#222C3F" />
+    </Style>
+
+    <!-- Global backup history list: card container + selected tint -->
+    <Style Selector="#HistoryList ListBoxItem">
+      <Setter Property="Template">
+        <ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="CardBorder"
+                  Margin="0,5,0,5"
+                  CornerRadius="14"
+                  Background="#151822"
+                  Padding="14">
+            <ContentPresenter
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="#HistoryList ListBoxItem:selected /template/ Border#CardBorder">
+      <Setter Property="Background" Value="#222C3F" />
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer Padding="20">
+    <StackPanel Spacing="18">
+
+      <!-- SUMMARY CARDS -->
+      <WrapPanel Orientation="Horizontal">
+        <!-- Snapshots -->
+        <Border Classes="card"
+                CornerRadius="18"
+                Padding="16"
+                Margin="0,0,12,0"
+                MinWidth="230"
+                MaxWidth="280">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Snapshots"
+                       FontSize="12"
+                       Foreground="{StaticResource TextSecondary}" />
+            <TextBlock Text="{Binding TotalSnapshots}"
+                       FontSize="22"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding SnapshotsSummaryLine}"
+                       FontSize="12"
+                       Foreground="{StaticResource TextSecondary}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Last backup -->
+        <Border Classes="card"
+                CornerRadius="18"
+                Padding="16"
+                Margin="0,0,12,0"
+                MinWidth="230"
+                MaxWidth="280">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Last backup"
+                       FontSize="12"
+                       Foreground="{StaticResource TextSecondary}" />
+            <TextBlock Text="{Binding LastBackupDisplay}"
+                       FontSize="18"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding LastBackupRelative}"
+                       FontSize="12"
+                       Foreground="{StaticResource TextSecondary}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Total backup size -->
+        <Border Classes="card"
+                CornerRadius="18"
+                Padding="16"
+                Margin="0,0,0,0"
+                MinWidth="230"
+                MaxWidth="280">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Backup size"
+                       FontSize="12"
+                       Foreground="{StaticResource TextSecondary}" />
+            <TextBlock Text="{Binding TotalBackupSizeFormatted}"
+                       FontSize="22"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="All snapshots combined"
+                       FontSize="12"
+                       Foreground="{StaticResource TextSecondary}" />
+          </StackPanel>
+        </Border>
+      </WrapPanel>
+
+
+      <!-- FULL BACKUP: all projects -->
+      <Border Classes="card" CornerRadius="18" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Classes="section-title" Text="Create Backup for All Projects"/>
+
+          <TextBlock Foreground="{StaticResource TextSecondary}"
+                     Text="Run a snapshot for every tracked Unity project." />
+
+          <Button Content="Back Up All Projects"
+                  HorizontalAlignment="Left"
+                  Classes="primary-button"
+                  Command="{Binding CreateBackupCommand}"/>
+
+        </StackPanel>
+      </Border>
+
+
+      <!-- MAIN AREA: per-project (left) + history (right) -->
+      <WrapPanel Orientation="Horizontal"
+                 HorizontalAlignment="Stretch">
+        <!-- PER-PROJECT BACKUPS -->
+        <Border Classes="card"
+                CornerRadius="18"
+                Padding="18"
+                MinWidth="360"
+                MaxWidth="520"
+                Margin="0,0,18,0">
+          <StackPanel Spacing="10">
+
+            <StackPanel Spacing="2">
+              <TextBlock Classes="section-title" Text="Per-project Backups" />
+
+              <TextBlock Foreground="{StaticResource TextSecondary}"
+                         Text="Back up single projects and check their status." />
+            </StackPanel>
+
+            <ListBox x:Name="PerProjectList"
+                     ItemsSource="{Binding ProjectBackups}"
+                     SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+                     SelectionMode="Single"
+                     BorderThickness="0"
+                     Margin="0,6,0,0">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <!-- 3-row layout: name/buttons, last backup, stats with more spacing -->
+                  <Grid ColumnDefinitions="*,Auto"
+                        RowDefinitions="Auto,Auto,Auto"
+                        RowSpacing="6"
+                        ColumnSpacing="12">
+
+                    <!-- Row 0: name + buttons -->
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="0"
+                               Text="{Binding Name}"
+                               FontSize="15"
+                               FontWeight="SemiBold" />
+
+                    <StackPanel Grid.Row="0"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="10"
+                                VerticalAlignment="Center">
+                      <Button Content="Back Up"
+                              Classes="small-button"
+                              Command="{Binding DataContext.BackupProjectCommand,
+                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}" />
+                      <Button Content="History"
+                              Classes="small-button"
+                              Command="{Binding DataContext.ShowProjectHistoryCommand,
+                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+
+                    <!-- Row 1: last backup -->
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="0"
+                               Grid.ColumnSpan="2"
+                               FontSize="13"
+                               Foreground="{StaticResource TextSecondary}"
+                               Text="{Binding LastBackupDisplay, StringFormat='Last backup: {0}'}" />
+
+                    <!-- Row 2: stats -->
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="0"
+                               Grid.ColumnSpan="2"
+                               FontSize="13"
+                               Foreground="{StaticResource TextSecondary}">
+                      <Run Text="Snapshots: " />
+                      <Run Text="{Binding SnapshotCount}" />
+                      <Run Text="  •  Total: " />
+                      <Run Text="{Binding TotalSizeFormatted}" />
+                    </TextBlock>
+
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+          </StackPanel>
+        </Border>
+
+
+        <!-- GLOBAL BACKUP HISTORY -->
+        <Border Classes="card"
+                CornerRadius="18"
+                Padding="18"
+                MinWidth="360"
+                MaxWidth="520"
+                Margin="0,0,0,0">
+          <StackPanel Spacing="10">
+
+            <!-- Header + filters -->
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock Classes="section-title" Text="Backup History" />
+
+                <TextBlock FontSize="12"
+                           Foreground="{StaticResource TextSecondary}">
+                  <Run Text="Newest snapshots first · " />
+                  <Run Text="{Binding HistoryFilterProjectLabel}" />
+                </TextBlock>
+              </StackPanel>
+
+              <StackPanel Grid.Column="1"
+                          Orientation="Horizontal"
+                          Spacing="6"
+                          VerticalAlignment="Center">
+                <Button Content="All"
+                        Classes="small-button"
+                        Command="{Binding FilterSnapshotsCommand}"
+                        CommandParameter="All" />
+                <Button Content="Auto"
+                        Classes="small-button"
+                        Command="{Binding FilterSnapshotsCommand}"
+                        CommandParameter="Auto" />
+                <Button Content="Manual"
+                        Classes="small-button"
+                        Command="{Binding FilterSnapshotsCommand}"
+                        CommandParameter="Manual" />
+              </StackPanel>
+            </Grid>
+
+            <!-- History list -->
+            <ListBox x:Name="HistoryList"
+                     ItemsSource="{Binding Snapshots}"
+                     BorderThickness="0"
+                     Margin="0,6,0,0"
+                     MaxHeight="260"
+                     SelectionMode="Multiple"
+                     SelectionChanged="HistoryList_SelectionChanged">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="*,Auto"
+                        RowDefinitions="Auto,Auto">
+
+                    <!-- Timestamp + colored tag -->
+                    <StackPanel Grid.Row="0"
+                                Grid.Column="0"
+                                Orientation="Horizontal"
+                                Spacing="8">
+                      <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                 FontSize="14" />
+
+                      <!-- Type/status/project pill -->
+                      <Border Padding="6,2"
+                              CornerRadius="10"
+                              Background="{Binding TagBackground}">
+                        <TextBlock Text="{Binding Label}"
+                                   FontSize="11"
+                                   Margin="0,-1,0,0" />
+                      </Border>
+                    </StackPanel>
+
+                    <!-- Size + status -->
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="0"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="12">
+                      <Run Text="{Binding SizeFormatted}" />
+                      <Run Text="  ·  " />
+                      <Run Text="{Binding Status}" />
+                    </TextBlock>
+
+                    <!-- Actions -->
+                    <StackPanel Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+
+                      <Button Content="Restore"
+                              Command="{Binding DataContext.RestoreBackupCommand,
+                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}"
+                              Classes="small-button" />
+
+                      <Button Content="Delete"
+                              Command="{Binding DataContext.DeleteBackupCommand,
+                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}"
+                              Classes="danger-button small-button" />
+
+                    </StackPanel>
+
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Compare snapshots -->
+            <StackPanel Spacing="6"
+                        Margin="0,10,0,0">
+              <TextBlock Text="Compare snapshots"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+
+              <!-- A/B selectors -->
+              <Grid ColumnDefinitions="*,*"
+                    ColumnSpacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Snapshot A"
+                             FontSize="11"
+                             Foreground="{StaticResource TextSecondary}" />
+                  <ComboBox x:Name="CompareComboA"
+                            ItemsSource="{Binding Snapshots}"
+                            SelectedItem="{Binding SelectedSnapshotA, Mode=TwoWay}"
+                            MinWidth="140"
+                            SelectionChanged="CompareCombo_SelectionChanged">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            Spacing="2">
+                  <TextBlock Text="Snapshot B"
+                             FontSize="11"
+                             Foreground="{StaticResource TextSecondary}" />
+                  <ComboBox x:Name="CompareComboB"
+                            ItemsSource="{Binding Snapshots}"
+                            SelectedItem="{Binding SelectedSnapshotB, Mode=TwoWay}"
+                            MinWidth="140"
+                            SelectionChanged="CompareCombo_SelectionChanged">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+              </Grid>
+
+              <!-- Size / file-count diff bars -->
+              <Grid Margin="0,6,0,0"
+                    ColumnDefinitions="*,*"
+                    RowDefinitions="Auto,Auto"
+                    ColumnSpacing="10">
+                <StackPanel Grid.Row="0"
+                            Grid.Column="0"
+                            Spacing="2">
+                  <TextBlock Text="Snapshot A"
+                             FontSize="11"
+                             Foreground="{StaticResource TextSecondary}" />
+                  <Border x:Name="CompareBarA"
+                          Height="6"
+                          CornerRadius="3"
+                          Background="#3A7AFE" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="0"
+                            Grid.Column="1"
+                            Spacing="2">
+                  <TextBlock Text="Snapshot B"
+                             FontSize="11"
+                             Foreground="{StaticResource TextSecondary}" />
+                  <Border x:Name="CompareBarB"
+                          Height="6"
+                          CornerRadius="3"
+                          Background="#FF5F5F" />
+                </StackPanel>
+
+                <TextBlock x:Name="CompareSizeText"
+                           Grid.Row="1"
+                           Grid.ColumnSpan="2"
+                           Margin="0,4,0,0"
+                           FontSize="11"
+                           Foreground="{StaticResource TextSecondary}"
+                           TextWrapping="Wrap" />
+              </Grid>
+
+              <!-- Time + summary -->
+              <TextBlock x:Name="CompareSummaryText"
+                         Margin="0,4,0,0"
+                         FontSize="11"
+                         Foreground="{StaticResource TextSecondary}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- Weekly snapshot activity mini-chart -->
+            <StackPanel Spacing="6"
+                        Margin="0,12,0,0">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Snapshots this week"
+                           FontSize="12"
+                           Foreground="{StaticResource TextSecondary}" />
+                <TextBlock Text="{Binding SnapshotActivitySummary}"
+                           FontSize="11"
+                           Foreground="{StaticResource TextSecondary}" />
+              </StackPanel>
+
+              <Border CornerRadius="8"
+                      Padding="8"
+                      Classes="list-item"
+                      MinHeight="90"
+                      Background="#151822">
+                <ItemsControl ItemsSource="{Binding SnapshotActivity}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal"
+                                  VerticalAlignment="Bottom" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Margin="6,0"
+                                  VerticalAlignment="Bottom">
+                        <Border Width="18"
+                                Height="{Binding BarHeight}"
+                                CornerRadius="5"
+                                Background="{Binding BarBrush}" />
+                        <TextBlock Text="{Binding DayLabel}"
+                                   FontSize="10"
+                                   Margin="0,4,0,0"
+                                   HorizontalAlignment="Center" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+
+              <!-- Legend for chart colors -->
+              <StackPanel Orientation="Horizontal"
+                          Spacing="16"
+                          Margin="2,4,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <Border Width="14"
+                          Height="10"
+                          CornerRadius="3"
+                          Background="#3A7AFE" />
+                  <TextBlock Text="Day with snapshots"
+                             FontSize="11"
+                             Foreground="{StaticResource TextSecondary}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <Border Width="14"
+                          Height="10"
+                          CornerRadius="3"
+                          Background="#22FFFFFF" />
+                  <TextBlock Text="No snapshots"
+                             FontSize="11"
+                             Foreground="{StaticResource TextSecondary}" />
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+
+          </StackPanel>
+        </Border>
+
+      </WrapPanel>
+
     </StackPanel>
-  </Border>
+  </ScrollViewer>
 </UserControl>

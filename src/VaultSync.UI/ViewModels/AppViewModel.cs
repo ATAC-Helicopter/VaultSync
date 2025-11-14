@@ -121,9 +121,4 @@ namespace VaultSync.UI.ViewModels
             public static void Remove(EventHandler? handler) { }
         }
     }
-
-    // Stub view models so the compiler can resolve types if you haven't created them yet.
-    // If you already have these, keep yours and remove these stubs.
-    public class BackupsViewModel  : ViewModelBase { }
-    public class SettingsViewModel : ViewModelBase { }
 }

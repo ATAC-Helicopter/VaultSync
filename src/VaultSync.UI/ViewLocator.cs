@@ -22,7 +22,12 @@ namespace VaultSync.UI
             if (data is string s) return new TextBlock { Text = s };
 
             var vmType = data.GetType();
-            var viewTypeName = vmType.FullName?.Replace("ViewModel", "View");
+
+            // Map "VaultSync.UI.ViewModels.XxxViewModel"
+            //   -> "VaultSync.UI.Views.XxxView"
+            var viewTypeName = vmType.FullName?
+                .Replace(".ViewModels.", ".Views.")
+                .Replace("ViewModel", "View");
 
             // Try to resolve the view type from the current assembly first.
             var asm = Assembly.GetExecutingAssembly();
