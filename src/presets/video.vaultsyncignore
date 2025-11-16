@@ -1,5 +1,12 @@
-**/CacheClip/
-**/Media Cache*/
-**/Proxy/*
-**/*.pek
-**/*.cfa
+Cache/**
+Proxies/**
+RenderCache/**
+*.tmp
+*.log
+*.sync
+*.aux
+*.peak
+
+.DS_Store
+Thumbs.db
+.git/

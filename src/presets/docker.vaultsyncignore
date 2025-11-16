@@ -1,0 +1,17 @@
+# Docker build output
+**/bin/**
+**/obj/**
+**/target/**
+*.log
+*.tmp
+
+# Docker volumes
+*/data/**
+*/cache/**
+*/temp/**
+
+.DS_Store
+Thumbs.db
+
+.git/
+.github/

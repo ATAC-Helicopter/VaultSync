@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using Avalonia.Media;
+using VaultSync.Core.Models;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -83,6 +84,80 @@ namespace VaultSync.UI.ViewModels
         public string LastBackupRelative { get; private set; } = "—";
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
 
+        // Backup progress details (for long-running operations)
+        private double _backupProgress;
+        public double BackupProgress
+        {
+            get => _backupProgress;
+            set
+            {
+                if (SetProperty(ref _backupProgress, value))
+                {
+                    OnPropertyChanged(nameof(BackupProgress));
+                }
+            }
+        }
+
+        private string _backupCurrentFile = string.Empty;
+        public string BackupCurrentFile
+        {
+            get => _backupCurrentFile;
+            set
+            {
+                if (SetProperty(ref _backupCurrentFile, value))
+                {
+                    OnPropertyChanged(nameof(BackupCurrentFile));
+                }
+            }
+        }
+
+        private string _backupEtaText = string.Empty;
+        public string BackupEtaText
+        {
+            get => _backupEtaText;
+            set
+            {
+                if (SetProperty(ref _backupEtaText, value))
+                {
+                    OnPropertyChanged(nameof(BackupEtaText));
+                }
+            }
+        }
+
+        // Busy / status state so the UI can show an overlay or progress indicator
+        private bool _isBusy;
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set
+            {
+                if (SetProperty(ref _isBusy, value))
+                {
+                    OnPropertyChanged(nameof(IsBusy));
+                }
+            }
+        }
+
+        private string _busyMessage = string.Empty;
+        public string BusyMessage
+        {
+            get => _busyMessage;
+            set
+            {
+                if (SetProperty(ref _busyMessage, value))
+                {
+                    OnPropertyChanged(nameof(BusyMessage));
+                }
+            }
+        }
+
+        // Events that external code (e.g. view or parent VM) can subscribe to
+        // in order to run real backup/restore logic and then refresh this VM.
+        public event Action? CreateBackupForAllProjectsRequested;
+        public event Action<ProjectBackupItem?>? BackupProjectRequested;
+        public event Action<BackupSnapshotItem?>? RestoreBackupRequested;
+        public event Action<BackupSnapshotItem?>? DeleteBackupRequested;
+
         // Commands
         public ICommand CreateBackupCommand { get; }
         public ICommand RestoreBackupCommand { get; }
@@ -108,39 +183,18 @@ namespace VaultSync.UI.ViewModels
             // History type filter
             FilterSnapshotsCommand = new ActionCommand(p => ApplyTypeFilter(p as string));
 
-            // Seed fake data for now
-            LoadDesignTimeData();
-
-            // Initial view
-            RefreshSnapshotsView(true);
-            RecalculateSummary();
+            // NOTE:
+            // Live data is now provided by LoadFromBackups(...) from the core layer.
+            // We no longer seed design-time demo data here.
         }
 
         // ---------- All-project backup ----------
 
         private void CreateBackupForAllProjects()
         {
-            // TODO: hook into real backup engine.
-
-            var snapshot = new BackupSnapshotItem
-            {
-                Id        = Guid.NewGuid().ToString("N"),
-                Timestamp = DateTime.Now,
-                SizeBytes = 750L * 1024 * 1024, // 750 MB demo
-                Type      = "Manual",
-                Status    = "Completed",
-                Label     = "All projects snapshot",
-                ProjectId = null
-            };
-
-            AddSnapshot(snapshot);
-
-            foreach (var project in ProjectBackups)
-            {
-                project.LastBackupTime = DateTime.Now;
-                project.SnapshotCount += 1;
-                project.TotalSizeBytes += 250L * 1024 * 1024; // fake increment
-            }
+            // Ask external code to perform a real backup for all projects,
+            // then reload this VM's data from the database.
+            CreateBackupForAllProjectsRequested?.Invoke();
         }
 
         // ---------- Global history operations ----------
@@ -150,7 +204,8 @@ namespace VaultSync.UI.ViewModels
             if (snapshot is null)
                 return;
 
-            // TODO: implement restore logic.
+            // Let external code handle the actual restore work.
+            RestoreBackupRequested?.Invoke(snapshot);
         }
 
         private void DeleteBackup(BackupSnapshotItem? snapshot)
@@ -158,9 +213,8 @@ namespace VaultSync.UI.ViewModels
             if (snapshot is null)
                 return;
 
-            _allSnapshots.Remove(snapshot);
-            RefreshSnapshotsView(false);
-            RecalculateSummary();
+            // Let external code handle deletion (DB row + files), then refresh this VM.
+            DeleteBackupRequested?.Invoke(snapshot);
         }
 
         // ---------- Per-project operations ----------
@@ -170,23 +224,8 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
                 return;
 
-            // TODO: real backup engine call per project.
-            project.LastBackupTime = DateTime.Now;
-            project.SnapshotCount += 1;
-            project.TotalSizeBytes += 300L * 1024 * 1024; // fake increment
-
-            var snapshot = new BackupSnapshotItem
-            {
-                Id        = Guid.NewGuid().ToString("N"),
-                Timestamp = DateTime.Now,
-                SizeBytes = 300L * 1024 * 1024,
-                Type      = "Manual",
-                Status    = "Completed",
-                Label     = $"{project.Name} snapshot",
-                ProjectId = project.Id
-            };
-
-            AddSnapshot(snapshot);
+            // Ask external code to run a real backup for the given project.
+            BackupProjectRequested?.Invoke(project);
         }
 
         private void ShowProjectHistory(ProjectBackupItem? project)
@@ -412,66 +451,70 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void LoadDesignTimeData()
+        /// <summary>
+        /// Populates this view model from real projects and backups loaded from the core layer.
+        /// Call this after performing any backup/restore/delete operations.
+        /// </summary>
+        public void LoadFromBackups(IEnumerable<Project> projects, IEnumerable<Backup> backups)
         {
-            // Per-project demo data
-            if (ProjectBackups.Count == 0)
+            if (projects is null) throw new ArgumentNullException(nameof(projects));
+            if (backups  is null) throw new ArgumentNullException(nameof(backups));
+
+            ProjectBackups.Clear();
+            _allSnapshots.Clear();
+
+            // Map per-project aggregates
+            var backupsByProject = backups
+                .GroupBy(b => b.ProjectId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var project in projects)
             {
-                ProjectBackups.Add(new ProjectBackupItem
-                {
-                    Id             = "proj-1",
-                    Name           = "Dumpster Fire Royale",
-                    LastBackupTime = DateTime.Now.AddHours(-2),
-                    SnapshotCount  = 5,
-                    TotalSizeBytes = 5_000_000_000 // ~5 GB
-                });
+                backupsByProject.TryGetValue(project.Id, out var projectBackups);
+                projectBackups ??= new List<Backup>();
 
-                ProjectBackups.Add(new ProjectBackupItem
-                {
-                    Id             = "proj-2",
-                    Name           = "OverSteer",
-                    LastBackupTime = DateTime.Now.AddDays(-1),
-                    SnapshotCount  = 3,
-                    TotalSizeBytes = 3_200_000_000 // ~3.2 GB
-                });
+                var lastBackup = projectBackups
+                    .OrderByDescending(b => b.CreatedUtc)
+                    .FirstOrDefault();
 
-                ProjectBackups.Add(new ProjectBackupItem
+                var projectItem = new ProjectBackupItem
                 {
-                    Id             = "proj-3",
-                    Name           = "VaultSync",
-                    LastBackupTime = null,
-                    SnapshotCount  = 0,
-                    TotalSizeBytes = 0
-                });
-            }
-
-            if (_allSnapshots.Count == 0)
-            {
-                var s1 = new BackupSnapshotItem
-                {
-                    Id        = "demo-1",
-                    Timestamp = DateTime.Now.AddHours(-1),
-                    SizeBytes = 2_147_483_648, // 2 GB
-                    Type      = "Auto",
-                    Status    = "Completed",
-                    Label     = "Auto snapshot",
-                    ProjectId = "proj-1"
+                    Id             = project.Id.ToString(),
+                    Name           = project.Name,
+                    LastBackupTime = lastBackup?.CreatedUtc,
+                    SnapshotCount  = projectBackups.Count,
+                    TotalSizeBytes = projectBackups.Sum(b => b.TotalBytes)
                 };
 
-                var s2 = new BackupSnapshotItem
+                ProjectBackups.Add(projectItem);
+            }
+
+            // Map individual backups into the history list model
+            foreach (var backup in backups)
+            {
+                var project = projects.FirstOrDefault(p => p.Id == backup.ProjectId);
+
+                var uiItem = new BackupSnapshotItem
                 {
-                    Id        = "demo-2",
-                    Timestamp = DateTime.Now.AddDays(-1),
-                    SizeBytes = 4_294_967_296, // 4 GB
-                    Type      = "Manual",
+                    Id        = backup.Id.ToString(),
+                    Timestamp = backup.CreatedUtc.ToLocalTime(),
+                    SizeBytes = backup.TotalBytes,
+                    Type      = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase)
+                        ? "Auto"
+                        : "Manual",
                     Status    = "Completed",
-                    Label     = "Manual snapshot",
-                    ProjectId = "proj-2"
+                    Label     = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase)
+                        ? "Auto snapshot"
+                        : "Manual snapshot",
+                    ProjectId = project?.Id.ToString()
                 };
 
-                _allSnapshots.Add(s1);
-                _allSnapshots.Add(s2);
+                _allSnapshots.Add(uiItem);
             }
+
+            // Rebuild the filtered history view + summary + mini-chart.
+            RefreshSnapshotsView(true);
+            RecalculateSummary();
         }
     }
 

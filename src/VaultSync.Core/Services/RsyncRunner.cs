@@ -1,10 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
+using VaultSync.Core.Services; // For FilterService
 
 namespace VaultSync.Core.Services
 {
@@ -14,6 +16,17 @@ namespace VaultSync.Core.Services
 
         public async Task<int> SyncAsync(Project project, string destination, bool dryRun, CancellationToken ct)
         {
+            // Build ignore filter file based on project's preset and local .vaultsyncignore
+            var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
+            string? tempExcludeFile = null;
+
+            if (filter.HasRules)
+            {
+                tempExcludeFile = Path.Combine(Path.GetTempPath(), $"vaultsync_exclude_{Guid.NewGuid():N}.txt");
+                var patterns = filter.RawPatterns ?? Array.Empty<string>();
+                File.WriteAllLines(tempExcludeFile, patterns.Where(p => !string.IsNullOrWhiteSpace(p)));
+            }
+
             var psi = new ProcessStartInfo
             {
                 FileName = "rsync",
@@ -38,9 +51,11 @@ namespace VaultSync.Core.Services
 
             if (dryRun) psi.ArgumentList.Add("--dry-run");
 
-            // Ignore file patterns from preset (handled by SnapshotService when hashing)
-            // For rsync we can still add a default filter to skip .git etc. optional.
-            // Not mandatory because snapshot logic already filters for verify/history.
+            // Apply exclude-from file if we generated one
+            if (tempExcludeFile != null)
+            {
+                psi.ArgumentList.Add($"--exclude-from={tempExcludeFile}");
+            }
 
             psi.ArgumentList.Add(src);
             psi.ArgumentList.Add(destination);
@@ -56,6 +71,12 @@ namespace VaultSync.Core.Services
             // Optional: you can log outputs here if you want
             _ = await stdOut;
             _ = await stdErr;
+
+            // Cleanup temp exclude file
+            if (tempExcludeFile != null && File.Exists(tempExcludeFile))
+            {
+                try { File.Delete(tempExcludeFile); } catch { /* ignore */ }
+            }
 
             return proc.ExitCode;
         }

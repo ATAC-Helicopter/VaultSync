@@ -3,7 +3,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
     x:Class="VaultSync.UI.Views.DashboardView"
-    x:CompileBindings="False">
+    x:CompileBindings="False"
+    Background="{DynamicResource VS.WindowBackground}">
 
   <!-- Vertical scroll for short windows. The whole page scales uniformly inside. -->
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="12">
@@ -76,7 +77,7 @@
               <Grid Grid.Row="0">
                 <TextBlock Text="Snapshots this week" Classes="section-title"/>
                 <Border HorizontalAlignment="Right" VerticalAlignment="Center" CornerRadius="8" Padding="8,4"
-                        Background="{StaticResource ItemBg}">
+                        Background="{DynamicResource ItemBg}">
                   <TextBlock Text="{Binding TotalSnapshotsWeek, StringFormat='{}{0} this week'}" FontWeight="SemiBold"/>
                 </Border>
               </Grid>
@@ -152,14 +153,14 @@
               </ListBox.ItemsPanel>
               <ListBox.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="{StaticResource ItemBg}" CornerRadius="12" Margin="0,6,0,6" Padding="10">
+                  <Border Background="{DynamicResource ItemBg}" CornerRadius="12" Margin="0,6,0,6" Padding="10">
                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
                       <Ellipse Width="10" Height="10" Fill="{Binding DotBrush}" VerticalAlignment="Center"/>
                       <StackPanel Grid.Column="1" Margin="8,0,0,0">
                         <TextBlock Text="{Binding Title}" Classes="kicker"/>
-                        <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource TextSecondary}"/>
+                        <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource TextSecondary}"/>
                       </StackPanel>
-                      <TextBlock Grid.Column="2" Text="{Binding When}" Foreground="{StaticResource TextSecondary}" Margin="16,0,0,0"/>
+                      <TextBlock Grid.Column="2" Text="{Binding When}" Foreground="{DynamicResource TextSecondary}" Margin="16,0,0,0"/>
                     </Grid>
                   </Border>
                 </DataTemplate>

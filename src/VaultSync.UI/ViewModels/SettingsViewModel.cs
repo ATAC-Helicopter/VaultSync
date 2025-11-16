@@ -3,17 +3,21 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Avalonia;
+using Avalonia.Styling;
+using VaultSync.Core.Config;
+using VaultSync.Core.Repositories;
 
 namespace VaultSync.UI
 {
     public sealed class SettingsViewModel : INotifyPropertyChanged
     {
-        // ---------- General ----------
+        // ---------------- Core backing fields ----------------
+
         private string _projectsRootPath = string.Empty;
         private bool _autoOpenLastProject = true;
         private bool _rememberWindowLayout = true;
 
-        // ---------- Backups ----------
         private bool _enableAutoBackups = true;
         private int _autoBackupIntervalMinutes = 30;
         private int _maxSnapshotsPerProject = 20;
@@ -22,31 +26,29 @@ namespace VaultSync.UI
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
 
-        // ---------- Storage ----------
         private bool _preferExternalDrives = true;
         private bool _showDriveHealthWarnings = true;
         private int _minimumFreeSpacePercent = 10;
 
-        // Network share / NAS credentials
         private bool _useCustomNetworkCredentials = false;
         private string _networkShareUserName = string.Empty;
         private string _networkSharePassword = string.Empty;
         private bool _rememberNetworkCredentials = false;
 
-        // ---------- Appearance ----------
         private string _selectedTheme;
         private bool _useCompactLayout = false;
         private bool _showProjectAvatars = true;
 
-        // ---------- Notifications ----------
         private bool _notifyOnBackupSuccess = true;
         private bool _notifyOnBackupFailure = true;
         private bool _notifyOnLowDiskSpace = true;
 
-        // ---------- Advanced ----------
         private bool _enableVerboseLogging = false;
         private bool _checkForUpdatesOnStartup = true;
         private bool _sendAnonymousUsageStats = false;
+
+        private bool _isInitialized;
+        private bool _isSaving;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -64,12 +66,19 @@ namespace VaultSync.UI
             BrowseProjectsRootCommand    = new RelayCommand(_ => BrowseProjectsRoot());
             BrowseBackupLocationCommand  = new RelayCommand(_ => BrowseBackupLocation());
             ResetToDefaultsCommand       = new RelayCommand(_ => ResetToDefaults());
+            ApplySettingsCommand         = new RelayCommand(_ => SaveToConfig());
             ClearLocalCacheCommand       = new RelayCommand(_ => ClearLocalCache());
             ForgetAllProjectsCommand     = new RelayCommand(_ => ForgetAllProjects());
             TestNetworkConnectionCommand = new RelayCommand(_ => TestNetworkConnection(), _ => ShowNetworkShareOptions);
+
+            PropertyChanged += OnSettingsPropertyChanged;
+
+            // AUTO-LOAD CONFIG ON STARTUP
+            LoadFromConfig();
+            _isInitialized = true;
         }
 
-        // ---------- INPC helpers ----------
+        // ---------------- INPC helpers ----------------
 
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -82,7 +91,160 @@ namespace VaultSync.UI
             return true;
         }
 
-        // ---------- General ----------
+        // ---------------- Load + Save ----------------
+
+        private void LoadFromConfig()
+        {
+            var cfg = AppConfigStore.Load();
+
+            _projectsRootPath      = cfg.ProjectsRoot ?? "";
+            _autoOpenLastProject   = cfg.AutoOpenLastProject;
+            _rememberWindowLayout  = cfg.RememberWindowLayout;
+
+            _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
+            _autoBackupIntervalMinutes = cfg.Backups.IntervalMinutes;
+            _maxSnapshotsPerProject    = cfg.Backups.MaxSnapshotsPerProject;
+            _backupLocationPath        = string.IsNullOrWhiteSpace(cfg.Backups.BackupRoot)
+                ? (cfg.Backups.Location ?? string.Empty)
+                : cfg.Backups.BackupRoot;
+            _useBackupCompression      = cfg.Backups.UseCompression;
+            _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
+            _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
+
+            _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
+            _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
+            _minimumFreeSpacePercent = cfg.Storage.MinFreeSpacePercent;
+
+            _useCustomNetworkCredentials = cfg.Network.UseCredentials;
+            _networkShareUserName        = cfg.Network.Username ?? "";
+            _networkSharePassword        = cfg.Network.Password ?? "";
+            _rememberNetworkCredentials  = cfg.Network.RememberCredentials;
+
+            // FIX: use Theme instead of ThemeName
+            _selectedTheme      = cfg.Appearance.Theme ?? "Follow system";
+            _useCompactLayout   = cfg.Appearance.CompactLayout;
+            _showProjectAvatars = cfg.Appearance.ShowProjectAvatars;
+
+            _notifyOnBackupSuccess = cfg.Notifications.OnBackupSuccess;
+            _notifyOnBackupFailure = cfg.Notifications.OnBackupFailure;
+            _notifyOnLowDiskSpace  = cfg.Notifications.OnLowDisk;
+
+            _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
+            _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
+            _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
+
+            // Apply theme when loading config (in case Settings view is opened first)
+            ApplyThemeFromSelected();
+
+            // Update UI
+            OnPropertyChanged(null);
+        }
+
+        private void SaveToConfig()
+        {
+            var cfg = new AppConfig
+            {
+                ProjectsRoot         = ProjectsRootPath,
+                AutoOpenLastProject  = AutoOpenLastProject,
+                RememberWindowLayout = RememberWindowLayout,
+
+                Backups =
+                {
+                    EnableAutoBackups      = EnableAutoBackups,
+                    IntervalMinutes        = AutoBackupIntervalMinutes,
+                    MaxSnapshotsPerProject = MaxSnapshotsPerProject,
+                    // Write to both for backwards compatibility
+                    Location               = BackupLocationPath,
+                    BackupRoot             = string.IsNullOrWhiteSpace(BackupLocationPath)
+                        ? null
+                        : BackupLocationPath,
+                    UseCompression         = UseBackupCompression,
+                    VerifyAfterCreate      = VerifyBackupsAfterCreate,
+                    PauseOnBattery         = PauseBackupsOnBattery
+                },
+
+                Storage =
+                {
+                    PreferExternalDrives = PreferExternalDrives,
+                    ShowDriveWarnings    = ShowDriveHealthWarnings,
+                    MinFreeSpacePercent  = MinimumFreeSpacePercent
+                },
+
+                Network =
+                {
+                    UseCredentials      = UseCustomNetworkCredentials,
+                    Username            = NetworkShareUserName,
+                    Password            = RememberNetworkCredentials ? NetworkSharePassword : "",
+                    RememberCredentials = RememberNetworkCredentials
+                },
+
+                Appearance =
+                {
+                    // FIX: use Theme instead of ThemeName
+                    Theme            = SelectedTheme,
+                    CompactLayout    = UseCompactLayout,
+                    ShowProjectAvatars = ShowProjectAvatars
+                },
+
+                Notifications =
+                {
+                    OnBackupSuccess = NotifyOnBackupSuccess,
+                    OnBackupFailure = NotifyOnBackupFailure,
+                    OnLowDisk       = NotifyOnLowDiskSpace
+                },
+
+                Advanced =
+                {
+                    VerboseLogging  = EnableVerboseLogging,
+                    CheckUpdates    = CheckForUpdatesOnStartup,
+                    SendUsageStats  = SendAnonymousUsageStats
+                }
+            };
+
+            AppConfigStore.Save(cfg);
+        }
+
+        private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (!_isInitialized)
+                return;
+
+            // Ignore non-setting notifications if needed
+            if (e.PropertyName is null || e.PropertyName == nameof(ShowNetworkShareOptions))
+                return;
+
+            if (_isSaving)
+                return;
+
+            try
+            {
+                _isSaving = true;
+                SaveToConfig();
+            }
+            finally
+            {
+                _isSaving = false;
+            }
+        }
+
+        // ---------------- Theme helper ----------------
+
+        private void ApplyThemeFromSelected()
+        {
+            var app = Application.Current;
+            if (app is null) return;
+
+            app.RequestedThemeVariant = _selectedTheme switch
+            {
+                "Dark"  => ThemeVariant.Dark,
+                "Light" => ThemeVariant.Light,
+                _       => ThemeVariant.Default  // Follow system
+            };
+        }
+
+        // ---------------- Properties ----------------
+
+        public ObservableCollection<string> ThemeOptions { get; }
 
         public string ProjectsRootPath
         {
@@ -101,8 +263,6 @@ namespace VaultSync.UI
             get => _rememberWindowLayout;
             set => SetField(ref _rememberWindowLayout, value);
         }
-
-        // ---------- Backups ----------
 
         public bool EnableAutoBackups
         {
@@ -125,14 +285,7 @@ namespace VaultSync.UI
         public string BackupLocationPath
         {
             get => _backupLocationPath;
-            set
-            {
-                if (SetField(ref _backupLocationPath, value))
-                {
-                    OnPropertyChanged(nameof(ShowNetworkShareOptions));
-                    (TestNetworkConnectionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
+            set => SetField(ref _backupLocationPath, value);
         }
 
         public bool UseBackupCompression
@@ -153,8 +306,6 @@ namespace VaultSync.UI
             set => SetField(ref _pauseBackupsOnBattery, value);
         }
 
-        // ---------- Storage ----------
-
         public bool PreferExternalDrives
         {
             get => _preferExternalDrives;
@@ -173,37 +324,16 @@ namespace VaultSync.UI
             set => SetField(ref _minimumFreeSpacePercent, value);
         }
 
-        /// <summary>
-        /// True when BackupLocationPath looks like a network share (UNC or smb:// / nfs://).
-        /// Used to show/hide the network credentials section in the UI.
-        /// </summary>
-        public bool ShowNetworkShareOptions
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(BackupLocationPath))
-                    return false;
-
-                var path = BackupLocationPath.Trim();
-
-                // Windows UNC path: \\server\share
-                if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase))
-                    return true;
-
-                if (Uri.TryCreate(path, UriKind.Absolute, out var uri))
-                {
-                    return uri.Scheme.Equals("smb", StringComparison.OrdinalIgnoreCase)
-                           || uri.Scheme.Equals("nfs", StringComparison.OrdinalIgnoreCase);
-                }
-
-                return false;
-            }
-        }
-
         public bool UseCustomNetworkCredentials
         {
             get => _useCustomNetworkCredentials;
-            set => SetField(ref _useCustomNetworkCredentials, value);
+            set
+            {
+                if (SetField(ref _useCustomNetworkCredentials, value))
+                {
+                    OnPropertyChanged(nameof(ShowNetworkShareOptions));
+                }
+            }
         }
 
         public string NetworkShareUserName
@@ -224,14 +354,25 @@ namespace VaultSync.UI
             set => SetField(ref _rememberNetworkCredentials, value);
         }
 
-        // ---------- Appearance ----------
-
-        public ObservableCollection<string> ThemeOptions { get; }
+        /// <summary>
+        /// Helper used by the UI to show/hide the NAS credentials section.
+        /// </summary>
+        public bool ShowNetworkShareOptions => UseCustomNetworkCredentials;
 
         public string SelectedTheme
         {
             get => _selectedTheme;
-            set => SetField(ref _selectedTheme, value);
+            set
+            {
+                if (SetField(ref _selectedTheme, value))
+                {
+                    if (_isInitialized)
+                    {
+                        // change app theme live when dropdown changes
+                        ApplyThemeFromSelected();
+                    }
+                }
+            }
         }
 
         public bool UseCompactLayout
@@ -245,8 +386,6 @@ namespace VaultSync.UI
             get => _showProjectAvatars;
             set => SetField(ref _showProjectAvatars, value);
         }
-
-        // ---------- Notifications ----------
 
         public bool NotifyOnBackupSuccess
         {
@@ -266,8 +405,6 @@ namespace VaultSync.UI
             set => SetField(ref _notifyOnLowDiskSpace, value);
         }
 
-        // ---------- Advanced ----------
-
         public bool EnableVerboseLogging
         {
             get => _enableVerboseLogging;
@@ -286,80 +423,63 @@ namespace VaultSync.UI
             set => SetField(ref _sendAnonymousUsageStats, value);
         }
 
-        // ---------- Commands ----------
-
+        // ---------------- Commands ----------------
         public ICommand BrowseProjectsRootCommand { get; }
         public ICommand BrowseBackupLocationCommand { get; }
         public ICommand ResetToDefaultsCommand { get; }
+        public ICommand ApplySettingsCommand { get; }
         public ICommand ClearLocalCacheCommand { get; }
         public ICommand ForgetAllProjectsCommand { get; }
         public ICommand TestNetworkConnectionCommand { get; }
 
         private void BrowseProjectsRoot()
         {
-            // TODO: integrate with folder picker / host service.
+            // TODO: folder picker.
         }
 
         private void BrowseBackupLocation()
         {
-            // TODO: integrate with folder picker / host service.
+            // TODO: folder picker.
         }
 
         private void ResetToDefaults()
         {
-            ProjectsRootPath          = string.Empty;
-            AutoOpenLastProject       = true;
-            RememberWindowLayout      = true;
-
-            EnableAutoBackups         = true;
-            AutoBackupIntervalMinutes = 30;
-            MaxSnapshotsPerProject    = 20;
-            BackupLocationPath        = string.Empty;
-            UseBackupCompression      = true;
-            VerifyBackupsAfterCreate  = true;
-            PauseBackupsOnBattery     = true;
-
-            PreferExternalDrives      = true;
-            ShowDriveHealthWarnings   = true;
-            MinimumFreeSpacePercent   = 10;
-
-            UseCustomNetworkCredentials = false;
-            NetworkShareUserName        = string.Empty;
-            NetworkSharePassword        = string.Empty;
-            RememberNetworkCredentials  = false;
-
-            SelectedTheme             = ThemeOptions.Count > 0 ? ThemeOptions[0] : "Follow system";
-            UseCompactLayout          = false;
-            ShowProjectAvatars        = true;
-
-            NotifyOnBackupSuccess     = true;
-            NotifyOnBackupFailure     = true;
-            NotifyOnLowDiskSpace      = true;
-
-            EnableVerboseLogging      = false;
-            CheckForUpdatesOnStartup  = true;
-            SendAnonymousUsageStats   = false;
+            AppConfigStore.Save(new AppConfig());
+            LoadFromConfig();
         }
 
         private void ClearLocalCache()
         {
-            // TODO: hook into cache service.
+            // TODO
         }
 
         private void ForgetAllProjects()
         {
-            // TODO: hook into project registry to clear pinned/known projects.
+            try
+            {
+                // Dev helper: reset the VaultSync SQLite DB to a "fresh install" state
+                // without touching any real project files or backup folders on disk.
+                var cfg  = AppConfigStore.Load();
+                var repo = new SqliteRepository(cfg.DbPath);
+
+                repo.EnsureSchema();
+                repo.ResetAllData();
+
+                // Optionally, you could raise a notification/toast here in the future.
+            }
+            catch (Exception)
+            {
+                // For now, silently ignore errors. In the future we can surface a
+                // message in the UI or log details when verbose logging is enabled.
+            }
         }
 
         private void TestNetworkConnection()
         {
-            // TODO: real implementation later:
-            //  - If UseCustomNetworkCredentials: try mounting/authenticating with provided credentials.
-            //  - Else: try normal access to BackupLocationPath.
-            //  - Then surface result via toast / dialog.
+            // TODO
         }
 
-        // ---------- RelayCommand ----------
+        // ---------------- RelayCommand ----------------
 
         private sealed class RelayCommand : ICommand
         {
@@ -368,17 +488,18 @@ namespace VaultSync.UI
 
             public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
             {
-                _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+                _execute = execute;
                 _canExecute = canExecute;
             }
 
             public event EventHandler? CanExecuteChanged;
 
-            public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
+            public bool CanExecute(object? param) => _canExecute?.Invoke(param) ?? true;
 
-            public void Execute(object? parameter) => _execute(parameter);
+            public void Execute(object? param) => _execute(param);
 
-            public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            public void RaiseCanExecuteChanged()
+                => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }

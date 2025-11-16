@@ -1,0 +1,19 @@
+target/**
+out/**
+build/**
+.gradle/**
+*~ 
+*.iml
+*.class
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+.github/

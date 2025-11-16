@@ -1,0 +1,13 @@
+autosave/**
+renderData/**
+images/**
+*.tmp
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.github/

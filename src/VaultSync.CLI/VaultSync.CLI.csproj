@@ -68,4 +68,12 @@
   </ItemGroup>
   -->
 
+
+<ItemGroup>
+    <Content Include="..\presets\*.vaultsyncignore">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>presets\%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,15 @@
+*_autosave.aep
+*_autosave.aepx
+*.tmp
+*.log
+*.lock
+Thumbs.db
+.DS_Store
+
+# Caches
+Adobe After Effects*/**
+~**
+
+# Git
+.git/
+.github/

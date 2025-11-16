@@ -1,11 +1,65 @@
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Ll]ogs/
+# --- Core Unity generated folders (always ignore) ---
+Library/
+Temp/
+Obj/
+Logs/
 UserSettings/
-*/Lightmap*/
-*/GI*/
+MemoryCaptures/
+Build/
+Builds/
+
+# Rider / VS / IDE junk
 .vs/
 .idea/
+.vscode/
+
+# Unity cache / packages (safe to regenerate)
+UnityPackageManager/
+Artifacts/
+CrashReports/
+
+# --- Lightmap & GI caches ---
+*/Lightmap*/
+*/Lightmaps*/
+*/GI*/
+*/GICache*/
+*/LightingData*/
+
+# --- OS cruft ---
+.DS_Store
+Thumbs.db
+
+# --- User-specific/IDE-specific files ---
 *.user
 *.userprefs
+*.csproj.user
+*.suo
+*.sln.docstates
+
+# --- Unity / C# build artefacts ---
+*.csproj
+*.unityproj
+*.sln
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Git metadata
+.git/
+.gitmodules
+.gitattributes
+.gitignore
+.github/
+
+# --- Temporary / backup / lock files ---
+*.tmp
+*.temp
+*.bak
+*.orig
+*.old
+*.swp
+*.lock

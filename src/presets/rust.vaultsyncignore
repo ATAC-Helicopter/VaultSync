@@ -1,0 +1,14 @@
+target/**
+Cargo.lock.bak
+*.rs.bk
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+.github/

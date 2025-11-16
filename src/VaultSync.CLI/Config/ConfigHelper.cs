@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using VaultSync.Core.Config;
 
 namespace VaultSync.CLI.Config
 {
@@ -38,9 +39,24 @@ namespace VaultSync.CLI.Config
         public static string ResolveDb(string? overridePath)
         {
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            // 1. If an explicit override is provided, honor it.
             if (!string.IsNullOrWhiteSpace(overridePath))
                 return overridePath.Replace("~", home);
 
+            // 2. Prefer the shared Core AppConfig.DbPath if available.
+            try
+            {
+                var coreConfig = AppConfigStore.Load();
+                if (!string.IsNullOrWhiteSpace(coreConfig.DbPath))
+                    return coreConfig.DbPath.Replace("~", home);
+            }
+            catch
+            {
+                // If Core config cannot be loaded, fall back to the legacy CLI config.
+            }
+
+            // 3. Fallback: use the legacy CLI ~/.vaultsync/config.json Database value.
             var cfg = Load();
             return cfg.Database.Replace("~", home);
         }

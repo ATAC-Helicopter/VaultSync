@@ -4,114 +4,123 @@
     xmlns:fluent="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
     xmlns:local="using:VaultSync.UI"
     x:Class="VaultSync.UI.App"
-    RequestedThemeVariant="Dark">
+    RequestedThemeVariant="Default">
 
-  <Application.Resources>
-    <ResourceDictionary>
-      <LinearGradientBrush x:Key="WindowBackground" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#101214" Offset="0"/>
-        <GradientStop Color="#0F1113" Offset="1"/>
-      </LinearGradientBrush>
+    <!-- Global resources -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Single source of truth for brushes (Dark + Light inside) -->
+                <ResourceInclude Source="avares://VaultSync.UI/Styles/Colors.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 
-      <SolidColorBrush x:Key="Surface0" Color="#0F1113"/>
-      <SolidColorBrush x:Key="Surface1" Color="#15181C"/>
-      <SolidColorBrush x:Key="Surface2" Color="#1B1F24"/>
-      <SolidColorBrush x:Key="BorderSoft" Color="#232730"/>
+    <!-- View-model → view wiring -->
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
 
-      <SolidColorBrush x:Key="TextPrimary" Color="#F0F2F5"/>
-      <SolidColorBrush x:Key="TextSecondary" Color="#C2C8D2"/>
-      <SolidColorBrush x:Key="AccentBrush" Color="#5D80FF"/>
+    <Application.Styles>
 
-      <SolidColorBrush x:Key="ItemBg" Color="#252B33"/>
-      <SolidColorBrush x:Key="ItemBgHover" Color="#2B313A"/>
-      <SolidColorBrush x:Key="ItemBgSelected" Color="#303744"/>
-    </ResourceDictionary>
-  </Application.Resources>
+        <!-- Core Fluent theme (actual control templates). Base = Light, we override via RequestedThemeVariant -->
+        <fluent:FluentTheme />
 
-  <!-- DataTemplates must include ViewLocator so ContentPresenter can resolve VM->View -->
-  <Application.DataTemplates>
-    <local:ViewLocator/>
-  </Application.DataTemplates>
+        <!-- Window background uses our brush from Colors.axaml -->
+        <Style Selector="Window">
+            <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
+        </Style>
 
-  <Application.Styles>
-    <fluent:FluentTheme />
-    <Style Selector="Window">
-      <Setter Property="Background" Value="{StaticResource WindowBackground}"/>
-    </Style>
+        <!-- Card surface -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource Surface1}" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="8" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
 
-    <Style Selector="Border.card">
-      <Setter Property="Background" Value="{StaticResource Surface1}"/>
-      <Setter Property="CornerRadius" Value="18"/>
-      <Setter Property="Padding" Value="16"/>
-      <Setter Property="Margin" Value="8"/>
-      <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-    </Style>
-    <Style Selector="Border.card:pointerover">
-      <Setter Property="Background" Value="{StaticResource Surface2}"/>
-    </Style>
+        <Style Selector="Border.card:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
 
-    <Style Selector="Border.sidebar">
-      <Setter Property="Background" Value="{StaticResource Surface0}"/>
-      <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
-      <Setter Property="BorderThickness" Value="0,0,1,0"/>
-    </Style>
-    <Style Selector="Border.header">
-      <Setter Property="Background" Value="{StaticResource Surface0}"/>
-      <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
-      <Setter Property="BorderThickness" Value="0,0,0,1"/>
-    </Style>
+        <!-- Sidebar + header -->
+        <Style Selector="Border.sidebar">
+            <Setter Property="Background" Value="{DynamicResource Surface0}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="0,0,1,0" />
+        </Style>
 
-    <Style Selector="Button.nav">
-      <Setter Property="HorizontalAlignment" Value="Stretch"/>
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderBrush" Value="Transparent"/>
-      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-      <Setter Property="CornerRadius" Value="10"/>
-      <Setter Property="Padding" Value="12,10"/>
-      <Setter Property="Margin" Value="0,6,0,0"/>
-    </Style>
-    <Style Selector="Button.nav:pointerover">
-      <Setter Property="Background" Value="{StaticResource Surface2}"/>
-    </Style>
-    <Style Selector="Button.nav:pressed">
-      <Setter Property="Background" Value="#2A313C"/>
-    </Style>
+        <Style Selector="Border.header">
+            <Setter Property="Background" Value="{DynamicResource Surface0}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
 
-    <Style Selector="ListBox">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-    </Style>
-    <Style Selector="ListBoxItem">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="0"/>
-      <Setter Property="Margin" Value="0"/>
-    </Style>
-    <Style Selector="ListBoxItem:pointerover">
-      <Setter Property="Background" Value="Transparent"/>
-    </Style>
-    <Style Selector="ListBoxItem:selected">
-      <Setter Property="Background" Value="Transparent"/>
-    </Style>
+        <!-- Navigation buttons -->
+        <Style Selector="Button.nav">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+        </Style>
 
-    <Style Selector="TextBlock.metric">
-      <Setter Property="FontSize" Value="36"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-      <Setter Property="Margin" Value="0,6,0,2"/>
-    </Style>
-    <Style Selector="TextBlock.metric-hint">
-      <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
-      <Setter Property="Margin" Value="0,2,0,0"/>
-    </Style>
-    <Style Selector="TextBlock.section-title">
-      <Setter Property="FontSize" Value="16"/>
-      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-    </Style>
-    <Style Selector="TextBlock.kicker">
-      <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
-      <Setter Property="Margin" Value="0,0,0,4"/>
-    </Style>
-  </Application.Styles>
+        <Style Selector="Button.nav:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
+
+        <Style Selector="Button.nav:pressed">
+            <Setter Property="Background" Value="{DynamicResource Surface3}" />
+        </Style>
+
+        <!-- ListBox cleanup -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBoxItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <!-- Typography -->
+        <Style Selector="TextBlock.metric">
+            <Setter Property="FontSize" Value="36" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="Margin" Value="0,6,0,2" />
+        </Style>
+
+        <Style Selector="TextBlock.metric-hint">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+        </Style>
+
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+
+        <Style Selector="TextBlock.kicker">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+    </Application.Styles>
+
 </Application>

@@ -1,0 +1,18 @@
+build/**
+.ios/**
+.android/**
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/**
+.packages
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+.github/

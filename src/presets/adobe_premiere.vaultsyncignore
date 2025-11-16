@@ -1,0 +1,13 @@
+Adobe Premiere Pro*/**
+Media Cache/**
+Media Cache Files/**
+*.pek
+*.ims
+*.prmdc
+
+# OS
+.DS_Store
+
+# Git
+.git/
+.github/

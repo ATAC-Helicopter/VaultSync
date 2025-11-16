@@ -109,6 +109,19 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
 
+        -- Backups
+        CREATE TABLE IF NOT EXISTS backups(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL,
+          snapshot_id INTEGER NOT NULL,
+          created_utc TEXT NOT NULL,
+          type TEXT NOT NULL,
+          total_bytes INTEGER NOT NULL,
+          path TEXT NOT NULL,
+          FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+          FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
+        );
+
         -- Indexes (idempotent)
         CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
 
@@ -117,11 +130,42 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 
         CREATE INDEX IF NOT EXISTS idx_files_snapshot ON files(snapshot_id);
 
+        CREATE INDEX IF NOT EXISTS idx_backups_project_created
+          ON backups(project_id, created_utc DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_backups_created
+          ON backups(created_utc DESC);
+
         -- Avoid duplicate file rows per snapshot (same logical path)
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
           ON files(snapshot_id, rel_path);
     """);
 }
+
+        /// <summary>
+        /// Development helper: clears all data from the database tables without
+        /// deleting the database file or any original project files on disk.
+        /// After this call, the DB is effectively in a "fresh" state but with the same schema.
+        /// </summary>
+        public void ResetAllData()
+        {
+            using var connection = Open();
+            using var tx = connection.BeginTransaction();
+
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.Transaction = tx;
+                cmd.CommandText = @"
+DELETE FROM backups;
+DELETE FROM files;
+DELETE FROM snapshots;
+DELETE FROM projects;
+DELETE FROM sqlite_sequence;";
+                cmd.ExecuteNonQuery();
+            }
+
+            tx.Commit();
+        }
         // ---------- Projects ----------
         public Project? GetProjectByName(string name)
         {
@@ -131,11 +175,31 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
                 new { name });
         }
 
+        public void RemoveProject(int projectId)
+        {
+            using var c = Open();
+
+            // Because foreign_keys are ON and snapshots/files reference projects
+            // with ON DELETE CASCADE, deleting the project row will also delete
+            // its snapshots and files.
+            const string sql = "DELETE FROM projects WHERE id = @id;";
+            c.Execute(sql, new { id = projectId });
+        }
+
         public IEnumerable<Project> ListProjects()
         {
             using var c = Open();
             return c.Query<Project>(
                 "SELECT id, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+        }
+
+        /// <summary>
+        /// Returns all projects in the database. This is a convenience wrapper used by the UI dashboard.
+        /// </summary>
+        public IEnumerable<Project> GetAllProjects()
+        {
+            // Delegate to the existing ListProjects implementation to keep one query definition.
+            return ListProjects();
         }
 
         public int AddProject(Project p)
@@ -211,6 +275,44 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
                 new { pid = projectId });
         }
 
+        public Snapshot? GetLatestSnapshotForProject(int projectId)
+        {
+            using var c = Open();
+            return c.QueryFirstOrDefault<Snapshot>(
+                """
+                SELECT
+                  id,
+                  project_id  AS ProjectId,
+                  created_utc AS CreatedUtc,
+                  file_count  AS FileCount,
+                  total_bytes AS TotalBytes
+                FROM snapshots
+                WHERE project_id = @pid
+                ORDER BY created_utc DESC
+                LIMIT 1;
+                """,
+                new { pid = projectId });
+        }
+
+        /// <summary>
+        /// Returns all snapshots across all projects, newest first. Used by the UI dashboard.
+        /// </summary>
+        public IEnumerable<Snapshot> GetAllSnapshots()
+        {
+            using var c = Open();
+            return c.Query<Snapshot>(
+                """
+                SELECT
+                  id,
+                  project_id as ProjectId,
+                  created_utc as CreatedUtc,
+                  file_count as FileCount,
+                  total_bytes as TotalBytes
+                FROM snapshots
+                ORDER BY created_utc DESC
+                """);
+        }
+
         public IEnumerable<Snapshot> GetSnapshotsForProject(string projectName)
         {
             using var c = Open();
@@ -265,6 +367,153 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
                 }),
                 tx);
             tx.Commit();
+        }
+        // ---------- Backups ----------
+
+        public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath)
+        {
+            using var c = Open();
+            var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+
+            return c.ExecuteScalar<int>(
+                """
+                INSERT INTO backups(project_id, snapshot_id, created_utc, type, total_bytes, path)
+                VALUES(@ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path);
+                SELECT last_insert_rowid();
+                """,
+                new
+                {
+                    ProjectId  = projectId,
+                    SnapshotId = snapshotId,
+                    CreatedUtc = created,
+                    Type       = type,
+                    TotalBytes = totalBytes,
+                    Path       = relativePath
+                });
+        }
+
+        public Backup? GetLatestBackupForProject(int projectId)
+        {
+            using var c = Open();
+            return c.QueryFirstOrDefault<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path
+                FROM backups
+                WHERE project_id = @pid
+                ORDER BY created_utc DESC
+                LIMIT 1;
+                """,
+                new { pid = projectId });
+        }
+
+        public IEnumerable<Backup> GetBackupsForProject(int projectId)
+        {
+            using var c = Open();
+            return c.Query<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path
+                FROM backups
+                WHERE project_id = @pid
+                ORDER BY created_utc DESC;
+                """,
+                new { pid = projectId });
+        }
+
+        /// <summary>
+        /// Backups created between the given UTC range (inclusive start, exclusive end).
+        /// Used by the Backups UI for history and charts.
+        /// </summary>
+        public IEnumerable<Backup> GetBackupsInRange(DateTime fromUtc, DateTime toUtc)
+        {
+            using var c = Open();
+            return c.Query<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path
+                FROM backups
+                WHERE created_utc >= @from AND created_utc < @to
+                ORDER BY created_utc DESC;
+                """,
+                new
+                {
+                    from = fromUtc.ToString("u", CultureInfo.InvariantCulture),
+                    to   = toUtc.ToString("u", CultureInfo.InvariantCulture)
+                });
+        }
+
+        public Backup? GetLastBackup()
+        {
+            using var c = Open();
+            return c.QueryFirstOrDefault<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path
+                FROM backups
+                ORDER BY created_utc DESC
+                LIMIT 1;
+                """);
+        }
+
+        public int GetBackupCount()
+        {
+            using var c = Open();
+            return c.ExecuteScalar<int>("SELECT COUNT(*) FROM backups;");
+        }
+
+        public long GetTotalBackupBytes()
+        {
+            using var c = Open();
+            return c.ExecuteScalar<long>("SELECT COALESCE(SUM(total_bytes), 0) FROM backups;");
+        }
+
+        public (int autoCount, int manualCount) GetBackupTypeCounts()
+        {
+            using var c = Open();
+            var rows = c.Query<(string type, int count)>(
+                "SELECT type, COUNT(*) as count FROM backups GROUP BY type;");
+
+            int auto = 0, manual = 0;
+            foreach (var row in rows)
+            {
+                if (string.Equals(row.type, "auto", StringComparison.OrdinalIgnoreCase))
+                    auto = row.count;
+                else if (string.Equals(row.type, "manual", StringComparison.OrdinalIgnoreCase))
+                    manual = row.count;
+            }
+
+            return (auto, manual);
+        }
+
+        public void DeleteBackupById(int backupId)
+        {
+            using var c = Open();
+            c.Execute("DELETE FROM backups WHERE id=@id;", new { id = backupId });
         }
     }
 

@@ -17,6 +17,10 @@ public class SnapshotService
 
     public async Task<int> CreateSnapshotAsync(Project project, bool fullHash, CancellationToken ct = default)
     {
+        Console.WriteLine($"[SnapshotService] Starting snapshot for project '{project.Name}'");
+        Console.WriteLine($"[SnapshotService]   RootPath = '{project.RootPath}'");
+        Console.WriteLine($"[SnapshotService]   Preset   = '{project.Preset}'");
+
         // Load previous snapshot (if any) to enable incremental behavior
         var prev = _repo.GetLatestSnapshot(project.Id);
         var prevFiles = prev != null
@@ -26,11 +30,19 @@ public class SnapshotService
         // Build filter from preset + local overrides
         var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
 
-        // Enumerate current files
-        var currentPaths = Directory
+        // Enumerate all current files first
+        var allPaths = Directory
             .EnumerateFiles(project.RootPath, "*", SearchOption.AllDirectories)
+            .ToList();
+
+        Console.WriteLine($"[SnapshotService] Enumerated {allPaths.Count} files under root before filtering.");
+
+        // Apply filter
+        var currentPaths = allPaths
             .Where(p => !filter.ShouldExclude(project.RootPath, p))
             .ToList();
+
+        Console.WriteLine($"[SnapshotService] {currentPaths.Count} files remain after filtering.");
 
         // Map rel path -> file system info
         var currMeta = currentPaths.Select(p => new

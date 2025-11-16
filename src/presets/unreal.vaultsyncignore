@@ -1,0 +1,28 @@
+# Unreal build artefacts
+Binaries/**
+DerivedDataCache/**
+Intermediate/**
+Saved/**
+Build/**
+Builds/**
+
+# IDE junk
+.vs/
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup / autosaves
+*.bak
+*.tmp
+*.old
+
+# Git / metadata
+.git/
+.github/
+.gitattributes
+.gitmodules
+.gitignore

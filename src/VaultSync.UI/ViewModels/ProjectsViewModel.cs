@@ -3,6 +3,15 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.CompilerServices;
+using VaultSync.Core.Repositories;
+using System.Threading.Tasks;
+using VaultSync.Core.Config;
+using VaultSync.Core.Services;
+using VaultSync.Core.Models;
+using System.Text.Json;
 
 namespace VaultSync.UI.ViewModels;
 
@@ -12,6 +21,14 @@ namespace VaultSync.UI.ViewModels;
 /// </summary>
 public class ProjectsViewModel : ViewModelBase
 {
+    private readonly IProjectDiscoveryService _discovery = new ProjectDiscoveryService();
+    /// <summary>
+    /// Preset options that can be applied to projects. These correspond to
+    /// .vaultsyncignore-style profiles (Unity, .NET, etc.) plus an explicit
+    /// "no preset" option.
+    /// </summary>
+    public ObservableCollection<string> AvailablePresets { get; } =
+        new ObservableCollection<string>();
     public ObservableCollection<ProjectItemViewModel> Projects { get; } =
         new ObservableCollection<ProjectItemViewModel>();
 
@@ -19,7 +36,25 @@ public class ProjectsViewModel : ViewModelBase
     public ProjectItemViewModel? SelectedProject
     {
         get => _selectedProject;
-        set => SetProperty(ref _selectedProject, value);
+        set
+        {
+            SetProperty(ref _selectedProject, value);
+            RefreshSelectedProjectRegistration();
+        }
+    }
+
+    private string _snapshotActionLabel = "Snapshot now";
+    public string SnapshotActionLabel
+    {
+        get => _snapshotActionLabel;
+        set => SetProperty(ref _snapshotActionLabel, value);
+    }
+
+    private bool _isLoading;
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set => SetProperty(ref _isLoading, value);
     }
 
     public ICommand RefreshCommand { get; }
@@ -28,21 +63,20 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand RemoveProjectCommand { get; }
     public ICommand SnapshotCommand { get; }
     public ICommand SyncCommand { get; }
+    public ICommand TakeSnapshotCommand => SnapshotCommand;
 
     public ProjectsViewModel()
     {
-        // TODO: replace with real data from VaultSync.Core
-        SeedDesignProjects();
-
-        if (Projects.Count > 0)
-            SelectedProject = Projects[0];
-
         RefreshCommand       = new RelayCommand(_ => Refresh());
         NewProjectCommand    = new RelayCommand(_ => NewProject());
         OpenFolderCommand    = new RelayCommand(_ => OpenFolder(),    _ => SelectedProject is not null);
         RemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
-        SnapshotCommand      = new RelayCommand(_ => TakeSnapshot(),  _ => SelectedProject is not null);
+        SnapshotCommand      = new RelayCommand(_ => TakeSnapshot());
         SyncCommand          = new RelayCommand(_ => SyncProject(),   _ => SelectedProject is not null);
+
+        LoadAvailablePresets();
+
+        _ = RefreshAsync();
     }
 
     private void SeedDesignProjects()
@@ -57,7 +91,7 @@ public class ProjectsViewModel : ViewModelBase
             HealthTag = "Healthy",
             LastSnapshot = DateTime.Today.AddMinutes(-20),
             SizeBytes = 1_800_000_000,
-            Preset = "Daily snapshot"
+            Preset = "unity"
         };
         vaultSync.SetSnapshots(CreateDesignSnapshots(1.8));
         Projects.Add(vaultSync);
@@ -70,7 +104,7 @@ public class ProjectsViewModel : ViewModelBase
             HealthTag = "Warning",
             LastSnapshot = DateTime.Today.AddDays(-1).AddHours(23),
             SizeBytes = 46_200_000_000,
-            Preset = "Weekly + on-demand"
+            Preset = "unity"
         };
         dumpsterFire.SetSnapshots(CreateDesignSnapshots(46.2));
         Projects.Add(dumpsterFire);
@@ -83,7 +117,7 @@ public class ProjectsViewModel : ViewModelBase
             HealthTag = "Out of date",
             LastSnapshot = DateTime.Today.AddDays(-3),
             SizeBytes = 32_900_000_000,
-            Preset = "Manual only"
+            Preset = "unity"
         };
         overSteer.SetSnapshots(CreateDesignSnapshots(32.9));
         Projects.Add(overSteer);
@@ -104,12 +138,156 @@ public class ProjectsViewModel : ViewModelBase
 
     private void Refresh()
     {
-        // TODO: call into Core to reload projects from config / disk.
-        // For now this just re-seeds the sample data.
-        SeedDesignProjects();
+        _ = RefreshAsync();
+    }
 
-        if (SelectedProject != null && !Projects.Contains(SelectedProject) && Projects.Count > 0)
-            SelectedProject = Projects[0];
+    private async Task RefreshAsync()
+    {
+        if (IsLoading)
+            return;
+
+        try
+        {
+            IsLoading = true;
+
+            var config     = AppConfigStore.Load();
+            var discovered = await _discovery.DiscoverAsync(config);
+
+            // Try to open the shared DB so we can enrich projects with real snapshot data.
+            SqliteRepository? repo = null;
+            try
+            {
+                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                    ? config.DbPath
+                    : GetDefaultDbPath();
+
+                repo = new SqliteRepository(dbPath);
+                repo.EnsureSchema();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[ProjectsViewModel] Could not open DB during refresh: " + ex);
+            }
+
+            Projects.Clear();
+
+            if (discovered.Count == 0)
+            {
+                // Design-time / fallback sample data if nothing is found yet.
+                SeedDesignProjects();
+            }
+            else
+            {
+                foreach (var p in discovered)
+                {
+                    DateTime? lastSnapshotTime  = p.LastSnapshotTime;
+                    long?     lastSnapshotBytes = p.LastSnapshotSizeBytes;
+                    List<ProjectSnapshotViewModel>? snapshotVms = null;
+                    Project? existingProject = null;
+
+                    if (repo != null)
+                    {
+                        try
+                        {
+                            // Use DB snapshot history if the project is registered.
+                            existingProject = repo.GetProjectByName(p.Name);
+                            if (existingProject != null)
+                            {
+                                var snapshots = repo.GetSnapshotsForProject(existingProject.Name)?.ToList();
+                                if (snapshots != null && snapshots.Count > 0)
+                                {
+                                    // Assume snapshots are returned newest-first.
+                                    var latest = snapshots[0];
+                                    lastSnapshotTime  = latest.CreatedUtc;
+                                    lastSnapshotBytes = latest.TotalBytes;
+
+                                    snapshotVms = snapshots
+                                        .Select(s => new ProjectSnapshotViewModel(s.CreatedUtc, s.TotalBytes))
+                                        .ToList();
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[ProjectsViewModel] Failed to load snapshot data for '{p.Name}': {ex}");
+                        }
+                    }
+
+                    var vm = new ProjectItemViewModel
+                    {
+                        Name         = p.Name,
+                        Path         = p.Path,
+                        LastSnapshot = lastSnapshotTime ?? default,
+                        SizeBytes    = lastSnapshotBytes ?? 0,
+                        Preset       = existingProject?.Preset ?? string.Empty
+                    };
+
+                    // Compute health based on how old the last snapshot is (if any).
+                    if (lastSnapshotTime.HasValue)
+                    {
+                        var age = DateTime.UtcNow - lastSnapshotTime.Value;
+
+                        if (age.TotalDays < 1)
+                        {
+                            vm.Health    = ProjectHealthStatus.Healthy;
+                            vm.HealthTag = "Healthy";
+                        }
+                        else if (age.TotalDays < 7)
+                        {
+                            vm.Health    = ProjectHealthStatus.Warning;
+                            vm.HealthTag = "Out of date";
+                        }
+                        else
+                        {
+                            vm.Health    = ProjectHealthStatus.OutOfDate;
+                            vm.HealthTag = "Stale";
+                        }
+                    }
+                    else
+                    {
+                        vm.Health    = ProjectHealthStatus.OutOfDate;
+                        vm.HealthTag = "Not backed up";
+                    }
+
+                    // Populate snapshot history from DB if available; otherwise fall back to discovery values.
+                    if (snapshotVms != null && snapshotVms.Count > 0)
+                    {
+                        vm.SetSnapshots(snapshotVms);
+                    }
+                    else if (p.LastSnapshotTime.HasValue && p.LastSnapshotSizeBytes.HasValue)
+                    {
+                        var snapshotVm = new ProjectSnapshotViewModel(
+                            p.LastSnapshotTime.Value,
+                            p.LastSnapshotSizeBytes.Value);
+
+                        vm.SetSnapshots(new[] { snapshotVm });
+                    }
+                    else
+                    {
+                        vm.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
+                    }
+
+                    Projects.Add(vm);
+                }
+            }
+
+            if (SelectedProject != null && !Projects.Contains(SelectedProject))
+            {
+                SelectedProject = Projects.Count > 0 ? Projects[0] : null;
+            }
+            else if (SelectedProject == null && Projects.Count > 0)
+            {
+                SelectedProject = Projects[0];
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[ProjectsViewModel] Error refreshing projects: " + ex);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private void NewProject()
@@ -119,22 +297,189 @@ public class ProjectsViewModel : ViewModelBase
 
     private void OpenFolder()
     {
-        if (SelectedProject is null) return;
-        // TODO: use platform-specific shell open helper.
+        if (SelectedProject is null)
+            return;
+
+        var path = SelectedProject.Path;
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        try
+        {
+            if (OperatingSystem.IsMacOS())
+            {
+                // macOS: use the 'open' command
+                Process.Start("open", path);
+            }
+            else if (OperatingSystem.IsWindows())
+            {
+                // Windows: use explorer
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{path}\"",
+                    UseShellExecute = true
+                });
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                // Linux: try xdg-open
+                Process.Start("xdg-open", path);
+            }
+            else
+            {
+                // Fallback: try default shell execute
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProjectsViewModel] Failed to open folder '{path}': {ex}");
+        }
     }
 
     private void RemoveProject()
     {
-        if (SelectedProject is null) return;
+        if (SelectedProject is null)
+            return;
 
-        Projects.Remove(SelectedProject);
-        SelectedProject = Projects.Count > 0 ? Projects[0] : null;
+        var removedProjectName = SelectedProject.Name;
+
+        try
+        {
+            // Resolve DB path (shared with CLI).
+            var config = AppConfigStore.Load();
+            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                ? config.DbPath
+                : GetDefaultDbPath();
+
+            // Open repository and ensure schema exists.
+            var repo = new SqliteRepository(dbPath);
+            repo.EnsureSchema();
+
+            // Look up the project in the DB by name.
+            var existing = repo.GetProjectByName(removedProjectName);
+            if (existing is null)
+            {
+                Console.WriteLine($"[ProjectsViewModel] Project '{removedProjectName}' not found in DB.");
+            }
+            else
+            {
+                repo.RemoveProject(existing.Id);
+                Console.WriteLine($"[ProjectsViewModel] Removed project '{removedProjectName}' from DB.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProjectsViewModel] Failed to remove project '{removedProjectName}' from DB: {ex}");
+        }
+
+        // Reset the selected project's details so the right panel no longer shows stale data.
+        if (SelectedProject != null && SelectedProject.Name == removedProjectName)
+        {
+            SelectedProject.LastSnapshot = default;
+            SelectedProject.SizeBytes    = 0;
+            SelectedProject.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
+            SelectedProject.Health    = ProjectHealthStatus.OutOfDate;
+            SelectedProject.HealthTag = "Not backed up";
+        }
+
+        // After removing from DB, keep the project visible in the list but mark it as unregistered
+        // so the primary action becomes "Add project" again.
+        RefreshSelectedProjectRegistration();
     }
 
-    private void TakeSnapshot()
+    private async void TakeSnapshot()
     {
-        if (SelectedProject is null) return;
-        // TODO: trigger snapshot pipeline for SelectedProject.
+        if (SelectedProject is null)
+            return;
+
+        Console.WriteLine(
+            $"[ProjectsViewModel] Snapshot requested for project '{SelectedProject.Name}' at '{SelectedProject.Path}'.");
+
+        try
+        {
+            // 1. Resolve DB path from shared AppConfig (with a sensible default).
+            var config = AppConfigStore.Load();
+            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                ? config.DbPath
+                : GetDefaultDbPath();
+
+            // 2. Open repository and ensure schema exists.
+            var repo = new SqliteRepository(dbPath);
+            repo.EnsureSchema();
+
+            // 3. Check if project is already registered.
+            var existing = repo.GetProjectByName(SelectedProject.Name);
+            if (existing is null)
+            {
+                // Require a preset (or explicit "no preset") before registering the project.
+                if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
+                {
+                    Console.WriteLine("[ProjectsViewModel] Cannot register project without a preset. Please select a preset first.");
+                    return;
+                }
+                // Register project instead of snapshot.
+                var project = new Project
+                {
+                    Name       = SelectedProject.Name,
+                    RootPath   = SelectedProject.Path,
+                    Preset     = SelectedProject.Preset,
+                    CreatedUtc = DateTime.UtcNow
+                };
+
+                var id = repo.AddProject(project);
+                Console.WriteLine($"[ProjectsViewModel] Registered project '{project.Name}' with id={id}.");
+
+                // Update UI label so next click becomes a real snapshot.
+                SnapshotActionLabel = "Snapshot now";
+                return;
+            }
+
+            // 4. Run snapshot via Core engine.
+            var hashService     = new HashService();
+            var snapshotService = new SnapshotService(repo, hashService);
+
+            var snapshotId = await snapshotService.CreateSnapshotAsync(existing, fullHash: true);
+            var outcome    = SnapshotService.LastOutcome;
+
+            Console.WriteLine(
+                $"[ProjectsViewModel] Snapshot #{snapshotId} for '{existing.Name}': " +
+                $"Added={outcome?.Added}, Modified={outcome?.Modified}, Deleted={outcome?.Deleted}, " +
+                $"Unchanged={outcome?.Unchanged}, TotalFiles={outcome?.TotalFiles}, Bytes={outcome?.TotalBytes}");
+
+            // Update the selected project's stats in the UI immediately.
+            if (SelectedProject != null && outcome != null)
+            {
+                var snapshotTime = DateTime.UtcNow;
+                SelectedProject.LastSnapshot = snapshotTime;
+                SelectedProject.SizeBytes    = outcome.TotalBytes;
+
+                var history = SelectedProject.SnapshotHistory?.ToList()
+                              ?? new List<ProjectSnapshotViewModel>();
+
+                history.Insert(0, new ProjectSnapshotViewModel(snapshotTime, outcome.TotalBytes));
+
+                if (history.Count > 10)
+                    history = history.Take(10).ToList();
+
+                SelectedProject.SetSnapshots(history);
+
+                SelectedProject.Health    = ProjectHealthStatus.Healthy;
+                SelectedProject.HealthTag = "Healthy";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProjectsViewModel] Snapshot failed: {ex}");
+        }
+
+        // Refresh label/state after the operation.
+        RefreshSelectedProjectRegistration();
     }
 
     private void SyncProject()
@@ -143,10 +488,187 @@ public class ProjectsViewModel : ViewModelBase
         // TODO: trigger sync pipeline for SelectedProject.
     }
 
-    private static bool SetProperty<T>(ref T storage, T value)
+    private void RefreshSelectedProjectRegistration()
+    {
+        if (SelectedProject is null)
+        {
+            SnapshotActionLabel = "Snapshot now";
+            return;
+        }
+
+        try
+        {
+            var config = AppConfigStore.Load();
+            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                ? config.DbPath
+                : GetDefaultDbPath();
+
+            var repo = new SqliteRepository(dbPath);
+            repo.EnsureSchema();
+
+            var existing = repo.GetProjectByName(SelectedProject.Name);
+            if (existing is null)
+            {
+                SnapshotActionLabel = "Add project";
+                // When not registered yet, force the user to choose a preset explicitly.
+                if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
+                {
+                    SelectedProject.Preset = string.Empty;
+                }
+            }
+            else
+            {
+                SnapshotActionLabel = "Snapshot now";
+                // Keep the UI in sync with the DB-stored preset.
+                SelectedProject.Preset = existing.Preset;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProjectsViewModel] Failed to refresh registration state: {ex}");
+            SnapshotActionLabel = "Snapshot now";
+        }
+    }
+
+    private void LoadAvailablePresets()
+    {
+        try
+        {
+            AvailablePresets.Clear();
+
+            foreach (var name in GetPresetNames())
+            {
+                AvailablePresets.Add(name);
+            }
+
+            // Always offer an explicit "no preset" option.
+            if (!AvailablePresets.Contains("no preset"))
+                AvailablePresets.Add("no preset");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[ProjectsViewModel] Failed to load presets from index/files: " + ex);
+
+            // Fallback to a minimal hard-coded set so the UI stays usable.
+            AvailablePresets.Clear();
+            AvailablePresets.Add("unity");
+            AvailablePresets.Add("dotnet");
+            AvailablePresets.Add("blender");
+            AvailablePresets.Add("video");
+            AvailablePresets.Add("no preset");
+        }
+    }
+
+    private static IEnumerable<string> GetPresetNames()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var dir   = ResolvePresetsDirForUi();
+
+        if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
+        {
+            try
+            {
+                var indexPath = Path.Combine(dir, "presets.index.json");
+                if (File.Exists(indexPath))
+                {
+                    var json  = File.ReadAllText(indexPath);
+                    var index = JsonSerializer.Deserialize<PresetIndex>(json);
+
+                    if (index?.Presets != null)
+                    {
+                        foreach (var p in index.Presets)
+                        {
+                            if (!string.IsNullOrWhiteSpace(p.Id))
+                            {
+                                names.Add(p.Id);
+                            }
+                            else if (!string.IsNullOrWhiteSpace(p.File))
+                            {
+                                names.Add(Path.GetFileNameWithoutExtension(p.File));
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // No index file: just enumerate preset files.
+                    foreach (var file in Directory.EnumerateFiles(dir, "*.vaultsyncignore"))
+                    {
+                        var name = Path.GetFileNameWithoutExtension(file);
+                        if (!string.IsNullOrWhiteSpace(name))
+                            names.Add(name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[ProjectsViewModel] Error reading preset index/files: " + ex);
+            }
+        }
+
+        return names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ResolvePresetsDirForUi()
+    {
+        // 1) Environment override for power users / testing
+        var env = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
+        if (!string.IsNullOrWhiteSpace(env) && Directory.Exists(env))
+            return env;
+
+        // 2) Installed / published app: <app>/presets
+        var appPresets = Path.Combine(AppContext.BaseDirectory, "presets");
+        if (Directory.Exists(appPresets))
+            return appPresets;
+
+        // 3) Dev tree: walk up to find src/presets (current repo layout)
+        var dir = AppContext.BaseDirectory;
+        for (int i = 0; i < 6; i++)
+        {
+            var candidate = Path.Combine(dir, "src", "presets");
+            if (Directory.Exists(candidate))
+                return candidate;
+
+            var parent = Directory.GetParent(dir)?.FullName;
+            if (parent is null)
+                break;
+
+            dir = parent;
+        }
+
+        // 4) Fallback to app presets path (may or may not exist)
+        return appPresets;
+    }
+
+    private sealed class PresetIndex
+    {
+        public List<PresetInfo> Presets { get; set; } = new();
+    }
+
+    private sealed class PresetInfo
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string File { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+
+    private static string GetDefaultDbPath()
+    {
+        // Fallback DB location when AppConfig.DbPath is not set.
+        // Later this will be fully unified with the CLI DB resolution logic.
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var dir     = Path.Combine(appData, "VaultSync");
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, "vaultsync.db");
+    }
+
+    private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
     {
         if (Equals(storage, value)) return false;
         storage = value;
+        OnPropertyChanged(propertyName);
         return true;
     }
 }
@@ -181,7 +703,13 @@ public class ProjectItemViewModel : ViewModelBase
     public ProjectHealthStatus Health
     {
         get => _health;
-        set => SetProperty(ref _health, value);
+        set
+        {
+            if (SetProperty(ref _health, value))
+            {
+                OnPropertyChanged(nameof(HealthBackground));
+            }
+        }
     }
 
     private string _healthTag = string.Empty;
@@ -195,14 +723,28 @@ public class ProjectItemViewModel : ViewModelBase
     public DateTime LastSnapshot
     {
         get => _lastSnapshot;
-        set => SetProperty(ref _lastSnapshot, value);
+        set
+        {
+            if (SetProperty(ref _lastSnapshot, value))
+            {
+                OnPropertyChanged(nameof(LastSnapshotSummary));
+                OnPropertyChanged(nameof(LastSnapshotShort));
+                OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
+            }
+        }
     }
 
     private long _sizeBytes;
     public long SizeBytes
     {
         get => _sizeBytes;
-        set => SetProperty(ref _sizeBytes, value);
+        set
+        {
+            if (SetProperty(ref _sizeBytes, value))
+            {
+                OnPropertyChanged(nameof(SizeDisplay));
+            }
+        }
     }
 
     private string _preset = string.Empty;
@@ -247,7 +789,14 @@ public class ProjectItemViewModel : ViewModelBase
         var max = SnapshotHistory.Count == 0 ? 0 : SnapshotHistory.Max(s => s.SizeBytes);
 
         if (max <= 0)
+        {
+            // No snapshots or all zero size: clear aggregate stats.
+            OnPropertyChanged(nameof(SnapshotCount));
+            OnPropertyChanged(nameof(TotalSnapshotSizeDisplay));
+            OnPropertyChanged(nameof(AverageSnapshotSizeDisplay));
+            OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
             return;
+        }
 
         for (int i = 0; i < SnapshotHistory.Count; i++)
         {
@@ -278,6 +827,12 @@ public class ProjectItemViewModel : ViewModelBase
                 }
             }
         }
+
+        // Notify that aggregate snapshot stats have changed.
+        OnPropertyChanged(nameof(SnapshotCount));
+        OnPropertyChanged(nameof(TotalSnapshotSizeDisplay));
+        OnPropertyChanged(nameof(AverageSnapshotSizeDisplay));
+        OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
     }
 
     // ---- Convenience / formatted properties ----
@@ -329,10 +884,11 @@ public class ProjectItemViewModel : ViewModelBase
             _                             => "#181B23"
         };
 
-    private static bool SetProperty<T>(ref T storage, T value)
+    private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
     {
         if (Equals(storage, value)) return false;
         storage = value;
+        OnPropertyChanged(propertyName);
         return true;
     }
 }

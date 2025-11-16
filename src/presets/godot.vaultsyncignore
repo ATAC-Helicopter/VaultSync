@@ -1,0 +1,21 @@
+# Godot generated
+.import/**
+mono/**
+export_presets.cfg
+
+# Temporary
+*.tmp
+*.old
+
+# Ide junk
+.vscode/
+.idea/
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.github/

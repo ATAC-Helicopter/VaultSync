@@ -1,17 +1,18 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace VaultSync.UI.Views;
-
-public partial class ProjectsView : UserControl
+namespace VaultSync.UI.Views
 {
-    public ProjectsView()
+    public partial class ProjectsView : UserControl
     {
-        InitializeComponent();
-    }
+        public ProjectsView()
+        {
+            InitializeComponent();
+        }
 
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
+        private void InitializeComponent()
+        {
+            AvaloniaXamlLoader.Load(this);
+        }
     }
 }

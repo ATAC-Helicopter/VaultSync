@@ -1,0 +1,200 @@
+{
+  "version": 1,
+  "presets": [
+    {
+      "id": "unity",
+      "name": "Unity",
+      "category": "Game Engines",
+      "file": "unity.vaultsyncignore",
+      "description": "Recommended Unity backup preset. Excludes Library, Temp, Logs, build artefacts, and IDE junk."
+    },
+    {
+      "id": "unreal",
+      "name": "Unreal Engine",
+      "category": "Game Engines",
+      "file": "unreal.vaultsyncignore",
+      "description": "Ignore DerivedDataCache, Binaries, Intermediate, Saved, and build artefacts."
+    },
+    {
+      "id": "godot",
+      "name": "Godot",
+      "category": "Game Engines",
+      "file": "godot.vaultsyncignore",
+      "description": "Excludes .import, cache, mono, and auto-generated folders."
+    },
+    {
+      "id": "gamemaker",
+      "name": "GameMaker",
+      "category": "Game Engines",
+      "file": "gamemaker.vaultsyncignore",
+      "description": "Excludes build output, cache, and backup directories."
+    },
+
+    {
+      "id": "dotnet",
+      "name": ".NET / C#",
+      "category": "Programming",
+      "file": "dotnet.vaultsyncignore",
+      "description": "Excludes bin, obj, TestResults, pdb files, and IDE artefacts."
+    },
+    {
+      "id": "node",
+      "name": "Node.js",
+      "category": "Programming",
+      "file": "node.vaultsyncignore",
+      "description": "Ignores node_modules, dist, build, cache and log files."
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "category": "Programming",
+      "file": "python.vaultsyncignore",
+      "description": "Excludes __pycache__, virtual environments, build output."
+    },
+    {
+      "id": "java",
+      "name": "Java",
+      "category": "Programming",
+      "file": "java.vaultsyncignore",
+      "description": "Ignores target, build, out, .class, .iml files and IDE folders."
+    },
+    {
+      "id": "rust",
+      "name": "Rust",
+      "category": "Programming",
+      "file": "rust.vaultsyncignore",
+      "description": "Excludes target folders and temporary backup files."
+    },
+    {
+      "id": "go",
+      "name": "Go",
+      "category": "Programming",
+      "file": "go.vaultsyncignore",
+      "description": "Excludes bin, pkg, test output and temporary files."
+    },
+    {
+      "id": "cpp",
+      "name": "C / C++",
+      "category": "Programming",
+      "file": "c_cpp.vaultsyncignore",
+      "description": "Ignore build/obj output, CMake files, and generated binaries."
+    },
+
+    {
+      "id": "flutter",
+      "name": "Flutter",
+      "category": "Mobile / UI",
+      "file": "flutter.vaultsyncignore",
+      "description": "Excludes build output, .ios, .android and Dart tool folders."
+    },
+    {
+      "id": "react_native",
+      "name": "React Native",
+      "category": "Mobile / UI",
+      "file": "react_native.vaultsyncignore",
+      "description": "Excludes node_modules, build output, metro caches."
+    },
+    {
+      "id": "avalonia",
+      "name": "Avalonia",
+      "category": "Mobile / UI",
+      "file": "avalonia.vaultsyncignore",
+      "description": "Excludes bin, obj, pdb, ide caches."
+    },
+
+    {
+      "id": "blender",
+      "name": "Blender",
+      "category": "3D / Creative",
+      "file": "blender.vaultsyncignore",
+      "description": "Excludes autosaves, backups, temp files and cache folders."
+    },
+    {
+      "id": "maya",
+      "name": "Maya",
+      "category": "3D / Creative",
+      "file": "maya.vaultsyncignore",
+      "description": "Ignore autosave, cache and rendering output."
+    },
+    {
+      "id": "after_effects",
+      "name": "After Effects",
+      "category": "3D / Creative",
+      "file": "adobe_after_effects.vaultsyncignore",
+      "description": "Excludes caches and auto-save project files."
+    },
+    {
+      "id": "premiere",
+      "name": "Premiere Pro",
+      "category": "3D / Creative",
+      "file": "adobe_premiere.vaultsyncignore",
+      "description": "Excludes media cache, preview files, and temp data."
+    },
+    {
+      "id": "davinci",
+      "name": "DaVinci Resolve",
+      "category": "3D / Creative",
+      "file": "davinci_resolve.vaultsyncignore",
+      "description": "Excludes clip cache, gallery, proxies and audio cache."
+    },
+    {
+      "id": "video",
+      "name": "Generic Video Project",
+      "category": "3D / Creative",
+      "file": "video.vaultsyncignore",
+      "description": "General video-production cache, proxy, and temp exclusions."
+    },
+
+    {
+      "id": "ableton",
+      "name": "Ableton Live",
+      "category": "Audio / Music",
+      "file": "ableton.vaultsyncignore",
+      "description": "Ignore backup, renders, and metadata cache."
+    },
+    {
+      "id": "fl_studio",
+      "name": "FL Studio",
+      "category": "Audio / Music",
+      "file": "fl_studio.vaultsyncignore",
+      "description": "Excludes backup, rendered audio and temporary files."
+    },
+
+    {
+      "id": "docker",
+      "name": "Docker Projects",
+      "category": "DevOps / Cloud",
+      "file": "docker.vaultsyncignore",
+      "description": "General Docker project exclusions for volumes, build artefacts and logs."
+    },
+    {
+      "id": "terraform",
+      "name": "Terraform",
+      "category": "DevOps / Cloud",
+      "file": "terraform.vaultsyncignore",
+      "description": "Ignore state files, crash logs and temp data."
+    },
+    {
+      "id": "kubernetes",
+      "name": "Kubernetes",
+      "category": "DevOps / Cloud",
+      "file": "kubernetes.vaultsyncignore",
+      "description": "Excludes kube caches, config backups and temporary resources."
+    },
+
+    {
+      "id": "vscode",
+      "name": "VSCode",
+      "category": "IDEs",
+      "file": "vscode.vaultsyncignore",
+      "description": "Ignore .vscode workspace junk except settings and recommendations."
+    },
+    {
+      "id": "jetbrains",
+      "name": "JetBrains IDEs",
+      "category": "IDEs",
+      "file": "jetbrains.vaultsyncignore",
+      "description": "Excludes .idea folder and IntelliJ output directories."
+    }
+  ]
+}

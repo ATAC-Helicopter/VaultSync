@@ -1,0 +1,7 @@
+*.kube/**
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+.git/

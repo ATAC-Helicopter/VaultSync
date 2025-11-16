@@ -18,10 +18,20 @@
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
-<PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.9" />
-<PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
-<PackageReference Include="ReactiveUI" Version="19.5.39" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.9" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
+    <PackageReference Include="ReactiveUI" Version="19.5.39" />
+  </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj" />
+  </ItemGroup>
 
- </ItemGroup>
+  <!-- 👇 NEW: copy presets into output/publish folder -->
+  <ItemGroup>
+    <Content Include="..\presets\*.vaultsyncignore">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>presets\%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
 </Project>

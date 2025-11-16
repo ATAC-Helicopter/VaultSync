@@ -1,5 +1,6 @@
 <UserControl
     x:Class="VaultSync.UI.Views.ProjectsView"
+    x:Name="Root"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     x:CompileBindings="False">
@@ -17,7 +18,7 @@
           <Border x:Name="CardBorder"
                   Margin="0,8,0,0"
                   CornerRadius="18"
-                  Background="#151822"
+                  Background="{DynamicResource CardBackgroundBrush}"
                   Padding="16">
             <ContentPresenter
               Content="{TemplateBinding Content}"
@@ -29,7 +30,7 @@
 
     <!-- Soft tint for selected project -->
     <Style Selector="#ProjectList ListBoxItem:selected /template/ Border#CardBorder">
-      <Setter Property="Background" Value="#1A2335" />
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
     </Style>
   </UserControl.Styles>
 
@@ -45,7 +46,7 @@
 
       <!-- LEFT: All projects card -->
       <Border Grid.Column="0"
-              Background="#0F1118"
+              Background="{DynamicResource SurfaceCardBrush}"
               CornerRadius="24"
               Padding="24">
         <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
@@ -55,11 +56,13 @@
             <TextBlock Text="All projects"
                        FontSize="22"
                        FontWeight="SemiBold"
-                       Foreground="#FFFFFF" />
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
           </StackPanel>
 
           <Grid ColumnDefinitions="*,Auto" Row="1" ColumnSpacing="8">
-            <Border CornerRadius="10" Background="#151822" Padding="0,0,4,0">
+            <Border CornerRadius="10"
+                    Background="{DynamicResource InputBackgroundBrush}"
+                    Padding="0,0,4,0">
               <Grid ColumnDefinitions="Auto,*">
                 <Border Width="12" />
                 <TextBox
@@ -68,15 +71,15 @@
                   Watermark="Search projects..."
                   BorderThickness="0"
                   Background="Transparent"
-                  Foreground="#FFFFFF" />
+                  Foreground="{DynamicResource TextPrimaryBrush}" />
               </Grid>
             </Border>
 
             <Button Grid.Column="1"
                     Padding="12,6"
                     CornerRadius="10"
-                    Background="#3A3F51"
-                    Foreground="#FFFFFF"
+                    Background="{DynamicResource AccentBrush}"
+                    Foreground="{DynamicResource ButtonForegroundBrush}"
                     Command="{Binding RefreshCommand}">
               Refresh
             </Button>
@@ -102,20 +105,20 @@
                         Text="{Binding Name}"
                         FontSize="18"
                         FontWeight="Bold"
-                        Foreground="#FFFFFF"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
                         TextWrapping="NoWrap"
                         TextTrimming="CharacterEllipsis" />
                       <TextBlock
                         Grid.Column="1"
                         Text="{Binding LastSnapshotShort}"
                         FontSize="13"
-                        Foreground="#C0C3CC" />
+                        Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBlock
                         Grid.Column="2"
                         Text="{Binding SizeDisplay}"
                         FontSize="13"
                         FontWeight="SemiBold"
-                        Foreground="#FFFFFF" />
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
                     </Grid>
 
                     <!-- Path -->
@@ -124,7 +127,7 @@
                       Grid.ColumnSpan="2"
                       Margin="0,6,0,0"
                       Text="{Binding Path}"
-                      Foreground="#8B90A0"
+                      Foreground="{DynamicResource TextMutedBrush}"
                       FontSize="13"
                       TextWrapping="NoWrap"
                       TextTrimming="CharacterEllipsis" />
@@ -136,19 +139,14 @@
                       Margin="0,10,0,0"
                       CornerRadius="999"
                       Height="20"
-                      Background="#111319">
-                      <Border
-                        Margin="3"
-                        CornerRadius="999"
-                        Background="{Binding HealthBackground}">
-                        <TextBlock
-                          VerticalAlignment="Center"
-                          HorizontalAlignment="Center"
-                          Text="{Binding HealthTag}"
-                          FontSize="11"
-                          FontWeight="SemiBold"
-                          Foreground="#FFFFFF" />
-                      </Border>
+                      Background="{Binding HealthBackground}">
+                      <TextBlock
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Text="{Binding HealthTag}"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource TextOnPillBrush}" />
                     </Border>
                   </Grid>
                 </DataTemplate>
@@ -160,11 +158,11 @@
 
       <!-- RIGHT: details + stats -->
       <Border Grid.Column="2"
-              Background="#0F1118"
+              Background="{DynamicResource SurfaceCardBrush}"
               CornerRadius="24"
               Padding="24"
               DataContext="{Binding SelectedItem, ElementName=ProjectList}">
-        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
+        <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="16">
 
           <!-- Header: name + path -->
           <StackPanel>
@@ -172,53 +170,80 @@
               Text="{Binding Name}"
               FontSize="22"
               FontWeight="SemiBold"
-              Foreground="#FFFFFF"
+              Foreground="{DynamicResource TextPrimaryBrush}"
               TextWrapping="NoWrap"
               TextTrimming="CharacterEllipsis" />
             <TextBlock
               Margin="0,4,0,0"
               Text="{Binding Path, StringFormat='Location · {0}'}"
               FontSize="12"
-              Foreground="#8B90A0"
+              Foreground="{DynamicResource TextMutedBrush}"
               TextWrapping="NoWrap"
               TextTrimming="CharacterEllipsis" />
           </StackPanel>
 
+          <!-- Actions: open folder + snapshot -->
+          <StackPanel Grid.Row="1"
+                      Orientation="Horizontal"
+                      HorizontalAlignment="Left"
+                      Spacing="8">
+            <Button Padding="10,4"
+                    CornerRadius="999"
+                    Background="{DynamicResource InputBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
+                    Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}">
+              Open folder
+            </Button>
+            <Button Padding="10,4"
+                    CornerRadius="999"
+                    Background="{DynamicResource AccentBrush}"
+                    Foreground="{DynamicResource ButtonForegroundBrush}"
+                    Command="{Binding DataContext.TakeSnapshotCommand, ElementName=Root}"
+                    Content="{Binding DataContext.SnapshotActionLabel, ElementName=Root}" />
+            <Button Padding="10,4"
+                    CornerRadius="999"
+                    Background="{DynamicResource InputBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
+                    Command="{Binding DataContext.RemoveProjectCommand, ElementName=Root}">
+              Remove from VaultSync
+            </Button>
+          </StackPanel>
+
           <!-- Stat badges row -->
-          <Grid Grid.Row="1"
+          <Grid Grid.Row="2"
                 ColumnDefinitions="*,*,*,*"
                 ColumnSpacing="12">
             <!-- Preset -->
-            <Border CornerRadius="14" Background="#151822" Padding="10">
-              <StackPanel Spacing="2">
+            <Border CornerRadius="14"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    Padding="10">
+              <StackPanel Spacing="4">
                 <TextBlock Text="Snapshot preset"
                            FontSize="11"
-                           Foreground="#9AA0B3" />
-                <TextBlock Text="{Binding Preset}"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="#FFFFFF"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis" />
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <ComboBox
+                    ItemsSource="{Binding DataContext.AvailablePresets, ElementName=Root}"
+                    SelectedItem="{Binding Preset, Mode=TwoWay}"
+                    HorizontalAlignment="Stretch" />
               </StackPanel>
             </Border>
 
             <!-- Health -->
             <Border Grid.Column="1"
                     CornerRadius="14"
-                    Background="#151822"
+                    Background="{DynamicResource CardBackgroundBrush}"
                     Padding="10">
               <StackPanel Spacing="4">
                 <TextBlock Text="Project health"
                            FontSize="11"
-                           Foreground="#9AA0B3" />
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
                 <Border CornerRadius="999"
                         Background="{Binding HealthBackground}"
                         Padding="6,2">
                   <TextBlock Text="{Binding HealthTag}"
                              FontSize="12"
                              FontWeight="SemiBold"
-                             Foreground="#FFFFFF"
+                             Foreground="{DynamicResource TextOnPillBrush}"
                              HorizontalAlignment="Center"
                              TextWrapping="NoWrap"
                              TextTrimming="CharacterEllipsis" />
@@ -229,16 +254,16 @@
             <!-- Last snapshot -->
             <Border Grid.Column="2"
                     CornerRadius="14"
-                    Background="#151822"
+                    Background="{DynamicResource CardBackgroundBrush}"
                     Padding="10">
               <StackPanel Spacing="2">
                 <TextBlock Text="Last snapshot taken"
                            FontSize="11"
-                           Foreground="#9AA0B3" />
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Text="{Binding LastSnapshotSummary}"
                            FontSize="13"
                            FontWeight="SemiBold"
-                           Foreground="#FFFFFF"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            TextWrapping="NoWrap"
                            TextTrimming="CharacterEllipsis" />
               </StackPanel>
@@ -247,82 +272,93 @@
             <!-- Size -->
             <Border Grid.Column="3"
                     CornerRadius="14"
-                    Background="#151822"
+                    Background="{DynamicResource CardBackgroundBrush}"
                     Padding="10">
               <StackPanel Spacing="2">
                 <TextBlock Text="Project size on disk"
                            FontSize="11"
-                           Foreground="#9AA0B3" />
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Text="{Binding SizeDisplay}"
                            FontSize="13"
                            FontWeight="SemiBold"
-                           Foreground="#FFFFFF"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis" />
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
               </StackPanel>
             </Border>
           </Grid>
 
           <!-- Stats card -->
-          <Border Grid.Row="2"
+          <Border Grid.Row="3"
                   Margin="0,4,0,0"
                   CornerRadius="18"
-                  Background="#151822"
+                  Background="{DynamicResource CardBackgroundBrush}"
                   Padding="16">
             <StackPanel Spacing="12">
 
               <!-- Top metrics -->
               <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
-                <Border CornerRadius="10" Background="#191D29" Padding="10">
+                <Border CornerRadius="10"
+                        Background="{DynamicResource CardRaisedBackgroundBrush}"
+                        Padding="10">
                   <StackPanel Spacing="2">
                     <TextBlock Text="Total snapshots"
                                FontSize="11"
-                               Foreground="#9AA0B3" />
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding SnapshotCount}"
                                FontSize="13"
                                FontWeight="SemiBold"
-                               Foreground="#FFFFFF" />
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
                   </StackPanel>
                 </Border>
 
-                <Border CornerRadius="10" Background="#191D29" Padding="10" Grid.Column="1">
+                <Border CornerRadius="10"
+                        Background="{DynamicResource CardRaisedBackgroundBrush}"
+                        Padding="10"
+                        Grid.Column="1">
                   <StackPanel Spacing="2">
                     <TextBlock Text="Snapshot storage"
                                FontSize="11"
-                               Foreground="#9AA0B3" />
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding TotalSnapshotSizeDisplay}"
                                FontSize="13"
                                FontWeight="SemiBold"
-                               Foreground="#FFFFFF" />
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
                   </StackPanel>
                 </Border>
 
-                <Border CornerRadius="10" Background="#191D29" Padding="10" Grid.Column="2">
+                <Border CornerRadius="10"
+                        Background="{DynamicResource CardRaisedBackgroundBrush}"
+                        Padding="10"
+                        Grid.Column="2">
                   <StackPanel Spacing="2">
                     <TextBlock Text="Average snapshot size"
                                FontSize="11"
-                               Foreground="#9AA0B3" />
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding AverageSnapshotSizeDisplay}"
                                FontSize="13"
                                FontWeight="SemiBold"
-                               Foreground="#FFFFFF" />
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
                   </StackPanel>
                 </Border>
 
-                <Border CornerRadius="10" Background="#191D29" Padding="10" Grid.Column="3">
+                <Border CornerRadius="10"
+                        Background="{DynamicResource CardRaisedBackgroundBrush}"
+                        Padding="10"
+                        Grid.Column="3">
                   <StackPanel Spacing="2">
                     <TextBlock Text="Time since last snapshot"
                                FontSize="11"
-                               Foreground="#9AA0B3" />
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding DaysSinceLastSnapshotDisplay}"
                                FontSize="13"
                                FontWeight="SemiBold"
-                               Foreground="#FFFFFF" />
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
                   </StackPanel>
                 </Border>
               </Grid>
 
-              <Border Margin="0,6,0,0" Height="1" Background="#202331" />
+              <Border Margin="0,6,0,0"
+                      Height="1"
+                      Background="{DynamicResource DividerBrush}" />
 
               <!-- Snapshot size trend -->
               <StackPanel Spacing="10">
@@ -331,10 +367,12 @@
                   Text="Snapshot size trend"
                   FontSize="13"
                   FontWeight="SemiBold"
-                  Foreground="#FFFFFF" />
+                  Foreground="{DynamicResource TextPrimaryBrush}" />
 
                 <!-- subtle y-axis baseline -->
-                <Border Height="1" Background="#242836" Margin="0,0,0,4"/>
+                <Border Height="1"
+                        Background="{DynamicResource SubtleAxisBrush}"
+                        Margin="0,0,0,4"/>
 
                 <!-- Chart area -->
                 <Grid RowDefinitions="Auto,Auto">
@@ -343,7 +381,8 @@
                   <ItemsControl Grid.Row="0" ItemsSource="{Binding SnapshotHistory}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"/>
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Bottom"/>
                       </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
 
@@ -367,10 +406,12 @@
                   </ItemsControl>
 
                   <!-- X-axis labels (dates) -->
-                  <ItemsControl Grid.Row="1" ItemsSource="{Binding SnapshotHistory}">
+                  <ItemsControl Grid.Row="1"
+                                ItemsSource="{Binding SnapshotHistory}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left"/>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Left"/>
                       </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
 
@@ -379,7 +420,7 @@
                         <TextBlock
                           Text="{Binding Timestamp, StringFormat='{}{0:dd/MM}'}"
                           FontSize="10"
-                          Foreground="#646B7A"
+                          Foreground="{DynamicResource TextMutedBrush}"
                           HorizontalAlignment="Center"
                           Margin="10,4,10,0"/>
                       </DataTemplate>
@@ -389,24 +430,43 @@
                 </Grid>
 
                 <!-- Legend -->
-                <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,0">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="14"
+                            Margin="0,4,0,0">
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Border Width="10" Height="10" CornerRadius="3" Background="#2E6A3E"/>
-                    <TextBlock Text="Decreasing size" FontSize="10" Foreground="#747B8A"/>
+                    <Border Width="10"
+                            Height="10"
+                            CornerRadius="3"
+                            Background="#2E6A3E"/>
+                    <TextBlock Text="Decreasing size"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextMutedBrush}"/>
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Border Width="10" Height="10" CornerRadius="3" Background="#6A2E2E"/>
-                    <TextBlock Text="Increasing size" FontSize="10" Foreground="#747B8A"/>
+                    <Border Width="10"
+                            Height="10"
+                            CornerRadius="3"
+                            Background="#6A2E2E"/>
+                    <TextBlock Text="Increasing size"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextMutedBrush}"/>
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Border Width="10" Height="10" CornerRadius="3" Background="#2F3650"/>
-                    <TextBlock Text="First snapshot / unchanged" FontSize="10" Foreground="#747B8A"/>
+                    <Border Width="10"
+                            Height="10"
+                            CornerRadius="3"
+                            Background="#2F3650"/>
+                    <TextBlock Text="First snapshot / unchanged"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextMutedBrush}"/>
                   </StackPanel>
                 </StackPanel>
 
               </StackPanel>
 
-              <Border Margin="0,6,0,0" Height="1" Background="#202331" />
+              <Border Margin="0,6,0,0"
+                      Height="1"
+                      Background="{DynamicResource DividerBrush}" />
 
               <!-- Recent snapshots list -->
               <StackPanel Spacing="8">
@@ -414,7 +474,7 @@
                   Text="Recent snapshots"
                   FontSize="13"
                   FontWeight="SemiBold"
-                  Foreground="#FFFFFF" />
+                  Foreground="{DynamicResource TextPrimaryBrush}" />
 
                 <ItemsControl ItemsSource="{Binding SnapshotHistory}">
                   <ItemsControl.ItemTemplate>
@@ -424,13 +484,13 @@
                           Grid.Column="0"
                           Text="{Binding DateDisplay}"
                           FontSize="12"
-                          Foreground="#C0C3CC" />
+                          Foreground="{DynamicResource TextSecondaryBrush}" />
                         <TextBlock
                           Grid.Column="1"
                           Text="{Binding SizeDisplay}"
                           FontSize="12"
                           FontWeight="SemiBold"
-                          Foreground="#FFFFFF" />
+                          Foreground="{DynamicResource TextPrimaryBrush}" />
                       </Grid>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
