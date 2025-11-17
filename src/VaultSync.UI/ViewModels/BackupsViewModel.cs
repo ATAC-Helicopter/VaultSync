@@ -94,6 +94,14 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _backupProgress, value))
                 {
                     OnPropertyChanged(nameof(BackupProgress));
+
+                    // When a backup reaches 100%, automatically clear the busy flag.
+                    // This ensures the compact progress overlay disappears once the
+                    // archive/native backup has fully completed.
+                    if (value >= 100d)
+                    {
+                        IsBusy = false;
+                    }
                 }
             }
         }

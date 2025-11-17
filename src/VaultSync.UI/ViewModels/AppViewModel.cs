@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -162,11 +163,11 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
                 return;
 
-            _backupsViewModel.BackupProgress = 0;
+            _backupsViewModel.BackupProgress    = 0;
             _backupsViewModel.BackupCurrentFile = "Preparing backup…";
-            _backupsViewModel.BackupEtaText = string.Empty;
-            _backupsViewModel.IsBusy = true;
-            _backupsViewModel.BusyMessage = $"Backing up {project.Name}…";
+            _backupsViewModel.BackupEtaText     = string.Empty;
+            _backupsViewModel.IsBusy            = true;
+            _backupsViewModel.BusyMessage       = $"Backing up {project.Name}…";
 
             try
             {
@@ -178,22 +179,53 @@ namespace VaultSync.UI.ViewModels
                         isAuto: false,
                         progressCallback: (percent, currentFile, etaText) =>
                         {
-                            _backupsViewModel.BackupProgress = percent;
-                            _backupsViewModel.BackupCurrentFile = string.IsNullOrWhiteSpace(currentFile)
-                                ? "Preparing backup…"
-                                : currentFile;
-                            _backupsViewModel.BackupEtaText = etaText;
-                        });
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _backupsViewModel.BackupProgress = percent;
+
+                                string label;
+                                if (!string.IsNullOrWhiteSpace(currentFile))
+                                {
+                                    label = currentFile;
+                                }
+                                else if (percent <= 0.1)
+                                {
+                                    label = "Preparing backup…";
+                                }
+                                else if (percent < 100)
+                                {
+                                    label = "Running backup…";
+                                }
+                                else
+                                {
+                                    label = "Completed";
+                                }
+
+                                _backupsViewModel.BackupCurrentFile = label;
+                                _backupsViewModel.BackupEtaText     = etaText;
+                            });
+                        },
+                        useArchiveMode: true);
                 });
 
                 ReloadBackupsVmData();
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AppViewModel] Backup failed: {ex}");
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _backupsViewModel.BackupCurrentFile = "Backup failed.";
+                    _backupsViewModel.BackupEtaText =
+                        string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
+                            ? ex.Message
+                            : _backupsViewModel.BackupEtaText + " · Failed";
+                });
+            }
             finally
             {
-                _backupsViewModel.BackupProgress = 100;
-                _backupsViewModel.BackupCurrentFile = "Completed";
-                _backupsViewModel.BackupEtaText = string.Empty;
-                _backupsViewModel.IsBusy = false;
+                _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
             }
         }
@@ -205,11 +237,11 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return;
 
-            _backupsViewModel.BackupProgress = 0;
+            _backupsViewModel.BackupProgress    = 0;
             _backupsViewModel.BackupCurrentFile = "Preparing backup…";
-            _backupsViewModel.BackupEtaText = string.Empty;
-            _backupsViewModel.IsBusy = true;
-            _backupsViewModel.BusyMessage = "Backing up all projects…";
+            _backupsViewModel.BackupEtaText     = string.Empty;
+            _backupsViewModel.IsBusy            = true;
+            _backupsViewModel.BusyMessage       = "Backing up all projects…";
 
             try
             {
@@ -223,23 +255,54 @@ namespace VaultSync.UI.ViewModels
                             isAuto: false,
                             progressCallback: (percent, currentFile, etaText) =>
                             {
-                                _backupsViewModel.BackupProgress = percent;
-                                _backupsViewModel.BackupCurrentFile = string.IsNullOrWhiteSpace(currentFile)
-                                    ? "Preparing backup…"
-                                    : currentFile;
-                                _backupsViewModel.BackupEtaText = etaText;
-                            });
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    _backupsViewModel.BackupProgress = percent;
+
+                                    string label;
+                                    if (!string.IsNullOrWhiteSpace(currentFile))
+                                    {
+                                        label = currentFile;
+                                    }
+                                    else if (percent <= 0.1)
+                                    {
+                                        label = "Preparing backup…";
+                                    }
+                                    else if (percent < 100)
+                                    {
+                                        label = "Running backup…";
+                                    }
+                                    else
+                                    {
+                                        label = "Completed";
+                                    }
+
+                                    _backupsViewModel.BackupCurrentFile = label;
+                                    _backupsViewModel.BackupEtaText     = etaText;
+                                });
+                            },
+                            useArchiveMode: true);
                     }
                 });
 
                 ReloadBackupsVmData();
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AppViewModel] Backup-all failed: {ex}");
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _backupsViewModel.BackupCurrentFile = "Backup all projects failed.";
+                    _backupsViewModel.BackupEtaText =
+                        string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
+                            ? ex.Message
+                            : _backupsViewModel.BackupEtaText + " · Failed";
+                });
+            }
             finally
             {
-                _backupsViewModel.BackupProgress = 100;
-                _backupsViewModel.BackupCurrentFile = "Completed";
-                _backupsViewModel.BackupEtaText = string.Empty;
-                _backupsViewModel.IsBusy = false;
+                _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
             }
         }

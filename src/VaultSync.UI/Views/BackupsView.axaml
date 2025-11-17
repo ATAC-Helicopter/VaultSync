@@ -433,37 +433,48 @@
       </StackPanel>
     </ScrollViewer>
 
-    <!-- Busy overlay -->
-    <Border Background="#80000080"
+    <!-- Busy overlay: compact progress card -->
+    <Border Grid.RowSpan="3"
+            Background="Transparent"
+            IsHitTestVisible="{Binding IsBusy}"
             IsVisible="{Binding IsBusy}">
-      <StackPanel HorizontalAlignment="Center"
-                  VerticalAlignment="Center"
-                  Spacing="8">
-        <!-- Status / title -->
-        <TextBlock Text="{Binding BusyMessage}"
-                   FontSize="13"
-                   Foreground="White"
-                   HorizontalAlignment="Center" />
+      <Border HorizontalAlignment="Right"
+              VerticalAlignment="Bottom"
+              Margin="0,0,24,24"
+              Padding="14"
+              Width="360"
+              MaxWidth="360"
+              CornerRadius="12"
+              Background="{DynamicResource CardBackgroundBrush}">
+        <StackPanel Spacing="6">
+          <!-- Status / title -->
+          <TextBlock Text="{Binding BusyMessage}"
+                     FontSize="13"
+                     FontWeight="SemiBold"
+                     TextTrimming="CharacterEllipsis"
+                     TextWrapping="NoWrap" />
 
-        <!-- Determinate progress bar -->
-        <ProgressBar Width="260"
-                     Maximum="100"
-                     Value="{Binding BackupProgress}" />
+          <!-- Slim determinate progress bar -->
+          <ProgressBar Minimum="0"
+                       Maximum="100"
+                       Value="{Binding BackupProgress}"
+                       Height="4"
+                       CornerRadius="2" />
 
-        <!-- Current file -->
-        <TextBlock Text="{Binding BackupCurrentFile}"
-                   FontSize="11"
-                   Foreground="White"
-                   HorizontalAlignment="Center"
-                   TextWrapping="Wrap"
-                   MaxWidth="340" />
+          <!-- Current file (single line, ellipsized, fixed width) -->
+          <TextBlock Text="{Binding BackupCurrentFile}"
+                     FontSize="11"
+                     MaxWidth="332"
+                     TextTrimming="CharacterEllipsis"
+                     TextWrapping="NoWrap" />
 
-        <!-- ETA -->
-        <TextBlock Text="{Binding BackupEtaText}"
-                   FontSize="11"
-                   Foreground="White"
-                   HorizontalAlignment="Center" />
-      </StackPanel>
+          <!-- Speed + ETA, right-aligned -->
+          <TextBlock Text="{Binding BackupEtaText}"
+                     FontSize="11"
+                     HorizontalAlignment="Right"
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+      </Border>
     </Border>
   </Grid>
 </UserControl>
