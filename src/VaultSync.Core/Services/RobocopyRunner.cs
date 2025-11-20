@@ -66,8 +66,7 @@ namespace VaultSync.Core.Services
             // Keep it fast and predictable
             psi.ArgumentList.Add("/R:1");
             psi.ArgumentList.Add("/W:1");
-            psi.ArgumentList.Add("/MT"); // default threads (~8). Could be /MT:16 if desired.
-
+            psi.ArgumentList.Add("/MT:16");
             // Apply exclusions (preset + local)
             AddRobocopyExcludes(psi, excludeFiles, excludeDirs);
 

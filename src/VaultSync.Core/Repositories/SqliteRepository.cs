@@ -202,6 +202,15 @@ DELETE FROM sqlite_sequence;";
             return ListProjects();
         }
 
+        /// <summary>
+        /// Async helper for retrieving all projects without blocking the caller thread.
+        /// Intended for UI code; it simply wraps the existing synchronous method.
+        /// </summary>
+        public Task<List<Project>> GetAllProjectsAsync(CancellationToken ct = default)
+        {
+            return Task.Run(() => GetAllProjects().ToList(), ct);
+        }
+
         public int AddProject(Project p)
         {
             using var c = Open();
@@ -313,6 +322,15 @@ DELETE FROM sqlite_sequence;";
                 """);
         }
 
+        /// <summary>
+        /// Async helper for retrieving all snapshots without blocking the UI thread.
+        /// Wraps the existing synchronous implementation.
+        /// </summary>
+        public Task<List<Snapshot>> GetAllSnapshotsAsync(CancellationToken ct = default)
+        {
+            return Task.Run(() => GetAllSnapshots().ToList(), ct);
+        }
+
         public IEnumerable<Snapshot> GetSnapshotsForProject(string projectName)
         {
             using var c = Open();
@@ -331,6 +349,15 @@ DELETE FROM sqlite_sequence;";
                 new { name = projectName });
         }
 
+        /// <summary>
+        /// Async helper for retrieving all snapshots for a given project name.
+        /// Safe to call from UI code; internally uses the existing sync method.
+        /// </summary>
+        public Task<List<Snapshot>> GetSnapshotsForProjectAsync(string projectName, CancellationToken ct = default)
+        {
+            return Task.Run(() => GetSnapshotsForProject(projectName).ToList(), ct);
+        }
+
         public IEnumerable<FileEntry> GetFilesForSnapshot(int snapshotId)
         {
             using var c = Open();
@@ -346,6 +373,25 @@ DELETE FROM sqlite_sequence;";
 
                 yield return new FileEntry(r.RelPath, r.Size, mtime, r.HashSha256);
             }
+        }
+
+        /// <summary>
+        /// Async helper that materializes all file entries for a snapshot into a list
+        /// on a background thread. This is safe to call from UI code without blocking
+        /// the UI thread, and uses the existing synchronous implementation internally.
+        /// </summary>
+        public Task<List<FileEntry>> GetFilesForSnapshotAsync(int snapshotId, CancellationToken ct = default)
+        {
+            return Task.Run(() =>
+            {
+                var list = new List<FileEntry>();
+                foreach (var entry in GetFilesForSnapshot(snapshotId))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    list.Add(entry);
+                }
+                return list;
+            }, ct);
         }
 
         public void InsertFiles(int snapshotId, IEnumerable<FileEntry> files)
@@ -434,7 +480,16 @@ DELETE FROM sqlite_sequence;";
         }
 
         /// <summary>
-        /// Backups created between the given UTC range (inclusive start, exclusive end).
+        /// Async helper for retrieving all backups for a given project id.
+        /// Safe to call from UI code; internally uses the existing sync method.
+        /// </summary>
+        public Task<List<Backup>> GetBackupsForProjectAsync(int projectId, CancellationToken ct = default)
+        {
+            return Task.Run(() => GetBackupsForProject(projectId).ToList(), ct);
+        }
+
+        /// <summary>
+        /// Backups created between the given UTC range (inclusive start and inclusive end).
         /// Used by the Backups UI for history and charts.
         /// </summary>
         public IEnumerable<Backup> GetBackupsInRange(DateTime fromUtc, DateTime toUtc)
@@ -451,7 +506,7 @@ DELETE FROM sqlite_sequence;";
                   total_bytes as TotalBytes,
                   path
                 FROM backups
-                WHERE created_utc >= @from AND created_utc < @to
+                WHERE created_utc >= @from AND created_utc <= @to
                 ORDER BY created_utc DESC;
                 """,
                 new
@@ -459,6 +514,15 @@ DELETE FROM sqlite_sequence;";
                     from = fromUtc.ToString("u", CultureInfo.InvariantCulture),
                     to   = toUtc.ToString("u", CultureInfo.InvariantCulture)
                 });
+        }
+
+        /// <summary>
+        /// Async helper for retrieving backups in a date range without blocking the UI thread.
+        /// Wraps the existing synchronous implementation.
+        /// </summary>
+        public Task<List<Backup>> GetBackupsInRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
+        {
+            return Task.Run(() => GetBackupsInRange(fromUtc, toUtc).ToList(), ct);
         }
 
         public Backup? GetLastBackup()

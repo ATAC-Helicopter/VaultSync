@@ -57,6 +57,10 @@ namespace VaultSync.Core.Services
             psi.ArgumentList.Add("--delete");
             psi.ArgumentList.Add("--human-readable");
 
+            // Fast LAN / local copy optimizations: do not compress, send whole files.
+            psi.ArgumentList.Add("--no-compress"); // avoid wasting CPU on compression over LAN / local FS
+            psi.ArgumentList.Add("--whole-file");  // skip delta algorithm, faster for LAN and mounted shares
+
             // Make rsync actually print progress lines with percentages.
             psi.ArgumentList.Add("--progress");
 
@@ -86,6 +90,8 @@ namespace VaultSync.Core.Services
             // Helper to parse progress from any rsync output line (stdout or stderr)
             void HandleProgressLine(string? data)
             {
+                if (ct.IsCancellationRequested)
+                    return;
                 if (string.IsNullOrWhiteSpace(data) || progressCallback is null)
                     return;
 
@@ -145,6 +151,8 @@ namespace VaultSync.Core.Services
             }
             catch (OperationCanceledException)
             {
+                try { proc.CancelErrorRead(); } catch { /* ignore */ }
+                try { proc.CancelOutputRead(); } catch { /* ignore */ }
                 try { proc.Kill(entireProcessTree: true); } catch { /* ignore */ }
                 throw;
             }

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using Avalonia.Media;
+using Avalonia.Threading;
 using VaultSync.Core.Models;
 
 namespace VaultSync.UI.ViewModels
@@ -16,7 +17,6 @@ namespace VaultSync.UI.ViewModels
         {
             if (EqualityComparer<T>.Default.Equals(storage, value))
                 return false;
-
             storage = value;
             return true;
         }
@@ -25,6 +25,10 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<BackupSnapshotItem> Snapshots { get; } =
             new ObservableCollection<BackupSnapshotItem>();
 
+        // Grouped view (per project) for the right-hand history panel
+        public ObservableCollection<SnapshotProjectGroup> SnapshotGroups { get; } =
+            new ObservableCollection<SnapshotProjectGroup>();
+
         // Internal full list for summary + filtering
         private readonly List<BackupSnapshotItem> _allSnapshots = new();
 
@@ -32,14 +36,26 @@ namespace VaultSync.UI.ViewModels
         public BackupSnapshotItem? SelectedSnapshotA
         {
             get => _selectedSnapshotA;
-            set => SetProperty(ref _selectedSnapshotA, value);
+            set
+            {
+                if (SetProperty(ref _selectedSnapshotA, value))
+                {
+                    OnPropertyChanged(nameof(SelectedSnapshotA));
+                }
+            }
         }
 
         private BackupSnapshotItem? _selectedSnapshotB;
         public BackupSnapshotItem? SelectedSnapshotB
         {
             get => _selectedSnapshotB;
-            set => SetProperty(ref _selectedSnapshotB, value);
+            set
+            {
+                if (SetProperty(ref _selectedSnapshotB, value))
+                {
+                    OnPropertyChanged(nameof(SelectedSnapshotB));
+                }
+            }
         }
 
         // Type + project filter state
@@ -51,6 +67,10 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<ProjectBackupItem> ProjectBackups { get; } =
             new ObservableCollection<ProjectBackupItem>();
 
+        // Active per-project backup progress items (for running backups)
+        public ObservableCollection<BackupProgressItem> ActiveBackups { get; } =
+            new ObservableCollection<BackupProgressItem>();
+
         // Currently selected project in the per-project list
         private ProjectBackupItem? _selectedProject;
         public ProjectBackupItem? SelectedProject
@@ -60,6 +80,7 @@ namespace VaultSync.UI.ViewModels
             {
                 if (SetProperty(ref _selectedProject, value))
                 {
+                    OnPropertyChanged(nameof(SelectedProject));
                     OnSelectedProjectChanged(value);
                 }
             }
@@ -78,7 +99,7 @@ namespace VaultSync.UI.ViewModels
         public int ManualSnapshotsThisWeek { get; private set; }
 
         public string SnapshotsSummaryLine { get; private set; } = "0 today · 0 this week";
-        public string SnapshotActivitySummary { get; private set; } = "No snapshots in the last 7 days";
+        public string SnapshotActivitySummary { get; private set; } = "No backups in the last 7 days";
 
         public string LastBackupDisplay { get; private set; } = "No backups yet";
         public string LastBackupRelative { get; private set; } = "—";
@@ -165,6 +186,7 @@ namespace VaultSync.UI.ViewModels
         public event Action<ProjectBackupItem?>? BackupProjectRequested;
         public event Action<BackupSnapshotItem?>? RestoreBackupRequested;
         public event Action<BackupSnapshotItem?>? DeleteBackupRequested;
+        public event Action<BackupProgressItem?>? CancelActiveBackupRequested;
 
         // Commands
         public ICommand CreateBackupCommand { get; }
@@ -252,13 +274,99 @@ namespace VaultSync.UI.ViewModels
             {
                 _currentProjectIdFilter   = null;
                 HistoryFilterProjectLabel = "All projects";
+                OnPropertyChanged(nameof(HistoryFilterProjectLabel));
                 RefreshSnapshotsView(true);
                 return;
             }
 
             _currentProjectIdFilter   = project.Id;
             HistoryFilterProjectLabel = project.Name;
+            OnPropertyChanged(nameof(HistoryFilterProjectLabel));
             RefreshSnapshotsView(true);
+        }
+
+        // ---------- Active backup progress (per project) ----------
+
+        /// <summary>
+        /// Updates (or creates) a per-project backup progress item. Intended to be called
+        /// from AppViewModel when BackupService reports progress for a specific project.
+        /// This method marshals updates onto the UI thread to keep ObservableCollection
+        /// changes safe and avoid UI-thread violations when progress is raised from
+        /// background threads.
+        /// </summary>
+        public void UpdateActiveBackup(string projectId, string projectName, double progress, string currentFile, string etaText)
+        {
+            if (string.IsNullOrWhiteSpace(projectId))
+                return;
+
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => UpdateActiveBackup(projectId, projectName, progress, currentFile, etaText));
+                return;
+            }
+
+            var item = ActiveBackups.FirstOrDefault(p => p.ProjectId == projectId);
+            if (item == null)
+            {
+                item = new BackupProgressItem
+                {
+                    ProjectId        = projectId,
+                    ProjectName      = string.IsNullOrWhiteSpace(projectName) ? "Unknown project" : projectName,
+                    CancelRequested  = OnCancelActiveBackup
+                };
+                ActiveBackups.Add(item);
+            }
+
+            item.Progress = progress;
+
+            if (!string.IsNullOrWhiteSpace(currentFile))
+                item.CurrentFile = currentFile;
+
+            item.EtaText = etaText ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Removes a per-project backup progress item once the backup is finished
+        /// or cancelled.
+        /// </summary>
+        public void RemoveActiveBackup(string projectId)
+        {
+            if (string.IsNullOrWhiteSpace(projectId))
+                return;
+
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => RemoveActiveBackup(projectId));
+                return;
+            }
+
+            var item = ActiveBackups.FirstOrDefault(p => p.ProjectId == projectId);
+            if (item != null)
+            {
+                ActiveBackups.Remove(item);
+            }
+        }
+
+        private void OnCancelActiveBackup(BackupProgressItem? item)
+        {
+            if (item is null)
+                return;
+
+            CancelActiveBackupRequested?.Invoke(item);
+        }
+
+        /// <summary>
+        /// Clears all active backup progress items, e.g. after a full refresh.
+        /// </summary>
+        public void ClearActiveBackups()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(ClearActiveBackups);
+                return;
+            }
+
+            ActiveBackups.Clear();
         }
 
         // ---------- Snapshot management + filtering ----------
@@ -279,7 +387,10 @@ namespace VaultSync.UI.ViewModels
 
                 // Only reset the label to "All projects" if we are not scoped to a project.
                 if (string.IsNullOrWhiteSpace(_currentProjectIdFilter))
+                {
                     HistoryFilterProjectLabel = "All projects";
+                    OnPropertyChanged(nameof(HistoryFilterProjectLabel));
+                }
             }
             else
             {
@@ -346,7 +457,61 @@ namespace VaultSync.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(_currentProjectIdFilter))
                 source = source.Where(s => s.ProjectId == _currentProjectIdFilter);
 
-            ReplaceSnapshots(source, forceResetCompare);
+            var filteredList = source.ToList();
+
+            ReplaceSnapshots(filteredList, forceResetCompare);
+            RebuildSnapshotGroups(filteredList);
+        }
+
+        private void RebuildSnapshotGroups(IReadOnlyList<BackupSnapshotItem> filtered)
+        {
+            SnapshotGroups.Clear();
+
+            if (filtered.Count == 0)
+                return;
+
+            // Map project id -> name from the per-project list on the left
+            var projectNameLookup = ProjectBackups
+                .GroupBy(p => p.Id)
+                .ToDictionary(g => g.Key, g => g.First().Name);
+
+            var grouped = filtered
+                .GroupBy(s => s.ProjectId ?? string.Empty)
+                .OrderBy(g =>
+                {
+                    if (!string.IsNullOrWhiteSpace(g.Key) && projectNameLookup.TryGetValue(g.Key, out var name))
+                        return name;
+                    return "zzzz_" + g.Key; // unknown/global go at the end
+                });
+
+            foreach (var g in grouped)
+            {
+                var ordered = g.OrderByDescending(s => s.Timestamp).ToList();
+                long totalBytes = ordered.Sum(s => s.SizeBytes);
+
+                string projectName;
+                if (string.IsNullOrWhiteSpace(g.Key))
+                {
+                    projectName = "Global snapshots";
+                }
+                else if (!projectNameLookup.TryGetValue(g.Key, out projectName!))
+                {
+                    projectName = "Unknown project";
+                }
+
+                var groupVm = new SnapshotProjectGroup
+                {
+                    ProjectId          = g.Key,
+                    ProjectName        = projectName,
+                    Summary            = $"{ordered.Count} backup{(ordered.Count == 1 ? string.Empty : "s")}",
+                    TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes)
+                };
+
+                foreach (var snap in ordered)
+                    groupVm.Snapshots.Add(snap);
+
+                SnapshotGroups.Add(groupVm);
+            }
         }
 
         // ---------- Summary computation ----------
@@ -370,16 +535,16 @@ namespace VaultSync.UI.ViewModels
                 s.Timestamp.Date >= weekStart &&
                 string.Equals(s.Type, "Manual", StringComparison.OrdinalIgnoreCase));
 
-            SnapshotsSummaryLine = $"{SnapshotsToday} today · {SnapshotsThisWeek} this week";
+            SnapshotsSummaryLine = $"{SnapshotsToday} backups today · {SnapshotsThisWeek} this week";
 
             if (SnapshotsThisWeek == 0)
             {
-                SnapshotActivitySummary = "No snapshots in the last 7 days";
+                SnapshotActivitySummary = "No backups in the last 7 days";
             }
             else
             {
                 SnapshotActivitySummary =
-                    $"{SnapshotsThisWeek} total · {AutoSnapshotsThisWeek} auto · {ManualSnapshotsThisWeek} manual";
+                    $"{SnapshotsThisWeek} backups total · {AutoSnapshotsThisWeek} auto · {ManualSnapshotsThisWeek} manual";
             }
 
             if (_allSnapshots.Count > 0)
@@ -401,6 +566,18 @@ namespace VaultSync.UI.ViewModels
             TotalBackupSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes);
 
             RebuildSnapshotActivity(now);
+
+            // Notify UI that summary properties changed
+            OnPropertyChanged(nameof(TotalSnapshots));
+            OnPropertyChanged(nameof(SnapshotsThisWeek));
+            OnPropertyChanged(nameof(SnapshotsToday));
+            OnPropertyChanged(nameof(AutoSnapshotsThisWeek));
+            OnPropertyChanged(nameof(ManualSnapshotsThisWeek));
+            OnPropertyChanged(nameof(SnapshotsSummaryLine));
+            OnPropertyChanged(nameof(SnapshotActivitySummary));
+            OnPropertyChanged(nameof(LastBackupDisplay));
+            OnPropertyChanged(nameof(LastBackupRelative));
+            OnPropertyChanged(nameof(TotalBackupSizeFormatted));
         }
 
         private static string FormatRelative(TimeSpan span)
@@ -468,15 +645,18 @@ namespace VaultSync.UI.ViewModels
             if (projects is null) throw new ArgumentNullException(nameof(projects));
             if (backups  is null) throw new ArgumentNullException(nameof(backups));
 
+            var projectList = projects.ToList();
+            var backupList  = backups.ToList();
+
             ProjectBackups.Clear();
             _allSnapshots.Clear();
 
             // Map per-project aggregates
-            var backupsByProject = backups
+            var backupsByProject = backupList
                 .GroupBy(b => b.ProjectId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            foreach (var project in projects)
+            foreach (var project in projectList)
             {
                 backupsByProject.TryGetValue(project.Id, out var projectBackups);
                 projectBackups ??= new List<Backup>();
@@ -498,9 +678,11 @@ namespace VaultSync.UI.ViewModels
             }
 
             // Map individual backups into the history list model
-            foreach (var backup in backups)
+            var projectLookup = projectList.ToDictionary(p => p.Id);
+
+            foreach (var backup in backupList)
             {
-                var project = projects.FirstOrDefault(p => p.Id == backup.ProjectId);
+                projectLookup.TryGetValue(backup.ProjectId, out var project);
 
                 var uiItem = new BackupSnapshotItem
                 {
@@ -599,6 +781,17 @@ namespace VaultSync.UI.ViewModels
         }
     }
 
+    public class SnapshotProjectGroup
+    {
+        public string? ProjectId { get; set; }
+        public string ProjectName { get; set; } = string.Empty;
+        public string Summary { get; set; } = string.Empty;
+        public string TotalSizeFormatted { get; set; } = string.Empty;
+
+        public ObservableCollection<BackupSnapshotItem> Snapshots { get; } =
+            new ObservableCollection<BackupSnapshotItem>();
+    }
+
     public class ProjectBackupItem
     {
         public string Id { get; set; } = string.Empty;
@@ -615,6 +808,65 @@ namespace VaultSync.UI.ViewModels
 
         public string TotalSizeFormatted =>
             BackupSnapshotItem.FormatSize(TotalSizeBytes);
+    }
+
+    public class BackupProgressItem : ViewModelBase
+    {
+        public string ProjectId { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+
+        public Action<BackupProgressItem?>? CancelRequested { get; set; }
+
+        public ICommand CancelCommand { get; }
+
+        public BackupProgressItem()
+        {
+            CancelCommand = new ActionCommand(_ => CancelRequested?.Invoke(this));
+        }
+
+        private double _progress;
+        public double Progress
+        {
+            get => _progress;
+            set
+            {
+                if (Math.Abs(_progress - value) < 0.0001)
+                    return;
+
+                _progress = value;
+                OnPropertyChanged(nameof(Progress));
+            }
+        }
+
+        private string _currentFile = string.Empty;
+        public string CurrentFile
+        {
+            get => _currentFile;
+            set
+            {
+                if (_currentFile == value)
+                    return;
+
+                _currentFile = value ?? string.Empty;
+                OnPropertyChanged(nameof(CurrentFile));
+            }
+        }
+
+        private string _etaText = string.Empty;
+        public string EtaText
+        {
+            get => _etaText;
+            set
+            {
+                if (_etaText == value)
+                    return;
+
+                _etaText = value ?? string.Empty;
+                OnPropertyChanged(nameof(EtaText));
+            }
+        }
+
+        public bool IsCompleted => Progress >= 100d;
     }
 
     public class SnapshotActivityPoint

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Collections.Concurrent;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -93,6 +94,7 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.CreateBackupForAllProjectsRequested += OnCreateBackupForAllProjectsRequested;
             _backupsViewModel.DeleteBackupRequested += OnDeleteBackupRequested;
             _backupsViewModel.RestoreBackupRequested += OnRestoreBackupRequested; // stub for later
+            _backupsViewModel.CancelActiveBackupRequested += OnCancelActiveBackupRequested;
 
             // 4) Initial load of backup data
             ReloadBackupsVmData();
@@ -140,14 +142,23 @@ namespace VaultSync.UI.ViewModels
 
         private void ReloadBackupsVmData()
         {
-            var projects = _repo.GetAllProjects();
-            var backups  = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
+            var projects = _repo.GetAllProjects().ToList();
+            var backups  = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+
+            Console.WriteLine($"[AppViewModel] ReloadBackupsVmData: projects={projects.Count}, backups={backups.Count}.");
 
             _backupsViewModel.LoadFromBackups(projects, backups);
         }
 
         private async void OnBackupProjectRequested(ProjectBackupItem? item)
         {
+            // Prevent overlapping manual backups; if one is already running, ignore.
+            if (_backupsViewModel.IsBusy)
+            {
+                Console.WriteLine("[AppViewModel] BackupProjectRequested ignored because a backup is already in progress.");
+                return;
+            }
+
             if (item is null)
                 return;
 
@@ -163,11 +174,24 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
                 return;
 
+            Console.WriteLine($"[AppViewModel] BackupProjectRequested for project '{project.Name}' (Id={project.Id}).");
+
+            // Reset progress state
             _backupsViewModel.BackupProgress    = 0;
             _backupsViewModel.BackupCurrentFile = "Preparing backup…";
             _backupsViewModel.BackupEtaText     = string.Empty;
-            _backupsViewModel.IsBusy            = true;
-            _backupsViewModel.BusyMessage       = $"Backing up {project.Name}…";
+
+            // Reset per-project cards and add this project
+            _backupsViewModel.ClearActiveBackups();
+            _backupsViewModel.UpdateActiveBackup(
+                project.Id.ToString(),
+                project.Name,
+                0,
+                "Preparing backup…",
+                string.Empty);
+
+            _backupsViewModel.IsBusy      = true;
+            _backupsViewModel.BusyMessage = $"Backing up {project.Name}…";
 
             try
             {
@@ -179,33 +203,42 @@ namespace VaultSync.UI.ViewModels
                         isAuto: false,
                         progressCallback: (percent, currentFile, etaText) =>
                         {
+                            // Build a nice label for this project
+                            string label;
+                            if (!string.IsNullOrWhiteSpace(currentFile))
+                            {
+                                label = currentFile;
+                            }
+                            else if (percent <= 0.1)
+                            {
+                                label = "Preparing backup…";
+                            }
+                            else if (percent < 100)
+                            {
+                                label = "Running backup…";
+                            }
+                            else
+                            {
+                                label = "Completed";
+                            }
+
+                            // Update per-project card (used by BackupsView overlay)
+                            _backupsViewModel.UpdateActiveBackup(
+                                project.Id.ToString(),
+                                project.Name,
+                                percent,
+                                label,
+                                etaText);
+
+                            // Keep legacy aggregate fields in sync (if anything else binds to them)
                             Dispatcher.UIThread.Post(() =>
                             {
-                                _backupsViewModel.BackupProgress = percent;
-
-                                string label;
-                                if (!string.IsNullOrWhiteSpace(currentFile))
-                                {
-                                    label = currentFile;
-                                }
-                                else if (percent <= 0.1)
-                                {
-                                    label = "Preparing backup…";
-                                }
-                                else if (percent < 100)
-                                {
-                                    label = "Running backup…";
-                                }
-                                else
-                                {
-                                    label = "Completed";
-                                }
-
+                                _backupsViewModel.BackupProgress    = percent;
                                 _backupsViewModel.BackupCurrentFile = label;
                                 _backupsViewModel.BackupEtaText     = etaText;
                             });
                         },
-                        useArchiveMode: true);
+                        useArchiveMode: false);
                 });
 
                 ReloadBackupsVmData();
@@ -225,6 +258,9 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
+                // Clear per-project cards once done
+                _backupsViewModel.ClearActiveBackups();
+
                 _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
             }
@@ -232,6 +268,15 @@ namespace VaultSync.UI.ViewModels
 
         private async void OnCreateBackupForAllProjectsRequested()
         {
+            // Do not start "backup all" if a backup is already running.
+            if (_backupsViewModel.IsBusy)
+            {
+                Console.WriteLine("[AppViewModel] CreateBackupForAllProjectsRequested ignored because a backup is already in progress.");
+                return;
+            }
+
+            Console.WriteLine("[AppViewModel] CreateBackupForAllProjectsRequested starting…");
+
             var cfg        = AppConfigStore.Load();
             var backupRoot = cfg.Backups.BackupRoot;
             if (string.IsNullOrWhiteSpace(backupRoot))
@@ -247,42 +292,124 @@ namespace VaultSync.UI.ViewModels
             {
                 await Task.Run(async () =>
                 {
-                    foreach (var project in _repo.GetAllProjects())
+                    var projects = _repo.GetAllProjects().ToList();
+                    Console.WriteLine($"[AppViewModel] Backing up {projects.Count} projects in parallel…");
+
+                    if (projects.Count == 0)
                     {
-                        await _backupService.RunBackupAsync(
+                        Console.WriteLine("[AppViewModel] No projects found for backup-all.");
+                        return;
+                    }
+
+                    var progressPerProject = new ConcurrentDictionary<int, double>();
+
+                    // Reset per-project cards and add entry place-holders
+                    _backupsViewModel.ClearActiveBackups();
+                    foreach (var p in projects)
+                    {
+                        _backupsViewModel.UpdateActiveBackup(
+                            p.Id.ToString(),
+                            p.Name,
+                            0,
+                            "Preparing backup…",
+                            string.Empty);
+                    }
+
+                    // Local helper to recompute aggregate progress and update the UI.
+                    void UpdateAggregateProgress(string currentFile, string etaText)
+                    {
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            if (progressPerProject.IsEmpty)
+                            {
+                                _backupsViewModel.BackupProgress    = 0;
+                                _backupsViewModel.BackupCurrentFile = "Preparing backup…";
+                                _backupsViewModel.BackupEtaText     = string.Empty;
+                                _backupsViewModel.BusyMessage       = "Backing up all projects…";
+                                return;
+                            }
+
+                            var avg = progressPerProject.Values.DefaultIfEmpty(0).Average();
+                            _backupsViewModel.BackupProgress = avg;
+
+                            string label;
+                            if (!string.IsNullOrWhiteSpace(currentFile))
+                            {
+                                label = currentFile;
+                            }
+                            else if (avg <= 0.1)
+                            {
+                                label = "Preparing backup…";
+                            }
+                            else if (avg < 100)
+                            {
+                                label = "Running backups…";
+                            }
+                            else
+                            {
+                                label = "All backups completed";
+                            }
+
+                            _backupsViewModel.BackupCurrentFile = label;
+                            _backupsViewModel.BackupEtaText     = etaText;
+                            _backupsViewModel.BusyMessage       = "Backing up all projects…";
+                        });
+                    }
+
+                    var tasks = projects.Select(project =>
+                    {
+                        return _backupService.RunBackupAsync(
                             project,
                             backupRoot,
                             isAuto: false,
                             progressCallback: (percent, currentFile, etaText) =>
                             {
-                                Dispatcher.UIThread.Post(() =>
+                                // Per-project label for its own card
+                                string label;
+                                if (!string.IsNullOrWhiteSpace(currentFile))
                                 {
-                                    _backupsViewModel.BackupProgress = percent;
+                                    label = currentFile;
+                                }
+                                else if (percent <= 0.1)
+                                {
+                                    label = "Preparing backup…";
+                                }
+                                else if (percent < 100)
+                                {
+                                    label = "Running backup…";
+                                }
+                                else
+                                {
+                                    label = "Completed";
+                                }
 
-                                    string label;
-                                    if (!string.IsNullOrWhiteSpace(currentFile))
-                                    {
-                                        label = currentFile;
-                                    }
-                                    else if (percent <= 0.1)
-                                    {
-                                        label = "Preparing backup…";
-                                    }
-                                    else if (percent < 100)
-                                    {
-                                        label = "Running backup…";
-                                    }
-                                    else
-                                    {
-                                        label = "Completed";
-                                    }
+                                progressPerProject[project.Id] = percent;
+                                UpdateAggregateProgress(currentFile, etaText);
 
-                                    _backupsViewModel.BackupCurrentFile = label;
-                                    _backupsViewModel.BackupEtaText     = etaText;
-                                });
+                                // Update that project's card
+                                _backupsViewModel.UpdateActiveBackup(
+                                    project.Id.ToString(),
+                                    project.Name,
+                                    percent,
+                                    label,
+                                    etaText);
                             },
-                            useArchiveMode: true);
-                    }
+                            useArchiveMode: false
+                        ).ContinueWith(t =>
+                        {
+                            if (t.IsFaulted)
+                            {
+                                Console.WriteLine($"[AppViewModel] Parallel backup failed for '{project.Name}' (Id={project.Id}): {t.Exception?.GetBaseException().Message}");
+                            }
+                        });
+                    }).ToList();
+
+                    await Task.WhenAll(tasks);
+
+                    Console.WriteLine("[AppViewModel] All parallel backups completed.");
+
+                    // After all done, clear cards so overlay can collapse cleanly
+                    _backupsViewModel.ClearActiveBackups();
                 });
 
                 ReloadBackupsVmData();
@@ -299,6 +426,9 @@ namespace VaultSync.UI.ViewModels
                             ? ex.Message
                             : _backupsViewModel.BackupEtaText + " · Failed";
                 });
+
+                // Clear cards on failure
+                _backupsViewModel.ClearActiveBackups();
             }
             finally
             {
@@ -326,7 +456,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return;
 
-            _backupsViewModel.IsBusy = true;
+            _backupsViewModel.IsBusy      = true;
             _backupsViewModel.BusyMessage = "Deleting backup…";
 
             try
@@ -347,7 +477,7 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
-                _backupsViewModel.IsBusy = false;
+                _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
             }
         }
@@ -356,6 +486,18 @@ namespace VaultSync.UI.ViewModels
         {
             // Intentionally left as a stub for now.
             // Later: copy files from backup path back into the project root.
+        }
+
+        private void OnCancelActiveBackupRequested(BackupProgressItem? item)
+        {
+            if (item is null)
+                return;
+
+            Console.WriteLine($"[AppViewModel] Cancel requested for project '{item.ProjectName}' (Id={item.ProjectId}).");
+
+            // TODO: integrate real cancellation once BackupService supports it.
+            // For now, we remove the card immediately so the UI reflects cancellation.
+            _backupsViewModel.RemoveActiveBackup(item.ProjectId);
         }
 
         // ---------- Minimal ICommand implementation ----------

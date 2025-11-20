@@ -13,11 +13,33 @@ namespace VaultSync.Core.Services;
 
 public sealed class BackupService
 {
+    private readonly Dictionary<int, CancellationTokenSource> _cancelMap = new();
     private readonly SqliteRepository _repo;
 
     public BackupService(SqliteRepository repo)
     {
         _repo = repo;
+    }
+
+    public void CancelBackup(int projectId)
+    {
+        if (_cancelMap.TryGetValue(projectId, out var cts))
+        {
+            try { cts.Cancel(); } catch { }
+        }
+    }
+
+    private static void DeletePartialBackup(string backupFolder)
+    {
+        try
+        {
+            if (Directory.Exists(backupFolder))
+                Directory.Delete(backupFolder, recursive: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to delete partial backup '{backupFolder}': {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -61,8 +83,21 @@ public sealed class BackupService
                 $"Project '{project.Name}' has no snapshots yet. Create a snapshot before running a backup.");
         }
 
-        ct.ThrowIfCancellationRequested();
+        // Create (or replace) a CTS for this project and link with caller token.
+        if (_cancelMap.ContainsKey(project.Id))
+        {
+            try { _cancelMap[project.Id].Cancel(); } catch { }
+            _cancelMap[project.Id].Dispose();
+        }
+        var projectCts = new CancellationTokenSource();
+        _cancelMap[project.Id] = projectCts;
 
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
+        var linkedToken = linkedCts.Token;
+
+        linkedToken.ThrowIfCancellationRequested();
+
+        Console.WriteLine($"[BackupService] RunBackupAsync entered for project '{project.Name}' (Id={project.Id}), backupRoot='{backupRoot}', isAuto={isAuto}, useArchiveMode={useArchiveMode}");
         progressCallback?.Invoke(0, string.Empty, "Preparing backup...");
 
         // Normalise backup root and ensure it exists (e.g. mounted NAS/share).
@@ -85,41 +120,67 @@ public sealed class BackupService
         var backupFolder = Path.Combine(projectBackupRoot, folderName);
         Directory.CreateDirectory(backupFolder);
 
-        // Compute total bytes up-front using the same filter logic as snapshots.
-        // This is much cheaper than copying and gives us a consistent number even
-        // when the actual copy is offloaded to rsync/robocopy.
-        long totalBytes = ComputeBackupSize(project.RootPath, project.Preset, ct);
+        // Compute total bytes off the UI thread, using the same filter logic as snapshots.
+        long totalBytes;
+        try
+        {
+            totalBytes = await Task.Run(
+                () => ComputeBackupSize(project.RootPath, project.Preset, linkedToken),
+                linkedToken);
+        }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+        {
+            Console.WriteLine($"[BackupService] Failed to compute backup size for '{project.Name}' ({project.RootPath}': {ex.Message}. Proceeding with totalBytes=0.");
+            totalBytes = 0;
+        }
+
+        Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
 
         try
         {
-            ct.ThrowIfCancellationRequested();
+            linkedToken.ThrowIfCancellationRequested();
 
             if (useArchiveMode)
             {
                 progressCallback?.Invoke(0, string.Empty, "Preparing archive backup...");
 
-                await RunArchiveBackupAsync(project, backupFolder, totalBytes, progressCallback, ct);
-
-                progressCallback?.Invoke(100, string.Empty, "Backup completed (archive).");
+                await RunArchiveBackupAsync(project, backupFolder, totalBytes, progressCallback, linkedToken);
             }
             else
             {
                 progressCallback?.Invoke(0, string.Empty, "Running backup (rsync/robocopy)...");
 
-                await RunNativeBackupAsync(project, backupFolder, totalBytes, progressCallback, ct);
-
-                progressCallback?.Invoke(100, string.Empty, "Backup completed.");
+                await RunNativeBackupAsync(project, backupFolder, totalBytes, progressCallback, linkedToken);
             }
         }
         catch (Exception ex)
         {
+            if (linkedToken.IsCancellationRequested)
+            {
+                Console.WriteLine($"[BackupService] Backup cancelled for '{project.Name}'. Cleaning up.");
+                DeletePartialBackup(backupFolder);
+                return 0;
+            }
+
             // If the native tool is not available or fails unexpectedly, fall back
             // to the managed File.Copy-based implementation so the backup still
             // succeeds (albeit more slowly).
-            Console.WriteLine($"[BackupService] Native backup failed, falling back to managed copy: {ex}");
+            Console.WriteLine($"[BackupService] Backup phase failed for '{project.Name}', falling back to managed copy. Exception: {ex}");
 
-            totalBytes = 0; // recompute while copying
-            CopyDirectoryRecursive(project.RootPath, backupFolder, project.Preset, ref totalBytes, progressCallback, ct);
+            totalBytes = await Task.Run(() =>
+            {
+                long bytes = 0;
+                try
+                {
+                    CopyDirectoryRecursive(project.RootPath, backupFolder, project.Preset, ref bytes, progressCallback, linkedToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    DeletePartialBackup(backupFolder);
+                    throw;
+                }
+                return bytes;
+            }, linkedToken);
 
             progressCallback?.Invoke(100, string.Empty, "Backup completed (fallback).");
         }
@@ -127,6 +188,8 @@ public sealed class BackupService
         // Store relative path so if backupRoot moves, paths are still valid.
         var relativePath = Path.GetRelativePath(backupRoot, backupFolder);
         var backupType   = isAuto ? "auto" : "manual";
+
+        Console.WriteLine($"[BackupService] Backup data written for '{project.Name}', creating backup metadata in database...");
 
         // Persist metadata in the backups table
         var backupId = _repo.CreateBackup(
@@ -136,6 +199,19 @@ public sealed class BackupService
             totalBytes:   totalBytes,
             relativePath: relativePath);
 
+        Console.WriteLine($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
+        progressCallback?.Invoke(100, string.Empty, useArchiveMode ? "Backup completed (archive)." : "Backup completed.");
+
+        if (_cancelMap.TryGetValue(project.Id, out var finishedCts))
+        {
+            finishedCts.Dispose();
+            _cancelMap.Remove(project.Id);
+        }
+        // Ensure cancelled backups never leave partial folders
+        if (linkedToken.IsCancellationRequested)
+        {
+            DeletePartialBackup(backupFolder);
+        }
         return backupId;
     }
 
@@ -168,11 +244,22 @@ public sealed class BackupService
         }
         else
         {
-            var startTime = DateTime.UtcNow;
+            var startTime     = DateTime.UtcNow;
+            var lastUiUpdate  = startTime;
+            var minUiInterval = TimeSpan.FromMilliseconds(100);
 
             callbackForRunner = (percent, currentFile, _) =>
             {
-                var now     = DateTime.UtcNow;
+                var now = DateTime.UtcNow;
+
+                // Throttle UI updates a bit to avoid spamming the UI thread when
+                // the native tool reports progress very frequently, especially
+                // when multiple backups run in parallel.
+                if (percent < 100 && (now - lastUiUpdate) < minUiInterval)
+                    return;
+
+                lastUiUpdate = now;
+
                 var elapsed = now - startTime;
                 var etaText = string.Empty;
 
@@ -251,6 +338,8 @@ public sealed class BackupService
         if (!srcInfo.Exists)
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
 
+        Console.WriteLine($"[BackupService] RunArchiveBackupAsync started for '{project.Name}', destDir='{destDir}', totalBytes={totalBytes}.");
+
         // Build filter from preset + local ignore rules.
         var filter = FilterService.FromPresetAndLocal(sourceDir, project.Preset);
 
@@ -278,6 +367,8 @@ public sealed class BackupService
 
         long processedBytes = 0;
         var  startTime      = DateTime.UtcNow;
+        var  lastUiUpdate   = startTime;
+        var  minUiInterval  = TimeSpan.FromMilliseconds(100);
 
         // Use a reasonably large buffer for efficient streaming.
         var buffer = new byte[128 * 1024];
@@ -288,60 +379,87 @@ public sealed class BackupService
             foreach (var filePath in allFiles)
             {
                 ct.ThrowIfCancellationRequested();
+                if (ct.IsCancellationRequested)
+                    throw new OperationCanceledException(ct);
 
                 var relative = Path.GetRelativePath(sourceDir, filePath);
-                var entry    = zip.CreateEntry(relative, CompressionLevel.Optimal);
+                var entry    = zip.CreateEntry(relative, CompressionLevel.Fastest);
 
-                using (var entryStream = entry.Open())
-                using (var input = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                try
                 {
-                    int read;
-                    while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                    using (var entryStream = entry.Open())
+                    using (var input = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        await entryStream.WriteAsync(buffer.AsMemory(0, read), ct);
-                        processedBytes += read;
-
-                        if (progressCallback is not null)
+                        int read;
+                        while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
                         {
-                            double percent;
-                            if (totalBytes > 0)
-                            {
-                                percent = processedBytes * 100d / totalBytes;
-                                if (percent > 100d) percent = 100d;
-                            }
-                            else
-                            {
-                                percent = 0d;
-                            }
+                            await entryStream.WriteAsync(buffer.AsMemory(0, read), ct);
+                            processedBytes += read;
 
-                            var elapsed        = DateTime.UtcNow - startTime;
-                            var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                            var speedBytesSec  = processedBytes / elapsedSeconds;
-                            var speedMbSec     = speedBytesSec / (1024 * 1024);
+                            if (progressCallback is not null)
+                            {
+                                double percent;
+                                if (totalBytes > 0)
+                                {
+                                    percent = processedBytes * 100d / totalBytes;
+                                    if (percent > 100d) percent = 100d;
+                                }
+                                else
+                                {
+                                    percent = 0d;
+                                }
 
-                            string etaText;
-                            if (percent > 0 && percent < 100)
-                            {
-                                var remainingFraction = (100d - percent) / percent;
-                                var remainingSeconds  = elapsedSeconds * remainingFraction;
-                                var eta               = TimeSpan.FromSeconds(remainingSeconds);
-                                etaText               = $"{speedMbSec:0.0} MB/s · ETA {eta:mm\\:ss}";
-                            }
-                            else if (percent >= 100)
-                            {
-                                etaText = $"{speedMbSec:0.0} MB/s · Completed";
-                            }
-                            else
-                            {
-                                etaText = string.Empty;
-                            }
+                                var now = DateTime.UtcNow;
 
-                            progressCallback(percent, relative, etaText);
+                                // Throttle UI updates to avoid flooding the dispatcher.
+                                if (percent < 100d && (now - lastUiUpdate) < minUiInterval)
+                                {
+                                    continue;
+                                }
+
+                                lastUiUpdate = now;
+
+                                var elapsed        = now - startTime;
+                                var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                                var speedBytesSec  = processedBytes / elapsedSeconds;
+                                var speedMbSec     = speedBytesSec / (1024 * 1024);
+
+                                string etaText;
+                                if (percent > 0 && percent < 100)
+                                {
+                                    var remainingFraction = (100d - percent) / percent;
+                                    var remainingSeconds  = elapsedSeconds * remainingFraction;
+                                    var eta               = TimeSpan.FromSeconds(remainingSeconds);
+                                    etaText               = $"{speedMbSec:0.0} MB/s · ETA {eta:mm\\:ss}";
+                                }
+                                else if (percent >= 100)
+                                {
+                                    etaText = $"{speedMbSec:0.0} MB/s · Completed";
+                                }
+                                else
+                                {
+                                    etaText = string.Empty;
+                                }
+
+                                progressCallback(percent, relative, etaText);
+                            }
                         }
                     }
                 }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    // Log and skip problematic files so a single failing file does not break the entire archive.
+                    Console.WriteLine($"[BackupService] Failed to add file '{filePath}' to archive for '{project.Name}': {ex.Message}");
+                    continue;
+                }
             }
         }
+        if (ct.IsCancellationRequested)
+        {
+            DeletePartialBackup(destDir);
+            return;
+        }
+        Console.WriteLine($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. ProcessedBytes={processedBytes}, archivePath='{archivePath}'.");
     }
 
     /// <summary>
@@ -355,20 +473,37 @@ public sealed class BackupService
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
 
         var filter = FilterService.FromPresetAndLocal(sourceDir, preset);
-
         long total = 0;
 
-        foreach (var filePath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+        try
         {
-            ct.ThrowIfCancellationRequested();
+            foreach (var filePath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                ct.ThrowIfCancellationRequested();
 
-            if (filter.ShouldExclude(sourceDir, filePath))
-                continue;
+                if (filter.ShouldExclude(sourceDir, filePath))
+                    continue;
 
-            var fi = new FileInfo(filePath);
-            total += fi.Length;
+                try
+                {
+                    var fi = new FileInfo(filePath);
+                    total += fi.Length;
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    // Skip files that cannot be accessed but do not abort the entire backup size computation.
+                    Console.WriteLine($"[BackupService] Skipping file while computing size '{filePath}': {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+        {
+            // Log and rethrow so callers can decide whether to fall back or abort.
+            Console.WriteLine($"[BackupService] Failed to enumerate files for size computation in '{sourceDir}': {ex.Message}");
+            throw;
         }
 
+        Console.WriteLine($"[BackupService] Computed backup size for '{sourceDir}': {total} bytes.");
         return total;
     }
 
@@ -399,37 +534,75 @@ public sealed class BackupService
         foreach (var filePath in allFiles)
         {
             ct.ThrowIfCancellationRequested();
+            if (ct.IsCancellationRequested)
+                throw new OperationCanceledException(ct);
 
-            var fileInfo  = new FileInfo(filePath);
-            var relative  = Path.GetRelativePath(sourceDir, filePath);
+            var fileInfo   = new FileInfo(filePath);
+            var relative   = Path.GetRelativePath(sourceDir, filePath);
             var targetPath = Path.Combine(destDir, relative);
             var targetDir  = Path.GetDirectoryName(targetPath);
             if (!string.IsNullOrEmpty(targetDir))
                 Directory.CreateDirectory(targetDir);
 
-            fileInfo.CopyTo(targetPath, overwrite: true);
-            totalBytes += fileInfo.Length;
-            processedFiles++;
-
-            if (progressCallback is not null)
+            try
             {
-                double percent = totalFiles == 0
-                    ? 100d
-                    : processedFiles * 100d / totalFiles;
+                const int bufferSize = 1024 * 1024; // 1 MB
+                var buffer = new byte[bufferSize];
 
-                var elapsed = DateTime.UtcNow - startTime;
-                string etaText = string.Empty;
+                long copiedForThisFile = 0;
 
-                if (processedFiles > 0 && percent < 100d)
+                using (var input = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var output = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
-                    var avgPerFileSeconds  = elapsed.TotalSeconds / processedFiles;
-                    var remainingFiles     = totalFiles - processedFiles;
-                    var remainingSeconds   = avgPerFileSeconds * remainingFiles;
-                    var eta                = TimeSpan.FromSeconds(remainingSeconds);
-                    etaText                = $"ETA {eta:mm\\:ss}";
+                    int read;
+                    while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        ct.ThrowIfCancellationRequested();
+
+                        output.Write(buffer, 0, read);
+                        copiedForThisFile += read;
+                        totalBytes += read;
+
+                        if (progressCallback is not null)
+                        {
+                            double percent;
+                            if (totalFiles == 0)
+                            {
+                                percent = 100d;
+                            }
+                            else
+                            {
+                                // Combine completed files with partial progress on the current file.
+                                var filesCompletedPortion = processedFiles * 100d / totalFiles;
+                                var currentFilePortion    = (double)copiedForThisFile / Math.Max(1L, fileInfo.Length) * (100d / totalFiles);
+                                percent = filesCompletedPortion + currentFilePortion;
+                                if (percent > 100d) percent = 100d;
+                            }
+
+                            var elapsed        = DateTime.UtcNow - startTime;
+                            var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                            string etaText     = string.Empty;
+
+                            if (percent > 0d && percent < 100d)
+                            {
+                                var remainingFraction = (100d - percent) / percent;
+                                var remainingSeconds  = elapsedSeconds * remainingFraction;
+                                var eta               = TimeSpan.FromSeconds(remainingSeconds);
+                                etaText               = $"ETA {eta:mm\\:ss}";
+                            }
+
+                            progressCallback(percent, relative, etaText);
+                        }
+                    }
                 }
 
-                progressCallback(percent, relative, etaText);
+                processedFiles++;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                // Log and skip the file rather than aborting the whole fallback backup.
+                Console.WriteLine($"[BackupService] Failed to copy '{filePath}' to '{targetPath}': {ex.Message}");
+                continue;
             }
         }
     }
