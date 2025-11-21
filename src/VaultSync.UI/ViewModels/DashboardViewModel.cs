@@ -10,6 +10,7 @@ using Avalonia.Media; // for Brush in legend + activity
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
+using VaultSync.UI.Infrastructure; // for RelayCommand
 
 namespace VaultSync.UI.ViewModels
 {

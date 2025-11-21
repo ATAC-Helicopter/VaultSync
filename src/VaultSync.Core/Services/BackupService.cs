@@ -338,128 +338,194 @@ public sealed class BackupService
         if (!srcInfo.Exists)
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
 
-        Console.WriteLine($"[BackupService] RunArchiveBackupAsync started for '{project.Name}', destDir='{destDir}', totalBytes={totalBytes}.");
+        Console.WriteLine($"[BackupService] RunArchiveBackupAsync (LOCAL ZIP MODE, 2-PHASE) started for '{project.Name}', destDir='{destDir}', totalBytes={totalBytes}.");
 
-        // Build filter from preset + local ignore rules.
+        // 1. Build filter identical to snapshots.
         var filter = FilterService.FromPresetAndLocal(sourceDir, project.Preset);
 
-        // Collect all files that will be included in the archive.
+        // 2. Gather all files that will be archived.
         var allFiles = Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories)
             .Where(path => !filter.ShouldExclude(sourceDir, path))
             .ToArray();
 
-        if (allFiles.Length == 0)
+        // 3. Prepare destination and local temp folder.
+        Directory.CreateDirectory(destDir);
+        var finalArchivePath = Path.Combine(destDir, "data.zip");
+
+        var localTempRoot  = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(localTempRoot);
+        var localArchive   = Path.Combine(localTempRoot, "data.zip");
+
+        try
         {
-            // Nothing to back up; still create an empty archive for bookkeeping.
-            Directory.CreateDirectory(destDir);
-            var emptyArchivePath = Path.Combine(destDir, "data.zip");
-            using (var fs = new FileStream(emptyArchivePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            // 4. If nothing to back up, create a valid empty ZIP and copy it.
+            if (allFiles.Length == 0)
+            {
+                using (var fs = new FileStream(localArchive, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
+                {
+                    // no entries
+                }
+
+                File.Copy(localArchive, finalArchivePath, overwrite: true);
+                progressCallback?.Invoke(100, string.Empty, "Archive empty (0 files).");
+
+                var emptySize = new FileInfo(finalArchivePath).Length;
+                Console.WriteLine($"[BackupService] Created empty archive for '{project.Name}', size={emptySize} bytes.");
+                return;
+            }
+
+            // --------------------
+            // PHASE 1: Compress files into local ZIP
+            // --------------------
+            long processedBytes = 0;
+            var  startTime      = DateTime.UtcNow;
+            var  lastUiUpdate   = startTime;
+            var  minUiInterval  = TimeSpan.FromMilliseconds(100);
+
+            using (var fs = new FileStream(localArchive, FileMode.Create, FileAccess.Write, FileShare.None))
             using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
             {
-            }
-
-            progressCallback?.Invoke(100, string.Empty, "Nothing to back up (archive is empty).");
-            return;
-        }
-
-        Directory.CreateDirectory(destDir);
-        var archivePath = Path.Combine(destDir, "data.zip");
-
-        long processedBytes = 0;
-        var  startTime      = DateTime.UtcNow;
-        var  lastUiUpdate   = startTime;
-        var  minUiInterval  = TimeSpan.FromMilliseconds(100);
-
-        // Use a reasonably large buffer for efficient streaming.
-        var buffer = new byte[128 * 1024];
-
-        using (var fs = new FileStream(archivePath, FileMode.Create, FileAccess.Write, FileShare.None))
-        using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
-        {
-            foreach (var filePath in allFiles)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (ct.IsCancellationRequested)
-                    throw new OperationCanceledException(ct);
-
-                var relative = Path.GetRelativePath(sourceDir, filePath);
-                var entry    = zip.CreateEntry(relative, CompressionLevel.Fastest);
-
-                try
+                foreach (var filePath in allFiles)
                 {
-                    using (var entryStream = entry.Open())
-                    using (var input = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    ct.ThrowIfCancellationRequested();
+
+                    var relative = Path.GetRelativePath(sourceDir, filePath);
+                    var entry    = zip.CreateEntry(relative, CompressionLevel.Fastest);
+
+                    try
                     {
-                        int read;
-                        while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                        using (var entryStream = entry.Open())
+                        using (var input = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
-                            await entryStream.WriteAsync(buffer.AsMemory(0, read), ct);
-                            processedBytes += read;
-
-                            if (progressCallback is not null)
-                            {
-                                double percent;
-                                if (totalBytes > 0)
-                                {
-                                    percent = processedBytes * 100d / totalBytes;
-                                    if (percent > 100d) percent = 100d;
-                                }
-                                else
-                                {
-                                    percent = 0d;
-                                }
-
-                                var now = DateTime.UtcNow;
-
-                                // Throttle UI updates to avoid flooding the dispatcher.
-                                if (percent < 100d && (now - lastUiUpdate) < minUiInterval)
-                                {
-                                    continue;
-                                }
-
-                                lastUiUpdate = now;
-
-                                var elapsed        = now - startTime;
-                                var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                                var speedBytesSec  = processedBytes / elapsedSeconds;
-                                var speedMbSec     = speedBytesSec / (1024 * 1024);
-
-                                string etaText;
-                                if (percent > 0 && percent < 100)
-                                {
-                                    var remainingFraction = (100d - percent) / percent;
-                                    var remainingSeconds  = elapsedSeconds * remainingFraction;
-                                    var eta               = TimeSpan.FromSeconds(remainingSeconds);
-                                    etaText               = $"{speedMbSec:0.0} MB/s · ETA {eta:mm\\:ss}";
-                                }
-                                else if (percent >= 100)
-                                {
-                                    etaText = $"{speedMbSec:0.0} MB/s · Completed";
-                                }
-                                else
-                                {
-                                    etaText = string.Empty;
-                                }
-
-                                progressCallback(percent, relative, etaText);
-                            }
+                            await input.CopyToAsync(entryStream, 128 * 1024, ct);
+                            processedBytes += input.Length;
                         }
                     }
-                }
-                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-                {
-                    // Log and skip problematic files so a single failing file does not break the entire archive.
-                    Console.WriteLine($"[BackupService] Failed to add file '{filePath}' to archive for '{project.Name}': {ex.Message}");
-                    continue;
+                    catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                    {
+                        Console.WriteLine($"[BackupService] Failed to add '{filePath}' to archive: {ex.Message}");
+                        continue;
+                    }
+
+                    if (progressCallback is not null)
+                    {
+                        // Map compression progress into 0–90% of overall progress.
+                        double compressPercent = (totalBytes > 0)
+                            ? Math.Min(100d, (processedBytes * 100d / totalBytes))
+                            : 0d;
+
+                        double overallPercent = compressPercent * 0.9; // 0–90%
+
+                        var now = DateTime.UtcNow;
+                        if (overallPercent < 90d && (now - lastUiUpdate) < minUiInterval)
+                            continue;
+
+                        lastUiUpdate = now;
+
+                        var elapsed        = now - startTime;
+                        var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                        var speedBytesSec  = processedBytes / elapsedSeconds;
+                        var speedMbSec     = speedBytesSec / (1024 * 1024);
+
+                        string etaText;
+                        if (overallPercent > 0 && overallPercent < 90)
+                        {
+                            var remainingFraction = (90d - overallPercent) / overallPercent;
+                            var remainingSeconds  = elapsedSeconds * remainingFraction;
+                            var eta               = TimeSpan.FromSeconds(remainingSeconds);
+                            etaText               = $"{speedMbSec:0.0} MB/s · Compressing · ETA {eta:mm\\:ss}";
+                        }
+                        else if (overallPercent >= 90)
+                        {
+                            etaText = $"{speedMbSec:0.0} MB/s · Compressing";
+                        }
+                        else
+                        {
+                            etaText = string.Empty;
+                        }
+
+                        progressCallback(overallPercent, relative, etaText);
+                    }
                 }
             }
+
+            // --------------------
+            // PHASE 2: Upload local ZIP to destination with progress (90–100%)
+            // --------------------
+            ct.ThrowIfCancellationRequested();
+
+            var zipInfo   = new FileInfo(localArchive);
+            var zipSize   = zipInfo.Length;
+            long uploaded = 0;
+
+            var uploadStart = DateTime.UtcNow;
+
+            const int bufferSize = 128 * 1024;
+            var       buffer     = new byte[bufferSize];
+
+            using (var src = new FileStream(localArchive, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var dst = new FileStream(finalArchivePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                int read;
+                while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    await dst.WriteAsync(buffer.AsMemory(0, read), ct);
+                    uploaded += read;
+
+                    if (progressCallback is not null && zipSize > 0)
+                    {
+                        var uploadPercent   = Math.Min(100d, (uploaded * 100d / zipSize));
+                        var overallPercent  = 90d + uploadPercent * 0.1; // map 0–100% upload into 90–100%
+                        if (overallPercent > 100d) overallPercent = 100d;
+
+                        var now            = DateTime.UtcNow;
+                        var elapsed        = now - uploadStart;
+                        var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                        var speedBytesSec  = uploaded / elapsedSeconds;
+                        var speedMbSec     = speedBytesSec / (1024 * 1024);
+
+                        string etaText;
+                        if (uploadPercent > 0 && uploadPercent < 100)
+                        {
+                            var remainingFraction = (100d - uploadPercent) / uploadPercent;
+                            var remainingSeconds  = elapsedSeconds * remainingFraction;
+                            var eta               = TimeSpan.FromSeconds(remainingSeconds);
+                            etaText               = $"{speedMbSec:0.0} MB/s · Uploading archive · ETA {eta:mm\\:ss}";
+                        }
+                        else
+                        {
+                            etaText = $"{speedMbSec:0.0} MB/s · Uploading archive · Completed";
+                        }
+
+                        progressCallback(overallPercent, Path.GetFileName(finalArchivePath), etaText);
+                    }
+                }
+            }
+
+            Console.WriteLine($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalZipSize={zipSize} bytes");
         }
-        if (ct.IsCancellationRequested)
+        catch
         {
+            // Cleanup: remove incomplete destination folder and rethrow.
             DeletePartialBackup(destDir);
-            return;
+            throw;
         }
-        Console.WriteLine($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. ProcessedBytes={processedBytes}, archivePath='{archivePath}'.");
+        finally
+        {
+            // Always remove local temp folder.
+            try
+            {
+                if (Directory.Exists(localTempRoot))
+                    Directory.Delete(localTempRoot, recursive: true);
+            }
+            catch
+            {
+                // ignore cleanup errors
+            }
+        }
     }
 
     /// <summary>

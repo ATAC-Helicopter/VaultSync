@@ -12,6 +12,7 @@ using VaultSync.Core.Config;
 using VaultSync.Core.Services;
 using VaultSync.Core.Models;
 using System.Text.Json;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.ViewModels;
 

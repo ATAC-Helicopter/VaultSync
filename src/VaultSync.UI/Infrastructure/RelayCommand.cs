@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Input;
 
-namespace VaultSync.UI.ViewModels
+namespace VaultSync.UI.Infrastructure
 {
     /// <summary>
     /// Minimal ICommand implementation for button bindings.

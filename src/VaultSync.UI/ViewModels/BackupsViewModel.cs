@@ -6,6 +6,7 @@ using System.Windows.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using VaultSync.Core.Models;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -106,26 +107,19 @@ namespace VaultSync.UI.ViewModels
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
 
         // Backup progress details (for long-running operations)
-        private double _backupProgress;
-        public double BackupProgress
+private double _backupProgress;
+public double BackupProgress
+{
+    get => _backupProgress;
+    set
+    {
+        if (SetProperty(ref _backupProgress, value))
         {
-            get => _backupProgress;
-            set
-            {
-                if (SetProperty(ref _backupProgress, value))
-                {
-                    OnPropertyChanged(nameof(BackupProgress));
-
-                    // When a backup reaches 100%, automatically clear the busy flag.
-                    // This ensures the compact progress overlay disappears once the
-                    // archive/native backup has fully completed.
-                    if (value >= 100d)
-                    {
-                        IsBusy = false;
-                    }
-                }
-            }
+            OnPropertyChanged(nameof(BackupProgress));
+            // Removed auto-hide behavior. AppViewModel now controls IsBusy.
         }
+    }
+}
 
         private string _backupCurrentFile = string.Empty;
         public string BackupCurrentFile
@@ -200,18 +194,18 @@ namespace VaultSync.UI.ViewModels
         public BackupsViewModel()
         {
             // All-project backup
-            CreateBackupCommand = new ActionCommand(_ => CreateBackupForAllProjects());
+            CreateBackupCommand = new RelayCommand(_ => CreateBackupForAllProjects());
 
             // Global history actions
-            RestoreBackupCommand = new ActionCommand(p => RestoreBackup(p as BackupSnapshotItem));
-            DeleteBackupCommand  = new ActionCommand(p => DeleteBackup(p as BackupSnapshotItem));
+            RestoreBackupCommand = new RelayCommand(p => RestoreBackup(p as BackupSnapshotItem));
+            DeleteBackupCommand  = new RelayCommand(p => DeleteBackup(p as BackupSnapshotItem));
 
             // Per-project actions
-            BackupProjectCommand      = new ActionCommand(p => BackupProject(p as ProjectBackupItem));
-            ShowProjectHistoryCommand = new ActionCommand(p => ShowProjectHistory(p as ProjectBackupItem));
+            BackupProjectCommand      = new RelayCommand(p => BackupProject(p as ProjectBackupItem));
+            ShowProjectHistoryCommand = new RelayCommand(p => ShowProjectHistory(p as ProjectBackupItem));
 
             // History type filter
-            FilterSnapshotsCommand = new ActionCommand(p => ApplyTypeFilter(p as string));
+            FilterSnapshotsCommand = new RelayCommand(p => ApplyTypeFilter(p as string));
 
             // NOTE:
             // Live data is now provided by LoadFromBackups(...) from the core layer.
@@ -821,7 +815,7 @@ namespace VaultSync.UI.ViewModels
 
         public BackupProgressItem()
         {
-            CancelCommand = new ActionCommand(_ => CancelRequested?.Invoke(this));
+            CancelCommand = new RelayCommand(_ => CancelRequested?.Invoke(this));
         }
 
         private double _progress;

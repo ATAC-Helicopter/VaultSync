@@ -9,6 +9,7 @@ using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -174,6 +175,8 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
                 return;
 
+            var useArchiveMode = _settingsViewModel.UseBackupCompression;
+
             Console.WriteLine($"[AppViewModel] BackupProjectRequested for project '{project.Name}' (Id={project.Id}).");
 
             // Reset progress state
@@ -238,7 +241,7 @@ namespace VaultSync.UI.ViewModels
                                 _backupsViewModel.BackupEtaText     = etaText;
                             });
                         },
-                        useArchiveMode: false);
+                        useArchiveMode: useArchiveMode);
                 });
 
                 ReloadBackupsVmData();
@@ -281,6 +284,8 @@ namespace VaultSync.UI.ViewModels
             var backupRoot = cfg.Backups.BackupRoot;
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return;
+
+            var useArchiveMode = _settingsViewModel.UseBackupCompression;
 
             _backupsViewModel.BackupProgress    = 0;
             _backupsViewModel.BackupCurrentFile = "Preparing backup…";
@@ -394,7 +399,7 @@ namespace VaultSync.UI.ViewModels
                                     label,
                                     etaText);
                             },
-                            useArchiveMode: false
+                            useArchiveMode: useArchiveMode
                         ).ContinueWith(t =>
                         {
                             if (t.IsFaulted)
@@ -407,12 +412,17 @@ namespace VaultSync.UI.ViewModels
                     await Task.WhenAll(tasks);
 
                     Console.WriteLine("[AppViewModel] All parallel backups completed.");
-
-                    // After all done, clear cards so overlay can collapse cleanly
-                    _backupsViewModel.ClearActiveBackups();
                 });
 
+                // First reload history so the new backups appear.
                 ReloadBackupsVmData();
+
+                // Then clear the active backup cards on the UI thread,
+                // so the overlay collapses only after history is updated.
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _backupsViewModel.ClearActiveBackups();
+                });
             }
             catch (Exception ex)
             {
@@ -427,8 +437,11 @@ namespace VaultSync.UI.ViewModels
                             : _backupsViewModel.BackupEtaText + " · Failed";
                 });
 
-                // Clear cards on failure
-                _backupsViewModel.ClearActiveBackups();
+                // Clear cards on failure (ensure this runs on the UI thread)
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _backupsViewModel.ClearActiveBackups();
+                });
             }
             finally
             {
@@ -465,12 +478,31 @@ namespace VaultSync.UI.ViewModels
 
                 await Task.Run(() =>
                 {
-                    if (Directory.Exists(fullPath))
-                        Directory.Delete(fullPath, recursive: true);
-                    else if (File.Exists(fullPath))
-                        File.Delete(fullPath);
+                    try
+                    {
+                        if (Directory.Exists(fullPath))
+                        {
+                            Directory.Delete(fullPath, recursive: true);
+                        }
+                        else if (File.Exists(fullPath))
+                        {
+                            File.Delete(fullPath);
+                        }
 
-                    _repo.DeleteBackupById(backupId);
+                        _repo.DeleteBackupById(backupId);
+                    }
+                    catch (IOException ex)
+                    {
+                        Console.WriteLine($"[OnDeleteBackupRequested] IOException while deleting '{fullPath}': {ex.Message}");
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        Console.WriteLine($"[OnDeleteBackupRequested] UnauthorizedAccessException while deleting '{fullPath}': {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[OnDeleteBackupRequested] Unexpected exception while deleting '{fullPath}': {ex}");
+                    }
                 });
 
                 ReloadBackupsVmData();
@@ -482,46 +514,145 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
+        private async void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
         {
-            // Intentionally left as a stub for now.
-            // Later: copy files from backup path back into the project root.
-        }
-
-        private void OnCancelActiveBackupRequested(BackupProgressItem? item)
-        {
-            if (item is null)
+            if (snapshot is null)
                 return;
 
-            Console.WriteLine($"[AppViewModel] Cancel requested for project '{item.ProjectName}' (Id={item.ProjectId}).");
+            if (!int.TryParse(snapshot.Id, out var backupId))
+                return;
 
-            // TODO: integrate real cancellation once BackupService supports it.
-            // For now, we remove the card immediately so the UI reflects cancellation.
-            _backupsViewModel.RemoveActiveBackup(item.ProjectId);
+            Console.WriteLine($"[AppViewModel] RestoreBackupRequested for backupId={backupId}.");
+
+            // Look up the backup row so we know which project and path this backup belongs to.
+            var allBackups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
+            var backup     = allBackups.FirstOrDefault(b => b.Id == backupId);
+            if (backup is null)
+            {
+                Console.WriteLine($"[AppViewModel] RestoreBackupRequested: no backup found with Id={backupId}.");
+                return;
+            }
+
+            var cfg        = AppConfigStore.Load();
+            var backupRoot = cfg.Backups.BackupRoot;
+            if (string.IsNullOrWhiteSpace(backupRoot))
+            {
+                Console.WriteLine("[AppViewModel] RestoreBackupRequested: backup root is not configured.");
+                return;
+            }
+
+            var backupFullPath = Path.Combine(backupRoot, backup.Path ?? string.Empty);
+
+            // Find the associated project so we know where to restore to.
+            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == backup.ProjectId);
+            if (project is null)
+            {
+                Console.WriteLine($"[AppViewModel] RestoreBackupRequested: no project found with Id={backup.ProjectId}.");
+                return;
+            }
+
+            var projectRoot = project.RootPath;
+            if (string.IsNullOrWhiteSpace(projectRoot))
+            {
+                Console.WriteLine($"[AppViewModel] RestoreBackupRequested: project '{project.Name}' has no root path.");
+                return;
+            }
+
+            if (!Directory.Exists(backupFullPath))
+            {
+                Console.WriteLine($"[AppViewModel] RestoreBackupRequested: backup folder '{backupFullPath}' does not exist.");
+                return;
+            }
+
+            _backupsViewModel.IsBusy      = true;
+            _backupsViewModel.BusyMessage = $"Restoring {project.Name}…";
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    Console.WriteLine($"[AppViewModel] Restoring backup '{backupFullPath}' to '{projectRoot}'.");
+                    RestoreDirectory(backupFullPath, projectRoot);
+                });
+
+                Console.WriteLine($"[AppViewModel] Restore completed for project '{project.Name}'.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AppViewModel] Restore failed for project '{project.Name}': {ex}");
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _backupsViewModel.BackupCurrentFile = "Restore failed.";
+                    _backupsViewModel.BackupEtaText =
+                        string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
+                            ? ex.Message
+                            : _backupsViewModel.BackupEtaText + " · Restore failed";
+                });
+            }
+            finally
+            {
+                _backupsViewModel.IsBusy      = false;
+                _backupsViewModel.BusyMessage = string.Empty;
+            }
         }
-
-        // ---------- Minimal ICommand implementation ----------
-
-        private sealed class RelayCommand : ICommand
+        private static void RestoreDirectory(string sourceDir, string targetDir)
         {
-            private readonly Action<object?> _execute;
-            private readonly Func<object?, bool>? _canExecute;
+            if (string.IsNullOrWhiteSpace(sourceDir))
+                throw new ArgumentException("Source directory is required.", nameof(sourceDir));
 
-            public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
+            if (string.IsNullOrWhiteSpace(targetDir))
+                throw new ArgumentException("Target directory is required.", nameof(targetDir));
+
+            if (!Directory.Exists(sourceDir))
+                throw new DirectoryNotFoundException($"Source directory '{sourceDir}' does not exist.");
+
+            // Ensure target root exists
+            Directory.CreateDirectory(targetDir);
+
+            // Create all directories
+            foreach (var dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
             {
-                _execute    = execute ?? throw new ArgumentNullException(nameof(execute));
-                _canExecute = canExecute;
+                var relative = Path.GetRelativePath(sourceDir, dirPath);
+                var target   = Path.Combine(targetDir, relative);
+                Directory.CreateDirectory(target);
             }
 
-            public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
-
-            public void Execute(object? parameter) => _execute(parameter);
-
-            public event EventHandler? CanExecuteChanged
+            // Copy all files, overwriting existing ones but not deleting extras.
+            foreach (var filePath in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
             {
-                add    { }
-                remove { }
+                var relative = Path.GetRelativePath(sourceDir, filePath);
+                var target   = Path.Combine(targetDir, relative);
+
+                var parentDir = Path.GetDirectoryName(target);
+                if (!string.IsNullOrEmpty(parentDir))
+                    Directory.CreateDirectory(parentDir);
+
+                File.Copy(filePath, target, overwrite: true);
             }
         }
+
+private void OnCancelActiveBackupRequested(BackupProgressItem? item)
+{
+    if (item is null)
+        return;
+
+    Console.WriteLine($"[AppViewModel] Cancel requested for project '{item.ProjectName}' (Id={item.ProjectId}).");
+
+    if (!int.TryParse(item.ProjectId, out var projectId))
+    {
+        Console.WriteLine($"[AppViewModel] Unable to parse ProjectId '{item.ProjectId}' for cancellation.");
+        return;
+    }
+
+    // Actually cancel the running backup for this project.
+    _backupService.CancelBackup(projectId);
+
+    // Do NOT remove the active backup card immediately.
+    // Let the backup operation observe the cancellation token and finish,
+    // then the existing completion logic (finally blocks / ReloadBackupsVmData)
+    // will clear the cards and refresh the UI.
+}
+
     }
 }
