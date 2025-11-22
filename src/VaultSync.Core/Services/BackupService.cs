@@ -66,7 +66,8 @@ public sealed class BackupService
         bool isAuto,
         Action<double, string, string>? progressCallback = null,
         CancellationToken ct = default,
-        bool useArchiveMode = false)
+        bool useArchiveMode = false,
+        int? maxSnapshotsToKeep = null)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -201,6 +202,16 @@ public sealed class BackupService
 
         Console.WriteLine($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
         progressCallback?.Invoke(100, string.Empty, useArchiveMode ? "Backup completed (archive)." : "Backup completed.");
+
+        // Apply simple retention: keep only the most recent N backups per project, if configured.
+        try
+        {
+            ApplyBackupRetention(project.Id, backupRoot, maxSnapshotsToKeep);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Retention step failed for project '{project.Name}': {ex}");
+        }
 
         if (_cancelMap.TryGetValue(project.Id, out var finishedCts))
         {
@@ -692,5 +703,63 @@ public sealed class BackupService
             cleaned = cleaned.Replace("--", "-", StringComparison.Ordinal);
 
         return cleaned.Trim('-');
+    }
+    private void ApplyBackupRetention(int projectId, string backupRoot, int? maxSnapshotsToKeep)
+    {
+        if (!maxSnapshotsToKeep.HasValue || maxSnapshotsToKeep.Value <= 0)
+        {
+            // Retention disabled or not configured.
+            return;
+        }
+
+        var maxToKeep = maxSnapshotsToKeep.Value;
+
+        // Load all backups for this project, newest first.
+        List<Backup> backups;
+        try
+        {
+            backups = _repo
+                .GetBackupsForProject(projectId)
+                .OrderByDescending(b => b.CreatedUtc)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to load backups for retention (projectId={projectId}): {ex}");
+            return;
+        }
+
+        if (backups.Count <= maxToKeep)
+        {
+            // Nothing to prune.
+            return;
+        }
+
+        var toRemove = backups.Skip(maxToKeep).ToList();
+
+        foreach (var backup in toRemove)
+        {
+            try
+            {
+                var fullPath = Path.Combine(backupRoot, backup.Path);
+
+                if (Directory.Exists(fullPath))
+                {
+                    Console.WriteLine($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
+                    Directory.Delete(fullPath, recursive: true);
+                }
+                else
+                {
+                    Console.WriteLine($"[BackupService] Retention could not find backup folder '{fullPath}' on disk (backupId={backup.Id}), continuing with DB cleanup.");
+                }
+
+                _repo.DeleteBackupById(backup.Id);
+            }
+            catch (Exception ex)
+            {
+                // Log and continue with the next backup; do not fail the main backup because retention cleanup failed.
+                Console.WriteLine($"[BackupService] Failed to delete old backup (backupId={backup.Id}): {ex}");
+            }
+        }
     }
 }

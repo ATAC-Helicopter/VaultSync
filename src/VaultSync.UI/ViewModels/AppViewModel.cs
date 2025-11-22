@@ -170,6 +170,7 @@ namespace VaultSync.UI.ViewModels
             var backupRoot = cfg.Backups.BackupRoot;
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return; // later: show error in UI
+            var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
 
             var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
             if (project is null)
@@ -241,8 +242,38 @@ namespace VaultSync.UI.ViewModels
                                 _backupsViewModel.BackupEtaText     = etaText;
                             });
                         },
-                        useArchiveMode: useArchiveMode);
+                        useArchiveMode: useArchiveMode,
+                        maxSnapshotsToKeep: maxSnapshotsToKeep);
                 });
+
+                // --- After backup: optional verification ---
+                var cfgAfter = AppConfigStore.Load();
+                if (cfgAfter.Backups.VerifyAfterCreate)
+                {
+                    var verifyService = new VerifyService(_repo, new HashService());
+                    var latest = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
+                                      .OrderByDescending(b => b.CreatedUtc)
+                                      .FirstOrDefault(b => b.ProjectId == project.Id);
+
+                    if (latest != null)
+                    {
+                        var folder = Path.Combine(backupRoot, latest.Path ?? "");
+                        try
+                        {
+                            await verifyService.VerifyAsync(project, folder, 100, full: true);
+                        }
+                        catch (Exception vex)
+                        {
+                            Console.WriteLine($"[AppViewModel] Verification exception: {vex}");
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                var backupId = latest.Id.ToString();
+                                _backupsViewModel.MarkSnapshotAsFailed(backupId);
+                                _backupsViewModel.ShowVerificationFailure(backupId, project.Name);
+                            });
+                        }
+                    }
+                }
 
                 ReloadBackupsVmData();
             }
@@ -284,6 +315,8 @@ namespace VaultSync.UI.ViewModels
             var backupRoot = cfg.Backups.BackupRoot;
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return;
+
+            var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
 
             var useArchiveMode = _settingsViewModel.UseBackupCompression;
 
@@ -399,7 +432,8 @@ namespace VaultSync.UI.ViewModels
                                     label,
                                     etaText);
                             },
-                            useArchiveMode: useArchiveMode
+                            useArchiveMode: useArchiveMode,
+                            maxSnapshotsToKeep: maxSnapshotsToKeep
                         ).ContinueWith(t =>
                         {
                             if (t.IsFaulted)
@@ -416,6 +450,38 @@ namespace VaultSync.UI.ViewModels
 
                 // First reload history so the new backups appear.
                 ReloadBackupsVmData();
+
+                // --- After all backups: optional verification ---
+                var cfgAfterAll = AppConfigStore.Load();
+                if (cfgAfterAll.Backups.VerifyAfterCreate)
+                {
+                    var verifyService = new VerifyService(_repo, new HashService());
+                    var allLatest = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
+                                         .GroupBy(b => b.ProjectId)
+                                         .Select(g => g.OrderByDescending(b => b.CreatedUtc).First());
+
+                    foreach (var latest in allLatest)
+                    {
+                        var proj = _repo.GetAllProjects().FirstOrDefault(p => p.Id == latest.ProjectId);
+                        if (proj == null) continue;
+
+                        var folder = Path.Combine(backupRoot, latest.Path ?? "");
+                        try
+                        {
+                            await verifyService.VerifyAsync(proj, folder, 100, full: true);
+                        }
+                        catch (Exception vex)
+                        {
+                            Console.WriteLine($"[AppViewModel] Verification exception for {proj?.Name}: {vex}");
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                var backupId = latest.Id.ToString();
+                                _backupsViewModel.MarkSnapshotAsFailed(backupId);
+                                _backupsViewModel.ShowVerificationFailure(backupId, proj?.Name ?? "Unknown project");
+                            });
+                        }
+                    }
+                }
 
                 // Then clear the active backup cards on the UI thread,
                 // so the overlay collapses only after history is updated.

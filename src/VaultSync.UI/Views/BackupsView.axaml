@@ -146,6 +146,14 @@
       <Setter Property="Text" Value="⌃" />
     </Style>
 
+    <!-- Notification banner style -->
+    <Style Selector="Border.notification-banner">
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+      <Setter Property="Background" Value="{DynamicResource AccentMutedBrush}" />
+    </Style>
+
   </UserControl.Styles>
 
   <Grid>
@@ -177,6 +185,7 @@
                     Command="{Binding CreateBackupCommand}"/>
           </StackPanel>
         </StackPanel>
+
 
         <!-- SUMMARY CARDS -->
         <Grid ColumnDefinitions="*,*,*"
@@ -255,10 +264,7 @@
               <StackPanel Grid.Column="0"
                           Orientation="Horizontal"
                           Spacing="6">
-                <TextBlock Text="Backups"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBlock Text="Backup in progress — please wait"
+                <TextBlock Text="Active backups"
                            FontSize="14"
                            FontWeight="SemiBold" />
               </StackPanel>
@@ -287,7 +293,7 @@
                   BorderThickness="0,1,0,0">
             <StackPanel Spacing="8">
               <!-- Per-project progress cards -->
-              <ItemsControl ItemsSource="{Binding ActiveBackups}">
+              <ItemsControl x:Name="ActiveBackupsList" ItemsSource="{Binding ActiveBackups}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
                     <WrapPanel Orientation="Horizontal"
@@ -325,7 +331,9 @@
                                   HorizontalAlignment="Right"
                                   VerticalAlignment="Center"
                                   Padding="8,2"
-                                  MinWidth="0" />
+                                  MinWidth="0"
+                                  IsEnabled="{Binding CanCancel}"
+                                  IsVisible="{Binding CanCancel}" />
                         </Grid>
 
                         <!-- Progress bar -->
@@ -343,12 +351,14 @@
                                    TextTrimming="CharacterEllipsis"
                                    TextWrapping="NoWrap" />
 
-                        <!-- ETA / speed (hidden when backup is finalising) -->
+                        <!-- ETA / speed -->
                         <TextBlock Classes="progress-detail"
                                    Text="{Binding EtaText}"
                                    FontSize="10"
                                    HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   IsVisible="{Binding ShowEta}" />
+
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -693,6 +703,41 @@
 
       </StackPanel>
     </ScrollViewer>
+
+    <!-- VERIFICATION POPUP OVERLAY -->
+    <Border IsVisible="{Binding IsVerificationPopupOpen}"
+            Background="#80000000"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+      <Grid>
+        <Border Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="16"
+                Padding="20"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="360">
+          <StackPanel Spacing="12">
+            <TextBlock Text="Backup verification failed"
+                       FontSize="16"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding VerificationPopupMessage}"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8">
+              <Button Content="Keep backup"
+                      MinWidth="100"
+                      Command="{Binding CloseVerificationPopupCommand}" />
+              <Button Content="Delete backup"
+                      MinWidth="110"
+                      Command="{Binding DeleteFailedBackupCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
 
   </Grid>
 </UserControl>

@@ -40,7 +40,11 @@ namespace VaultSync.CLI.Commands
                 AnsiConsole.MarkupLine($"[blue]Scanning & hashing[/] {Markup.Escape(proj.Name)} at {Markup.Escape(proj.RootPath)} (preset: {Markup.Escape(proj.Preset)})…");
 
             var started = DateTime.UtcNow;
-            var snapId = await svc.CreateSnapshotAsync(proj, s.FullHash, ct);
+            var snapId = await svc.CreateSnapshotAsync(
+                proj,
+                s.FullHash,
+                maxSnapshotsToKeep: null,
+                ct: ct);
             var took = DateTime.UtcNow - started;
             var outcome = SnapshotService.LastOutcome;
 

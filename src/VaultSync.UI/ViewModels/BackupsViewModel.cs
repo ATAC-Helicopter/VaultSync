@@ -106,6 +106,16 @@ namespace VaultSync.UI.ViewModels
         public string LastBackupRelative { get; private set; } = "—";
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
 
+        // Notification state for the Backups view
+        private string _notificationMessage = string.Empty;
+        private string _notificationSeverity = "Info"; // Info, Warning, Error
+        private bool   _hasNotification;
+
+        // Popup dialog state for verification failures
+        private string _verificationPopupMessage = string.Empty;
+        private bool   _isVerificationPopupOpen;
+        private string? _verificationFailedBackupId;
+
         // Backup progress details (for long-running operations)
 private double _backupProgress;
 public double BackupProgress
@@ -174,6 +184,78 @@ public double BackupProgress
             }
         }
 
+        public string NotificationMessage
+        {
+            get => _notificationMessage;
+            set
+            {
+                if (SetProperty(ref _notificationMessage, value))
+                {
+                    OnPropertyChanged(nameof(NotificationMessage));
+                }
+            }
+        }
+
+        public string NotificationSeverity
+        {
+            get => _notificationSeverity;
+            set
+            {
+                if (SetProperty(ref _notificationSeverity, value))
+                {
+                    OnPropertyChanged(nameof(NotificationSeverity));
+                }
+            }
+        }
+
+        public bool HasNotification
+        {
+            get => _hasNotification;
+            set
+            {
+                if (SetProperty(ref _hasNotification, value))
+                {
+                    OnPropertyChanged(nameof(HasNotification));
+                }
+            }
+        }
+
+        public string VerificationPopupMessage
+        {
+            get => _verificationPopupMessage;
+            set
+            {
+                if (SetProperty(ref _verificationPopupMessage, value))
+                {
+                    OnPropertyChanged(nameof(VerificationPopupMessage));
+                }
+            }
+        }
+
+        public bool IsVerificationPopupOpen
+        {
+            get => _isVerificationPopupOpen;
+            set
+            {
+                if (SetProperty(ref _isVerificationPopupOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsVerificationPopupOpen));
+                }
+            }
+        }
+
+        public string? VerificationFailedBackupId
+        {
+            get => _verificationFailedBackupId;
+            set
+            {
+                if (SetProperty(ref _verificationFailedBackupId, value))
+                {
+                    OnPropertyChanged(nameof(VerificationFailedBackupId));
+                }
+            }
+        }
+
         // Events that external code (e.g. view or parent VM) can subscribe to
         // in order to run real backup/restore logic and then refresh this VM.
         public event Action? CreateBackupForAllProjectsRequested;
@@ -190,6 +272,8 @@ public double BackupProgress
         public ICommand BackupProjectCommand { get; }
         public ICommand ShowProjectHistoryCommand { get; }
         public ICommand FilterSnapshotsCommand { get; }
+        public ICommand CloseVerificationPopupCommand { get; }
+        public ICommand DeleteFailedBackupCommand { get; }
 
         public BackupsViewModel()
         {
@@ -206,6 +290,8 @@ public double BackupProgress
 
             // History type filter
             FilterSnapshotsCommand = new RelayCommand(p => ApplyTypeFilter(p as string));
+            CloseVerificationPopupCommand = new RelayCommand(_ => CloseVerificationPopup());
+            DeleteFailedBackupCommand     = new RelayCommand(_ => DeleteFailedBackup());
 
             // NOTE:
             // Live data is now provided by LoadFromBackups(...) from the core layer.
@@ -509,6 +595,82 @@ public double BackupProgress
         }
 
         // ---------- Summary computation ----------
+
+        /// <summary>
+        /// Shows a notification banner in the Backups view.
+        /// Severity can be "Info", "Warning", or "Error".
+        /// </summary>
+        public void ShowNotification(string message, string severity = "Info")
+        {
+            NotificationMessage  = message;
+            NotificationSeverity = severity;
+            HasNotification      = !string.IsNullOrWhiteSpace(message);
+        }
+
+        /// <summary>
+        /// Opens the verification failure popup for a specific backup.
+        /// </summary>
+        public void ShowVerificationFailure(string backupId, string projectName)
+        {
+            VerificationFailedBackupId = backupId;
+            VerificationPopupMessage   = $"Backup verification failed for {projectName}. The backup may be incomplete or corrupted.";
+            IsVerificationPopupOpen    = true;
+        }
+
+        /// <summary>
+        /// Closes the verification popup without deleting the backup.
+        /// </summary>
+        public void CloseVerificationPopup()
+        {
+            IsVerificationPopupOpen    = false;
+            VerificationPopupMessage   = string.Empty;
+            VerificationFailedBackupId = null;
+        }
+
+        /// <summary>
+        /// Deletes the failed backup selected in the verification popup by reusing
+        /// the normal DeleteBackupRequested event, then closes the popup.
+        /// </summary>
+        private void DeleteFailedBackup()
+        {
+            if (string.IsNullOrWhiteSpace(VerificationFailedBackupId))
+            {
+                CloseVerificationPopup();
+                return;
+            }
+
+            var snapshot = _allSnapshots.FirstOrDefault(s => s.Id == VerificationFailedBackupId);
+            if (snapshot == null)
+            {
+                CloseVerificationPopup();
+                return;
+            }
+
+            // Let external code handle deletion (DB row + files), then refresh this VM.
+            DeleteBackupRequested?.Invoke(snapshot);
+            CloseVerificationPopup();
+        }
+
+        /// <summary>
+        /// Marks a snapshot as failed (e.g. after verification) and rebuilds the views.
+        /// Intended to be called from AppViewModel when verification detects mismatches.
+        /// </summary>
+        public void MarkSnapshotAsFailed(string backupId)
+        {
+            if (string.IsNullOrWhiteSpace(backupId))
+                return;
+
+            var snapshot = _allSnapshots.FirstOrDefault(s => s.Id == backupId);
+            if (snapshot == null)
+                return;
+
+            // Keep the original label ("Auto snapshot"/"Manual snapshot"), only mark status as failed.
+            snapshot.Status = "Failed";
+
+            // Rebuild filtered views + summary so UI picks up the new status/tag color.
+            RefreshSnapshotsView(false);
+            RecalculateSummary();
+        }
 
         private void RecalculateSummary()
         {
@@ -829,6 +991,9 @@ public double BackupProgress
 
                 _progress = value;
                 OnPropertyChanged(nameof(Progress));
+                OnPropertyChanged(nameof(IsCompleted));
+                OnPropertyChanged(nameof(ShowEta));
+                OnPropertyChanged(nameof(CanCancel));
             }
         }
 
@@ -861,6 +1026,10 @@ public double BackupProgress
         }
 
         public bool IsCompleted => Progress >= 100d;
+
+        public bool ShowEta => Progress < 100d;
+
+        public bool CanCancel => !IsCompleted;
     }
 
     public class SnapshotActivityPoint

@@ -88,7 +88,11 @@ namespace VaultSync.CLI.Commands
                         AnsiConsole.MarkupLine($"[dim]• change detected ({Markup.Escape(reason)}); snapshotting…[/]");
 
                     var snapSvc = new SnapshotService(repo, new HashService());
-                    var snapId = await snapSvc.CreateSnapshotAsync(proj, fullHash: true, token);
+                    var snapId = await snapSvc.CreateSnapshotAsync(
+                        proj,
+                        fullHash: true,
+                        maxSnapshotsToKeep: null,
+                        ct: token);
 
                     if (!s.Quiet)
                     {

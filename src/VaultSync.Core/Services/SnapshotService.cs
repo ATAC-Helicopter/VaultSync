@@ -15,7 +15,7 @@ public class SnapshotService
         _hash = hash;
     }
 
-    public async Task<int> CreateSnapshotAsync(Project project, bool fullHash, CancellationToken ct = default)
+    public async Task<int> CreateSnapshotAsync(Project project, bool fullHash, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -167,6 +167,19 @@ public class SnapshotService
             // Persist files in a stable order
             _repo.InsertFiles(snapId, entries.OrderBy(e => e.RelPath, StringComparer.OrdinalIgnoreCase));
 
+            // Apply snapshot retention (keep only the most recent N snapshots that have no backups referencing them)
+            if (maxSnapshotsToKeep.HasValue && maxSnapshotsToKeep.Value > 0)
+            {
+                try
+                {
+                    ApplySnapshotRetention(project, maxSnapshotsToKeep.Value);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
+                }
+            }
+
             // Attach summary for CLI
             LastOutcome = new SnapshotOutcome
             (
@@ -187,6 +200,42 @@ public class SnapshotService
 
     // simple store for most recent outcome in-process
     public static SnapshotOutcome? LastOutcome { get; private set; }
+    private void ApplySnapshotRetention(Project project, int maxSnapshotsToKeep)
+    {
+        // Load all snapshots for this project (newest first)
+        var snapshots = _repo
+            .GetSnapshotsForProject(project.Name)
+            .OrderByDescending(s => s.CreatedUtc)
+            .ToList();
+
+        // If snapshots are <= max, nothing to prune
+        if (snapshots.Count <= maxSnapshotsToKeep)
+            return;
+
+        // Load all backups for this project to find protected snapshot IDs
+        var backups = _repo.GetBackupsForProject(project.Id);
+        var protectedIds = new HashSet<int>(backups.Select(b => b.SnapshotId));
+
+        // Determine snapshots that are not referenced by any backup
+        var freeSnapshots = snapshots.Where(s => !protectedIds.Contains(s.Id)).ToList();
+
+        // If free snapshots <= max, nothing to delete
+        if (freeSnapshots.Count <= maxSnapshotsToKeep)
+            return;
+
+        // Delete oldest free snapshots beyond the keep limit
+        var toDelete = freeSnapshots
+            .OrderByDescending(s => s.CreatedUtc)
+            .Skip(maxSnapshotsToKeep)
+            .Select(s => s.Id)
+            .ToList();
+
+        if (toDelete.Count > 0)
+        {
+            Console.WriteLine($"[SnapshotService] Retention deleting {toDelete.Count} old snapshots for project '{project.Name}'.");
+            _repo.DeleteSnapshotsById(project.Name, toDelete);
+        }
+    }
 }
 
 public record SnapshotOutcome(int Added, int Modified, int Deleted, int Unchanged, int TotalFiles, long TotalBytes);

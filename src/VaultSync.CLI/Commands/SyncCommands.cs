@@ -316,7 +316,11 @@ namespace VaultSync.CLI.Commands
             if (!s.Quiet) AnsiConsole.MarkupLine($"Registered project [bold]{Markup.Escape(name)}[/] (id {id}) → {Markup.Escape(src)}");
 
             var snapSvc = new SnapshotService(repo, new HashService());
-            var snapId = await snapSvc.CreateSnapshotAsync(repo.GetProjectByName(name)!, fullHash: true, ct);
+            var snapId = await snapSvc.CreateSnapshotAsync(
+                repo.GetProjectByName(name)!,
+                fullHash: true,
+                maxSnapshotsToKeep: null,
+                ct: ct);
             if (!s.Quiet) AnsiConsole.MarkupLine($"Snapshot {snapId} created");
 
             var syncSvc = new SyncService();

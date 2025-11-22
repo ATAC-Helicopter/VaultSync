@@ -409,6 +409,7 @@ public class ProjectsViewModel : ViewModelBase
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
+            var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
 
             // 2. Open repository and ensure schema exists.
             var repo = new SqliteRepository(dbPath);
@@ -445,7 +446,10 @@ public class ProjectsViewModel : ViewModelBase
             var hashService     = new HashService();
             var snapshotService = new SnapshotService(repo, hashService);
 
-            var snapshotId = await snapshotService.CreateSnapshotAsync(existing, fullHash: true);
+            var snapshotId = await snapshotService.CreateSnapshotAsync(
+                existing,
+                fullHash: true,
+                maxSnapshotsToKeep: maxSnapshotsToKeep);
             var outcome    = SnapshotService.LastOutcome;
 
             Console.WriteLine(
@@ -453,25 +457,43 @@ public class ProjectsViewModel : ViewModelBase
                 $"Added={outcome?.Added}, Modified={outcome?.Modified}, Deleted={outcome?.Deleted}, " +
                 $"Unchanged={outcome?.Unchanged}, TotalFiles={outcome?.TotalFiles}, Bytes={outcome?.TotalBytes}");
 
-            // Update the selected project's stats in the UI immediately.
+            // Update the selected project's stats in the UI immediately, based on the DB state
+            // after snapshot creation and retention have run.
             if (SelectedProject != null && outcome != null)
             {
-                var snapshotTime = DateTime.UtcNow;
-                SelectedProject.LastSnapshot = snapshotTime;
-                SelectedProject.SizeBytes    = outcome.TotalBytes;
+                try
+                {
+                    var snapshotsFromDb = repo.GetSnapshotsForProject(existing.Name)?.ToList()
+                                          ?? new List<Snapshot>();
 
-                var history = SelectedProject.SnapshotHistory?.ToList()
-                              ?? new List<ProjectSnapshotViewModel>();
+                    if (snapshotsFromDb.Count > 0)
+                    {
+                        // Assume snapshots are returned newest-first, consistent with RefreshAsync.
+                        var latest = snapshotsFromDb[0];
+                        SelectedProject.LastSnapshot = latest.CreatedUtc;
+                        SelectedProject.SizeBytes    = latest.TotalBytes;
 
-                history.Insert(0, new ProjectSnapshotViewModel(snapshotTime, outcome.TotalBytes));
+                        var history = snapshotsFromDb
+                            .Take(10)
+                            .Select(s => new ProjectSnapshotViewModel(s.CreatedUtc, s.TotalBytes));
 
-                if (history.Count > 10)
-                    history = history.Take(10).ToList();
+                        SelectedProject.SetSnapshots(history);
+                    }
+                    else
+                    {
+                        // No snapshots remaining (should be rare, but handle it).
+                        SelectedProject.LastSnapshot = default;
+                        SelectedProject.SizeBytes    = 0;
+                        SelectedProject.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
+                    }
 
-                SelectedProject.SetSnapshots(history);
-
-                SelectedProject.Health    = ProjectHealthStatus.Healthy;
-                SelectedProject.HealthTag = "Healthy";
+                    SelectedProject.Health    = ProjectHealthStatus.Healthy;
+                    SelectedProject.HealthTag = "Healthy";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ProjectsViewModel] Failed to refresh snapshot list after snapshot: {ex}");
+                }
             }
         }
         catch (Exception ex)
