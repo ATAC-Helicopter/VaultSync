@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using VaultSync.Core.Models;
 using VaultSync.UI.Infrastructure;
+using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -106,10 +107,8 @@ namespace VaultSync.UI.ViewModels
         public string LastBackupRelative { get; private set; } = "—";
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
 
-        // Notification state for the Backups view
-        private string _notificationMessage = string.Empty;
-        private string _notificationSeverity = "Info"; // Info, Warning, Error
-        private bool   _hasNotification;
+        // Notification state for the Backups view (reusable notification model)
+        public NotificationState Notification { get; } = new NotificationState();
 
         // Popup dialog state for verification failures
         private string _verificationPopupMessage = string.Empty;
@@ -117,19 +116,19 @@ namespace VaultSync.UI.ViewModels
         private string? _verificationFailedBackupId;
 
         // Backup progress details (for long-running operations)
-private double _backupProgress;
-public double BackupProgress
-{
-    get => _backupProgress;
-    set
-    {
-        if (SetProperty(ref _backupProgress, value))
+        private double _backupProgress;
+        public double BackupProgress
         {
-            OnPropertyChanged(nameof(BackupProgress));
-            // Removed auto-hide behavior. AppViewModel now controls IsBusy.
+            get => _backupProgress;
+            set
+            {
+                if (SetProperty(ref _backupProgress, value))
+                {
+                    OnPropertyChanged(nameof(BackupProgress));
+                    // Removed auto-hide behavior. AppViewModel now controls IsBusy.
+                }
+            }
         }
-    }
-}
 
         private string _backupCurrentFile = string.Empty;
         public string BackupCurrentFile
@@ -180,42 +179,6 @@ public double BackupProgress
                 if (SetProperty(ref _busyMessage, value))
                 {
                     OnPropertyChanged(nameof(BusyMessage));
-                }
-            }
-        }
-
-        public string NotificationMessage
-        {
-            get => _notificationMessage;
-            set
-            {
-                if (SetProperty(ref _notificationMessage, value))
-                {
-                    OnPropertyChanged(nameof(NotificationMessage));
-                }
-            }
-        }
-
-        public string NotificationSeverity
-        {
-            get => _notificationSeverity;
-            set
-            {
-                if (SetProperty(ref _notificationSeverity, value))
-                {
-                    OnPropertyChanged(nameof(NotificationSeverity));
-                }
-            }
-        }
-
-        public bool HasNotification
-        {
-            get => _hasNotification;
-            set
-            {
-                if (SetProperty(ref _hasNotification, value))
-                {
-                    OnPropertyChanged(nameof(HasNotification));
                 }
             }
         }
@@ -289,7 +252,7 @@ public double BackupProgress
             ShowProjectHistoryCommand = new RelayCommand(p => ShowProjectHistory(p as ProjectBackupItem));
 
             // History type filter
-            FilterSnapshotsCommand = new RelayCommand(p => ApplyTypeFilter(p as string));
+            FilterSnapshotsCommand        = new RelayCommand(p => ApplyTypeFilter(p as string));
             CloseVerificationPopupCommand = new RelayCommand(_ => CloseVerificationPopup());
             DeleteFailedBackupCommand     = new RelayCommand(_ => DeleteFailedBackup());
 
@@ -599,12 +562,19 @@ public double BackupProgress
         /// <summary>
         /// Shows a notification banner in the Backups view.
         /// Severity can be "Info", "Warning", or "Error".
+        /// This is a thin wrapper around the shared NotificationState model.
         /// </summary>
         public void ShowNotification(string message, string severity = "Info")
         {
-            NotificationMessage  = message;
-            NotificationSeverity = severity;
-            HasNotification      = !string.IsNullOrWhiteSpace(message);
+            var sev = severity switch
+            {
+                "Error"   => NotificationSeverity.Error,
+                "Warning" => NotificationSeverity.Warning,
+                _         => NotificationSeverity.Info
+            };
+
+            Console.WriteLine($"[BackupsViewModel] SHOW NOTIFICATION: {sev} - {message}");
+            Notification.Show(message, sev);
         }
 
         /// <summary>

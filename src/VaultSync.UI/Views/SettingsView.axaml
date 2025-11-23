@@ -226,6 +226,20 @@
                                 IsChecked="{Binding VerifyBackupsAfterCreate, Mode=TwoWay}" />
                 </Grid>
 
+                <!-- Full snapshot hashing -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Full snapshot hashing" />
+                    <TextBlock Text="Hash all files on every snapshot (safer, but slower on large projects)."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding UseFullSnapshotHash, Mode=TwoWay}" />
+                </Grid>
+
                 <!-- Pause on battery -->
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
@@ -442,29 +456,44 @@
                              FontSize="12" />
                 </StackPanel>
 
-                <Grid ColumnDefinitions="*,Auto">
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,0,0,4">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="On backup success" />
-                    <TextBlock Text="Show a small toast when a snapshot completes."
+                    <TextBlock Text="Enable notifications" />
+                    <TextBlock Text="Turn all VaultSync notifications on or off."
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
-                                IsChecked="{Binding NotifyOnBackupSuccess, Mode=TwoWay}" />
+                                IsChecked="{Binding NotificationsEnabled, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="On backup success" />
+                    <TextBlock Text="Show a notification when a backup completes successfully."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding NotifyOnBackupSuccess, Mode=TwoWay}"
+                                IsEnabled="{Binding NotificationsEnabled}" />
                 </Grid>
 
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="On backup failure" />
-                    <TextBlock Text="Always notify when a snapshot fails."
+                    <TextBlock Text="Always notify when a backup fails."
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
-                                IsChecked="{Binding NotifyOnBackupFailure, Mode=TwoWay}" />
+                                IsChecked="{Binding NotifyOnBackupFailure, Mode=TwoWay}"
+                                IsEnabled="{Binding NotificationsEnabled}" />
                 </Grid>
 
                 <Grid ColumnDefinitions="*,Auto"
@@ -477,7 +506,8 @@
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
-                                IsChecked="{Binding NotifyOnLowDiskSpace, Mode=TwoWay}" />
+                                IsChecked="{Binding NotifyOnLowDiskSpace, Mode=TwoWay}"
+                                IsEnabled="{Binding NotificationsEnabled}" />
                 </Grid>
 
               </StackPanel>

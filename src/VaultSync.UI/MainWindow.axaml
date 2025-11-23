@@ -2,6 +2,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    xmlns:viewsControls="clr-namespace:VaultSync.UI.Views.Controls"
     x:Class="VaultSync.UI.MainWindow"
     x:DataType="vm:AppViewModel"
     Width="1200" Height="800"
@@ -47,7 +48,11 @@
     </Border>
 
     <Border Grid.Row="1" Grid.Column="1" Padding="16">
-<ContentControl x:Name="MainContent" Content="{CompiledBinding CurrentView}"/>    </Border>
+      <ContentControl x:Name="MainContent" Content="{CompiledBinding CurrentView}"/>
+    </Border>
+
+    <!-- Global bottom-right toast notifications covering the whole window -->
+    <viewsControls:ToastHost Grid.RowSpan="2" Grid.ColumnSpan="2" />
 
   </Grid>
 </Window>

@@ -49,6 +49,11 @@ namespace VaultSync.Core.Config
             }
         }
         public bool   UseCompression        { get; set; } = true;
+        /// <summary>
+        /// Controls whether snapshots always compute full hashes for all files.
+        /// When false, snapshots may reuse hashes for unchanged files to speed up runs.
+        /// </summary>
+        public bool   UseFullSnapshotHash   { get; set; } = true;
         public bool   VerifyAfterCreate     { get; set; } = true;
         public bool   PauseOnBattery        { get; set; } = true;
     }
@@ -85,9 +90,25 @@ namespace VaultSync.Core.Config
 
     public sealed class NotificationsConfig
     {
-        public bool OnBackupSuccess  { get; set; } = true;
-        public bool OnBackupFailure  { get; set; } = true;
-        public bool OnLowDisk        { get; set; } = true;
+        public bool OnBackupSuccess      { get; set; } = true;
+        public bool OnBackupFailure      { get; set; } = true;
+
+        public bool OnSnapshotSuccess    { get; set; } = false;
+        public bool OnSnapshotFailure    { get; set; } = true;
+
+        public bool OnLowDisk            { get; set; } = true;
+
+        /// <summary>
+        /// When true, VaultSync will attempt to use OS-level notifications
+        /// (notification center / toasts) for important events.
+        /// </summary>
+        public bool UseOsNotifications   { get; set; } = true;
+
+        /// <summary>
+        /// When true, OS notifications are only shown if the main window is
+        /// not active (app in background / not focused).
+        /// </summary>
+        public bool OnlyWhenInactive     { get; set; } = true;
     }
 
     // -------- Advanced / Misc --------

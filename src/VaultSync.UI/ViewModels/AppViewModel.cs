@@ -10,9 +10,54 @@ using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
+using VaultSync.UI.Notifications;
+using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI.ViewModels
 {
+    public enum NotificationLevel
+    {
+        Info,
+        Warning,
+        Error
+    }
+
+    public enum NotificationKind
+    {
+        System,
+        Backup,
+        Snapshot
+    }
+
+    public interface INotificationService
+    {
+        void ShowInfo(string title, string message, NotificationKind kind = NotificationKind.System);
+        void ShowWarning(string title, string message, NotificationKind kind = NotificationKind.System);
+        void ShowError(string title, string message, NotificationKind kind = NotificationKind.System);
+    }
+
+    /// <summary>
+    /// Basic in-app notification service. For now it only logs to the console;
+    /// later we can extend this to drive UI banners/toasts and OS notifications.
+    /// </summary>
+    public sealed class NotificationService : INotificationService
+    {
+        public void ShowInfo(string title, string message, NotificationKind kind = NotificationKind.System)
+        {
+            Console.WriteLine($"[Notification][Info][{kind}] {title}: {message}");
+        }
+
+        public void ShowWarning(string title, string message, NotificationKind kind = NotificationKind.System)
+        {
+            Console.WriteLine($"[Notification][Warning][{kind}] {title}: {message}");
+        }
+
+        public void ShowError(string title, string message, NotificationKind kind = NotificationKind.System)
+        {
+            Console.WriteLine($"[Notification][Error][{kind}] {title}: {message}");
+        }
+    }
+
     public class AppViewModel : ViewModelBase
     {
         private object? _currentView;
@@ -28,6 +73,13 @@ namespace VaultSync.UI.ViewModels
         // Core services for live data
         private readonly SqliteRepository _repo;
         private readonly BackupService    _backupService;
+        private readonly INotificationService _notificationService;
+
+        // Helper property to detect when the Backups page is active
+        private bool IsOnBackupsPage => CurrentView == _backupsViewModel;
+
+        // Helper property to respect global notifications setting from SettingsViewModel
+        private bool NotificationsEnabled => _settingsViewModel?.NotificationsEnabled ?? true;
 
         public object? CurrentView
         {
@@ -79,10 +131,11 @@ namespace VaultSync.UI.ViewModels
             // 1) Config + DB + services
             var cfg = AppConfigStore.Load();
 
-            _repo = new SqliteRepository(cfg.DbPath);
+            _repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
             _repo.EnsureSchema();
 
-            _backupService = new BackupService(_repo);
+            _backupService       = new BackupService(_repo);
+            _notificationService = new NotificationService();
 
             // 2) Section viewmodels
             _dashboardViewModel = new DashboardViewModel();
@@ -99,6 +152,7 @@ namespace VaultSync.UI.ViewModels
 
             // 4) Initial load of backup data
             ReloadBackupsVmData();
+            _ = _dashboardViewModel.RefreshAsync();
 
             // 5) Default route
             CurrentView  = _dashboardViewModel;
@@ -108,6 +162,8 @@ namespace VaultSync.UI.ViewModels
             // 6) Navigation commands (using cached VMs)
             NavigateDashboard = new RelayCommand(_ =>
             {
+                _ = _dashboardViewModel.RefreshAsync();
+
                 CurrentView  = _dashboardViewModel;
                 HeaderTitle  = "Dashboard";
                 HeaderKicker = "Overview";
@@ -125,6 +181,7 @@ namespace VaultSync.UI.ViewModels
                 // IMPORTANT: refresh data each time we navigate here,
                 // so newly added projects/snapshots show up.
                 ReloadBackupsVmData();
+                _ = _dashboardViewModel.RefreshAsync();
 
                 CurrentView  = _backupsViewModel;
                 HeaderTitle  = "Backups";
@@ -243,7 +300,9 @@ namespace VaultSync.UI.ViewModels
                             });
                         },
                         useArchiveMode: useArchiveMode,
-                        maxSnapshotsToKeep: maxSnapshotsToKeep);
+                        maxSnapshotsToKeep: maxSnapshotsToKeep,
+                        minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent
+                    );
                 });
 
                 // --- After backup: optional verification ---
@@ -265,6 +324,23 @@ namespace VaultSync.UI.ViewModels
                         catch (Exception vex)
                         {
                             Console.WriteLine($"[AppViewModel] Verification exception: {vex}");
+
+                            if (NotificationsEnabled)
+                            {
+                                _notificationService.ShowError(
+                                    "Backup verification failed",
+                                    $"Verification failed for '{project.Name}'. The backup may be corrupted or incomplete.",
+                                    NotificationKind.Backup);
+
+                                if (!IsOnBackupsPage)
+                                {
+                                    GlobalNotificationCenter.Instance.Show(
+                                        $"Verification failed for '{project.Name}'. The backup may be corrupted or incomplete.",
+                                        NotificationSeverity.Error,
+                                        "Backup verification failed");
+                                }
+                            }
+
                             Dispatcher.UIThread.Post(() =>
                             {
                                 var backupId = latest.Id.ToString();
@@ -276,19 +352,98 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 ReloadBackupsVmData();
+                await _dashboardViewModel.RefreshAsync();
+
+                // Notify success if enabled in settings and globally
+                if (NotificationsEnabled && _settingsViewModel.NotifyOnBackupSuccess)
+                {
+                    _notificationService.ShowInfo(
+                        "Backup completed",
+                        $"Backup for '{project.Name}' completed successfully.",
+                        NotificationKind.Backup);
+
+                    _backupsViewModel.ShowNotification(
+                        $"Backup completed for {project.Name}",
+                        "Info");
+
+                    if (!IsOnBackupsPage)
+                    {
+                        GlobalNotificationCenter.Instance.Show(
+                            $"Backup for '{project.Name}' completed successfully.",
+                            NotificationSeverity.Info,
+                            "Backup completed");
+                    }
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[AppViewModel] Backup failed: {ex}");
 
-                Dispatcher.UIThread.Post(() =>
+                // Detect the low-disk-space condition thrown by BackupService
+                var isLowDisk =
+                    ex is InvalidOperationException ioe &&
+                    ioe.Message.Contains("does not have enough free space", StringComparison.OrdinalIgnoreCase);
+
+                if (isLowDisk)
                 {
-                    _backupsViewModel.BackupCurrentFile = "Backup failed.";
-                    _backupsViewModel.BackupEtaText =
-                        string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
-                            ? ex.Message
-                            : _backupsViewModel.BackupEtaText + " · Failed";
-                });
+                    // Low disk space: treat as a skipped backup with a clear warning,
+                    // honoring the notifications settings.
+                    if (NotificationsEnabled && _settingsViewModel.NotifyOnLowDiskSpace)
+                    {
+                        // Always go through the central notification service so we get
+                        // consistent logging and behavior.
+                        _notificationService.ShowWarning(
+                            "Low disk space",
+                            $"Backup for '{project.Name}' was skipped because the backup target is almost full.",
+                            NotificationKind.Backup);
+
+                        if (IsOnBackupsPage)
+                        {
+                            // When the user is on the Backups page, also show an in-page banner
+                            // so the warning is clearly visible where the action happened.
+                            _backupsViewModel.ShowNotification(
+                                $"Backup for '{project.Name}' was skipped because the backup target is almost full.",
+                                "Warning");
+                        }
+                        else
+                        {
+                            // When the user is elsewhere, show a global toast.
+                            GlobalNotificationCenter.Instance.Show(
+                                $"Backup for '{project.Name}' was skipped due to low disk space on the backup target.",
+                                NotificationSeverity.Warning,
+                                "Low disk space");
+                        }
+                    }
+
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _backupsViewModel.BackupCurrentFile = "Backup skipped: low disk space.";
+                        _backupsViewModel.BackupEtaText =
+                            string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
+                                ? ex.Message
+                                : _backupsViewModel.BackupEtaText + " · Low disk space";
+                    });
+                }
+                else
+                {
+                    // Generic backup failure path (unchanged behaviour)
+                    if (NotificationsEnabled && !IsOnBackupsPage)
+                    {
+                        GlobalNotificationCenter.Instance.Show(
+                            $"Backup failed for '{project.Name}'. Check logs for details.",
+                            NotificationSeverity.Error,
+                            "Backup failed");
+                    }
+
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _backupsViewModel.BackupCurrentFile = "Backup failed.";
+                        _backupsViewModel.BackupEtaText =
+                            string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
+                                ? ex.Message
+                                : _backupsViewModel.BackupEtaText + " · Failed";
+                    });
+                }
             }
             finally
             {
@@ -433,7 +588,8 @@ namespace VaultSync.UI.ViewModels
                                     etaText);
                             },
                             useArchiveMode: useArchiveMode,
-                            maxSnapshotsToKeep: maxSnapshotsToKeep
+                            maxSnapshotsToKeep: maxSnapshotsToKeep,
+                            minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent
                         ).ContinueWith(t =>
                         {
                             if (t.IsFaulted)
@@ -450,6 +606,7 @@ namespace VaultSync.UI.ViewModels
 
                 // First reload history so the new backups appear.
                 ReloadBackupsVmData();
+                await _dashboardViewModel.RefreshAsync();
 
                 // --- After all backups: optional verification ---
                 var cfgAfterAll = AppConfigStore.Load();
@@ -473,6 +630,23 @@ namespace VaultSync.UI.ViewModels
                         catch (Exception vex)
                         {
                             Console.WriteLine($"[AppViewModel] Verification exception for {proj?.Name}: {vex}");
+
+                            if (NotificationsEnabled)
+                            {
+                                _notificationService.ShowError(
+                                    "Backup verification failed",
+                                    $"Verification failed for '{proj?.Name ?? "Unknown project"}'. The backup may be corrupted or incomplete.",
+                                    NotificationKind.Backup);
+
+                                if (!IsOnBackupsPage)
+                                {
+                                    GlobalNotificationCenter.Instance.Show(
+                                        $"Verification failed for '{proj?.Name ?? "Unknown project"}'. The backup may be corrupted or incomplete.",
+                                        NotificationSeverity.Error,
+                                        "Backup verification failed");
+                                }
+                            }
+
                             Dispatcher.UIThread.Post(() =>
                             {
                                 var backupId = latest.Id.ToString();
@@ -488,11 +662,39 @@ namespace VaultSync.UI.ViewModels
                 Dispatcher.UIThread.Post(() =>
                 {
                     _backupsViewModel.ClearActiveBackups();
+
+                    if (NotificationsEnabled && _settingsViewModel.NotifyOnBackupSuccess)
+                    {
+                        _notificationService.ShowInfo(
+                            "Backups completed",
+                            "All project backups completed successfully.",
+                            NotificationKind.Backup);
+
+                        _backupsViewModel.ShowNotification(
+                            "All project backups completed successfully.",
+                            "Info");
+
+                        if (!IsOnBackupsPage)
+                        {
+                            GlobalNotificationCenter.Instance.Show(
+                                "All project backups completed successfully.",
+                                NotificationSeverity.Info,
+                                "Backups completed");
+                        }
+                    }
                 });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[AppViewModel] Backup-all failed: {ex}");
+
+                if (NotificationsEnabled && !IsOnBackupsPage)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        "Backup all projects failed. Check logs for details.",
+                        NotificationSeverity.Error,
+                        "Backup-all failed");
+                }
 
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -572,6 +774,7 @@ namespace VaultSync.UI.ViewModels
                 });
 
                 ReloadBackupsVmData();
+                await _dashboardViewModel.RefreshAsync();
             }
             finally
             {

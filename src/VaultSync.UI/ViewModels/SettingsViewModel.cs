@@ -8,6 +8,7 @@ using Avalonia.Styling;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
 using VaultSync.UI.Infrastructure;
+
 namespace VaultSync.UI
 {
     public sealed class SettingsViewModel : INotifyPropertyChanged
@@ -25,6 +26,7 @@ namespace VaultSync.UI
         private bool _useBackupCompression = true;
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
+        private bool _useFullSnapshotHash = true;
 
         private bool _preferExternalDrives = true;
         private bool _showDriveHealthWarnings = true;
@@ -39,9 +41,16 @@ namespace VaultSync.UI
         private bool _useCompactLayout = false;
         private bool _showProjectAvatars = true;
 
+        private bool _notificationsEnabled = true;
         private bool _notifyOnBackupSuccess = true;
         private bool _notifyOnBackupFailure = true;
         private bool _notifyOnLowDiskSpace = true;
+
+        private bool _notifyOnSnapshotSuccess = false;
+        private bool _notifyOnSnapshotFailure = true;
+
+        private bool _useOsNotifications = true;
+        private bool _notifyOnlyWhenInactive = true;
 
         private bool _enableVerboseLogging = false;
         private bool _checkForUpdatesOnStartup = true;
@@ -110,6 +119,7 @@ namespace VaultSync.UI
             _useBackupCompression      = cfg.Backups.UseCompression;
             _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
             _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
+            _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
 
             _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
@@ -125,9 +135,22 @@ namespace VaultSync.UI
             _useCompactLayout   = cfg.Appearance.CompactLayout;
             _showProjectAvatars = cfg.Appearance.ShowProjectAvatars;
 
-            _notifyOnBackupSuccess = cfg.Notifications.OnBackupSuccess;
-            _notifyOnBackupFailure = cfg.Notifications.OnBackupFailure;
-            _notifyOnLowDiskSpace  = cfg.Notifications.OnLowDisk;
+            _notifyOnBackupSuccess   = cfg.Notifications.OnBackupSuccess;
+            _notifyOnBackupFailure   = cfg.Notifications.OnBackupFailure;
+            _notifyOnLowDiskSpace    = cfg.Notifications.OnLowDisk;
+            _notifyOnSnapshotSuccess = cfg.Notifications.OnSnapshotSuccess;
+            _notifyOnSnapshotFailure = cfg.Notifications.OnSnapshotFailure;
+            _useOsNotifications      = cfg.Notifications.UseOsNotifications;
+            _notifyOnlyWhenInactive  = cfg.Notifications.OnlyWhenInactive;
+
+            // Derive master notifications toggle from individual flags for now
+            _notificationsEnabled =
+                _notifyOnBackupSuccess ||
+                _notifyOnBackupFailure ||
+                _notifyOnLowDiskSpace ||
+                _notifyOnSnapshotSuccess ||
+                _notifyOnSnapshotFailure ||
+                _useOsNotifications;
 
             _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
@@ -160,7 +183,8 @@ namespace VaultSync.UI
                         : BackupLocationPath,
                     UseCompression         = UseBackupCompression,
                     VerifyAfterCreate      = VerifyBackupsAfterCreate,
-                    PauseOnBattery         = PauseBackupsOnBattery
+                    PauseOnBattery         = PauseBackupsOnBattery,
+                    UseFullSnapshotHash    = _useFullSnapshotHash
                 },
 
                 Storage =
@@ -181,16 +205,20 @@ namespace VaultSync.UI
                 Appearance =
                 {
                     // FIX: use Theme instead of ThemeName
-                    Theme            = SelectedTheme,
-                    CompactLayout    = UseCompactLayout,
+                    Theme              = SelectedTheme,
+                    CompactLayout      = UseCompactLayout,
                     ShowProjectAvatars = ShowProjectAvatars
                 },
 
                 Notifications =
                 {
-                    OnBackupSuccess = NotifyOnBackupSuccess,
-                    OnBackupFailure = NotifyOnBackupFailure,
-                    OnLowDisk       = NotifyOnLowDiskSpace
+                    OnBackupSuccess    = NotifyOnBackupSuccess,
+                    OnBackupFailure    = NotifyOnBackupFailure,
+                    OnLowDisk          = NotifyOnLowDiskSpace,
+                    OnSnapshotSuccess  = NotifyOnSnapshotSuccess,
+                    OnSnapshotFailure  = NotifyOnSnapshotFailure,
+                    UseOsNotifications = UseOsNotifications,
+                    OnlyWhenInactive   = NotifyOnlyWhenInactive
                 },
 
                 Advanced =
@@ -306,6 +334,12 @@ namespace VaultSync.UI
             set => SetField(ref _pauseBackupsOnBattery, value);
         }
 
+        public bool UseFullSnapshotHash
+        {
+            get => _useFullSnapshotHash;
+            set => SetField(ref _useFullSnapshotHash, value);
+        }
+
         public bool PreferExternalDrives
         {
             get => _preferExternalDrives;
@@ -387,6 +421,12 @@ namespace VaultSync.UI
             set => SetField(ref _showProjectAvatars, value);
         }
 
+        public bool NotificationsEnabled
+        {
+            get => _notificationsEnabled;
+            set => SetField(ref _notificationsEnabled, value);
+        }
+
         public bool NotifyOnBackupSuccess
         {
             get => _notifyOnBackupSuccess;
@@ -403,6 +443,30 @@ namespace VaultSync.UI
         {
             get => _notifyOnLowDiskSpace;
             set => SetField(ref _notifyOnLowDiskSpace, value);
+        }
+
+        public bool NotifyOnSnapshotSuccess
+        {
+            get => _notifyOnSnapshotSuccess;
+            set => SetField(ref _notifyOnSnapshotSuccess, value);
+        }
+
+        public bool NotifyOnSnapshotFailure
+        {
+            get => _notifyOnSnapshotFailure;
+            set => SetField(ref _notifyOnSnapshotFailure, value);
+        }
+
+        public bool UseOsNotifications
+        {
+            get => _useOsNotifications;
+            set => SetField(ref _useOsNotifications, value);
+        }
+
+        public bool NotifyOnlyWhenInactive
+        {
+            get => _notifyOnlyWhenInactive;
+            set => SetField(ref _notifyOnlyWhenInactive, value);
         }
 
         public bool EnableVerboseLogging
@@ -460,7 +524,7 @@ namespace VaultSync.UI
                 // Dev helper: reset the VaultSync SQLite DB to a "fresh install" state
                 // without touching any real project files or backup folders on disk.
                 var cfg  = AppConfigStore.Load();
-                var repo = new SqliteRepository(cfg.DbPath);
+                var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
 
                 repo.EnsureSchema();
                 repo.ResetAllData();

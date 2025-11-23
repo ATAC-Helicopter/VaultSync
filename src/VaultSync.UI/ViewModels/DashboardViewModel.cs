@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.IO;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
@@ -23,6 +24,19 @@ namespace VaultSync.UI.ViewModels
         private string _snapshotsHint = string.Empty;
         private string _storageUsed = "0 B";
         private string _storageHint = string.Empty;
+        // Backup disk usage card fields
+        private double _backupDiskUsedPercent;
+        private string _backupDiskFreeText = string.Empty;
+        private string _backupDiskThresholdText = string.Empty;
+        private bool _backupDiskIsBelowThreshold;
+
+        // Backup storage segmented usage bar (Other + per-project)
+        public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
+            Array.Empty<BackupUsageSegment>();
+
+        public ISeries[] BackupUsageSeries { get; private set; } = Array.Empty<ISeries>();
+        public Axis[] BackupUsageXAxes { get; private set; } = Array.Empty<Axis>();
+        public Axis[] BackupUsageYAxes { get; private set; } = Array.Empty<Axis>();
 
         public int ProjectCount
         {
@@ -90,6 +104,50 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public double BackupDiskUsedPercent
+        {
+            get => _backupDiskUsedPercent;
+            private set
+            {
+                if (Math.Abs(_backupDiskUsedPercent - value) < 0.001) return;
+                _backupDiskUsedPercent = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string BackupDiskFreeText
+        {
+            get => _backupDiskFreeText;
+            private set
+            {
+                if (_backupDiskFreeText == value) return;
+                _backupDiskFreeText = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string BackupDiskThresholdText
+        {
+            get => _backupDiskThresholdText;
+            private set
+            {
+                if (_backupDiskThresholdText == value) return;
+                _backupDiskThresholdText = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool BackupDiskIsBelowThreshold
+        {
+            get => _backupDiskIsBelowThreshold;
+            private set
+            {
+                if (_backupDiskIsBelowThreshold == value) return;
+                _backupDiskIsBelowThreshold = value;
+                OnPropertyChanged();
+            }
+        }
+
         // Search / actions (your RelayCommand expects Action<object?>)
         public string? SearchText { get; set; }
         public RelayCommand RefreshCommand { get; }
@@ -108,13 +166,13 @@ namespace VaultSync.UI.ViewModels
         // Activity (for now, keep simple demo items)
         public ObservableCollection<ActivityItem> ActivityItems { get; } = new()
         {
-            new ActivityItem("Daily snapshot", "Completed", "Just now", Dot.Green),
-            new ActivityItem("Manual sync", "Finished successfully", "Earlier today", Dot.Blue),
+            new ActivityItem("Daily backup", "Completed", "Just now", Dot.Green),
+            new ActivityItem("Manual backup", "Finished successfully", "Earlier today", Dot.Blue),
             new ActivityItem("Backup validation", "No issues found", "This week", Dot.Purple)
         };
 
         // Internal data for chart aggregation
-        private readonly string[] _days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+        private string[] _days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
         private readonly double[] _snapshotCountsByDay = new double[7];
 
         public DashboardViewModel()
@@ -168,6 +226,7 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 var config = AppConfigStore.Load();
+                UpdateBackupDiskUsage(config);
 
                 var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
@@ -178,6 +237,7 @@ namespace VaultSync.UI.ViewModels
 
                 var projects = repo.GetAllProjects().ToList();
                 var allSnapshots = repo.GetAllSnapshots().ToList();
+                var allBackups = repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
 
                 // KPIs
                 ProjectCount = projects.Count;
@@ -221,30 +281,104 @@ namespace VaultSync.UI.ViewModels
 
                 StorageHint = "Total across latest snapshots";
 
-                // Activity: rebuild from latest snapshots (keep top 5 newest)
+                // Activity: rebuild from latest backups and snapshots (keep top 5 newest)
                 ActivityItems.Clear();
-                foreach (var s in allSnapshots
-                             .OrderByDescending(s => s.CreatedUtc)
-                             .Take(5))
+
+                // Build a unified activity list:
+                //  - one entry per backup (auto/manual backup created)
+                //  - one entry per snapshot that does NOT have a backup row
+                var activities = new List<(int? ProjectId, DateTime WhenUtc, string Subtitle)>();
+
+                // 1) Backups
+                foreach (var b in allBackups)
                 {
-                    var project = projects.FirstOrDefault(p => p.Id == s.ProjectId);
-                    var title = project != null ? project.Name : "Unknown project";
-                    var when = s.CreatedUtc.ToLocalTime().ToString("g");
-                    ActivityItems.Add(new ActivityItem(title, "Snapshot completed", when, Dot.Blue));
+                    var subtitle = string.Equals(b.Type, "auto", StringComparison.OrdinalIgnoreCase)
+                        ? "Auto backup created"
+                        : "Manual backup created";
+
+                    activities.Add((b.ProjectId, b.CreatedUtc, subtitle));
                 }
 
-                // Snapshot chart: counts per day for last 7 days
+                // 2) Snapshots without any backup record ("snapshot-only" events)
+                var snapshotIdsWithBackup = new HashSet<int>(allBackups.Select(x => x.SnapshotId));
+                foreach (var s in allSnapshots)
+                {
+                    if (snapshotIdsWithBackup.Contains(s.Id))
+                        continue; // this snapshot already has a backup entry
+
+                    activities.Add((s.ProjectId, s.CreatedUtc, "Snapshot created"));
+                }
+
+                // Now render the 5 most recent activities, newest first.
+                var projectPalette = new[]
+                {
+                    Color.Parse("#4C8DFF"),
+                    Color.Parse("#22CC88"),
+                    Color.Parse("#FFB84C"),
+                    Color.Parse("#FF6B6B"),
+                    Color.Parse("#9B6BFF")
+                };
+
+                var projectDotBrushes = new Dictionary<int, Brush>();
+                var paletteIndex = 0;
+
+                foreach (var a in activities
+                             .OrderByDescending(a => a.WhenUtc)
+                             .Take(5))
+                {
+                    Project? project = null;
+                    if (a.ProjectId.HasValue)
+                    {
+                        project = projects.FirstOrDefault(p => p.Id == a.ProjectId.Value);
+                    }
+
+                    var title = project != null ? project.Name : "Unknown project";
+                    var when = a.WhenUtc.ToLocalTime().ToString("g");
+
+                    Brush dotBrush;
+                    if (project != null)
+                    {
+                        if (projectDotBrushes.TryGetValue(project.Id, out var cached))
+                        {
+                            dotBrush = cached ?? new SolidColorBrush(Colors.Gray);
+                        }
+                        else
+                        {
+                            var color = projectPalette[paletteIndex % projectPalette.Length];
+                            dotBrush = new SolidColorBrush(color);
+                            projectDotBrushes[project.Id] = dotBrush;
+                            paletteIndex++;
+                        }
+                    }
+                    else
+                    {
+                        dotBrush = new SolidColorBrush(Colors.Gray);
+                    }
+
+                    ActivityItems.Add(new ActivityItem(title, a.Subtitle, when, dotBrush));
+                }
+
+                // Backup chart: backups per day for the last 7 days (oldest on the left, today on the right).
+                var startDate = DateTime.UtcNow.Date.AddDays(-6); // 7 days inclusive
+                for (var i = 0; i < _days.Length; i++)
+                {
+                    var d = startDate.AddDays(i);
+                    _days[i] = d.ToString("ddd");
+                }
+
                 Array.Clear(_snapshotCountsByDay, 0, _snapshotCountsByDay.Length);
                 foreach (var s in snapshotsThisWeek)
                 {
-                    var dayIndex = (int)((DateTime.UtcNow.Date - s.CreatedUtc.Date).TotalDays);
-                    var idx = 6 - Math.Clamp(dayIndex, 0, 6); // put oldest at left, newest at right
-                    if (idx >= 0 && idx < _snapshotCountsByDay.Length)
-                        _snapshotCountsByDay[idx]++;
+                    var dayIndex = (int)(s.CreatedUtc.Date - startDate).TotalDays;
+                    if (dayIndex < 0 || dayIndex >= _snapshotCountsByDay.Length)
+                        continue;
+
+                    _snapshotCountsByDay[dayIndex]++;
                 }
 
                 BuildSnapshotSeries();
                 BuildStorageDonut(storageSlices);
+                BuildBackupUsageBar(config, storageSlices);
 
                 OnPropertyChanged(nameof(TotalSnapshotsWeek));
             }
@@ -257,33 +391,19 @@ namespace VaultSync.UI.ViewModels
 
         private void BuildSnapshotSeries()
         {
-            var accent        = SKColor.Parse("#22CCFF");
-            var accentFillTop = new SKColor(0x22, 0xCC, 0xFF, 64);
-            var accentFillBot = new SKColor(0x22, 0xCC, 0xFF, 12);
-            var avgStroke     = new SKColor(255, 255, 255, 110);
+            // Simple, readable chart: one bar per day showing how many backups ran.
+            var accent = SKColor.Parse("#22CCFF");
 
-            var line = new LineSeries<double>
+            var dailyBackups = new ColumnSeries<double>
             {
-                Values         = _snapshotCountsByDay,
-                LineSmoothness = 1,
-                Stroke         = new SolidColorPaint(accent) { StrokeThickness = 3 },
-                GeometrySize   = 8,
-                GeometryStroke = new SolidColorPaint(SKColors.White) { StrokeThickness = 2 },
-                Fill           = new LinearGradientPaint(new[] { accentFillTop, accentFillBot },
-                                                         new SKPoint(0, 0), new SKPoint(0, 1))
+                Values = _snapshotCountsByDay,
+                Stroke = null,
+                Fill = new SolidColorPaint(accent),
+                MaxBarWidth = 26,
+                DataLabelsPaint = null
             };
 
-            var avgValues = MovingAverage(_snapshotCountsByDay, 3);
-            var avg = new LineSeries<double>
-            {
-                Values         = avgValues,
-                LineSmoothness = 1,
-                GeometrySize   = 0,
-                Fill           = null,
-                Stroke         = new SolidColorPaint(avgStroke) { StrokeThickness = 2 }
-            };
-
-            SnapshotSeries = new ISeries[] { avg, line };
+            SnapshotSeries = new ISeries[] { dailyBackups };
             OnPropertyChanged(nameof(SnapshotSeries));
         }
 
@@ -368,7 +488,295 @@ namespace VaultSync.UI.ViewModels
 
             BuildSnapshotSeries();
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
+            BuildBackupUsageBar(AppConfigStore.Load(), Array.Empty<(Project project, long bytes)>());
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
+        }
+
+        private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project project, long bytes)> perProject)
+        {
+            try
+            {
+                // Default to empty segments if backup root is not configured.
+                var backupRoot = config.Backups.BackupLocation;
+                if (string.IsNullOrWhiteSpace(backupRoot))
+                {
+                    BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+                    BackupUsageSeries = Array.Empty<ISeries>();
+                    BackupUsageXAxes = Array.Empty<Axis>();
+                    BackupUsageYAxes = Array.Empty<Axis>();
+
+                    OnPropertyChanged(nameof(BackupUsageSegments));
+                    OnPropertyChanged(nameof(BackupUsageSeries));
+                    OnPropertyChanged(nameof(BackupUsageXAxes));
+                    OnPropertyChanged(nameof(BackupUsageYAxes));
+                    return;
+                }
+
+                backupRoot = Path.GetFullPath(backupRoot);
+                var drive = new DriveInfo(backupRoot);
+                if (!drive.IsReady || drive.TotalSize <= 0)
+                {
+                    BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+                    BackupUsageSeries = Array.Empty<ISeries>();
+                    BackupUsageXAxes = Array.Empty<Axis>();
+                    BackupUsageYAxes = Array.Empty<Axis>();
+
+                    OnPropertyChanged(nameof(BackupUsageSegments));
+                    OnPropertyChanged(nameof(BackupUsageSeries));
+                    OnPropertyChanged(nameof(BackupUsageXAxes));
+                    OnPropertyChanged(nameof(BackupUsageYAxes));
+                    return;
+                }
+
+                var totalBytes = drive.TotalSize;
+                var freeBytes = drive.AvailableFreeSpace;
+                var usedBytes = Math.Max(0L, totalBytes - freeBytes);
+
+                if (totalBytes <= 0)
+                {
+                    BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+                    BackupUsageSeries = Array.Empty<ISeries>();
+                    BackupUsageXAxes = Array.Empty<Axis>();
+                    BackupUsageYAxes = Array.Empty<Axis>();
+
+                    OnPropertyChanged(nameof(BackupUsageSegments));
+                    OnPropertyChanged(nameof(BackupUsageSeries));
+                    OnPropertyChanged(nameof(BackupUsageXAxes));
+                    OnPropertyChanged(nameof(BackupUsageYAxes));
+                    return;
+                }
+
+                // Sum of the latest snapshot sizes per project (VaultSync usage approximation).
+                var vaultSyncBytes = perProject?.Sum(p => p.bytes) ?? 0L;
+                if (vaultSyncBytes < 0) vaultSyncBytes = 0;
+
+                // Percentages of the total backup disk.
+                var usedPercentTotal = usedBytes * 100d / totalBytes;
+                var vaultSyncPercent = vaultSyncBytes * 100d / totalBytes;
+                var otherPercent = Math.Max(0d, usedPercentTotal - vaultSyncPercent);
+
+                var segments = new List<BackupUsageSegment>();
+
+                // Palette for project colors.
+                var projectPalette = new[]
+                {
+                    Color.Parse("#4C8DFF"),
+                    Color.Parse("#FFB84C"),
+                    Color.Parse("#22CC88"),
+                    Color.Parse("#FF6B6B"),
+                    Color.Parse("#9B6BFF")
+                };
+
+                // 1) Other segment (non-VaultSync usage on the backup drive).
+                // This is both in the legend and in the overlay bar.
+                if (otherPercent > 0)
+                {
+                    segments.Add(new BackupUsageSegment(
+                        "Other",
+                        otherPercent,
+                        new SolidColorBrush(Color.Parse("#8E8E93"))));
+                }
+
+                // 2) One segment per project for its latest snapshot size, as percent of total disk.
+                if (perProject != null)
+                {
+                    var index = 0;
+                    foreach (var (project, bytes) in perProject)
+                    {
+                        var projectPercent = bytes * 100d / totalBytes;
+                        if (projectPercent <= 0) continue;
+
+                        var color = projectPalette[index % projectPalette.Length];
+                        index++;
+
+                        segments.Add(new BackupUsageSegment(
+                            project.Name,
+                            projectPercent,
+                            new SolidColorBrush(color)));
+                    }
+                }
+
+                BackupUsageSegments = segments;
+
+                // Build stacked RowSeries for the colored bar (Other + VaultSync projects).
+                if (segments.Count == 0)
+                {
+                    BackupUsageSeries = Array.Empty<ISeries>();
+                    BackupUsageXAxes = new[]
+                    {
+                        new Axis
+                        {
+                            IsVisible = false,
+                            MinLimit = 0,
+                            MaxLimit = 100
+                        }
+                    };
+                    BackupUsageYAxes = new[]
+                    {
+                        new Axis
+                        {
+                            IsVisible = false
+                        }
+                    };
+
+                    OnPropertyChanged(nameof(BackupUsageSegments));
+                    OnPropertyChanged(nameof(BackupUsageSeries));
+                    OnPropertyChanged(nameof(BackupUsageXAxes));
+                    OnPropertyChanged(nameof(BackupUsageYAxes));
+                    return;
+                }
+
+                var totalShown = segments.Sum(s => s.SizeBytes);
+                if (totalShown <= 0)
+                {
+                    BackupUsageSeries = Array.Empty<ISeries>();
+                    BackupUsageXAxes = new[]
+                    {
+                        new Axis
+                        {
+                            IsVisible = false,
+                            MinLimit = 0,
+                            MaxLimit = 100
+                        }
+                    };
+                    BackupUsageYAxes = new[]
+                    {
+                        new Axis
+                        {
+                            IsVisible = false
+                        }
+                    };
+
+                    OnPropertyChanged(nameof(BackupUsageSegments));
+                    OnPropertyChanged(nameof(BackupUsageSeries));
+                    OnPropertyChanged(nameof(BackupUsageXAxes));
+                    OnPropertyChanged(nameof(BackupUsageYAxes));
+                    return;
+                }
+
+                var series = new List<ISeries>();
+                foreach (var seg in segments)
+                {
+                    if (seg.SizeBytes <= 0)
+                        continue;
+
+                    var solid = seg.Brush as SolidColorBrush;
+                    if (solid == null)
+                        continue;
+
+                    var skColor = new SKColor(solid.Color.R, solid.Color.G, solid.Color.B, solid.Color.A);
+
+                    series.Add(new StackedRowSeries<double>
+                    {
+                        Values = new[] { seg.SizeBytes },
+                        Stroke = null,
+                        Fill = new SolidColorPaint(skColor),
+                        MaxBarWidth = 20,
+                        IsHoverable = false,
+                        DataLabelsPaint = null,
+                        StackGroup = 0
+                    });
+                }
+
+                BackupUsageSeries = series.ToArray();
+
+                BackupUsageXAxes = new[]
+                {
+                    new Axis
+                    {
+                        IsVisible = false,
+                        MinLimit = 0,
+                        MaxLimit = 100
+                    }
+                };
+
+                BackupUsageYAxes = new[]
+                {
+                    new Axis
+                    {
+                        IsVisible = false
+                    }
+                };
+
+                OnPropertyChanged(nameof(BackupUsageSegments));
+                OnPropertyChanged(nameof(BackupUsageSeries));
+                OnPropertyChanged(nameof(BackupUsageXAxes));
+                OnPropertyChanged(nameof(BackupUsageYAxes));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DashboardViewModel] Failed to build backup usage bar: {ex}");
+
+                BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+                BackupUsageSeries = Array.Empty<ISeries>();
+                BackupUsageXAxes = Array.Empty<Axis>();
+                BackupUsageYAxes = Array.Empty<Axis>();
+
+                OnPropertyChanged(nameof(BackupUsageSegments));
+                OnPropertyChanged(nameof(BackupUsageSeries));
+                OnPropertyChanged(nameof(BackupUsageXAxes));
+                OnPropertyChanged(nameof(BackupUsageYAxes));
+            }
+        }
+
+        private void UpdateBackupDiskUsage(AppConfig config)
+        {
+            try
+            {
+                // Use the backup root from config; if not configured, show a hint.
+                var backupRoot = config.Backups.BackupLocation;
+                if (string.IsNullOrWhiteSpace(backupRoot))
+                {
+                    BackupDiskUsedPercent = 0;
+                    BackupDiskFreeText = "Backup root not configured";
+                    BackupDiskThresholdText = $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space";
+                    BackupDiskIsBelowThreshold = false;
+                    return;
+                }
+
+                backupRoot = Path.GetFullPath(backupRoot);
+
+                var drive = new DriveInfo(backupRoot);
+                if (!drive.IsReady)
+                {
+                    BackupDiskUsedPercent = 0;
+                    BackupDiskFreeText = "Backup target not available";
+                    BackupDiskThresholdText = $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space";
+                    BackupDiskIsBelowThreshold = false;
+                    return;
+                }
+
+                var total = drive.TotalSize;
+                var free = drive.AvailableFreeSpace;
+
+                if (total <= 0)
+                {
+                    BackupDiskUsedPercent = 0;
+                    BackupDiskFreeText = "Backup target size unknown";
+                    BackupDiskThresholdText = $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space";
+                    BackupDiskIsBelowThreshold = false;
+                    return;
+                }
+
+                var used = total - free;
+                var usedPercent = (double)used / total * 100d;
+                var freePercent = (double)free / total * 100d;
+
+                BackupDiskUsedPercent = usedPercent;
+                BackupDiskFreeText = $"Free {FormatBytes(free)} of {FormatBytes(total)} ({freePercent:0.#}%)";
+
+                var threshold = config.Storage.MinFreeSpacePercent;
+                BackupDiskThresholdText = $"Reserve at least {threshold}% free space";
+                BackupDiskIsBelowThreshold = freePercent < threshold;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DashboardViewModel] Failed to compute backup disk usage: {ex}");
+                BackupDiskUsedPercent = 0;
+                BackupDiskFreeText = "Backup storage usage unavailable";
+                BackupDiskThresholdText = string.Empty;
+                BackupDiskIsBelowThreshold = false;
+            }
         }
 
         private static double[] MovingAverage(IReadOnlyList<double> v, int window)
@@ -407,23 +815,33 @@ namespace VaultSync.UI.ViewModels
 
         // Bindables
         public record LegendItem(string Label, Brush Brush);
+        public record BackupUsageSegment(string Label, double SizeBytes, Brush Brush);
 
-        public enum Dot { Green, Blue, Purple }
+        public enum Dot { Green, Blue, Purple, Gray }
 
         public class ActivityItem
         {
-            public ActivityItem(string title, string subtitle, string when, Dot dot)
+            // New constructor: allow passing an explicit brush (used when we want per-project colors).
+            public ActivityItem(string title, string subtitle, string when, Brush dotBrush)
             {
                 Title = title;
                 Subtitle = subtitle;
                 When = when;
-                DotBrush = dot switch
-                {
-                    Dot.Green  => new SolidColorBrush(Color.Parse("#2ECC71")),
-                    Dot.Blue   => new SolidColorBrush(Color.Parse("#1ABCFE")),
-                    Dot.Purple => new SolidColorBrush(Color.Parse("#8E77FF")),
-                    _          => new SolidColorBrush(Colors.Gray)
-                };
+                DotBrush = dotBrush;
+            }
+
+            // Backwards-compatible constructor for simple fixed dots.
+            public ActivityItem(string title, string subtitle, string when, Dot dot)
+                : this(title, subtitle, when,
+                    dot switch
+                    {
+                        Dot.Green  => new SolidColorBrush(Color.Parse("#2ECC71")),
+                        Dot.Blue   => new SolidColorBrush(Color.Parse("#1ABCFE")),
+                        Dot.Purple => new SolidColorBrush(Color.Parse("#8E77FF")),
+                        Dot.Gray   => new SolidColorBrush(Colors.Gray),
+                        _          => new SolidColorBrush(Colors.Gray)
+                    })
+            {
             }
 
             public string Title { get; }

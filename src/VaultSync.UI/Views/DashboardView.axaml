@@ -12,8 +12,9 @@
     <!-- Scale EVERYTHING uniformly from this design width -->
     <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
       <Grid Width="1220">
-        <!-- 5 rows: 0 Header, 1 KPIs, 2 Actions, 3 Charts, 4 Activity -->
+        <!-- 6 rows: 0 Header, 1 KPIs, 2 Backup storage, 3 Actions, 4 Charts, 5 Activity -->
         <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
@@ -43,7 +44,7 @@
 
           <Border Classes="card" Padding="20" Grid.Column="1">
             <Grid RowDefinitions="Auto,*">
-              <TextBlock Text="Snapshots" Classes="kicker"/>
+              <TextBlock Text="Backups" Classes="kicker"/>
               <StackPanel Grid.Row="1" Spacing="4">
                 <TextBlock Text="{Binding SnapshotCount}" FontSize="36" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding SnapshotsHint}" Classes="metric-hint"/>
@@ -62,20 +63,74 @@
           </Border>
         </Grid>
 
+        <!-- Backup storage -->
+        <Grid Grid.Row="2" Margin="4,12,4,0">
+          <Border Classes="card" Padding="14">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Backup storage" Classes="section-title"/>
+
+              <!-- Base blue bar (used vs total) + segmented overlay (Other + per-project VaultSync) -->
+              <Grid Margin="0,4,0,0" Height="12" ClipToBounds="True">
+                <!-- Base blue bar: overall used space on the backup drive -->
+                <ProgressBar Minimum="0"
+                             Maximum="100"
+                             Value="{Binding BackupDiskUsedPercent}"
+                             Height="12"
+                             Margin="0"
+                             Foreground="#4C8DFF"
+                             Background="{DynamicResource ItemBg}"/>
+                <!-- Stacked row chart overlay: breakdown of used space (Other + VaultSync projects) -->
+                <lvc:CartesianChart
+                    Series="{Binding BackupUsageSeries}"
+                    XAxes="{Binding BackupUsageXAxes}"
+                    YAxes="{Binding BackupUsageYAxes}"
+                    Background="Transparent"
+                    LegendPosition="Hidden"
+                    Height="12"
+                    Margin="0"
+                    Padding="0"/>
+              </Grid>
+
+              <!-- Legend: Other + projects -->
+              <ItemsControl ItemsSource="{Binding BackupUsageSegments}" Margin="0,6,0,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,2,12,2">
+                      <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Brush}"/>
+                      <TextBlock Text="{Binding Label}" Classes="metric-hint"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- Existing textual hints -->
+              <TextBlock Text="{Binding BackupDiskFreeText}"
+                         Classes="metric-hint"
+                         Margin="0,4,0,0"/>
+              <TextBlock Text="{Binding BackupDiskThresholdText}"
+                         Foreground="{DynamicResource TextSecondary}"
+                         FontSize="11"/>
+            </StackPanel>
+          </Border>
+        </Grid>
+
         <!-- Actions -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="4,12,4,0">
-          <TextBox Watermark="Search projects…" Text="{Binding SearchText}" />
-          <Button Grid.Column="1" Command="{Binding RefreshCommand}">Refresh</Button>
-          <Button Grid.Column="2" Command="{Binding NewSnapshotCommand}">New Snapshot</Button>
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="4,12,4,0">
+          <!-- TODO: actions toolbar/cards will go here -->
         </Grid>
 
         <!-- Charts row -->
-        <Grid Grid.Row="3" ColumnDefinitions="2*,1*" ColumnSpacing="16" Margin="4,12,4,0">
+        <Grid Grid.Row="4" ColumnDefinitions="2*,1*" ColumnSpacing="16" Margin="4,12,4,0">
           <!-- Trend -->
           <Border Classes="card" Padding="14" Grid.Column="0">
             <Grid RowDefinitions="Auto,*">
               <Grid Grid.Row="0">
-                <TextBlock Text="Snapshots this week" Classes="section-title"/>
+                <TextBlock Text="Backups this week" Classes="section-title"/>
                 <Border HorizontalAlignment="Right" VerticalAlignment="Center" CornerRadius="8" Padding="8,4"
                         Background="{DynamicResource ItemBg}">
                   <TextBlock Text="{Binding TotalSnapshotsWeek, StringFormat='{}{0} this week'}" FontWeight="SemiBold"/>
@@ -138,7 +193,7 @@
         </Grid>
 
         <!-- Recent activity -->
-        <Border Classes="card" Padding="14" Margin="4,12,4,0" Grid.Row="4">
+        <Border Classes="card" Padding="14" Margin="4,12,4,0" Grid.Row="5">
           <Grid RowDefinitions="Auto,*">
             <TextBlock Text="Recent activity" Classes="section-title" Margin="0,0,0,8"/>
             <ListBox Grid.Row="1"

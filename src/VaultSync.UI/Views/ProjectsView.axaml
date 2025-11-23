@@ -3,6 +3,7 @@
     x:Name="Root"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
     x:CompileBindings="False">
 
   <UserControl.Styles>
@@ -35,6 +36,11 @@
   </UserControl.Styles>
 
   <Grid Margin="32,24,32,24" RowDefinitions="Auto,*" RowSpacing="16">
+
+    <controls:NotificationCard
+        Grid.Row="0"
+        Margin="0,0,0,12"
+        DataContext="{Binding Notification}" />
 
     <!-- Inner content -->
     <Grid Row="1">

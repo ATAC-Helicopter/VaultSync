@@ -13,6 +13,7 @@ using VaultSync.Core.Services;
 using VaultSync.Core.Models;
 using System.Text.Json;
 using VaultSync.UI.Infrastructure;
+using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI.ViewModels;
 
@@ -58,6 +59,9 @@ public class ProjectsViewModel : ViewModelBase
         set => SetProperty(ref _isLoading, value);
     }
 
+    // Reusable notification state for the Projects view.
+    public NotificationState Notification { get; } = new NotificationState();
+
     public ICommand RefreshCommand { get; }
     public ICommand NewProjectCommand { get; }
     public ICommand OpenFolderCommand { get; }
@@ -78,6 +82,11 @@ public class ProjectsViewModel : ViewModelBase
         LoadAvailablePresets();
 
         _ = RefreshAsync();
+    }
+
+    private void ShowNotification(string message, NotificationSeverity severity = NotificationSeverity.Info)
+    {
+        Notification.Show(message, severity);
     }
 
     private void SeedDesignProjects()
@@ -168,6 +177,7 @@ public class ProjectsViewModel : ViewModelBase
             catch (Exception ex)
             {
                 Console.WriteLine("[ProjectsViewModel] Could not open DB during refresh: " + ex);
+                ShowNotification("Could not open backup database while refreshing projects. Snapshot history may be incomplete.", NotificationSeverity.Warning);
             }
 
             Projects.Clear();
@@ -284,6 +294,7 @@ public class ProjectsViewModel : ViewModelBase
         catch (Exception ex)
         {
             Console.WriteLine("[ProjectsViewModel] Error refreshing projects: " + ex);
+            ShowNotification("Error refreshing projects. Check logs for details.", NotificationSeverity.Error);
         }
         finally
         {
@@ -340,6 +351,7 @@ public class ProjectsViewModel : ViewModelBase
         catch (Exception ex)
         {
             Console.WriteLine($"[ProjectsViewModel] Failed to open folder '{path}': {ex}");
+            ShowNotification($"Failed to open folder for '{SelectedProject?.Name}'.", NotificationSeverity.Error);
         }
     }
 
@@ -367,16 +379,19 @@ public class ProjectsViewModel : ViewModelBase
             if (existing is null)
             {
                 Console.WriteLine($"[ProjectsViewModel] Project '{removedProjectName}' not found in DB.");
+                ShowNotification($"Project '{removedProjectName}' was not registered in the backup database.", NotificationSeverity.Warning);
             }
             else
             {
                 repo.RemoveProject(existing.Id);
                 Console.WriteLine($"[ProjectsViewModel] Removed project '{removedProjectName}' from DB.");
+                ShowNotification($"Removed project '{removedProjectName}' from the backup database.", NotificationSeverity.Info);
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ProjectsViewModel] Failed to remove project '{removedProjectName}' from DB: {ex}");
+            ShowNotification($"Failed to remove project '{removedProjectName}' from the backup database.", NotificationSeverity.Error);
         }
 
         // Reset the selected project's details so the right panel no longer shows stale data.
@@ -410,6 +425,10 @@ public class ProjectsViewModel : ViewModelBase
                 ? config.DbPath
                 : GetDefaultDbPath();
             var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
+            var fullHash = config.Backups.UseFullSnapshotHash;
+            Console.WriteLine(
+                $"[ProjectsViewModel] Snapshot settings for '{SelectedProject.Name}': " +
+                $"DbPath='{dbPath}', MaxSnapshotsToKeep={maxSnapshotsToKeep}, UseFullSnapshotHash={fullHash}");
 
             // 2. Open repository and ensure schema exists.
             var repo = new SqliteRepository(dbPath);
@@ -423,6 +442,7 @@ public class ProjectsViewModel : ViewModelBase
                 if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
                 {
                     Console.WriteLine("[ProjectsViewModel] Cannot register project without a preset. Please select a preset first.");
+                    ShowNotification("Please select a preset (or 'no preset') before adding this project.", NotificationSeverity.Error);
                     return;
                 }
                 // Register project instead of snapshot.
@@ -436,6 +456,7 @@ public class ProjectsViewModel : ViewModelBase
 
                 var id = repo.AddProject(project);
                 Console.WriteLine($"[ProjectsViewModel] Registered project '{project.Name}' with id={id}.");
+                ShowNotification($"Project '{project.Name}' registered. Next click will create a snapshot.", NotificationSeverity.Info);
 
                 // Update UI label so next click becomes a real snapshot.
                 SnapshotActionLabel = "Snapshot now";
@@ -446,9 +467,11 @@ public class ProjectsViewModel : ViewModelBase
             var hashService     = new HashService();
             var snapshotService = new SnapshotService(repo, hashService);
 
+            Console.WriteLine(
+                $"[ProjectsViewModel] Creating snapshot for '{existing.Name}' with fullHash={fullHash}, maxSnapshotsToKeep={maxSnapshotsToKeep}.");
             var snapshotId = await snapshotService.CreateSnapshotAsync(
                 existing,
-                fullHash: true,
+                fullHash: fullHash,
                 maxSnapshotsToKeep: maxSnapshotsToKeep);
             var outcome    = SnapshotService.LastOutcome;
 
@@ -495,10 +518,15 @@ public class ProjectsViewModel : ViewModelBase
                     Console.WriteLine($"[ProjectsViewModel] Failed to refresh snapshot list after snapshot: {ex}");
                 }
             }
+            if (SelectedProject != null)
+            {
+                ShowNotification($"Snapshot created for '{SelectedProject.Name}'.", NotificationSeverity.Info);
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ProjectsViewModel] Snapshot failed: {ex}");
+            ShowNotification("Snapshot failed. Check logs for details.", NotificationSeverity.Error);
         }
 
         // Refresh label/state after the operation.
@@ -550,6 +578,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             Console.WriteLine($"[ProjectsViewModel] Failed to refresh registration state: {ex}");
             SnapshotActionLabel = "Snapshot now";
+            ShowNotification("Could not refresh project registration state. Using default actions.", NotificationSeverity.Warning);
         }
     }
 

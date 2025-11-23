@@ -67,7 +67,8 @@ public sealed class BackupService
         Action<double, string, string>? progressCallback = null,
         CancellationToken ct = default,
         bool useArchiveMode = false,
-        int? maxSnapshotsToKeep = null)
+        int? maxSnapshotsToKeep = null,
+        double? minimumFreeSpacePercent = null)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -114,6 +115,27 @@ public sealed class BackupService
         var projectSlug = Slugify(project.Name);
         var projectBackupRoot = Path.Combine(backupRoot, projectSlug);
         Directory.CreateDirectory(projectBackupRoot);
+
+        // Optional low-disk protection: check free space on the backup target volume
+        if (minimumFreeSpacePercent.HasValue && minimumFreeSpacePercent.Value > 0)
+        {
+            var space = TryGetDiskSpace(projectBackupRoot);
+            if (space is not null)
+            {
+                var (volumeTotalBytes, volumeFreeBytes) = space.Value;
+                if (volumeTotalBytes > 0)
+                {
+                    var freePercent = (double)volumeFreeBytes / volumeTotalBytes * 100d;
+                    Console.WriteLine($"[BackupService] Backup target free space for '{project.Name}': {freePercent:0.0}% remaining (threshold={minimumFreeSpacePercent.Value:0.0}%).");
+
+                    if (freePercent < minimumFreeSpacePercent.Value)
+                    {
+                        throw new InvalidOperationException(
+                            $"Backup target for '{project.Name}' does not have enough free space. Free={freePercent:0.0}% (threshold={minimumFreeSpacePercent.Value:0.0}%).");
+                    }
+                }
+            }
+        }
 
         // Timestamped folder name: 2025-11-16_15-47-30
         var timestamp = DateTime.UtcNow;
@@ -760,6 +782,27 @@ public sealed class BackupService
                 // Log and continue with the next backup; do not fail the main backup because retention cleanup failed.
                 Console.WriteLine($"[BackupService] Failed to delete old backup (backupId={backup.Id}): {ex}");
             }
+        }
+    }
+    private static (long totalBytes, long freeBytes)? TryGetDiskSpace(string path)
+    {
+        try
+        {
+            // Use DriveInfo with the target directory to resolve the underlying volume,
+            // which works for local disks, external drives and mounted network shares.
+            var driveInfo = new DriveInfo(path);
+            if (!driveInfo.IsReady)
+            {
+                Console.WriteLine($"[BackupService] Drive for path '{path}' is not ready.");
+                return null;
+            }
+
+            return (driveInfo.TotalSize, driveInfo.AvailableFreeSpace);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to read disk space for '{path}': {ex.Message}");
+            return null;
         }
     }
 }
