@@ -251,6 +251,50 @@
           </Border>
         </Grid>
 
+        <!-- MINI BACKUP STORAGE CARD (Backups page) -->
+        <Border Classes="card"
+                Padding="16">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Backup storage"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <!-- Used percent + free/total summary -->
+            <StackPanel Orientation="Horizontal"
+                        Spacing="6"
+                        VerticalAlignment="Center">
+              <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
+                         FontSize="18"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="•"
+                         Margin="4,0"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+              <TextBlock Text="{Binding BackupDiskFreeText}"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+
+            <!-- Usage bar -->
+            <ProgressBar Minimum="0"
+                         Maximum="100"
+                         Value="{Binding BackupDiskUsedPercent}"
+                         Height="4"
+                         CornerRadius="2" />
+
+            <!-- Threshold / warning info -->
+            <TextBlock Text="{Binding BackupDiskThresholdText}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <TextBlock Text="Warning: backup disk is below reserve threshold"
+                       FontSize="11"
+                       Foreground="#FF6B6B"
+                       IsVisible="{Binding BackupDiskIsBelowThreshold}" />
+          </StackPanel>
+        </Border>
+
         <!-- RUNNING BACKUPS CARD (inline, below summary cards) -->
         <Expander Classes="backup-group"
                   IsExpanded="True"

@@ -12,6 +12,7 @@ using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels.Notifications;
+using System.Collections.Generic;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -80,6 +81,28 @@ namespace VaultSync.UI.ViewModels
 
         // Helper property to respect global notifications setting from SettingsViewModel
         private bool NotificationsEnabled => _settingsViewModel?.NotificationsEnabled ?? true;
+
+        // New: helper to read system notification setting from AppConfig.Behavior
+        private bool SystemNotificationsEnabled
+        {
+            get
+            {
+                try
+                {
+                    var cfg = AppConfigStore.Load();
+                    return cfg.Behavior?.EnableSystemNotifications ?? true;
+                }
+                catch
+                {
+                    // Fail open: if config cannot be read, don't silently drop notifications.
+                    return true;
+                }
+            }
+        }
+
+        // New: only raise system notifications when enabled AND not in foreground
+        private bool ShouldRaiseSystemNotification =>
+            SystemNotificationsEnabled && !VaultSync.UI.MainWindow.IsForeground;
 
         public object? CurrentView
         {
@@ -327,17 +350,30 @@ namespace VaultSync.UI.ViewModels
 
                             if (NotificationsEnabled)
                             {
+                                var msg   = $"Verification failed for '{project.Name}'. The backup may be corrupted or incomplete.";
+                                var title = "Backup verification failed";
+
                                 _notificationService.ShowError(
-                                    "Backup verification failed",
-                                    $"Verification failed for '{project.Name}'. The backup may be corrupted or incomplete.",
+                                    title,
+                                    msg,
                                     NotificationKind.Backup);
 
+                                // Toast only when not already on the Backups page.
                                 if (!IsOnBackupsPage)
                                 {
                                     GlobalNotificationCenter.Instance.Show(
-                                        $"Verification failed for '{project.Name}'. The backup may be corrupted or incomplete.",
+                                        msg,
                                         NotificationSeverity.Error,
-                                        "Backup verification failed");
+                                        title);
+                                }
+
+                                // System notification depends only on window foreground + settings.
+                                if (ShouldRaiseSystemNotification)
+                                {
+                                    GlobalNotificationCenter.Instance.ShowSystem(
+                                        msg,
+                                        NotificationSeverity.Error,
+                                        title);
                                 }
                             }
 
@@ -357,21 +393,34 @@ namespace VaultSync.UI.ViewModels
                 // Notify success if enabled in settings and globally
                 if (NotificationsEnabled && _settingsViewModel.NotifyOnBackupSuccess)
                 {
+                    var msg   = $"Backup for '{project.Name}' completed successfully.";
+                    var title = "Backup completed";
+
                     _notificationService.ShowInfo(
-                        "Backup completed",
-                        $"Backup for '{project.Name}' completed successfully.",
+                        title,
+                        msg,
                         NotificationKind.Backup);
 
                     _backupsViewModel.ShowNotification(
                         $"Backup completed for {project.Name}",
                         "Info");
 
+                    // Toast only when not already on the Backups page.
                     if (!IsOnBackupsPage)
                     {
                         GlobalNotificationCenter.Instance.Show(
-                            $"Backup for '{project.Name}' completed successfully.",
+                            msg,
                             NotificationSeverity.Info,
-                            "Backup completed");
+                            title);
+                    }
+
+                    // System notification depends only on window foreground + settings.
+                    if (ShouldRaiseSystemNotification)
+                    {
+                        GlobalNotificationCenter.Instance.ShowSystem(
+                            msg,
+                            NotificationSeverity.Info,
+                            title);
                     }
                 }
             }
@@ -390,11 +439,14 @@ namespace VaultSync.UI.ViewModels
                     // honoring the notifications settings.
                     if (NotificationsEnabled && _settingsViewModel.NotifyOnLowDiskSpace)
                     {
+                        var msg   = $"Backup for '{project.Name}' was skipped due to low disk space on the backup target.";
+                        var title = "Low disk space";
+
                         // Always go through the central notification service so we get
                         // consistent logging and behavior.
                         _notificationService.ShowWarning(
-                            "Low disk space",
-                            $"Backup for '{project.Name}' was skipped because the backup target is almost full.",
+                            title,
+                            msg,
                             NotificationKind.Backup);
 
                         if (IsOnBackupsPage)
@@ -409,9 +461,18 @@ namespace VaultSync.UI.ViewModels
                         {
                             // When the user is elsewhere, show a global toast.
                             GlobalNotificationCenter.Instance.Show(
-                                $"Backup for '{project.Name}' was skipped due to low disk space on the backup target.",
+                                msg,
                                 NotificationSeverity.Warning,
-                                "Low disk space");
+                                title);
+                        }
+
+                        // System notification depends only on window foreground + settings.
+                        if (ShouldRaiseSystemNotification)
+                        {
+                            GlobalNotificationCenter.Instance.ShowSystem(
+                                msg,
+                                NotificationSeverity.Warning,
+                                title);
                         }
                     }
 
@@ -426,13 +487,27 @@ namespace VaultSync.UI.ViewModels
                 }
                 else
                 {
-                    // Generic backup failure path (unchanged behaviour)
-                    if (NotificationsEnabled && !IsOnBackupsPage)
+                    // Generic backup failure path
+                    if (NotificationsEnabled)
                     {
-                        GlobalNotificationCenter.Instance.Show(
-                            $"Backup failed for '{project.Name}'. Check logs for details.",
-                            NotificationSeverity.Error,
-                            "Backup failed");
+                        var msg   = $"Backup failed for '{project.Name}'. Check logs for details.";
+                        var title = "Backup failed";
+
+                        if (!IsOnBackupsPage)
+                        {
+                            GlobalNotificationCenter.Instance.Show(
+                                msg,
+                                NotificationSeverity.Error,
+                                title);
+                        }
+
+                        if (ShouldRaiseSystemNotification)
+                        {
+                            GlobalNotificationCenter.Instance.ShowSystem(
+                                msg,
+                                NotificationSeverity.Error,
+                                title);
+                        }
                     }
 
                     Dispatcher.UIThread.Post(() =>
@@ -640,10 +715,22 @@ namespace VaultSync.UI.ViewModels
 
                                 if (!IsOnBackupsPage)
                                 {
+                                    var name  = proj?.Name ?? "Unknown project";
+                                    var msg   = $"Verification failed for '{name}'. The backup may be corrupted or incomplete.";
+                                    var title = "Backup verification failed";
+
                                     GlobalNotificationCenter.Instance.Show(
-                                        $"Verification failed for '{proj?.Name ?? "Unknown project"}'. The backup may be corrupted or incomplete.",
+                                        msg,
                                         NotificationSeverity.Error,
-                                        "Backup verification failed");
+                                        title);
+
+                                    if (ShouldRaiseSystemNotification)
+                                    {
+                                        GlobalNotificationCenter.Instance.ShowSystem(
+                                            msg,
+                                            NotificationSeverity.Error,
+                                            title);
+                                    }
                                 }
                             }
 
@@ -665,21 +752,32 @@ namespace VaultSync.UI.ViewModels
 
                     if (NotificationsEnabled && _settingsViewModel.NotifyOnBackupSuccess)
                     {
+                        var msg   = "All project backups completed successfully.";
+                        var title = "Backups completed";
+
                         _notificationService.ShowInfo(
-                            "Backups completed",
-                            "All project backups completed successfully.",
+                            title,
+                            msg,
                             NotificationKind.Backup);
 
                         _backupsViewModel.ShowNotification(
-                            "All project backups completed successfully.",
+                            msg,
                             "Info");
 
                         if (!IsOnBackupsPage)
                         {
                             GlobalNotificationCenter.Instance.Show(
-                                "All project backups completed successfully.",
+                                msg,
                                 NotificationSeverity.Info,
-                                "Backups completed");
+                                title);
+                        }
+
+                        if (ShouldRaiseSystemNotification)
+                        {
+                            GlobalNotificationCenter.Instance.ShowSystem(
+                                msg,
+                                NotificationSeverity.Info,
+                                title);
                         }
                     }
                 });
@@ -688,12 +786,26 @@ namespace VaultSync.UI.ViewModels
             {
                 Console.WriteLine($"[AppViewModel] Backup-all failed: {ex}");
 
-                if (NotificationsEnabled && !IsOnBackupsPage)
+                if (NotificationsEnabled)
                 {
-                    GlobalNotificationCenter.Instance.Show(
-                        "Backup all projects failed. Check logs for details.",
-                        NotificationSeverity.Error,
-                        "Backup-all failed");
+                    var msg   = "Backup all projects failed. Check logs for details.";
+                    var title = "Backup-all failed";
+
+                    if (!IsOnBackupsPage)
+                    {
+                        GlobalNotificationCenter.Instance.Show(
+                            msg,
+                            NotificationSeverity.Error,
+                            title);
+                    }
+
+                    if (ShouldRaiseSystemNotification)
+                    {
+                        GlobalNotificationCenter.Instance.ShowSystem(
+                            msg,
+                            NotificationSeverity.Error,
+                            title);
+                    }
                 }
 
                 Dispatcher.UIThread.Post(() =>
@@ -865,6 +977,7 @@ namespace VaultSync.UI.ViewModels
                 _backupsViewModel.BusyMessage = string.Empty;
             }
         }
+
         private static void RestoreDirectory(string sourceDir, string targetDir)
         {
             if (string.IsNullOrWhiteSpace(sourceDir))
@@ -901,27 +1014,176 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-private void OnCancelActiveBackupRequested(BackupProgressItem? item)
+        private void OnCancelActiveBackupRequested(BackupProgressItem? item)
+        {
+            if (item is null)
+                return;
+
+            Console.WriteLine($"[AppViewModel] Cancel requested for project '{item.ProjectName}' (Id={item.ProjectId}).");
+
+            if (!int.TryParse(item.ProjectId, out var projectId))
+            {
+                Console.WriteLine($"[AppViewModel] Unable to parse ProjectId '{item.ProjectId}' for cancellation.");
+                return;
+            }
+
+            // Actually cancel the running backup for this project.
+            _backupService.CancelBackup(projectId);
+
+            // Do NOT remove the active backup card immediately.
+            // Let the backup operation observe the cancellation token and finish,
+            // then the existing completion logic (finally blocks / ReloadBackupsVmData)
+            // will clear the cards and refresh the UI.
+        }
+
+        // ---------- Tray entry points ----------
+
+        /// <summary>
+        /// Triggered from the tray menu: backup all projects.
+        /// Reuses the same logic as the Backups page \"backup all\" action.
+        /// </summary>
+        
+        /// <summary>
+        /// Returns the list of backup-capable projects for use in the tray menu.
+        /// </summary>
+        public IReadOnlyList<ProjectBackupItem> GetProjectsForBackupTray()
+        {
+            return _backupsViewModel.ProjectBackups.ToList();
+        }
+
+        /// <summary>
+        /// Triggered from the tray menu: backup a specific project by its ProjectBackupItem.Id.
+        /// This reuses the same pipeline as the Backups page per-project backup.
+        /// </summary>
+        public void RequestBackupProjectFromTray(string projectId)
+        {
+            if (string.IsNullOrWhiteSpace(projectId))
+                return;
+
+            // Don't start if something is already running
+            if (_backupsViewModel.IsBusy)
+            {
+                Console.WriteLine("[AppViewModel] Tray project-backup ignored because a backup is already in progress.");
+                return;
+            }
+
+            var projectItem = _backupsViewModel.ProjectBackups.FirstOrDefault(p => p.Id == projectId);
+            if (projectItem == null)
+            {
+                Console.WriteLine($"[AppViewModel] Tray project-backup: no ProjectBackupItem found for Id={projectId}.");
+                return;
+            }
+
+            Console.WriteLine($"[AppViewModel] Tray: backup requested for project '{projectItem.Name}' (Id={projectItem.Id}).");
+
+            // When triggered from tray, navigate to the Backups page so the user
+            // immediately sees the running backup card (when the window is shown).
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (NavigateBackups?.CanExecute(null) == true)
+                {
+                    NavigateBackups.Execute(null);
+                }
+            });
+
+            OnBackupProjectRequested(projectItem);
+        }
+
+        public void RequestBackupAllFromTray()
+        {
+            // Do not start if something is already running.
+            if (_backupsViewModel.IsBusy)
+            {
+                Console.WriteLine("[AppViewModel] Tray backup-all ignored because a backup is already in progress.");
+                return;
+            }
+
+            Console.WriteLine("[AppViewModel] Tray: backup all projects requested.");
+
+            // When triggered from tray, navigate to the Backups page so the user
+            // immediately sees the running backup cards (when the window is shown).
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (NavigateBackups?.CanExecute(null) == true)
+                {
+                    NavigateBackups.Execute(null);
+                }
+            });
+
+            OnCreateBackupForAllProjectsRequested();
+        }
+
+        /// <summary>
+        /// Triggered from the tray menu: backup the selected project.
+        /// For now we simply navigate to the Backups page so the user can pick a project
+        /// and start the backup from there. Later we can wire this to the actual selection.
+        /// </summary>
+        public void RequestBackupSelectedProjectFromTray()
+        {
+            Console.WriteLine("[AppViewModel] Tray: backup selected project requested.");
+
+            // For now, just bring the Backups page into view.
+            if (NavigateBackups?.CanExecute(null) == true)
+            {
+                NavigateBackups.Execute(null);
+            }
+
+            // TODO (later): once BackupsViewModel exposes the currently selected project,
+            // call OnBackupProjectRequested with that item to start the backup directly.
+        }
+
+        /// <summary>
+        /// Returns the list of projects used for snapshots (Projects page),
+        /// for use in the tray's Snapshot submenu.
+        /// Only returns projects that are actually added/tracked in VaultSync.
+        /// Untracked/discovered entries normally have ProjectId <= 0 and should not appear in the tray.
+        /// </summary>
+public IReadOnlyList<ProjectItemViewModel> GetProjectsForSnapshotTray()
 {
-    if (item is null)
-        return;
-
-    Console.WriteLine($"[AppViewModel] Cancel requested for project '{item.ProjectName}' (Id={item.ProjectId}).");
-
-    if (!int.TryParse(item.ProjectId, out var projectId))
-    {
-        Console.WriteLine($"[AppViewModel] Unable to parse ProjectId '{item.ProjectId}' for cancellation.");
-        return;
-    }
-
-    // Actually cancel the running backup for this project.
-    _backupService.CancelBackup(projectId);
-
-    // Do NOT remove the active backup card immediately.
-    // Let the backup operation observe the cancellation token and finish,
-    // then the existing completion logic (finally blocks / ReloadBackupsVmData)
-    // will clear the cards and refresh the UI.
+    // Only expose projects that are actually registered in the backup DB.
+    return _projectsViewModel.Projects
+        .Where(p => p.IsRegistered)
+        .ToList();
 }
 
+        /// <summary>
+        /// Triggered from the tray menu: create a snapshot for a specific project by name.
+        /// This reuses the ProjectsViewModel.TakeSnapshotForProjectFromTrayAsync pipeline,
+        /// which in turn calls the existing TakeSnapshot() logic.
+        /// </summary>
+        public async Task TakeSnapshotForProjectFromTrayAsync(string projectName)
+        {
+            // When triggered from tray, navigate to the Projects page so the user
+            // immediately sees the snapshot activity (when the window is shown).
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (NavigateProjects?.CanExecute(null) == true)
+                {
+                    NavigateProjects.Execute(null);
+                }
+            });
+
+            await _projectsViewModel.TakeSnapshotForProjectFromTrayAsync(projectName);
+        }
+
+        /// <summary>
+        /// Triggered from the tray menu: create snapshots for all projects.
+        /// This reuses the ProjectsViewModel.TakeSnapshotAllFromTrayAsync pipeline,
+        /// which in turn calls the existing TakeSnapshot() logic for each project.
+        /// </summary>
+        public async Task TakeSnapshotAllFromTrayAsync()
+        {
+            // When triggered from tray, navigate to the Projects page so the user
+            // immediately sees the snapshot activity (when the window is shown).
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (NavigateProjects?.CanExecute(null) == true)
+                {
+                    NavigateProjects.Execute(null);
+                }
+            });
+
+            await _projectsViewModel.TakeSnapshotAllFromTrayAsync();
+        }
     }
 }

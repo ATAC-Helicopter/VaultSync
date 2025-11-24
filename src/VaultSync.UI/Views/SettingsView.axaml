@@ -106,6 +106,19 @@
                                 IsChecked="{Binding RememberWindowLayout, Mode=TwoWay}" />
                 </Grid>
 
+                                <!-- Show main window on tray actions -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Show main window for tray actions" />
+                    <TextBlock Text="Bring VaultSync to front when starting backups or snapshots from the tray."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding ShowWindowOnTrayActions, Mode=TwoWay}" />
+                </Grid>
+
               </StackPanel>
             </Border>
 

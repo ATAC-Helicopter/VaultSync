@@ -4,6 +4,15 @@ using VaultSync.UI.ViewModels.Notifications;
 namespace VaultSync.UI.Notifications
 {
     /// <summary>
+    /// Abstraction for OS-level/system notifications (macOS, Windows, etc.).
+    /// Implementations are responsible for using platform APIs.
+    /// </summary>
+    public interface ISystemNotificationService
+    {
+        void ShowSystemNotification(NotificationRequest request);
+    }
+
+    /// <summary>
     /// Immutable description of a toast notification request.
     /// </summary>
     public sealed class NotificationRequest
@@ -34,6 +43,13 @@ namespace VaultSync.UI.Notifications
     {
         public static GlobalNotificationCenter Instance { get; } = new();
 
+        /// <summary>
+        /// Optional system notification service that can be wired at startup
+        /// (for macOS/Windows native notifications). If null, only in-app toasts
+        /// will be used.
+        /// </summary>
+        public ISystemNotificationService? SystemNotificationService { get; set; }
+
         private GlobalNotificationCenter() { }
 
         public event Action<NotificationRequest>? NotificationRequested;
@@ -51,6 +67,25 @@ namespace VaultSync.UI.Notifications
                 duration ?? TimeSpan.FromSeconds(4));
 
             NotificationRequested?.Invoke(request);
+        }
+
+        /// <summary>
+        /// Shows a system-level (OS) notification if a SystemNotificationService
+        /// has been configured. This does not affect the in-app toast host.
+        /// </summary>
+        public void ShowSystem(
+            string message,
+            NotificationSeverity severity = NotificationSeverity.Info,
+            string? title = null,
+            TimeSpan? duration = null)
+        {
+            var request = new NotificationRequest(
+                message,
+                severity,
+                title,
+                duration ?? TimeSpan.FromSeconds(4));
+
+            SystemNotificationService?.ShowSystemNotification(request);
         }
     }
 }

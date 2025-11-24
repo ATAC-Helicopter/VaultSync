@@ -18,6 +18,7 @@ namespace VaultSync.UI
         private string _projectsRootPath = string.Empty;
         private bool _autoOpenLastProject = true;
         private bool _rememberWindowLayout = true;
+        private bool _showWindowOnTrayActions = true;
 
         private bool _enableAutoBackups = true;
         private int _autoBackupIntervalMinutes = 30;
@@ -109,6 +110,7 @@ namespace VaultSync.UI
             _projectsRootPath      = cfg.ProjectsRoot ?? "";
             _autoOpenLastProject   = cfg.AutoOpenLastProject;
             _rememberWindowLayout  = cfg.RememberWindowLayout;
+            _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
             _autoBackupIntervalMinutes = cfg.Backups.IntervalMinutes;
@@ -219,6 +221,11 @@ namespace VaultSync.UI
                     OnSnapshotFailure  = NotifyOnSnapshotFailure,
                     UseOsNotifications = UseOsNotifications,
                     OnlyWhenInactive   = NotifyOnlyWhenInactive
+                },
+
+                Behavior =
+                {
+                    ShowWindowOnTrayActions = _showWindowOnTrayActions
                 },
 
                 Advanced =
@@ -407,6 +414,12 @@ namespace VaultSync.UI
                     }
                 }
             }
+        }
+
+        public bool ShowWindowOnTrayActions
+        {
+            get => _showWindowOnTrayActions;
+            set => SetField(ref _showWindowOnTrayActions, value);
         }
 
         public bool UseCompactLayout

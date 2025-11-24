@@ -23,6 +23,7 @@ namespace VaultSync.Core.Config
         public AppearanceConfig Appearance { get; set; } = new();
         public NotificationsConfig Notifications { get; set; } = new();
         public AdvancedConfig Advanced { get; set; } = new();
+        public AppBehaviorConfig Behavior { get; set; } = new();
     }
 
     // -------- Backups --------
@@ -118,5 +119,44 @@ namespace VaultSync.Core.Config
         public bool VerboseLogging   { get; set; } = false;
         public bool CheckUpdates     { get; set; } = true;
         public bool SendUsageStats   { get; set; } = false;
+    }
+
+    // -------- App Behavior / Background Mode --------
+
+    public sealed class AppBehaviorConfig
+    {
+        /// <summary>
+        /// If true, closing the main window hides it and keeps VaultSync running
+        /// in the background via tray/menu bar instead of quitting.
+        /// </summary>
+        public bool RunInBackground { get; set; } = true;
+
+    /// <summary>
+    /// When true, starting backups or snapshots from the tray/menu-bar will
+    /// bring the main window to the foreground. When false, those actions
+    /// will run in the background without showing the window.
+    /// </summary>
+    public bool ShowWindowOnTrayActions { get; set; } = true;
+    
+        /// <summary>
+        /// If true, show a tray icon (Windows) or menu bar icon (macOS).
+        /// </summary>
+        public bool ShowTrayIcon { get; set; } = true;
+
+        /// <summary>
+        /// If true, OS-level notifications (Notification Center / Windows Toasts)
+        /// are enabled when the app is in background.
+        /// </summary>
+        public bool EnableSystemNotifications { get; set; } = true;
+
+        /// <summary>
+        /// If true, minimizing the window sends it to tray/menu bar.
+        /// </summary>
+        public bool MinimizeToTray { get; set; } = false;
+
+        /// <summary>
+        /// If true, the app will attempt to launch on login where supported.
+        /// </summary>
+        public bool LaunchOnLogin { get; set; } = false;
     }
 }

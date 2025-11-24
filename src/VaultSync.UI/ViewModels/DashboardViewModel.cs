@@ -719,7 +719,12 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void UpdateBackupDiskUsage(AppConfig config)
+        /// <summary>
+        /// Computes backup disk usage based on the current app config.
+        /// Returns a tuple that can be reused by other view models (e.g. BackupsViewModel).
+        /// </summary>
+        public static (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold)
+            ComputeBackupDiskUsage(AppConfig config)
         {
             try
             {
@@ -727,11 +732,12 @@ namespace VaultSync.UI.ViewModels
                 var backupRoot = config.Backups.BackupLocation;
                 if (string.IsNullOrWhiteSpace(backupRoot))
                 {
-                    BackupDiskUsedPercent = 0;
-                    BackupDiskFreeText = "Backup root not configured";
-                    BackupDiskThresholdText = $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space";
-                    BackupDiskIsBelowThreshold = false;
-                    return;
+                    return (
+                        0d,
+                        "Backup root not configured",
+                        $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space",
+                        false
+                    );
                 }
 
                 backupRoot = Path.GetFullPath(backupRoot);
@@ -739,11 +745,12 @@ namespace VaultSync.UI.ViewModels
                 var drive = new DriveInfo(backupRoot);
                 if (!drive.IsReady)
                 {
-                    BackupDiskUsedPercent = 0;
-                    BackupDiskFreeText = "Backup target not available";
-                    BackupDiskThresholdText = $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space";
-                    BackupDiskIsBelowThreshold = false;
-                    return;
+                    return (
+                        0d,
+                        "Backup target not available",
+                        $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space",
+                        false
+                    );
                 }
 
                 var total = drive.TotalSize;
@@ -751,32 +758,46 @@ namespace VaultSync.UI.ViewModels
 
                 if (total <= 0)
                 {
-                    BackupDiskUsedPercent = 0;
-                    BackupDiskFreeText = "Backup target size unknown";
-                    BackupDiskThresholdText = $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space";
-                    BackupDiskIsBelowThreshold = false;
-                    return;
+                    return (
+                        0d,
+                        "Backup target size unknown",
+                        $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space",
+                        false
+                    );
                 }
 
-                var used = total - free;
+                var used        = total - free;
                 var usedPercent = (double)used / total * 100d;
                 var freePercent = (double)free / total * 100d;
 
-                BackupDiskUsedPercent = usedPercent;
-                BackupDiskFreeText = $"Free {FormatBytes(free)} of {FormatBytes(total)} ({freePercent:0.#}%)";
-
+                var freeText = $"Free {FormatBytes(free)} of {FormatBytes(total)} ({freePercent:0.#}%)";
                 var threshold = config.Storage.MinFreeSpacePercent;
-                BackupDiskThresholdText = $"Reserve at least {threshold}% free space";
-                BackupDiskIsBelowThreshold = freePercent < threshold;
+                var thresholdText = $"Reserve at least {threshold}% free space";
+                var isBelowThreshold = freePercent < threshold;
+
+                return (usedPercent, freeText, thresholdText, isBelowThreshold);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[DashboardViewModel] Failed to compute backup disk usage: {ex}");
-                BackupDiskUsedPercent = 0;
-                BackupDiskFreeText = "Backup storage usage unavailable";
-                BackupDiskThresholdText = string.Empty;
-                BackupDiskIsBelowThreshold = false;
+                return (
+                    0d,
+                    "Backup storage usage unavailable",
+                    string.Empty,
+                    false
+                );
             }
+        }
+
+        private void UpdateBackupDiskUsage(AppConfig config)
+        {
+            var (usedPercent, freeText, thresholdText, isBelowThreshold) =
+                ComputeBackupDiskUsage(config);
+
+            BackupDiskUsedPercent      = usedPercent;
+            BackupDiskFreeText         = freeText;
+            BackupDiskThresholdText    = thresholdText;
+            BackupDiskIsBelowThreshold = isBelowThreshold;
         }
 
         private static double[] MovingAverage(IReadOnlyList<double> v, int window)

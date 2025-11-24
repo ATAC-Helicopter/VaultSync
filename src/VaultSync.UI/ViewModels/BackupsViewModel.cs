@@ -6,6 +6,7 @@ using System.Windows.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using VaultSync.Core.Models;
+using VaultSync.Core.Config;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
 
@@ -106,6 +107,59 @@ namespace VaultSync.UI.ViewModels
         public string LastBackupDisplay { get; private set; } = "No backups yet";
         public string LastBackupRelative { get; private set; } = "—";
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
+
+        // Mini backup storage card (for Backups page)
+        private double _backupDiskUsedPercent;
+        public double BackupDiskUsedPercent
+        {
+            get => _backupDiskUsedPercent;
+            private set
+            {
+                if (SetProperty(ref _backupDiskUsedPercent, value))
+                {
+                    OnPropertyChanged(nameof(BackupDiskUsedPercent));
+                }
+            }
+        }
+
+        private string _backupDiskFreeText = string.Empty;
+        public string BackupDiskFreeText
+        {
+            get => _backupDiskFreeText;
+            private set
+            {
+                if (SetProperty(ref _backupDiskFreeText, value))
+                {
+                    OnPropertyChanged(nameof(BackupDiskFreeText));
+                }
+            }
+        }
+
+        private string _backupDiskThresholdText = string.Empty;
+        public string BackupDiskThresholdText
+        {
+            get => _backupDiskThresholdText;
+            private set
+            {
+                if (SetProperty(ref _backupDiskThresholdText, value))
+                {
+                    OnPropertyChanged(nameof(BackupDiskThresholdText));
+                }
+            }
+        }
+
+        private bool _backupDiskIsBelowThreshold;
+        public bool BackupDiskIsBelowThreshold
+        {
+            get => _backupDiskIsBelowThreshold;
+            private set
+            {
+                if (SetProperty(ref _backupDiskIsBelowThreshold, value))
+                {
+                    OnPropertyChanged(nameof(BackupDiskIsBelowThreshold));
+                }
+            }
+        }
 
         // Notification state for the Backups view (reusable notification model)
         public NotificationState Notification { get; } = new NotificationState();
@@ -557,6 +611,45 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        /// <summary>
+        /// Updates the mini backup storage card values for the Backups page.
+        /// Intended to be called from AppViewModel after computing disk usage
+        /// (total/free/used and threshold) so this VM stays UI-only.
+        /// </summary>
+        public void UpdateBackupDiskUsage(double usedPercent, string freeText, string thresholdText, bool isBelowThreshold)
+        {
+            BackupDiskUsedPercent     = usedPercent;
+            BackupDiskFreeText        = freeText ?? string.Empty;
+            BackupDiskThresholdText   = thresholdText ?? string.Empty;
+            BackupDiskIsBelowThreshold = isBelowThreshold;
+        }
+
+        /// <summary>
+        /// Recomputes backup disk usage from the current app configuration and updates
+        /// the mini backup storage card. This reuses the DashboardViewModel static helper
+        /// so both views stay consistent.
+        /// </summary>
+        public void RefreshBackupDiskUsage()
+        {
+            try
+            {
+                var config = AppConfigStore.Load();
+                var (usedPercent, freeText, thresholdText, isBelowThreshold) =
+                    DashboardViewModel.ComputeBackupDiskUsage(config);
+
+                UpdateBackupDiskUsage(usedPercent, freeText, thresholdText, isBelowThreshold);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BackupsViewModel] Failed to compute backup disk usage: {ex}");
+                UpdateBackupDiskUsage(
+                    0d,
+                    "Backup storage usage unavailable",
+                    string.Empty,
+                    false);
+            }
+        }
+
         // ---------- Summary computation ----------
 
         /// <summary>
@@ -831,6 +924,7 @@ namespace VaultSync.UI.ViewModels
             // Rebuild the filtered history view + summary + mini-chart.
             RefreshSnapshotsView(true);
             RecalculateSummary();
+            RefreshBackupDiskUsage();
         }
     }
 

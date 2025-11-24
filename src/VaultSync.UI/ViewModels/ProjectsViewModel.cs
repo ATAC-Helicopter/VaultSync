@@ -278,6 +278,9 @@ public class ProjectsViewModel : ViewModelBase
                         vm.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
                     }
 
+                    // Mark whether this project is registered in the backup DB.
+                    vm.IsRegistered = existingProject is not null;
+
                     Projects.Add(vm);
                 }
             }
@@ -402,6 +405,7 @@ public class ProjectsViewModel : ViewModelBase
             SelectedProject.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
             SelectedProject.Health    = ProjectHealthStatus.OutOfDate;
             SelectedProject.HealthTag = "Not backed up";
+            SelectedProject.IsRegistered = false;
         }
 
         // After removing from DB, keep the project visible in the list but mark it as unregistered
@@ -460,6 +464,10 @@ public class ProjectsViewModel : ViewModelBase
 
                 // Update UI label so next click becomes a real snapshot.
                 SnapshotActionLabel = "Snapshot now";
+                if (SelectedProject != null)
+                {
+                    SelectedProject.IsRegistered = true;
+                }
                 return;
             }
 
@@ -533,6 +541,59 @@ public class ProjectsViewModel : ViewModelBase
         RefreshSelectedProjectRegistration();
     }
 
+        /// <summary>
+    /// Tray helper: create a snapshot for a specific project by name,
+    /// reusing the existing TakeSnapshot() pipeline.
+    /// </summary>
+    public Task TakeSnapshotForProjectFromTrayAsync(string projectName)
+    {
+        var project = Projects.FirstOrDefault(p => p.Name == projectName);
+        if (project is null)
+            return Task.CompletedTask;
+
+        var previous = SelectedProject;
+
+        try
+        {
+            // Temporarily select the project so existing code works.
+            SelectedProject = project;
+
+            // Fire the existing snapshot pipeline (async void).
+            TakeSnapshot();
+        }
+        finally
+        {
+            // Restore UI selection so the UI does not jump unexpectedly.
+            SelectedProject = previous;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Tray helper: create snapshots for all projects, sequentially,
+    /// reusing the existing TakeSnapshot() pipeline.
+    /// </summary>
+    public Task TakeSnapshotAllFromTrayAsync()
+    {
+        var previous = SelectedProject;
+
+        try
+        {
+            foreach (var project in Projects.ToList())
+            {
+                SelectedProject = project;
+                TakeSnapshot();
+            }
+        }
+        finally
+        {
+            SelectedProject = previous;
+        }
+
+        return Task.CompletedTask;
+    }
+
     private void SyncProject()
     {
         if (SelectedProject is null) return;
@@ -561,6 +622,8 @@ public class ProjectsViewModel : ViewModelBase
             if (existing is null)
             {
                 SnapshotActionLabel = "Add project";
+                SelectedProject.IsRegistered = false;
+
                 // When not registered yet, force the user to choose a preset explicitly.
                 if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
                 {
@@ -570,6 +633,8 @@ public class ProjectsViewModel : ViewModelBase
             else
             {
                 SnapshotActionLabel = "Snapshot now";
+                SelectedProject.IsRegistered = true;
+
                 // Keep the UI in sync with the DB-stored preset.
                 SelectedProject.Preset = existing.Preset;
             }
@@ -806,8 +871,14 @@ public class ProjectItemViewModel : ViewModelBase
         set => SetProperty(ref _preset, value);
     }
 
-    // ---- Snapshot history for per-project statistics ----
+    private bool _isRegistered;
+    public bool IsRegistered
+    {
+        get => _isRegistered;
+        set => SetProperty(ref _isRegistered, value);
+    }
 
+    // ---- Snapshot history for per-project statistics ----
     public ObservableCollection<ProjectSnapshotViewModel> SnapshotHistory { get; } =
         new ObservableCollection<ProjectSnapshotViewModel>();
 

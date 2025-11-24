@@ -1,37 +1,53 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+
+    <!-- Multi-target: generic .NET 8 + Windows-specific TFM -->
+    <TargetFrameworks>net8.0;net8.0-windows10.0.19041.0</TargetFrameworks>
+
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
+  <!-- Base Avalonia + dependencies -->
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.8" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.8" />
-    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.8">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
+
     <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.9" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
     <PackageReference Include="ReactiveUI" Version="19.5.39" />
   </ItemGroup>
 
+  <!-- Reference to core project -->
   <ItemGroup>
     <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj" />
   </ItemGroup>
 
-  <!-- 👇 NEW: copy presets into output/publish folder -->
+  <!-- Copy presets into output -->
   <ItemGroup>
     <Content Include="..\presets\*.vaultsyncignore">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>presets\%(Filename)%(Extension)</Link>
     </Content>
   </ItemGroup>
+
+  <!-- Tray/Menu bar icon -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/vaultsync-tray.png" />
+  </ItemGroup>
+
+  <!-- Windows notifications -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.19041.0'">
+    <PackageReference Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
+  </ItemGroup>
+
 </Project>
