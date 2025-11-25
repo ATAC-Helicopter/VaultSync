@@ -70,6 +70,11 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<ProjectBackupItem> ProjectBackups { get; } =
             new ObservableCollection<ProjectBackupItem>();
 
+        public event Action<int, bool>? AutoBackupPreferenceChanged;
+
+        // Appearance
+        public bool ShowProjectAvatars { get; private set; } = true;
+
         // Active per-project backup progress items (for running backups)
         public ObservableCollection<BackupProgressItem> ActiveBackups { get; } =
             new ObservableCollection<BackupProgressItem>();
@@ -670,6 +675,14 @@ namespace VaultSync.UI.ViewModels
             Notification.Show(message, sev);
         }
 
+        private void OnAutoBackupChanged(ProjectBackupItem item)
+        {
+            if (int.TryParse(item.Id, out var projectId))
+            {
+                AutoBackupPreferenceChanged?.Invoke(projectId, item.AutoBackupEnabled);
+            }
+        }
+
         /// <summary>
         /// Opens the verification failure popup for a specific backup.
         /// </summary>
@@ -859,10 +872,14 @@ namespace VaultSync.UI.ViewModels
         /// Populates this view model from real projects and backups loaded from the core layer.
         /// Call this after performing any backup/restore/delete operations.
         /// </summary>
-        public void LoadFromBackups(IEnumerable<Project> projects, IEnumerable<Backup> backups)
+        public void LoadFromBackups(IEnumerable<Project> projects, IEnumerable<Backup> backups, ISet<int>? autoBackupDisabledProjects = null)
         {
             if (projects is null) throw new ArgumentNullException(nameof(projects));
             if (backups  is null) throw new ArgumentNullException(nameof(backups));
+
+            var config = AppConfigStore.Load();
+            ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
+            OnPropertyChanged(nameof(ShowProjectAvatars));
 
             var projectList = projects.ToList();
             var backupList  = backups.ToList();
@@ -886,12 +903,15 @@ namespace VaultSync.UI.ViewModels
 
                 var projectItem = new ProjectBackupItem
                 {
-                    Id             = project.Id.ToString(),
-                    Name           = project.Name,
-                    LastBackupTime = lastBackup?.CreatedUtc,
-                    SnapshotCount  = projectBackups.Count,
-                    TotalSizeBytes = projectBackups.Sum(b => b.TotalBytes)
+                    Id                = project.Id.ToString(),
+                    Name              = project.Name,
+                    LastBackupTime    = lastBackup?.CreatedUtc,
+                    SnapshotCount     = projectBackups.Count,
+                    TotalSizeBytes    = projectBackups.Sum(b => b.TotalBytes),
+                    AutoBackupEnabled = autoBackupDisabledProjects is null || !autoBackupDisabledProjects.Contains(project.Id),
+                    AutoBackupChanged = OnAutoBackupChanged
                 };
+                projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath);
 
                 ProjectBackups.Add(projectItem);
             }
@@ -1020,6 +1040,62 @@ namespace VaultSync.UI.ViewModels
         public DateTime? LastBackupTime { get; set; }
         public int       SnapshotCount  { get; set; }
         public long      TotalSizeBytes { get; set; }
+
+        public bool AutoBackupEnabled
+        {
+            get => _autoBackupEnabled;
+            set
+            {
+                if (_autoBackupEnabled == value)
+                    return;
+                _autoBackupEnabled = value;
+                AutoBackupChanged?.Invoke(this);
+            }
+        }
+
+        private bool _autoBackupEnabled = true;
+        public Action<ProjectBackupItem>? AutoBackupChanged { get; set; }
+
+        // Avatar
+        public string AvatarInitials { get; private set; } = string.Empty;
+        public string AvatarColor    { get; private set; } = "#33405A";
+        public string? AvatarImagePath { get; private set; }
+        public bool HasCustomAvatar => !string.IsNullOrWhiteSpace(AvatarImagePath);
+
+        public void SetAvatarFromNameAndStore(string name, string projectPath)
+        {
+            AvatarInitials  = ComputeInitials(name);
+            AvatarColor     = PickColor(name);
+            AvatarImagePath = AvatarStore.GetAvatarForProject(projectPath);
+        }
+
+        private static string ComputeInitials(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "?";
+
+            var parts = name.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length >= 2)
+                return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+
+            if (name.Length >= 2)
+                return name.Substring(0, 2).ToUpperInvariant();
+
+            return name.Substring(0, 1).ToUpperInvariant();
+        }
+
+        private static string PickColor(string name)
+        {
+            var palette = new[]
+            {
+                "#2F3650", "#2E4A6A", "#2E6A5A", "#6A4A2E", "#5A2E6A",
+                "#2E6A6A", "#6A2E2E", "#4A6A2E", "#2E5A6A", "#6A2E4A"
+            };
+
+            var hash = Math.Abs(name.GetHashCode());
+            return palette[hash % palette.Length];
+        }
 
         public string LastBackupDisplay =>
             LastBackupTime.HasValue

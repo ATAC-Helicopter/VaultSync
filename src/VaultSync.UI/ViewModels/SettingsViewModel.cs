@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -16,9 +17,10 @@ namespace VaultSync.UI
         // ---------------- Core backing fields ----------------
 
         private string _projectsRootPath = string.Empty;
-        private bool _autoOpenLastProject = true;
-        private bool _rememberWindowLayout = true;
+        private bool _resumeLastSession = true;
         private bool _showWindowOnTrayActions = true;
+        private bool _launchOnLogin = false;
+        private List<int> _autoBackupDisabledProjects = new();
 
         private bool _enableAutoBackups = true;
         private int _autoBackupIntervalMinutes = 30;
@@ -108,13 +110,14 @@ namespace VaultSync.UI
             var cfg = AppConfigStore.Load();
 
             _projectsRootPath      = cfg.ProjectsRoot ?? "";
-            _autoOpenLastProject   = cfg.AutoOpenLastProject;
-            _rememberWindowLayout  = cfg.RememberWindowLayout;
+            _resumeLastSession     = cfg.ResumeLastSession;
             _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
+            _launchOnLogin         = cfg.Behavior.LaunchOnLogin;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
             _autoBackupIntervalMinutes = cfg.Backups.IntervalMinutes;
             _maxSnapshotsPerProject    = cfg.Backups.MaxSnapshotsPerProject;
+            _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
             _backupLocationPath        = string.IsNullOrWhiteSpace(cfg.Backups.BackupRoot)
                 ? (cfg.Backups.Location ?? string.Empty)
                 : cfg.Backups.BackupRoot;
@@ -167,17 +170,27 @@ namespace VaultSync.UI
 
         private void SaveToConfig()
         {
+            // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
+            var latest = AppConfigStore.Load();
+            var latestDisabled = latest.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            _autoBackupDisabledProjects = latestDisabled;
+
             var cfg = new AppConfig
             {
                 ProjectsRoot         = ProjectsRootPath,
-                AutoOpenLastProject  = AutoOpenLastProject,
-                RememberWindowLayout = RememberWindowLayout,
+                ResumeLastSession    = ResumeLastSession,
+                Behavior =
+                {
+                    LaunchOnLogin          = _launchOnLogin,
+                    ShowWindowOnTrayActions = _showWindowOnTrayActions
+                },
 
                 Backups =
                 {
                     EnableAutoBackups      = EnableAutoBackups,
                     IntervalMinutes        = AutoBackupIntervalMinutes,
                     MaxSnapshotsPerProject = MaxSnapshotsPerProject,
+                    AutoBackupDisabledProjects = _autoBackupDisabledProjects,
                     // Write to both for backwards compatibility
                     Location               = BackupLocationPath,
                     BackupRoot             = string.IsNullOrWhiteSpace(BackupLocationPath)
@@ -223,11 +236,6 @@ namespace VaultSync.UI
                     OnlyWhenInactive   = NotifyOnlyWhenInactive
                 },
 
-                Behavior =
-                {
-                    ShowWindowOnTrayActions = _showWindowOnTrayActions
-                },
-
                 Advanced =
                 {
                     VerboseLogging  = EnableVerboseLogging,
@@ -237,6 +245,7 @@ namespace VaultSync.UI
             };
 
             AppConfigStore.Save(cfg);
+            AutoStartService.SetLaunchOnLogin(_launchOnLogin);
         }
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -287,16 +296,10 @@ namespace VaultSync.UI
             set => SetField(ref _projectsRootPath, value);
         }
 
-        public bool AutoOpenLastProject
+        public bool ResumeLastSession
         {
-            get => _autoOpenLastProject;
-            set => SetField(ref _autoOpenLastProject, value);
-        }
-
-        public bool RememberWindowLayout
-        {
-            get => _rememberWindowLayout;
-            set => SetField(ref _rememberWindowLayout, value);
+            get => _resumeLastSession;
+            set => SetField(ref _resumeLastSession, value);
         }
 
         public bool EnableAutoBackups
@@ -420,6 +423,12 @@ namespace VaultSync.UI
         {
             get => _showWindowOnTrayActions;
             set => SetField(ref _showWindowOnTrayActions, value);
+        }
+
+        public bool LaunchOnLogin
+        {
+            get => _launchOnLogin;
+            set => SetField(ref _launchOnLogin, value);
         }
 
         public bool UseCompactLayout

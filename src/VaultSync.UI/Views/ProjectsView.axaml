@@ -104,10 +104,29 @@
               <ListBox.ItemTemplate>
                 <DataTemplate>
                   <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
-                    <!-- Name + last snapshot short + size -->
-                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <!-- Name + last snapshot short + size + avatar -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                      <Grid Grid.Column="0"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,4,0"
+                            IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                        <Border CornerRadius="18" Background="{Binding AvatarColor}"/>
+                        <Image Source="{Binding AvatarImagePath}"
+                               Stretch="UniformToFill"
+                               IsVisible="{Binding HasCustomAvatar}">
+                          <Image.Clip>
+                            <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/>
+                          </Image.Clip>
+                        </Image>
+                        <TextBlock Text="{Binding AvatarInitials}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+                      </Grid>
                       <TextBlock
-                        Grid.Column="0"
+                        Grid.Column="1"
                         Text="{Binding Name}"
                         FontSize="18"
                         FontWeight="Bold"
@@ -115,12 +134,12 @@
                         TextWrapping="NoWrap"
                         TextTrimming="CharacterEllipsis" />
                       <TextBlock
-                        Grid.Column="1"
+                        Grid.Column="2"
                         Text="{Binding LastSnapshotShort}"
                         FontSize="13"
                         Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBlock
-                        Grid.Column="2"
+                        Grid.Column="3"
                         Text="{Binding SizeDisplay}"
                         FontSize="13"
                         FontWeight="SemiBold"
@@ -169,26 +188,48 @@
               Padding="24"
               DataContext="{Binding SelectedItem, ElementName=ProjectList}">
         <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="16">
+          <!-- Header: avatar + name + path -->
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <Grid Width="48"
+                  Height="48"
+                  IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+              <Border CornerRadius="24"
+                      Background="{Binding AvatarColor}" />
+              <Image Source="{Binding AvatarImagePath}"
+                     Stretch="UniformToFill"
+                     IsVisible="{Binding HasCustomAvatar}">
+                <Image.Clip>
+                  <EllipseGeometry Center="24,24" RadiusX="24" RadiusY="24"/>
+                </Image.Clip>
+              </Image>
+              <TextBlock Text="{Binding AvatarInitials}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         FontWeight="SemiBold"
+                         FontSize="16"
+                         Foreground="White"/>
+            </Grid>
 
-          <!-- Header: name + path -->
-          <StackPanel>
-            <TextBlock
-              Text="{Binding Name}"
-              FontSize="22"
-              FontWeight="SemiBold"
-              Foreground="{DynamicResource TextPrimaryBrush}"
-              TextWrapping="NoWrap"
-              TextTrimming="CharacterEllipsis" />
-            <TextBlock
-              Margin="0,4,0,0"
-              Text="{Binding Path, StringFormat='Location · {0}'}"
-              FontSize="12"
-              Foreground="{DynamicResource TextMutedBrush}"
-              TextWrapping="NoWrap"
-              TextTrimming="CharacterEllipsis" />
-          </StackPanel>
+            <StackPanel Grid.Column="1">
+              <TextBlock
+                Text="{Binding Name}"
+                FontSize="22"
+                FontWeight="SemiBold"
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                TextWrapping="NoWrap"
+                TextTrimming="CharacterEllipsis" />
+              <TextBlock
+                Margin="0,4,0,0"
+                Text="{Binding Path, StringFormat='Location: {0}'}"
+                FontSize="12"
+                Foreground="{DynamicResource TextMutedBrush}"
+                TextWrapping="NoWrap"
+                TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Grid>
 
           <!-- Actions: open folder + snapshot -->
+
           <StackPanel Grid.Row="1"
                       Orientation="Horizontal"
                       HorizontalAlignment="Left"
@@ -511,3 +552,4 @@
     </Grid>
   </Grid>
 </UserControl>
+

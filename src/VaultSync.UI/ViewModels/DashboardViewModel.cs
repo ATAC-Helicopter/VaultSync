@@ -492,232 +492,251 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
         }
 
-        private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project project, long bytes)> perProject)
+private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project project, long bytes)> perProject)
+{
+    try
+    {
+        // Default to empty segments if backup root is not configured.
+        var backupRoot = config.Backups.BackupLocation;
+        if (string.IsNullOrWhiteSpace(backupRoot))
         {
-            try
+            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+            BackupUsageSeries   = Array.Empty<ISeries>();
+            BackupUsageXAxes    = Array.Empty<Axis>();
+            BackupUsageYAxes    = Array.Empty<Axis>();
+
+            OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupUsageSeries));
+            OnPropertyChanged(nameof(BackupUsageXAxes));
+            OnPropertyChanged(nameof(BackupUsageYAxes));
+            return;
+        }
+
+        backupRoot = Path.GetFullPath(backupRoot);
+
+        // Always reduce to a drive/root so DriveInfo is happy (especially on Windows).
+        var driveRoot = Path.GetPathRoot(backupRoot);
+        if (string.IsNullOrWhiteSpace(driveRoot))
+        {
+            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+            BackupUsageSeries   = Array.Empty<ISeries>();
+            BackupUsageXAxes    = Array.Empty<Axis>();
+            BackupUsageYAxes    = Array.Empty<Axis>();
+
+            OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupUsageSeries));
+            OnPropertyChanged(nameof(BackupUsageXAxes));
+            OnPropertyChanged(nameof(BackupUsageYAxes));
+            return;
+        }
+
+        // On Windows this will be e.g. "C:\" or "V:\"
+        // On macOS this will be "/" (root volume), which still maps to the correct disk.
+        var drive = new DriveInfo(driveRoot);
+        if (!drive.IsReady || drive.TotalSize <= 0)
+        {
+            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+            BackupUsageSeries   = Array.Empty<ISeries>();
+            BackupUsageXAxes    = Array.Empty<Axis>();
+            BackupUsageYAxes    = Array.Empty<Axis>();
+
+            OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupUsageSeries));
+            OnPropertyChanged(nameof(BackupUsageXAxes));
+            OnPropertyChanged(nameof(BackupUsageYAxes));
+            return;
+        }
+
+        var totalBytes = drive.TotalSize;
+        var freeBytes  = drive.AvailableFreeSpace;
+        var usedBytes  = Math.Max(0L, totalBytes - freeBytes);
+
+        if (totalBytes <= 0)
+        {
+            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+            BackupUsageSeries   = Array.Empty<ISeries>();
+            BackupUsageXAxes    = Array.Empty<Axis>();
+            BackupUsageYAxes    = Array.Empty<Axis>();
+
+            OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupUsageSeries));
+            OnPropertyChanged(nameof(BackupUsageXAxes));
+            OnPropertyChanged(nameof(BackupUsageYAxes));
+            return;
+        }
+
+        // Sum of the latest snapshot sizes per project (VaultSync usage approximation).
+        var vaultSyncBytes = perProject?.Sum(p => p.bytes) ?? 0L;
+        if (vaultSyncBytes < 0) vaultSyncBytes = 0;
+
+        // Percentages of the total backup disk.
+        var usedPercentTotal = usedBytes        * 100d / totalBytes;
+        var vaultSyncPercent = vaultSyncBytes   * 100d / totalBytes;
+        var otherPercent     = Math.Max(0d, usedPercentTotal - vaultSyncPercent);
+
+        var segments = new List<BackupUsageSegment>();
+
+        // Palette for project colors.
+        var projectPalette = new[]
+        {
+            Color.Parse("#4C8DFF"),
+            Color.Parse("#FFB84C"),
+            Color.Parse("#22CC88"),
+            Color.Parse("#FF6B6B"),
+            Color.Parse("#9B6BFF")
+        };
+
+        // 1) Other segment (non-VaultSync usage on the backup drive).
+        // This is both in the legend and in the overlay bar.
+        if (otherPercent > 0)
+        {
+            segments.Add(new BackupUsageSegment(
+                "Other",
+                otherPercent,
+                new SolidColorBrush(Color.Parse("#8E8E93"))));
+        }
+
+        // 2) One segment per project for its latest snapshot size, as percent of total disk.
+        if (perProject != null)
+        {
+            var index = 0;
+            foreach (var (project, bytes) in perProject)
             {
-                // Default to empty segments if backup root is not configured.
-                var backupRoot = config.Backups.BackupLocation;
-                if (string.IsNullOrWhiteSpace(backupRoot))
-                {
-                    BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-                    BackupUsageSeries = Array.Empty<ISeries>();
-                    BackupUsageXAxes = Array.Empty<Axis>();
-                    BackupUsageYAxes = Array.Empty<Axis>();
+                var projectPercent = bytes * 100d / totalBytes;
+                if (projectPercent <= 0) continue;
 
-                    OnPropertyChanged(nameof(BackupUsageSegments));
-                    OnPropertyChanged(nameof(BackupUsageSeries));
-                    OnPropertyChanged(nameof(BackupUsageXAxes));
-                    OnPropertyChanged(nameof(BackupUsageYAxes));
-                    return;
-                }
+                var color = projectPalette[index % projectPalette.Length];
+                index++;
 
-                backupRoot = Path.GetFullPath(backupRoot);
-                var drive = new DriveInfo(backupRoot);
-                if (!drive.IsReady || drive.TotalSize <= 0)
-                {
-                    BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-                    BackupUsageSeries = Array.Empty<ISeries>();
-                    BackupUsageXAxes = Array.Empty<Axis>();
-                    BackupUsageYAxes = Array.Empty<Axis>();
-
-                    OnPropertyChanged(nameof(BackupUsageSegments));
-                    OnPropertyChanged(nameof(BackupUsageSeries));
-                    OnPropertyChanged(nameof(BackupUsageXAxes));
-                    OnPropertyChanged(nameof(BackupUsageYAxes));
-                    return;
-                }
-
-                var totalBytes = drive.TotalSize;
-                var freeBytes = drive.AvailableFreeSpace;
-                var usedBytes = Math.Max(0L, totalBytes - freeBytes);
-
-                if (totalBytes <= 0)
-                {
-                    BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-                    BackupUsageSeries = Array.Empty<ISeries>();
-                    BackupUsageXAxes = Array.Empty<Axis>();
-                    BackupUsageYAxes = Array.Empty<Axis>();
-
-                    OnPropertyChanged(nameof(BackupUsageSegments));
-                    OnPropertyChanged(nameof(BackupUsageSeries));
-                    OnPropertyChanged(nameof(BackupUsageXAxes));
-                    OnPropertyChanged(nameof(BackupUsageYAxes));
-                    return;
-                }
-
-                // Sum of the latest snapshot sizes per project (VaultSync usage approximation).
-                var vaultSyncBytes = perProject?.Sum(p => p.bytes) ?? 0L;
-                if (vaultSyncBytes < 0) vaultSyncBytes = 0;
-
-                // Percentages of the total backup disk.
-                var usedPercentTotal = usedBytes * 100d / totalBytes;
-                var vaultSyncPercent = vaultSyncBytes * 100d / totalBytes;
-                var otherPercent = Math.Max(0d, usedPercentTotal - vaultSyncPercent);
-
-                var segments = new List<BackupUsageSegment>();
-
-                // Palette for project colors.
-                var projectPalette = new[]
-                {
-                    Color.Parse("#4C8DFF"),
-                    Color.Parse("#FFB84C"),
-                    Color.Parse("#22CC88"),
-                    Color.Parse("#FF6B6B"),
-                    Color.Parse("#9B6BFF")
-                };
-
-                // 1) Other segment (non-VaultSync usage on the backup drive).
-                // This is both in the legend and in the overlay bar.
-                if (otherPercent > 0)
-                {
-                    segments.Add(new BackupUsageSegment(
-                        "Other",
-                        otherPercent,
-                        new SolidColorBrush(Color.Parse("#8E8E93"))));
-                }
-
-                // 2) One segment per project for its latest snapshot size, as percent of total disk.
-                if (perProject != null)
-                {
-                    var index = 0;
-                    foreach (var (project, bytes) in perProject)
-                    {
-                        var projectPercent = bytes * 100d / totalBytes;
-                        if (projectPercent <= 0) continue;
-
-                        var color = projectPalette[index % projectPalette.Length];
-                        index++;
-
-                        segments.Add(new BackupUsageSegment(
-                            project.Name,
-                            projectPercent,
-                            new SolidColorBrush(color)));
-                    }
-                }
-
-                BackupUsageSegments = segments;
-
-                // Build stacked RowSeries for the colored bar (Other + VaultSync projects).
-                if (segments.Count == 0)
-                {
-                    BackupUsageSeries = Array.Empty<ISeries>();
-                    BackupUsageXAxes = new[]
-                    {
-                        new Axis
-                        {
-                            IsVisible = false,
-                            MinLimit = 0,
-                            MaxLimit = 100
-                        }
-                    };
-                    BackupUsageYAxes = new[]
-                    {
-                        new Axis
-                        {
-                            IsVisible = false
-                        }
-                    };
-
-                    OnPropertyChanged(nameof(BackupUsageSegments));
-                    OnPropertyChanged(nameof(BackupUsageSeries));
-                    OnPropertyChanged(nameof(BackupUsageXAxes));
-                    OnPropertyChanged(nameof(BackupUsageYAxes));
-                    return;
-                }
-
-                var totalShown = segments.Sum(s => s.SizeBytes);
-                if (totalShown <= 0)
-                {
-                    BackupUsageSeries = Array.Empty<ISeries>();
-                    BackupUsageXAxes = new[]
-                    {
-                        new Axis
-                        {
-                            IsVisible = false,
-                            MinLimit = 0,
-                            MaxLimit = 100
-                        }
-                    };
-                    BackupUsageYAxes = new[]
-                    {
-                        new Axis
-                        {
-                            IsVisible = false
-                        }
-                    };
-
-                    OnPropertyChanged(nameof(BackupUsageSegments));
-                    OnPropertyChanged(nameof(BackupUsageSeries));
-                    OnPropertyChanged(nameof(BackupUsageXAxes));
-                    OnPropertyChanged(nameof(BackupUsageYAxes));
-                    return;
-                }
-
-                var series = new List<ISeries>();
-                foreach (var seg in segments)
-                {
-                    if (seg.SizeBytes <= 0)
-                        continue;
-
-                    var solid = seg.Brush as SolidColorBrush;
-                    if (solid == null)
-                        continue;
-
-                    var skColor = new SKColor(solid.Color.R, solid.Color.G, solid.Color.B, solid.Color.A);
-
-                    series.Add(new StackedRowSeries<double>
-                    {
-                        Values = new[] { seg.SizeBytes },
-                        Stroke = null,
-                        Fill = new SolidColorPaint(skColor),
-                        MaxBarWidth = 20,
-                        IsHoverable = false,
-                        DataLabelsPaint = null,
-                        StackGroup = 0
-                    });
-                }
-
-                BackupUsageSeries = series.ToArray();
-
-                BackupUsageXAxes = new[]
-                {
-                    new Axis
-                    {
-                        IsVisible = false,
-                        MinLimit = 0,
-                        MaxLimit = 100
-                    }
-                };
-
-                BackupUsageYAxes = new[]
-                {
-                    new Axis
-                    {
-                        IsVisible = false
-                    }
-                };
-
-                OnPropertyChanged(nameof(BackupUsageSegments));
-                OnPropertyChanged(nameof(BackupUsageSeries));
-                OnPropertyChanged(nameof(BackupUsageXAxes));
-                OnPropertyChanged(nameof(BackupUsageYAxes));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DashboardViewModel] Failed to build backup usage bar: {ex}");
-
-                BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-                BackupUsageSeries = Array.Empty<ISeries>();
-                BackupUsageXAxes = Array.Empty<Axis>();
-                BackupUsageYAxes = Array.Empty<Axis>();
-
-                OnPropertyChanged(nameof(BackupUsageSegments));
-                OnPropertyChanged(nameof(BackupUsageSeries));
-                OnPropertyChanged(nameof(BackupUsageXAxes));
-                OnPropertyChanged(nameof(BackupUsageYAxes));
+                segments.Add(new BackupUsageSegment(
+                    project.Name,
+                    projectPercent,
+                    new SolidColorBrush(color)));
             }
         }
+
+        BackupUsageSegments = segments;
+
+        // Build stacked RowSeries for the colored bar (Other + VaultSync projects).
+        if (segments.Count == 0)
+        {
+            BackupUsageSeries = Array.Empty<ISeries>();
+            BackupUsageXAxes  = new[]
+            {
+                new Axis
+                {
+                    IsVisible = false,
+                    MinLimit  = 0,
+                    MaxLimit  = 100
+                }
+            };
+            BackupUsageYAxes  = new[]
+            {
+                new Axis
+                {
+                    IsVisible = false
+                }
+            };
+
+            OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupUsageSeries));
+            OnPropertyChanged(nameof(BackupUsageXAxes));
+            OnPropertyChanged(nameof(BackupUsageYAxes));
+            return;
+        }
+
+        var totalShown = segments.Sum(s => s.SizeBytes);
+        if (totalShown <= 0)
+        {
+            BackupUsageSeries = Array.Empty<ISeries>();
+            BackupUsageXAxes  = new[]
+            {
+                new Axis
+                {
+                    IsVisible = false,
+                    MinLimit  = 0,
+                    MaxLimit  = 100
+                }
+            };
+            BackupUsageYAxes  = new[]
+            {
+                new Axis
+                {
+                    IsVisible = false
+                }
+            };
+
+            OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupUsageSeries));
+            OnPropertyChanged(nameof(BackupUsageXAxes));
+            OnPropertyChanged(nameof(BackupUsageYAxes));
+            return;
+        }
+
+        var series = new List<ISeries>();
+        foreach (var seg in segments)
+        {
+            if (seg.SizeBytes <= 0)
+                continue;
+
+            if (seg.Brush is not SolidColorBrush solid)
+                continue;
+
+            var skColor = new SKColor(solid.Color.R, solid.Color.G, solid.Color.B, solid.Color.A);
+
+            series.Add(new StackedRowSeries<double>
+            {
+                Values        = new[] { seg.SizeBytes },
+                Stroke        = null,
+                Fill          = new SolidColorPaint(skColor),
+                MaxBarWidth   = 20,
+                IsHoverable   = false,
+                DataLabelsPaint = null,
+                StackGroup    = 0
+            });
+        }
+
+        BackupUsageSeries = series.ToArray();
+
+        BackupUsageXAxes = new[]
+        {
+            new Axis
+            {
+                IsVisible = false,
+                MinLimit  = 0,
+                MaxLimit  = 100
+            }
+        };
+
+        BackupUsageYAxes = new[]
+        {
+            new Axis
+            {
+                IsVisible = false
+            }
+        };
+
+        OnPropertyChanged(nameof(BackupUsageSegments));
+        OnPropertyChanged(nameof(BackupUsageSeries));
+        OnPropertyChanged(nameof(BackupUsageXAxes));
+        OnPropertyChanged(nameof(BackupUsageYAxes));
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[DashboardViewModel] Failed to build backup usage bar: {ex}");
+
+        BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+        BackupUsageSeries   = Array.Empty<ISeries>();
+        BackupUsageXAxes    = Array.Empty<Axis>();
+        BackupUsageYAxes    = Array.Empty<Axis>();
+
+        OnPropertyChanged(nameof(BackupUsageSegments));
+        OnPropertyChanged(nameof(BackupUsageSeries));
+        OnPropertyChanged(nameof(BackupUsageXAxes));
+        OnPropertyChanged(nameof(BackupUsageYAxes));
+    }
+}
+
 
         /// <summary>
         /// Computes backup disk usage based on the current app config.
@@ -741,8 +760,18 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 backupRoot = Path.GetFullPath(backupRoot);
+                var driveRoot = Path.GetPathRoot(backupRoot);
+                if (string.IsNullOrWhiteSpace(driveRoot))
+                {
+                    return (
+                        0d,
+                        "Backup target not available",
+                        $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space",
+                        false
+                    );
+                }
 
-                var drive = new DriveInfo(backupRoot);
+                var drive = new DriveInfo(driveRoot);
                 if (!drive.IsReady)
                 {
                     return (

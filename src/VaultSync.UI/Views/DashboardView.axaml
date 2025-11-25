@@ -70,7 +70,8 @@
               <TextBlock Text="Backup storage" Classes="section-title"/>
 
               <!-- Base blue bar (used vs total) + segmented overlay (Other + per-project VaultSync) -->
-              <Grid Margin="0,4,0,0" Height="12" ClipToBounds="True">
+              <Grid Margin="0,4,0,0" Height="12" ClipToBounds="True"
+                    Background="{DynamicResource CardBackgroundBrush}">
                 <!-- Base blue bar: overall used space on the backup drive -->
                 <ProgressBar Minimum="0"
                              Maximum="100"
@@ -84,7 +85,7 @@
                     Series="{Binding BackupUsageSeries}"
                     XAxes="{Binding BackupUsageXAxes}"
                     YAxes="{Binding BackupUsageYAxes}"
-                    Background="Transparent"
+                    Background="{DynamicResource CardBackgroundBrush}"
                     LegendPosition="Hidden"
                     Height="12"
                     Margin="0"

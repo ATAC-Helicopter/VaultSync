@@ -56,6 +56,10 @@ public sealed class BackupService
     /// <param name="progressCallback">Callback for progress updates.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <param name="useArchiveMode">Whether to create a compressed archive instead of using native sync tools.</param>
+    /// <param name="preferredFinalBackupRoot">
+    /// Optional final backup root to move into after creation (e.g., NAS path). If provided and different
+    /// from <paramref name="backupRoot"/>, a best-effort move will be attempted after the backup completes.
+    /// </param>
     /// <returns>The ID of the created backup row in the database.</returns>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the project has no snapshots yet, or backupRoot is not configured.
@@ -68,7 +72,8 @@ public sealed class BackupService
         CancellationToken ct = default,
         bool useArchiveMode = false,
         int? maxSnapshotsToKeep = null,
-        double? minimumFreeSpacePercent = null)
+        double? minimumFreeSpacePercent = null,
+        string? preferredFinalBackupRoot = null)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -142,6 +147,8 @@ public sealed class BackupService
         var folderName = timestamp.ToString("yyyy-MM-dd_HH-mm-ss");
         var backupFolder = Path.Combine(projectBackupRoot, folderName);
         Directory.CreateDirectory(backupFolder);
+        var backupRootUsed   = backupRoot;
+        var backupFolderUsed = backupFolder;
 
         // Compute total bytes off the UI thread, using the same filter logic as snapshots.
         long totalBytes;
@@ -208,8 +215,51 @@ public sealed class BackupService
             progressCallback?.Invoke(100, string.Empty, "Backup completed (fallback).");
         }
 
+        // If we created the backup in a temporary location (e.g., NAS unreachable) but the preferred
+        // final backup root is available now, move it before writing metadata.
+        if (!string.IsNullOrWhiteSpace(preferredFinalBackupRoot) &&
+            !string.Equals(preferredFinalBackupRoot, backupRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                if (Directory.Exists(preferredFinalBackupRoot))
+                {
+                    var destProjectRoot = Path.Combine(preferredFinalBackupRoot, projectSlug);
+                    Directory.CreateDirectory(destProjectRoot);
+
+                    var destFolder = Path.Combine(destProjectRoot, Path.GetFileName(backupFolder));
+                    if (Directory.Exists(destFolder))
+                        Directory.Delete(destFolder, recursive: true);
+
+                    Directory.Move(backupFolder, destFolder);
+                    backupRootUsed   = preferredFinalBackupRoot;
+                    backupFolderUsed = destFolder;
+
+                    // Clean up empty temp project root if applicable
+                    try
+                    {
+                        var tempProjectRoot = Path.GetDirectoryName(backupFolder);
+                        if (!string.IsNullOrWhiteSpace(tempProjectRoot) &&
+                            Directory.Exists(tempProjectRoot) &&
+                            !Directory.EnumerateFileSystemEntries(tempProjectRoot).Any())
+                        {
+                            Directory.Delete(tempProjectRoot, recursive: true);
+                        }
+                    }
+                    catch
+                    {
+                        // ignore cleanup failures
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BackupService] Failed to move backup from temp to preferred root: {ex.Message}");
+            }
+        }
+
         // Store relative path so if backupRoot moves, paths are still valid.
-        var relativePath = Path.GetRelativePath(backupRoot, backupFolder);
+        var relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
         var backupType   = isAuto ? "auto" : "manual";
 
         Console.WriteLine($"[BackupService] Backup data written for '{project.Name}', creating backup metadata in database...");
@@ -228,7 +278,7 @@ public sealed class BackupService
         // Apply simple retention: keep only the most recent N backups per project, if configured.
         try
         {
-            ApplyBackupRetention(project.Id, backupRoot, maxSnapshotsToKeep);
+            ApplyBackupRetention(project.Id, backupRootUsed, maxSnapshotsToKeep);
         }
         catch (Exception ex)
         {
@@ -336,7 +386,7 @@ public sealed class BackupService
                 ct);
 
             if (exitCode != 0)
-                throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}.");
+                throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
         }
         else
         {

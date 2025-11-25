@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Collections.Concurrent;
+using System.Threading;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -70,6 +71,13 @@ namespace VaultSync.UI.ViewModels
         private readonly ProjectsViewModel  _projectsViewModel;
         private readonly BackupsViewModel   _backupsViewModel;
         private readonly SettingsViewModel  _settingsViewModel;
+        private readonly AppConfig          _config;
+
+        // NAS monitor to move temp backups when the preferred network root becomes reachable again.
+        private Timer? _nasMonitorTimer;
+        private int _nasMonitorInFlight;
+        private Timer? _autoBackupTimer;
+        private int _autoBackupInFlight;
 
         // Core services for live data
         private readonly SqliteRepository _repo;
@@ -82,27 +90,26 @@ namespace VaultSync.UI.ViewModels
         // Helper property to respect global notifications setting from SettingsViewModel
         private bool NotificationsEnabled => _settingsViewModel?.NotificationsEnabled ?? true;
 
-        // New: helper to read system notification setting from AppConfig.Behavior
-        private bool SystemNotificationsEnabled
+        // Determine if system notifications should be raised, based on user settings.
+        private bool ShouldRaiseSystemNotification
         {
             get
             {
-                try
-                {
-                    var cfg = AppConfigStore.Load();
-                    return cfg.Behavior?.EnableSystemNotifications ?? true;
-                }
-                catch
-                {
-                    // Fail open: if config cannot be read, don't silently drop notifications.
+                if (_settingsViewModel is null)
                     return true;
-                }
+
+                if (!_settingsViewModel.NotificationsEnabled)
+                    return false;
+
+                if (!_settingsViewModel.UseOsNotifications)
+                    return false;
+
+                if (_settingsViewModel.NotifyOnlyWhenInactive && VaultSync.UI.MainWindow.IsForeground)
+                    return false;
+
+                return true;
             }
         }
-
-        // New: only raise system notifications when enabled AND not in foreground
-        private bool ShouldRaiseSystemNotification =>
-            SystemNotificationsEnabled && !VaultSync.UI.MainWindow.IsForeground;
 
         public object? CurrentView
         {
@@ -152,9 +159,9 @@ namespace VaultSync.UI.ViewModels
         public AppViewModel()
         {
             // 1) Config + DB + services
-            var cfg = AppConfigStore.Load();
+            _config = AppConfigStore.Load();
 
-            _repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+            _repo = new SqliteRepository(_config.DbPath ?? string.Empty);
             _repo.EnsureSchema();
 
             _backupService       = new BackupService(_repo);
@@ -172,51 +179,32 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.DeleteBackupRequested += OnDeleteBackupRequested;
             _backupsViewModel.RestoreBackupRequested += OnRestoreBackupRequested; // stub for later
             _backupsViewModel.CancelActiveBackupRequested += OnCancelActiveBackupRequested;
+            _backupsViewModel.AutoBackupPreferenceChanged += OnAutoBackupPreferenceChanged;
 
             // 4) Initial load of backup data
             ReloadBackupsVmData();
             _ = _dashboardViewModel.RefreshAsync();
 
             // 5) Default route
+            // Default route (may be overridden by resume-last-session)
             CurrentView  = _dashboardViewModel;
             HeaderTitle  = "Dashboard";
             HeaderKicker = "Overview";
 
+            if (_config.ResumeLastSession)
+            {
+                ApplyLastSessionView();
+            }
+
+            // Ensure launch-on-login matches config
+            AutoStartService.SetLaunchOnLogin(_config.Behavior.LaunchOnLogin);
+            ConfigureAutoBackupTimer();
+
             // 6) Navigation commands (using cached VMs)
-            NavigateDashboard = new RelayCommand(_ =>
-            {
-                _ = _dashboardViewModel.RefreshAsync();
-
-                CurrentView  = _dashboardViewModel;
-                HeaderTitle  = "Dashboard";
-                HeaderKicker = "Overview";
-            });
-
-            NavigateProjects = new RelayCommand(_ =>
-            {
-                CurrentView  = _projectsViewModel;
-                HeaderTitle  = "Projects";
-                HeaderKicker = "All repositories";
-            });
-
-            NavigateBackups = new RelayCommand(_ =>
-            {
-                // IMPORTANT: refresh data each time we navigate here,
-                // so newly added projects/snapshots show up.
-                ReloadBackupsVmData();
-                _ = _dashboardViewModel.RefreshAsync();
-
-                CurrentView  = _backupsViewModel;
-                HeaderTitle  = "Backups";
-                HeaderKicker = "Snapshots & history";
-            });
-
-            NavigateSettings = new RelayCommand(_ =>
-            {
-                CurrentView  = _settingsViewModel;
-                HeaderTitle  = "Settings";
-                HeaderKicker = "Preferences";
-            });
+            NavigateDashboard = new RelayCommand(_ => SetCurrentView("Dashboard"));
+            NavigateProjects  = new RelayCommand(_ => SetCurrentView("Projects"));
+            NavigateBackups   = new RelayCommand(_ => SetCurrentView("Backups"));
+            NavigateSettings  = new RelayCommand(_ => SetCurrentView("Settings"));
         }
 
         // ---------- Backups wiring ----------
@@ -225,10 +213,146 @@ namespace VaultSync.UI.ViewModels
         {
             var projects = _repo.GetAllProjects().ToList();
             var backups  = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+            var disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
 
             Console.WriteLine($"[AppViewModel] ReloadBackupsVmData: projects={projects.Count}, backups={backups.Count}.");
 
-            _backupsViewModel.LoadFromBackups(projects, backups);
+            _backupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
+        }
+
+        private void SetCurrentView(string viewKey, bool remember = true)
+        {
+            switch (viewKey)
+            {
+                case "Projects":
+                    CurrentView  = _projectsViewModel;
+                    HeaderTitle  = "Projects";
+                    HeaderKicker = "All repositories";
+                    break;
+                case "Backups":
+                    ReloadBackupsVmData();
+                    _ = _dashboardViewModel.RefreshAsync();
+                    CurrentView  = _backupsViewModel;
+                    HeaderTitle  = "Backups";
+                    HeaderKicker = "Snapshots & history";
+                    break;
+                case "Settings":
+                    CurrentView  = _settingsViewModel;
+                    HeaderTitle  = "Settings";
+                    HeaderKicker = "Preferences";
+                    break;
+                default:
+                    _ = _dashboardViewModel.RefreshAsync();
+                    CurrentView  = _dashboardViewModel;
+                    HeaderTitle  = "Dashboard";
+                    HeaderKicker = "Overview";
+                    viewKey      = "Dashboard";
+                    break;
+            }
+
+            if (remember)
+            {
+                _config.LastView = viewKey;
+                AppConfigStore.Save(_config);
+            }
+        }
+
+        private void ApplyLastSessionView()
+        {
+            var last = string.IsNullOrWhiteSpace(_config.LastView)
+                ? "Dashboard"
+                : _config.LastView;
+
+            SetCurrentView(last, remember: false);
+        }
+
+        private void ConfigureAutoBackupTimer()
+        {
+            _autoBackupTimer?.Dispose();
+            _autoBackupTimer = null;
+
+            var intervalMinutes = _config.Backups.IntervalMinutes;
+            if (!_config.Backups.EnableAutoBackups || intervalMinutes <= 0)
+                return;
+
+            var interval = TimeSpan.FromMinutes(intervalMinutes);
+            _autoBackupTimer = new Timer(async _ => await RunAutoBackupsAsync(), null, interval, interval);
+        }
+
+        private async Task RunAutoBackupsAsync()
+        {
+            if (Interlocked.Exchange(ref _autoBackupInFlight, 1) == 1)
+                return;
+
+            try
+            {
+                if (_backupsViewModel.IsBusy)
+                    return;
+
+                var cfg = AppConfigStore.Load();
+                if (!cfg.Backups.EnableAutoBackups)
+                    return;
+
+                var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
+                var projects = _repo.GetAllProjects().ToList();
+
+                var backupRoot = cfg.Backups.BackupRoot;
+                if (string.IsNullOrWhiteSpace(backupRoot))
+                    return;
+
+                var useArchiveMode = _settingsViewModel.UseBackupCompression;
+
+                foreach (var project in projects)
+                {
+                    if (disabled.Contains(project.Id))
+                        continue;
+
+                    ResolveBackupRoots(
+                        project,
+                        backupRoot,
+                        out var effectiveBackupRoot,
+                        out var preferredFinalBackupRoot);
+
+                    try
+                    {
+                        await _backupService.RunBackupAsync(
+                            project,
+                            effectiveBackupRoot,
+                            isAuto: true,
+                            progressCallback: null,
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[AutoBackup] Failed for '{project.Name}': {ex.Message}");
+                    }
+                }
+
+                ReloadBackupsVmData();
+                _ = _dashboardViewModel.RefreshAsync();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _autoBackupInFlight, 0);
+            }
+        }
+
+        private void OnAutoBackupPreferenceChanged(int projectId, bool enabled)
+        {
+            var list = _config.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            if (!enabled)
+            {
+                if (!list.Contains(projectId))
+                    list.Add(projectId);
+            }
+            else
+            {
+                list.Remove(projectId);
+            }
+
+            _config.Backups.AutoBackupDisabledProjects = list;
+            AppConfigStore.Save(_config);
+            ConfigureAutoBackupTimer();
         }
 
         private async void OnBackupProjectRequested(ProjectBackupItem? item)
@@ -258,6 +382,12 @@ namespace VaultSync.UI.ViewModels
 
             var useArchiveMode = _settingsViewModel.UseBackupCompression;
 
+            ResolveBackupRoots(
+                project,
+                backupRoot,
+                out var effectiveBackupRoot,
+                out var preferredFinalBackupRoot);
+
             Console.WriteLine($"[AppViewModel] BackupProjectRequested for project '{project.Name}' (Id={project.Id}).");
 
             // Reset progress state
@@ -283,7 +413,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     await _backupService.RunBackupAsync(
                         project,
-                        backupRoot,
+                        effectiveBackupRoot,
                         isAuto: false,
                         progressCallback: (percent, currentFile, etaText) =>
                         {
@@ -324,7 +454,8 @@ namespace VaultSync.UI.ViewModels
                         },
                         useArchiveMode: useArchiveMode,
                         maxSnapshotsToKeep: maxSnapshotsToKeep,
-                        minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent
+                        minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
+                        preferredFinalBackupRoot: preferredFinalBackupRoot
                     );
                 });
 
@@ -367,7 +498,6 @@ namespace VaultSync.UI.ViewModels
                                         title);
                                 }
 
-                                // System notification depends only on window foreground + settings.
                                 if (ShouldRaiseSystemNotification)
                                 {
                                     GlobalNotificationCenter.Instance.ShowSystem(
@@ -414,7 +544,6 @@ namespace VaultSync.UI.ViewModels
                             title);
                     }
 
-                    // System notification depends only on window foreground + settings.
                     if (ShouldRaiseSystemNotification)
                     {
                         GlobalNotificationCenter.Instance.ShowSystem(
@@ -466,7 +595,6 @@ namespace VaultSync.UI.ViewModels
                                 title);
                         }
 
-                        // System notification depends only on window foreground + settings.
                         if (ShouldRaiseSystemNotification)
                         {
                             GlobalNotificationCenter.Instance.ShowSystem(
@@ -626,9 +754,15 @@ namespace VaultSync.UI.ViewModels
 
                     var tasks = projects.Select(project =>
                     {
-                        return _backupService.RunBackupAsync(
+                        ResolveBackupRoots(
                             project,
                             backupRoot,
+                            out var effectiveBackupRoot,
+                            out var preferredFinalBackupRoot);
+
+                        return _backupService.RunBackupAsync(
+                            project,
+                            effectiveBackupRoot,
                             isAuto: false,
                             progressCallback: (percent, currentFile, etaText) =>
                             {
@@ -664,7 +798,8 @@ namespace VaultSync.UI.ViewModels
                             },
                             useArchiveMode: useArchiveMode,
                             maxSnapshotsToKeep: maxSnapshotsToKeep,
-                            minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent
+                            minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
+                            preferredFinalBackupRoot: preferredFinalBackupRoot
                         ).ContinueWith(t =>
                         {
                             if (t.IsFaulted)
@@ -854,7 +989,8 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var fullPath = Path.Combine(backupRoot, backup.Path);
+                var relativePath = backup.Path ?? string.Empty;
+                var fullPath     = Path.GetFullPath(Path.Combine(backupRoot, relativePath));
 
                 await Task.Run(() =>
                 {
@@ -862,7 +998,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         if (Directory.Exists(fullPath))
                         {
-                            Directory.Delete(fullPath, recursive: true);
+                            DeleteDirectoryRobust(fullPath);
                         }
                         else if (File.Exists(fullPath))
                         {
@@ -893,6 +1029,39 @@ namespace VaultSync.UI.ViewModels
                 _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
             }
+        }
+
+        /// <summary>
+        /// Deletes a directory tree, clearing read-only attributes to avoid UnauthorizedAccess on Windows.
+        /// </summary>
+        private static void DeleteDirectoryRobust(string path)
+        {
+            // Clear read-only attributes on files and dirs before deletion.
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                }
+                catch
+                {
+                    // ignore individual failures; deletion will surface issues later
+                }
+            }
+
+            foreach (var dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories).Reverse())
+            {
+                try
+                {
+                    File.SetAttributes(dir, FileAttributes.Directory);
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
+            Directory.Delete(path, recursive: true);
         }
 
         private async void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
@@ -1184,6 +1353,157 @@ public IReadOnlyList<ProjectItemViewModel> GetProjectsForSnapshotTray()
             });
 
             await _projectsViewModel.TakeSnapshotAllFromTrayAsync();
+        }
+
+        /// <summary>
+        /// Resolve the effective backup root to use for a project, honoring preferences for external/NAS paths.
+        /// If the preferred NAS path is unavailable, a temporary backup folder is used next to the project.
+        /// </summary>
+        private void ResolveBackupRoots(
+            Project project,
+            string configuredBackupRoot,
+            out string effectiveBackupRoot,
+            out string? preferredFinalBackupRoot)
+        {
+            effectiveBackupRoot      = configuredBackupRoot;
+            preferredFinalBackupRoot = null;
+
+            if (_settingsViewModel?.PreferExternalDrives == true &&
+                IsNetworkPath(configuredBackupRoot))
+            {
+                if (Directory.Exists(configuredBackupRoot))
+                {
+                    // If the NAS just came back, try to migrate any temp backups into it.
+                    TryMigrateTempBackups(project, configuredBackupRoot);
+                }
+                else
+                {
+                    var tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+                    Directory.CreateDirectory(tempRoot);
+
+                    effectiveBackupRoot      = tempRoot;
+                    preferredFinalBackupRoot = configuredBackupRoot;
+                    EnsureNasMonitorStarted();
+                }
+            }
+        }
+
+        private static void TryMigrateTempBackups(Project project, string targetRoot)
+        {
+            var tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+            if (!Directory.Exists(tempRoot))
+                return;
+
+            Directory.CreateDirectory(targetRoot);
+
+            foreach (var dir in Directory.EnumerateDirectories(tempRoot))
+            {
+                var dest = Path.Combine(targetRoot, Path.GetFileName(dir));
+
+                try
+                {
+                    if (Directory.Exists(dest))
+                        continue; // already moved
+
+                    Directory.Move(dir, dest);
+                }
+                catch
+                {
+                    // ignore and continue with other folders
+                }
+            }
+
+            try
+            {
+                if (!Directory.EnumerateFileSystemEntries(tempRoot).Any())
+                {
+                    Directory.Delete(tempRoot, recursive: true);
+                }
+            }
+            catch
+            {
+                // ignore cleanup failures
+            }
+        }
+
+        private static bool IsNetworkPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            return path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
+                   path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||
+                   path.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void EnsureNasMonitorStarted()
+        {
+            if (_nasMonitorTimer != null)
+                return;
+
+            // Check every 5 minutes; first check after 2 minutes.
+            _nasMonitorTimer = new Timer(
+                _ => _ = CheckNasAndMigrateAsync(),
+                null,
+                TimeSpan.FromMinutes(2),
+                TimeSpan.FromMinutes(5));
+        }
+
+        private void StopNasMonitor()
+        {
+            _nasMonitorTimer?.Dispose();
+            _nasMonitorTimer = null;
+        }
+
+        private async Task CheckNasAndMigrateAsync()
+        {
+            if (Interlocked.Exchange(ref _nasMonitorInFlight, 1) == 1)
+                return;
+
+            try
+            {
+                if (_backupsViewModel.IsBusy)
+                    return;
+
+                var cfg = AppConfigStore.Load();
+
+                if (_settingsViewModel?.PreferExternalDrives != true)
+                    return;
+
+                var backupRoot = cfg.Backups.BackupRoot;
+                if (string.IsNullOrWhiteSpace(backupRoot) || !IsNetworkPath(backupRoot))
+                    return;
+
+                if (!Directory.Exists(backupRoot))
+                    return;
+
+                var projects = _repo.GetAllProjects().ToList();
+                var hadTemp = false;
+
+                foreach (var project in projects)
+                {
+                    var tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+                    if (Directory.Exists(tempRoot))
+                    {
+                        hadTemp = true;
+                        TryMigrateTempBackups(project, backupRoot);
+                    }
+                }
+
+                // If no temp backups remain anywhere, stop the monitor to avoid unnecessary pings.
+                if (!hadTemp)
+                {
+                    StopNasMonitor();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AppViewModel] NAS monitor failed: {ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _nasMonitorInFlight, 0);
+            }
         }
     }
 }

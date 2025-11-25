@@ -178,7 +178,22 @@ namespace VaultSync.Core.Services
                 var exit = await tcs.Task.ConfigureAwait(false);
 
                 // Robocopy 0..7 are success (changes/no changes). Normalize to 0.
-                return exit <= 7 ? 0 : exit;
+                var normalized = exit <= 7 ? 0 : exit;
+
+                if (normalized != 0)
+                {
+                    // Emit stdout/stderr for diagnostics (trim to avoid flooding logs).
+                    var outText = TrimLog(stdout);
+                    var errText = TrimLog(stderr);
+
+                    Console.WriteLine($"[RobocopyRunner] robocopy failed (exit={exit}, normalized={normalized}) src='{src}' dst='{dst}'.");
+                    if (outText.Length > 0)
+                        Console.WriteLine($"[RobocopyRunner][stdout]\n{outText}");
+                    if (errText.Length > 0)
+                        Console.WriteLine($"[RobocopyRunner][stderr]\n{errText}");
+                }
+
+                return normalized;
             }
             finally
             {
@@ -245,6 +260,20 @@ namespace VaultSync.Core.Services
                 // Skip comments / empty
                 if (line.Length == 0 || line.StartsWith("#"))
                     continue;
+
+                // Handle ** wildcard (common in gitignore-style). Robocopy doesn't support it.
+                // If the pattern looks like "bin/**" treat it as a dir exclude "bin".
+                if (line.Contains("/**") || line.Contains("\\**"))
+                {
+                    var d = line.Replace("/**", string.Empty)
+                                .Replace("\\**", string.Empty)
+                                .TrimEnd('/');
+
+                    if (!string.IsNullOrWhiteSpace(d))
+                        dirs.Add(NormalizeRobocopyGlob(d));
+
+                    continue;
+                }
 
                 // Very simple parsing:
                 // - trailing slash => treat as directory pattern
@@ -316,6 +345,10 @@ namespace VaultSync.Core.Services
             // Robocopy accepts wildcards in names, e.g. *.tmp or obj\*.
             var p = pattern.Replace('/', '\\');
 
+            // Robocopy does not understand "**" (recursive glob). Downgrade to single star.
+            while (p.Contains("**"))
+                p = p.Replace("**", "*");
+
             // Avoid leading ".\" which can confuse in some contexts
             if (p.StartsWith(@".\")) p = p.Substring(2);
 
@@ -324,15 +357,28 @@ namespace VaultSync.Core.Services
 
         private static string NormalizeWinPath(string path)
         {
-            // Trim trailing separators, convert to backslashes,
-            // and add \\?\ long-path prefix if not present.
+            // Trim trailing separators, convert to backslashes.
             var trimmed = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                               .Replace('/', '\\');
 
+            // If already long-path or UNC, leave as-is.
             if (trimmed.StartsWith(@"\\?\") || trimmed.StartsWith(@"\\"))
-                return trimmed; // already long/UNC
+                return trimmed;
 
-            return @"\\?\" + trimmed;
+            // UNC share (e.g. \\server\share) -> long UNC form \\?\UNC\server\share
+            if (trimmed.StartsWith(@"\\"))
+            {
+                var withoutLeadingSlashes = trimmed.TrimStart('\\');
+                return @"\\?\UNC\" + withoutLeadingSlashes;
+            }
+
+            // Drive-letter path: only add \\?\ if path is long enough to need it.
+            // Robocopy can error 53 on mapped drives when always using \\?\.
+            const int maxPath = 240; // conservative threshold
+            if (trimmed.Length >= maxPath)
+                return @"\\?\" + trimmed;
+
+            return trimmed;
         }
 
         private static double? TryParsePercent(string line)
@@ -362,6 +408,16 @@ namespace VaultSync.Core.Services
             }
 
             return null;
+        }
+
+        private static string TrimLog(StringBuilder sb, int maxChars = 4000)
+        {
+            var text = sb.ToString();
+            if (text.Length <= maxChars)
+                return text;
+
+            // Keep the tail, since robocopy typically prints errors at the end.
+            return text[^maxChars..];
         }
     }
 }

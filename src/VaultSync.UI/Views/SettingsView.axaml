@@ -80,33 +80,33 @@
 </Button>
                 </Grid>
 
-                <!-- Auto open last project -->
+                <!-- Resume last session -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Open last project on startup" />
-                    <TextBlock Text="Jump straight back into your most recent workspace."
+                    <TextBlock Text="Resume where you left off" />
+                    <TextBlock Text="Open VaultSync to the last page you were using."
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
-                                IsChecked="{Binding AutoOpenLastProject, Mode=TwoWay}" />
+                                IsChecked="{Binding ResumeLastSession, Mode=TwoWay}" />
                 </Grid>
 
-                <!-- Remember window layout -->
+                <!-- Launch on login -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Remember window size and layout" />
-                    <TextBlock Text="Restore the same layout next time you open VaultSync."
+                    <TextBlock Text="Launch at system startup" />
+                    <TextBlock Text="Start VaultSync automatically when you sign in."
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
-                                IsChecked="{Binding RememberWindowLayout, Mode=TwoWay}" />
+                                IsChecked="{Binding LaunchOnLogin, Mode=TwoWay}" />
                 </Grid>
 
-                                <!-- Show main window on tray actions -->
+                <!-- Show main window on tray actions -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="Show main window for tray actions" />

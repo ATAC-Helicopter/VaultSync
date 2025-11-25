@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace VaultSync.Core.Config
 {
@@ -7,8 +9,16 @@ namespace VaultSync.Core.Config
         // -------- General --------
 
         public string? ProjectsRoot { get; set; } = string.Empty;
-        public bool AutoOpenLastProject { get; set; } = true;
-        public bool RememberWindowLayout { get; set; } = true;
+        public bool ResumeLastSession { get; set; } = true;
+
+        [JsonPropertyName("AutoOpenLastProject")]
+        public bool AutoOpenLastProject
+        {
+            get => ResumeLastSession;
+            set => ResumeLastSession = value;
+        }
+
+        public string LastView { get; set; } = "Dashboard";
 
         /// <summary>
         /// Optional explicit path to the VaultSync metadata database (SQLite).
@@ -33,6 +43,7 @@ namespace VaultSync.Core.Config
         public bool   EnableAutoBackups     { get; set; } = true;
         public int    IntervalMinutes       { get; set; } = 30;
         public int    MaxSnapshotsPerProject{ get; set; } = 20;
+        public List<int> AutoBackupDisabledProjects { get; set; } = new();
         public string? Location             { get; set; } = string.Empty;
         // New canonical backup root path used by UI + snapshot service
         public string? BackupRoot { get; set; } = string.Empty;

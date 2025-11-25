@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VaultSync.UI.ViewModels"
              xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
@@ -141,10 +141,10 @@
 
     <!-- Chevron text for backup-group expanders -->
     <Style Selector="Expander.backup-group TextBlock.chevron">
-      <Setter Property="Text" Value="⌄" />
+      <Setter Property="Text" Value="âŒ„" />
     </Style>
     <Style Selector="Expander.backup-group:expanded TextBlock.chevron">
-      <Setter Property="Text" Value="⌃" />
+      <Setter Property="Text" Value="âŒƒ" />
     </Style>
 
 
@@ -267,7 +267,7 @@
               <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
                          FontSize="18"
                          FontWeight="SemiBold" />
-              <TextBlock Text="•"
+              <TextBlock Text="â€¢"
                          Margin="4,0"
                          FontSize="12"
                          Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -315,7 +315,7 @@
                           Spacing="6"
                           HorizontalAlignment="Right"
                           VerticalAlignment="Center">
-                <TextBlock Text="{Binding ActiveBackups.Count, StringFormat=' • {0} active'}"
+                <TextBlock Text="{Binding ActiveBackups.Count, StringFormat=' â€¢ {0} active'}"
                            FontSize="11"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <!-- Chevron indicator styled like other backup-group expanders -->
@@ -407,7 +407,7 @@
               </ItemsControl>
 
               <!-- Fallback text if something is busy but no detailed progress items -->
-              <TextBlock Text="Please wait… the backup will appear in history once completed. Do not close the app."
+              <TextBlock Text="Please waitâ€¦ the backup will appear in history once completed. Do not close the app."
                          FontSize="11"
                          Foreground="{DynamicResource TextSecondaryBrush}"
                          TextWrapping="NoWrap"
@@ -450,91 +450,105 @@
                        SelectionMode="Single"
                        BorderThickness="0"
                        Margin="0,4,0,0">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto"
-                          RowSpacing="4"
-                          ColumnSpacing="12">
+                              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto"
+                        RowSpacing="4"
+                        ColumnSpacing="12">
 
-                      <!-- Icon -->
-                      <Border Grid.RowSpan="3"
-                              Grid.Column="0"
-                              Classes="project-icon-circle">
-                        <TextBlock Text="{Binding Name[0]}"
-                                   FontSize="13"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" />
-                      </Border>
+                    <!-- Avatar -->
+                    <Grid Grid.RowSpan="3"
+                          Grid.Column="0"
+                          Width="32"
+                          Height="32"
+                          IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                      <Border CornerRadius="16"
+                              Background="{Binding AvatarColor}" />
+                      <Image Source="{Binding AvatarImagePath}"
+                             Stretch="UniformToFill"
+                             IsVisible="{Binding HasCustomAvatar}">
+                        <Image.Clip>
+                          <EllipseGeometry Center="16,16" RadiusX="16" RadiusY="16"/>
+                        </Image.Clip>
+                      </Image>
+                      <TextBlock Text="{Binding AvatarInitials}"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 FontWeight="SemiBold"
+                                 Foreground="White" />
+                    </Grid>
 
-                      <!-- Row 0: project name + actions -->
-                      <Grid Grid.Row="0"
-                            Grid.Column="1"
-                            ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0"
-                                   Text="{Binding Name}"
+                    <!-- Row 0: project name + actions -->
+                    <Grid Grid.Row="0"
+                          Grid.Column="1"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8">
+                      <StackPanel Grid.Column="0"
+                                  Orientation="Horizontal"
+                                  Spacing="6"
+                                  VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" />
-
-                        <StackPanel Grid.Column="1"
-                                    Orientation="Horizontal"
-                                    Spacing="6"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center">
-                          <Button Content="Back up"
-                                  Classes="small-button"
-                                  Command="{Binding DataContext.BackupProjectCommand,
-                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  CommandParameter="{Binding}" />
-                          <Button Content="History"
-                                  Classes="small-button"
-                                  Command="{Binding DataContext.ShowProjectHistoryCommand,
-                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  CommandParameter="{Binding}" />
-                        </StackPanel>
-                      </Grid>
-
-                      <!-- Row 1: last backup info -->
-                      <StackPanel Grid.Row="1"
-                                  Grid.Column="1"
-                                  Orientation="Horizontal"
-                                  Spacing="6">
-                        <TextBlock Text="Last backup:"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBlock Text="{Binding LastBackupDisplay}"
-                                   FontSize="11" />
                       </StackPanel>
 
-                      <!-- Row 2: stats -->
-                      <StackPanel Grid.Row="2"
-                                  Grid.Column="1"
+                      <StackPanel Grid.Column="1"
                                   Orientation="Horizontal"
-                                  Spacing="8">
-                        <TextBlock Text="{Binding SnapshotCount}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Text="backups"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-
-                        <TextBlock Text="•"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-
-                        <TextBlock Text="{Binding TotalSizeFormatted}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Text="stored"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                                  Spacing="6"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center">
+                        <Button Content="Back up"
+                                Classes="small-button"
+                                Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}" />
+                        <Button Content="History"
+                                Classes="small-button"
+                                Command="{Binding DataContext.ShowProjectHistoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}" />
                       </StackPanel>
-
                     </Grid>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
+
+                    <!-- Row 1: last backup info -->
+                    <StackPanel Grid.Row="1"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="Last backup:"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="{Binding LastBackupDisplay}"
+                                 FontSize="11" />
+                    </StackPanel>
+
+                    <!-- Row 2: stats -->
+                    <StackPanel Grid.Row="2"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{Binding SnapshotCount}"
+                                 FontSize="11"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="backups"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="•"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="{Binding TotalSizeFormatted}"
+                                 FontSize="11"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="stored"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
               </ListBox>
 
             </StackPanel>
@@ -782,3 +796,5 @@
 
   </Grid>
 </UserControl>
+
+

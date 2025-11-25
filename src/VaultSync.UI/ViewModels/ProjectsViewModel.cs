@@ -2,7 +2,6 @@ using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -14,6 +13,7 @@ using VaultSync.Core.Models;
 using System.Text.Json;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
+using System.Linq;
 
 namespace VaultSync.UI.ViewModels;
 
@@ -44,6 +44,8 @@ public class ProjectsViewModel : ViewModelBase
             RefreshSelectedProjectRegistration();
         }
     }
+
+    public bool ShowProjectAvatars { get; private set; } = true;
 
     private string _snapshotActionLabel = "Snapshot now";
     public string SnapshotActionLabel
@@ -103,6 +105,7 @@ public class ProjectsViewModel : ViewModelBase
             SizeBytes = 1_800_000_000,
             Preset = "unity"
         };
+        vaultSync.SetAvatarFromNameAndStore(null);
         vaultSync.SetSnapshots(CreateDesignSnapshots(1.8));
         Projects.Add(vaultSync);
 
@@ -116,6 +119,7 @@ public class ProjectsViewModel : ViewModelBase
             SizeBytes = 46_200_000_000,
             Preset = "unity"
         };
+        dumpsterFire.SetAvatarFromNameAndStore(null);
         dumpsterFire.SetSnapshots(CreateDesignSnapshots(46.2));
         Projects.Add(dumpsterFire);
 
@@ -129,6 +133,7 @@ public class ProjectsViewModel : ViewModelBase
             SizeBytes = 32_900_000_000,
             Preset = "unity"
         };
+        overSteer.SetAvatarFromNameAndStore(null);
         overSteer.SetSnapshots(CreateDesignSnapshots(32.9));
         Projects.Add(overSteer);
     }
@@ -161,6 +166,8 @@ public class ProjectsViewModel : ViewModelBase
             IsLoading = true;
 
             var config     = AppConfigStore.Load();
+            ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
+            OnPropertyChanged(nameof(ShowProjectAvatars));
             var discovered = await _discovery.DiscoverAsync(config);
 
             // Try to open the shared DB so we can enrich projects with real snapshot data.
@@ -232,6 +239,7 @@ public class ProjectsViewModel : ViewModelBase
                         SizeBytes    = lastSnapshotBytes ?? 0,
                         Preset       = existingProject?.Preset ?? string.Empty
                     };
+                    vm.SetAvatarFromNameAndStore(AvatarStore.GetAvatarForProject(p.Path));
 
                     // Compute health based on how old the last snapshot is (if any).
                     if (lastSnapshotTime.HasValue)
@@ -788,6 +796,24 @@ public class ProjectsViewModel : ViewModelBase
         OnPropertyChanged(propertyName);
         return true;
     }
+
+    public void SetAvatarForSelectedProject(string avatarPath)
+    {
+        if (SelectedProject is null)
+            return;
+
+        SelectedProject.SetCustomAvatar(avatarPath);
+        AvatarStore.SetAvatarForProject(SelectedProject.Path, avatarPath);
+    }
+
+    public void ClearAvatarForSelectedProject()
+    {
+        if (SelectedProject is null)
+            return;
+
+        SelectedProject.ClearAvatar();
+        AvatarStore.ClearAvatarForProject(SelectedProject.Path);
+    }
 }
 
 public enum ProjectHealthStatus
@@ -877,6 +903,12 @@ public class ProjectItemViewModel : ViewModelBase
         get => _isRegistered;
         set => SetProperty(ref _isRegistered, value);
     }
+
+    // Avatar
+    public string AvatarInitials { get; private set; } = string.Empty;
+    public string AvatarColor { get; private set; } = "#33405A";
+    public string? AvatarImagePath { get; private set; }
+    public bool HasCustomAvatar => !string.IsNullOrWhiteSpace(AvatarImagePath);
 
     // ---- Snapshot history for per-project statistics ----
     public ObservableCollection<ProjectSnapshotViewModel> SnapshotHistory { get; } =
@@ -1006,6 +1038,64 @@ public class ProjectItemViewModel : ViewModelBase
             ProjectHealthStatus.OutOfDate => "#471C1C",
             _                             => "#181B23"
         };
+
+    public void SetCustomAvatar(string path)
+    {
+        AvatarImagePath = path;
+        OnPropertyChanged(nameof(AvatarImagePath));
+        OnPropertyChanged(nameof(HasCustomAvatar));
+    }
+
+    public void ClearAvatar()
+    {
+        AvatarImagePath = null;
+        OnPropertyChanged(nameof(AvatarImagePath));
+        OnPropertyChanged(nameof(HasCustomAvatar));
+    }
+
+    public void SetAvatarFromNameAndStore(string? customPath)
+    {
+        AvatarInitials = ComputeInitials(Name);
+        AvatarColor    = PickColor(Name);
+        AvatarImagePath = customPath;
+        OnPropertyChanged(nameof(AvatarInitials));
+        OnPropertyChanged(nameof(AvatarColor));
+        OnPropertyChanged(nameof(AvatarImagePath));
+        OnPropertyChanged(nameof(HasCustomAvatar));
+    }
+
+    private static string ComputeInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "??";
+
+        var parts = name.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            return (parts[0][0].ToString() + parts[1][0].ToString()).ToUpperInvariant();
+        }
+
+        var trimmed = name.Trim();
+        if (trimmed.Length >= 2)
+            return trimmed.Substring(0, 2).ToUpperInvariant();
+
+        return trimmed.Substring(0, 1).ToUpperInvariant();
+    }
+
+    private static readonly string[] Palette =
+    {
+        "#4C8DFF", "#7A6CFF", "#FF6A8C", "#FF8D4C", "#4CD1A8", "#4CBCD9", "#D94CD1", "#FFC64C"
+    };
+
+    private static string PickColor(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return Palette[0];
+
+        var hash = name.Aggregate(0, (acc, c) => acc + c);
+        var idx = Math.Abs(hash) % Palette.Length;
+        return Palette[idx];
+    }
 
     private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
     {

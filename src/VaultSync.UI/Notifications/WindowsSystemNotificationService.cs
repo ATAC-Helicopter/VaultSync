@@ -34,9 +34,8 @@ namespace VaultSync.UI.Notifications
                 var toastContent = builder.GetToastContent();
                 var toast        = new ToastNotification(toastContent.GetXml());
 
-                // NOTE: "VaultSync" here is your AUMID / app ID for toast routing.
-                // For unpackaged apps you may need to register a compatible AUMID in the app.manifest.
-                var notifier = ToastNotificationManager.CreateToastNotifier("VaultSync");
+                // Use the compat notifier so unpackaged Win32 builds can still raise toasts.
+                var notifier = ToastNotificationManagerCompat.CreateToastNotifier();
                 notifier.Show(toast);
             }
             catch (Exception ex)
