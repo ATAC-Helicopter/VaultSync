@@ -21,4 +21,9 @@ public record Backup
     /// Path to the backup relative to the backup root (from AppConfig.Backups).
     /// </summary>
     public string Path      { get; init; } = string.Empty;
+
+    /// <summary>
+    /// When true, this backup is protected from automatic retention pruning.
+    /// </summary>
+    public bool IsProtected { get; init; }
 }

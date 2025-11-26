@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Microsoft.Win32;
+using System.Runtime.Versioning;
 
 namespace VaultSync.UI.Infrastructure
 {
@@ -28,7 +29,6 @@ namespace VaultSync.UI.Infrastructure
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AutoStart] Failed to set launch on login: {ex.Message}");
             }
         }
 
@@ -42,6 +42,7 @@ namespace VaultSync.UI.Infrastructure
             return path;
         }
 
+        [SupportedOSPlatform("windows")]
         private static void SetWindowsAutoStart(bool enable)
         {
             using var key = Registry.CurrentUser.OpenSubKey(WindowsRunKey, writable: true)

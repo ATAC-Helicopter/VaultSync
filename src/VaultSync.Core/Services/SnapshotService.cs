@@ -172,7 +172,7 @@ public class SnapshotService
             {
                 try
                 {
-                    ApplySnapshotRetention(project, maxSnapshotsToKeep.Value);
+                    ApplySnapshotRetention(project, Math.Max(1, maxSnapshotsToKeep.Value));
                 }
                 catch (Exception ex)
                 {

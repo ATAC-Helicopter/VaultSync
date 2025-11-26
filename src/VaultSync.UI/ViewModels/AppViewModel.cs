@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.ComponentModel;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -14,6 +15,7 @@ using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels.Notifications;
 using System.Collections.Generic;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -46,17 +48,14 @@ namespace VaultSync.UI.ViewModels
     {
         public void ShowInfo(string title, string message, NotificationKind kind = NotificationKind.System)
         {
-            Console.WriteLine($"[Notification][Info][{kind}] {title}: {message}");
         }
 
         public void ShowWarning(string title, string message, NotificationKind kind = NotificationKind.System)
         {
-            Console.WriteLine($"[Notification][Warning][{kind}] {title}: {message}");
         }
 
         public void ShowError(string title, string message, NotificationKind kind = NotificationKind.System)
         {
-            Console.WriteLine($"[Notification][Error][{kind}] {title}: {message}");
         }
     }
 
@@ -83,6 +82,8 @@ namespace VaultSync.UI.ViewModels
         private readonly SqliteRepository _repo;
         private readonly BackupService    _backupService;
         private readonly INotificationService _notificationService;
+        private readonly IPowerStatusProvider _powerStatusProvider;
+        private readonly IDriveHealthService _driveHealthService;
 
         // Helper property to detect when the Backups page is active
         private bool IsOnBackupsPage => CurrentView == _backupsViewModel;
@@ -166,12 +167,15 @@ namespace VaultSync.UI.ViewModels
 
             _backupService       = new BackupService(_repo);
             _notificationService = new NotificationService();
+            _powerStatusProvider = new PowerStatusProvider();
+            _driveHealthService  = new DriveHealthService();
 
             // 2) Section viewmodels
             _dashboardViewModel = new DashboardViewModel();
             _projectsViewModel  = new ProjectsViewModel();
             _backupsViewModel   = new BackupsViewModel();
             _settingsViewModel  = new SettingsViewModel();
+            _settingsViewModel.PropertyChanged += OnSettingsChanged;
 
             // 3) Wire BackupsViewModel events to real logic
             _backupsViewModel.BackupProjectRequested += OnBackupProjectRequested;
@@ -180,6 +184,7 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.RestoreBackupRequested += OnRestoreBackupRequested; // stub for later
             _backupsViewModel.CancelActiveBackupRequested += OnCancelActiveBackupRequested;
             _backupsViewModel.AutoBackupPreferenceChanged += OnAutoBackupPreferenceChanged;
+            _backupsViewModel.BackupProtectionChanged += OnBackupProtectionChanged;
 
             // 4) Initial load of backup data
             ReloadBackupsVmData();
@@ -215,7 +220,6 @@ namespace VaultSync.UI.ViewModels
             var backups  = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
             var disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
 
-            Console.WriteLine($"[AppViewModel] ReloadBackupsVmData: projects={projects.Count}, backups={backups.Count}.");
 
             _backupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
         }
@@ -289,6 +293,16 @@ namespace VaultSync.UI.ViewModels
                 if (_backupsViewModel.IsBusy)
                     return;
 
+                if (ShouldPauseBackupsForBattery(out var pauseReason))
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _backupsViewModel.BackupCurrentFile = pauseReason;
+                        _backupsViewModel.BusyMessage       = pauseReason;
+                    });
+                    return;
+                }
+
                 var cfg = AppConfigStore.Load();
                 if (!cfg.Backups.EnableAutoBackups)
                     return;
@@ -313,6 +327,16 @@ namespace VaultSync.UI.ViewModels
                         out var effectiveBackupRoot,
                         out var preferredFinalBackupRoot);
 
+                    var blockForDrive = ShouldBlockForDriveHealth(project.RootPath, effectiveBackupRoot, out var driveMessage, out var driveSeverity);
+                    if (!string.IsNullOrWhiteSpace(driveMessage))
+                    {
+                        ShowDriveHealthNotification(driveMessage, driveSeverity);
+                    }
+                    if (blockForDrive)
+                    {
+                        continue;
+                    }
+
                     try
                     {
                         await _backupService.RunBackupAsync(
@@ -320,11 +344,14 @@ namespace VaultSync.UI.ViewModels
                             effectiveBackupRoot,
                             isAuto: true,
                             progressCallback: null,
-                            CancellationToken.None);
+                            CancellationToken.None,
+                            fullSnapshotHash: _settingsViewModel.UseFullSnapshotHash,
+                            maxSnapshotsToKeep: cfg.Backups.MaxSnapshotsPerProject,
+                            minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
+                            preferredFinalBackupRoot: preferredFinalBackupRoot);
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[AutoBackup] Failed for '{project.Name}': {ex.Message}");
                     }
                 }
 
@@ -355,12 +382,30 @@ namespace VaultSync.UI.ViewModels
             ConfigureAutoBackupTimer();
         }
 
+        private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(SettingsViewModel.EnableAutoBackups)
+                or nameof(SettingsViewModel.AutoBackupIntervalMinutes))
+            {
+                var latest = AppConfigStore.Load();
+                _config.Backups.EnableAutoBackups = latest.Backups.EnableAutoBackups;
+                _config.Backups.IntervalMinutes   = latest.Backups.IntervalMinutes;
+                ConfigureAutoBackupTimer();
+            }
+        }
+
         private async void OnBackupProjectRequested(ProjectBackupItem? item)
         {
             // Prevent overlapping manual backups; if one is already running, ignore.
             if (_backupsViewModel.IsBusy)
             {
-                Console.WriteLine("[AppViewModel] BackupProjectRequested ignored because a backup is already in progress.");
+                return;
+            }
+
+            if (ShouldPauseBackupsForBattery(out var pauseReason))
+            {
+                _backupsViewModel.BackupCurrentFile = pauseReason;
+                _backupsViewModel.BusyMessage       = pauseReason;
                 return;
             }
 
@@ -388,7 +433,18 @@ namespace VaultSync.UI.ViewModels
                 out var effectiveBackupRoot,
                 out var preferredFinalBackupRoot);
 
-            Console.WriteLine($"[AppViewModel] BackupProjectRequested for project '{project.Name}' (Id={project.Id}).");
+            var blockForDrive = ShouldBlockForDriveHealth(project.RootPath, effectiveBackupRoot, out var driveMessage, out var driveSeverity);
+            if (!string.IsNullOrWhiteSpace(driveMessage))
+            {
+                ShowDriveHealthNotification(driveMessage, driveSeverity);
+            }
+            if (blockForDrive)
+            {
+                _backupsViewModel.BusyMessage       = driveMessage;
+                _backupsViewModel.BackupCurrentFile = driveMessage;
+                return;
+            }
+
 
             // Reset progress state
             _backupsViewModel.BackupProgress    = 0;
@@ -453,6 +509,7 @@ namespace VaultSync.UI.ViewModels
                             });
                         },
                         useArchiveMode: useArchiveMode,
+                        fullSnapshotHash: _settingsViewModel.UseFullSnapshotHash,
                         maxSnapshotsToKeep: maxSnapshotsToKeep,
                         minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
                         preferredFinalBackupRoot: preferredFinalBackupRoot
@@ -477,7 +534,6 @@ namespace VaultSync.UI.ViewModels
                         }
                         catch (Exception vex)
                         {
-                            Console.WriteLine($"[AppViewModel] Verification exception: {vex}");
 
                             if (NotificationsEnabled)
                             {
@@ -555,7 +611,6 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AppViewModel] Backup failed: {ex}");
 
                 // Detect the low-disk-space condition thrown by BackupService
                 var isLowDisk =
@@ -663,11 +718,16 @@ namespace VaultSync.UI.ViewModels
             // Do not start "backup all" if a backup is already running.
             if (_backupsViewModel.IsBusy)
             {
-                Console.WriteLine("[AppViewModel] CreateBackupForAllProjectsRequested ignored because a backup is already in progress.");
                 return;
             }
 
-            Console.WriteLine("[AppViewModel] CreateBackupForAllProjectsRequested starting…");
+            if (ShouldPauseBackupsForBattery(out var pauseReason))
+            {
+                _backupsViewModel.BackupCurrentFile = pauseReason;
+                _backupsViewModel.BusyMessage       = pauseReason;
+                return;
+            }
+
 
             var cfg        = AppConfigStore.Load();
             var backupRoot = cfg.Backups.BackupRoot;
@@ -689,11 +749,9 @@ namespace VaultSync.UI.ViewModels
                 await Task.Run(async () =>
                 {
                     var projects = _repo.GetAllProjects().ToList();
-                    Console.WriteLine($"[AppViewModel] Backing up {projects.Count} projects in parallel…");
 
                     if (projects.Count == 0)
                     {
-                        Console.WriteLine("[AppViewModel] No projects found for backup-all.");
                         return;
                     }
 
@@ -760,6 +818,27 @@ namespace VaultSync.UI.ViewModels
                             out var effectiveBackupRoot,
                             out var preferredFinalBackupRoot);
 
+                        var blockForDrive = ShouldBlockForDriveHealth(project.RootPath, effectiveBackupRoot, out var driveMessage, out var driveSeverity);
+                        if (!string.IsNullOrWhiteSpace(driveMessage))
+                        {
+                            ShowDriveHealthNotification(driveMessage, driveSeverity);
+                        }
+                        if (blockForDrive)
+                        {
+                            progressPerProject[project.Id] = 100;
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _backupsViewModel.UpdateActiveBackup(
+                                    project.Id.ToString(),
+                                    project.Name,
+                                    100,
+                                    driveMessage,
+                                    string.Empty);
+                            });
+                            UpdateAggregateProgress(driveMessage, string.Empty);
+                            return Task.CompletedTask;
+                        }
+
                         return _backupService.RunBackupAsync(
                             project,
                             effectiveBackupRoot,
@@ -804,14 +883,12 @@ namespace VaultSync.UI.ViewModels
                         {
                             if (t.IsFaulted)
                             {
-                                Console.WriteLine($"[AppViewModel] Parallel backup failed for '{project.Name}' (Id={project.Id}): {t.Exception?.GetBaseException().Message}");
                             }
                         });
                     }).ToList();
 
                     await Task.WhenAll(tasks);
 
-                    Console.WriteLine("[AppViewModel] All parallel backups completed.");
                 });
 
                 // First reload history so the new backups appear.
@@ -839,7 +916,6 @@ namespace VaultSync.UI.ViewModels
                         }
                         catch (Exception vex)
                         {
-                            Console.WriteLine($"[AppViewModel] Verification exception for {proj?.Name}: {vex}");
 
                             if (NotificationsEnabled)
                             {
@@ -919,7 +995,6 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AppViewModel] Backup-all failed: {ex}");
 
                 if (NotificationsEnabled)
                 {
@@ -978,6 +1053,8 @@ namespace VaultSync.UI.ViewModels
             var backup     = allBackups.FirstOrDefault(b => b.Id == backupId);
             if (backup is null)
                 return;
+            var snapshotId = backup.SnapshotId;
+            var projectId  = backup.ProjectId;
 
             var cfg        = AppConfigStore.Load();
             var backupRoot = cfg.Backups.BackupRoot;
@@ -1005,19 +1082,20 @@ namespace VaultSync.UI.ViewModels
                             File.Delete(fullPath);
                         }
 
+                    }
+                    catch (IOException)
+                    {
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    finally
+                    {
                         _repo.DeleteBackupById(backupId);
-                    }
-                    catch (IOException ex)
-                    {
-                        Console.WriteLine($"[OnDeleteBackupRequested] IOException while deleting '{fullPath}': {ex.Message}");
-                    }
-                    catch (UnauthorizedAccessException ex)
-                    {
-                        Console.WriteLine($"[OnDeleteBackupRequested] UnauthorizedAccessException while deleting '{fullPath}': {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[OnDeleteBackupRequested] Unexpected exception while deleting '{fullPath}': {ex}");
+                        TryDeleteSnapshotIfOrphan(projectId, snapshotId);
                     }
                 });
 
@@ -1072,14 +1150,12 @@ namespace VaultSync.UI.ViewModels
             if (!int.TryParse(snapshot.Id, out var backupId))
                 return;
 
-            Console.WriteLine($"[AppViewModel] RestoreBackupRequested for backupId={backupId}.");
 
             // Look up the backup row so we know which project and path this backup belongs to.
             var allBackups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
             var backup     = allBackups.FirstOrDefault(b => b.Id == backupId);
             if (backup is null)
             {
-                Console.WriteLine($"[AppViewModel] RestoreBackupRequested: no backup found with Id={backupId}.");
                 return;
             }
 
@@ -1087,7 +1163,6 @@ namespace VaultSync.UI.ViewModels
             var backupRoot = cfg.Backups.BackupRoot;
             if (string.IsNullOrWhiteSpace(backupRoot))
             {
-                Console.WriteLine("[AppViewModel] RestoreBackupRequested: backup root is not configured.");
                 return;
             }
 
@@ -1097,20 +1172,17 @@ namespace VaultSync.UI.ViewModels
             var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == backup.ProjectId);
             if (project is null)
             {
-                Console.WriteLine($"[AppViewModel] RestoreBackupRequested: no project found with Id={backup.ProjectId}.");
                 return;
             }
 
             var projectRoot = project.RootPath;
             if (string.IsNullOrWhiteSpace(projectRoot))
             {
-                Console.WriteLine($"[AppViewModel] RestoreBackupRequested: project '{project.Name}' has no root path.");
                 return;
             }
 
             if (!Directory.Exists(backupFullPath))
             {
-                Console.WriteLine($"[AppViewModel] RestoreBackupRequested: backup folder '{backupFullPath}' does not exist.");
                 return;
             }
 
@@ -1121,15 +1193,12 @@ namespace VaultSync.UI.ViewModels
             {
                 await Task.Run(() =>
                 {
-                    Console.WriteLine($"[AppViewModel] Restoring backup '{backupFullPath}' to '{projectRoot}'.");
                     RestoreDirectory(backupFullPath, projectRoot);
                 });
 
-                Console.WriteLine($"[AppViewModel] Restore completed for project '{project.Name}'.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AppViewModel] Restore failed for project '{project.Name}': {ex}");
 
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -1188,11 +1257,9 @@ namespace VaultSync.UI.ViewModels
             if (item is null)
                 return;
 
-            Console.WriteLine($"[AppViewModel] Cancel requested for project '{item.ProjectName}' (Id={item.ProjectId}).");
 
             if (!int.TryParse(item.ProjectId, out var projectId))
             {
-                Console.WriteLine($"[AppViewModel] Unable to parse ProjectId '{item.ProjectId}' for cancellation.");
                 return;
             }
 
@@ -1232,18 +1299,15 @@ namespace VaultSync.UI.ViewModels
             // Don't start if something is already running
             if (_backupsViewModel.IsBusy)
             {
-                Console.WriteLine("[AppViewModel] Tray project-backup ignored because a backup is already in progress.");
                 return;
             }
 
             var projectItem = _backupsViewModel.ProjectBackups.FirstOrDefault(p => p.Id == projectId);
             if (projectItem == null)
             {
-                Console.WriteLine($"[AppViewModel] Tray project-backup: no ProjectBackupItem found for Id={projectId}.");
                 return;
             }
 
-            Console.WriteLine($"[AppViewModel] Tray: backup requested for project '{projectItem.Name}' (Id={projectItem.Id}).");
 
             // When triggered from tray, navigate to the Backups page so the user
             // immediately sees the running backup card (when the window is shown).
@@ -1263,11 +1327,9 @@ namespace VaultSync.UI.ViewModels
             // Do not start if something is already running.
             if (_backupsViewModel.IsBusy)
             {
-                Console.WriteLine("[AppViewModel] Tray backup-all ignored because a backup is already in progress.");
                 return;
             }
 
-            Console.WriteLine("[AppViewModel] Tray: backup all projects requested.");
 
             // When triggered from tray, navigate to the Backups page so the user
             // immediately sees the running backup cards (when the window is shown).
@@ -1289,7 +1351,6 @@ namespace VaultSync.UI.ViewModels
         /// </summary>
         public void RequestBackupSelectedProjectFromTray()
         {
-            Console.WriteLine("[AppViewModel] Tray: backup selected project requested.");
 
             // For now, just bring the Backups page into view.
             if (NavigateBackups?.CanExecute(null) == true)
@@ -1498,12 +1559,128 @@ public IReadOnlyList<ProjectItemViewModel> GetProjectsForSnapshotTray()
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AppViewModel] NAS monitor failed: {ex.Message}");
             }
             finally
             {
                 Interlocked.Exchange(ref _nasMonitorInFlight, 0);
             }
+        }
+
+        private void TryDeleteSnapshotIfOrphan(int projectId, int snapshotId)
+        {
+            try
+            {
+                // If any other backup references this snapshot, keep it.
+                var remaining = _repo.GetBackupsForProject(projectId)
+                    .Any(b => b.SnapshotId == snapshotId);
+                if (remaining)
+                    return;
+
+                var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
+                if (project is null)
+                    return;
+
+                _repo.DeleteSnapshotsById(project.Name, new[] { snapshotId });
+            }
+            catch
+            {
+                // Ignore snapshot cleanup failures for now.
+            }
+        }
+
+        private void OnBackupProtectionChanged(int backupId, bool isProtected)
+        {
+            try
+            {
+                _repo.SetBackupProtection(backupId, isProtected);
+            }
+            catch
+            {
+                // swallow for now; could surface notification later
+            }
+        }
+
+        private bool ShouldBlockForDriveHealth(string projectPath, string backupPath, out string message, out NotificationSeverity severity)
+        {
+            message  = string.Empty;
+            severity = NotificationSeverity.Warning;
+
+            if (_settingsViewModel?.ShowDriveHealthWarnings != true)
+                return false;
+
+            var results = new List<DriveHealthResult>
+            {
+                _driveHealthService.CheckPath(projectPath),
+                _driveHealthService.CheckPath(backupPath)
+            };
+
+            DriveHealthResult? issue = null;
+            foreach (var r in results)
+            {
+                if (r.Status == DriveHealthStatus.Failing)
+                {
+                    issue = r;
+                    break;
+                }
+
+                if (r.Status == DriveHealthStatus.Warning && issue is null)
+                {
+                    issue = r;
+                }
+            }
+
+            if (issue is null || issue.Status == DriveHealthStatus.Unknown || issue.Status == DriveHealthStatus.Healthy)
+                return false;
+
+            var driveLabel = issue.DriveId ?? issue.Path ?? "drive";
+            severity = issue.Status == DriveHealthStatus.Failing
+                ? NotificationSeverity.Error
+                : NotificationSeverity.Warning;
+
+            message = issue.Status == DriveHealthStatus.Failing
+                ? $"Backup skipped: drive health failing on {driveLabel} ({issue.Message})."
+                : $"Drive health warning on {driveLabel}: {issue.Message}.";
+
+            return issue.Status == DriveHealthStatus.Failing;
+        }
+
+        private void ShowDriveHealthNotification(string message, NotificationSeverity severity)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            if (!NotificationsEnabled)
+                return;
+
+            var title = severity == NotificationSeverity.Error
+                ? "Backup blocked: drive health"
+                : "Drive health warning";
+
+            GlobalNotificationCenter.Instance.Show(
+                message,
+                severity,
+                title);
+
+            if (ShouldRaiseSystemNotification)
+            {
+                GlobalNotificationCenter.Instance.ShowSystem(
+                    message,
+                    severity,
+                    title);
+            }
+        }
+
+        /// <summary>
+        /// Returns true when backups should be paused because the device is on battery and the user enabled the setting.
+        /// </summary>
+        private bool ShouldPauseBackupsForBattery(out string reason)
+        {
+            reason = "Backups paused on battery power.";
+
+            if (_settingsViewModel?.PauseBackupsOnBattery != true)
+                return false;
+
+            return _powerStatusProvider.GetPowerState() == PowerState.OnBattery;
         }
     }
 }

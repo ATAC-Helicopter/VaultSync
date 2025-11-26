@@ -40,11 +40,9 @@ namespace VaultSync.UI.Notifications
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[WindowsSystemNotificationService] Windows toast failed: {ex}");
             }
 #else
             // Non-Windows targets fall back to logging only
-            Console.WriteLine($"[WindowsSystemNotificationService][Stub] {title}: {message}");
 #endif
         }
     }

@@ -24,12 +24,12 @@ It provides fast snapshots, incremental backups, filtering via presets, and a mo
 - Works headless for servers or automation scripts  
 
 ### Desktop UI (Avalonia)
-- Modern dashboard for tracking all projects  
-- One‑click snapshots & backups  
-- Real‑time progress overlays  
-- Project health indicators  
-- Snapshot history & per‑project statistics  
-- Fully cross‑platform (macOS, Windows, Linux)
+- Modern dashboard (projects, backups, storage usage)  
+- One-click snapshots & backups (auto + manual)  
+- Live progress overlays and per-project status cards  
+- Backup history with "Keep" (protected) backups that bypass retention  
+- Disk health (best-effort SMART) and backup retention controls  
+- Cross-platform: macOS, Windows, Linux
 
 ### Smart Presets
 Presets define what gets included/excluded (like `.gitignore`).  
@@ -51,10 +51,12 @@ You can also create your own, or choose **No preset**.
 
 ### Backup System
 - Backup any snapshot to local or external storage  
-- Timestamped folders (e.g., `2025-11-16_20-41-43`)  
-- Per‑project or “backup all”  
+- Timestamped folders (e.g., 2025-11-16_20-41-43)  
+- Per-project or "backup all"  
 - Automatic backups (optional)  
-- Progress, file count, and failure handling (NAS sleep detection, retries coming soon)
+- Progress, file count, and failure handling (NAS sleep detection, retries coming soon)  
+- Retention: keep the newest N backups per project; protected ("Keep") backups are never pruned  
+- Integrated snapshot creation: every backup captures a fresh snapshot; orphan snapshots are cleaned up when backups are pruned
 
 ---
 
@@ -125,3 +127,4 @@ Built with:
 - Avalonia UI  
 - SQLite  
 - rsync / robocopy 
+

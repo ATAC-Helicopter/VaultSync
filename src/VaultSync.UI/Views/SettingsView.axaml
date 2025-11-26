@@ -4,6 +4,44 @@
              x:Class="VaultSync.UI.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
+  <UserControl.Styles>
+    <!-- Inputs -->
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="10,6" />
+    </Style>
+    <Style Selector="TextBox:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource InputBorderFocusedBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox">
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="10,6" />
+    </Style>
+    <Style Selector="ComboBox:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource InputBorderFocusedBrush}" />
+    </Style>
+
+    <!-- Ghost button -->
+    <Style Selector="Button.settings-ghost">
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="MinWidth" Value="0" />
+    </Style>
+    <Style Selector="Button.settings-ghost:pointerover">
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+    </Style>
+  </UserControl.Styles>
+
   <ScrollViewer VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
                 Padding="12">
@@ -71,13 +109,13 @@
                            Text="{Binding ProjectsRootPath, Mode=TwoWay}"
                            Watermark="Leave empty to use OS default" />
 
-<Button Grid.Row="1"
-        Grid.Column="1"
-        Margin="8,2,0,0"
-        Padding="10,4"
-        Click="OnBrowseProjectsRoot">
-  Browse…
-</Button>
+                  <Button Grid.Row="1"
+                          Grid.Column="1"
+                          Margin="8,2,0,0"
+                          Classes="settings-ghost"
+                          Command="{Binding BrowseProjectsRootCommand}">
+                    Browse
+                  </Button>
                 </Grid>
 
                 <!-- Resume last session -->
@@ -160,7 +198,7 @@
                   <TextBox Grid.Column="1"
                            Width="60"
                            HorizontalContentAlignment="Center"
-                           Text="{Binding AutoBackupIntervalMinutes, Mode=TwoWay}"
+                           Text="{Binding AutoBackupIntervalMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            HorizontalAlignment="Right" />
                 </Grid>
 
@@ -176,7 +214,7 @@
                   <TextBox Grid.Column="1"
                            Width="60"
                            HorizontalContentAlignment="Center"
-                           Text="{Binding MaxSnapshotsPerProject, Mode=TwoWay}"
+                           Text="{Binding MaxSnapshotsPerProject, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            HorizontalAlignment="Right" />
                 </Grid>
 
@@ -202,13 +240,13 @@
                            Text="{Binding BackupLocationPath, Mode=TwoWay}"
                            Watermark="Leave empty to store backups next to projects" />
 
-<Button Grid.Row="1"
-        Grid.Column="1"
-        Margin="8,2,0,0"
-        Padding="10,4"
-        Click="OnBrowseBackupLocation">
-  Browse…
-</Button>
+                  <Button Grid.Row="1"
+                          Grid.Column="1"
+                          Margin="8,2,0,0"
+                          Classes="settings-ghost"
+                          Command="{Binding BrowseBackupLocationCommand}">
+                    Browse
+                  </Button>
                 </Grid>
 
                 <!-- Compression -->
@@ -381,7 +419,7 @@
                                   Content="Remember credentials on this device"
                                   IsChecked="{Binding RememberNetworkCredentials, Mode=TwoWay}" />
                         <Button Grid.Column="1"
-                                Padding="10,4"
+                                Classes="settings-ghost"
                                 Command="{Binding TestNetworkConnectionCommand}">
                           Test connection
                         </Button>
@@ -582,7 +620,7 @@
                             Margin="0,10,0,0"
                             Spacing="8">
                   <Button Command="{Binding ResetToDefaultsCommand}"
-                          Padding="10,4">
+                          Classes="settings-ghost">
                     Reset to defaults
                   </Button>
                 </StackPanel>
@@ -607,7 +645,7 @@
 
                 <StackPanel Spacing="6">
                   <Button Command="{Binding ClearLocalCacheCommand}"
-                          Padding="10,4">
+                          Classes="settings-ghost">
                     Clear local cache
                   </Button>
                   <TextBlock Text="Removes cached metadata and state. Project data is not deleted."
@@ -618,7 +656,7 @@
                 <StackPanel Spacing="6"
                             Margin="0,4,0,0">
                   <Button Command="{Binding ForgetAllProjectsCommand}"
-                          Padding="10,4">
+                          Classes="settings-ghost">
                     Forget all projects
                   </Button>
                   <TextBlock Text="Resets VaultSync's internal database (projects, snapshots, backups). No files on disk or NAS are removed."

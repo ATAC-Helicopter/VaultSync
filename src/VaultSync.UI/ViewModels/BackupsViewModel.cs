@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
+using System.ComponentModel;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using VaultSync.Core.Models;
 using VaultSync.Core.Config;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -166,6 +169,46 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private string _backupDiskDriveLabel = "Drive: unknown";
+        public string BackupDiskDriveLabel
+        {
+            get => _backupDiskDriveLabel;
+            private set
+            {
+                if (SetProperty(ref _backupDiskDriveLabel, value))
+                {
+                    OnPropertyChanged(nameof(BackupDiskDriveLabel));
+                }
+            }
+        }
+
+        // Backup disk SMART/health display
+        private string _backupDiskHealthText = "Health: not available";
+        public string BackupDiskHealthText
+        {
+            get => _backupDiskHealthText;
+            private set
+            {
+                if (SetProperty(ref _backupDiskHealthText, value))
+                {
+                    OnPropertyChanged(nameof(BackupDiskHealthText));
+                }
+            }
+        }
+
+        private IBrush _backupDiskHealthBrush = Brushes.Gray;
+        public IBrush BackupDiskHealthBrush
+        {
+            get => _backupDiskHealthBrush;
+            private set
+            {
+                if (SetProperty(ref _backupDiskHealthBrush, value))
+                {
+                    OnPropertyChanged(nameof(BackupDiskHealthBrush));
+                }
+            }
+        }
+
         // Notification state for the Backups view (reusable notification model)
         public NotificationState Notification { get; } = new NotificationState();
 
@@ -285,11 +328,13 @@ namespace VaultSync.UI.ViewModels
         public event Action<BackupSnapshotItem?>? RestoreBackupRequested;
         public event Action<BackupSnapshotItem?>? DeleteBackupRequested;
         public event Action<BackupProgressItem?>? CancelActiveBackupRequested;
+        public event Action<int, bool>? BackupProtectionChanged;
 
         // Commands
         public ICommand CreateBackupCommand { get; }
         public ICommand RestoreBackupCommand { get; }
         public ICommand DeleteBackupCommand { get; }
+        public ICommand ToggleBackupProtectionCommand { get; }
 
         public ICommand BackupProjectCommand { get; }
         public ICommand ShowProjectHistoryCommand { get; }
@@ -305,6 +350,7 @@ namespace VaultSync.UI.ViewModels
             // Global history actions
             RestoreBackupCommand = new RelayCommand(p => RestoreBackup(p as BackupSnapshotItem));
             DeleteBackupCommand  = new RelayCommand(p => DeleteBackup(p as BackupSnapshotItem));
+            ToggleBackupProtectionCommand = new RelayCommand(p => ToggleBackupProtection(p as BackupSnapshotItem));
 
             // Per-project actions
             BackupProjectCommand      = new RelayCommand(p => BackupProject(p as ProjectBackupItem));
@@ -347,6 +393,19 @@ namespace VaultSync.UI.ViewModels
 
             // Let external code handle deletion (DB row + files), then refresh this VM.
             DeleteBackupRequested?.Invoke(snapshot);
+        }
+
+        private void ToggleBackupProtection(BackupSnapshotItem? item)
+        {
+            if (item is null)
+                return;
+
+            if (!int.TryParse(item.Id, out var backupId))
+                return;
+
+            var newValue = item.IsProtected;
+
+            BackupProtectionChanged?.Invoke(backupId, newValue);
         }
 
         // ---------- Per-project operations ----------
@@ -559,7 +618,10 @@ namespace VaultSync.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(_currentProjectIdFilter))
                 source = source.Where(s => s.ProjectId == _currentProjectIdFilter);
 
-            var filteredList = source.ToList();
+            var filteredList = source
+                .GroupBy(s => s.Id)
+                .Select(g => g.First())
+                .ToList();
 
             ReplaceSnapshots(filteredList, forceResetCompare);
             RebuildSnapshotGroups(filteredList);
@@ -586,24 +648,34 @@ namespace VaultSync.UI.ViewModels
                     return "zzzz_" + g.Key; // unknown/global go at the end
                 });
 
+            var seenProjects = new HashSet<string>();
+
             foreach (var g in grouped)
             {
-                var ordered = g.OrderByDescending(s => s.Timestamp).ToList();
+                var key = g.Key ?? string.Empty;
+                if (!seenProjects.Add(key))
+                    continue; // guard against duplicate groups for the same project
+
+                var ordered = g
+                    .GroupBy(s => s.Id)
+                    .Select(grp => grp.First())
+                    .OrderByDescending(s => s.Timestamp)
+                    .ToList();
                 long totalBytes = ordered.Sum(s => s.SizeBytes);
 
                 string projectName;
-                if (string.IsNullOrWhiteSpace(g.Key))
+                if (string.IsNullOrWhiteSpace(key))
                 {
                     projectName = "Global snapshots";
                 }
-                else if (!projectNameLookup.TryGetValue(g.Key, out projectName!))
+                else if (!projectNameLookup.TryGetValue(key, out projectName!))
                 {
                     projectName = "Unknown project";
                 }
 
                 var groupVm = new SnapshotProjectGroup
                 {
-                    ProjectId          = g.Key,
+                    ProjectId          = key,
                     ProjectName        = projectName,
                     Summary            = $"{ordered.Count} backup{(ordered.Count == 1 ? string.Empty : "s")}",
                     TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes)
@@ -614,6 +686,7 @@ namespace VaultSync.UI.ViewModels
 
                 SnapshotGroups.Add(groupVm);
             }
+
         }
 
         /// <summary>
@@ -643,16 +716,65 @@ namespace VaultSync.UI.ViewModels
                     DashboardViewModel.ComputeBackupDiskUsage(config);
 
                 UpdateBackupDiskUsage(usedPercent, freeText, thresholdText, isBelowThreshold);
+                BackupDiskDriveLabel = $"Drive: {FormatDriveLabel(config.Backups.BackupRoot)}";
+
+                // Best-effort SMART/health probe for the backup path
+                var healthService = new DriveHealthService();
+                var backupPath = config.Backups.BackupRoot ?? string.Empty;
+                var health = healthService.CheckPath(backupPath);
+
+                var (text, brush) = health.Status switch
+                {
+                    DriveHealthStatus.Healthy => ($"Health ({BackupDiskDriveLabel}): OK ({health.Message})", (IBrush)new SolidColorBrush(Colors.LimeGreen)),
+                    DriveHealthStatus.Warning => ($"Health warning ({BackupDiskDriveLabel}): {health.Message}", (IBrush)new SolidColorBrush(Colors.Orange)),
+                    DriveHealthStatus.Failing => ($"Health failing ({BackupDiskDriveLabel}): {health.Message}", (IBrush)new SolidColorBrush(Colors.Tomato)),
+                    _ => ($"Health ({BackupDiskDriveLabel}): not available", (IBrush)new SolidColorBrush(Colors.Gray))
+                };
+
+                BackupDiskHealthText  = text;
+                BackupDiskHealthBrush = brush;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[BackupsViewModel] Failed to compute backup disk usage: {ex}");
                 UpdateBackupDiskUsage(
                     0d,
                     "Backup storage usage unavailable",
                     string.Empty,
                     false);
+
+                BackupDiskDriveLabel  = "Drive: unknown";
+                BackupDiskHealthText  = "Health (Drive: unknown): not available";
+                BackupDiskHealthBrush = new SolidColorBrush(Colors.Gray);
             }
+        }
+
+        private static string FormatDriveLabel(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return "unknown";
+
+            try
+            {
+                var root = System.IO.Path.GetPathRoot(path);
+                if (!string.IsNullOrWhiteSpace(root))
+                {
+                    return root.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                }
+            }
+            catch
+            {
+                // ignore and fall back
+            }
+
+            // UNC paths: try to take \\server\share
+            if (path.StartsWith("\\\\") || path.StartsWith("//"))
+            {
+                var parts = path.Trim('\\', '/').Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2)
+                    return $"\\\\{parts[0]}\\{parts[1]}";
+            }
+
+            return path;
         }
 
         // ---------- Summary computation ----------
@@ -671,7 +793,6 @@ namespace VaultSync.UI.ViewModels
                 _         => NotificationSeverity.Info
             };
 
-            Console.WriteLine($"[BackupsViewModel] SHOW NOTIFICATION: {sev} - {message}");
             Notification.Show(message, sev);
         }
 
@@ -853,10 +974,10 @@ namespace VaultSync.UI.ViewModels
                 // base height 4–8px plus up to ~40px for busy days
                 double height = count == 0 ? 4 : 8 + normalized * 40;
 
-                // Accent color, dim if no snapshots
+                // Accent color, dim if no snapshots (use immutable brushes so we can build off UI thread)
                 IBrush brush = count == 0
-                    ? new SolidColorBrush(Color.Parse("#22FFFFFF"))
-                    : new SolidColorBrush(Color.Parse("#3A7AFE"));
+                    ? new ImmutableSolidColorBrush(Color.Parse("#22FFFFFF"))
+                    : new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
 
                 SnapshotActivity.Add(new SnapshotActivityPoint
                 {
@@ -882,7 +1003,10 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(ShowProjectAvatars));
 
             var projectList = projects.ToList();
-            var backupList  = backups.ToList();
+            var backupList  = backups
+                .GroupBy(b => b.Id)
+                .Select(g => g.First())
+                .ToList();
 
             ProjectBackups.Clear();
             _allSnapshots.Clear();
@@ -933,9 +1057,10 @@ namespace VaultSync.UI.ViewModels
                         : "Manual",
                     Status    = "Completed",
                     Label     = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase)
-                        ? "Auto snapshot"
-                        : "Manual snapshot",
-                    ProjectId = project?.Id.ToString()
+                        ? "Auto backup"
+                        : "Manual backup",
+                    ProjectId = project?.Id.ToString(),
+                    IsProtected = backup.IsProtected
                 };
 
                 _allSnapshots.Add(uiItem);
@@ -950,11 +1075,14 @@ namespace VaultSync.UI.ViewModels
 
     // ---------- Models ----------
 
-    public class BackupSnapshotItem
+    public class BackupSnapshotItem : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         public string Id { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
         public long SizeBytes { get; set; }
+        private bool _isProtected;
 
         /// <summary>Snapshot type, e.g. "Auto" or "Manual".</summary>
         public string Type { get; set; } = "Manual";
@@ -969,6 +1097,19 @@ namespace VaultSync.UI.ViewModels
         public string? ProjectId { get; set; }
 
         public string SizeFormatted => FormatSize(SizeBytes);
+
+        public bool IsProtected
+        {
+            get => _isProtected;
+            set
+            {
+                if (_isProtected != value)
+                {
+                    _isProtected = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsProtected)));
+                }
+            }
+        }
 
         // ---------- Tag pill background color ----------
 
@@ -1177,7 +1318,7 @@ namespace VaultSync.UI.ViewModels
         public string DayLabel { get; set; } = string.Empty;
         public int Count { get; set; }
         public double BarHeight { get; set; }
-        public IBrush BarBrush { get; set; } = new SolidColorBrush(Color.Parse("#3A7AFE"));
+        public IBrush BarBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
     }
 
     /// <summary>

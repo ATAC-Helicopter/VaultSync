@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.IO;
+using System.Threading.Tasks;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
 using Avalonia.Media; // for Brush in legend + activity
+using Avalonia.Media.Immutable;
+using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -37,6 +40,7 @@ namespace VaultSync.UI.ViewModels
         public ISeries[] BackupUsageSeries { get; private set; } = Array.Empty<ISeries>();
         public Axis[] BackupUsageXAxes { get; private set; } = Array.Empty<Axis>();
         public Axis[] BackupUsageYAxes { get; private set; } = Array.Empty<Axis>();
+        public bool HasBackupUsageSegments => BackupUsageSegments.Count > 0;
 
         public int ProjectCount
         {
@@ -236,16 +240,16 @@ namespace VaultSync.UI.ViewModels
                 repo.EnsureSchema();
 
                 var projects = repo.GetAllProjects().ToList();
-                var allSnapshots = repo.GetAllSnapshots().ToList();
                 var allBackups = repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+                var allSnapshots = repo.GetAllSnapshots().ToList();
 
                 // KPIs
                 ProjectCount = projects.Count;
-                SnapshotCount = allSnapshots.Count;
+                SnapshotCount = allBackups.Count;
 
                 var weekAgoUtc = DateTime.UtcNow.AddDays(-7);
-                var snapshotsThisWeek = allSnapshots.Where(s => s.CreatedUtc >= weekAgoUtc).ToList();
-                SnapshotsHint = $"{snapshotsThisWeek.Count} this week";
+                var backupsThisWeek = allBackups.Where(b => b.CreatedUtc >= weekAgoUtc).ToList();
+                SnapshotsHint = $"{backupsThisWeek.Count} this week";
 
                 // Storage: sum latest snapshot per project and capture per-project slices.
                 long totalLatestBytes = 0;
@@ -319,8 +323,11 @@ namespace VaultSync.UI.ViewModels
                     Color.Parse("#9B6BFF")
                 };
 
-                var projectDotBrushes = new Dictionary<int, Brush>();
+                var projectDotBrushes = new Dictionary<int, IBrush>();
                 var paletteIndex = 0;
+
+                async Task<IBrush> CreateBrushAsync(Color color) =>
+                    await Dispatcher.UIThread.InvokeAsync(() => (IBrush)new SolidColorBrush(color));
 
                 foreach (var a in activities
                              .OrderByDescending(a => a.WhenUtc)
@@ -335,27 +342,28 @@ namespace VaultSync.UI.ViewModels
                     var title = project != null ? project.Name : "Unknown project";
                     var when = a.WhenUtc.ToLocalTime().ToString("g");
 
-                    Brush dotBrush;
+                    IBrush dotBrush;
                     if (project != null)
                     {
                         if (projectDotBrushes.TryGetValue(project.Id, out var cached))
                         {
-                            dotBrush = cached ?? new SolidColorBrush(Colors.Gray);
+                            dotBrush = cached ?? await CreateBrushAsync(Colors.Gray);
                         }
                         else
                         {
                             var color = projectPalette[paletteIndex % projectPalette.Length];
-                            dotBrush = new SolidColorBrush(color);
+                            dotBrush = await CreateBrushAsync(color);
                             projectDotBrushes[project.Id] = dotBrush;
                             paletteIndex++;
                         }
                     }
                     else
                     {
-                        dotBrush = new SolidColorBrush(Colors.Gray);
+                        dotBrush = await CreateBrushAsync(Colors.Gray);
                     }
 
-                    ActivityItems.Add(new ActivityItem(title, a.Subtitle, when, dotBrush));
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                        ActivityItems.Add(new ActivityItem(title, a.Subtitle, when, dotBrush)));
                 }
 
                 // Backup chart: backups per day for the last 7 days (oldest on the left, today on the right).
@@ -367,9 +375,9 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 Array.Clear(_snapshotCountsByDay, 0, _snapshotCountsByDay.Length);
-                foreach (var s in snapshotsThisWeek)
+                foreach (var b in backupsThisWeek)
                 {
-                    var dayIndex = (int)(s.CreatedUtc.Date - startDate).TotalDays;
+                    var dayIndex = (int)(b.CreatedUtc.Date - startDate).TotalDays;
                     if (dayIndex < 0 || dayIndex >= _snapshotCountsByDay.Length)
                         continue;
 
@@ -384,7 +392,6 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[DashboardViewModel] Refresh failed, falling back to demo data: " + ex);
                 BuildDemoSeriesIfNeeded();
             }
         }
@@ -440,7 +447,7 @@ namespace VaultSync.UI.ViewModels
             };
 
             var series = new List<ISeries>();
-            var legend = new List<LegendItem>();
+                var legend = new List<LegendItem>();
 
             for (int i = 0; i < perProject.Count; i++)
             {
@@ -460,7 +467,7 @@ namespace VaultSync.UI.ViewModels
 
                 legend.Add(new LegendItem(
                     $"{project.Name} {FormatBytes(bytes)}",
-                    new SolidColorBrush(Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue))));
+                    new ImmutableSolidColorBrush(Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue))));
             }
 
             StorageSeries = series.ToArray();
@@ -593,7 +600,7 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
             segments.Add(new BackupUsageSegment(
                 "Other",
                 otherPercent,
-                new SolidColorBrush(Color.Parse("#8E8E93"))));
+                new ImmutableSolidColorBrush(Color.Parse("#8E8E93"))));
         }
 
         // 2) One segment per project for its latest snapshot size, as percent of total disk.
@@ -611,11 +618,12 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
                 segments.Add(new BackupUsageSegment(
                     project.Name,
                     projectPercent,
-                    new SolidColorBrush(color)));
+                    new ImmutableSolidColorBrush(color)));
             }
         }
 
         BackupUsageSegments = segments;
+        OnPropertyChanged(nameof(HasBackupUsageSegments));
 
         // Build stacked RowSeries for the colored bar (Other + VaultSync projects).
         if (segments.Count == 0)
@@ -639,6 +647,7 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
             };
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(HasBackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
             OnPropertyChanged(nameof(BackupUsageYAxes));
@@ -667,6 +676,7 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
             };
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(HasBackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
             OnPropertyChanged(nameof(BackupUsageYAxes));
@@ -717,13 +727,13 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
         };
 
         OnPropertyChanged(nameof(BackupUsageSegments));
+        OnPropertyChanged(nameof(HasBackupUsageSegments));
         OnPropertyChanged(nameof(BackupUsageSeries));
         OnPropertyChanged(nameof(BackupUsageXAxes));
         OnPropertyChanged(nameof(BackupUsageYAxes));
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[DashboardViewModel] Failed to build backup usage bar: {ex}");
 
         BackupUsageSegments = Array.Empty<BackupUsageSegment>();
         BackupUsageSeries   = Array.Empty<ISeries>();
@@ -808,7 +818,6 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DashboardViewModel] Failed to compute backup disk usage: {ex}");
                 return (
                     0d,
                     "Backup storage usage unavailable",
@@ -864,19 +873,19 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
         }
 
         // Bindables
-        public record LegendItem(string Label, Brush Brush);
-        public record BackupUsageSegment(string Label, double SizeBytes, Brush Brush);
+        public record LegendItem(string Label, IBrush Brush);
+        public record BackupUsageSegment(string Label, double SizeBytes, IBrush Brush);
 
         public enum Dot { Green, Blue, Purple, Gray }
 
         public class ActivityItem
         {
             // New constructor: allow passing an explicit brush (used when we want per-project colors).
-            public ActivityItem(string title, string subtitle, string when, Brush dotBrush)
+            public ActivityItem(string title, string subtitle, string when, IBrush dotBrush)
             {
-                Title = title;
+                Title    = title;
                 Subtitle = subtitle;
-                When = when;
+                When     = when;
                 DotBrush = dotBrush;
             }
 
@@ -885,11 +894,11 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
                 : this(title, subtitle, when,
                     dot switch
                     {
-                        Dot.Green  => new SolidColorBrush(Color.Parse("#2ECC71")),
-                        Dot.Blue   => new SolidColorBrush(Color.Parse("#1ABCFE")),
-                        Dot.Purple => new SolidColorBrush(Color.Parse("#8E77FF")),
-                        Dot.Gray   => new SolidColorBrush(Colors.Gray),
-                        _          => new SolidColorBrush(Colors.Gray)
+                        Dot.Green  => new ImmutableSolidColorBrush(Color.Parse("#2ECC71")),
+                        Dot.Blue   => new ImmutableSolidColorBrush(Color.Parse("#1ABCFE")),
+                        Dot.Purple => new ImmutableSolidColorBrush(Color.Parse("#8E77FF")),
+                        Dot.Gray   => new ImmutableSolidColorBrush(Colors.Gray),
+                        _          => new ImmutableSolidColorBrush(Colors.Gray)
                     })
             {
             }
@@ -897,7 +906,7 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
             public string Title { get; }
             public string Subtitle { get; }
             public string When { get; }
-            public Brush DotBrush { get; }
+            public IBrush DotBrush { get; }
         }
     }
 }

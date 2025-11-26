@@ -140,6 +140,9 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
           ON files(snapshot_id, rel_path);
     """);
+
+    // Migrations: add missing columns
+    EnsureColumnExists("backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
 }
 
         /// <summary>
@@ -416,15 +419,15 @@ DELETE FROM sqlite_sequence;";
         }
         // ---------- Backups ----------
 
-        public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath)
+        public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath, bool isProtected = false)
         {
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
 
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(project_id, snapshot_id, created_utc, type, total_bytes, path)
-                VALUES(@ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path);
+                INSERT INTO backups(project_id, snapshot_id, created_utc, type, total_bytes, path, is_protected)
+                VALUES(@ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @IsProtected);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -434,7 +437,8 @@ DELETE FROM sqlite_sequence;";
                     CreatedUtc = created,
                     Type       = type,
                     TotalBytes = totalBytes,
-                    Path       = relativePath
+                    Path       = relativePath,
+                    IsProtected = isProtected ? 1 : 0
                 });
         }
 
@@ -450,7 +454,8 @@ DELETE FROM sqlite_sequence;";
                   created_utc as CreatedUtc,
                   type,
                   total_bytes as TotalBytes,
-                  path
+                  path,
+                  is_protected as IsProtected
                 FROM backups
                 WHERE project_id = @pid
                 ORDER BY created_utc DESC
@@ -471,7 +476,8 @@ DELETE FROM sqlite_sequence;";
                   created_utc as CreatedUtc,
                   type,
                   total_bytes as TotalBytes,
-                  path
+                  path,
+                  is_protected as IsProtected
                 FROM backups
                 WHERE project_id = @pid
                 ORDER BY created_utc DESC;
@@ -504,7 +510,8 @@ DELETE FROM sqlite_sequence;";
                   created_utc as CreatedUtc,
                   type,
                   total_bytes as TotalBytes,
-                  path
+                  path,
+                  is_protected as IsProtected
                 FROM backups
                 WHERE created_utc >= @from AND created_utc <= @to
                 ORDER BY created_utc DESC;
@@ -537,7 +544,8 @@ DELETE FROM sqlite_sequence;";
                   created_utc as CreatedUtc,
                   type,
                   total_bytes as TotalBytes,
-                  path
+                  path,
+                  is_protected as IsProtected
                 FROM backups
                 ORDER BY created_utc DESC
                 LIMIT 1;
@@ -550,11 +558,31 @@ DELETE FROM sqlite_sequence;";
             return c.ExecuteScalar<int>("SELECT COUNT(*) FROM backups;");
         }
 
-        public long GetTotalBackupBytes()
+    public long GetTotalBackupBytes()
+    {
+        using var c = Open();
+        return c.ExecuteScalar<long>("SELECT COALESCE(SUM(total_bytes), 0) FROM backups;");
+    }
+
+    private void EnsureColumnExists(string table, string column, string alterSql)
+    {
+        try
         {
             using var c = Open();
-            return c.ExecuteScalar<long>("SELECT COALESCE(SUM(total_bytes), 0) FROM backups;");
+            var cols = c.Query($"PRAGMA table_info({table});")
+                        .Select(row => (string)row.name)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (!cols.Contains(column))
+            {
+                c.Execute(alterSql);
+            }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SqliteRepository] Failed to ensure column {column} on {table}: {ex.Message}");
+        }
+    }
 
         public (int autoCount, int manualCount) GetBackupTypeCounts()
         {
@@ -578,6 +606,12 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             c.Execute("DELETE FROM backups WHERE id=@id;", new { id = backupId });
+        }
+
+        public void SetBackupProtection(int backupId, bool isProtected)
+        {
+            using var c = Open();
+            c.Execute("UPDATE backups SET is_protected=@p WHERE id=@id;", new { id = backupId, p = isProtected ? 1 : 0 });
         }
     }
 

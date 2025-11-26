@@ -12,8 +12,6 @@ namespace VaultSync.UI.Notifications
     {
         public void ShowSystemNotification(NotificationRequest request)
         {
-            Console.WriteLine(
-                $"[SystemNotification][{request.Severity}] {request.Title ?? "(no title)"}: {request.Message}");
         }
     }
 }

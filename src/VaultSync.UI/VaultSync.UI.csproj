@@ -9,6 +9,10 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Disable Avalonia telemetry task (skip UsedAvaloniaProducts) to avoid build log write failures -->
+    <UsedAvaloniaProducts></UsedAvaloniaProducts>
+    <!-- Avoid shared compiler server to sidestep temp permission issues -->
+    <UseSharedCompilation>false</UseSharedCompilation>
   </PropertyGroup>
 
   <!-- Enable WINDOWS constant for the Windows TFM so #if WINDOWS blocks compile -->

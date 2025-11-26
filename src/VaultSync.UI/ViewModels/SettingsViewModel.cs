@@ -4,7 +4,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using System.Linq;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
@@ -518,14 +522,48 @@ namespace VaultSync.UI
         public ICommand ForgetAllProjectsCommand { get; }
         public ICommand TestNetworkConnectionCommand { get; }
 
-        private void BrowseProjectsRoot()
+        private async void BrowseProjectsRoot()
         {
-            // TODO: folder picker.
+            var storageProvider = GetStorageProvider();
+            if (storageProvider is null)
+                return;
+
+            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose projects root",
+                AllowMultiple = false
+            });
+
+            var folder = folders?.FirstOrDefault();
+            var path = folder?.Path?.LocalPath;
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            var config = AppConfigStore.Load();
+            config.ProjectsRoot = path;
+            AppConfigStore.Save(config);
+
+            ProjectsRootPath = path;
         }
 
-        private void BrowseBackupLocation()
+        private async void BrowseBackupLocation()
         {
-            // TODO: folder picker.
+            var storageProvider = GetStorageProvider();
+            if (storageProvider is null)
+                return;
+
+            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose backup location",
+                AllowMultiple = false
+            });
+
+            var folder = folders?.FirstOrDefault();
+            var path = folder?.Path?.LocalPath;
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            BackupLocationPath = path;
         }
 
         private void ResetToDefaults()
@@ -565,5 +603,15 @@ namespace VaultSync.UI
             // TODO
         }
 
+        private static IStorageProvider? GetStorageProvider()
+        {
+            var app = Application.Current;
+            if (app?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                return desktop.MainWindow?.StorageProvider;
+            }
+
+            return null;
+        }
     }
 }

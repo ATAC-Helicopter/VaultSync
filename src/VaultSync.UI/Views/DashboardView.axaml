@@ -71,21 +71,22 @@
 
               <!-- Base blue bar (used vs total) + segmented overlay (Other + per-project VaultSync) -->
               <Grid Margin="0,4,0,0" Height="12" ClipToBounds="True"
-                    Background="{DynamicResource CardBackgroundBrush}">
+                    Background="{DynamicResource ItemBg}">
                 <!-- Base blue bar: overall used space on the backup drive -->
                 <ProgressBar Minimum="0"
                              Maximum="100"
                              Value="{Binding BackupDiskUsedPercent}"
                              Height="12"
                              Margin="0"
-                             Foreground="#4C8DFF"
-                             Background="{DynamicResource ItemBg}"/>
+                             Foreground="#8E8E93"
+                             Background="{DynamicResource Surface2}"/>
                 <!-- Stacked row chart overlay: breakdown of used space (Other + VaultSync projects) -->
                 <lvc:CartesianChart
                     Series="{Binding BackupUsageSeries}"
                     XAxes="{Binding BackupUsageXAxes}"
                     YAxes="{Binding BackupUsageYAxes}"
-                    Background="{DynamicResource CardBackgroundBrush}"
+                    Background="Transparent"
+                    IsVisible="False"
                     LegendPosition="Hidden"
                     Height="12"
                     Margin="0"

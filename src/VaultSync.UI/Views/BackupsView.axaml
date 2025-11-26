@@ -7,13 +7,11 @@
              x:CompileBindings="False">
 
   <UserControl.Styles>
-    <!-- Remove OS-style blue selection highlight for list boxes in this view -->
     <Style Selector="ListBox > ListBoxItem:selected">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
 
-    <!-- Per-project backups list: card container + selected tint -->
     <Style Selector="#PerProjectList ListBoxItem">
       <Setter Property="Template">
         <ControlTemplate TargetType="ListBoxItem">
@@ -34,7 +32,6 @@
       <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
     </Style>
 
-    <!-- Global backup history list: card container + selected tint -->
     <Style Selector="#HistoryList ListBoxItem">
       <Setter Property="Template">
         <ControlTemplate TargetType="ListBoxItem">
@@ -55,7 +52,6 @@
       <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
     </Style>
 
-    <!-- Tag pill style for snapshot type/status -->
     <Style Selector="Border.backup-tag">
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="6,2" />
@@ -63,7 +59,6 @@
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
-    <!-- Small icon circle (for per-project list) -->
     <Style Selector="Border.project-icon-circle">
       <Setter Property="Width" Value="28" />
       <Setter Property="Height" Value="28" />
@@ -74,7 +69,6 @@
       <Setter Property="Margin" Value="0,0,8,0" />
     </Style>
 
-    <!-- Card-style expander for backup history groups -->
     <Style Selector="Expander.backup-group">
       <Setter Property="Padding" Value="12" />
       <Setter Property="Margin" Value="0,0,0,8" />
@@ -86,7 +80,6 @@
                   BorderBrush="{DynamicResource CardBorderBrush}"
                   BorderThickness="1">
             <StackPanel Margin="{TemplateBinding Padding}">
-              <!-- Header row -->
               <ToggleButton x:Name="PART_Header"
                             Background="Transparent"
                             BorderBrush="Transparent"
@@ -97,8 +90,6 @@
                 <ContentPresenter Content="{TemplateBinding Header}"
                                   HorizontalAlignment="Stretch" />
               </ToggleButton>
-
-              <!-- Content -->
               <ContentPresenter x:Name="PART_ContentHost"
                                 Margin="0,8,0,0"
                                 Content="{TemplateBinding Content}"
@@ -109,7 +100,6 @@
       </Setter>
     </Style>
 
-    <!-- Remove accent/selection visuals from backup-group headers -->
     <Style Selector="Expander.backup-group ToggleButton#PART_Header">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -123,33 +113,45 @@
         </ControlTemplate>
       </Setter>
     </Style>
-
     <Style Selector="Expander.backup-group ToggleButton#PART_Header:pointerover">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
-
     <Style Selector="Expander.backup-group ToggleButton#PART_Header:pressed">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
-
     <Style Selector="Expander.backup-group ToggleButton#PART_Header:checked">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
 
-    <!-- Chevron text for backup-group expanders -->
     <Style Selector="Expander.backup-group TextBlock.chevron">
-      <Setter Property="Text" Value="âŒ„" />
+      <Setter Property="Text" Value="›" />
     </Style>
     <Style Selector="Expander.backup-group:expanded TextBlock.chevron">
-      <Setter Property="Text" Value="âŒƒ" />
+      <Setter Property="Text" Value="‹›" />
     </Style>
 
+    <!-- Per-project primary action -->
+    <Style Selector="Button.project-primary">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="MinWidth" Value="0" />
+    </Style>
+
+    <Style Selector="Button.project-primary:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
 
   </UserControl.Styles>
-
   <Grid>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="24"
@@ -259,6 +261,9 @@
                        FontSize="12"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
+            <TextBlock Text="{Binding BackupDiskDriveLabel}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
 
             <!-- Used percent + free/total summary -->
             <StackPanel Orientation="Horizontal"
@@ -267,7 +272,7 @@
               <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
                          FontSize="18"
                          FontWeight="SemiBold" />
-              <TextBlock Text="â€¢"
+              <TextBlock Text="·"
                          Margin="4,0"
                          FontSize="12"
                          Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -292,6 +297,11 @@
                        FontSize="11"
                        Foreground="#FF6B6B"
                        IsVisible="{Binding BackupDiskIsBelowThreshold}" />
+
+            <!-- SMART / drive health -->
+            <TextBlock Text="{Binding BackupDiskHealthText}"
+                       FontSize="11"
+                       Foreground="{Binding BackupDiskHealthBrush}" />
           </StackPanel>
         </Border>
 
@@ -300,7 +310,6 @@
                   IsExpanded="True"
                   IsVisible="{Binding IsBusy}">
           <Expander.Header>
-            <!-- Header row matching history expanders -->
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Grid.Column="0"
                           Orientation="Horizontal"
@@ -309,16 +318,14 @@
                            FontSize="14"
                            FontWeight="SemiBold" />
               </StackPanel>
-
               <StackPanel Grid.Column="1"
                           Orientation="Horizontal"
                           Spacing="6"
                           HorizontalAlignment="Right"
                           VerticalAlignment="Center">
-                <TextBlock Text="{Binding ActiveBackups.Count, StringFormat=' â€¢ {0} active'}"
+                <TextBlock Text="{Binding ActiveBackups.Count, StringFormat=' · {0} active'}"
                            FontSize="11"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                <!-- Chevron indicator styled like other backup-group expanders -->
                 <TextBlock Classes="chevron"
                            Margin="8,0,0,0"
                            FontSize="10"
@@ -333,7 +340,6 @@
                   BorderBrush="{DynamicResource CardBorderBrush}"
                   BorderThickness="0,1,0,0">
             <StackPanel Spacing="8">
-              <!-- Per-project progress cards -->
               <ItemsControl x:Name="ActiveBackupsList" ItemsSource="{Binding ActiveBackups}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
@@ -350,7 +356,6 @@
                             BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="1">
                       <StackPanel Spacing="4">
-                        <!-- Project name + percentage -->
                         <Grid ColumnDefinitions="*,Auto,Auto"
                               ColumnSpacing="6">
                           <TextBlock Grid.Column="0"
@@ -358,13 +363,11 @@
                                      FontSize="12"
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
-
                           <TextBlock Grid.Column="1"
                                      Text="{Binding Progress, StringFormat='{}{0:0}%'}"
                                      FontSize="11"
                                      Foreground="{DynamicResource TextSecondaryBrush}"
                                      Margin="0,0,4,0" />
-
                           <Button Grid.Column="2"
                                   Content="Cancel"
                                   Command="{Binding CancelCommand}"
@@ -376,38 +379,29 @@
                                   IsEnabled="{Binding CanCancel}"
                                   IsVisible="{Binding CanCancel}" />
                         </Grid>
-
-                        <!-- Progress bar -->
                         <ProgressBar Minimum="0"
                                      Maximum="100"
                                      Value="{Binding Progress}"
                                      Height="4"
                                      CornerRadius="2" />
-
-                        <!-- Current file path -->
                         <TextBlock Classes="progress-detail"
                                    Text="{Binding CurrentFile}"
                                    FontSize="11"
                                    MaxWidth="340"
                                    TextTrimming="CharacterEllipsis"
                                    TextWrapping="NoWrap" />
-
-                        <!-- ETA / speed -->
                         <TextBlock Classes="progress-detail"
                                    Text="{Binding EtaText}"
                                    FontSize="10"
                                    HorizontalAlignment="Right"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    IsVisible="{Binding ShowEta}" />
-
                       </StackPanel>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-
-              <!-- Fallback text if something is busy but no detailed progress items -->
-              <TextBlock Text="Please waitâ€¦ the backup will appear in history once completed. Do not close the app."
+              <TextBlock Text="Please wait… the backup will appear in history once completed. Do not close the app."
                          FontSize="11"
                          Foreground="{DynamicResource TextSecondaryBrush}"
                          TextWrapping="NoWrap"
@@ -423,12 +417,12 @@
           <!-- PER-PROJECT BACKUPS -->
           <Border Classes="card"
                   CornerRadius="18"
-                  Padding="18"
+                  Padding="14"
                   MinWidth="360"
                   MaxWidth="520"
                   Grid.Column="0">
 
-            <StackPanel Spacing="10">
+            <StackPanel Spacing="8">
 
               <!-- Section header -->
               <StackPanel Orientation="Horizontal"
@@ -453,15 +447,15 @@
                               <ListBox.ItemTemplate>
                 <DataTemplate>
                   <Grid ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto"
-                        RowSpacing="4"
-                        ColumnSpacing="12">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                        RowSpacing="2"
+                        ColumnSpacing="10">
 
                     <!-- Avatar -->
-                    <Grid Grid.RowSpan="3"
+                    <Grid Grid.RowSpan="5"
                           Grid.Column="0"
-                          Width="32"
-                          Height="32"
+                          Width="28"
+                          Height="28"
                           IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
                       <Border CornerRadius="16"
                               Background="{Binding AvatarColor}" />
@@ -479,39 +473,53 @@
                                  Foreground="White" />
                     </Grid>
 
-                    <!-- Row 0: project name + actions -->
-                    <Grid Grid.Row="0"
-                          Grid.Column="1"
-                          ColumnDefinitions="*,Auto"
-                          ColumnSpacing="8">
-                      <StackPanel Grid.Column="0"
-                                  Orientation="Horizontal"
-                                  Spacing="6"
-                                  VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Name}"
-                                   FontSize="15"
-                                   FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
-                      </StackPanel>
+                    <!-- Row 0: project name -->
+                    <StackPanel Grid.Row="0"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}"
+                                 FontSize="15"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
 
-                      <StackPanel Grid.Column="1"
-                                  Orientation="Horizontal"
-                                  Spacing="6"
-                                  HorizontalAlignment="Right"
-                                  VerticalAlignment="Center">
-                        <Button Content="Back up"
-                                Classes="small-button"
-                                Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}" />
-                        <Button Content="History"
-                                Classes="small-button"
-                                Command="{Binding DataContext.ShowProjectHistoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}" />
-                      </StackPanel>
-                    </Grid>
-
-                    <!-- Row 1: last backup info -->
+                    <!-- Row 1: primary action (tighter spacing) -->
                     <StackPanel Grid.Row="1"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="0,-2,0,0">
+                      <Button Content="Back up now"
+                              Classes="project-primary"
+                              Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+
+                    <!-- Row 2: auto-backup toggle -->
+                    <StackPanel Grid.Row="2"
+                                Grid.Column="1"
+                                Orientation="Vertical"
+                                Spacing="2"
+                                VerticalAlignment="Center"
+                                Margin="0,2,0,0">
+                      <TextBlock Text="Auto backups"
+                                 FontSize="11"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <ToggleSwitch IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
+                                    OffContent=""
+                                    OnContent=""
+                                    FontSize="11"
+                                    VerticalAlignment="Center"
+                                    MinWidth="0"
+                                    HorizontalAlignment="Left"
+                                    ToolTip.Tip="Disable to skip this project during automatic backups." />
+                    </StackPanel>
+
+                    <!-- Row 3: last backup info -->
+                    <StackPanel Grid.Row="3"
                                 Grid.Column="1"
                                 Orientation="Horizontal"
                                 Spacing="6"
@@ -523,8 +531,8 @@
                                  FontSize="11" />
                     </StackPanel>
 
-                    <!-- Row 2: stats -->
-                    <StackPanel Grid.Row="2"
+                    <!-- Row 4: stats -->
+                    <StackPanel Grid.Row="4"
                                 Grid.Column="1"
                                 Orientation="Horizontal"
                                 Spacing="8"
@@ -535,7 +543,7 @@
                       <TextBlock Text="backups"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBlock Text="•"
+                      <TextBlock Text="·"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBlock Text="{Binding TotalSizeFormatted}"
@@ -596,12 +604,10 @@
                 </StackPanel>
               </Grid>
 
-              <!-- Separator under header -->
               <Border BorderBrush="{DynamicResource CardBorderBrush}"
                       BorderThickness="0,1,0,0"
                       Margin="0,4,0,0" />
 
-              <!-- History grouped by project -->
               <ItemsControl ItemsSource="{Binding SnapshotGroups}"
                             Margin="0,6,0,0">
                 <ItemsControl.ItemTemplate>
@@ -610,11 +616,9 @@
                               IsExpanded="True"
                               HorizontalAlignment="Stretch">
                       <Expander.Header>
-                        <!-- Project header -->
                         <Grid ColumnDefinitions="*,Auto">
                           <StackPanel Grid.Column="0"
                                       Spacing="2">
-                            <!-- First row: project name + TOTAL size (top-left) -->
                             <StackPanel Orientation="Horizontal"
                                         Spacing="6">
                               <TextBlock Text="{Binding ProjectName}"
@@ -624,14 +628,10 @@
                                          FontSize="12"
                                          FontWeight="SemiBold" />
                             </StackPanel>
-
-                            <!-- Second row: summary line -->
                             <TextBlock Text="{Binding Summary}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                           </StackPanel>
-
-                          <!-- Chevron indicator -->
                           <TextBlock Grid.Column="1"
                                      Margin="8,0,0,0"
                                      VerticalAlignment="Center"
@@ -641,7 +641,6 @@
                         </Grid>
                       </Expander.Header>
 
-                      <!-- Backups inside this project -->
                       <Border Margin="0,6,0,0"
                               Padding="0,8,0,0"
                               BorderBrush="{DynamicResource CardBorderBrush}"
@@ -656,7 +655,6 @@
                                       RowSpacing="3"
                                       Margin="0,2,0,2">
 
-                                  <!-- Row 0 left: label + type pill -->
                                   <StackPanel Grid.Row="0"
                                               Grid.Column="0"
                                               Orientation="Horizontal"
@@ -672,7 +670,6 @@
                                     </Border>
                                   </StackPanel>
 
-                                  <!-- Row 0 right: size -->
                                   <TextBlock Grid.Row="0"
                                              Grid.Column="1"
                                              Text="{Binding SizeFormatted}"
@@ -680,19 +677,23 @@
                                              FontWeight="SemiBold"
                                              HorizontalAlignment="Right" />
 
-                                  <!-- Row 1 left: timestamp -->
                                   <TextBlock Grid.Row="1"
                                              Grid.Column="0"
                                              Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
                                              FontSize="11"
                                              Foreground="{DynamicResource TextSecondaryBrush}" />
 
-                                  <!-- Row 1 right: actions -->
                                   <StackPanel Grid.Row="1"
                                               Grid.Column="1"
                                               Orientation="Horizontal"
                                               HorizontalAlignment="Right"
                                               Spacing="6">
+                                    <CheckBox Content="Keep"
+                                              VerticalAlignment="Center"
+                                              IsChecked="{Binding IsProtected, Mode=TwoWay}"
+                                              Command="{Binding DataContext.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              CommandParameter="{Binding}"
+                                              FontSize="11"/>
                                     <Button Content="Restore"
                                             Classes="small-button"
                                             Command="{Binding DataContext.RestoreBackupCommand,
@@ -716,7 +717,6 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <!-- Weekly mini-activity chart -->
               <StackPanel Margin="0,4,0,0">
                 <TextBlock Text="Backups per day (last 7 days)"
                            FontSize="11"
@@ -759,7 +759,6 @@
       </StackPanel>
     </ScrollViewer>
 
-    <!-- VERIFICATION POPUP OVERLAY -->
     <Border IsVisible="{Binding IsVerificationPopupOpen}"
             Background="#80000000"
             HorizontalAlignment="Stretch"
@@ -796,5 +795,3 @@
 
   </Grid>
 </UserControl>
-
-

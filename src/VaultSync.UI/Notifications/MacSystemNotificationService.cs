@@ -11,7 +11,6 @@ namespace VaultSync.UI.Notifications
         /// <param name="request">Notification payload (title, message, severity, etc.).</param>
         public void ShowSystemNotification(NotificationRequest request)
         {
-            Console.WriteLine($"[MacSystemNotificationService] Attempting to show notification: Title='{request.Title}', Message='{request.Message}'");
             try
             {
                 var title = string.IsNullOrWhiteSpace(request.Title)
@@ -41,7 +40,6 @@ namespace VaultSync.UI.Notifications
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[MacSystemNotificationService] Failed to show notification: {ex}");
             }
         }
 

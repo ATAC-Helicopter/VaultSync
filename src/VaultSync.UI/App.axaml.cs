@@ -234,7 +234,6 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[App] Failed to initialize system notification service: {ex}");
         }
 
         // On unsupported platforms (or on failure), return null

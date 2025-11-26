@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Markup.Xaml;
 
 namespace VaultSync.UI.Views
 {
@@ -6,7 +7,7 @@ namespace VaultSync.UI.Views
     {
         public BackupsView()
         {
-            InitializeComponent();
+            AvaloniaXamlLoader.Load(this);
         }
     }
 }

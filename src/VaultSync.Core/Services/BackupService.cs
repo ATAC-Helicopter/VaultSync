@@ -56,6 +56,7 @@ public sealed class BackupService
     /// <param name="progressCallback">Callback for progress updates.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <param name="useArchiveMode">Whether to create a compressed archive instead of using native sync tools.</param>
+    /// <param name="fullSnapshotHash">Whether to hash all files when creating the pre-backup snapshot.</param>
     /// <param name="preferredFinalBackupRoot">
     /// Optional final backup root to move into after creation (e.g., NAS path). If provided and different
     /// from <paramref name="backupRoot"/>, a best-effort move will be attempted after the backup completes.
@@ -71,6 +72,7 @@ public sealed class BackupService
         Action<double, string, string>? progressCallback = null,
         CancellationToken ct = default,
         bool useArchiveMode = false,
+        bool fullSnapshotHash = true,
         int? maxSnapshotsToKeep = null,
         double? minimumFreeSpacePercent = null,
         string? preferredFinalBackupRoot = null)
@@ -81,14 +83,6 @@ public sealed class BackupService
 
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
-
-        // Make sure snapshot exists – we tie backups to snapshots for history.
-        var latestSnapshot = _repo.GetLatestSnapshotForProject(project.Id);
-        if (latestSnapshot is null)
-        {
-            throw new InvalidOperationException(
-                $"Project '{project.Name}' has no snapshots yet. Create a snapshot before running a backup.");
-        }
 
         // Create (or replace) a CTS for this project and link with caller token.
         if (_cancelMap.ContainsKey(project.Id))
@@ -165,6 +159,11 @@ public sealed class BackupService
         }
 
         Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
+
+        // Always create a fresh snapshot before backing up so history stays aligned.
+        progressCallback?.Invoke(0, string.Empty, "Creating snapshot...");
+        var snapshotService = new SnapshotService(_repo, new HashService());
+        var snapshotId = await snapshotService.CreateSnapshotAsync(project, fullSnapshotHash, maxSnapshotsToKeep, linkedToken);
 
         try
         {
@@ -267,7 +266,7 @@ public sealed class BackupService
         // Persist metadata in the backups table
         var backupId = _repo.CreateBackup(
             projectId:    project.Id,
-            snapshotId:   latestSnapshot.Id,
+            snapshotId:   snapshotId,
             type:         backupType,
             totalBytes:   totalBytes,
             relativePath: relativePath);
@@ -784,7 +783,7 @@ public sealed class BackupService
             return;
         }
 
-        var maxToKeep = maxSnapshotsToKeep.Value;
+        var maxToKeep = Math.Max(1, maxSnapshotsToKeep.Value);
 
         // Load all backups for this project, newest first.
         List<Backup> backups;
@@ -801,13 +800,9 @@ public sealed class BackupService
             return;
         }
 
-        if (backups.Count <= maxToKeep)
-        {
-            // Nothing to prune.
-            return;
-        }
-
-        var toRemove = backups.Skip(maxToKeep).ToList();
+        // Keep all protected backups; apply the cap only to unprotected ones.
+        var unprotected = backups.Where(b => !b.IsProtected).ToList();
+        var toRemove = unprotected.Skip(maxToKeep).ToList();
 
         foreach (var backup in toRemove)
         {
@@ -824,14 +819,39 @@ public sealed class BackupService
                 {
                     Console.WriteLine($"[BackupService] Retention could not find backup folder '{fullPath}' on disk (backupId={backup.Id}), continuing with DB cleanup.");
                 }
-
-                _repo.DeleteBackupById(backup.Id);
             }
             catch (Exception ex)
             {
-                // Log and continue with the next backup; do not fail the main backup because retention cleanup failed.
+                // Log and continue; retention should still drop the DB row even if disk cleanup fails.
                 Console.WriteLine($"[BackupService] Failed to delete old backup (backupId={backup.Id}): {ex}");
             }
+            finally
+            {
+                _repo.DeleteBackupById(backup.Id);
+                MaybeDeleteSnapshotIfOrphan(projectId, backup.SnapshotId);
+            }
+        }
+    }
+
+    private void MaybeDeleteSnapshotIfOrphan(int projectId, int snapshotId)
+    {
+        try
+        {
+            // If any other backup still references this snapshot, keep it.
+            var remaining = _repo.GetBackupsForProject(projectId)
+                .Any(b => b.SnapshotId == snapshotId);
+            if (remaining)
+                return;
+
+            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
+            if (project is null)
+                return;
+
+            _repo.DeleteSnapshotsById(project.Name, new[] { snapshotId });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to delete orphan snapshot (projectId={projectId}, snapshotId={snapshotId}): {ex.Message}");
         }
     }
     private static (long totalBytes, long freeBytes)? TryGetDiskSpace(string path)
