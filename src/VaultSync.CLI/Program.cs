@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -41,7 +41,7 @@ public static class Program
                     .WithDescription("Compare two snapshots (default: latest vs previous)");
 
                 cfg.AddCommand<VaultSync.CLI.Commands.SelfTestCommand>("self-test")
-                    .WithDescription("Run an end-to-end smoke test (temp project → snapshot → sync → verify)");
+                    .WithDescription("Run an end-to-end smoke test (temp project -> snapshot -> sync -> verify)");
 
                 cfg.AddCommand<VaultSync.CLI.Commands.InitCommand>("init")
                     .WithDescription("Initialize local config & database path");

@@ -16,7 +16,7 @@
         </ResourceDictionary>
     </Application.Resources>
 
-    <!-- View-model → view wiring -->
+    <!-- View-model -> view wiring -->
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>

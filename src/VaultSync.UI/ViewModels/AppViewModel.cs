@@ -70,7 +70,7 @@ namespace VaultSync.UI.ViewModels
         private readonly ProjectsViewModel  _projectsViewModel;
         private readonly BackupsViewModel   _backupsViewModel;
         private readonly SettingsViewModel  _settingsViewModel;
-        private readonly AppConfig          _config;
+        private AppConfig                   _config;
 
         // NAS monitor to move temp backups when the preferred network root becomes reachable again.
         private Timer? _nasMonitorTimer;
@@ -256,8 +256,10 @@ namespace VaultSync.UI.ViewModels
 
             if (remember)
             {
+                var cfg = AppConfigStore.Load();
+                cfg.LastView   = viewKey;
                 _config.LastView = viewKey;
-                AppConfigStore.Save(_config);
+                AppConfigStore.Save(cfg);
             }
         }
 
@@ -366,7 +368,8 @@ namespace VaultSync.UI.ViewModels
 
         private void OnAutoBackupPreferenceChanged(int projectId, bool enabled)
         {
-            var list = _config.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            var cfg  = AppConfigStore.Load();
+            var list = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
             if (!enabled)
             {
                 if (!list.Contains(projectId))
@@ -377,19 +380,20 @@ namespace VaultSync.UI.ViewModels
                 list.Remove(projectId);
             }
 
+            cfg.Backups.AutoBackupDisabledProjects = list;
+            AppConfigStore.Save(cfg);
             _config.Backups.AutoBackupDisabledProjects = list;
-            AppConfigStore.Save(_config);
             ConfigureAutoBackupTimer();
         }
 
         private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
         {
+            // Keep the cached config in sync with persisted settings to avoid overwriting newer values.
+            _config = AppConfigStore.Load();
+
             if (e.PropertyName is nameof(SettingsViewModel.EnableAutoBackups)
                 or nameof(SettingsViewModel.AutoBackupIntervalMinutes))
             {
-                var latest = AppConfigStore.Load();
-                _config.Backups.EnableAutoBackups = latest.Backups.EnableAutoBackups;
-                _config.Backups.IntervalMinutes   = latest.Backups.IntervalMinutes;
                 ConfigureAutoBackupTimer();
             }
         }
@@ -448,7 +452,7 @@ namespace VaultSync.UI.ViewModels
 
             // Reset progress state
             _backupsViewModel.BackupProgress    = 0;
-            _backupsViewModel.BackupCurrentFile = "Preparing backup…";
+            _backupsViewModel.BackupCurrentFile = "Preparing backup...";
             _backupsViewModel.BackupEtaText     = string.Empty;
 
             // Reset per-project cards and add this project
@@ -457,11 +461,11 @@ namespace VaultSync.UI.ViewModels
                 project.Id.ToString(),
                 project.Name,
                 0,
-                "Preparing backup…",
+                "Preparing backup...",
                 string.Empty);
 
             _backupsViewModel.IsBusy      = true;
-            _backupsViewModel.BusyMessage = $"Backing up {project.Name}…";
+            _backupsViewModel.BusyMessage = $"Backing up {project.Name}...";
 
             try
             {
@@ -481,11 +485,11 @@ namespace VaultSync.UI.ViewModels
                             }
                             else if (percent <= 0.1)
                             {
-                                label = "Preparing backup…";
+                                label = "Preparing backup...";
                             }
                             else if (percent < 100)
                             {
-                                label = "Running backup…";
+                                label = "Running backup...";
                             }
                             else
                             {
@@ -739,10 +743,10 @@ namespace VaultSync.UI.ViewModels
             var useArchiveMode = _settingsViewModel.UseBackupCompression;
 
             _backupsViewModel.BackupProgress    = 0;
-            _backupsViewModel.BackupCurrentFile = "Preparing backup…";
+            _backupsViewModel.BackupCurrentFile = "Preparing backup...";
             _backupsViewModel.BackupEtaText     = string.Empty;
             _backupsViewModel.IsBusy            = true;
-            _backupsViewModel.BusyMessage       = "Backing up all projects…";
+            _backupsViewModel.BusyMessage       = "Backing up all projects...";
 
             try
             {
@@ -765,7 +769,7 @@ namespace VaultSync.UI.ViewModels
                             p.Id.ToString(),
                             p.Name,
                             0,
-                            "Preparing backup…",
+                            "Preparing backup...",
                             string.Empty);
                     }
 
@@ -777,9 +781,9 @@ namespace VaultSync.UI.ViewModels
                             if (progressPerProject.IsEmpty)
                             {
                                 _backupsViewModel.BackupProgress    = 0;
-                                _backupsViewModel.BackupCurrentFile = "Preparing backup…";
+                                _backupsViewModel.BackupCurrentFile = "Preparing backup...";
                                 _backupsViewModel.BackupEtaText     = string.Empty;
-                                _backupsViewModel.BusyMessage       = "Backing up all projects…";
+                                _backupsViewModel.BusyMessage       = "Backing up all projects...";
                                 return;
                             }
 
@@ -793,11 +797,11 @@ namespace VaultSync.UI.ViewModels
                             }
                             else if (avg <= 0.1)
                             {
-                                label = "Preparing backup…";
+                                label = "Preparing backup...";
                             }
                             else if (avg < 100)
                             {
-                                label = "Running backups…";
+                                label = "Running backups...";
                             }
                             else
                             {
@@ -806,7 +810,7 @@ namespace VaultSync.UI.ViewModels
 
                             _backupsViewModel.BackupCurrentFile = label;
                             _backupsViewModel.BackupEtaText     = etaText;
-                            _backupsViewModel.BusyMessage       = "Backing up all projects…";
+                            _backupsViewModel.BusyMessage       = "Backing up all projects...";
                         });
                     }
 
@@ -853,11 +857,11 @@ namespace VaultSync.UI.ViewModels
                                 }
                                 else if (percent <= 0.1)
                                 {
-                                    label = "Preparing backup…";
+                                    label = "Preparing backup...";
                                 }
                                 else if (percent < 100)
                                 {
-                                    label = "Running backup…";
+                                    label = "Running backup...";
                                 }
                                 else
                                 {
@@ -1062,7 +1066,7 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             _backupsViewModel.IsBusy      = true;
-            _backupsViewModel.BusyMessage = "Deleting backup…";
+            _backupsViewModel.BusyMessage = "Deleting backup...";
 
             try
             {
@@ -1187,7 +1191,7 @@ namespace VaultSync.UI.ViewModels
             }
 
             _backupsViewModel.IsBusy      = true;
-            _backupsViewModel.BusyMessage = $"Restoring {project.Name}…";
+            _backupsViewModel.BusyMessage = $"Restoring {project.Name}...";
 
             try
             {

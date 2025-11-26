@@ -5,7 +5,7 @@ using Spectre.Console;
 
 namespace VaultSync.CLI.Utils
 {
-    // Note: original had 'file sealed class' (typo) — fixed to 'sealed class'
+    // Note: original had 'file sealed class' (typo) - fixed to 'sealed class'
     public sealed class AsyncDebouncer
     {
         private readonly int _delayMs;

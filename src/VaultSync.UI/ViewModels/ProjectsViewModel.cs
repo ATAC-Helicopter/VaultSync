@@ -18,7 +18,7 @@ using System.Linq;
 namespace VaultSync.UI.ViewModels;
 
 /// <summary>
-/// Projects page view model – drives the list on the left and the
+/// Projects page view model - drives the list on the left and the
 /// details / actions panel on the right.
 /// </summary>
 public class ProjectsViewModel : ViewModelBase
@@ -896,7 +896,7 @@ public class ProjectItemViewModel : ViewModelBase
 
     public string AverageSnapshotSizeDisplay =>
         SnapshotHistory.Count == 0
-            ? "–"
+            ? "-"
             : ProjectSnapshotViewModel.FormatSize(
                 SnapshotHistory.Count == 0
                     ? 0
@@ -1094,7 +1094,7 @@ public sealed class ProjectSnapshotViewModel
     public double RelativeSize { get; set; }
 
     /// <summary>
-    /// 24–80px bar height, based on RelativeSize.
+    /// 24-80px bar height, based on RelativeSize.
     /// </summary>
     public double RelativeBarHeight => 24 + RelativeSize * 56;
 

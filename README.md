@@ -5,9 +5,9 @@
 </p>
 
 # VaultSync  
-### Snapshot • Backup • Sync • Verify — for Projects & Workspaces
+### Snapshot | Backup | Sync | Verify - for Projects & Workspaces
 
-VaultSync is a cross‑platform backup and snapshot manager built for developers, creators, and power‑users working with large project folders.  
+VaultSync is a cross-platform backup and snapshot manager built for developers, creators, and power-users working with large project folders.  
 It provides fast snapshots, incremental backups, filtering via presets, and a modern desktop UI.
 
 ---
@@ -17,7 +17,7 @@ It provides fast snapshots, incremental backups, filtering via presets, and a mo
 ### CLI (Command Line Interface)
 - Create snapshots of any project folder  
 - Sync using **rsync** (macOS/Linux) or **robocopy** (Windows)  
-- Hash‑based file verification  
+- Hash-based file verification  
 - Watch mode for automatic syncing  
 - JSON output for scripting  
 - Customizable preset rules per project  
@@ -25,7 +25,7 @@ It provides fast snapshots, incremental backups, filtering via presets, and a mo
 
 ### Desktop UI (Avalonia)
 - Modern dashboard (projects, backups, storage usage)  
-- One-click snapshots & backups (auto + manual)  
+- One-click snapshots and backups (auto + manual)  
 - Live progress overlays and per-project status cards  
 - Backup history with "Keep" (protected) backups that bypass retention  
 - Disk health (best-effort SMART) and backup retention controls  
@@ -79,7 +79,7 @@ dotnet tool update --global vaultsync.cli
 ## Quick Start
 
 ```sh
-vaultsync init --db ~/.vaultsync/vault.db
+vaultsync init
 vaultsync add-project Demo ~/Projects/Demo --preset unity
 vaultsync snapshot Demo
 vaultsync sync Demo ~/Backup/Demo
@@ -127,4 +127,3 @@ Built with:
 - Avalonia UI  
 - SQLite  
 - rsync / robocopy 
-

@@ -5,8 +5,17 @@ using VaultSync.Core.Config;
 
 namespace VaultSync.CLI.Config
 {
+    /// <summary>
+    /// CLI-facing config helper that now delegates to the shared Core AppConfigStore
+    /// to keep the database path and settings unified across CLI and UI.
+    /// </summary>
     static class ConfigHelper
     {
+        private sealed class LegacyCliConfig
+        {
+            public string Database { get; set; } = string.Empty;
+        }
+
         public static string GetConfigDir()
         {
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -21,44 +30,73 @@ namespace VaultSync.CLI.Config
             Directory.CreateDirectory(dir);
             Directory.CreateDirectory(Path.Combine(dir, "logs"));
 
-            var json = JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(GetConfigPath(), json + Environment.NewLine);
+            if (string.IsNullOrWhiteSpace(cfg.DbPath))
+                cfg.DbPath = AppConfigStore.GetDefaultDbPath();
+
+            AppConfigStore.Save(cfg);
         }
 
         public static AppConfig Load()
         {
-            var path = GetConfigPath();
-            if (!File.Exists(path))
-                throw new Exception("Run `vaultsync init` first (creates ~/.vaultsync/config.json)");
+            // Load the shared config first.
+            var cfg = AppConfigStore.Load();
 
-            var json = File.ReadAllText(path);
-            var cfg = JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+            // If a legacy CLI config exists with a Database value, migrate it into DbPath.
+            var legacy = TryLoadLegacy();
+            if (legacy is not null && !string.IsNullOrWhiteSpace(legacy.Database))
+            {
+                var expanded = ExpandHome(legacy.Database);
+                if (string.IsNullOrWhiteSpace(cfg.DbPath))
+                {
+                    cfg.DbPath = expanded;
+                    AppConfigStore.Save(cfg);
+                }
+            }
+
             return cfg;
         }
 
         public static string ResolveDb(string? overridePath)
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-            // 1. If an explicit override is provided, honor it.
+            // 1. Explicit override wins.
             if (!string.IsNullOrWhiteSpace(overridePath))
-                return overridePath.Replace("~", home);
+                return ExpandHome(overridePath);
 
-            // 2. Prefer the shared Core AppConfig.DbPath if available.
+            // 2. Shared AppConfig.DbPath (ensures a single DB location for CLI + UI).
+            var cfg = AppConfigStore.Load();
+            if (!string.IsNullOrWhiteSpace(cfg.DbPath))
+                return ExpandHome(cfg.DbPath);
+
+            // 3. Legacy CLI config fallback.
+            var legacy = TryLoadLegacy();
+            if (legacy is not null && !string.IsNullOrWhiteSpace(legacy.Database))
+                return ExpandHome(legacy.Database);
+
+            // 4. Safe default from shared store.
+            return AppConfigStore.GetDefaultDbPath();
+        }
+
+        private static string ExpandHome(string path)
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return path.Replace("~", home);
+        }
+
+        private static LegacyCliConfig? TryLoadLegacy()
+        {
+            var path = GetConfigPath();
+            if (!File.Exists(path))
+                return null;
+
             try
             {
-                var coreConfig = AppConfigStore.Load();
-                if (!string.IsNullOrWhiteSpace(coreConfig.DbPath))
-                    return coreConfig.DbPath.Replace("~", home);
+                var json = File.ReadAllText(path);
+                return JsonSerializer.Deserialize<LegacyCliConfig>(json);
             }
             catch
             {
-                // If Core config cannot be loaded, fall back to the legacy CLI config.
+                return null;
             }
-
-            // 3. Fallback: use the legacy CLI ~/.vaultsync/config.json Database value.
-            var cfg = Load();
-            return cfg.Database.Replace("~", home);
         }
     }
 }

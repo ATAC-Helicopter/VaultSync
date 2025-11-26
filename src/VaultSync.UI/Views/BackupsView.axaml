@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VaultSync.UI.ViewModels"
              xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
@@ -401,7 +401,7 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="Please wait… the backup will appear in history once completed. Do not close the app."
+              <TextBlock Text="Please wait... the backup will appear in history once completed. Do not close the app."
                          FontSize="11"
                          Foreground="{DynamicResource TextSecondaryBrush}"
                          TextWrapping="NoWrap"

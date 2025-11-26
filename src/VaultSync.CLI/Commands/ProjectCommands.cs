@@ -41,7 +41,7 @@ namespace VaultSync.CLI.Commands
             var id = repo.AddProject(new Project { Name = s.Name, RootPath = fullPath, Preset = s.Preset });
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[green]Added[/] project [bold]{Markup.Escape(s.Name)}[/] (id {id}) → {Markup.Escape(fullPath)} [grey](preset: {Markup.Escape(s.Preset)})[/]");
+                AnsiConsole.MarkupLine($"[green]Added[/] project [bold]{Markup.Escape(s.Name)}[/] (id {id}) -> {Markup.Escape(fullPath)} [grey](preset: {Markup.Escape(s.Preset)})[/]");
 
             return Task.FromResult(0);
         }
@@ -76,7 +76,7 @@ namespace VaultSync.CLI.Commands
             if (stats.Projects == 0) throw new Exception($"Project '{s.Name}' not found (nothing deleted)");
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[green]Removed[/] project [bold]{Markup.Escape(s.Name)}[/] — Snapshots: {stats.Snapshots}, Files: {stats.Files}");
+                AnsiConsole.MarkupLine($"[green]Removed[/] project [bold]{Markup.Escape(s.Name)}[/] - Snapshots: {stats.Snapshots}, Files: {stats.Files}");
 
             return Task.FromResult(0);
         }
@@ -105,7 +105,7 @@ namespace VaultSync.CLI.Commands
                 throw new Exception($"Project '{s.Name}' not found");
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[green]Updated[/] [bold]{Markup.Escape(s.Name)}[/] path: {Markup.Escape(oldPath ?? "?")} → {Markup.Escape(full)}");
+                AnsiConsole.MarkupLine($"[green]Updated[/] [bold]{Markup.Escape(s.Name)}[/] path: {Markup.Escape(oldPath ?? "?")} -> {Markup.Escape(full)}");
 
             return Task.FromResult(0);
         }

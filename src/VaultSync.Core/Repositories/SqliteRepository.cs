@@ -281,10 +281,7 @@ DELETE FROM sqlite_sequence;";
 
         public Snapshot? GetLatestSnapshot(int projectId)
         {
-            using var c = Open();
-            return c.QueryFirstOrDefault<Snapshot>(
-                "SELECT id, project_id as ProjectId, created_utc as CreatedUtc, file_count as FileCount, total_bytes as TotalBytes FROM snapshots WHERE project_id=@pid ORDER BY id DESC LIMIT 1",
-                new { pid = projectId });
+            return GetLatestSnapshotForProject(projectId);
         }
 
         public Snapshot? GetLatestSnapshotForProject(int projectId)
@@ -300,7 +297,7 @@ DELETE FROM sqlite_sequence;";
                   total_bytes AS TotalBytes
                 FROM snapshots
                 WHERE project_id = @pid
-                ORDER BY created_utc DESC
+                ORDER BY created_utc DESC, id DESC
                 LIMIT 1;
                 """,
                 new { pid = projectId });

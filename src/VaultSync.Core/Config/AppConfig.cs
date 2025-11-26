@@ -26,7 +26,7 @@ namespace VaultSync.Core.Config
         /// </summary>
         public string? DbPath { get; set; } = string.Empty;
 
-        // Grouped sections – these are what SettingsViewModel expects
+        // Grouped sections - these are what SettingsViewModel expects
         public BackupsConfig Backups { get; set; } = new();
         public StorageConfig Storage { get; set; } = new();
         public NetworkConfig Network { get; set; } = new();

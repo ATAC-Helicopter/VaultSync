@@ -17,7 +17,7 @@ namespace VaultSync.UI.ViewModels
 {
     public class BackupsViewModel : ViewModelBase
     {
-        // Simple SetProperty helper – note: no PropertyChanged here, we just need
+        // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
         protected bool SetProperty<T>(ref T storage, T value)
         {
@@ -113,7 +113,7 @@ namespace VaultSync.UI.ViewModels
         public string SnapshotActivitySummary { get; private set; } = "No backups in the last 7 days";
 
         public string LastBackupDisplay { get; private set; } = "No backups yet";
-        public string LastBackupRelative { get; private set; } = "—";
+        public string LastBackupRelative { get; private set; } = "-";
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
 
         // Mini backup storage card (for Backups page)
@@ -912,7 +912,7 @@ namespace VaultSync.UI.ViewModels
             else
             {
                 LastBackupDisplay  = "No backups yet";
-                LastBackupRelative = "—";
+                LastBackupRelative = "-";
             }
 
             long totalBytes = _allSnapshots.Sum(s => s.SizeBytes);
@@ -971,7 +971,7 @@ namespace VaultSync.UI.ViewModels
                 countsByDate.TryGetValue(day, out var count);
 
                 double normalized = count / (double)max;
-                // base height 4–8px plus up to ~40px for busy days
+                // base height 4-8px plus up to ~40px for busy days
                 double height = count == 0 ? 4 : 8 + normalized * 40;
 
                 // Accent color, dim if no snapshots (use immutable brushes so we can build off UI thread)

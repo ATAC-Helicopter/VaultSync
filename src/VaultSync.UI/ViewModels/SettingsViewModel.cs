@@ -140,7 +140,7 @@ namespace VaultSync.UI
             _rememberNetworkCredentials  = cfg.Network.RememberCredentials;
 
             // FIX: use Theme instead of ThemeName
-            _selectedTheme      = cfg.Appearance.Theme ?? "Follow system";
+            _selectedTheme      = DisplayThemeOption(cfg.Appearance.Theme ?? "System");
             _useCompactLayout   = cfg.Appearance.CompactLayout;
             _showProjectAvatars = cfg.Appearance.ShowProjectAvatars;
 
@@ -174,79 +174,56 @@ namespace VaultSync.UI
 
         private void SaveToConfig()
         {
+            // Start from the latest persisted config so we don't clobber fields the Settings view doesn't edit
+            // (e.g., LastView, DbPath, tray settings).
+            var cfg = AppConfigStore.Load();
+
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
-            var latest = AppConfigStore.Load();
-            var latestDisabled = latest.Backups.AutoBackupDisabledProjects ?? new List<int>();
-            _autoBackupDisabledProjects = latestDisabled;
+            _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
 
-            var cfg = new AppConfig
-            {
-                ProjectsRoot         = ProjectsRootPath,
-                ResumeLastSession    = ResumeLastSession,
-                Behavior =
-                {
-                    LaunchOnLogin          = _launchOnLogin,
-                    ShowWindowOnTrayActions = _showWindowOnTrayActions
-                },
+            cfg.ProjectsRoot      = ProjectsRootPath;
+            cfg.ResumeLastSession = ResumeLastSession;
 
-                Backups =
-                {
-                    EnableAutoBackups      = EnableAutoBackups,
-                    IntervalMinutes        = AutoBackupIntervalMinutes,
-                    MaxSnapshotsPerProject = MaxSnapshotsPerProject,
-                    AutoBackupDisabledProjects = _autoBackupDisabledProjects,
-                    // Write to both for backwards compatibility
-                    Location               = BackupLocationPath,
-                    BackupRoot             = string.IsNullOrWhiteSpace(BackupLocationPath)
-                        ? null
-                        : BackupLocationPath,
-                    UseCompression         = UseBackupCompression,
-                    VerifyAfterCreate      = VerifyBackupsAfterCreate,
-                    PauseOnBattery         = PauseBackupsOnBattery,
-                    UseFullSnapshotHash    = _useFullSnapshotHash
-                },
+            cfg.Behavior.LaunchOnLogin           = _launchOnLogin;
+            cfg.Behavior.ShowWindowOnTrayActions = _showWindowOnTrayActions;
 
-                Storage =
-                {
-                    PreferExternalDrives = PreferExternalDrives,
-                    ShowDriveWarnings    = ShowDriveHealthWarnings,
-                    MinFreeSpacePercent  = MinimumFreeSpacePercent
-                },
+            cfg.Backups.EnableAutoBackups           = EnableAutoBackups;
+            cfg.Backups.IntervalMinutes             = AutoBackupIntervalMinutes;
+            cfg.Backups.MaxSnapshotsPerProject      = MaxSnapshotsPerProject;
+            cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
+            cfg.Backups.Location                    = BackupLocationPath;
+            cfg.Backups.BackupRoot                  = string.IsNullOrWhiteSpace(BackupLocationPath)
+                ? null
+                : BackupLocationPath;
+            cfg.Backups.UseCompression              = UseBackupCompression;
+            cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
+            cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
+            cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
 
-                Network =
-                {
-                    UseCredentials      = UseCustomNetworkCredentials,
-                    Username            = NetworkShareUserName,
-                    Password            = RememberNetworkCredentials ? NetworkSharePassword : "",
-                    RememberCredentials = RememberNetworkCredentials
-                },
+            cfg.Storage.PreferExternalDrives = PreferExternalDrives;
+            cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
+            cfg.Storage.MinFreeSpacePercent  = MinimumFreeSpacePercent;
 
-                Appearance =
-                {
-                    // FIX: use Theme instead of ThemeName
-                    Theme              = SelectedTheme,
-                    CompactLayout      = UseCompactLayout,
-                    ShowProjectAvatars = ShowProjectAvatars
-                },
+            cfg.Network.UseCredentials      = UseCustomNetworkCredentials;
+            cfg.Network.Username            = NetworkShareUserName;
+            cfg.Network.Password            = RememberNetworkCredentials ? NetworkSharePassword : "";
+            cfg.Network.RememberCredentials = RememberNetworkCredentials;
 
-                Notifications =
-                {
-                    OnBackupSuccess    = NotifyOnBackupSuccess,
-                    OnBackupFailure    = NotifyOnBackupFailure,
-                    OnLowDisk          = NotifyOnLowDiskSpace,
-                    OnSnapshotSuccess  = NotifyOnSnapshotSuccess,
-                    OnSnapshotFailure  = NotifyOnSnapshotFailure,
-                    UseOsNotifications = UseOsNotifications,
-                    OnlyWhenInactive   = NotifyOnlyWhenInactive
-                },
+            cfg.Appearance.Theme              = NormalizeThemeOption(SelectedTheme);
+            cfg.Appearance.CompactLayout      = UseCompactLayout;
+            cfg.Appearance.ShowProjectAvatars = ShowProjectAvatars;
 
-                Advanced =
-                {
-                    VerboseLogging  = EnableVerboseLogging,
-                    CheckUpdates    = CheckForUpdatesOnStartup,
-                    SendUsageStats  = SendAnonymousUsageStats
-                }
-            };
+            cfg.Notifications.OnBackupSuccess    = NotifyOnBackupSuccess;
+            cfg.Notifications.OnBackupFailure    = NotifyOnBackupFailure;
+            cfg.Notifications.OnLowDisk          = NotifyOnLowDiskSpace;
+            cfg.Notifications.OnSnapshotSuccess  = NotifyOnSnapshotSuccess;
+            cfg.Notifications.OnSnapshotFailure  = NotifyOnSnapshotFailure;
+            cfg.Notifications.UseOsNotifications = UseOsNotifications;
+            cfg.Notifications.OnlyWhenInactive   = NotifyOnlyWhenInactive;
+
+            cfg.Advanced.VerboseLogging = EnableVerboseLogging;
+            cfg.Advanced.CheckUpdates   = CheckForUpdatesOnStartup;
+            cfg.Advanced.SendUsageStats = SendAnonymousUsageStats;
 
             AppConfigStore.Save(cfg);
             AutoStartService.SetLaunchOnLogin(_launchOnLogin);
@@ -287,6 +264,28 @@ namespace VaultSync.UI
                 "Dark"  => ThemeVariant.Dark,
                 "Light" => ThemeVariant.Light,
                 _       => ThemeVariant.Default  // Follow system
+            };
+        }
+
+        private static string NormalizeThemeOption(string theme)
+        {
+            return theme switch
+            {
+                "Dark"          => "Dark",
+                "Light"         => "Light",
+                "Follow system" => "System",
+                "System"        => "System",
+                _               => "System"
+            };
+        }
+
+        private static string DisplayThemeOption(string storedTheme)
+        {
+            return storedTheme switch
+            {
+                "Dark"  => "Dark",
+                "Light" => "Light",
+                _       => "Follow system"
             };
         }
 
@@ -450,7 +449,30 @@ namespace VaultSync.UI
         public bool NotificationsEnabled
         {
             get => _notificationsEnabled;
-            set => SetField(ref _notificationsEnabled, value);
+            set
+            {
+                if (!SetField(ref _notificationsEnabled, value))
+                    return;
+
+                if (!value)
+                {
+                    NotifyOnBackupSuccess   = false;
+                    NotifyOnBackupFailure   = false;
+                    NotifyOnSnapshotSuccess = false;
+                    NotifyOnSnapshotFailure = false;
+                    NotifyOnLowDiskSpace    = false;
+                    UseOsNotifications      = false;
+                }
+                else
+                {
+                    NotifyOnBackupSuccess   = true;
+                    NotifyOnBackupFailure   = true;
+                    NotifyOnSnapshotSuccess = false;
+                    NotifyOnSnapshotFailure = true;
+                    NotifyOnLowDiskSpace    = true;
+                    UseOsNotifications      = true;
+                }
+            }
         }
 
         public bool NotifyOnBackupSuccess
@@ -615,3 +637,4 @@ namespace VaultSync.UI
         }
     }
 }
+

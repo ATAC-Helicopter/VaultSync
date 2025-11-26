@@ -6,7 +6,7 @@ using VaultSync.UI.Notifications;
 namespace VaultSync.UI.ViewModels.Notifications
 {
     /// <summary>
-    /// ViewModel for the global toast host – owns a stack of NotificationState items.
+    /// ViewModel for the global toast host - owns a stack of NotificationState items.
     /// </summary>
     public class ToastHostViewModel : ViewModelBase
     {

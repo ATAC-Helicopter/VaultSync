@@ -109,9 +109,9 @@ public partial class MainWindow : Window
         SetHeader(title, kicker);
 
         // If CurrentView exists, set a plain string or the VM and let ViewLocator handle it.
-        if (!TrySetCurrentView(new TextBlock { Text = $"{title} view coming soon…", Margin = new Thickness(16) }))
+        if (!TrySetCurrentView(new TextBlock { Text = $"{title} view coming soon...", Margin = new Thickness(16) }))
         {
-            MainContent.Content = new TextBlock { Text = $"{title} view coming soon…", Margin = new Thickness(16) };
+            MainContent.Content = new TextBlock { Text = $"{title} view coming soon...", Margin = new Thickness(16) };
         }
     }
 
@@ -141,7 +141,7 @@ public partial class MainWindow : Window
         }
         catch
         {
-            // ignore – property is optional
+            // ignore - property is optional
         }
     }
 }

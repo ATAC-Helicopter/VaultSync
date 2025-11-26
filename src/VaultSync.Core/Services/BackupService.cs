@@ -492,12 +492,12 @@ public sealed class BackupService
 
                     if (progressCallback is not null)
                     {
-                        // Map compression progress into 0–90% of overall progress.
+                        // Map compression progress into 0-90% of overall progress.
                         double compressPercent = (totalBytes > 0)
                             ? Math.Min(100d, (processedBytes * 100d / totalBytes))
                             : 0d;
 
-                        double overallPercent = compressPercent * 0.9; // 0–90%
+                        double overallPercent = compressPercent * 0.9; // 0-90%
 
                         var now = DateTime.UtcNow;
                         if (overallPercent < 90d && (now - lastUiUpdate) < minUiInterval)
@@ -533,7 +533,7 @@ public sealed class BackupService
             }
 
             // --------------------
-            // PHASE 2: Upload local ZIP to destination with progress (90–100%)
+            // PHASE 2: Upload local ZIP to destination with progress (90-100%)
             // --------------------
             ct.ThrowIfCancellationRequested();
 
@@ -560,7 +560,7 @@ public sealed class BackupService
                     if (progressCallback is not null && zipSize > 0)
                     {
                         var uploadPercent   = Math.Min(100d, (uploaded * 100d / zipSize));
-                        var overallPercent  = 90d + uploadPercent * 0.1; // map 0–100% upload into 90–100%
+                        var overallPercent  = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
                         if (overallPercent > 100d) overallPercent = 100d;
 
                         var now            = DateTime.UtcNow;
