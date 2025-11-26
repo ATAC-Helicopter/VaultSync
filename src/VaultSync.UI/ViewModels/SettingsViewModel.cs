@@ -52,6 +52,7 @@ namespace VaultSync.UI
         private bool _notifyOnBackupSuccess = true;
         private bool _notifyOnBackupFailure = true;
         private bool _notifyOnLowDiskSpace = true;
+        private bool _showTrayBackupWidget = true;
 
         private bool _notifyOnSnapshotSuccess = false;
         private bool _notifyOnSnapshotFailure = true;
@@ -116,6 +117,7 @@ namespace VaultSync.UI
             _projectsRootPath      = cfg.ProjectsRoot ?? "";
             _resumeLastSession     = cfg.ResumeLastSession;
             _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
+            _showTrayBackupWidget  = cfg.Behavior.ShowBackupWidget;
             _launchOnLogin         = cfg.Behavior.LaunchOnLogin;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
@@ -186,6 +188,7 @@ namespace VaultSync.UI
 
             cfg.Behavior.LaunchOnLogin           = _launchOnLogin;
             cfg.Behavior.ShowWindowOnTrayActions = _showWindowOnTrayActions;
+            cfg.Behavior.ShowBackupWidget        = _showTrayBackupWidget;
 
             cfg.Backups.EnableAutoBackups           = EnableAutoBackups;
             cfg.Backups.IntervalMinutes             = AutoBackupIntervalMinutes;
@@ -426,6 +429,12 @@ namespace VaultSync.UI
         {
             get => _showWindowOnTrayActions;
             set => SetField(ref _showWindowOnTrayActions, value);
+        }
+
+        public bool ShowTrayBackupWidget
+        {
+            get => _showTrayBackupWidget;
+            set => SetField(ref _showTrayBackupWidget, value);
         }
 
         public bool LaunchOnLogin

@@ -1,0 +1,128 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:viewmodels="using:VaultSync.UI.ViewModels"
+        x:Class="VaultSync.UI.Views.BackupWidgetWindow"
+        x:DataType="viewmodels:BackupWidgetViewModel"
+        Width="320"
+        Height="200"
+        SystemDecorations="None"
+        CanResize="False"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        TransparencyLevelHint="Mica,AcrylicBlur,Blur"
+        Topmost="True">
+  <Border BorderBrush="#1F2937"
+          BorderThickness="1"
+          CornerRadius="16"
+          Padding="12"
+          BoxShadow="0 12 30 0 #23000000">
+    <Border.Background>
+      <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#182034" Offset="0" />
+        <GradientStop Color="#0F1524" Offset="1" />
+      </LinearGradientBrush>
+    </Border.Background>
+
+    <Grid RowDefinitions="Auto,*"
+          RowSpacing="10">
+      <!-- Header -->
+      <Grid ColumnDefinitions="*,Auto,Auto"
+            ColumnSpacing="6"
+            PointerPressed="OnDragAreaPointerPressed">
+        <StackPanel Grid.Column="0"
+                    Orientation="Vertical"
+                    Spacing="2">
+          <TextBlock Text="VaultSync backup"
+                     FontWeight="SemiBold"
+                     FontSize="13" />
+          <TextBlock Text="{Binding StatusText}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     FontSize="11" />
+        </StackPanel>
+
+        <Button Grid.Column="1"
+                Content="Open app"
+                Command="{Binding OpenAppCommand}"
+                Classes="small-button"
+                Padding="8,3"
+                MinWidth="0" />
+
+        <Button Grid.Column="2"
+                Content="Close"
+                Command="{Binding CloseCommand}"
+                Classes="small-button"
+                Padding="8,3"
+                MinWidth="0" />
+      </Grid>
+
+      <!-- Active backups list -->
+      <Border Grid.Row="1"
+              Background="#111827"
+              BorderBrush="#1F2937"
+              BorderThickness="1"
+              CornerRadius="12"
+              Padding="10">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding ActiveBackups}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="viewmodels:BackupProgressItem">
+                <Border Margin="0,4"
+                        Padding="8"
+                        CornerRadius="10"
+                        Background="#0D121F"
+                        BorderBrush="#1F2937"
+                        BorderThickness="1">
+                  <StackPanel Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="6">
+                      <TextBlock Grid.Column="0"
+                                 Text="{Binding ProjectName}"
+                                 FontWeight="SemiBold"
+                                 FontSize="12"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding Progress, StringFormat='{}{0:0}%'}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 FontSize="11" />
+                    </Grid>
+
+                    <ProgressBar Height="5"
+                                 CornerRadius="3"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding Progress}"
+                                 Foreground="#4FD1C5"
+                                 Background="#1F2937" />
+
+                    <TextBlock Text="{Binding CurrentFile}"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               MaxHeight="52"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="6">
+                      <TextBlock Grid.Column="0"
+                                 Text="{Binding EtaText}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 IsVisible="{Binding ShowEta}" />
+                      <Button Grid.Column="1"
+                              Content="Cancel"
+                              Command="{Binding CancelCommand}"
+                              Classes="small-button"
+                              IsVisible="{Binding CanCancel}"
+                              IsEnabled="{Binding CanCancel}"
+                              Padding="8,2"
+                              MinWidth="0" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+  </Border>
+</Window>

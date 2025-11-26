@@ -61,6 +61,8 @@ namespace VaultSync.UI.ViewModels
 
     public class AppViewModel : ViewModelBase
     {
+        public event Action? TrayMenuRefreshRequested;
+
         private object? _currentView;
         private string _headerTitle = "Dashboard";
         private string _headerKicker = "Overview";
@@ -71,6 +73,7 @@ namespace VaultSync.UI.ViewModels
         private readonly BackupsViewModel   _backupsViewModel;
         private readonly SettingsViewModel  _settingsViewModel;
         private AppConfig                   _config;
+        private IBackupWidgetService?       _backupWidgetService;
 
         // NAS monitor to move temp backups when the preferred network root becomes reachable again.
         private Timer? _nasMonitorTimer;
@@ -84,6 +87,7 @@ namespace VaultSync.UI.ViewModels
         private readonly INotificationService _notificationService;
         private readonly IPowerStatusProvider _powerStatusProvider;
         private readonly IDriveHealthService _driveHealthService;
+        private bool _trayInitiatedBackup;
 
         // Helper property to detect when the Backups page is active
         private bool IsOnBackupsPage => CurrentView == _backupsViewModel;
@@ -111,6 +115,11 @@ namespace VaultSync.UI.ViewModels
                 return true;
             }
         }
+
+        private bool ShouldShowBackupWidget =>
+            _settingsViewModel?.ShowTrayBackupWidget ?? true;
+
+        public BackupsViewModel BackupsViewModel => _backupsViewModel;
 
         public object? CurrentView
         {
@@ -210,6 +219,11 @@ namespace VaultSync.UI.ViewModels
             NavigateProjects  = new RelayCommand(_ => SetCurrentView("Projects"));
             NavigateBackups   = new RelayCommand(_ => SetCurrentView("Backups"));
             NavigateSettings  = new RelayCommand(_ => SetCurrentView("Settings"));
+        }
+
+        public void AttachBackupWidgetService(IBackupWidgetService? service)
+        {
+            _backupWidgetService = service;
         }
 
         // ---------- Backups wiring ----------
@@ -400,6 +414,9 @@ namespace VaultSync.UI.ViewModels
 
         private async void OnBackupProjectRequested(ProjectBackupItem? item)
         {
+            var trayRun = _trayInitiatedBackup;
+            _trayInitiatedBackup = false;
+
             // Prevent overlapping manual backups; if one is already running, ignore.
             if (_backupsViewModel.IsBusy)
             {
@@ -466,6 +483,10 @@ namespace VaultSync.UI.ViewModels
 
             _backupsViewModel.IsBusy      = true;
             _backupsViewModel.BusyMessage = $"Backing up {project.Name}...";
+            if (trayRun && ShouldShowBackupWidget)
+            {
+                _backupWidgetService?.ShowForTrayBackup();
+            }
 
             try
             {
@@ -714,11 +735,16 @@ namespace VaultSync.UI.ViewModels
 
                 _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
+
+                TrayMenuRefreshRequested?.Invoke();
             }
         }
 
         private async void OnCreateBackupForAllProjectsRequested()
         {
+            var trayRun = _trayInitiatedBackup;
+            _trayInitiatedBackup = false;
+
             // Do not start "backup all" if a backup is already running.
             if (_backupsViewModel.IsBusy)
             {
@@ -747,6 +773,10 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.BackupEtaText     = string.Empty;
             _backupsViewModel.IsBusy            = true;
             _backupsViewModel.BusyMessage       = "Backing up all projects...";
+            if (trayRun && ShouldShowBackupWidget)
+            {
+                _backupWidgetService?.ShowForTrayBackup();
+            }
 
             try
             {
@@ -1041,6 +1071,8 @@ namespace VaultSync.UI.ViewModels
             {
                 _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
+
+                TrayMenuRefreshRequested?.Invoke();
             }
         }
 
@@ -1312,7 +1344,6 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-
             // When triggered from tray, navigate to the Backups page so the user
             // immediately sees the running backup card (when the window is shown).
             Dispatcher.UIThread.Post(() =>
@@ -1322,6 +1353,12 @@ namespace VaultSync.UI.ViewModels
                     NavigateBackups.Execute(null);
                 }
             });
+
+            _trayInitiatedBackup = true;
+            if (ShouldShowBackupWidget)
+            {
+                _backupWidgetService?.ShowForTrayBackup();
+            }
 
             OnBackupProjectRequested(projectItem);
         }
@@ -1334,7 +1371,6 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-
             // When triggered from tray, navigate to the Backups page so the user
             // immediately sees the running backup cards (when the window is shown).
             Dispatcher.UIThread.Post(() =>
@@ -1344,6 +1380,12 @@ namespace VaultSync.UI.ViewModels
                     NavigateBackups.Execute(null);
                 }
             });
+
+            _trayInitiatedBackup = true;
+            if (ShouldShowBackupWidget)
+            {
+                _backupWidgetService?.ShowForTrayBackup();
+            }
 
             OnCreateBackupForAllProjectsRequested();
         }
@@ -1372,13 +1414,13 @@ namespace VaultSync.UI.ViewModels
         /// Only returns projects that are actually added/tracked in VaultSync.
         /// Untracked/discovered entries normally have ProjectId <= 0 and should not appear in the tray.
         /// </summary>
-public IReadOnlyList<ProjectItemViewModel> GetProjectsForSnapshotTray()
-{
-    // Only expose projects that are actually registered in the backup DB.
-    return _projectsViewModel.Projects
-        .Where(p => p.IsRegistered)
-        .ToList();
-}
+        public IReadOnlyList<ProjectItemViewModel> GetProjectsForSnapshotTray()
+        {
+            // Only expose projects that are actually registered in the backup DB.
+            return _projectsViewModel.Projects
+                .Where(p => p.IsRegistered)
+                .ToList();
+        }
 
         /// <summary>
         /// Triggered from the tray menu: create a snapshot for a specific project by name.
@@ -1499,6 +1541,83 @@ public IReadOnlyList<ProjectItemViewModel> GetProjectsForSnapshotTray()
             return path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
                    path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||
                    path.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // ---------- Tray helpers: recent backups / keep / delete ----------
+
+        public sealed record TrayBackupItem(int Id, string Label, bool IsProtected);
+        public sealed record TrayProjectBackups(int ProjectId, string ProjectName, IReadOnlyList<TrayBackupItem> Backups);
+
+        public IReadOnlyList<TrayProjectBackups> GetRecentBackupsForTray(int maxPerProject = 5)
+        {
+            try
+            {
+                var projects = _repo.GetAllProjects().ToList();
+                var result   = new List<TrayProjectBackups>();
+
+                foreach (var project in projects)
+                {
+                    var backups = _repo.GetBackupsForProject(project.Id)
+                        .OrderByDescending(b => b.CreatedUtc)
+                        .Take(maxPerProject)
+                        .Select(b =>
+                        {
+                            var ts   = b.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+                            var keep = b.IsProtected ? " • Keep" : string.Empty;
+                            var label = $"{ts}{keep}";
+                            return new TrayBackupItem(b.Id, label, b.IsProtected);
+                        })
+                        .ToList();
+
+                    result.Add(new TrayProjectBackups(project.Id, project.Name, backups));
+                }
+
+                return result;
+            }
+            catch
+            {
+                return Array.Empty<TrayProjectBackups>();
+            }
+        }
+
+        public void ToggleBackupProtectionFromTray(int backupId)
+        {
+            try
+            {
+                var backup = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
+                    .FirstOrDefault(b => b.Id == backupId);
+                if (backup is null)
+                    return;
+
+                var newValue = !backup.IsProtected;
+                _repo.SetBackupProtection(backupId, newValue);
+                _backupsViewModel.MarkBackupProtection(backupId, newValue);
+                TrayMenuRefreshRequested?.Invoke();
+            }
+            catch
+            {
+                // Swallow for tray; avoid surfacing errors in the OS menu context.
+            }
+        }
+
+        public void DeleteBackupFromTray(int backupId)
+        {
+            try
+            {
+                var snapshot = new BackupSnapshotItem
+                {
+                    Id = backupId.ToString()
+                };
+                OnDeleteBackupRequested(snapshot);
+            }
+            catch
+            {
+                // Ignore tray errors to avoid blocking menu actions.
+            }
+            finally
+            {
+                TrayMenuRefreshRequested?.Invoke();
+            }
         }
 
         private void EnsureNasMonitorStarted()

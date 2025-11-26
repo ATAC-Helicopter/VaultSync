@@ -11,6 +11,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI;
 
@@ -36,6 +37,14 @@ public partial class App : Application
             {
                 DataContext = AppViewModelInstance
             };
+
+            // Small always-on-top widget that lights up for tray-started backups.
+            var backupWidgetService = new BackupWidgetService(
+                desktop,
+                AppViewModelInstance.BackupsViewModel,
+                () => BringMainWindowToFront(desktop));
+            AppViewModelInstance.AttachBackupWidgetService(backupWidgetService);
+            AppViewModelInstance.TrayMenuRefreshRequested += RefreshTrayMenu;
 
             // Wire a platform-aware system notification service; fall back to stub if unavailable.
             GlobalNotificationCenter.Instance.SystemNotificationService =
@@ -73,25 +82,14 @@ public partial class App : Application
             ToolTipText = "VaultSync"
         };
 
-        void BringWindowToFrontIfUserWants()
-        {
-            var window = desktop.MainWindow;
-            if (window is null)
-                return;
+        var menu = BuildTrayMenu(desktop);
 
-            var config = AppConfigStore.Load();
-            if (config.Behavior?.ShowWindowOnTrayActions != true)
-                return;
+        _trayIcon.Menu = menu;
+        _trayIcon.IsVisible = true;
+    }
 
-            if (!window.IsVisible)
-                window.Show();
-
-            if (window.WindowState == WindowState.Minimized)
-                window.WindowState = WindowState.Normal;
-
-            window.Activate();
-        }
-
+    private NativeMenu BuildTrayMenu(IClassicDesktopStyleApplicationLifetime desktop)
+    {
         // Build a small context menu: Open / Backup / Snapshot / Quit.
         var menu = new NativeMenu();
 
@@ -129,7 +127,7 @@ public partial class App : Application
             var projectBackupItem = new NativeMenuItem(projectName);
             projectBackupItem.Click += (_, _) =>
             {
-                BringWindowToFrontIfUserWants();
+                BringWindowToFrontIfUserWants(desktop);
                 AppViewModelInstance?.RequestBackupProjectFromTray(projectId);
             };
 
@@ -144,7 +142,7 @@ public partial class App : Application
         var backupAllItem = new NativeMenuItem("Backup all projects");
         backupAllItem.Click += (_, _) =>
         {
-            BringWindowToFrontIfUserWants();
+            BringWindowToFrontIfUserWants(desktop);
             AppViewModelInstance?.RequestBackupAllFromTray();
         };
         backupMenu.Items.Add(backupAllItem);
@@ -165,7 +163,7 @@ public partial class App : Application
             var projectSnapshotItem = new NativeMenuItem(projectName);
             projectSnapshotItem.Click += async (_, _) =>
             {
-                BringWindowToFrontIfUserWants();
+                BringWindowToFrontIfUserWants(desktop);
 
                 if (AppViewModelInstance is not null)
                 {
@@ -184,7 +182,7 @@ public partial class App : Application
         var snapshotAllItem = new NativeMenuItem("Snapshot all projects");
         snapshotAllItem.Click += async (_, _) =>
         {
-            BringWindowToFrontIfUserWants();
+            BringWindowToFrontIfUserWants(desktop);
 
             if (AppViewModelInstance is not null)
             {
@@ -194,6 +192,63 @@ public partial class App : Application
         snapshotMenu.Items.Add(snapshotAllItem);
 
         snapshotRootItem.Menu = snapshotMenu;
+
+        // ---------- Manage recent backups (keep/delete) ----------
+        var manageBackupsRoot = new NativeMenuItem("Manage backups");
+        var manageBackupsMenu = new NativeMenu();
+
+        var recentByProject = AppViewModelInstance?.GetRecentBackupsForTray(5)
+                              ?? Array.Empty<AppViewModel.TrayProjectBackups>();
+
+        var anyBackups = false;
+        foreach (var project in recentByProject)
+        {
+            if (!project.Backups.Any())
+                continue;
+
+            anyBackups = true;
+            var projectItem = new NativeMenuItem(project.ProjectName);
+            var projectMenu = new NativeMenu();
+
+            foreach (var backup in project.Backups)
+            {
+                var keepLabel = backup.IsProtected
+                    ? $"Kept · {backup.Label}"
+                    : $"Keep · {backup.Label}";
+                var keepItem = new NativeMenuItem(keepLabel);
+                keepItem.Click += (_, _) =>
+                {
+                    AppViewModelInstance?.ToggleBackupProtectionFromTray(backup.Id);
+                };
+
+                var deleteItem = new NativeMenuItem($"Delete · {backup.Label}");
+                deleteItem.Click += (_, _) =>
+                {
+                    AppViewModelInstance?.DeleteBackupFromTray(backup.Id);
+                };
+
+                projectMenu.Items.Add(keepItem);
+                projectMenu.Items.Add(deleteItem);
+                projectMenu.Items.Add(new NativeMenuItemSeparator());
+            }
+
+            // Trim trailing separator per project
+            if (projectMenu.Items.LastOrDefault() is NativeMenuItemSeparator)
+            {
+                projectMenu.Items.RemoveAt(projectMenu.Items.Count - 1);
+            }
+
+            projectItem.Menu = projectMenu;
+            manageBackupsMenu.Items.Add(projectItem);
+        }
+
+        if (!anyBackups)
+        {
+            manageBackupsMenu.Items.Add(new NativeMenuItem("No backups yet") { IsEnabled = false });
+        }
+
+        manageBackupsRoot.Menu = manageBackupsMenu;
+        menu.Items.Add(manageBackupsRoot);
 
         var separator1 = new NativeMenuItemSeparator();
         var separator2 = new NativeMenuItemSeparator();
@@ -212,8 +267,52 @@ public partial class App : Application
         menu.Items.Add(separator2);
         menu.Items.Add(quitItem);
 
-        _trayIcon.Menu = menu;
-        _trayIcon.IsVisible = true;
+        return menu;
+    }
+
+    public void RefreshTrayMenu()
+    {
+        if (_trayIcon is null)
+            return;
+
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+
+        _trayIcon.Menu = BuildTrayMenu(desktop);
+    }
+
+    private static void BringWindowToFrontIfUserWants(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        var window = desktop.MainWindow;
+        if (window is null)
+            return;
+
+        var config = AppConfigStore.Load();
+        if (config.Behavior?.ShowWindowOnTrayActions != true)
+            return;
+
+        if (!window.IsVisible)
+            window.Show();
+
+        if (window.WindowState == WindowState.Minimized)
+            window.WindowState = WindowState.Normal;
+
+        window.Activate();
+    }
+
+    private static void BringMainWindowToFront(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        var window = desktop.MainWindow;
+        if (window is null)
+            return;
+
+        if (!window.IsVisible)
+            window.Show();
+
+        if (window.WindowState == WindowState.Minimized)
+            window.WindowState = WindowState.Normal;
+
+        window.Activate();
     }
 
     private static ISystemNotificationService? CreateSystemNotificationService()

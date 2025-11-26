@@ -14,6 +14,7 @@ using System.Text.Json;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
 using System.Linq;
+using VaultSync.UI.Notifications;
 
 namespace VaultSync.UI.ViewModels;
 
@@ -89,6 +90,29 @@ public class ProjectsViewModel : ViewModelBase
     private void ShowNotification(string message, NotificationSeverity severity = NotificationSeverity.Info)
     {
         Notification.Show(message, severity);
+    }
+
+    private void NotifySnapshotOutcome(string message, bool success)
+    {
+        var cfg = AppConfigStore.Load();
+
+        var wants = success
+            ? cfg.Notifications.OnSnapshotSuccess
+            : cfg.Notifications.OnSnapshotFailure;
+
+        if (!wants)
+            return;
+
+        var severity = success ? NotificationSeverity.Info : NotificationSeverity.Error;
+        var title    = success ? "Snapshot completed" : "Snapshot failed";
+
+        GlobalNotificationCenter.Instance.Show(message, severity, title);
+
+        if (cfg.Notifications.UseOsNotifications &&
+            (!cfg.Notifications.OnlyWhenInactive || !MainWindow.IsForeground))
+        {
+            GlobalNotificationCenter.Instance.ShowSystem(message, severity, title);
+        }
     }
 
     private void SeedDesignProjects()
@@ -513,12 +537,16 @@ public class ProjectsViewModel : ViewModelBase
             }
             if (SelectedProject != null)
             {
-                ShowNotification($"Snapshot created for '{SelectedProject.Name}'.", NotificationSeverity.Info);
+                var msg = $"Snapshot created for '{SelectedProject.Name}'.";
+                ShowNotification(msg, NotificationSeverity.Info);
+                NotifySnapshotOutcome(msg, success: true);
             }
         }
         catch (Exception ex)
         {
-            ShowNotification("Snapshot failed. Check logs for details.", NotificationSeverity.Error);
+            const string msg = "Snapshot failed. Check logs for details.";
+            ShowNotification(msg, NotificationSeverity.Error);
+            NotifySnapshotOutcome(msg, success: false);
         }
 
         // Refresh label/state after the operation.

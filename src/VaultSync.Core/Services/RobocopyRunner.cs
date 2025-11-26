@@ -51,7 +51,9 @@ namespace VaultSync.Core.Services
                 FileName               = "robocopy",
                 UseShellExecute        = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true
+                RedirectStandardError  = true,
+                CreateNoWindow         = true,
+                WindowStyle            = ProcessWindowStyle.Hidden
             };
 
             // Required: source + dest first

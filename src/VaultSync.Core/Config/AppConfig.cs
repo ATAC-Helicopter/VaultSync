@@ -150,15 +150,20 @@ namespace VaultSync.Core.Config
     public bool ShowWindowOnTrayActions { get; set; } = true;
     
         /// <summary>
-        /// If true, show a tray icon (Windows) or menu bar icon (macOS).
-        /// </summary>
-        public bool ShowTrayIcon { get; set; } = true;
+    /// If true, show a tray icon (Windows) or menu bar icon (macOS).
+    /// </summary>
+    public bool ShowTrayIcon { get; set; } = true;
 
-        /// <summary>
-        /// If true, OS-level notifications (Notification Center / Windows Toasts)
-        /// are enabled when the app is in background.
-        /// </summary>
-        public bool EnableSystemNotifications { get; set; } = true;
+    /// <summary>
+    /// If true, show the mini backup widget when starting backups from the tray/menu-bar.
+    /// </summary>
+    public bool ShowBackupWidget { get; set; } = true;
+
+    /// <summary>
+    /// If true, OS-level notifications (Notification Center / Windows Toasts)
+    /// are enabled when the app is in background.
+    /// </summary>
+    public bool EnableSystemNotifications { get; set; } = true;
 
         /// <summary>
         /// If true, minimizing the window sends it to tray/menu bar.

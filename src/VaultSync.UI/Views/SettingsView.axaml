@@ -157,6 +157,19 @@
                                 IsChecked="{Binding ShowWindowOnTrayActions, Mode=TwoWay}" />
                 </Grid>
 
+                <!-- Show mini backup widget when starting from tray -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Show mini backup widget for tray backups" />
+                    <TextBlock Text="Display a small draggable widget when a tray backup starts."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding ShowTrayBackupWidget, Mode=TwoWay}" />
+                </Grid>
+
               </StackPanel>
             </Border>
 

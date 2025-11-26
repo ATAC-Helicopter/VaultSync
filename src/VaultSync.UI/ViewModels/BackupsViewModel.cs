@@ -530,6 +530,26 @@ namespace VaultSync.UI.ViewModels
             ActiveBackups.Clear();
         }
 
+        public void MarkBackupProtection(int backupId, bool isProtected)
+        {
+            var idStr = backupId.ToString();
+
+            var snapshot = Snapshots.FirstOrDefault(s => s.Id == idStr);
+            if (snapshot != null)
+                snapshot.IsProtected = isProtected;
+
+            var all = _allSnapshots.FirstOrDefault(s => s.Id == idStr);
+            if (all != null)
+                all.IsProtected = isProtected;
+
+            foreach (var group in SnapshotGroups)
+            {
+                var gItem = group.Snapshots.FirstOrDefault(s => s.Id == idStr);
+                if (gItem != null)
+                    gItem.IsProtected = isProtected;
+            }
+        }
+
         // ---------- Snapshot management + filtering ----------
 
         private void AddSnapshot(BackupSnapshotItem snapshot)
