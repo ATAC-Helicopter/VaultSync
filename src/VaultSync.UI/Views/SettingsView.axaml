@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VaultSync.UI"
+             xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
              x:Class="VaultSync.UI.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
@@ -41,6 +42,10 @@
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
     </Style>
   </UserControl.Styles>
+
+  <UserControl.Resources>
+    <controls:StatusToBrushConverter x:Key="StatusToBrushConverter" />
+  </UserControl.Resources>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
@@ -144,6 +149,28 @@
                                 IsChecked="{Binding LaunchOnLogin, Mode=TwoWay}" />
                 </Grid>
 
+                <!-- Show tray icon -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Show tray icon" />
+                    <TextBlock Text="Keep a tray/menu icon for quick actions." Foreground="{StaticResource TextSecondary}" FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding ShowTrayIcon, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- Run in background when closing -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="Run in background when closing" />
+                    <TextBlock Text="Hide to tray instead of quitting when closing the window." Foreground="{StaticResource TextSecondary}" FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding RunInBackground, Mode=TwoWay}" />
+                </Grid>
+
                 <!-- Show main window on tray actions -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
@@ -232,19 +259,30 @@
                 </Grid>
 
                 <!-- Backup location -->
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid ColumnDefinitions="*,Auto,Auto"
                       RowDefinitions="Auto,Auto"
                       RowSpacing="4"
                       Margin="0,6,0,0"
                       ColumnSpacing="8">
                   <StackPanel Grid.Row="0"
                               Grid.Column="0"
-                              Grid.ColumnSpan="2"
+                              Grid.ColumnSpan="3"
                               Spacing="2">
                     <TextBlock Text="Backup location" />
                     <TextBlock Text="Folder where VaultSync stores backup archives."
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
+                    <Border Background="{Binding BackupLocationStatus, Converter={StaticResource StatusToBrushConverter}, ConverterParameter=bg}"
+                            BorderBrush="{Binding BackupLocationStatus, Converter={StaticResource StatusToBrushConverter}}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="8,4"
+                            Margin="0,4,0,0">
+                      <TextBlock Text="{Binding BackupLocationStatus}"
+                                 Foreground="{Binding BackupLocationStatus, Converter={StaticResource StatusToBrushConverter}}"
+                                 FontSize="11"
+                                 FontWeight="SemiBold" />
+                    </Border>
                   </StackPanel>
 
                   <TextBox Grid.Row="1"
@@ -259,6 +297,14 @@
                           Classes="settings-ghost"
                           Command="{Binding BrowseBackupLocationCommand}">
                     Browse
+                  </Button>
+
+                  <Button Grid.Row="1"
+                          Grid.Column="2"
+                          Margin="8,2,0,0"
+                          Classes="settings-ghost"
+                          Command="{Binding TestBackupLocationCommand}">
+                    Recheck
                   </Button>
                 </Grid>
 

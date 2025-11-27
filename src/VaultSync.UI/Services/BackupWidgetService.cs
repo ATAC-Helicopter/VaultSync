@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
@@ -48,6 +49,11 @@ namespace VaultSync.UI.Services
 
             Dispatcher.UIThread.Post(() =>
             {
+                // If main window is visible/foreground, skip showing the widget to avoid overlap.
+                var main = _desktop.MainWindow;
+                if (main is not null && main.IsVisible && MainWindow.IsForeground)
+                    return;
+
                 EnsureWindow();
                 if (_window is null)
                     return;
@@ -78,11 +84,12 @@ namespace VaultSync.UI.Services
                 DataContext   = new BackupWidgetViewModel(_backupsViewModel, _bringMainWindowToFront, Hide),
                 ShowInTaskbar = false,
                 Topmost       = true,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen
+                WindowStartupLocation = WindowStartupLocation.Manual
             };
 
             // If the user closes the widget, simply drop the instance so it can be recreated later.
             _window.Closed += (_, _) => _window = null;
+            _window.Opened += (_, _) => PositionWindow(_window);
         }
 
         private void OnActiveBackupsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -129,6 +136,36 @@ namespace VaultSync.UI.Services
                     Hide();
                 }
             }
+        }
+
+        private void PositionWindow(Window? window)
+        {
+            if (window is null)
+                return;
+
+            var owner = _desktop.MainWindow;
+            var screens = owner?.Screens ?? window.Screens;
+            var screen = owner is not null
+                ? screens.ScreenFromWindow(owner) ?? screens.Primary
+                : screens.Primary;
+
+            if (screen is null)
+                return;
+
+            const int margin = 16;
+            // Use the current size if available; otherwise fall back to a sensible default.
+            var width  = window.Width  > 0 ? window.Width  : 360;
+            var height = window.Height > 0 ? window.Height : 220;
+
+            var area = screen.WorkingArea;
+            var x = area.X + area.Width  - (int)width  - margin;
+            var y = area.Y + area.Height - (int)height - margin;
+
+            // Keep within the working area bounds.
+            x = Math.Max(area.X + margin, x);
+            y = Math.Max(area.Y + margin, y);
+
+            window.Position = new PixelPoint(x, y);
         }
     }
 }

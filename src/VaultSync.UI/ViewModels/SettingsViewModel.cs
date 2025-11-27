@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.IO;
 using System.Windows.Input;
 using System.Linq;
 using Avalonia;
@@ -13,6 +14,8 @@ using Avalonia.Styling;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
 using VaultSync.UI.Infrastructure;
+using VaultSync.UI.Notifications;
+using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI
 {
@@ -23,6 +26,8 @@ namespace VaultSync.UI
         private string _projectsRootPath = string.Empty;
         private bool _resumeLastSession = true;
         private bool _showWindowOnTrayActions = true;
+        private bool _showTrayIcon = true;
+        private bool _runInBackground = true;
         private bool _launchOnLogin = false;
         private List<int> _autoBackupDisabledProjects = new();
 
@@ -34,6 +39,7 @@ namespace VaultSync.UI
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
         private bool _useFullSnapshotHash = true;
+        private string _backupLocationStatus = string.Empty;
 
         private bool _preferExternalDrives = true;
         private bool _showDriveHealthWarnings = true;
@@ -86,6 +92,7 @@ namespace VaultSync.UI
             ApplySettingsCommand         = new RelayCommand(_ => SaveToConfig());
             ClearLocalCacheCommand       = new RelayCommand(_ => ClearLocalCache());
             ForgetAllProjectsCommand     = new RelayCommand(_ => ForgetAllProjects());
+            TestBackupLocationCommand    = new RelayCommand(_ => TestBackupLocation(), _ => !string.IsNullOrWhiteSpace(BackupLocationPath));
             TestNetworkConnectionCommand = new RelayCommand(_ => TestNetworkConnection(), _ => ShowNetworkShareOptions);
 
             PropertyChanged += OnSettingsPropertyChanged;
@@ -117,8 +124,10 @@ namespace VaultSync.UI
             _projectsRootPath      = cfg.ProjectsRoot ?? "";
             _resumeLastSession     = cfg.ResumeLastSession;
             _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
-            _showTrayBackupWidget  = cfg.Behavior.ShowBackupWidget;
-            _launchOnLogin         = cfg.Behavior.LaunchOnLogin;
+            _showTrayIcon            = cfg.Behavior.ShowTrayIcon;
+            _runInBackground         = cfg.Behavior.RunInBackground;
+            _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
+            _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
             _autoBackupIntervalMinutes = cfg.Backups.IntervalMinutes;
@@ -188,6 +197,8 @@ namespace VaultSync.UI
 
             cfg.Behavior.LaunchOnLogin           = _launchOnLogin;
             cfg.Behavior.ShowWindowOnTrayActions = _showWindowOnTrayActions;
+            cfg.Behavior.ShowTrayIcon            = _showTrayIcon;
+            cfg.Behavior.RunInBackground         = _runInBackground;
             cfg.Behavior.ShowBackupWidget        = _showTrayBackupWidget;
 
             cfg.Backups.EnableAutoBackups           = EnableAutoBackups;
@@ -329,7 +340,19 @@ namespace VaultSync.UI
         public string BackupLocationPath
         {
             get => _backupLocationPath;
-            set => SetField(ref _backupLocationPath, value);
+            set
+            {
+                if (SetField(ref _backupLocationPath, value))
+                {
+                    ValidateBackupLocation(value);
+                }
+            }
+        }
+
+        public string BackupLocationStatus
+        {
+            get => _backupLocationStatus;
+            private set => SetField(ref _backupLocationStatus, value);
         }
 
         public bool UseBackupCompression
@@ -429,6 +452,18 @@ namespace VaultSync.UI
         {
             get => _showWindowOnTrayActions;
             set => SetField(ref _showWindowOnTrayActions, value);
+        }
+
+        public bool ShowTrayIcon
+        {
+            get => _showTrayIcon;
+            set => SetField(ref _showTrayIcon, value);
+        }
+
+        public bool RunInBackground
+        {
+            get => _runInBackground;
+            set => SetField(ref _runInBackground, value);
         }
 
         public bool ShowTrayBackupWidget
@@ -551,6 +586,7 @@ namespace VaultSync.UI
         public ICommand ApplySettingsCommand { get; }
         public ICommand ClearLocalCacheCommand { get; }
         public ICommand ForgetAllProjectsCommand { get; }
+        public ICommand TestBackupLocationCommand { get; }
         public ICommand TestNetworkConnectionCommand { get; }
 
         private async void BrowseProjectsRoot()
@@ -595,6 +631,7 @@ namespace VaultSync.UI
                 return;
 
             BackupLocationPath = path;
+            ValidateBackupLocation(path);
         }
 
         private void ResetToDefaults()
@@ -606,6 +643,88 @@ namespace VaultSync.UI
         private void ClearLocalCache()
         {
             // TODO
+        }
+
+        private void TestBackupLocation()
+        {
+            if (string.IsNullOrWhiteSpace(BackupLocationPath))
+                return;
+
+            ValidateBackupLocation(BackupLocationPath, notifyOnSuccess: false);
+        }
+
+        private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                BackupLocationStatus = string.Empty;
+                return;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(path);
+            }
+            catch (Exception ex)
+            {
+                BackupLocationStatus = "Not accessible";
+                GlobalNotificationCenter.Instance.Show(
+                    $"Backup location not accessible: {ex.Message}",
+                    NotificationSeverity.Error,
+                    "Backup location");
+                return;
+            }
+
+            // Write test file to ensure we can write to the target.
+            var testFile = Path.Combine(path, ".vaultsync_write_test");
+            try
+            {
+                File.WriteAllText(testFile, "ok");
+                File.Delete(testFile);
+            }
+            catch (Exception ex)
+            {
+                BackupLocationStatus = "Not writable";
+                GlobalNotificationCenter.Instance.Show(
+                    $"Backup location is not writable: {ex.Message}",
+                    NotificationSeverity.Error,
+                    "Backup location");
+                return;
+            }
+
+            // Check free space against the configured minimum threshold.
+            try
+            {
+                var drive = new DriveInfo(path);
+                if (drive.IsReady && drive.TotalSize > 0)
+                {
+                    var freePercent = (double)drive.AvailableFreeSpace / drive.TotalSize * 100d;
+                    if (freePercent < MinimumFreeSpacePercent)
+                    {
+                        BackupLocationStatus = $"Low space ({freePercent:0.#}% free)";
+                        GlobalNotificationCenter.Instance.Show(
+                            $"Free space below threshold ({freePercent:0.#}% available, threshold {MinimumFreeSpacePercent}%).",
+                            NotificationSeverity.Warning,
+                            "Backup location");
+                    }
+                    else
+                    {
+                        BackupLocationStatus = "OK";
+                        if (notifyOnSuccess)
+                        {
+                            GlobalNotificationCenter.Instance.Show(
+                                $"Backup location set: {path}",
+                                NotificationSeverity.Info,
+                                "Backup location");
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                BackupLocationStatus = "OK";
+                // Ignore disk space failures; path/write checks already passed.
+            }
         }
 
         private void ForgetAllProjects()
@@ -646,4 +765,8 @@ namespace VaultSync.UI
         }
     }
 }
+
+
+
+
 

@@ -44,8 +44,15 @@ namespace VaultSync.Core.Config
 
                     cfg.DbPath = Path.Combine(dir, "vaultsync.db");
 
-                    // Save updated config with the new DbPath
-                    Save(cfg);
+                    // Save updated config with the new DbPath (best-effort; ignore failures so app can still run)
+                    try
+                    {
+                        Save(cfg);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[AppConfigStore] Failed to persist default DbPath: {ex.Message}");
+                    }
                 }
 
                 return cfg;

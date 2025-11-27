@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -119,6 +120,7 @@ namespace VaultSync.UI.ViewModels
         private bool ShouldShowBackupWidget =>
             _settingsViewModel?.ShowTrayBackupWidget ?? true;
 
+        public SettingsViewModel SettingsViewModel => _settingsViewModel;
         public BackupsViewModel BackupsViewModel => _backupsViewModel;
 
         public object? CurrentView
@@ -1545,8 +1547,71 @@ namespace VaultSync.UI.ViewModels
 
         // ---------- Tray helpers: recent backups / keep / delete ----------
 
-        public sealed record TrayBackupItem(int Id, string Label, bool IsProtected);
+        public sealed record TrayBackupItem(int Id, int ProjectId, string Label, bool IsProtected);
         public sealed record TrayProjectBackups(int ProjectId, string ProjectName, IReadOnlyList<TrayBackupItem> Backups);
+        public void OpenBackupFolderFromTray(int backupId)
+        {
+            try
+            {
+                var backup = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
+                    .FirstOrDefault(b => b.Id == backupId);
+                if (backup is null)
+                    return;
+
+                var cfg = AppConfigStore.Load();
+                var root = cfg.Backups.BackupRoot;
+                if (string.IsNullOrWhiteSpace(root))
+                    return;
+
+                var fullPath = Path.GetFullPath(Path.Combine(root, backup.Path ?? string.Empty));
+                if (!Directory.Exists(fullPath))
+                    return;
+
+                if (OperatingSystem.IsWindows())
+                {
+                    Process.Start(new ProcessStartInfo("explorer.exe", $"\"{fullPath}\"") { UseShellExecute = true });
+                }
+                else if (OperatingSystem.IsMacOS())
+                {
+                    Process.Start("open", fullPath);
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    Process.Start("xdg-open", fullPath);
+                }
+                else
+                {
+                    Process.Start(new ProcessStartInfo { FileName = fullPath, UseShellExecute = true });
+                }
+            }
+            catch
+            {
+                // Swallow tray errors
+            }
+        }
+
+        public void ShowBackupInAppFromTray(int projectId)
+        {
+            try
+            {
+                ReloadBackupsVmData();
+                var projectItem = _backupsViewModel.ProjectBackups
+                    .FirstOrDefault(p => int.TryParse(p.Id, out var pid) && pid == projectId);
+                if (projectItem is not null)
+                {
+                    _backupsViewModel.SelectedProject = projectItem;
+                }
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    SetCurrentView("Backups");
+                });
+            }
+            catch
+            {
+                // ignore tray errors
+            }
+        }
 
         public IReadOnlyList<TrayProjectBackups> GetRecentBackupsForTray(int maxPerProject = 5)
         {
@@ -1565,7 +1630,7 @@ namespace VaultSync.UI.ViewModels
                             var ts   = b.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
                             var keep = b.IsProtected ? " • Keep" : string.Empty;
                             var label = $"{ts}{keep}";
-                            return new TrayBackupItem(b.Id, label, b.IsProtected);
+                            return new TrayBackupItem(b.Id, project.Id, label, b.IsProtected);
                         })
                         .ToList();
 

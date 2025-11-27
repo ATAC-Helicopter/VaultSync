@@ -44,6 +44,12 @@ namespace VaultSync.UI.Notifications
         public static GlobalNotificationCenter Instance { get; } = new();
 
         /// <summary>
+        /// Optional filter to decide whether a system notification should be shown.
+        /// Returning false will drop the OS-level notification (in-app toasts still fire).
+        /// </summary>
+        public Func<NotificationRequest, bool>? ShouldShowSystemNotification { get; set; }
+
+        /// <summary>
         /// Optional system notification service that can be wired at startup
         /// (for macOS/Windows native notifications). If null, only in-app toasts
         /// will be used.
@@ -84,6 +90,9 @@ namespace VaultSync.UI.Notifications
                 severity,
                 title,
                 duration ?? TimeSpan.FromSeconds(4));
+
+            if (ShouldShowSystemNotification is not null && !ShouldShowSystemNotification(request))
+                return;
 
             SystemNotificationService?.ShowSystemNotification(request);
         }
