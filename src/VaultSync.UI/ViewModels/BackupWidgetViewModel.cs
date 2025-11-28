@@ -13,6 +13,7 @@ namespace VaultSync.UI.ViewModels
 
         public ICommand CloseCommand { get; }
         public ICommand OpenAppCommand { get; }
+        public ICommand OpenBackupsCommand { get; }
 
         public string StatusText =>
             ActiveBackups.Count switch
@@ -27,6 +28,7 @@ namespace VaultSync.UI.ViewModels
         public BackupWidgetViewModel(
             BackupsViewModel backupsViewModel,
             Action openMainWindow,
+            Action openBackupsView,
             Action hideWidget)
         {
             ActiveBackups = backupsViewModel?.ActiveBackups
@@ -34,11 +36,22 @@ namespace VaultSync.UI.ViewModels
 
             if (openMainWindow is null)
                 throw new ArgumentNullException(nameof(openMainWindow));
+            if (openBackupsView is null)
+                throw new ArgumentNullException(nameof(openBackupsView));
             if (hideWidget is null)
                 throw new ArgumentNullException(nameof(hideWidget));
 
             CloseCommand   = new RelayCommand(_ => hideWidget());
-            OpenAppCommand = new RelayCommand(_ => openMainWindow());
+            OpenAppCommand = new RelayCommand(_ =>
+            {
+                openMainWindow();
+                hideWidget();
+            });
+            OpenBackupsCommand = new RelayCommand(_ =>
+            {
+                openBackupsView();
+                hideWidget();
+            });
 
             ActiveBackups.CollectionChanged += OnActiveBackupsChanged;
         }

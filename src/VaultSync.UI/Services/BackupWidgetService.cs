@@ -5,8 +5,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using VaultSync.UI.ViewModels;
 using VaultSync.UI.Views;
+using VaultSync.UI.ViewModels;
+using VaultSync.UI;
 
 namespace VaultSync.UI.Services
 {
@@ -81,7 +82,15 @@ namespace VaultSync.UI.Services
 
             _window = new BackupWidgetWindow
             {
-                DataContext   = new BackupWidgetViewModel(_backupsViewModel, _bringMainWindowToFront, Hide),
+                DataContext   = new BackupWidgetViewModel(
+                    _backupsViewModel,
+                    _bringMainWindowToFront,
+                    () =>
+                    {
+                        _bringMainWindowToFront();
+                        App.AppViewModelInstance?.NavigateBackups?.Execute(null);
+                    },
+                    Hide),
                 ShowInTaskbar = false,
                 Topmost       = true,
                 WindowStartupLocation = WindowStartupLocation.Manual

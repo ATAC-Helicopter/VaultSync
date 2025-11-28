@@ -357,22 +357,23 @@
                             BorderThickness="1">
                       <StackPanel Spacing="4">
                         <Grid ColumnDefinitions="*,Auto,Auto"
-                              ColumnSpacing="6">
-                          <TextBlock Grid.Column="0"
-                                     Text="{Binding ProjectName}"
-                                     FontSize="12"
-                                     FontWeight="SemiBold"
-                                     TextTrimming="CharacterEllipsis" />
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding Progress, StringFormat='{}{0:0}%'}"
-                                     FontSize="11"
-                                     Foreground="{DynamicResource TextSecondaryBrush}"
-                                     Margin="0,0,4,0" />
-                          <Button Grid.Column="2"
-                                  Content="Cancel"
-                                  Command="{Binding CancelCommand}"
-                                  Classes="small-button"
-                                  HorizontalAlignment="Right"
+                          ColumnSpacing="6">
+                      <TextBlock Grid.Column="0"
+                                 Text="{Binding ProjectName}"
+                                 FontSize="12"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding Progress, StringFormat='{}{0:0}%'}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 Margin="0,0,4,0"
+                                 IsVisible="{Binding ShowPercent}" />
+                      <Button Grid.Column="2"
+                              Content="Cancel"
+                              Command="{Binding CancelCommand}"
+                              Classes="small-button"
+                              HorizontalAlignment="Right"
                                   VerticalAlignment="Center"
                                   Padding="8,2"
                                   MinWidth="0"
@@ -382,6 +383,7 @@
                         <ProgressBar Minimum="0"
                                      Maximum="100"
                                      Value="{Binding Progress}"
+                                     IsIndeterminate="{Binding IsIndeterminate}"
                                      Height="4"
                                      CornerRadius="2" />
                         <TextBlock Classes="progress-detail"

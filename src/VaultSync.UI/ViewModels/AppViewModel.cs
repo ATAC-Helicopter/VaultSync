@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Diagnostics;
 using System.Linq;
@@ -339,21 +339,21 @@ namespace VaultSync.UI.ViewModels
                     if (disabled.Contains(project.Id))
                         continue;
 
-                    ResolveBackupRoots(
-                        project,
-                        backupRoot,
-                        out var effectiveBackupRoot,
-                        out var preferredFinalBackupRoot);
+                ResolveBackupRoots(
+                    project,
+                    backupRoot,
+                    out var effectiveBackupRoot,
+                    out var preferredFinalBackupRoot);
 
-                    var blockForDrive = ShouldBlockForDriveHealth(project.RootPath, effectiveBackupRoot, out var driveMessage, out var driveSeverity);
-                    if (!string.IsNullOrWhiteSpace(driveMessage))
-                    {
-                        ShowDriveHealthNotification(driveMessage, driveSeverity);
-                    }
-                    if (blockForDrive)
-                    {
-                        continue;
-                    }
+                var driveDecision = await EvaluateDriveHealthAsync(project.RootPath, effectiveBackupRoot);
+                if (!string.IsNullOrWhiteSpace(driveDecision.Message))
+                {
+                    ShowDriveHealthNotification(driveDecision.Message, driveDecision.Severity);
+                }
+                if (driveDecision.Block)
+                {
+                    continue;
+                }
 
                     try
                     {
@@ -456,15 +456,15 @@ namespace VaultSync.UI.ViewModels
                 out var effectiveBackupRoot,
                 out var preferredFinalBackupRoot);
 
-            var blockForDrive = ShouldBlockForDriveHealth(project.RootPath, effectiveBackupRoot, out var driveMessage, out var driveSeverity);
-            if (!string.IsNullOrWhiteSpace(driveMessage))
+            var driveDecision = await EvaluateDriveHealthAsync(project.RootPath, effectiveBackupRoot);
+            if (!string.IsNullOrWhiteSpace(driveDecision.Message))
             {
-                ShowDriveHealthNotification(driveMessage, driveSeverity);
+                ShowDriveHealthNotification(driveDecision.Message, driveDecision.Severity);
             }
-            if (blockForDrive)
+            if (driveDecision.Block)
             {
-                _backupsViewModel.BusyMessage       = driveMessage;
-                _backupsViewModel.BackupCurrentFile = driveMessage;
+                _backupsViewModel.BusyMessage       = driveDecision.Message;
+                _backupsViewModel.BackupCurrentFile = driveDecision.Message;
                 return;
             }
 
@@ -692,7 +692,7 @@ namespace VaultSync.UI.ViewModels
                         _backupsViewModel.BackupEtaText =
                             string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
                                 ? ex.Message
-                                : _backupsViewModel.BackupEtaText + " · Low disk space";
+                                : _backupsViewModel.BackupEtaText + " Â· Low disk space";
                     });
                 }
                 else
@@ -726,7 +726,7 @@ namespace VaultSync.UI.ViewModels
                         _backupsViewModel.BackupEtaText =
                             string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
                                 ? ex.Message
-                                : _backupsViewModel.BackupEtaText + " · Failed";
+                                : _backupsViewModel.BackupEtaText + " Â· Failed";
                     });
                 }
             }
@@ -846,7 +846,7 @@ namespace VaultSync.UI.ViewModels
                         });
                     }
 
-                    var tasks = projects.Select(project =>
+                    var tasks = projects.Select(project => Task.Run(async () =>
                     {
                         ResolveBackupRoots(
                             project,
@@ -854,12 +854,12 @@ namespace VaultSync.UI.ViewModels
                             out var effectiveBackupRoot,
                             out var preferredFinalBackupRoot);
 
-                        var blockForDrive = ShouldBlockForDriveHealth(project.RootPath, effectiveBackupRoot, out var driveMessage, out var driveSeverity);
-                        if (!string.IsNullOrWhiteSpace(driveMessage))
+                        var driveDecision = await EvaluateDriveHealthAsync(project.RootPath, effectiveBackupRoot);
+                        if (!string.IsNullOrWhiteSpace(driveDecision.Message))
                         {
-                            ShowDriveHealthNotification(driveMessage, driveSeverity);
+                            ShowDriveHealthNotification(driveDecision.Message, driveDecision.Severity);
                         }
-                        if (blockForDrive)
+                        if (driveDecision.Block)
                         {
                             progressPerProject[project.Id] = 100;
                             Dispatcher.UIThread.Post(() =>
@@ -868,14 +868,14 @@ namespace VaultSync.UI.ViewModels
                                     project.Id.ToString(),
                                     project.Name,
                                     100,
-                                    driveMessage,
+                                    driveDecision.Message,
                                     string.Empty);
                             });
-                            UpdateAggregateProgress(driveMessage, string.Empty);
-                            return Task.CompletedTask;
+                            UpdateAggregateProgress(driveDecision.Message, string.Empty);
+                            return;
                         }
 
-                        return _backupService.RunBackupAsync(
+                        await _backupService.RunBackupAsync(
                             project,
                             effectiveBackupRoot,
                             isAuto: false,
@@ -915,13 +915,11 @@ namespace VaultSync.UI.ViewModels
                             maxSnapshotsToKeep: maxSnapshotsToKeep,
                             minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
                             preferredFinalBackupRoot: preferredFinalBackupRoot
-                        ).ContinueWith(t =>
-                        {
-                            if (t.IsFaulted)
-                            {
-                            }
-                        });
-                    }).ToList();
+                        );
+
+                        progressPerProject[project.Id] = 100;
+                        UpdateAggregateProgress(string.Empty, string.Empty);
+                    })).ToList();
 
                     await Task.WhenAll(tasks);
 
@@ -1060,7 +1058,7 @@ namespace VaultSync.UI.ViewModels
                     _backupsViewModel.BackupEtaText =
                         string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
                             ? ex.Message
-                            : _backupsViewModel.BackupEtaText + " · Failed";
+                            : _backupsViewModel.BackupEtaText + " Â· Failed";
                 });
 
                 // Clear cards on failure (ensure this runs on the UI thread)
@@ -1098,6 +1096,12 @@ namespace VaultSync.UI.ViewModels
             var backupRoot = cfg.Backups.BackupRoot;
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return;
+
+            var project    = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
+            var projectName = project?.Name ?? "Backup";
+            var cardId = $"delete-{backupId}";
+
+            _backupsViewModel.ShowTransientOperation(cardId, projectName, "Deleting backup files...");
 
             _backupsViewModel.IsBusy      = true;
             _backupsViewModel.BusyMessage = "Deleting backup...";
@@ -1142,6 +1146,7 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
+                _backupsViewModel.CompleteTransientOperation(cardId, "Deleted");
                 _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
             }
@@ -1244,7 +1249,7 @@ namespace VaultSync.UI.ViewModels
                     _backupsViewModel.BackupEtaText =
                         string.IsNullOrWhiteSpace(_backupsViewModel.BackupEtaText)
                             ? ex.Message
-                            : _backupsViewModel.BackupEtaText + " · Restore failed";
+                            : _backupsViewModel.BackupEtaText + " Â· Restore failed";
                 });
             }
             finally
@@ -1628,7 +1633,7 @@ namespace VaultSync.UI.ViewModels
                         .Select(b =>
                         {
                             var ts   = b.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-                            var keep = b.IsProtected ? " • Keep" : string.Empty;
+                            var keep = b.IsProtected ? " * Keep" : string.Empty;
                             var label = $"{ts}{keep}";
                             return new TrayBackupItem(b.Id, project.Id, label, b.IsProtected);
                         })
@@ -1669,6 +1674,11 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
+                if (ShouldShowBackupWidget)
+                {
+                    _backupWidgetService?.ShowForTrayBackup();
+                }
+
                 var snapshot = new BackupSnapshotItem
                 {
                     Id = backupId.ToString()
@@ -1788,6 +1798,17 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private sealed record DriveHealthDecision(bool Block, string Message, NotificationSeverity Severity);
+
+        private async Task<DriveHealthDecision> EvaluateDriveHealthAsync(string projectPath, string backupPath)
+        {
+            return await Task.Run(() =>
+            {
+                var block = ShouldBlockForDriveHealth(projectPath, backupPath, out var msg, out var sev);
+                return new DriveHealthDecision(block, msg, sev);
+            });
+        }
+
         private bool ShouldBlockForDriveHealth(string projectPath, string backupPath, out string message, out NotificationSeverity severity)
         {
             message  = string.Empty;
@@ -1872,3 +1893,5 @@ namespace VaultSync.UI.ViewModels
         }
     }
 }
+
+

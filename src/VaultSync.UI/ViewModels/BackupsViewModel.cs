@@ -455,14 +455,14 @@ namespace VaultSync.UI.ViewModels
         /// changes safe and avoid UI-thread violations when progress is raised from
         /// background threads.
         /// </summary>
-        public void UpdateActiveBackup(string projectId, string projectName, double progress, string currentFile, string etaText)
+        public void UpdateActiveBackup(string projectId, string projectName, double progress, string currentFile, string etaText, bool allowCancel = true)
         {
             if (string.IsNullOrWhiteSpace(projectId))
                 return;
 
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                Dispatcher.UIThread.Post(() => UpdateActiveBackup(projectId, projectName, progress, currentFile, etaText));
+                Dispatcher.UIThread.Post(() => UpdateActiveBackup(projectId, projectName, progress, currentFile, etaText, allowCancel));
                 return;
             }
 
@@ -477,8 +477,13 @@ namespace VaultSync.UI.ViewModels
                 };
                 ActiveBackups.Add(item);
             }
+            else if (!string.IsNullOrWhiteSpace(projectName))
+            {
+                item.ProjectName = projectName;
+            }
 
             item.Progress = progress;
+            item.AllowCancel = allowCancel;
 
             if (!string.IsNullOrWhiteSpace(currentFile))
                 item.CurrentFile = currentFile;
@@ -528,6 +533,23 @@ namespace VaultSync.UI.ViewModels
             }
 
             ActiveBackups.Clear();
+        }
+
+        /// <summary>
+        /// Shows a non-cancellable transient operation (e.g., deleting a backup) in the active list.
+        /// </summary>
+        public void ShowTransientOperation(string operationId, string title, string detail)
+        {
+            UpdateActiveBackup(operationId, title, 0, detail, string.Empty, allowCancel: false);
+        }
+
+        /// <summary>
+        /// Removes a transient operation card once completed.
+        /// </summary>
+        public void CompleteTransientOperation(string operationId, string finalDetail = "")
+        {
+            UpdateActiveBackup(operationId, string.Empty, 100, finalDetail, string.Empty, allowCancel: false);
+            RemoveActiveBackup(operationId);
         }
 
         public void MarkBackupProtection(int backupId, bool isProtected)
@@ -743,12 +765,13 @@ namespace VaultSync.UI.ViewModels
                 var backupPath = config.Backups.BackupRoot ?? string.Empty;
                 var health = healthService.CheckPath(backupPath);
 
+                var fallbackMessage = string.IsNullOrWhiteSpace(health.Message) ? "not available" : health.Message;
                 var (text, brush) = health.Status switch
                 {
                     DriveHealthStatus.Healthy => ($"Health ({BackupDiskDriveLabel}): OK ({health.Message})", (IBrush)new SolidColorBrush(Colors.LimeGreen)),
                     DriveHealthStatus.Warning => ($"Health warning ({BackupDiskDriveLabel}): {health.Message}", (IBrush)new SolidColorBrush(Colors.Orange)),
                     DriveHealthStatus.Failing => ($"Health failing ({BackupDiskDriveLabel}): {health.Message}", (IBrush)new SolidColorBrush(Colors.Tomato)),
-                    _ => ($"Health ({BackupDiskDriveLabel}): not available", (IBrush)new SolidColorBrush(Colors.Gray))
+                    _ => ($"Health ({BackupDiskDriveLabel}): {fallbackMessage}", (IBrush)new SolidColorBrush(Colors.Gray))
                 };
 
                 BackupDiskHealthText  = text;
@@ -1274,6 +1297,23 @@ namespace VaultSync.UI.ViewModels
 
         public Action<BackupProgressItem?>? CancelRequested { get; set; }
 
+        private bool _allowCancel = true;
+        public bool AllowCancel
+        {
+            get => _allowCancel;
+            set
+            {
+                if (_allowCancel == value)
+                    return;
+
+                _allowCancel = value;
+                OnPropertyChanged(nameof(AllowCancel));
+                OnPropertyChanged(nameof(CanCancel));
+                OnPropertyChanged(nameof(ShowPercent));
+                OnPropertyChanged(nameof(IsIndeterminate));
+            }
+        }
+
         public ICommand CancelCommand { get; }
 
         public BackupProgressItem()
@@ -1330,7 +1370,11 @@ namespace VaultSync.UI.ViewModels
 
         public bool ShowEta => Progress < 100d;
 
-        public bool CanCancel => !IsCompleted;
+        public bool CanCancel => AllowCancel && !IsCompleted;
+
+        public bool ShowPercent => AllowCancel;
+
+        public bool IsIndeterminate => !AllowCancel;
     }
 
     public class SnapshotActivityPoint
