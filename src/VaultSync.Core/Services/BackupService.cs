@@ -61,6 +61,14 @@ public sealed class BackupService
     /// Optional final backup root to move into after creation (e.g., NAS path). If provided and different
     /// from <paramref name="backupRoot"/>, a best-effort move will be attempted after the backup completes.
     /// </param>
+    /// <param name="reuseSnapshotId">
+    /// Optional snapshot ID to reuse when writing the backup metadata. When null, a fresh
+    /// snapshot is created before the backup.
+    /// </param>
+    /// <param name="writeMetadata">
+    /// When false, backup data is written but database metadata/retention is skipped.
+    /// Useful for mirror destinations that should not create duplicate history entries.
+    /// </param>
     /// <returns>The ID of the created backup row in the database.</returns>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the project has no snapshots yet, or backupRoot is not configured.
@@ -75,7 +83,11 @@ public sealed class BackupService
         bool fullSnapshotHash = true,
         int? maxSnapshotsToKeep = null,
         double? minimumFreeSpacePercent = null,
-        string? preferredFinalBackupRoot = null)
+        string? preferredFinalBackupRoot = null,
+        int? reuseSnapshotId = null,
+        bool writeMetadata = true,
+        string? destinationPath = null,
+        string? destinationAlias = null)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -160,10 +172,19 @@ public sealed class BackupService
 
         Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
 
-        // Always create a fresh snapshot before backing up so history stays aligned.
-        progressCallback?.Invoke(0, string.Empty, "Creating snapshot...");
-        var snapshotService = new SnapshotService(_repo, new HashService());
-        var snapshotId = await snapshotService.CreateSnapshotAsync(project, fullSnapshotHash, maxSnapshotsToKeep, linkedToken);
+        int snapshotId;
+        if (reuseSnapshotId.HasValue)
+        {
+            snapshotId = reuseSnapshotId.Value;
+            progressCallback?.Invoke(0, string.Empty, "Reusing existing snapshot...");
+        }
+        else
+        {
+            // Always create a fresh snapshot before backing up so history stays aligned.
+            progressCallback?.Invoke(0, string.Empty, "Creating snapshot...");
+            var snapshotService = new SnapshotService(_repo, new HashService());
+            snapshotId = await snapshotService.CreateSnapshotAsync(project, fullSnapshotHash, maxSnapshotsToKeep, linkedToken);
+        }
 
         try
         {
@@ -263,26 +284,41 @@ public sealed class BackupService
 
         Console.WriteLine($"[BackupService] Backup data written for '{project.Name}', creating backup metadata in database...");
 
-        // Persist metadata in the backups table
-        var backupId = _repo.CreateBackup(
-            projectId:    project.Id,
-            snapshotId:   snapshotId,
-            type:         backupType,
-            totalBytes:   totalBytes,
-            relativePath: relativePath);
+        var backupId = 0;
 
-        Console.WriteLine($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
+        if (writeMetadata)
+        {
+            // Persist metadata in the backups table
+            var metadataRoot = !string.IsNullOrWhiteSpace(destinationPath)
+                ? destinationPath
+                : backupRootUsed;
+            var metadataAlias = !string.IsNullOrWhiteSpace(destinationAlias)
+                ? destinationAlias
+                : string.Empty;
+
+            backupId = _repo.CreateBackup(
+                projectId:       project.Id,
+                snapshotId:      snapshotId,
+                type:            backupType,
+                totalBytes:      totalBytes,
+                relativePath:    relativePath,
+                destinationPath: metadataRoot,
+                destinationAlias: metadataAlias);
+
+            Console.WriteLine($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
+
+            // Apply simple retention: keep only the most recent N backups per project, if configured.
+            try
+            {
+                ApplyBackupRetention(project.Id, backupRootUsed, maxSnapshotsToKeep);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BackupService] Retention step failed for project '{project.Name}': {ex}");
+            }
+        }
+
         progressCallback?.Invoke(100, string.Empty, useArchiveMode ? "Backup completed (archive)." : "Backup completed.");
-
-        // Apply simple retention: keep only the most recent N backups per project, if configured.
-        try
-        {
-            ApplyBackupRetention(project.Id, backupRootUsed, maxSnapshotsToKeep);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[BackupService] Retention step failed for project '{project.Name}': {ex}");
-        }
 
         if (_cancelMap.TryGetValue(project.Id, out var finishedCts))
         {

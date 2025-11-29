@@ -18,6 +18,8 @@
   <!-- Enable WINDOWS constant for the Windows TFM so #if WINDOWS blocks compile -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.19041.0'">
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+    <!-- Allow building the Windows TFM on non-Windows agents (e.g., macOS CI/local) -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <!-- Base Avalonia + dependencies -->

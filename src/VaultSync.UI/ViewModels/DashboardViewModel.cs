@@ -499,12 +499,12 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
         }
 
-private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project project, long bytes)> perProject)
-{
-    try
-    {
-        // Default to empty segments if backup root is not configured.
-        var backupRoot = config.Backups.BackupLocation;
+        private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project project, long bytes)> perProject)
+        {
+            try
+            {
+                // Default to empty segments if backup root is not configured.
+                var backupRoot = config.Backups.BackupLocation;
         if (string.IsNullOrWhiteSpace(backupRoot))
         {
             BackupUsageSegments = Array.Empty<BackupUsageSegment>();
@@ -521,9 +521,9 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
 
         backupRoot = Path.GetFullPath(backupRoot);
 
-        // Always reduce to a drive/root so DriveInfo is happy (especially on Windows).
-        var driveRoot = Path.GetPathRoot(backupRoot);
-        if (string.IsNullOrWhiteSpace(driveRoot))
+        // Normalize to the actual drive/mount path so external volumes on macOS work.
+        var drivePath = GetDriveInfoPath(backupRoot);
+        if (string.IsNullOrWhiteSpace(drivePath))
         {
             BackupUsageSegments = Array.Empty<BackupUsageSegment>();
             BackupUsageSeries   = Array.Empty<ISeries>();
@@ -538,8 +538,8 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
         }
 
         // On Windows this will be e.g. "C:\" or "V:\"
-        // On macOS this will be "/" (root volume), which still maps to the correct disk.
-        var drive = new DriveInfo(driveRoot);
+        // On macOS this will be the mount (e.g., "/Volumes/MyDisk").
+        var drive = new DriveInfo(drivePath);
         if (!drive.IsReady || drive.TotalSize <= 0)
         {
             BackupUsageSegments = Array.Empty<BackupUsageSegment>();
@@ -770,8 +770,8 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
                 }
 
                 backupRoot = Path.GetFullPath(backupRoot);
-                var driveRoot = Path.GetPathRoot(backupRoot);
-                if (string.IsNullOrWhiteSpace(driveRoot))
+                var drivePath = GetDriveInfoPath(backupRoot);
+                if (string.IsNullOrWhiteSpace(drivePath))
                 {
                     return (
                         0d,
@@ -781,7 +781,7 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
                     );
                 }
 
-                var drive = new DriveInfo(driveRoot);
+                var drive = new DriveInfo(drivePath);
                 if (!drive.IsReady)
                 {
                     return (
@@ -825,6 +825,37 @@ private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project projec
                     false
                 );
             }
+        }
+
+        /// <summary>
+        /// Determines the path to pass into DriveInfo for a given backup path.
+        /// On Windows we reduce to the drive root (C:\, V:\, etc).
+        /// On macOS/Linux we keep the mount path (e.g., /Volumes/MyDisk) so external drives are honored.
+        /// </summary>
+        private static string GetDriveInfoPath(string fullPath)
+        {
+            if (string.IsNullOrWhiteSpace(fullPath))
+                return string.Empty;
+
+            var normalized = Path.GetFullPath(fullPath);
+
+            if (OperatingSystem.IsWindows())
+            {
+                return Path.GetPathRoot(normalized) ?? string.Empty;
+            }
+
+            // macOS external disks live under /Volumes/<Name>; keep the mount path.
+            if (normalized.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
+            {
+                var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2)
+                {
+                    return "/Volumes/" + parts[1];
+                }
+            }
+
+            // Fallback: DriveInfo can handle the full path on Unix-like systems.
+            return normalized;
         }
 
         private void UpdateBackupDiskUsage(AppConfig config)

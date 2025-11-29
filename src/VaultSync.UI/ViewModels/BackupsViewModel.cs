@@ -82,6 +82,11 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<BackupProgressItem> ActiveBackups { get; } =
             new ObservableCollection<BackupProgressItem>();
 
+        // Per-destination status for the current backup run
+        public ObservableCollection<DestinationStatusItem> DestinationStatuses { get; } =
+            new ObservableCollection<DestinationStatusItem>();
+        public bool HasDestinationStatuses => DestinationStatuses.Count > 0;
+
         // Currently selected project in the per-project list
         private ProjectBackupItem? _selectedProject;
         public ProjectBackupItem? SelectedProject
@@ -361,6 +366,8 @@ namespace VaultSync.UI.ViewModels
             CloseVerificationPopupCommand = new RelayCommand(_ => CloseVerificationPopup());
             DeleteFailedBackupCommand     = new RelayCommand(_ => DeleteFailedBackup());
 
+            DestinationStatuses.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDestinationStatuses));
+
             // NOTE:
             // Live data is now provided by LoadFromBackups(...) from the core layer.
             // We no longer seed design-time demo data here.
@@ -533,6 +540,51 @@ namespace VaultSync.UI.ViewModels
             }
 
             ActiveBackups.Clear();
+        }
+
+        public void ResetDestinationStatuses(IEnumerable<BackupDestination> destinations)
+        {
+            var list = destinations.ToList();
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => ResetDestinationStatuses(list));
+                return;
+            }
+
+            DestinationStatuses.Clear();
+            foreach (var dest in list)
+            {
+                DestinationStatuses.Add(new DestinationStatusItem
+                {
+                    Id     = DestinationStatusItem.GetId(dest),
+                    Alias  = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path,
+                    Path   = dest.Path,
+                    Status = dest.Active ? "Pending" : "Inactive",
+                    Severity = "Info"
+                });
+            }
+            OnPropertyChanged(nameof(HasDestinationStatuses));
+        }
+
+        public void UpdateDestinationStatus(string id, string status, string severity = "Info")
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => UpdateDestinationStatus(id, status, severity));
+                return;
+            }
+
+            var item = DestinationStatuses.FirstOrDefault(d => d.Id == id);
+            if (item is null)
+                return;
+
+            item.Status   = status;
+            item.Severity = severity;
+        }
+
+        public void MarkDestinationComplete(string id, bool success, string status)
+        {
+            UpdateDestinationStatus(id, status, success ? "Success" : "Error");
         }
 
         /// <summary>
@@ -798,10 +850,20 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var root = System.IO.Path.GetPathRoot(path);
-                if (!string.IsNullOrWhiteSpace(root))
+                var normalized = System.IO.Path.GetFullPath(path);
+
+                // On Windows, keep the drive root; on macOS/Linux prefer the mount point under /Volumes.
+                if (OperatingSystem.IsWindows())
                 {
-                    return root.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                    var root = System.IO.Path.GetPathRoot(normalized);
+                    if (!string.IsNullOrWhiteSpace(root))
+                        return root.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                }
+                else if (normalized.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 2)
+                        return parts[1];
                 }
             }
             catch
@@ -1090,6 +1152,10 @@ namespace VaultSync.UI.ViewModels
             {
                 projectLookup.TryGetValue(backup.ProjectId, out var project);
 
+                var destinationDisplay = string.IsNullOrWhiteSpace(backup.DestinationAlias)
+                    ? backup.DestinationPath
+                    : backup.DestinationAlias;
+
                 var uiItem = new BackupSnapshotItem
                 {
                     Id        = backup.Id.ToString(),
@@ -1103,7 +1169,8 @@ namespace VaultSync.UI.ViewModels
                         ? "Auto backup"
                         : "Manual backup",
                     ProjectId = project?.Id.ToString(),
-                    IsProtected = backup.IsProtected
+                    IsProtected = backup.IsProtected,
+                    DestinationDisplay = destinationDisplay
                 };
 
                 _allSnapshots.Add(uiItem);
@@ -1138,6 +1205,9 @@ namespace VaultSync.UI.ViewModels
 
         /// <summary>Optional project id this snapshot belongs to; null for global.</summary>
         public string? ProjectId { get; set; }
+
+        /// <summary>Destination endpoint that stored this backup.</summary>
+        public string DestinationDisplay { get; set; } = string.Empty;
 
         public string SizeFormatted => FormatSize(SizeBytes);
 
@@ -1249,7 +1319,7 @@ namespace VaultSync.UI.ViewModels
         public void SetAvatarFromNameAndStore(string name, string projectPath)
         {
             AvatarInitials  = ComputeInitials(name);
-            AvatarColor     = PickColor(name);
+            AvatarColor     = AvatarColorProvider.GetColor(name, projectPath);
             AvatarImagePath = AvatarStore.GetAvatarForProject(projectPath);
         }
 
@@ -1269,18 +1339,6 @@ namespace VaultSync.UI.ViewModels
             return name.Substring(0, 1).ToUpperInvariant();
         }
 
-        private static string PickColor(string name)
-        {
-            var palette = new[]
-            {
-                "#2F3650", "#2E4A6A", "#2E6A5A", "#6A4A2E", "#5A2E6A",
-                "#2E6A6A", "#6A2E2E", "#4A6A2E", "#2E5A6A", "#6A2E4A"
-            };
-
-            var hash = Math.Abs(name.GetHashCode());
-            return palette[hash % palette.Length];
-        }
-
         public string LastBackupDisplay =>
             LastBackupTime.HasValue
                 ? LastBackupTime.Value.ToString("yyyy-MM-dd HH:mm")
@@ -1288,6 +1346,36 @@ namespace VaultSync.UI.ViewModels
 
         public string TotalSizeFormatted =>
             BackupSnapshotItem.FormatSize(TotalSizeBytes);
+    }
+
+    public class DestinationStatusItem : ViewModelBase
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Alias { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
+
+        private string _status = string.Empty;
+        public string Status
+        {
+            get => _status;
+            set
+            {
+                if (_status == value)
+                    return;
+                _status = value ?? string.Empty;
+                OnPropertyChanged(nameof(Status));
+            }
+        }
+
+        private string _severity = "Info";
+        public string Severity
+        {
+            get => _severity;
+            set => SetField(ref _severity, value);
+        }
+
+        public static string GetId(BackupDestination dest) =>
+            string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
     }
 
     public class BackupProgressItem : ViewModelBase

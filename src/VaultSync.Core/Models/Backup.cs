@@ -26,4 +26,14 @@ public record Backup
     /// When true, this backup is protected from automatic retention pruning.
     /// </summary>
     public bool IsProtected { get; init; }
+
+    /// <summary>
+    /// Absolute path to the destination root that stored this backup.
+    /// </summary>
+    public string DestinationPath { get; init; } = string.Empty;
+
+    /// <summary>
+    /// User-friendly label for the destination used when the backup was created.
+    /// </summary>
+    public string DestinationAlias { get; init; } = string.Empty;
 }

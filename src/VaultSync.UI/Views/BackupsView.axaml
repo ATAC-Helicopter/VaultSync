@@ -403,6 +403,29 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              <ItemsControl ItemsSource="{Binding DestinationStatuses}"
+                            IsVisible="{Binding HasDestinationStatuses}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="0,2,0,0"
+                            Padding="8"
+                            CornerRadius="8"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1">
+                      <StackPanel Orientation="Horizontal"
+                                  Spacing="8">
+                        <TextBlock Text="{Binding Alias}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Status}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="320" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
               <TextBlock Text="Please wait... the backup will appear in history once completed. Do not close the app."
                          FontSize="11"
                          Foreground="{DynamicResource TextSecondaryBrush}"
@@ -652,7 +675,7 @@
                             <ItemsControl.ItemTemplate>
                               <DataTemplate>
                                 <Grid ColumnDefinitions="*,Auto"
-                                      RowDefinitions="Auto,Auto"
+                                      RowDefinitions="Auto,Auto,Auto"
                                       ColumnSpacing="12"
                                       RowSpacing="3"
                                       Margin="0,2,0,2">
@@ -684,6 +707,14 @@
                                              Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
                                              FontSize="11"
                                              Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                                  <TextBlock Grid.Row="2"
+                                             Grid.Column="0"
+                                             Grid.ColumnSpan="2"
+                                             Text="{Binding DestinationDisplay}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource TextSecondaryBrush}"
+                                             TextTrimming="CharacterEllipsis" />
 
                                   <StackPanel Grid.Row="1"
                                               Grid.Column="1"

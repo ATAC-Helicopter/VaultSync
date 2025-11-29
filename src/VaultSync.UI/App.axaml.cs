@@ -9,6 +9,7 @@ using VaultSync.UI.ViewModels;
 using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.UI.Views;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -169,6 +170,31 @@ public partial class App : Application
         {
             menu.Items.Add(healthItem);
         }
+        var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
+            ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
+        var destinationRootItem = new NativeMenuItem("Destinations");
+        var destinationMenu = new NativeMenu();
+
+        if (destinationSummaries.Any())
+        {
+            foreach (var dest in destinationSummaries)
+            {
+                var status = dest.Reachable ? "Ready" : "Unreachable";
+                var text = string.IsNullOrWhiteSpace(dest.Alias)
+                    ? $"{dest.Path} · {status}"
+                    : $"{dest.Alias} · {status}";
+
+                var detail = new NativeMenuItem(text) { IsEnabled = false };
+                destinationMenu.Items.Add(detail);
+            }
+        }
+        else
+        {
+            destinationMenu.Items.Add(new NativeMenuItem("No destinations configured") { IsEnabled = false });
+        }
+
+        destinationRootItem.Menu = destinationMenu;
+        menu.Items.Add(destinationRootItem);
         menu.Items.Add(new NativeMenuItemSeparator());
         // Open main window
         var openItem = new NativeMenuItem("Open VaultSync");
@@ -416,10 +442,10 @@ public partial class App : Application
         }
     }
 
-    public async void RefreshTrayMenu()
-    {
-        if (_trayIcon is null)
-            return;
+        public async void RefreshTrayMenu()
+        {
+            if (_trayIcon is null)
+                return;
 
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
@@ -430,7 +456,17 @@ public partial class App : Application
 
         Dispatcher.UIThread.Post(() =>
         {
-            _trayIcon.Menu = BuildTrayMenu(desktop, recent);
+            try
+            {
+                // Reset first to avoid Avalonia native menu mismatch errors on macOS.
+                _trayIcon.Menu = null;
+                _trayIcon.Menu = BuildTrayMenu(desktop, recent);
+            }
+            catch (Exception ex)
+            {
+                // Best-effort: avoid crashing the app if tray menu rebuild fails.
+                Console.WriteLine($"[Tray] Failed to refresh tray menu: {ex.Message}");
+            }
         });
     }
 
@@ -497,6 +533,7 @@ public partial class App : Application
     {
         var config = AppConfigStore.Load();
         ApplyTheme(config.Appearance.Theme);
+        ThemeManager.ApplyCompactLayout(config.Appearance.CompactLayout);
     }
 
     public void ApplyTheme(string themeOption)

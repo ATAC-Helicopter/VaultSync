@@ -12,6 +12,28 @@
       <Setter Property="Opacity" Value="0.85" />
     </Style>
 
+    <!-- Search box: keep focus visuals clean -->
+    <Style Selector="TextBox#ProjectSearch">
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Focusable" Value="True" />
+    </Style>
+
+    <!-- Preset dropdown: pill style -->
+    <Style Selector="ComboBox.preset-combo">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="MaxDropDownHeight" Value="240" />
+    </Style>
+
     <!-- Custom container template for project list items -->
     <Style Selector="#ProjectList ListBoxItem">
       <Setter Property="Template">
@@ -57,27 +79,42 @@
               Padding="24">
         <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
 
-          <!-- Title + search row -->
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <!-- Title + sort -->
+          <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
             <TextBlock Text="All projects"
                        FontSize="22"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
-          </StackPanel>
+            <Button Grid.Column="1"
+                    Padding="10,6"
+                    CornerRadius="10"
+                    Background="{DynamicResource Surface2}"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
+                    Command="{Binding ToggleSortCommand}">
+              <TextBlock Text="{Binding SortModeLabel}"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </Button>
+          </Grid>
 
           <Grid ColumnDefinitions="*,Auto" Row="1" ColumnSpacing="8">
-            <Border CornerRadius="10"
+            <Border CornerRadius="12"
                     Background="{DynamicResource InputBackgroundBrush}"
-                    Padding="0,0,4,0">
+                    BorderBrush="{DynamicResource DividerBrush}"
+                    BorderThickness="1"
+                    Padding="0,0,6,0">
               <Grid ColumnDefinitions="Auto,*">
                 <Border Width="12" />
                 <TextBox
+                  x:Name="ProjectSearch"
                   Margin="0"
-                  Padding="8,6"
+                  Padding="10,8"
                   Watermark="Search projects..."
                   BorderThickness="0"
                   Background="Transparent"
-                  Foreground="{DynamicResource TextPrimaryBrush}" />
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  Text="{Binding SearchText, Mode=TwoWay}"
+                  CaretBrush="{DynamicResource TextPrimaryBrush}" />
               </Grid>
             </Border>
 
@@ -269,6 +306,7 @@
                            FontSize="11"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <ComboBox
+                    Classes="preset-combo"
                     ItemsSource="{Binding DataContext.AvailablePresets, ElementName=Root}"
                     SelectedItem="{Binding Preset, Mode=TwoWay}"
                     HorizontalAlignment="Stretch" />
@@ -552,4 +590,3 @@
     </Grid>
   </Grid>
 </UserControl>
-

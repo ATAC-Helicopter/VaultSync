@@ -13,6 +13,17 @@
                 <!-- Single source of truth for brushes (Dark + Light inside) -->
                 <ResourceInclude Source="avares://VaultSync.UI/Styles/Colors.axaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Layout tokens (toggled by compact mode) -->
+            <Thickness x:Key="CardPadding">16</Thickness>
+            <Thickness x:Key="CardMargin">8</Thickness>
+            <CornerRadius x:Key="CardCornerRadius">18</CornerRadius>
+            <Thickness x:Key="NavButtonPadding">12,10</Thickness>
+            <Thickness x:Key="NavButtonMargin">0,6,0,0</Thickness>
+            <Thickness x:Key="MetricMargin">0,6,0,2</Thickness>
+            <Thickness x:Key="MetricHintMargin">0,2,0,0</Thickness>
+            <x:Double x:Key="MetricFontSize">36</x:Double>
+            <x:Double x:Key="SectionTitleFontSize">16</x:Double>
         </ResourceDictionary>
     </Application.Resources>
 
@@ -34,9 +45,9 @@
         <!-- Card surface -->
         <Style Selector="Border.card">
             <Setter Property="Background" Value="{DynamicResource Surface1}" />
-            <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="Padding" Value="16" />
-            <Setter Property="Margin" Value="8" />
+            <Setter Property="CornerRadius" Value="{DynamicResource CardCornerRadius}" />
+            <Setter Property="Padding" Value="{DynamicResource CardPadding}" />
+            <Setter Property="Margin" Value="{DynamicResource CardMargin}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
@@ -65,8 +76,8 @@
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
             <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="12,10" />
-            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="Padding" Value="{DynamicResource NavButtonPadding}" />
+            <Setter Property="Margin" Value="{DynamicResource NavButtonMargin}" />
         </Style>
 
         <Style Selector="Button.nav:pointerover">
@@ -100,19 +111,19 @@
 
         <!-- Typography -->
         <Style Selector="TextBlock.metric">
-            <Setter Property="FontSize" Value="36" />
+            <Setter Property="FontSize" Value="{DynamicResource MetricFontSize}" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-            <Setter Property="Margin" Value="0,6,0,2" />
+            <Setter Property="Margin" Value="{DynamicResource MetricMargin}" />
         </Style>
 
         <Style Selector="TextBlock.metric-hint">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-            <Setter Property="Margin" Value="0,2,0,0" />
+            <Setter Property="Margin" Value="{DynamicResource MetricHintMargin}" />
         </Style>
 
         <Style Selector="TextBlock.section-title">
-            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontSize" Value="{DynamicResource SectionTitleFontSize}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
         </Style>
 

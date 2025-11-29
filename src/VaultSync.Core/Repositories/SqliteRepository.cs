@@ -118,6 +118,8 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           type TEXT NOT NULL,
           total_bytes INTEGER NOT NULL,
           path TEXT NOT NULL,
+          destination_path TEXT NOT NULL DEFAULT '',
+          destination_alias TEXT NOT NULL DEFAULT '',
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
@@ -143,6 +145,8 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 
     // Migrations: add missing columns
     EnsureColumnExists("backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
 }
 
         /// <summary>
@@ -416,26 +420,28 @@ DELETE FROM sqlite_sequence;";
         }
         // ---------- Backups ----------
 
-        public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath, bool isProtected = false)
+        public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath, string destinationPath, string destinationAlias, bool isProtected = false)
         {
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
 
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(project_id, snapshot_id, created_utc, type, total_bytes, path, is_protected)
-                VALUES(@ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @IsProtected);
+                INSERT INTO backups(project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected)
+                VALUES(@ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected);
                 SELECT last_insert_rowid();
                 """,
                 new
                 {
-                    ProjectId  = projectId,
-                    SnapshotId = snapshotId,
-                    CreatedUtc = created,
-                    Type       = type,
-                    TotalBytes = totalBytes,
-                    Path       = relativePath,
-                    IsProtected = isProtected ? 1 : 0
+                    ProjectId       = projectId,
+                    SnapshotId      = snapshotId,
+                    CreatedUtc      = created,
+                    Type            = type,
+                    TotalBytes      = totalBytes,
+                    Path            = relativePath,
+                    DestinationPath = destinationPath ?? string.Empty,
+                    DestinationAlias = destinationAlias ?? string.Empty,
+                    IsProtected     = isProtected ? 1 : 0
                 });
         }
 
@@ -452,6 +458,8 @@ DELETE FROM sqlite_sequence;";
                   type,
                   total_bytes as TotalBytes,
                   path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
                   is_protected as IsProtected
                 FROM backups
                 WHERE project_id = @pid
@@ -474,6 +482,8 @@ DELETE FROM sqlite_sequence;";
                   type,
                   total_bytes as TotalBytes,
                   path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
                   is_protected as IsProtected
                 FROM backups
                 WHERE project_id = @pid
@@ -508,6 +518,8 @@ DELETE FROM sqlite_sequence;";
                   type,
                   total_bytes as TotalBytes,
                   path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
                   is_protected as IsProtected
                 FROM backups
                 WHERE created_utc >= @from AND created_utc <= @to

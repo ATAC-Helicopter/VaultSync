@@ -70,6 +70,9 @@ public static class Program
                 cfg.AddCommand<VaultSync.CLI.Commands.DoctorCommand>("doctor")
                     .WithDescription("Check environment: rsync, DB path, project paths, and optional destination writability");
 
+                cfg.AddCommand<VaultSync.CLI.Commands.DestinationCommand>("destinations")
+                    .WithDescription("List configured backup destinations and test their accessibility");
+
                 cfg.AddCommand<VaultSync.CLI.Commands.VersionCommand>("version")
                     .WithDescription("Show version");
 

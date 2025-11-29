@@ -68,6 +68,12 @@ namespace VaultSync.Core.Config
         public bool   UseFullSnapshotHash   { get; set; } = true;
         public bool   VerifyAfterCreate     { get; set; } = true;
         public bool   PauseOnBattery        { get; set; } = true;
+
+        /// <summary>
+        /// Preferred backup destinations (local / external / network).
+        /// When empty, BackupRoot is used for legacy compatibility.
+        /// </summary>
+        public List<BackupDestination> Destinations { get; set; } = new();
     }
 
     // -------- Storage --------
@@ -83,10 +89,32 @@ namespace VaultSync.Core.Config
 
     public sealed class NetworkConfig
     {
-        public bool   UseCredentials        { get; set; } = false;
-        public string? Username             { get; set; } = string.Empty;
-        public string? Password             { get; set; } = string.Empty;
-        public bool   RememberCredentials   { get; set; } = false;
+        /// <summary>
+        /// Saved credential profiles that can be assigned to NAS destinations.
+        /// Secrets should be stored in platform keychain/credential manager; KeyRef points to that entry.
+        /// </summary>
+        public List<NetworkCredentialProfile> Credentials { get; set; } = new();
+    }
+
+    public sealed class NetworkCredentialProfile
+    {
+        public string Name { get; set; } = string.Empty;          // e.g., "Home NAS"
+        public string Username { get; set; } = string.Empty;      // e.g., "media" or "DOMAIN\\user"
+        public string? Domain { get; set; } = string.Empty;
+        public string? KeyRef { get; set; } = string.Empty;       // reference to keychain/credman entry
+        public bool UseKeychain { get; set; } = true;             // prefer platform store
+        public string? Password { get; set; } = string.Empty;     // optional (fallback); prefer keychain in production
+    }
+
+    public sealed class BackupDestination
+    {
+        public string Path { get; set; } = string.Empty;          // UNC, smb://, local/external path
+        public string? CredentialName { get; set; }               // links to NetworkCredentialProfile.Name
+        public bool Active { get; set; } = true;                  // include by default
+        public bool AutoMount { get; set; } = false;              // attempt to mount if unreachable
+        public bool AutoUnmount { get; set; } = false;            // unmount after backup if we mounted it
+        public bool PreMounted { get; set; } = false;             // treat as already mounted/guest; skip mount/creds
+        public string? Alias { get; set; } = string.Empty;        // optional display label
     }
 
     // -------- Appearance --------

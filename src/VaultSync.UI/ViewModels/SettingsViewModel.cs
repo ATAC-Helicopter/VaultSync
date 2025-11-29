@@ -4,15 +4,19 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Diagnostics;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using VaultSync.UI.Services;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
+using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels.Notifications;
@@ -45,14 +49,10 @@ namespace VaultSync.UI
         private bool _showDriveHealthWarnings = true;
         private int _minimumFreeSpacePercent = 10;
 
-        private bool _useCustomNetworkCredentials = false;
-        private string _networkShareUserName = string.Empty;
-        private string _networkSharePassword = string.Empty;
-        private bool _rememberNetworkCredentials = false;
-
-        private string _selectedTheme;
-        private bool _useCompactLayout = false;
-        private bool _showProjectAvatars = true;
+    private string _selectedTheme;
+    private bool _useCompactLayout = false;
+    private bool _showProjectAvatars = true;
+    private string _saveStatus = string.Empty;
 
         private bool _notificationsEnabled = true;
         private bool _notifyOnBackupSuccess = true;
@@ -69,11 +69,17 @@ namespace VaultSync.UI
         private bool _enableVerboseLogging = false;
         private bool _checkForUpdatesOnStartup = true;
         private bool _sendAnonymousUsageStats = false;
+        private readonly CredentialVault _credentialVault = CredentialVault.Instance;
+        private bool _showLegacyBackupLocation = true;
 
         private bool _isInitialized;
         private bool _isSaving;
 
         public event PropertyChangedEventHandler? PropertyChanged;
+        private void RefreshLegacyVisibility()
+        {
+            ShowLegacyBackupLocation = Destinations.Count == 0;
+        }
 
         public SettingsViewModel()
         {
@@ -93,7 +99,16 @@ namespace VaultSync.UI
             ClearLocalCacheCommand       = new RelayCommand(_ => ClearLocalCache());
             ForgetAllProjectsCommand     = new RelayCommand(_ => ForgetAllProjects());
             TestBackupLocationCommand    = new RelayCommand(_ => TestBackupLocation(), _ => !string.IsNullOrWhiteSpace(BackupLocationPath));
-            TestNetworkConnectionCommand = new RelayCommand(_ => TestNetworkConnection(), _ => ShowNetworkShareOptions);
+            AddDestinationCommand        = new RelayCommand(_ => AddDestination());
+            RemoveDestinationCommand     = new RelayCommand(p => RemoveDestination(p as BackupDestinationViewModel));
+            BrowseDestinationCommand     = new RelayCommand(p => BrowseDestination(p as BackupDestinationViewModel));
+            TestDestinationCommand       = new RelayCommand(p => TestDestination(p as BackupDestinationViewModel));
+            AddCredentialCommand         = new RelayCommand(_ => AddCredential());
+            RemoveCredentialCommand      = new RelayCommand(p => RemoveCredential(p as NetworkCredentialViewModel));
+            OpenHelpCommand              = new RelayCommand(_ => OpenHelp());
+
+            CredentialProfiles.CollectionChanged += (_, _) => OnPropertyChanged(nameof(CredentialNames));
+            Destinations.CollectionChanged       += (_, _) => RefreshLegacyVisibility();
 
             PropertyChanged += OnSettingsPropertyChanged;
 
@@ -145,10 +160,61 @@ namespace VaultSync.UI
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
             _minimumFreeSpacePercent = cfg.Storage.MinFreeSpacePercent;
 
-            _useCustomNetworkCredentials = cfg.Network.UseCredentials;
-            _networkShareUserName        = cfg.Network.Username ?? "";
-            _networkSharePassword        = cfg.Network.Password ?? "";
-            _rememberNetworkCredentials  = cfg.Network.RememberCredentials;
+            CredentialProfiles.Clear();
+            foreach (var cred in cfg.Network.Credentials ?? new List<NetworkCredentialProfile>())
+            {
+                var keyRef  = _credentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
+                var secret  = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
+
+                CredentialProfiles.Add(new NetworkCredentialViewModel
+                {
+                    Name        = cred.Name,
+                    Username    = cred.Username,
+                    Domain      = cred.Domain ?? string.Empty,
+                    KeyRef      = keyRef,
+                    UseKeychain = cred.UseKeychain,
+                    Password    = secret ?? string.Empty
+                });
+            }
+
+            Destinations.Clear();
+            if (cfg.Backups.Destinations != null && cfg.Backups.Destinations.Count > 0)
+            {
+                foreach (var dest in cfg.Backups.Destinations)
+                {
+                    var vm = new BackupDestinationViewModel
+                    {
+                        Alias        = dest.Alias ?? string.Empty,
+                        Path         = dest.Path,
+                        Active       = dest.Active,
+                        AutoMount    = dest.AutoMount,
+                        AutoUnmount  = dest.AutoUnmount,
+                        PreMounted   = dest.PreMounted
+                    };
+
+                    vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
+                        c.Name.Equals(dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+
+                    Destinations.Add(vm);
+                }
+            }
+            else
+            {
+                // fallback: use BackupRoot as a single destination
+                if (!string.IsNullOrWhiteSpace(_backupLocationPath))
+                {
+                Destinations.Add(new BackupDestinationViewModel
+                {
+                    Alias       = "Primary",
+                    Path        = _backupLocationPath,
+                    Active      = true,
+                    PreMounted  = true,
+                    AutoMount   = false,
+                    AutoUnmount = false
+                });
+            }
+            }
+            RefreshLegacyVisibility();
 
             // FIX: use Theme instead of ThemeName
             _selectedTheme      = DisplayThemeOption(cfg.Appearance.Theme ?? "System");
@@ -174,10 +240,13 @@ namespace VaultSync.UI
 
             _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
-            _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
+                _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
 
-            // Apply theme when loading config (in case Settings view is opened first)
+            // Apply theme + layout when loading config (in case Settings view is opened first)
             ApplyThemeFromSelected();
+            ThemeManager.ApplyCompactLayout(_useCompactLayout);
+
+            SaveStatus = "Settings loaded";
 
             // Update UI
             OnPropertyChanged(null);
@@ -188,6 +257,11 @@ namespace VaultSync.UI
             // Start from the latest persisted config so we don't clobber fields the Settings view doesn't edit
             // (e.g., LastView, DbPath, tray settings).
             var cfg = AppConfigStore.Load();
+
+            if (!ValidateDestinations())
+            {
+                return;
+            }
 
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
@@ -205,23 +279,69 @@ namespace VaultSync.UI
             cfg.Backups.IntervalMinutes             = AutoBackupIntervalMinutes;
             cfg.Backups.MaxSnapshotsPerProject      = MaxSnapshotsPerProject;
             cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
-            cfg.Backups.Location                    = BackupLocationPath;
-            cfg.Backups.BackupRoot                  = string.IsNullOrWhiteSpace(BackupLocationPath)
-                ? null
-                : BackupLocationPath;
+            // Sync legacy backup root from the first active destination (fallback for older code paths).
+            var firstActiveDest = Destinations.FirstOrDefault(d => d.Active) ?? Destinations.FirstOrDefault();
+            var fallbackRoot    = firstActiveDest?.Path ?? (string.IsNullOrWhiteSpace(BackupLocationPath) ? null : BackupLocationPath);
+            cfg.Backups.BackupRoot = fallbackRoot;
+            cfg.Backups.Location   = cfg.Backups.BackupRoot;
             cfg.Backups.UseCompression              = UseBackupCompression;
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
+            cfg.Backups.Destinations                = Destinations.Select(d => new BackupDestination
+            {
+                Alias          = d.Alias,
+                Path           = d.Path,
+                CredentialName = d.SelectedCredential?.Name,
+                Active         = d.Active,
+                AutoMount      = d.AutoMount,
+                AutoUnmount    = d.AutoUnmount,
+                PreMounted     = d.PreMounted
+            }).ToList();
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
             cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
             cfg.Storage.MinFreeSpacePercent  = MinimumFreeSpacePercent;
 
-            cfg.Network.UseCredentials      = UseCustomNetworkCredentials;
-            cfg.Network.Username            = NetworkShareUserName;
-            cfg.Network.Password            = RememberNetworkCredentials ? NetworkSharePassword : "";
-            cfg.Network.RememberCredentials = RememberNetworkCredentials;
+            var savedCreds = new List<NetworkCredentialProfile>();
+            foreach (var c in CredentialProfiles)
+            {
+                var keyRef = _credentialVault.EnsureKeyRef(c.KeyRef, c.Name);
+                c.KeyRef   = keyRef;
+
+                var secret = !string.IsNullOrWhiteSpace(c.Password)
+                    ? c.Password
+                    : _credentialVault.GetSecret(keyRef, c.Username, c.UseKeychain);
+
+                if (!string.IsNullOrWhiteSpace(secret))
+                {
+                    try
+                    {
+                        _credentialVault.SaveSecret(keyRef, c.Username, secret, c.UseKeychain);
+                    }
+                    catch (Exception ex)
+                    {
+                        GlobalNotificationCenter.Instance.Show(
+                            $"Could not store credential '{c.Name}' securely: {ex.Message}",
+                            NotificationSeverity.Error,
+                            "Credential storage");
+                        // Skip writing this credential if we cannot secure it.
+                        continue;
+                    }
+                }
+
+                savedCreds.Add(new NetworkCredentialProfile
+                {
+                    Name        = c.Name,
+                    Username    = c.Username,
+                    Domain      = c.Domain,
+                    KeyRef      = keyRef,
+                    UseKeychain = c.UseKeychain,
+                    Password    = string.Empty // keep out of config
+                });
+            }
+
+            cfg.Network.Credentials = savedCreds;
 
             cfg.Appearance.Theme              = NormalizeThemeOption(SelectedTheme);
             cfg.Appearance.CompactLayout      = UseCompactLayout;
@@ -241,6 +361,46 @@ namespace VaultSync.UI
 
             AppConfigStore.Save(cfg);
             AutoStartService.SetLaunchOnLogin(_launchOnLogin);
+
+            SaveStatus = $"Saved at {DateTime.Now:HH:mm:ss}";
+        }
+
+        private bool ValidateDestinations()
+        {
+            var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var dest in Destinations)
+            {
+                if (string.IsNullOrWhiteSpace(dest.Path))
+                {
+                    SaveStatus = "Destination path is required.";
+                    GlobalNotificationCenter.Instance.Show(
+                        SaveStatus,
+                        NotificationSeverity.Error,
+                        "Destination validation");
+                    return false;
+                }
+
+                if (!string.IsNullOrWhiteSpace(dest.Alias) && !aliases.Add(dest.Alias))
+                {
+                    SaveStatus = $"Duplicate destination alias '{dest.Alias}'.";
+                    GlobalNotificationCenter.Instance.Show(
+                        SaveStatus,
+                        NotificationSeverity.Error,
+                        "Destination validation");
+                    return false;
+                }
+
+                if (dest.AutoMount && !dest.PreMounted && dest.SelectedCredential is null)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        $"Destination '{dest.DisplayName}' is set to auto-mount but no credential is selected.",
+                        NotificationSeverity.Warning,
+                        "Destination validation");
+                }
+            }
+
+            return true;
         }
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -248,8 +408,7 @@ namespace VaultSync.UI
             if (!_isInitialized)
                 return;
 
-            // Ignore non-setting notifications if needed
-            if (e.PropertyName is null || e.PropertyName == nameof(ShowNetworkShareOptions))
+            if (e.PropertyName is null)
                 return;
 
             if (_isSaving)
@@ -349,6 +508,12 @@ namespace VaultSync.UI
             }
         }
 
+        public bool ShowLegacyBackupLocation
+        {
+            get => _showLegacyBackupLocation;
+            private set => SetField(ref _showLegacyBackupLocation, value);
+        }
+
         public string BackupLocationStatus
         {
             get => _backupLocationStatus;
@@ -397,40 +562,9 @@ namespace VaultSync.UI
             set => SetField(ref _minimumFreeSpacePercent, value);
         }
 
-        public bool UseCustomNetworkCredentials
-        {
-            get => _useCustomNetworkCredentials;
-            set
-            {
-                if (SetField(ref _useCustomNetworkCredentials, value))
-                {
-                    OnPropertyChanged(nameof(ShowNetworkShareOptions));
-                }
-            }
-        }
-
-        public string NetworkShareUserName
-        {
-            get => _networkShareUserName;
-            set => SetField(ref _networkShareUserName, value);
-        }
-
-        public string NetworkSharePassword
-        {
-            get => _networkSharePassword;
-            set => SetField(ref _networkSharePassword, value);
-        }
-
-        public bool RememberNetworkCredentials
-        {
-            get => _rememberNetworkCredentials;
-            set => SetField(ref _rememberNetworkCredentials, value);
-        }
-
-        /// <summary>
-        /// Helper used by the UI to show/hide the NAS credentials section.
-        /// </summary>
-        public bool ShowNetworkShareOptions => UseCustomNetworkCredentials;
+        public ObservableCollection<BackupDestinationViewModel> Destinations { get; } = new();
+        public ObservableCollection<NetworkCredentialViewModel> CredentialProfiles { get; } = new();
+        public IEnumerable<string> CredentialNames => CredentialProfiles.Select(c => c.Name);
 
         public string SelectedTheme
         {
@@ -481,13 +615,25 @@ namespace VaultSync.UI
         public bool UseCompactLayout
         {
             get => _useCompactLayout;
-            set => SetField(ref _useCompactLayout, value);
+            set
+            {
+                if (SetField(ref _useCompactLayout, value) && _isInitialized)
+                {
+                    ThemeManager.ApplyCompactLayout(value);
+                }
+            }
         }
 
         public bool ShowProjectAvatars
         {
             get => _showProjectAvatars;
             set => SetField(ref _showProjectAvatars, value);
+        }
+
+        public string SaveStatus
+        {
+            get => _saveStatus;
+            private set => SetField(ref _saveStatus, value);
         }
 
         public bool NotificationsEnabled
@@ -581,13 +727,19 @@ namespace VaultSync.UI
 
         // ---------------- Commands ----------------
         public ICommand BrowseProjectsRootCommand { get; }
-        public ICommand BrowseBackupLocationCommand { get; }
-        public ICommand ResetToDefaultsCommand { get; }
-        public ICommand ApplySettingsCommand { get; }
-        public ICommand ClearLocalCacheCommand { get; }
-        public ICommand ForgetAllProjectsCommand { get; }
-        public ICommand TestBackupLocationCommand { get; }
-        public ICommand TestNetworkConnectionCommand { get; }
+    public ICommand BrowseBackupLocationCommand { get; }
+    public ICommand ResetToDefaultsCommand { get; }
+    public ICommand ApplySettingsCommand { get; }
+    public ICommand ClearLocalCacheCommand { get; }
+    public ICommand ForgetAllProjectsCommand { get; }
+    public ICommand TestBackupLocationCommand { get; }
+    public ICommand AddDestinationCommand { get; }
+    public ICommand RemoveDestinationCommand { get; }
+    public ICommand BrowseDestinationCommand { get; }
+    public ICommand TestDestinationCommand { get; }
+    public ICommand AddCredentialCommand { get; }
+    public ICommand RemoveCredentialCommand { get; }
+    public ICommand OpenHelpCommand { get; }
 
         private async void BrowseProjectsRoot()
         {
@@ -634,6 +786,30 @@ namespace VaultSync.UI
             ValidateBackupLocation(path);
         }
 
+        private async void BrowseDestination(BackupDestinationViewModel? dest)
+        {
+            if (dest is null)
+                return;
+
+            var storageProvider = GetStorageProvider();
+            if (storageProvider is null)
+                return;
+
+            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose destination folder",
+                AllowMultiple = false
+            });
+
+            var folder = folders?.FirstOrDefault();
+            var path = folder?.Path?.LocalPath;
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            dest.Path = path;
+            RefreshLegacyVisibility();
+        }
+
         private void ResetToDefaults()
         {
             AppConfigStore.Save(new AppConfig());
@@ -651,6 +827,52 @@ namespace VaultSync.UI
                 return;
 
             ValidateBackupLocation(BackupLocationPath, notifyOnSuccess: false);
+        }
+
+        private async void TestDestination(BackupDestinationViewModel? dest)
+        {
+            if (dest is null)
+                return;
+
+            var path = dest.Path;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                SaveStatus = "Destination path is required.";
+                dest.LastTestStatus   = "Path required";
+                dest.LastTestSeverity = "Error";
+                return;
+            }
+
+            var display = dest.DisplayName;
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    Directory.CreateDirectory(path);
+                    var testFile = Path.Combine(path, ".vaultsync_destination_test");
+                    File.WriteAllText(testFile, "ok");
+                    File.Delete(testFile);
+                });
+
+                SaveStatus = $"Destination '{display}' is reachable.";
+                dest.LastTestStatus   = "Reachable";
+                dest.LastTestSeverity = "Info";
+                GlobalNotificationCenter.Instance.Show(
+                    SaveStatus,
+                    NotificationSeverity.Info,
+                    "Destination test");
+            }
+            catch (Exception ex)
+            {
+                SaveStatus = $"Destination '{display}' failed: {ex.Message}";
+                dest.LastTestStatus   = ex.Message;
+                dest.LastTestSeverity = "Error";
+                GlobalNotificationCenter.Instance.Show(
+                    SaveStatus,
+                    NotificationSeverity.Error,
+                    "Destination test");
+            }
         }
 
         private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)
@@ -748,11 +970,6 @@ namespace VaultSync.UI
             }
         }
 
-        private void TestNetworkConnection()
-        {
-            // TODO
-        }
-
         private static IStorageProvider? GetStorageProvider()
         {
             var app = Application.Current;
@@ -763,10 +980,188 @@ namespace VaultSync.UI
 
             return null;
         }
+
+        private void AddDestination()
+        {
+            Destinations.Add(new BackupDestinationViewModel
+            {
+                Alias = $"Destination {Destinations.Count + 1}",
+                Active = true,
+                PreMounted = true
+            });
+            RefreshLegacyVisibility();
+        }
+
+        private void RemoveDestination(BackupDestinationViewModel? dest)
+        {
+            if (dest is null) return;
+            Destinations.Remove(dest);
+            RefreshLegacyVisibility();
+        }
+
+        private void AddCredential()
+        {
+            CredentialProfiles.Add(new NetworkCredentialViewModel
+            {
+                Name = $"Profile {CredentialProfiles.Count + 1}",
+                UseKeychain = true
+            });
+            OnPropertyChanged(nameof(CredentialNames));
+        }
+
+        private void RemoveCredential(NetworkCredentialViewModel? cred)
+        {
+            if (cred is null) return;
+            _credentialVault.DeleteSecret(cred.KeyRef, cred.Username);
+            CredentialProfiles.Remove(cred);
+            OnPropertyChanged(nameof(CredentialNames));
+        }
+
+        public void OpenHelp()
+        {
+            try
+            {
+                var root = AppContext.BaseDirectory;
+                var path = Path.Combine(root, "docs", "HELP.md");
+                if (!File.Exists(path))
+                {
+                    // fallback to repo relative when running from source
+                    var repoPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "docs", "HELP.md"));
+                    if (File.Exists(repoPath))
+                        path = repoPath;
+                }
+
+                if (File.Exists(path))
+                {
+                    if (OperatingSystem.IsMacOS())
+                        Process.Start("open", path);
+                    else if (OperatingSystem.IsWindows())
+                        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
+                    else
+                        Process.Start("xdg-open", path);
+                }
+            }
+            catch
+            {
+                // ignore failures
+            }
+        }
+    }
+
+    public class BackupDestinationViewModel : VaultSync.UI.ViewModels.ViewModelBase
+    {
+        private string _alias = string.Empty;
+        public string Alias
+        {
+            get => _alias;
+            set
+            {
+                if (SetField(ref _alias, value))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                }
+            }
+        }
+
+        private string _path = string.Empty;
+        public string Path
+        {
+            get => _path;
+            set
+            {
+                if (SetField(ref _path, value))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                }
+            }
+        }
+
+        private NetworkCredentialViewModel? _selectedCredential;
+        public NetworkCredentialViewModel? SelectedCredential
+        {
+            get => _selectedCredential;
+            set
+            {
+                if (SetField(ref _selectedCredential, value))
+                {
+                    OnPropertyChanged(nameof(NeedsCredentialWarning));
+                }
+            }
+        }
+
+        private bool _active = true;
+        public bool Active { get => _active; set => SetField(ref _active, value); }
+
+        private bool _autoMount;
+        public bool AutoMount
+        {
+            get => _autoMount;
+            set
+            {
+                if (SetField(ref _autoMount, value))
+                {
+                    OnPropertyChanged(nameof(NeedsCredentialWarning));
+                }
+            }
+        }
+
+        private bool _autoUnmount;
+        public bool AutoUnmount { get => _autoUnmount; set => SetField(ref _autoUnmount, value); }
+
+        private bool _preMounted = true;
+        public bool PreMounted
+        {
+            get => _preMounted;
+            set
+            {
+                if (SetField(ref _preMounted, value))
+                {
+                    OnPropertyChanged(nameof(NeedsCredentialWarning));
+                }
+            }
+        }
+
+        public bool NeedsCredentialWarning =>
+            AutoMount && !PreMounted && SelectedCredential is null;
+
+        private string _lastTestStatus = string.Empty;
+        public string LastTestStatus
+        {
+            get => _lastTestStatus;
+            set => SetField(ref _lastTestStatus, value);
+        }
+
+        private string _lastTestSeverity = "Info";
+        public string LastTestSeverity
+        {
+            get => _lastTestSeverity;
+            set => SetField(ref _lastTestSeverity, value);
+        }
+
+        public string DisplayName => string.IsNullOrWhiteSpace(Alias) ? Path : Alias;
+    }
+
+    public class NetworkCredentialViewModel : VaultSync.UI.ViewModels.ViewModelBase
+    {
+        private string _name = string.Empty;
+        public string Name { get => _name; set => SetField(ref _name, value); }
+
+        private string _username = string.Empty;
+        public string Username { get => _username; set => SetField(ref _username, value); }
+
+        private string _domain = string.Empty;
+        public string Domain { get => _domain; set => SetField(ref _domain, value); }
+
+        private string _keyRef = string.Empty;
+        public string KeyRef { get => _keyRef; set => SetField(ref _keyRef, value); }
+
+        private bool _useKeychain = true;
+        public bool UseKeychain { get => _useKeychain; set => SetField(ref _useKeychain, value); }
+
+        private string _password = string.Empty;
+        public string Password { get => _password; set => SetField(ref _password, value); }
+
+        private bool _showPassword = false;
+        public bool ShowPassword { get => _showPassword; set => SetField(ref _showPassword, value); }
     }
 }
-
-
-
-
-

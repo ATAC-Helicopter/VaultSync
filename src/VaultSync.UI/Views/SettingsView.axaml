@@ -2,8 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VaultSync.UI"
              xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
+             xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
              x:Class="VaultSync.UI.SettingsView"
-             x:DataType="vm:SettingsViewModel">
+             x:DataType="vm:SettingsViewModel"
+             x:CompileBindings="False">
 
   <UserControl.Styles>
     <!-- Inputs -->
@@ -43,9 +45,11 @@
     </Style>
   </UserControl.Styles>
 
-  <UserControl.Resources>
-    <controls:StatusToBrushConverter x:Key="StatusToBrushConverter" />
-  </UserControl.Resources>
+    <UserControl.Resources>
+      <controls:StatusToBrushConverter x:Key="StatusToBrushConverter" />
+      <infra:BooleanToCharConverter x:Key="BoolToCharConverter" />
+      <controls:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+    </UserControl.Resources>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
@@ -258,18 +262,19 @@
                            HorizontalAlignment="Right" />
                 </Grid>
 
-                <!-- Backup location -->
+                <!-- Backup location (legacy fallback) -->
                 <Grid ColumnDefinitions="*,Auto,Auto"
                       RowDefinitions="Auto,Auto"
                       RowSpacing="4"
                       Margin="0,6,0,0"
-                      ColumnSpacing="8">
+                      ColumnSpacing="8"
+                      IsVisible="{Binding ShowLegacyBackupLocation}">
                   <StackPanel Grid.Row="0"
                               Grid.Column="0"
                               Grid.ColumnSpan="3"
                               Spacing="2">
-                    <TextBlock Text="Backup location" />
-                    <TextBlock Text="Folder where VaultSync stores backup archives."
+                    <TextBlock Text="Fallback backup location" />
+                    <TextBlock Text="Used only if no backup destinations are configured."
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                     <Border Background="{Binding BackupLocationStatus, Converter={StaticResource StatusToBrushConverter}, ConverterParameter=bg}"
@@ -420,71 +425,179 @@
                            HorizontalAlignment="Right" />
                 </Grid>
 
-                <!-- Network share access (only shown for network paths) -->
+                <!-- Backup destinations + credentials -->
                 <Border Margin="0,10,0,0"
                         Padding="12"
                         CornerRadius="10"
                         Background="{DynamicResource VsCardHighlightBrush}"
-                        IsVisible="{Binding ShowNetworkShareOptions}">
-                  <StackPanel Spacing="8">
+                        DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                  <StackPanel Spacing="12">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Backup destinations" FontWeight="SemiBold" />
+                      <TextBlock Text="Configure multiple targets (local, external, or network)."
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11" />
+                      <Button Classes="settings-ghost"
+                              HorizontalAlignment="Left"
+                              Command="{Binding OpenHelpCommand}">
+                        Open help
+                      </Button>
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{Binding Destinations}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Padding="8"
+                                  Margin="0,4,0,0"
+                                  CornerRadius="10"
+                                  Background="{DynamicResource CardBackgroundBrush}">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="8">
+                              <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Spacing="6">
+                                <TextBox Width="120"
+                                         MaxWidth="160"
+                                         HorizontalAlignment="Left"
+                                         Watermark="Alias"
+                                         Text="{Binding Alias, Mode=TwoWay}" />
+                                <ToggleSwitch IsChecked="{Binding Active, Mode=TwoWay}"
+                                              Content="Active" />
+                              </StackPanel>
+                              <Grid Grid.Column="0" Grid.Row="1" ColumnDefinitions="*,Auto,160,Auto" ColumnSpacing="10">
+                                <TextBox Grid.Column="0"
+                                         MaxWidth="320"
+                                         Watermark="Path (\\server\\share or /Volumes/Backup)"
+                                         Text="{Binding Path, Mode=TwoWay}" />
+                                <Button Grid.Column="1"
+                                        Classes="settings-ghost"
+                                        Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                  Select…
+                                </Button>
+                                <ComboBox Grid.Column="2"
+                                          ItemsSource="{Binding DataContext.CredentialProfiles, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          SelectedItem="{Binding SelectedCredential, Mode=TwoWay}">
+                                  <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                      <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                  </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding LastTestStatus}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           Margin="6,0,0,0"
+                                           IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
+                              </Grid>
+                              <StackPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Spacing="10">
+                                <CheckBox Content="Pre-mounted/guest"
+                                          ToolTip.Tip="Use if the share is already mounted or is guest-accessible."
+                                          IsChecked="{Binding PreMounted, Mode=TwoWay}" />
+                                <CheckBox Content="Auto-mount"
+                                          ToolTip.Tip="Attempt to mount if unreachable using the selected credential."
+                                          IsChecked="{Binding AutoMount, Mode=TwoWay}" />
+                                <CheckBox Content="Auto-unmount"
+                                          ToolTip.Tip="Unmount after backup if we mounted it."
+                                          IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
+                              </StackPanel>
+                              <StackPanel Grid.Column="0" Grid.Row="3" Orientation="Vertical" Spacing="4" Margin="0,8,0,0">
+                                <TextBlock Text="Credential required for auto-mount"
+                                           Foreground="#FF6B6B"
+                                           FontSize="11"
+                                           IsVisible="{Binding NeedsCredentialWarning}" />
+                              </StackPanel>
+
+                              <StackPanel Grid.Column="1" Grid.RowSpan="3"
+                                          Orientation="Vertical"
+                                          Spacing="6">
+                                <TextBlock Text="{Binding LastTestStatus}"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           FontSize="11"
+                                           HorizontalAlignment="Right"
+                                           IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
+                                <Button Classes="settings-ghost"
+                                        Content="Remove"
+                                        Command="{Binding DataContext.RemoveDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}" />
+                              </StackPanel>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Classes="settings-ghost"
+                            Command="{Binding AddDestinationCommand}">
+                      Add destination
+                    </Button>
+
+                    <Separator />
 
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Network share access" FontWeight="SemiBold" />
-                      <TextBlock Text="Use custom credentials for protected SMB / NAS shares."
+                      <TextBlock Text="Credential profiles" FontWeight="SemiBold" />
+                      <TextBlock Text="Saved accounts for NAS/SMB shares (stored in keychain/credential manager when possible)."
                                  Foreground="{StaticResource TextSecondary}"
                                  FontSize="11" />
                     </StackPanel>
 
-                    <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Grid.Column="0" Spacing="2">
-                        <TextBlock Text="Use custom credentials" />
-                        <TextBlock Text="Override the OS user when accessing this share."
-                                   Foreground="{StaticResource TextSecondary}"
-                                   FontSize="11" />
-                      </StackPanel>
-                      <ToggleSwitch Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    IsChecked="{Binding UseCustomNetworkCredentials, Mode=TwoWay}" />
-                    </Grid>
+                      <ItemsControl ItemsSource="{Binding CredentialProfiles}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Padding="8"
+                                  Margin="0,4,0,0"
+                                  CornerRadius="10"
+                                  Background="{DynamicResource CardBackgroundBrush}">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
+                              <Grid Grid.Column="0" Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Text="Name" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1"
+                                         Width="200"
+                                         Text="{Binding Name, Mode=TwoWay}"
+                                         Watermark="Profile name" />
+                              </Grid>
 
-                    <!-- Credentials section -->
-                    <StackPanel Spacing="6"
-                                Margin="8,4,0,0"
-                                IsVisible="{Binding UseCustomNetworkCredentials}">
-                      <Grid ColumnDefinitions="Auto,*"
-                            ColumnSpacing="8">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Text="User name" />
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding NetworkShareUserName, Mode=TwoWay}"
-                                 Watermark="user or DOMAIN\user" />
-                      </Grid>
+                              <Grid Grid.Column="0" Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Text="Username" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1"
+                                         Width="200"
+                                         Text="{Binding Username, Mode=TwoWay}"
+                                         Watermark="user or DOMAIN\\user" />
+                              </Grid>
 
-                      <Grid ColumnDefinitions="Auto,*"
-                            ColumnSpacing="8">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Text="Password" />
-                        <!-- Replaced PasswordBox with TextBox for compatibility -->
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding NetworkSharePassword, Mode=TwoWay}"
-                                 Watermark="Password" />
-                      </Grid>
+                              <Grid Grid.Column="0" Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Text="Password" VerticalAlignment="Center"/>
+                                <Grid Grid.Column="1" ColumnDefinitions="200,Auto,Auto" ColumnSpacing="12">
+                                  <TextBox Grid.Column="0"
+                                           Width="200"
+                                           Text="{Binding Password, Mode=TwoWay}"
+                                           Watermark="Stored locally"
+                                           PasswordChar="{Binding ShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=•}" />
+                                  <ToggleSwitch Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                IsChecked="{Binding ShowPassword, Mode=TwoWay}"
+                                                Content="Show" />
+                                  <Button Grid.Column="2"
+                                          Classes="settings-ghost"
+                                          Content="Remove"
+                                          Command="{Binding DataContext.RemoveCredentialCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          CommandParameter="{Binding}" />
+                                </Grid>
+                              </Grid>
 
-                      <Grid ColumnDefinitions="*,Auto"
-                            ColumnSpacing="8">
-                        <CheckBox Grid.Column="0"
-                                  Content="Remember credentials on this device"
-                                  IsChecked="{Binding RememberNetworkCredentials, Mode=TwoWay}" />
-                        <Button Grid.Column="1"
-                                Classes="settings-ghost"
-                                Command="{Binding TestNetworkConnectionCommand}">
-                          Test connection
-                        </Button>
-                      </Grid>
-                    </StackPanel>
+                              <CheckBox Grid.Column="1" Grid.Row="0"
+                                        Content="Use keychain/credman"
+                                        IsChecked="{Binding UseKeychain, Mode=TwoWay}"
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
+                    <Button Classes="settings-ghost"
+                            Command="{Binding AddCredentialCommand}">
+                      Add credential
+                    </Button>
                   </StackPanel>
                 </Border>
 

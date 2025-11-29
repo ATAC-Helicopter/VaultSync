@@ -16,6 +16,12 @@ namespace VaultSync.UI.Views.Controls
             Color color;
             if (text.StartsWith("OK", StringComparison.OrdinalIgnoreCase))
                 color = Color.Parse("#66C18A"); // green
+            else if (text.StartsWith("Reachable", StringComparison.OrdinalIgnoreCase))
+                color = Color.Parse("#66C18A");
+            else if (text.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
+                color = Color.Parse("#E07B74");
+            else if (text.IndexOf("required", StringComparison.OrdinalIgnoreCase) >= 0)
+                color = Color.Parse("#E07B74");
             else if (text.StartsWith("Low space", StringComparison.OrdinalIgnoreCase))
                 color = Color.Parse("#E0B35B"); // amber
             else if (text.StartsWith("Not", StringComparison.OrdinalIgnoreCase))

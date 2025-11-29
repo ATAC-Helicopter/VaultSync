@@ -72,6 +72,44 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand SnapshotCommand { get; }
     public ICommand SyncCommand { get; }
     public ICommand TakeSnapshotCommand => SnapshotCommand;
+    public ICommand ToggleSortCommand { get; }
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (SetField(ref _searchText, value))
+            {
+                ApplyFilterAndSort();
+            }
+        }
+    }
+
+    public enum ProjectSortMode
+    {
+        Name,
+        LastSnapshot
+    }
+
+    private ProjectSortMode _sortMode = ProjectSortMode.LastSnapshot;
+    public ProjectSortMode SortMode
+    {
+        get => _sortMode;
+        private set
+        {
+            if (SetField(ref _sortMode, value))
+            {
+                OnPropertyChanged(nameof(SortModeLabel));
+                SortProjects();
+            }
+        }
+    }
+
+    public string SortModeLabel =>
+        SortMode == ProjectSortMode.LastSnapshot ? "Sort: Latest snapshot" : "Sort: Name";
+
+    private readonly List<ProjectItemViewModel> _allProjects = new();
+    private string _searchText = string.Empty;
 
     public ProjectsViewModel()
     {
@@ -81,6 +119,7 @@ public class ProjectsViewModel : ViewModelBase
         RemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
         SnapshotCommand      = new RelayCommand(_ => TakeSnapshot());
         SyncCommand          = new RelayCommand(_ => SyncProject(),   _ => SelectedProject is not null);
+        ToggleSortCommand    = new RelayCommand(_ => ToggleSortMode());
 
         LoadAvailablePresets();
 
@@ -118,6 +157,7 @@ public class ProjectsViewModel : ViewModelBase
     private void SeedDesignProjects()
     {
         Projects.Clear();
+        _allProjects.Clear();
 
         var vaultSync = new ProjectItemViewModel
         {
@@ -129,9 +169,9 @@ public class ProjectsViewModel : ViewModelBase
             SizeBytes = 1_800_000_000,
             Preset = "unity"
         };
-        vaultSync.SetAvatarFromNameAndStore(null);
+        vaultSync.SetAvatarFromNameAndStore(vaultSync.Path, null);
         vaultSync.SetSnapshots(CreateDesignSnapshots(1.8));
-        Projects.Add(vaultSync);
+        _allProjects.Add(vaultSync);
 
         var dumpsterFire = new ProjectItemViewModel
         {
@@ -143,9 +183,9 @@ public class ProjectsViewModel : ViewModelBase
             SizeBytes = 46_200_000_000,
             Preset = "unity"
         };
-        dumpsterFire.SetAvatarFromNameAndStore(null);
+        dumpsterFire.SetAvatarFromNameAndStore(dumpsterFire.Path, null);
         dumpsterFire.SetSnapshots(CreateDesignSnapshots(46.2));
-        Projects.Add(dumpsterFire);
+        _allProjects.Add(dumpsterFire);
 
         var overSteer = new ProjectItemViewModel
         {
@@ -157,9 +197,11 @@ public class ProjectsViewModel : ViewModelBase
             SizeBytes = 32_900_000_000,
             Preset = "unity"
         };
-        overSteer.SetAvatarFromNameAndStore(null);
+        overSteer.SetAvatarFromNameAndStore(overSteer.Path, null);
         overSteer.SetSnapshots(CreateDesignSnapshots(32.9));
-        Projects.Add(overSteer);
+        _allProjects.Add(overSteer);
+
+        ApplyFilterAndSort();
     }
 
     private static ProjectSnapshotViewModel[] CreateDesignSnapshots(double baseGb)
@@ -180,7 +222,7 @@ public class ProjectsViewModel : ViewModelBase
         _ = RefreshAsync();
     }
 
-    private async Task RefreshAsync()
+    public async Task RefreshAsync()
     {
         if (IsLoading)
             return;
@@ -211,6 +253,7 @@ public class ProjectsViewModel : ViewModelBase
             }
 
             Projects.Clear();
+            _allProjects.Clear();
 
             if (discovered.Count == 0)
             {
@@ -261,7 +304,9 @@ public class ProjectsViewModel : ViewModelBase
                         SizeBytes    = lastSnapshotBytes ?? 0,
                         Preset       = existingProject?.Preset ?? string.Empty
                     };
-                    vm.SetAvatarFromNameAndStore(AvatarStore.GetAvatarForProject(p.Path));
+                    vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path));
+
+                    var isRegistered = existingProject is not null;
 
                     // Compute health based on how old the last snapshot is (if any).
                     if (lastSnapshotTime.HasValue)
@@ -271,23 +316,25 @@ public class ProjectsViewModel : ViewModelBase
                         if (age.TotalDays < 1)
                         {
                             vm.Health    = ProjectHealthStatus.Healthy;
-                            vm.HealthTag = "Healthy";
+                            vm.HealthTag = "Healthy (<1d)";
                         }
                         else if (age.TotalDays < 7)
                         {
                             vm.Health    = ProjectHealthStatus.Warning;
-                            vm.HealthTag = "Out of date";
+                            vm.HealthTag = "Out of date (>1d)";
                         }
                         else
                         {
                             vm.Health    = ProjectHealthStatus.OutOfDate;
-                            vm.HealthTag = "Stale";
+                            vm.HealthTag = "Stale (>7d)";
                         }
                     }
                     else
                     {
-                        vm.Health    = ProjectHealthStatus.OutOfDate;
-                        vm.HealthTag = "Not backed up";
+                        vm.Health = ProjectHealthStatus.OutOfDate;
+                        vm.HealthTag = isRegistered
+                            ? "No snapshots yet"
+                            : "Not added";
                     }
 
                     // Populate snapshot history from DB if available; otherwise fall back to discovery values.
@@ -309,11 +356,20 @@ public class ProjectsViewModel : ViewModelBase
                     }
 
                     // Mark whether this project is registered in the backup DB.
-                    vm.IsRegistered = existingProject is not null;
+                    vm.IsRegistered = isRegistered;
 
-                    Projects.Add(vm);
+                    // Auto-detect preset for unregistered projects if none is set yet.
+                    if (!isRegistered && string.IsNullOrWhiteSpace(vm.Preset))
+                    {
+                        var autoPreset = DetectPreset(p.Path);
+                        vm.Preset = autoPreset ?? string.Empty;
+                    }
+
+                    _allProjects.Add(vm);
                 }
             }
+
+            ApplyFilterAndSort();
 
             if (SelectedProject != null && !Projects.Contains(SelectedProject))
             {
@@ -332,6 +388,138 @@ public class ProjectsViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    private void SortProjects()
+    {
+        if (Projects.Count <= 1)
+            return;
+
+        ApplyFilterAndSort();
+    }
+
+    private void ToggleSortMode()
+    {
+        SortMode = SortMode == ProjectSortMode.LastSnapshot
+            ? ProjectSortMode.Name
+            : ProjectSortMode.LastSnapshot;
+    }
+
+    private void ApplyFilterAndSort()
+    {
+        IEnumerable<ProjectItemViewModel> filtered = _allProjects;
+
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            var term = SearchText.Trim();
+            filtered = filtered.Where(p =>
+                (!string.IsNullOrEmpty(p.Name) && p.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(p.Path) && p.Path.Contains(term, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        IOrderedEnumerable<ProjectItemViewModel> ordered = SortMode switch
+        {
+            ProjectSortMode.LastSnapshot => filtered
+                .OrderByDescending(p => p.LastSnapshot == default ? DateTime.MinValue : p.LastSnapshot)
+                .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase),
+            _ => filtered.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+        };
+
+        var newList = ordered.ToList();
+
+        // Sync Projects collection to newList
+        for (int i = 0; i < newList.Count; i++)
+        {
+            var item = newList[i];
+            if (i < Projects.Count && ReferenceEquals(Projects[i], item))
+                continue;
+
+            var currentIndex = Projects.IndexOf(item);
+            if (currentIndex >= 0)
+            {
+                Projects.Move(currentIndex, i);
+            }
+            else
+            {
+                Projects.Insert(i, item);
+            }
+        }
+
+        // Remove any extra items not in newList
+        for (int i = Projects.Count - 1; i >= newList.Count; i--)
+        {
+            Projects.RemoveAt(i);
+        }
+
+        // Keep selection valid
+        if (SelectedProject != null && !Projects.Contains(SelectedProject))
+        {
+            SelectedProject = Projects.Count > 0 ? Projects[0] : null;
+        }
+        else if (SelectedProject == null && Projects.Count > 0)
+        {
+            SelectedProject = Projects[0];
+        }
+    }
+
+    private string? DetectPreset(string projectPath)
+    {
+        // Simple heuristics: choose the first matching preset from known signals.
+        // This does not override an explicitly chosen preset or a DB-stored preset.
+        bool Has(string relativePath) => File.Exists(Path.Combine(projectPath, relativePath));
+        bool HasDir(string relativePath) => Directory.Exists(Path.Combine(projectPath, relativePath));
+        bool HasAny(string pattern) => Directory.EnumerateFiles(projectPath, pattern, SearchOption.AllDirectories).Any();
+
+        // Prefer Avalonia when we see XAML + package references.
+        if (HasAny("*.axaml"))
+        {
+            var csproj = Directory.EnumerateFiles(projectPath, "*.csproj", SearchOption.AllDirectories).FirstOrDefault();
+            if (csproj != null)
+            {
+                try
+                {
+                    var text = File.ReadAllText(csproj);
+                    if (text.IndexOf("Avalonia.", StringComparison.OrdinalIgnoreCase) >= 0)
+                        return PresetAvailable("avalonia");
+                }
+                catch
+                {
+                }
+            }
+
+            // If .axaml exists, lean toward Avalonia even without package check.
+            var avaloniaPreset = PresetAvailable("avalonia");
+            if (!string.IsNullOrWhiteSpace(avaloniaPreset))
+                return avaloniaPreset;
+        }
+
+        if (HasDir("Assets") && HasDir("ProjectSettings"))
+            return PresetAvailable("unity");
+        if (Has("project.godot"))
+            return PresetAvailable("godot");
+        if (HasAny("*.uproject"))
+            return PresetAvailable("unreal");
+        if (Has("Cargo.toml"))
+            return PresetAvailable("rust");
+        if (Has("package.json"))
+            return PresetAvailable("node");
+        if (HasAny("*.csproj") || HasAny("*.sln"))
+            return PresetAvailable("dotnet");
+        if (Has("pyproject.toml") || Has("requirements.txt"))
+            return PresetAvailable("python");
+        if (HasAny("*.blend"))
+            return PresetAvailable("blender");
+        if (HasAny("*.prproj"))
+            return PresetAvailable("video");
+
+        return null;
+    }
+
+    private string? PresetAvailable(string presetName)
+    {
+        return AvailablePresets.Any(p => p.Equals(presetName, StringComparison.OrdinalIgnoreCase))
+            ? presetName
+            : null;
     }
 
     private void NewProject()
@@ -995,12 +1183,12 @@ public class ProjectItemViewModel : ViewModelBase
 
     public string LastSnapshotSummary =>
         LastSnapshot == default
-            ? "Never"
+            ? "No snapshots yet"
             : $"{LastSnapshot:g}";
 
     public string LastSnapshotShort =>
         LastSnapshot == default
-            ? "Never"
+            ? "No snapshots yet"
             : LastSnapshot.ToString("ddd · HH:mm");
 
     public string DaysSinceLastSnapshotDisplay
@@ -1054,10 +1242,10 @@ public class ProjectItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasCustomAvatar));
     }
 
-    public void SetAvatarFromNameAndStore(string? customPath)
+    public void SetAvatarFromNameAndStore(string projectPath, string? customPath)
     {
         AvatarInitials = ComputeInitials(Name);
-        AvatarColor    = PickColor(Name);
+        AvatarColor    = AvatarColorProvider.GetColor(Name, projectPath);
         AvatarImagePath = customPath;
         OnPropertyChanged(nameof(AvatarInitials));
         OnPropertyChanged(nameof(AvatarColor));
@@ -1081,21 +1269,6 @@ public class ProjectItemViewModel : ViewModelBase
             return trimmed.Substring(0, 2).ToUpperInvariant();
 
         return trimmed.Substring(0, 1).ToUpperInvariant();
-    }
-
-    private static readonly string[] Palette =
-    {
-        "#4C8DFF", "#7A6CFF", "#FF6A8C", "#FF8D4C", "#4CD1A8", "#4CBCD9", "#D94CD1", "#FFC64C"
-    };
-
-    private static string PickColor(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return Palette[0];
-
-        var hash = name.Aggregate(0, (acc, c) => acc + c);
-        var idx = Math.Abs(hash) % Palette.Length;
-        return Palette[idx];
     }
 
     private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
