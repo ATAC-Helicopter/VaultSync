@@ -1,0 +1,41 @@
+#define MyAppName "VaultSync"
+#define MyAppVersion "0.1.0"
+#define MyAppPublisher "Flavio Giacchetti"
+#define MyAppExeName "VaultSync.UI.exe"
+
+[Setup]
+AppId={{A95C0681-2A65-4C8B-BFA9-VAULTSYNC123456}}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+DefaultDirName={pf}\{#MyAppName}
+DefaultGroupName={#MyAppName}
+OutputBaseFilename=VaultSync-Setup-{#MyAppVersion}
+Compression=lzma
+SolidCompression=yes
+DisableDirPage=no
+DisableProgramGroupPage=yes
+ArchitecturesInstallIn64BitMode=x64
+; Use your app icon for the installer EXE and wizard
+SetupIconFile="G:\Dev\vaultsync\src\VaultSync.UI\Assets\vaultsync.ico"
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
+
+[Files]
+Source: "G:\Dev\vaultsync\src\VaultSync.UI\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\*"; \
+  DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+
+[Icons]
+; Start menu shortcut with app icon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"
+; Desktop shortcut with app icon
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\{#MyAppExeName}"
+
+[Run]
+Filename: "{app}\{#MyAppExeName}"; \
+  Description: "Launch {#MyAppName}"; \
+  Flags: nowait postinstall skipifsilent
