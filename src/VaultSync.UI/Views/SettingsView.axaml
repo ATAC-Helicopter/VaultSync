@@ -765,7 +765,7 @@
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="Check for updates on startup" />
-                    <TextBlock Text="Let VaultSync check for new versions when it launches."
+                    <TextBlock Text="Track the GitHub Releases for the stable branch so you can grab the latest installer."
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>

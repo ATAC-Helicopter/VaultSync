@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <Version>0.1.0</Version>
+    <Product>VaultSync</Product>
+    <Company>Flavio Giacchetti</Company>
 
     <!-- Multi-target: generic .NET 8 + Windows-specific TFM -->
     <TargetFrameworks>net8.0;net8.0-windows10.0.19041.0</TargetFrameworks>

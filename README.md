@@ -76,6 +76,12 @@ dotnet tool update --global vaultsync.cli
 
 ---
 
+## Updates & installers
+
+VaultSync’s updater tracks the `stable` branch of the [ATAC-Helicopter/VaultSync](https://github.com/ATAC-Helicopter/VaultSync) repo. When the UI is configured to check for updates on startup it looks for the latest release metadata on that branch so you can grab the installer straight from the repo’s [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page. The CLI follows the same stable channel; run `dotnet tool update --global vaultsync.cli` after a new release is published to stay in sync.
+
+---
+
 ## Quick Start
 
 ```sh

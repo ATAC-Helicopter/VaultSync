@@ -10,6 +10,11 @@
 - CLI tool: `dotnet pack src/VaultSync.CLI -c Release` then `dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli`.
 - Config lives at `~/.vaultsync/appsettings.json` (secrets are kept in keychain/DPAPI via KeyRef).
 
+## Updates & installers
+- The UI update check tracks the `stable` branch of `ATAC-Helicopter/VaultSync` on GitHub and tells you about new releases posted under the repo’s [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page.
+- Desktop installers are published as assets on that Releases page so the updater can download installers from the repo itself.
+- Keep the CLI aligned with the same channel by rerunning `dotnet tool update --global vaultsync.cli` after a release is published.
+
 ## UI Primer
 - **Dashboard**: quick stats, recent backups, disk health.
 - **Projects**: add/edit projects, choose preset filters, trigger snapshots.
