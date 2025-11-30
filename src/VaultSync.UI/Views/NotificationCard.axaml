@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:VaultSync.UI.ViewModels.Notifications"
+             x:Class="VaultSync.UI.Views.Controls.NotificationCard"
+             x:DataType="vm:NotificationState">
+  <UserControl.Styles>
+    <!-- Card look -->
+    <Style Selector="Border.notification-card">
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="Margin" Value="0,8,0,0" />
+      <!-- Use app card background to stay on-theme -->
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <!-- Severity pill -->
+    <Style Selector="Border.notification-pill">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="4,1" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+      <!-- Subtle, on-theme pill instead of custom dark/blue -->
+      <Setter Property="Background" Value="{DynamicResource CardBorderBrush}" />
+    </Style>
+
+    <!-- Dismiss button -->
+    <Style Selector="Button.notification-dismiss">
+      <Setter Property="Width" Value="22" />
+      <Setter Property="Height" Value="22" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Classes="notification-card"
+          IsVisible="{Binding IsVisible}">
+    <Grid ColumnDefinitions="Auto,*,Auto"
+          ColumnSpacing="8"
+          VerticalAlignment="Center">
+
+      <!-- Severity pill -->
+      <Border Classes="notification-pill"
+              VerticalAlignment="Center">
+        <TextBlock Text="{Binding Severity}"
+                   FontSize="10"
+                   FontWeight="SemiBold" />
+      </Border>
+
+      <!-- Message -->
+      <TextBlock Grid.Column="1"
+                 Text="{Binding Message}"
+                 FontSize="11"
+                 TextWrapping="Wrap"
+                 VerticalAlignment="Center" />
+
+      <!-- Dismiss button -->
+      <Button Grid.Column="2"
+              Classes="notification-dismiss"
+              Command="{Binding DismissCommand}"
+              Content="✕"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Center" />
+    </Grid>
+  </Border>
+</UserControl>

@@ -27,7 +27,9 @@ namespace VaultSync.CLI.Commands
         public override Task<int> ExecuteAsync(CommandContext context, ConfigPathSettings settings, CancellationToken ct)
         {
             var cfg = ConfigHelper.Load();
-            Console.WriteLine(cfg.Database);
+            Console.WriteLine(string.IsNullOrWhiteSpace(cfg.DbPath)
+                ? ConfigHelper.ResolveDb(null)
+                : cfg.DbPath);
             return Task.FromResult(0);
         }
     }
@@ -47,11 +49,13 @@ namespace VaultSync.CLI.Commands
             System.IO.Directory.CreateDirectory(dir);
 
             var cfg = ConfigHelper.Load();
-            cfg.Database = s.DbPath;
+            cfg.DbPath = s.DbPath;
             ConfigHelper.Save(cfg);
 
-            AnsiConsole.MarkupLine($"[green]Updated[/] config: database → {Markup.Escape(s.DbPath)}");
+            AnsiConsole.MarkupLine($"[green]Updated[/] config: database -> {Markup.Escape(s.DbPath)}");
             return Task.FromResult(0);
         }
     }
 }
+
+

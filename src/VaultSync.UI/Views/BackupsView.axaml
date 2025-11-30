@@ -1,0 +1,831 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VaultSync.UI.ViewModels"
+             xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
+             xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+             x:Class="VaultSync.UI.Views.BackupsView"
+             x:DataType="vm:BackupsViewModel"
+             x:CompileBindings="False">
+
+  <UserControl.Styles>
+    <Style Selector="ListBox > ListBoxItem:selected">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+
+    <Style Selector="#PerProjectList ListBoxItem">
+      <Setter Property="Template">
+        <ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="CardBorder"
+                  Margin="0,4,0,4"
+                  CornerRadius="16"
+                  Background="{DynamicResource CardBackgroundBrush}"
+                  Padding="16">
+            <ContentPresenter
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="#PerProjectList ListBoxItem:selected /template/ Border#CardBorder">
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+    </Style>
+
+    <Style Selector="#HistoryList ListBoxItem">
+      <Setter Property="Template">
+        <ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="CardBorder"
+                  Margin="0,4,0,4"
+                  CornerRadius="16"
+                  Background="{DynamicResource CardBackgroundBrush}"
+                  Padding="12">
+            <ContentPresenter
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="#HistoryList ListBoxItem:selected /template/ Border#CardBorder">
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+    </Style>
+
+    <Style Selector="Border.backup-tag">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="Margin" Value="4,0,0,0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Border.project-icon-circle">
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Background" Value="{DynamicResource AccentMutedBrush}" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
+
+    <Style Selector="Expander.backup-group">
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="Template">
+        <ControlTemplate TargetType="Expander">
+          <Border CornerRadius="18"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{DynamicResource CardBorderBrush}"
+                  BorderThickness="1">
+            <StackPanel Margin="{TemplateBinding Padding}">
+              <ToggleButton x:Name="PART_Header"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            Padding="0"
+                            HorizontalContentAlignment="Stretch"
+                            Focusable="False"
+                            IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                <ContentPresenter Content="{TemplateBinding Header}"
+                                  HorizontalAlignment="Stretch" />
+              </ToggleButton>
+              <ContentPresenter x:Name="PART_ContentHost"
+                                Margin="0,8,0,0"
+                                Content="{TemplateBinding Content}"
+                                IsVisible="{TemplateBinding IsExpanded}" />
+            </StackPanel>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="Expander.backup-group ToggleButton#PART_Header">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Template">
+        <ControlTemplate TargetType="ToggleButton">
+          <ContentPresenter
+              Content="{TemplateBinding Content}"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Center"
+              Margin="0" />
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Expander.backup-group ToggleButton#PART_Header:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Expander.backup-group ToggleButton#PART_Header:pressed">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Expander.backup-group ToggleButton#PART_Header:checked">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Expander.backup-group TextBlock.chevron">
+      <Setter Property="Text" Value="›" />
+    </Style>
+    <Style Selector="Expander.backup-group:expanded TextBlock.chevron">
+      <Setter Property="Text" Value="‹›" />
+    </Style>
+
+    <!-- Per-project primary action -->
+    <Style Selector="Button.project-primary">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="MinWidth" Value="0" />
+    </Style>
+
+    <Style Selector="Button.project-primary:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+  </UserControl.Styles>
+  <Grid>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="24"
+                  Spacing="16">
+
+        <!-- HEADER -->
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    Spacing="12">
+          <StackPanel>
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Page.Title}"
+                       FontSize="22"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Page.Description}"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
+                      HorizontalAlignment="Right"
+                      Margin="16,0,0,0">
+            <Button Content="{infra:LocalizedString Key=Backups.Action.BackupAll}"
+                    HorizontalAlignment="Left"
+                    Classes="primary-button"
+                    Command="{Binding CreateBackupCommand}"/>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- NOTIFICATION BANNER -->
+        <controls:NotificationCard DataContext="{Binding Notification}" />
+
+
+        <!-- SUMMARY CARDS -->
+        <Grid ColumnDefinitions="*,*,*"
+              ColumnSpacing="12">
+
+          <!-- Total snapshots -->
+          <Border Classes="card"
+                  Padding="16">
+            <Grid RowDefinitions="Auto,*,Auto">
+              <TextBlock Grid.Row="0"
+                         Text="{infra:LocalizedString Key=Backups.Summary.Total}"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+              <TextBlock Grid.Row="1"
+                         Text="{Binding TotalSnapshots}"
+                         FontSize="24"
+                         FontWeight="SemiBold"
+                         Margin="0,4,0,4" />
+              <TextBlock Grid.Row="2"
+                         Text="{Binding SnapshotsSummaryLine}"
+                         FontSize="11"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+            </Grid>
+          </Border>
+
+          <!-- Last backup -->
+          <Border Classes="card"
+                  Padding="16"
+                  Grid.Column="1">
+            <Grid RowDefinitions="Auto,*,Auto">
+              <TextBlock Grid.Row="0"
+                         Text="{infra:LocalizedString Key=Backups.Summary.Last}"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+              <TextBlock Grid.Row="1"
+                         Text="{Binding LastBackupDisplay}"
+                         FontSize="20"
+                         FontWeight="SemiBold"
+                         Margin="0,4,0,2" />
+              <TextBlock Grid.Row="2"
+                         Text="{Binding LastBackupRelative}"
+                         FontSize="11"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+            </Grid>
+          </Border>
+
+          <!-- Total backup size -->
+          <Border Classes="card"
+                  Padding="16"
+                  Grid.Column="2">
+            <Grid RowDefinitions="Auto,*,Auto">
+              <TextBlock Grid.Row="0"
+                         Text="{infra:LocalizedString Key=Backups.Summary.TotalStored}"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+              <TextBlock Grid.Row="1"
+                         Text="{Binding TotalBackupSizeFormatted}"
+                         FontSize="20"
+                         FontWeight="SemiBold"
+                         Margin="0,4,0,2" />
+              <TextBlock Grid.Row="2"
+                         Text="{Binding SnapshotActivitySummary}"
+                         FontSize="11"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+            </Grid>
+          </Border>
+        </Grid>
+
+        <!-- MINI BACKUP STORAGE CARD (Backups page) -->
+        <Border Classes="card"
+                Padding="16">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Section.StorageLabel}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <TextBlock Text="{Binding BackupDiskDriveLabel}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <!-- Used percent + free/total summary -->
+            <StackPanel Orientation="Horizontal"
+                        Spacing="6"
+                        VerticalAlignment="Center">
+              <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
+                         FontSize="18"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="·"
+                         Margin="4,0"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+              <TextBlock Text="{Binding BackupDiskFreeText}"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+
+            <!-- Usage bar -->
+            <ProgressBar Minimum="0"
+                         Maximum="100"
+                         Value="{Binding BackupDiskUsedPercent}"
+                         Height="4"
+                         CornerRadius="2" />
+
+            <!-- Threshold / warning info -->
+            <TextBlock Text="{Binding BackupDiskThresholdText}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Section.Warning}"
+                       FontSize="11"
+                       Foreground="#FF6B6B"
+                       IsVisible="{Binding BackupDiskIsBelowThreshold}" />
+
+            <!-- SMART / drive health -->
+            <TextBlock Text="{Binding BackupDiskHealthText}"
+                       FontSize="11"
+                       Foreground="{Binding BackupDiskHealthBrush}" />
+          </StackPanel>
+        </Border>
+
+        <!-- RUNNING BACKUPS CARD (inline, below summary cards) -->
+        <Expander Classes="backup-group"
+                  IsExpanded="True"
+                  IsVisible="{Binding IsBusy}">
+          <Expander.Header>
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0"
+                          Orientation="Horizontal"
+                          Spacing="6">
+                <TextBlock Text="{infra:LocalizedString Key=Backups.Section.Active}"
+                           FontSize="14"
+                           FontWeight="SemiBold" />
+              </StackPanel>
+              <StackPanel Grid.Column="1"
+                          Orientation="Horizontal"
+                          Spacing="6"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center">
+                <TextBlock Text="{Binding ActiveBackups.Count, StringFormat=' · {0} active'}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Classes="chevron"
+                           Margin="8,0,0,0"
+                           FontSize="10"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+              </StackPanel>
+            </Grid>
+          </Expander.Header>
+
+          <Border Margin="0,6,0,0"
+                  Padding="0,8,0,0"
+                  BorderBrush="{DynamicResource CardBorderBrush}"
+                  BorderThickness="0,1,0,0">
+            <StackPanel Spacing="8">
+              <ItemsControl x:Name="ActiveBackupsList" ItemsSource="{Binding ActiveBackups}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal"
+                               ItemWidth="260" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="0,4,12,4"
+                            Padding="10"
+                            CornerRadius="12"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1">
+                      <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto,Auto"
+                          ColumnSpacing="6">
+                      <TextBlock Grid.Column="0"
+                                 Text="{Binding ProjectName}"
+                                 FontSize="12"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding Progress, StringFormat='{}{0:0}%'}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 Margin="0,0,4,0"
+                                 IsVisible="{Binding ShowPercent}" />
+                      <Button Grid.Column="2"
+                              Content="{infra:LocalizedString Key=Backups.Section.Cancel}"
+                              Command="{Binding CancelCommand}"
+                              Classes="small-button"
+                              HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Padding="8,2"
+                                  MinWidth="0"
+                                  IsEnabled="{Binding CanCancel}"
+                                  IsVisible="{Binding CanCancel}" />
+                        </Grid>
+                        <ProgressBar Minimum="0"
+                                     Maximum="100"
+                                     Value="{Binding Progress}"
+                                     IsIndeterminate="{Binding IsIndeterminate}"
+                                     Height="4"
+                                     CornerRadius="2" />
+                        <TextBlock Classes="progress-detail"
+                                   Text="{Binding CurrentFile}"
+                                   FontSize="11"
+                                   MaxWidth="340"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap" />
+                        <TextBlock Classes="progress-detail"
+                                   Text="{Binding EtaText}"
+                                   FontSize="10"
+                                   HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   IsVisible="{Binding ShowEta}" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding DestinationStatuses}"
+                            IsVisible="{Binding HasDestinationStatuses}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="0,2,0,0"
+                            Padding="8"
+                            CornerRadius="8"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1">
+                      <StackPanel Orientation="Horizontal"
+                                  Spacing="8">
+                        <TextBlock Text="{Binding Alias}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Status}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="320" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{infra:LocalizedString Key=Backups.Section.WaitMessage}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="NoWrap"
+                         TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Border>
+        </Expander>
+
+        <!-- MAIN AREA: per-project (left) + history (right) -->
+        <Grid ColumnDefinitions="*,*"
+              ColumnSpacing="16">
+
+          <!-- PER-PROJECT BACKUPS -->
+          <Border Classes="card"
+                  CornerRadius="18"
+                  Padding="14"
+                  MinWidth="360"
+                  MaxWidth="520"
+                  Grid.Column="0">
+
+            <StackPanel Spacing="8">
+
+              <!-- Section header -->
+              <StackPanel Orientation="Horizontal"
+                          HorizontalAlignment="Stretch">
+                <StackPanel>
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.PerProjectTitle}"
+                             FontSize="14"
+                             FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.PerProjectDescription}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+              </StackPanel>
+
+              <!-- Per-project list -->
+              <ListBox x:Name="PerProjectList"
+                       ItemsSource="{Binding ProjectBackups}"
+                       SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+                       SelectionMode="Single"
+                       BorderThickness="0"
+                       Margin="0,4,0,0">
+                              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                        RowSpacing="2"
+                        ColumnSpacing="10">
+
+                    <!-- Avatar -->
+                    <Grid Grid.RowSpan="5"
+                          Grid.Column="0"
+                          Width="28"
+                          Height="28"
+                          IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                      <Border CornerRadius="16"
+                              Background="{Binding AvatarColor}" />
+                      <Image Source="{Binding AvatarImagePath}"
+                             Stretch="UniformToFill"
+                             IsVisible="{Binding HasCustomAvatar}">
+                        <Image.Clip>
+                          <EllipseGeometry Center="16,16" RadiusX="16" RadiusY="16"/>
+                        </Image.Clip>
+                      </Image>
+                      <TextBlock Text="{Binding AvatarInitials}"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 FontWeight="SemiBold"
+                                 Foreground="White" />
+                    </Grid>
+
+                    <!-- Row 0: project name -->
+                    <StackPanel Grid.Row="0"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}"
+                                 FontSize="15"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+
+                    <!-- Row 1: primary action (tighter spacing) -->
+                    <StackPanel Grid.Row="1"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="0,-2,0,0">
+                      <Button Content="{infra:LocalizedString Key=Backups.Section.PerProjectAction}"
+                              Classes="project-primary"
+                              Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+
+                    <!-- Row 2: auto-backup toggle -->
+                    <StackPanel Grid.Row="2"
+                                Grid.Column="1"
+                                Orientation="Vertical"
+                                Spacing="2"
+                                VerticalAlignment="Center"
+                                Margin="0,2,0,0">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}"
+                                 FontSize="11"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <ToggleSwitch IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
+                                    OffContent=""
+                                    OnContent=""
+                                    FontSize="11"
+                                    VerticalAlignment="Center"
+                                    MinWidth="0"
+                                    HorizontalAlignment="Left"
+                                    ToolTip.Tip="{infra:LocalizedString Key=Backups.Section.AutoBackupsTooltip}" />
+                    </StackPanel>
+
+                    <!-- Row 3: last backup info -->
+                    <StackPanel Grid.Row="3"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.LastBackupLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="{Binding LastBackupDisplay}"
+                                 FontSize="11" />
+                    </StackPanel>
+
+                    <!-- Row 4: stats -->
+                    <StackPanel Grid.Row="4"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{Binding SnapshotCount}"
+                                 FontSize="11"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.BackupsLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="·"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="{Binding TotalSizeFormatted}"
+                                 FontSize="11"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.StoredLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+              </ListBox>
+
+            </StackPanel>
+          </Border>
+
+          <!-- GLOBAL HISTORY + MINI-CHART -->
+          <Border Classes="card"
+                  CornerRadius="18"
+                  Padding="18"
+                  MinWidth="360"
+                  Grid.Column="1">
+
+            <StackPanel Spacing="10">
+
+              <!-- History header + filters -->
+              <Grid ColumnDefinitions="*,Auto"
+                    Margin="0,0,0,4">
+
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.HistoryTitle}"
+                             FontSize="14"
+                             FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding HistoryFilterProjectLabel}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+
+                <!-- Type filter buttons -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            HorizontalAlignment="Right">
+                  <Button Content="{infra:LocalizedString Key=Backups.Section.FilterAll}"
+                          Classes="small-pill"
+                          Command="{Binding FilterSnapshotsCommand}"
+                          CommandParameter="All" />
+                  <Button Content="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
+                          Classes="small-pill"
+                          Command="{Binding FilterSnapshotsCommand}"
+                          CommandParameter="Auto" />
+                  <Button Content="{infra:LocalizedString Key=Backups.Section.FilterManual}"
+                          Classes="small-pill"
+                          Command="{Binding FilterSnapshotsCommand}"
+                          CommandParameter="Manual" />
+                </StackPanel>
+              </Grid>
+
+              <Border BorderBrush="{DynamicResource CardBorderBrush}"
+                      BorderThickness="0,1,0,0"
+                      Margin="0,4,0,0" />
+
+              <ItemsControl ItemsSource="{Binding SnapshotGroups}"
+                            Margin="0,6,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Expander Classes="backup-group"
+                              IsExpanded="True"
+                              HorizontalAlignment="Stretch">
+                      <Expander.Header>
+                        <Grid ColumnDefinitions="*,Auto">
+                          <StackPanel Grid.Column="0"
+                                      Spacing="2">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6">
+                              <TextBlock Text="{Binding ProjectName}"
+                                         FontSize="13"
+                                         FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding TotalSizeFormatted}"
+                                         FontSize="12"
+                                         FontWeight="SemiBold" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding Summary}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                          </StackPanel>
+                          <TextBlock Grid.Column="1"
+                                     Margin="8,0,0,0"
+                                     VerticalAlignment="Center"
+                                     FontSize="10"
+                                     Classes="chevron"
+                                     Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </Grid>
+                      </Expander.Header>
+
+                      <Border Margin="0,6,0,0"
+                              Padding="0,8,0,0"
+                              BorderBrush="{DynamicResource CardBorderBrush}"
+                              BorderThickness="0,1,0,0">
+                        <StackPanel Spacing="4">
+                          <ItemsControl ItemsSource="{Binding Snapshots}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate>
+                                <Grid ColumnDefinitions="*,Auto"
+                                      RowDefinitions="Auto,Auto,Auto"
+                                      ColumnSpacing="12"
+                                      RowSpacing="3"
+                                      Margin="0,2,0,2">
+
+                                  <StackPanel Grid.Row="0"
+                                              Grid.Column="0"
+                                              Orientation="Horizontal"
+                                              Spacing="6">
+                                    <TextBlock Text="{Binding Label}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <Border Classes="backup-tag"
+                                            Background="{Binding TagBackground}">
+                                      <TextBlock Text="{Binding Type}"
+                                                 FontSize="11" />
+                                    </Border>
+                                  </StackPanel>
+
+                                  <TextBlock Grid.Row="0"
+                                             Grid.Column="1"
+                                             Text="{Binding SizeFormatted}"
+                                             FontSize="12"
+                                             FontWeight="SemiBold"
+                                             HorizontalAlignment="Right" />
+
+                                  <TextBlock Grid.Row="1"
+                                             Grid.Column="0"
+                                             Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                                  <TextBlock Grid.Row="2"
+                                             Grid.Column="0"
+                                             Grid.ColumnSpan="2"
+                                             Text="{Binding DestinationDisplay}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource TextSecondaryBrush}"
+                                             TextTrimming="CharacterEllipsis" />
+
+                                  <StackPanel Grid.Row="1"
+                                              Grid.Column="1"
+                                              Orientation="Horizontal"
+                                              HorizontalAlignment="Right"
+                                              Spacing="6">
+                                    <CheckBox Content="{infra:LocalizedString Key=Backups.Section.Keep}"
+                                              VerticalAlignment="Center"
+                                              IsChecked="{Binding IsProtected, Mode=TwoWay}"
+                                              Command="{Binding DataContext.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              CommandParameter="{Binding}"
+                                              FontSize="11"/>
+                                    <Button Content="{infra:LocalizedString Key=Backups.Section.Restore}"
+                                            Classes="small-button"
+                                            Command="{Binding DataContext.RestoreBackupCommand,
+                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Content="{infra:LocalizedString Key=Backups.Section.Delete}"
+                                            Classes="small-button"
+                                            Command="{Binding DataContext.DeleteBackupCommand,
+                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}" />
+                                  </StackPanel>
+
+                                </Grid>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Border>
+                    </Expander>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <StackPanel Margin="0,4,0,0">
+                <TextBlock Text="{infra:LocalizedString Key=Backups.Section.SnapshotsActivity}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <StackPanel Orientation="Horizontal"
+                            VerticalAlignment="Bottom"
+                            Spacing="4"
+                            Margin="0,4,0,0">
+                  <ItemsControl ItemsSource="{Binding SnapshotActivity}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel HorizontalAlignment="Center"
+                                    VerticalAlignment="Bottom"
+                                    Spacing="2">
+                          <Border Width="8"
+                                  Height="{Binding BarHeight}"
+                                  Background="{Binding BarBrush}"
+                                  CornerRadius="4" />
+                          <TextBlock Text="{Binding DayLabel}"
+                                     FontSize="10"
+                                     HorizontalAlignment="Center"
+                                     Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </StackPanel>
+
+            </StackPanel>
+          </Border>
+
+        </Grid>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border IsVisible="{Binding IsVerificationPopupOpen}"
+            Background="#80000000"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+      <Grid>
+        <Border Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="16"
+                Padding="20"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="360">
+          <StackPanel Spacing="12">
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Verification.Title}"
+                       FontSize="16"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding VerificationPopupMessage}"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8">
+              <Button Content="{infra:LocalizedString Key=Backups.Verification.Keep}"
+                      MinWidth="100"
+                      Command="{Binding CloseVerificationPopupCommand}" />
+              <Button Content="{infra:LocalizedString Key=Backups.Verification.Delete}"
+                      MinWidth="110"
+                      Command="{Binding DeleteFailedBackupCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+  </Grid>
+</UserControl>

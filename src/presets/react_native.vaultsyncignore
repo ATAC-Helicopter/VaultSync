@@ -1,0 +1,20 @@
+android/build/**
+ios/build/**
+node_modules/**
+*.log
+*.tmp
+
+# Metro bundler
+.expo/**
+.expo-shared/**
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+.github/

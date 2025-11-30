@@ -8,6 +8,8 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
+using VaultSync.Core.Config;
+using VaultSync.Core.Services;
 using VaultSync.CLI.Config;
 
 namespace VaultSync.CLI.Commands
@@ -39,7 +41,7 @@ namespace VaultSync.CLI.Commands
             var id = repo.AddProject(new Project { Name = s.Name, RootPath = fullPath, Preset = s.Preset });
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[green]Added[/] project [bold]{Markup.Escape(s.Name)}[/] (id {id}) → {Markup.Escape(fullPath)} [grey](preset: {Markup.Escape(s.Preset)})[/]");
+                AnsiConsole.MarkupLine($"[green]Added[/] project [bold]{Markup.Escape(s.Name)}[/] (id {id}) -> {Markup.Escape(fullPath)} [grey](preset: {Markup.Escape(s.Preset)})[/]");
 
             return Task.FromResult(0);
         }
@@ -74,7 +76,7 @@ namespace VaultSync.CLI.Commands
             if (stats.Projects == 0) throw new Exception($"Project '{s.Name}' not found (nothing deleted)");
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[green]Removed[/] project [bold]{Markup.Escape(s.Name)}[/] — Snapshots: {stats.Snapshots}, Files: {stats.Files}");
+                AnsiConsole.MarkupLine($"[green]Removed[/] project [bold]{Markup.Escape(s.Name)}[/] - Snapshots: {stats.Snapshots}, Files: {stats.Files}");
 
             return Task.FromResult(0);
         }
@@ -103,7 +105,7 @@ namespace VaultSync.CLI.Commands
                 throw new Exception($"Project '{s.Name}' not found");
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[green]Updated[/] [bold]{Markup.Escape(s.Name)}[/] path: {Markup.Escape(oldPath ?? "?")} → {Markup.Escape(full)}");
+                AnsiConsole.MarkupLine($"[green]Updated[/] [bold]{Markup.Escape(s.Name)}[/] path: {Markup.Escape(oldPath ?? "?")} -> {Markup.Escape(full)}");
 
             return Task.FromResult(0);
         }
@@ -143,6 +145,72 @@ namespace VaultSync.CLI.Commands
             foreach (var p in rows) table.AddRow(p.Name, p.RootPath, p.Preset, p.CreatedUtc.ToString("u"));
             AnsiConsole.Write(table);
             return Task.FromResult(0);
+        }
+    }
+
+    sealed class DiscoverProjectsSettings : CommandSettings
+    {
+        [CommandOption("--root")] public string? OverrideRoot { get; init; }
+        [CommandOption("--json")] public bool Json { get; init; } = false;
+    }
+
+    sealed class DiscoverProjectsCommand : AsyncCommand<DiscoverProjectsSettings>
+    {
+        public override async Task<int> ExecuteAsync(CommandContext context, DiscoverProjectsSettings s, CancellationToken ct)
+        {
+            var config = AppConfigStore.Load();
+
+            if (!string.IsNullOrWhiteSpace(s.OverrideRoot))
+            {
+                config.ProjectsRoot = s.OverrideRoot;
+            }
+
+            var discovery = new ProjectDiscoveryService();
+            var projects = await discovery.DiscoverAsync(config, ct);
+
+            if (s.Json)
+            {
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                Console.WriteLine(JsonSerializer.Serialize(projects, options));
+                return 0;
+            }
+
+            if (projects.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[yellow]No projects found.[/] Check your Projects Root in settings or use --root to override.");
+                return 0;
+            }
+
+            var table = new Table().Border(TableBorder.Rounded);
+            table.AddColumn("Name");
+            table.AddColumn(new TableColumn("Path").NoWrap());
+            table.AddColumn("Last snapshot");
+            table.AddColumn("Last size");
+
+            foreach (var p in projects)
+            {
+                var lastSnapshot = p.LastSnapshotTime?.ToString("u") ?? "-";
+                var size = p.LastSnapshotSizeBytes.HasValue ? FormatSize(p.LastSnapshotSizeBytes.Value) : "-";
+                table.AddRow(p.Name, p.Path, lastSnapshot, size);
+            }
+
+            AnsiConsole.Write(table);
+            return 0;
+        }
+
+        private static string FormatSize(long bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            double len = bytes;
+            int order = 0;
+
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len /= 1024;
+            }
+
+            return $"{len:0.#} {sizes[order]}";
         }
     }
 }

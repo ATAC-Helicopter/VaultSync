@@ -1,0 +1,123 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <!-- DARK THEME COLORS -->
+    <ResourceDictionary x:Key="Dark">
+      <!-- Backgrounds -->
+      <Color x:Key="VsBackgroundColor">#101218</Color>
+      <Color x:Key="VsCardColor">#181B24</Color>
+      <Color x:Key="VsCardHighlightColor">#222635</Color>
+
+      <!-- Text -->
+      <Color x:Key="VsTextPrimaryColor">#FFFFFF</Color>
+      <Color x:Key="VsTextSecondaryColor">#B3B8C7</Color>
+      <Color x:Key="VsTextMutedColor">#8086A0</Color>
+
+      <!-- Accents -->
+      <Color x:Key="VsAccentColor">#4F8DFF</Color>
+      <Color x:Key="VsAccentSoftColor">#334F8DFF</Color>
+
+      <!-- Status / semantic (BRIGHTER) -->
+      <Color x:Key="VsSuccessColor">#4FF2B6</Color>
+      <Color x:Key="VsWarningColor">#FFC766</Color>
+      <Color x:Key="VsDangerColor">#FF7676</Color>
+
+      <!-- Input + borders -->
+      <Color x:Key="VsInputBackgroundColor">#1F2230</Color>
+      <Color x:Key="VsInputBorderColor">#353A4C</Color>
+      <Color x:Key="VsInputBorderFocusedColor">#4F8DFF</Color>
+      <Color x:Key="VsDividerColor">#303548</Color>
+    </ResourceDictionary>
+
+    <!-- LIGHT THEME COLORS -->
+    <ResourceDictionary x:Key="Light">
+      <!-- Backgrounds -->
+      <Color x:Key="VsBackgroundColor">#F4F5F9</Color>
+      <Color x:Key="VsCardColor">#FFFFFF</Color>
+      <Color x:Key="VsCardHighlightColor">#E6E9F2</Color>
+
+      <!-- Text -->
+      <Color x:Key="VsTextPrimaryColor">#11131A</Color>
+      <Color x:Key="VsTextSecondaryColor">#5C6275</Color>
+      <Color x:Key="VsTextMutedColor">#8C92A8</Color>
+
+      <!-- Accents -->
+      <Color x:Key="VsAccentColor">#2663FF</Color>
+      <Color x:Key="VsAccentSoftColor">#1A2663FF</Color>
+
+      <!-- Status / semantic (BRIGHTER) -->
+      <Color x:Key="VsSuccessColor">#32DFA0</Color>
+      <Color x:Key="VsWarningColor">#FFBF5F</Color>
+      <Color x:Key="VsDangerColor">#FF6A6A</Color>
+
+      <!-- Input + borders -->
+      <Color x:Key="VsInputBackgroundColor">#F5F6FB</Color>
+      <Color x:Key="VsInputBorderColor">#D0D4E2</Color>
+      <Color x:Key="VsInputBorderFocusedColor">#2663FF</Color>
+      <Color x:Key="VsDividerColor">#D9DCE8</Color>
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Background surfaces -->
+  <SolidColorBrush x:Key="VsBackgroundBrush" Color="{DynamicResource VsBackgroundColor}" />
+  <SolidColorBrush x:Key="VsCardBrush" Color="{DynamicResource VsCardColor}" />
+  <SolidColorBrush x:Key="VsCardHighlightBrush" Color="{DynamicResource VsCardHighlightColor}" />
+
+  <!-- Text brushes -->
+  <SolidColorBrush x:Key="TextPrimary" Color="{DynamicResource VsTextPrimaryColor}" />
+  <SolidColorBrush x:Key="TextSecondary" Color="{DynamicResource VsTextSecondaryColor}" />
+  <SolidColorBrush x:Key="TextMuted" Color="{DynamicResource VsTextMutedColor}" />
+
+  <!-- Accent brushes -->
+  <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource VsAccentColor}" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="{DynamicResource VsAccentSoftColor}" />
+
+  <!-- Status / semantic brushes -->
+  <SolidColorBrush x:Key="SuccessBrush" Color="{DynamicResource VsSuccessColor}" />
+  <SolidColorBrush x:Key="WarningBrush" Color="{DynamicResource VsWarningColor}" />
+  <SolidColorBrush x:Key="DangerBrush" Color="{DynamicResource VsDangerColor}" />
+
+  <!-- Input + borders -->
+  <SolidColorBrush x:Key="InputBackgroundBrush" Color="{DynamicResource VsInputBackgroundColor}" />
+  <SolidColorBrush x:Key="InputBorderBrush" Color="{DynamicResource VsInputBorderColor}" />
+  <SolidColorBrush x:Key="InputBorderFocusedBrush" Color="{DynamicResource VsInputBorderFocusedColor}" />
+  <SolidColorBrush x:Key="DividerBrush" Color="{DynamicResource VsDividerColor}" />
+
+  <!-- Window background -->
+  <SolidColorBrush x:Key="WindowBackground" Color="{DynamicResource VsBackgroundColor}" />
+
+  <!-- Surfaces: sidebar/header/card stacks -->
+  <SolidColorBrush x:Key="Surface0" Color="{DynamicResource VsCardColor}" />
+  <SolidColorBrush x:Key="Surface1" Color="{DynamicResource VsCardColor}" />
+  <SolidColorBrush x:Key="Surface2" Color="{DynamicResource VsCardHighlightColor}" />
+  <SolidColorBrush x:Key="Surface3" Color="{DynamicResource VsCardHighlightColor}" />
+
+  <!-- Soft border for cards + separators -->
+  <SolidColorBrush x:Key="BorderSoft" Color="{DynamicResource VsCardHighlightColor}" />
+
+  <!-- Text alias brushes used throughout views -->
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="{DynamicResource VsTextPrimaryColor}" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource VsTextSecondaryColor}" />
+  <SolidColorBrush x:Key="TextMutedBrush" Color="{DynamicResource VsTextMutedColor}" />
+
+  <!-- Card + surface aliases -->
+  <SolidColorBrush x:Key="CardBackgroundBrush" Color="{DynamicResource VsCardColor}" />
+  <SolidColorBrush x:Key="CardSelectedBrush" Color="{DynamicResource VsCardHighlightColor}" />
+  <SolidColorBrush x:Key="CardRaisedBackgroundBrush" Color="{DynamicResource VsCardHighlightColor}" />
+  <SolidColorBrush x:Key="SurfaceCardBrush" Color="{DynamicResource VsCardColor}" />
+  <SolidColorBrush x:Key="ItemBg" Color="{DynamicResource VsCardColor}" />
+
+  <!-- Buttons / pills -->
+  <SolidColorBrush x:Key="ButtonForegroundBrush" Color="{DynamicResource VsTextPrimaryColor}" />
+  <SolidColorBrush x:Key="PillBackgroundBrush" Color="{DynamicResource VsSuccessColor}" />
+  <!-- New: no visible outline, but available if ever needed -->
+  <SolidColorBrush x:Key="PillBorderBrush" Color="Transparent" />
+  <SolidColorBrush x:Key="TextOnPillBrush" Color="{DynamicResource VsBackgroundColor}" />
+
+  <!-- Charts and subtle lines -->
+  <SolidColorBrush x:Key="SubtleAxisBrush" Color="{DynamicResource VsDividerColor}" />
+
+</ResourceDictionary>

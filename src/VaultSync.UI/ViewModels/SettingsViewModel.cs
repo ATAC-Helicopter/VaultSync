@@ -1,0 +1,1210 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.IO;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using System.Diagnostics;
+using System.Linq;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
+using Avalonia.Styling;
+using VaultSync.UI.Services;
+using VaultSync.Core.Config;
+using VaultSync.Core.Repositories;
+using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
+using VaultSync.UI.Notifications;
+using VaultSync.UI.ViewModels.Notifications;
+
+namespace VaultSync.UI
+{
+    public sealed class SettingsViewModel : INotifyPropertyChanged
+    {
+        // ---------------- Core backing fields ----------------
+
+        private string _projectsRootPath = string.Empty;
+        private bool _resumeLastSession = true;
+        private bool _showWindowOnTrayActions = true;
+        private bool _showTrayIcon = true;
+        private bool _runInBackground = true;
+        private bool _launchOnLogin = false;
+        private List<int> _autoBackupDisabledProjects = new();
+
+        private bool _enableAutoBackups = true;
+        private int _autoBackupIntervalMinutes = 30;
+        private int _maxSnapshotsPerProject = 20;
+        private string _backupLocationPath = string.Empty;
+        private bool _useBackupCompression = true;
+        private bool _verifyBackupsAfterCreate = true;
+        private bool _pauseBackupsOnBattery = true;
+        private bool _useFullSnapshotHash = true;
+        private string _backupLocationStatus = string.Empty;
+
+        private bool _preferExternalDrives = true;
+        private bool _showDriveHealthWarnings = true;
+        private int _minimumFreeSpacePercent = 10;
+
+    private string _selectedTheme;
+    private bool _useCompactLayout = false;
+    private bool _showProjectAvatars = true;
+    private string _saveStatus = string.Empty;
+
+        private bool _notificationsEnabled = true;
+        private bool _notifyOnBackupSuccess = true;
+        private bool _notifyOnBackupFailure = true;
+        private bool _notifyOnLowDiskSpace = true;
+        private bool _showTrayBackupWidget = true;
+
+        private bool _notifyOnSnapshotSuccess = false;
+        private bool _notifyOnSnapshotFailure = true;
+
+        private bool _useOsNotifications = true;
+        private bool _notifyOnlyWhenInactive = true;
+
+        private bool _enableVerboseLogging = false;
+        private bool _checkForUpdatesOnStartup = true;
+        private bool _sendAnonymousUsageStats = false;
+        private readonly LocalizationService _localizationService;
+        private string _selectedLanguageCode = "en";
+        private readonly CredentialVault _credentialVault = CredentialVault.Instance;
+        private bool _showLegacyBackupLocation = true;
+
+        private bool _isInitialized;
+        private bool _isSaving;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void RefreshLegacyVisibility()
+        {
+            ShowLegacyBackupLocation = Destinations.Count == 0;
+        }
+
+        public SettingsViewModel(LocalizationService localizationService)
+        {
+            _localizationService = localizationService;
+            _selectedLanguageCode = localizationService.CurrentLanguage;
+            _localizationService.LanguageChanged += () => OnPropertyChanged(nameof(SelectedLanguage));
+
+            ThemeOptions = new ObservableCollection<string>
+            {
+                "Follow system",
+                "Dark",
+                "Light"
+            };
+
+            _selectedTheme = ThemeOptions[0];
+
+            BrowseProjectsRootCommand    = new RelayCommand(_ => BrowseProjectsRoot());
+            BrowseBackupLocationCommand  = new RelayCommand(_ => BrowseBackupLocation());
+            ResetToDefaultsCommand       = new RelayCommand(_ => ResetToDefaults());
+            ApplySettingsCommand         = new RelayCommand(_ => SaveToConfig());
+            ClearLocalCacheCommand       = new RelayCommand(_ => ClearLocalCache());
+            ForgetAllProjectsCommand     = new RelayCommand(_ => ForgetAllProjects());
+            TestBackupLocationCommand    = new RelayCommand(_ => TestBackupLocation(), _ => !string.IsNullOrWhiteSpace(BackupLocationPath));
+            AddDestinationCommand        = new RelayCommand(_ => AddDestination());
+            RemoveDestinationCommand     = new RelayCommand(p => RemoveDestination(p as BackupDestinationViewModel));
+            BrowseDestinationCommand     = new RelayCommand(p => BrowseDestination(p as BackupDestinationViewModel));
+            TestDestinationCommand       = new RelayCommand(p => TestDestination(p as BackupDestinationViewModel));
+            AddCredentialCommand         = new RelayCommand(_ => AddCredential());
+            RemoveCredentialCommand      = new RelayCommand(p => RemoveCredential(p as NetworkCredentialViewModel));
+            OpenHelpCommand              = new RelayCommand(_ => OpenHelp());
+
+            CredentialProfiles.CollectionChanged += (_, _) => OnPropertyChanged(nameof(CredentialNames));
+            Destinations.CollectionChanged       += (_, _) => RefreshLegacyVisibility();
+
+            PropertyChanged += OnSettingsPropertyChanged;
+
+            // AUTO-LOAD CONFIG ON STARTUP
+            LoadFromConfig();
+            _isInitialized = true;
+        }
+
+        // ---------------- INPC helpers ----------------
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
+
+        // ---------------- Load + Save ----------------
+
+        private void LoadFromConfig()
+        {
+            var cfg = AppConfigStore.Load();
+            _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
+                ? _localizationService.CurrentLanguage
+                : cfg.Advanced.Language;
+
+            _projectsRootPath      = cfg.ProjectsRoot ?? "";
+            _resumeLastSession     = cfg.ResumeLastSession;
+            _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
+            _showTrayIcon            = cfg.Behavior.ShowTrayIcon;
+            _runInBackground         = cfg.Behavior.RunInBackground;
+            _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
+            _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
+
+            _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
+            _autoBackupIntervalMinutes = cfg.Backups.IntervalMinutes;
+            _maxSnapshotsPerProject    = cfg.Backups.MaxSnapshotsPerProject;
+            _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            _backupLocationPath        = string.IsNullOrWhiteSpace(cfg.Backups.BackupRoot)
+                ? (cfg.Backups.Location ?? string.Empty)
+                : cfg.Backups.BackupRoot;
+            _useBackupCompression      = cfg.Backups.UseCompression;
+            _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
+            _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
+            _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
+
+            _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
+            _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
+            _minimumFreeSpacePercent = cfg.Storage.MinFreeSpacePercent;
+
+            CredentialProfiles.Clear();
+            foreach (var cred in cfg.Network.Credentials ?? new List<NetworkCredentialProfile>())
+            {
+                var keyRef  = _credentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
+                var secret  = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
+
+                CredentialProfiles.Add(new NetworkCredentialViewModel
+                {
+                    Name        = cred.Name,
+                    Username    = cred.Username,
+                    Domain      = cred.Domain ?? string.Empty,
+                    KeyRef      = keyRef,
+                    UseKeychain = cred.UseKeychain,
+                    Password    = secret ?? string.Empty
+                });
+            }
+
+            Destinations.Clear();
+            if (cfg.Backups.Destinations != null && cfg.Backups.Destinations.Count > 0)
+            {
+                foreach (var dest in cfg.Backups.Destinations)
+                {
+                    var vm = new BackupDestinationViewModel
+                    {
+                        Alias        = dest.Alias ?? string.Empty,
+                        Path         = dest.Path,
+                        Active       = dest.Active,
+                        AutoMount    = dest.AutoMount,
+                        AutoUnmount  = dest.AutoUnmount,
+                        PreMounted   = dest.PreMounted
+                    };
+
+                    vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
+                        c.Name.Equals(dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+
+                    Destinations.Add(vm);
+                }
+            }
+            else
+            {
+                // fallback: use BackupRoot as a single destination
+                if (!string.IsNullOrWhiteSpace(_backupLocationPath))
+                {
+                Destinations.Add(new BackupDestinationViewModel
+                {
+                    Alias       = "Primary",
+                    Path        = _backupLocationPath,
+                    Active      = true,
+                    PreMounted  = true,
+                    AutoMount   = false,
+                    AutoUnmount = false
+                });
+            }
+            }
+            RefreshLegacyVisibility();
+
+            // FIX: use Theme instead of ThemeName
+            _selectedTheme      = DisplayThemeOption(cfg.Appearance.Theme ?? "System");
+            _useCompactLayout   = cfg.Appearance.CompactLayout;
+            _showProjectAvatars = cfg.Appearance.ShowProjectAvatars;
+
+            _notifyOnBackupSuccess   = cfg.Notifications.OnBackupSuccess;
+            _notifyOnBackupFailure   = cfg.Notifications.OnBackupFailure;
+            _notifyOnLowDiskSpace    = cfg.Notifications.OnLowDisk;
+            _notifyOnSnapshotSuccess = cfg.Notifications.OnSnapshotSuccess;
+            _notifyOnSnapshotFailure = cfg.Notifications.OnSnapshotFailure;
+            _useOsNotifications      = cfg.Notifications.UseOsNotifications;
+            _notifyOnlyWhenInactive  = cfg.Notifications.OnlyWhenInactive;
+
+            // Derive master notifications toggle from individual flags for now
+            _notificationsEnabled =
+                _notifyOnBackupSuccess ||
+                _notifyOnBackupFailure ||
+                _notifyOnLowDiskSpace ||
+                _notifyOnSnapshotSuccess ||
+                _notifyOnSnapshotFailure ||
+                _useOsNotifications;
+
+            _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
+            _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
+                _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
+
+            // Apply theme + layout when loading config (in case Settings view is opened first)
+            ApplyThemeFromSelected();
+            ThemeManager.ApplyCompactLayout(_useCompactLayout);
+
+            SaveStatus = "Settings loaded";
+
+            // Update UI
+            OnPropertyChanged(null);
+        }
+
+        private void SaveToConfig()
+        {
+            // Start from the latest persisted config so we don't clobber fields the Settings view doesn't edit
+            // (e.g., LastView, DbPath, tray settings).
+            var cfg = AppConfigStore.Load();
+
+            if (!ValidateDestinations())
+            {
+                return;
+            }
+
+            // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
+            _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+
+            cfg.ProjectsRoot      = ProjectsRootPath;
+            cfg.ResumeLastSession = ResumeLastSession;
+
+            cfg.Behavior.LaunchOnLogin           = _launchOnLogin;
+            cfg.Behavior.ShowWindowOnTrayActions = _showWindowOnTrayActions;
+            cfg.Behavior.ShowTrayIcon            = _showTrayIcon;
+            cfg.Behavior.RunInBackground         = _runInBackground;
+            cfg.Behavior.ShowBackupWidget        = _showTrayBackupWidget;
+
+            cfg.Backups.EnableAutoBackups           = EnableAutoBackups;
+            cfg.Backups.IntervalMinutes             = AutoBackupIntervalMinutes;
+            cfg.Backups.MaxSnapshotsPerProject      = MaxSnapshotsPerProject;
+            cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
+            // Sync legacy backup root from the first active destination (fallback for older code paths).
+            var firstActiveDest = Destinations.FirstOrDefault(d => d.Active) ?? Destinations.FirstOrDefault();
+            var fallbackRoot    = firstActiveDest?.Path ?? (string.IsNullOrWhiteSpace(BackupLocationPath) ? null : BackupLocationPath);
+            cfg.Backups.BackupRoot = fallbackRoot;
+            cfg.Backups.Location   = cfg.Backups.BackupRoot;
+            cfg.Backups.UseCompression              = UseBackupCompression;
+            cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
+            cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
+            cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
+            cfg.Backups.Destinations                = Destinations.Select(d => new BackupDestination
+            {
+                Alias          = d.Alias,
+                Path           = d.Path,
+                CredentialName = d.SelectedCredential?.Name,
+                Active         = d.Active,
+                AutoMount      = d.AutoMount,
+                AutoUnmount    = d.AutoUnmount,
+                PreMounted     = d.PreMounted
+            }).ToList();
+
+            cfg.Storage.PreferExternalDrives = PreferExternalDrives;
+            cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
+            cfg.Storage.MinFreeSpacePercent  = MinimumFreeSpacePercent;
+
+            var savedCreds = new List<NetworkCredentialProfile>();
+            foreach (var c in CredentialProfiles)
+            {
+                var keyRef = _credentialVault.EnsureKeyRef(c.KeyRef, c.Name);
+                c.KeyRef   = keyRef;
+
+                var secret = !string.IsNullOrWhiteSpace(c.Password)
+                    ? c.Password
+                    : _credentialVault.GetSecret(keyRef, c.Username, c.UseKeychain);
+
+                if (!string.IsNullOrWhiteSpace(secret))
+                {
+                    try
+                    {
+                        _credentialVault.SaveSecret(keyRef, c.Username, secret, c.UseKeychain);
+                    }
+                    catch (Exception ex)
+                    {
+                        GlobalNotificationCenter.Instance.Show(
+                            $"Could not store credential '{c.Name}' securely: {ex.Message}",
+                            NotificationSeverity.Error,
+                            "Credential storage");
+                        // Skip writing this credential if we cannot secure it.
+                        continue;
+                    }
+                }
+
+                savedCreds.Add(new NetworkCredentialProfile
+                {
+                    Name        = c.Name,
+                    Username    = c.Username,
+                    Domain      = c.Domain,
+                    KeyRef      = keyRef,
+                    UseKeychain = c.UseKeychain,
+                    Password    = string.Empty // keep out of config
+                });
+            }
+
+            cfg.Network.Credentials = savedCreds;
+
+            cfg.Appearance.Theme              = NormalizeThemeOption(SelectedTheme);
+            cfg.Appearance.CompactLayout      = UseCompactLayout;
+            cfg.Appearance.ShowProjectAvatars = ShowProjectAvatars;
+
+            cfg.Notifications.OnBackupSuccess    = NotifyOnBackupSuccess;
+            cfg.Notifications.OnBackupFailure    = NotifyOnBackupFailure;
+            cfg.Notifications.OnLowDisk          = NotifyOnLowDiskSpace;
+            cfg.Notifications.OnSnapshotSuccess  = NotifyOnSnapshotSuccess;
+            cfg.Notifications.OnSnapshotFailure  = NotifyOnSnapshotFailure;
+            cfg.Notifications.UseOsNotifications = UseOsNotifications;
+            cfg.Notifications.OnlyWhenInactive   = NotifyOnlyWhenInactive;
+
+            cfg.Advanced.VerboseLogging = EnableVerboseLogging;
+            cfg.Advanced.CheckUpdates   = CheckForUpdatesOnStartup;
+            cfg.Advanced.SendUsageStats = SendAnonymousUsageStats;
+            cfg.Advanced.Language       = SelectedLanguageCode;
+
+            AppConfigStore.Save(cfg);
+            AutoStartService.SetLaunchOnLogin(_launchOnLogin);
+
+            SaveStatus = $"Saved at {DateTime.Now:HH:mm:ss}";
+        }
+
+        private bool ValidateDestinations()
+        {
+            var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var dest in Destinations)
+            {
+                if (string.IsNullOrWhiteSpace(dest.Path))
+                {
+                    SaveStatus = "Destination path is required.";
+                    GlobalNotificationCenter.Instance.Show(
+                        SaveStatus,
+                        NotificationSeverity.Error,
+                        "Destination validation");
+                    return false;
+                }
+
+                if (!string.IsNullOrWhiteSpace(dest.Alias) && !aliases.Add(dest.Alias))
+                {
+                    SaveStatus = $"Duplicate destination alias '{dest.Alias}'.";
+                    GlobalNotificationCenter.Instance.Show(
+                        SaveStatus,
+                        NotificationSeverity.Error,
+                        "Destination validation");
+                    return false;
+                }
+
+                if (dest.AutoMount && !dest.PreMounted && dest.SelectedCredential is null)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        $"Destination '{dest.DisplayName}' is set to auto-mount but no credential is selected.",
+                        NotificationSeverity.Warning,
+                        "Destination validation");
+                }
+            }
+
+            return true;
+        }
+
+        private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (!_isInitialized)
+                return;
+
+            if (e.PropertyName is null)
+                return;
+
+            if (_isSaving)
+                return;
+
+            try
+            {
+                _isSaving = true;
+                SaveToConfig();
+            }
+            finally
+            {
+                _isSaving = false;
+            }
+        }
+
+    // ---------------- Theme helper ----------------
+
+        private void ApplyThemeFromSelected()
+        {
+            var app = Application.Current;
+            if (app is null) return;
+
+            app.RequestedThemeVariant = _selectedTheme switch
+            {
+                "Dark"  => ThemeVariant.Dark,
+                "Light" => ThemeVariant.Light,
+                _       => ThemeVariant.Default  // Follow system
+            };
+        }
+
+        private static string NormalizeThemeOption(string theme)
+        {
+            return theme switch
+            {
+                "Dark"          => "Dark",
+                "Light"         => "Light",
+                "Follow system" => "System",
+                "System"        => "System",
+                _               => "System"
+            };
+        }
+
+        private static string DisplayThemeOption(string storedTheme)
+        {
+            return storedTheme switch
+            {
+                "Dark"  => "Dark",
+                "Light" => "Light",
+                _       => "Follow system"
+            };
+        }
+
+        // ---------------- Properties ----------------
+
+        public ObservableCollection<string> ThemeOptions { get; }
+
+        public string ProjectsRootPath
+        {
+            get => _projectsRootPath;
+            set => SetField(ref _projectsRootPath, value);
+        }
+
+        public bool ResumeLastSession
+        {
+            get => _resumeLastSession;
+            set => SetField(ref _resumeLastSession, value);
+        }
+
+        public bool EnableAutoBackups
+        {
+            get => _enableAutoBackups;
+            set => SetField(ref _enableAutoBackups, value);
+        }
+
+        public int AutoBackupIntervalMinutes
+        {
+            get => _autoBackupIntervalMinutes;
+            set => SetField(ref _autoBackupIntervalMinutes, value);
+        }
+
+        public int MaxSnapshotsPerProject
+        {
+            get => _maxSnapshotsPerProject;
+            set => SetField(ref _maxSnapshotsPerProject, value);
+        }
+
+        public string BackupLocationPath
+        {
+            get => _backupLocationPath;
+            set
+            {
+                if (SetField(ref _backupLocationPath, value))
+                {
+                    ValidateBackupLocation(value);
+                }
+            }
+        }
+
+        public bool ShowLegacyBackupLocation
+        {
+            get => _showLegacyBackupLocation;
+            private set => SetField(ref _showLegacyBackupLocation, value);
+        }
+
+        public string BackupLocationStatus
+        {
+            get => _backupLocationStatus;
+            private set => SetField(ref _backupLocationStatus, value);
+        }
+
+        public bool UseBackupCompression
+        {
+            get => _useBackupCompression;
+            set => SetField(ref _useBackupCompression, value);
+        }
+
+        public bool VerifyBackupsAfterCreate
+        {
+            get => _verifyBackupsAfterCreate;
+            set => SetField(ref _verifyBackupsAfterCreate, value);
+        }
+
+        public bool PauseBackupsOnBattery
+        {
+            get => _pauseBackupsOnBattery;
+            set => SetField(ref _pauseBackupsOnBattery, value);
+        }
+
+        public bool UseFullSnapshotHash
+        {
+            get => _useFullSnapshotHash;
+            set => SetField(ref _useFullSnapshotHash, value);
+        }
+
+        public bool PreferExternalDrives
+        {
+            get => _preferExternalDrives;
+            set => SetField(ref _preferExternalDrives, value);
+        }
+
+        public bool ShowDriveHealthWarnings
+        {
+            get => _showDriveHealthWarnings;
+            set => SetField(ref _showDriveHealthWarnings, value);
+        }
+
+        public int MinimumFreeSpacePercent
+        {
+            get => _minimumFreeSpacePercent;
+            set => SetField(ref _minimumFreeSpacePercent, value);
+        }
+
+        public ObservableCollection<BackupDestinationViewModel> Destinations { get; } = new();
+        public ObservableCollection<NetworkCredentialViewModel> CredentialProfiles { get; } = new();
+        public IEnumerable<string> CredentialNames => CredentialProfiles.Select(c => c.Name);
+
+        public string SelectedTheme
+        {
+            get => _selectedTheme;
+            set
+            {
+                if (SetField(ref _selectedTheme, value))
+                {
+                    if (_isInitialized)
+                    {
+                        // change app theme live when dropdown changes
+                        ApplyThemeFromSelected();
+                    }
+                }
+            }
+        }
+
+        public bool ShowWindowOnTrayActions
+        {
+            get => _showWindowOnTrayActions;
+            set => SetField(ref _showWindowOnTrayActions, value);
+        }
+
+        public bool ShowTrayIcon
+        {
+            get => _showTrayIcon;
+            set => SetField(ref _showTrayIcon, value);
+        }
+
+        public bool RunInBackground
+        {
+            get => _runInBackground;
+            set => SetField(ref _runInBackground, value);
+        }
+
+        public bool ShowTrayBackupWidget
+        {
+            get => _showTrayBackupWidget;
+            set => SetField(ref _showTrayBackupWidget, value);
+        }
+
+        public bool LaunchOnLogin
+        {
+            get => _launchOnLogin;
+            set => SetField(ref _launchOnLogin, value);
+        }
+
+        public bool UseCompactLayout
+        {
+            get => _useCompactLayout;
+            set
+            {
+                if (SetField(ref _useCompactLayout, value) && _isInitialized)
+                {
+                    ThemeManager.ApplyCompactLayout(value);
+                }
+            }
+        }
+
+        public bool ShowProjectAvatars
+        {
+            get => _showProjectAvatars;
+            set => SetField(ref _showProjectAvatars, value);
+        }
+
+        public string SaveStatus
+        {
+            get => _saveStatus;
+            private set => SetField(ref _saveStatus, value);
+        }
+
+        public bool NotificationsEnabled
+        {
+            get => _notificationsEnabled;
+            set
+            {
+                if (!SetField(ref _notificationsEnabled, value))
+                    return;
+
+                if (!value)
+                {
+                    NotifyOnBackupSuccess   = false;
+                    NotifyOnBackupFailure   = false;
+                    NotifyOnSnapshotSuccess = false;
+                    NotifyOnSnapshotFailure = false;
+                    NotifyOnLowDiskSpace    = false;
+                    UseOsNotifications      = false;
+                }
+                else
+                {
+                    NotifyOnBackupSuccess   = true;
+                    NotifyOnBackupFailure   = true;
+                    NotifyOnSnapshotSuccess = false;
+                    NotifyOnSnapshotFailure = true;
+                    NotifyOnLowDiskSpace    = true;
+                    UseOsNotifications      = true;
+                }
+            }
+        }
+
+        public bool NotifyOnBackupSuccess
+        {
+            get => _notifyOnBackupSuccess;
+            set => SetField(ref _notifyOnBackupSuccess, value);
+        }
+
+        public bool NotifyOnBackupFailure
+        {
+            get => _notifyOnBackupFailure;
+            set => SetField(ref _notifyOnBackupFailure, value);
+        }
+
+        public bool NotifyOnLowDiskSpace
+        {
+            get => _notifyOnLowDiskSpace;
+            set => SetField(ref _notifyOnLowDiskSpace, value);
+        }
+
+        public bool NotifyOnSnapshotSuccess
+        {
+            get => _notifyOnSnapshotSuccess;
+            set => SetField(ref _notifyOnSnapshotSuccess, value);
+        }
+
+        public bool NotifyOnSnapshotFailure
+        {
+            get => _notifyOnSnapshotFailure;
+            set => SetField(ref _notifyOnSnapshotFailure, value);
+        }
+
+        public bool UseOsNotifications
+        {
+            get => _useOsNotifications;
+            set => SetField(ref _useOsNotifications, value);
+        }
+
+        public bool NotifyOnlyWhenInactive
+        {
+            get => _notifyOnlyWhenInactive;
+            set => SetField(ref _notifyOnlyWhenInactive, value);
+        }
+
+        public bool EnableVerboseLogging
+        {
+            get => _enableVerboseLogging;
+            set => SetField(ref _enableVerboseLogging, value);
+        }
+
+        public bool CheckForUpdatesOnStartup
+        {
+            get => _checkForUpdatesOnStartup;
+            set => SetField(ref _checkForUpdatesOnStartup, value);
+        }
+
+        public bool SendAnonymousUsageStats
+        {
+            get => _sendAnonymousUsageStats;
+            set => SetField(ref _sendAnonymousUsageStats, value);
+        }
+
+        public IReadOnlyList<LanguageOption> LanguageOptions => _localizationService.SupportedLanguages;
+
+        public string SelectedLanguageCode
+        {
+            get => _selectedLanguageCode;
+            set
+            {
+                if (_selectedLanguageCode == value)
+                    return;
+
+                if (!_localizationService.SetLanguage(value))
+                    return;
+
+                if (SetField(ref _selectedLanguageCode, value))
+                {
+                    OnPropertyChanged(nameof(SelectedLanguage));
+                }
+            }
+        }
+
+        public LanguageOption? SelectedLanguage
+        {
+            get => LanguageOptions
+                .FirstOrDefault(option => string.Equals(option.Code, _selectedLanguageCode, StringComparison.OrdinalIgnoreCase));
+            set
+            {
+                if (value is null)
+                    return;
+
+                SelectedLanguageCode = value.Code;
+            }
+        }
+
+        // ---------------- Commands ----------------
+        public ICommand BrowseProjectsRootCommand { get; }
+    public ICommand BrowseBackupLocationCommand { get; }
+    public ICommand ResetToDefaultsCommand { get; }
+    public ICommand ApplySettingsCommand { get; }
+    public ICommand ClearLocalCacheCommand { get; }
+    public ICommand ForgetAllProjectsCommand { get; }
+    public ICommand TestBackupLocationCommand { get; }
+    public ICommand AddDestinationCommand { get; }
+    public ICommand RemoveDestinationCommand { get; }
+    public ICommand BrowseDestinationCommand { get; }
+    public ICommand TestDestinationCommand { get; }
+    public ICommand AddCredentialCommand { get; }
+    public ICommand RemoveCredentialCommand { get; }
+    public ICommand OpenHelpCommand { get; }
+
+        private async void BrowseProjectsRoot()
+        {
+            var storageProvider = GetStorageProvider();
+            if (storageProvider is null)
+                return;
+
+            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose projects root",
+                AllowMultiple = false
+            });
+
+            var folder = folders?.FirstOrDefault();
+            var path = folder?.Path?.LocalPath;
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            var config = AppConfigStore.Load();
+            config.ProjectsRoot = path;
+            AppConfigStore.Save(config);
+
+            ProjectsRootPath = path;
+        }
+
+        private async void BrowseBackupLocation()
+        {
+            var storageProvider = GetStorageProvider();
+            if (storageProvider is null)
+                return;
+
+            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose backup location",
+                AllowMultiple = false
+            });
+
+            var folder = folders?.FirstOrDefault();
+            var path = folder?.Path?.LocalPath;
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            BackupLocationPath = path;
+            ValidateBackupLocation(path);
+        }
+
+        private async void BrowseDestination(BackupDestinationViewModel? dest)
+        {
+            if (dest is null)
+                return;
+
+            var storageProvider = GetStorageProvider();
+            if (storageProvider is null)
+                return;
+
+            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose destination folder",
+                AllowMultiple = false
+            });
+
+            var folder = folders?.FirstOrDefault();
+            var path = folder?.Path?.LocalPath;
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            dest.Path = path;
+            RefreshLegacyVisibility();
+        }
+
+        private void ResetToDefaults()
+        {
+            AppConfigStore.Save(new AppConfig());
+            LoadFromConfig();
+        }
+
+        private void ClearLocalCache()
+        {
+            // TODO
+        }
+
+        private void TestBackupLocation()
+        {
+            if (string.IsNullOrWhiteSpace(BackupLocationPath))
+                return;
+
+            ValidateBackupLocation(BackupLocationPath, notifyOnSuccess: false);
+        }
+
+        private async void TestDestination(BackupDestinationViewModel? dest)
+        {
+            if (dest is null)
+                return;
+
+            var path = dest.Path;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                SaveStatus = "Destination path is required.";
+                dest.LastTestStatus   = "Path required";
+                dest.LastTestSeverity = "Error";
+                return;
+            }
+
+            var display = dest.DisplayName;
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    Directory.CreateDirectory(path);
+                    var testFile = Path.Combine(path, ".vaultsync_destination_test");
+                    File.WriteAllText(testFile, "ok");
+                    File.Delete(testFile);
+                });
+
+                SaveStatus = $"Destination '{display}' is reachable.";
+                dest.LastTestStatus   = "Reachable";
+                dest.LastTestSeverity = "Info";
+                GlobalNotificationCenter.Instance.Show(
+                    SaveStatus,
+                    NotificationSeverity.Info,
+                    "Destination test");
+            }
+            catch (Exception ex)
+            {
+                SaveStatus = $"Destination '{display}' failed: {ex.Message}";
+                dest.LastTestStatus   = ex.Message;
+                dest.LastTestSeverity = "Error";
+                GlobalNotificationCenter.Instance.Show(
+                    SaveStatus,
+                    NotificationSeverity.Error,
+                    "Destination test");
+            }
+        }
+
+        private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                BackupLocationStatus = string.Empty;
+                return;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(path);
+            }
+            catch (Exception ex)
+            {
+                BackupLocationStatus = "Not accessible";
+                GlobalNotificationCenter.Instance.Show(
+                    $"Backup location not accessible: {ex.Message}",
+                    NotificationSeverity.Error,
+                    "Backup location");
+                return;
+            }
+
+            // Write test file to ensure we can write to the target.
+            var testFile = Path.Combine(path, ".vaultsync_write_test");
+            try
+            {
+                File.WriteAllText(testFile, "ok");
+                File.Delete(testFile);
+            }
+            catch (Exception ex)
+            {
+                BackupLocationStatus = "Not writable";
+                GlobalNotificationCenter.Instance.Show(
+                    $"Backup location is not writable: {ex.Message}",
+                    NotificationSeverity.Error,
+                    "Backup location");
+                return;
+            }
+
+            // Check free space against the configured minimum threshold.
+            try
+            {
+                var drive = new DriveInfo(path);
+                if (drive.IsReady && drive.TotalSize > 0)
+                {
+                    var freePercent = (double)drive.AvailableFreeSpace / drive.TotalSize * 100d;
+                    if (freePercent < MinimumFreeSpacePercent)
+                    {
+                        BackupLocationStatus = $"Low space ({freePercent:0.#}% free)";
+                        GlobalNotificationCenter.Instance.Show(
+                            $"Free space below threshold ({freePercent:0.#}% available, threshold {MinimumFreeSpacePercent}%).",
+                            NotificationSeverity.Warning,
+                            "Backup location");
+                    }
+                    else
+                    {
+                        BackupLocationStatus = "OK";
+                        if (notifyOnSuccess)
+                        {
+                            GlobalNotificationCenter.Instance.Show(
+                                $"Backup location set: {path}",
+                                NotificationSeverity.Info,
+                                "Backup location");
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                BackupLocationStatus = "OK";
+                // Ignore disk space failures; path/write checks already passed.
+            }
+        }
+
+        private void ForgetAllProjects()
+        {
+            try
+            {
+                // Dev helper: reset the VaultSync SQLite DB to a "fresh install" state
+                // without touching any real project files or backup folders on disk.
+                var cfg  = AppConfigStore.Load();
+                var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+
+                repo.EnsureSchema();
+                repo.ResetAllData();
+
+                // Optionally, you could raise a notification/toast here in the future.
+            }
+            catch (Exception)
+            {
+                // For now, silently ignore errors. In the future we can surface a
+                // message in the UI or log details when verbose logging is enabled.
+            }
+        }
+
+        private static IStorageProvider? GetStorageProvider()
+        {
+            var app = Application.Current;
+            if (app?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                return desktop.MainWindow?.StorageProvider;
+            }
+
+            return null;
+        }
+
+        private void AddDestination()
+        {
+            Destinations.Add(new BackupDestinationViewModel
+            {
+                Alias = $"Destination {Destinations.Count + 1}",
+                Active = true,
+                PreMounted = true
+            });
+            RefreshLegacyVisibility();
+        }
+
+        private void RemoveDestination(BackupDestinationViewModel? dest)
+        {
+            if (dest is null) return;
+            Destinations.Remove(dest);
+            RefreshLegacyVisibility();
+        }
+
+        private void AddCredential()
+        {
+            CredentialProfiles.Add(new NetworkCredentialViewModel
+            {
+                Name = $"Profile {CredentialProfiles.Count + 1}",
+                UseKeychain = true
+            });
+            OnPropertyChanged(nameof(CredentialNames));
+        }
+
+        private void RemoveCredential(NetworkCredentialViewModel? cred)
+        {
+            if (cred is null) return;
+            _credentialVault.DeleteSecret(cred.KeyRef, cred.Username);
+            CredentialProfiles.Remove(cred);
+            OnPropertyChanged(nameof(CredentialNames));
+        }
+
+        public void OpenHelp()
+        {
+            try
+            {
+                var root = AppContext.BaseDirectory;
+                var path = Path.Combine(root, "docs", "HELP.md");
+                if (!File.Exists(path))
+                {
+                    // fallback to repo relative when running from source
+                    var repoPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "docs", "HELP.md"));
+                    if (File.Exists(repoPath))
+                        path = repoPath;
+                }
+
+                if (File.Exists(path))
+                {
+                    if (OperatingSystem.IsMacOS())
+                        Process.Start("open", path);
+                    else if (OperatingSystem.IsWindows())
+                        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
+                    else
+                        Process.Start("xdg-open", path);
+                }
+            }
+            catch
+            {
+                // ignore failures
+            }
+        }
+    }
+
+    public class BackupDestinationViewModel : VaultSync.UI.ViewModels.ViewModelBase
+    {
+        private string _alias = string.Empty;
+        public string Alias
+        {
+            get => _alias;
+            set
+            {
+                if (SetField(ref _alias, value))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                }
+            }
+        }
+
+        private string _path = string.Empty;
+        public string Path
+        {
+            get => _path;
+            set
+            {
+                if (SetField(ref _path, value))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                }
+            }
+        }
+
+        private NetworkCredentialViewModel? _selectedCredential;
+        public NetworkCredentialViewModel? SelectedCredential
+        {
+            get => _selectedCredential;
+            set
+            {
+                if (SetField(ref _selectedCredential, value))
+                {
+                    OnPropertyChanged(nameof(NeedsCredentialWarning));
+                }
+            }
+        }
+
+        private bool _active = true;
+        public bool Active { get => _active; set => SetField(ref _active, value); }
+
+        private bool _autoMount;
+        public bool AutoMount
+        {
+            get => _autoMount;
+            set
+            {
+                if (SetField(ref _autoMount, value))
+                {
+                    OnPropertyChanged(nameof(NeedsCredentialWarning));
+                }
+            }
+        }
+
+        private bool _autoUnmount;
+        public bool AutoUnmount { get => _autoUnmount; set => SetField(ref _autoUnmount, value); }
+
+        private bool _preMounted = true;
+        public bool PreMounted
+        {
+            get => _preMounted;
+            set
+            {
+                if (SetField(ref _preMounted, value))
+                {
+                    OnPropertyChanged(nameof(NeedsCredentialWarning));
+                }
+            }
+        }
+
+        public bool NeedsCredentialWarning =>
+            AutoMount && !PreMounted && SelectedCredential is null;
+
+        private string _lastTestStatus = string.Empty;
+        public string LastTestStatus
+        {
+            get => _lastTestStatus;
+            set => SetField(ref _lastTestStatus, value);
+        }
+
+        private string _lastTestSeverity = "Info";
+        public string LastTestSeverity
+        {
+            get => _lastTestSeverity;
+            set => SetField(ref _lastTestSeverity, value);
+        }
+
+        public string DisplayName => string.IsNullOrWhiteSpace(Alias) ? Path : Alias;
+    }
+
+    public class NetworkCredentialViewModel : VaultSync.UI.ViewModels.ViewModelBase
+    {
+        private string _name = string.Empty;
+        public string Name { get => _name; set => SetField(ref _name, value); }
+
+        private string _username = string.Empty;
+        public string Username { get => _username; set => SetField(ref _username, value); }
+
+        private string _domain = string.Empty;
+        public string Domain { get => _domain; set => SetField(ref _domain, value); }
+
+        private string _keyRef = string.Empty;
+        public string KeyRef { get => _keyRef; set => SetField(ref _keyRef, value); }
+
+        private bool _useKeychain = true;
+        public bool UseKeychain { get => _useKeychain; set => SetField(ref _useKeychain, value); }
+
+        private string _password = string.Empty;
+        public string Password { get => _password; set => SetField(ref _password, value); }
+
+        private bool _showPassword = false;
+        public bool ShowPassword { get => _showPassword; set => SetField(ref _showPassword, value); }
+    }
+}

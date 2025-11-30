@@ -1,0 +1,20 @@
+# Build output
+*.yyz
+*.yyp.bak
+*.yymps
+backup/
+output/
+build/
+cache/
+
+# IDE
+.vs/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.github/

@@ -1,0 +1,9 @@
+Backup/**
+Rendered/**
+*.fst
+*.tmp
+*.bak
+
+.DS_Store
+Thumbs.db
+.git/

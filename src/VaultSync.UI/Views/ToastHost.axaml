@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:VaultSync.UI.ViewModels.Notifications"
+             xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
+             x:Class="VaultSync.UI.Views.Controls.ToastHost"
+             x:DataType="vm:ToastHostViewModel"
+             Background="Transparent"
+             IsHitTestVisible="False">
+
+  <UserControl.DataContext>
+    <!-- This host has its own VM because it is global, not tied to a page VM -->
+    <vm:ToastHostViewModel />
+  </UserControl.DataContext>
+
+  <!-- Full overlay, anchored bottom-right -->
+  <Grid Background="Transparent">
+    <ItemsControl ItemsSource="{Binding Toasts}"
+                  Background="Transparent"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <!-- Panel gets full size and then aligns its content bottom-right -->
+          <StackPanel Orientation="Vertical"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Bottom"
+                      Margin="0,0,16,16"
+                      Spacing="8" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:NotificationState">
+          <!-- Toast wrapper: on-theme card, but with shadow and max width -->
+          <Border MaxWidth="380"
+                  Background="{DynamicResource CardBackgroundBrush}"
+                  BorderBrush="{DynamicResource CardBorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="12"
+                  Padding="4"
+                  BoxShadow="0 10 24 0 #CC000000">
+            <controls:NotificationCard />
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </Grid>
+</UserControl>

@@ -50,7 +50,7 @@ namespace VaultSync.Core.Services
             }
             catch
             {
-                // Never throw from logger — swallow to avoid breaking CLI flows.
+                // Never throw from logger - swallow to avoid breaking CLI flows.
                 // In a debug build you could Debug.WriteLine(ex) if desired.
             }
         }

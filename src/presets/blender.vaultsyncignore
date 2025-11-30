@@ -1,6 +1,16 @@
-**/__pycache__/
-**/*.blend1
-**/*.blend2
-**/*.tmp
-**/*.autosave
-**/cache/
+*.blend1
+*.blend2
+*.blend@*
+*.blend.tmp
+__pycache__/**
+cache/**
+backup/**
+autosave/**
+*.swp
+*.tmp
+Thumbs.db
+.DS_Store
+
+# Git
+.git/
+.github/

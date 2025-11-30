@@ -37,10 +37,14 @@ namespace VaultSync.CLI.Commands
             Log.Info($"snapshot start name={proj.Name} fullHash={s.FullHash} root={proj.RootPath}");
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[blue]Scanning & hashing[/] {Markup.Escape(proj.Name)} at {Markup.Escape(proj.RootPath)} (preset: {Markup.Escape(proj.Preset)})…");
+                AnsiConsole.MarkupLine($"[blue]Scanning & hashing[/] {Markup.Escape(proj.Name)} at {Markup.Escape(proj.RootPath)} (preset: {Markup.Escape(proj.Preset)})...");
 
             var started = DateTime.UtcNow;
-            var snapId = await svc.CreateSnapshotAsync(proj, s.FullHash, ct);
+            var snapId = await svc.CreateSnapshotAsync(
+                proj,
+                s.FullHash,
+                maxSnapshotsToKeep: null,
+                ct: ct);
             var took = DateTime.UtcNow - started;
             var outcome = SnapshotService.LastOutcome;
 
@@ -103,7 +107,7 @@ namespace VaultSync.CLI.Commands
             foreach (var srow in list)
                 table.AddRow(srow.Id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), srow.TotalBytes.ToString("N0"));
 
-            AnsiConsole.MarkupLine($"History for [bold]{Markup.Escape(proj.Name)}[/] — {list.Count} snapshot(s)");
+            AnsiConsole.MarkupLine($"History for [bold]{Markup.Escape(proj.Name)}[/] - {list.Count} snapshot(s)");
             AnsiConsole.Write(table);
             return Task.FromResult(0);
         }
@@ -193,7 +197,7 @@ namespace VaultSync.CLI.Commands
                 return Task.FromResult(0);
             }
 
-            AnsiConsole.MarkupLine($"Diff [bold]{Markup.Escape(proj.Name)}[/] — A: {aId} vs B: {bId}");
+            AnsiConsole.MarkupLine($"Diff [bold]{Markup.Escape(proj.Name)}[/] - A: {aId} vs B: {bId}");
             var grid = new Grid().AddColumn().AddColumn().AddColumn().AddColumn();
             grid.AddRow(
                 $"[green]Added[/]: {added.Count}",

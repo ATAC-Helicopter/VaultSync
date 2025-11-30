@@ -76,6 +76,22 @@ dotnet tool update --global vaultsync.cli
 
 ---
 
+## Updates & installers
+
+VaultSync’s updater polls the `stable` branch of the [ATAC-Helicopter/VaultSync](https://github.com/ATAC-Helicopter/VaultSync) repo each time the app starts (when “Check for updates on startup” is enabled). Every push to that branch is treated as an available update: the UI compares the metadata of the latest release with the running version, warns the user if a newer release exists, and lets the user decide when to download and install.
+
+Desktop installers are published as assets on the repo’s [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page, so you can grab the matching installer for your platform once you accept the update prompt. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script (compile it with the Inno Setup compiler after publishing the `win-x64` output), while macOS/Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the same stable channel; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
+
+VaultSync now exposes a language selector (English + Italiano) under Settings → Advanced; translations are loaded from the `Localization/` folder and can be extended to other languages in future releases.
+
+---
+
+# 0.9.0 Beta
+
+VaultSync **0.9.0-beta.1** introduces the new patch-based updater (see `docs/UPDATER.md`) and ships a localized experience (English + Italiano) for Settings, Dashboard, Backups, and Projects. Select Italiano in Settings → Advanced to see the UI translate instantly, and add more languages by dropping another `Localization/strings.<code>.json`.
+
+---
+
 ## Quick Start
 
 ```sh

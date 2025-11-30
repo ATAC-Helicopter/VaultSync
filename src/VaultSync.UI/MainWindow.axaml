@@ -1,0 +1,98 @@
+<Window
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    xmlns:viewsControls="clr-namespace:VaultSync.UI.Views.Controls"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+    x:Class="VaultSync.UI.MainWindow"
+    x:DataType="vm:AppViewModel"
+    Width="1200" Height="800"
+    Title="VaultSync">
+
+  <Grid RowDefinitions="Auto,*" ColumnDefinitions="260,*">
+
+    <Border Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="4,6,4,16">
+          <TextBlock Text="VaultSync" FontSize="20" FontWeight="SemiBold"/>
+          <TextBlock Text="Navigation" Foreground="{StaticResource TextSecondary}" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <Button Classes="nav" Command="{CompiledBinding NavigateDashboard}">
+            <TextBlock Text="{infra:LocalizedString Key=Nav.Dashboard}"/>
+          </Button>
+
+          <Button Classes="nav" Command="{CompiledBinding NavigateProjects}">
+            <TextBlock Text="{infra:LocalizedString Key=Nav.Projects}"/>
+          </Button>
+
+          <Button Classes="nav" Command="{CompiledBinding NavigateBackups}">
+            <TextBlock Text="{infra:LocalizedString Key=Nav.Backups}"/>
+          </Button>
+
+          <Button Classes="nav" Command="{CompiledBinding NavigateSettings}">
+            <TextBlock Text="{infra:LocalizedString Key=Nav.Settings}"/>
+          </Button>
+        </StackPanel>
+
+      </DockPanel>
+    </Border>
+
+    <Border Grid.Row="0" Grid.Column="1" Classes="header" Padding="16">
+      <Grid ColumnDefinitions="*,Auto"
+            RowDefinitions="Auto,Auto"
+            ColumnSpacing="12"
+            VerticalAlignment="Center">
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
+          <TextBlock Text="{CompiledBinding HeaderTitle}" FontSize="22" FontWeight="SemiBold"/>
+          <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{StaticResource TextSecondary}"/>
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Margin="0,12,0,0"
+                Padding="12"
+                CornerRadius="12"
+                Background="{DynamicResource Surface2}"
+                BorderBrush="{DynamicResource BorderSoft}"
+                BorderThickness="1"
+                IsVisible="{CompiledBinding IsUpdateAvailable}">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="10"
+                  VerticalAlignment="Center">
+              <TextBlock Text="{CompiledBinding UpdateBannerMessage}"
+                         TextWrapping="Wrap"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="{CompiledBinding UpdateTooltip}" />
+              <Button Grid.Column="1"
+                      Command="{CompiledBinding InstallPatchCommand}"
+                      Content="{CompiledBinding InstallButtonText}"
+                      MinWidth="140"
+                      HorizontalAlignment="Right"
+                      IsVisible="{CompiledBinding ShowPatchButton}" />
+              <Button Grid.Column="2"
+                      Command="{CompiledBinding OpenReleasePageCommand}"
+                      Content="Open release"
+                      MinWidth="110"
+                      HorizontalAlignment="Right" />
+            </Grid>
+            <TextBlock Text="{CompiledBinding PatchStatusMessage}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       FontSize="12"
+                       IsVisible="{CompiledBinding ShowPatchStatus}" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Grid.Column="1" Padding="16">
+      <ContentControl x:Name="MainContent" Content="{CompiledBinding CurrentView}"/>
+    </Border>
+
+    <!-- Global bottom-right toast notifications covering the whole window -->
+    <viewsControls:ToastHost Grid.RowSpan="2" Grid.ColumnSpan="2" />
+
+  </Grid>
+</Window>

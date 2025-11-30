@@ -1,3 +1,26 @@
-**/bin/
-**/obj/
-**/.vs/
+bin/**
+obj/**
+TestResults/**
+*.user
+*.csproj.user
+*.suo
+*.cache
+*.db
+*.nupkg
+*.snupkg
+*.pdb
+*.tmp
+
+# IDE
+.vscode/
+.vs/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.github/
+.gitattributes

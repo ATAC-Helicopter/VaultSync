@@ -74,7 +74,7 @@ namespace VaultSync.CLI.Commands
             {
                 var extra = s.DryRun ? " (dry-run)" : "";
                 var tail = doVerify ? " and verify" : "";
-                AnsiConsole.MarkupLine($"[grey]→ will sync to[/] {Markup.Escape(s.Destination!)}[grey]{extra}{tail}[/]");
+                AnsiConsole.MarkupLine($"[grey]-> will sync to[/] {Markup.Escape(s.Destination!)}[grey]{extra}{tail}[/]");
             }
 
             async Task RunCycle(CancellationToken token, string reason)
@@ -85,10 +85,14 @@ namespace VaultSync.CLI.Commands
                     if (token.IsCancellationRequested) return;
 
                     if (!s.Quiet)
-                        AnsiConsole.MarkupLine($"[dim]• change detected ({Markup.Escape(reason)}); snapshotting…[/]");
+                        AnsiConsole.MarkupLine($"[dim]* change detected ({Markup.Escape(reason)}); snapshotting...[/]");
 
                     var snapSvc = new SnapshotService(repo, new HashService());
-                    var snapId = await snapSvc.CreateSnapshotAsync(proj, fullHash: true, token);
+                    var snapId = await snapSvc.CreateSnapshotAsync(
+                        proj,
+                        fullHash: true,
+                        maxSnapshotsToKeep: null,
+                        ct: token);
 
                     if (!s.Quiet)
                     {
@@ -157,7 +161,7 @@ namespace VaultSync.CLI.Commands
             void OnRename(object? _, RenamedEventArgs e)
             {
                 if (ct.IsCancellationRequested) return;
-                debouncer.Trigger(t => RunCycle(t, $"Renamed: {e.OldFullPath} → {e.FullPath}"));
+                debouncer.Trigger(t => RunCycle(t, $"Renamed: {e.OldFullPath} -> {e.FullPath}"));
             }
 
             void OnError(object? _, ErrorEventArgs e)

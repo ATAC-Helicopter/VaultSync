@@ -1,0 +1,30 @@
+build/**
+bin/**
+obj/**
+*.o
+*.obj
+*.pdb
+*.dll
+*.exe
+*.so
+*.a
+*.tmp
+*.log
+
+# CMake
+CMakeFiles/**
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# IDE
+.vscode/
+.idea/
+.vs/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+.github/

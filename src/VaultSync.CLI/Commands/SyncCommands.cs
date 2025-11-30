@@ -37,9 +37,9 @@ namespace VaultSync.CLI.Commands
             if (!s.Quiet)
             {
                 if (s.DryRun)
-                    AnsiConsole.MarkupLine($"[yellow]Dry run[/]: mirroring [blue]{Markup.Escape(proj.RootPath)}[/] → [blue]{Markup.Escape(dest)}[/] (preset: {Markup.Escape(proj.Preset)})");
+                    AnsiConsole.MarkupLine($"[yellow]Dry run[/]: mirroring [blue]{Markup.Escape(proj.RootPath)}[/] -> [blue]{Markup.Escape(dest)}[/] (preset: {Markup.Escape(proj.Preset)})");
                 else
-                    AnsiConsole.MarkupLine($"Mirroring [blue]{Markup.Escape(proj.RootPath)}[/] → [blue]{Markup.Escape(dest)}[/] (preset: {Markup.Escape(proj.Preset)})");
+                    AnsiConsole.MarkupLine($"Mirroring [blue]{Markup.Escape(proj.RootPath)}[/] -> [blue]{Markup.Escape(dest)}[/] (preset: {Markup.Escape(proj.Preset)})");
             }
 
             var started = DateTime.UtcNow;
@@ -81,7 +81,7 @@ namespace VaultSync.CLI.Commands
             var svc = new VerifyService(repo, new HashService());
 
             if (!s.Quiet && !s.Json)
-                AnsiConsole.MarkupLine($"Verifying [blue]{Markup.Escape(proj.Name)}[/] against [blue]{Markup.Escape(src)}[/] — {(s.Full ? "full scan" : $"{s.Percent}% sample")}…");
+                AnsiConsole.MarkupLine($"Verifying [blue]{Markup.Escape(proj.Name)}[/] against [blue]{Markup.Escape(src)}[/] - {(s.Full ? "full scan" : $"{s.Percent}% sample")}...");
 
             var started = DateTime.UtcNow;
             var result = await svc.VerifyAsync(proj, src, s.Percent, s.Full, ct);
@@ -107,7 +107,7 @@ namespace VaultSync.CLI.Commands
             if (result.Failures.Count == 0)
             {
                 if (!s.Quiet)
-                    AnsiConsole.MarkupLine($"[green]OK[/] — Checked {result.Checked} files, all good ({took.TotalSeconds:F1}s).");
+                    AnsiConsole.MarkupLine($"[green]OK[/] - Checked {result.Checked} files, all good ({took.TotalSeconds:F1}s).");
                 return 0;
             }
 
@@ -121,7 +121,7 @@ namespace VaultSync.CLI.Commands
             AnsiConsole.Write(table);
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[red]FAILED[/] — {result.Failures.Count} issues out of {result.Checked} checked ({took.TotalSeconds:F1}s).");
+                AnsiConsole.MarkupLine($"[red]FAILED[/] - {result.Failures.Count} issues out of {result.Checked} checked ({took.TotalSeconds:F1}s).");
 
             return 2;
         }
@@ -264,17 +264,17 @@ namespace VaultSync.CLI.Commands
             else if (!s.Quiet)
             {
                 var hdr = s.DryRun ? "[yellow]Dry restore[/]" : "Restore";
-                AnsiConsole.MarkupLine($"{hdr}: [bold]{Markup.Escape(proj.Name)}[/] snapshot [bold]{snapshotId}[/] ([grey]{snapshotCreatedUtc:u}[/]) → [blue]{Markup.Escape(destRootFull)}[/]");
+                AnsiConsole.MarkupLine($"{hdr}: [bold]{Markup.Escape(proj.Name)}[/] snapshot [bold]{snapshotId}[/] ([grey]{snapshotCreatedUtc:u}[/]) -> [blue]{Markup.Escape(destRootFull)}[/]");
                 if (s.Clean && s.DryRun) AnsiConsole.MarkupLine("[grey]Note[/]: --clean will remove extra files (shown only).");
                 if (s.Clean && !s.DryRun)
                 {
-                    var note = s.KeepEmptyDirs ? "[grey]Cleaning destination (files only; preserving empty dirs)…[/]"
-                                               : "[grey]Cleaning destination (files + empty dirs)…[/]";
+                    var note = s.KeepEmptyDirs ? "[grey]Cleaning destination (files only; preserving empty dirs)...[/]"
+                                               : "[grey]Cleaning destination (files + empty dirs)...[/]";
                     AnsiConsole.MarkupLine(note);
                 }
 
                 var mode = s.DryRun ? "[yellow]Dry restore complete[/]" : "[green]Restore complete[/]";
-                AnsiConsole.MarkupLine($"{mode} — copied: {copied}, deleted: {deleted}, deleted-dirs: {deletedDirs}, missing-from-source: {skippedMissing} ({took.TotalSeconds:F1}s).");
+                AnsiConsole.MarkupLine($"{mode} - copied: {copied}, deleted: {deleted}, deleted-dirs: {deletedDirs}, missing-from-source: {skippedMissing} ({took.TotalSeconds:F1}s).");
                 if (skippedMissing > 0)
                     AnsiConsole.MarkupLine("[yellow]Note[/]: Some files listed in the snapshot were not present in the current project folder; they were skipped.");
             }
@@ -313,16 +313,20 @@ namespace VaultSync.CLI.Commands
             if (!s.Quiet) AnsiConsole.MarkupLine($"[blue]Self-test[/] using database {Markup.Escape(db)}");
 
             var id = repo.AddProject(new VaultSync.Core.Models.Project { Name = name, RootPath = src, Preset = "custom" });
-            if (!s.Quiet) AnsiConsole.MarkupLine($"Registered project [bold]{Markup.Escape(name)}[/] (id {id}) → {Markup.Escape(src)}");
+            if (!s.Quiet) AnsiConsole.MarkupLine($"Registered project [bold]{Markup.Escape(name)}[/] (id {id}) -> {Markup.Escape(src)}");
 
             var snapSvc = new SnapshotService(repo, new HashService());
-            var snapId = await snapSvc.CreateSnapshotAsync(repo.GetProjectByName(name)!, fullHash: true, ct);
+            var snapId = await snapSvc.CreateSnapshotAsync(
+                repo.GetProjectByName(name)!,
+                fullHash: true,
+                maxSnapshotsToKeep: null,
+                ct: ct);
             if (!s.Quiet) AnsiConsole.MarkupLine($"Snapshot {snapId} created");
 
             var syncSvc = new SyncService();
             var syncCode = await syncSvc.SyncAsync(repo.GetProjectByName(name)!, dst, dryRun: false, ct);
             if (syncCode != 0) { if (!s.Quiet) AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {syncCode})"); return 2; }
-            if (!s.Quiet) AnsiConsole.MarkupLine($"[green]Sync OK[/] → {Markup.Escape(dst)}");
+            if (!s.Quiet) AnsiConsole.MarkupLine($"[green]Sync OK[/] -> {Markup.Escape(dst)}");
 
             var verifySvc = new VerifyService(repo, new HashService());
             var result = await verifySvc.VerifyAsync(repo.GetProjectByName(name)!, dst, percent: 100, full: true, ct);
@@ -331,7 +335,7 @@ namespace VaultSync.CLI.Commands
                 if (!s.Quiet) AnsiConsole.MarkupLine($"[red]Verify failed[/]: {result.Failures.Count} issues");
                 return 2;
             }
-            if (!s.Quiet) AnsiConsole.MarkupLine("[green]Verify OK[/] — all files matched");
+            if (!s.Quiet) AnsiConsole.MarkupLine("[green]Verify OK[/] - all files matched");
 
             repo.DeleteProjectCascade(name);
             if (!s.Quiet) AnsiConsole.MarkupLine($"[grey]Cleanup[/]: removed project metadata; files remain under {Markup.Escape(tmpRoot)}");

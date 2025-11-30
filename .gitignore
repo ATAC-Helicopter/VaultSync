@@ -23,6 +23,9 @@ out/
 .LSOverride
 Thumbs.db
 
+# Installer output
+installer/Output/
+
 # NuGet
 *.nupkg
 *.snupkg

@@ -1,0 +1,15 @@
+bin/**
+pkg/**
+*.test
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+.github/

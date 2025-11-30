@@ -1,0 +1,18 @@
+bin/**
+obj/**
+*.log
+*.pdb
+*.tmp
+*.db
+
+# IDE
+.vscode/
+.vs/
+.idea/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+.github/

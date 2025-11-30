@@ -109,6 +109,21 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
 
+        -- Backups
+        CREATE TABLE IF NOT EXISTS backups(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL,
+          snapshot_id INTEGER NOT NULL,
+          created_utc TEXT NOT NULL,
+          type TEXT NOT NULL,
+          total_bytes INTEGER NOT NULL,
+          path TEXT NOT NULL,
+          destination_path TEXT NOT NULL DEFAULT '',
+          destination_alias TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+          FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
+        );
+
         -- Indexes (idempotent)
         CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
 
@@ -117,11 +132,47 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 
         CREATE INDEX IF NOT EXISTS idx_files_snapshot ON files(snapshot_id);
 
+        CREATE INDEX IF NOT EXISTS idx_backups_project_created
+          ON backups(project_id, created_utc DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_backups_created
+          ON backups(created_utc DESC);
+
         -- Avoid duplicate file rows per snapshot (same logical path)
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
           ON files(snapshot_id, rel_path);
     """);
+
+    // Migrations: add missing columns
+    EnsureColumnExists("backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
 }
+
+        /// <summary>
+        /// Development helper: clears all data from the database tables without
+        /// deleting the database file or any original project files on disk.
+        /// After this call, the DB is effectively in a "fresh" state but with the same schema.
+        /// </summary>
+        public void ResetAllData()
+        {
+            using var connection = Open();
+            using var tx = connection.BeginTransaction();
+
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.Transaction = tx;
+                cmd.CommandText = @"
+DELETE FROM backups;
+DELETE FROM files;
+DELETE FROM snapshots;
+DELETE FROM projects;
+DELETE FROM sqlite_sequence;";
+                cmd.ExecuteNonQuery();
+            }
+
+            tx.Commit();
+        }
         // ---------- Projects ----------
         public Project? GetProjectByName(string name)
         {
@@ -131,11 +182,40 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
                 new { name });
         }
 
+        public void RemoveProject(int projectId)
+        {
+            using var c = Open();
+
+            // Because foreign_keys are ON and snapshots/files reference projects
+            // with ON DELETE CASCADE, deleting the project row will also delete
+            // its snapshots and files.
+            const string sql = "DELETE FROM projects WHERE id = @id;";
+            c.Execute(sql, new { id = projectId });
+        }
+
         public IEnumerable<Project> ListProjects()
         {
             using var c = Open();
             return c.Query<Project>(
                 "SELECT id, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+        }
+
+        /// <summary>
+        /// Returns all projects in the database. This is a convenience wrapper used by the UI dashboard.
+        /// </summary>
+        public IEnumerable<Project> GetAllProjects()
+        {
+            // Delegate to the existing ListProjects implementation to keep one query definition.
+            return ListProjects();
+        }
+
+        /// <summary>
+        /// Async helper for retrieving all projects without blocking the caller thread.
+        /// Intended for UI code; it simply wraps the existing synchronous method.
+        /// </summary>
+        public Task<List<Project>> GetAllProjectsAsync(CancellationToken ct = default)
+        {
+            return Task.Run(() => GetAllProjects().ToList(), ct);
         }
 
         public int AddProject(Project p)
@@ -205,10 +285,54 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 
         public Snapshot? GetLatestSnapshot(int projectId)
         {
+            return GetLatestSnapshotForProject(projectId);
+        }
+
+        public Snapshot? GetLatestSnapshotForProject(int projectId)
+        {
             using var c = Open();
             return c.QueryFirstOrDefault<Snapshot>(
-                "SELECT id, project_id as ProjectId, created_utc as CreatedUtc, file_count as FileCount, total_bytes as TotalBytes FROM snapshots WHERE project_id=@pid ORDER BY id DESC LIMIT 1",
+                """
+                SELECT
+                  id,
+                  project_id  AS ProjectId,
+                  created_utc AS CreatedUtc,
+                  file_count  AS FileCount,
+                  total_bytes AS TotalBytes
+                FROM snapshots
+                WHERE project_id = @pid
+                ORDER BY created_utc DESC, id DESC
+                LIMIT 1;
+                """,
                 new { pid = projectId });
+        }
+
+        /// <summary>
+        /// Returns all snapshots across all projects, newest first. Used by the UI dashboard.
+        /// </summary>
+        public IEnumerable<Snapshot> GetAllSnapshots()
+        {
+            using var c = Open();
+            return c.Query<Snapshot>(
+                """
+                SELECT
+                  id,
+                  project_id as ProjectId,
+                  created_utc as CreatedUtc,
+                  file_count as FileCount,
+                  total_bytes as TotalBytes
+                FROM snapshots
+                ORDER BY created_utc DESC
+                """);
+        }
+
+        /// <summary>
+        /// Async helper for retrieving all snapshots without blocking the UI thread.
+        /// Wraps the existing synchronous implementation.
+        /// </summary>
+        public Task<List<Snapshot>> GetAllSnapshotsAsync(CancellationToken ct = default)
+        {
+            return Task.Run(() => GetAllSnapshots().ToList(), ct);
         }
 
         public IEnumerable<Snapshot> GetSnapshotsForProject(string projectName)
@@ -229,6 +353,15 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
                 new { name = projectName });
         }
 
+        /// <summary>
+        /// Async helper for retrieving all snapshots for a given project name.
+        /// Safe to call from UI code; internally uses the existing sync method.
+        /// </summary>
+        public Task<List<Snapshot>> GetSnapshotsForProjectAsync(string projectName, CancellationToken ct = default)
+        {
+            return Task.Run(() => GetSnapshotsForProject(projectName).ToList(), ct);
+        }
+
         public IEnumerable<FileEntry> GetFilesForSnapshot(int snapshotId)
         {
             using var c = Open();
@@ -244,6 +377,25 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 
                 yield return new FileEntry(r.RelPath, r.Size, mtime, r.HashSha256);
             }
+        }
+
+        /// <summary>
+        /// Async helper that materializes all file entries for a snapshot into a list
+        /// on a background thread. This is safe to call from UI code without blocking
+        /// the UI thread, and uses the existing synchronous implementation internally.
+        /// </summary>
+        public Task<List<FileEntry>> GetFilesForSnapshotAsync(int snapshotId, CancellationToken ct = default)
+        {
+            return Task.Run(() =>
+            {
+                var list = new List<FileEntry>();
+                foreach (var entry in GetFilesForSnapshot(snapshotId))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    list.Add(entry);
+                }
+                return list;
+            }, ct);
         }
 
         public void InsertFiles(int snapshotId, IEnumerable<FileEntry> files)
@@ -265,6 +417,210 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
                 }),
                 tx);
             tx.Commit();
+        }
+        // ---------- Backups ----------
+
+        public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath, string destinationPath, string destinationAlias, bool isProtected = false)
+        {
+            using var c = Open();
+            var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+
+            return c.ExecuteScalar<int>(
+                """
+                INSERT INTO backups(project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected)
+                VALUES(@ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected);
+                SELECT last_insert_rowid();
+                """,
+                new
+                {
+                    ProjectId       = projectId,
+                    SnapshotId      = snapshotId,
+                    CreatedUtc      = created,
+                    Type            = type,
+                    TotalBytes      = totalBytes,
+                    Path            = relativePath,
+                    DestinationPath = destinationPath ?? string.Empty,
+                    DestinationAlias = destinationAlias ?? string.Empty,
+                    IsProtected     = isProtected ? 1 : 0
+                });
+        }
+
+        public Backup? GetLatestBackupForProject(int projectId)
+        {
+            using var c = Open();
+            return c.QueryFirstOrDefault<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  is_protected as IsProtected
+                FROM backups
+                WHERE project_id = @pid
+                ORDER BY created_utc DESC
+                LIMIT 1;
+                """,
+                new { pid = projectId });
+        }
+
+        public IEnumerable<Backup> GetBackupsForProject(int projectId)
+        {
+            using var c = Open();
+            return c.Query<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  is_protected as IsProtected
+                FROM backups
+                WHERE project_id = @pid
+                ORDER BY created_utc DESC;
+                """,
+                new { pid = projectId });
+        }
+
+        /// <summary>
+        /// Async helper for retrieving all backups for a given project id.
+        /// Safe to call from UI code; internally uses the existing sync method.
+        /// </summary>
+        public Task<List<Backup>> GetBackupsForProjectAsync(int projectId, CancellationToken ct = default)
+        {
+            return Task.Run(() => GetBackupsForProject(projectId).ToList(), ct);
+        }
+
+        /// <summary>
+        /// Backups created between the given UTC range (inclusive start and inclusive end).
+        /// Used by the Backups UI for history and charts.
+        /// </summary>
+        public IEnumerable<Backup> GetBackupsInRange(DateTime fromUtc, DateTime toUtc)
+        {
+            using var c = Open();
+            return c.Query<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  is_protected as IsProtected
+                FROM backups
+                WHERE created_utc >= @from AND created_utc <= @to
+                ORDER BY created_utc DESC;
+                """,
+                new
+                {
+                    from = fromUtc.ToString("u", CultureInfo.InvariantCulture),
+                    to   = toUtc.ToString("u", CultureInfo.InvariantCulture)
+                });
+        }
+
+        /// <summary>
+        /// Async helper for retrieving backups in a date range without blocking the UI thread.
+        /// Wraps the existing synchronous implementation.
+        /// </summary>
+        public Task<List<Backup>> GetBackupsInRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
+        {
+            return Task.Run(() => GetBackupsInRange(fromUtc, toUtc).ToList(), ct);
+        }
+
+        public Backup? GetLastBackup()
+        {
+            using var c = Open();
+            return c.QueryFirstOrDefault<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path,
+                  is_protected as IsProtected
+                FROM backups
+                ORDER BY created_utc DESC
+                LIMIT 1;
+                """);
+        }
+
+        public int GetBackupCount()
+        {
+            using var c = Open();
+            return c.ExecuteScalar<int>("SELECT COUNT(*) FROM backups;");
+        }
+
+    public long GetTotalBackupBytes()
+    {
+        using var c = Open();
+        return c.ExecuteScalar<long>("SELECT COALESCE(SUM(total_bytes), 0) FROM backups;");
+    }
+
+    private void EnsureColumnExists(string table, string column, string alterSql)
+    {
+        try
+        {
+            using var c = Open();
+            var cols = c.Query($"PRAGMA table_info({table});")
+                        .Select(row => (string)row.name)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (!cols.Contains(column))
+            {
+                c.Execute(alterSql);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SqliteRepository] Failed to ensure column {column} on {table}: {ex.Message}");
+        }
+    }
+
+        public (int autoCount, int manualCount) GetBackupTypeCounts()
+        {
+            using var c = Open();
+            var rows = c.Query<(string type, int count)>(
+                "SELECT type, COUNT(*) as count FROM backups GROUP BY type;");
+
+            int auto = 0, manual = 0;
+            foreach (var row in rows)
+            {
+                if (string.Equals(row.type, "auto", StringComparison.OrdinalIgnoreCase))
+                    auto = row.count;
+                else if (string.Equals(row.type, "manual", StringComparison.OrdinalIgnoreCase))
+                    manual = row.count;
+            }
+
+            return (auto, manual);
+        }
+
+        public void DeleteBackupById(int backupId)
+        {
+            using var c = Open();
+            c.Execute("DELETE FROM backups WHERE id=@id;", new { id = backupId });
+        }
+
+        public void SetBackupProtection(int backupId, bool isProtected)
+        {
+            using var c = Open();
+            c.Execute("UPDATE backups SET is_protected=@p WHERE id=@id;", new { id = backupId, p = isProtected ? 1 : 0 });
         }
     }
 

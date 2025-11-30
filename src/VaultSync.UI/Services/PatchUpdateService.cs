@@ -1,0 +1,141 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace VaultSync.UI.Services
+{
+    public sealed class PatchFileEntry
+    {
+        [JsonPropertyName("path")]
+        public string RelativePath { get; set; } = string.Empty;
+
+        [JsonPropertyName("sha256")]
+        public string Sha256 { get; set; } = string.Empty;
+
+        [JsonPropertyName("size")]
+        public long Size { get; set; }
+    }
+
+    public sealed class PatchManifest
+    {
+        [JsonPropertyName("previousVersion")]
+        public string PreviousVersion { get; set; } = string.Empty;
+
+        [JsonPropertyName("targetVersion")]
+        public string TargetVersion { get; set; } = string.Empty;
+
+        [JsonPropertyName("archiveSha256")]
+        public string ArchiveSha256 { get; set; } = string.Empty;
+
+        [JsonPropertyName("archiveSize")]
+        public long ArchiveSize { get; set; }
+
+        [JsonPropertyName("files")]
+        public List<PatchFileEntry> Files { get; set; } = new();
+    }
+
+    public sealed class PatchPlan
+    {
+        public PatchManifest Manifest { get; }
+        public Uri ArchiveUrl { get; }
+        public string ArchiveName { get; }
+
+        public PatchPlan(PatchManifest manifest, Uri archiveUrl, string archiveName)
+        {
+            Manifest = manifest;
+            ArchiveUrl = archiveUrl;
+            ArchiveName = archiveName;
+        }
+    }
+
+    public sealed class PatchUpdateService
+    {
+        private static readonly HttpClient s_httpClient = CreateHttpClient();
+
+        public async Task<PatchPlan?> PreparePatchAsync(
+            UpdateCheckResult updateResult,
+            string currentVersion,
+            CancellationToken cancellationToken)
+        {
+            if (!updateResult.HasPatch || string.IsNullOrWhiteSpace(updateResult.PatchManifestUrl) || updateResult.PatchArchiveUrl is null)
+                return null;
+
+            var manifest = await s_httpClient.GetFromJsonAsync<PatchManifest>(
+                updateResult.PatchManifestUrl,
+                cancellationToken);
+
+            if (manifest is null)
+                return null;
+
+            if (!string.Equals(manifest.PreviousVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var archiveName = string.IsNullOrWhiteSpace(updateResult.PatchArchiveName)
+                ? Path.GetFileName(updateResult.PatchArchiveUrl.AbsolutePath)
+                : updateResult.PatchArchiveName;
+
+            return new PatchPlan(manifest, updateResult.PatchArchiveUrl, archiveName);
+        }
+
+        public async Task<string?> DownloadPatchArchiveAsync(
+            PatchPlan plan,
+            CancellationToken cancellationToken)
+        {
+            var stagingDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "VaultSync",
+                "patches");
+            Directory.CreateDirectory(stagingDir);
+
+            var destinationPath = Path.Combine(stagingDir, plan.ArchiveName);
+            using (var response = await s_httpClient.GetAsync(plan.ArchiveUrl, cancellationToken))
+            {
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                using var sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var destinationStream = File.Create(destinationPath);
+                await sourceStream.CopyToAsync(destinationStream, cancellationToken);
+            }
+
+            var fileInfo = new FileInfo(destinationPath);
+            if (plan.Manifest.ArchiveSize > 0 && fileInfo.Length != plan.Manifest.ArchiveSize)
+                return null;
+
+            if (!await VerifyChecksumAsync(destinationPath, plan.Manifest.ArchiveSha256, cancellationToken))
+                return null;
+
+            return destinationPath;
+        }
+
+        private static async Task<bool> VerifyChecksumAsync(
+            string filePath,
+            string expectedSha256,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(expectedSha256))
+                return true;
+
+            using var stream = File.OpenRead(filePath);
+            using var sha = SHA256.Create();
+            var hash = await sha.ComputeHashAsync(stream, cancellationToken);
+            var actual = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+            return string.Equals(actual, expectedSha256.Trim().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static HttpClient CreateHttpClient()
+        {
+            var client = new HttpClient();
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-PatchUpdater/1.0");
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+            return client;
+        }
+    }
+}

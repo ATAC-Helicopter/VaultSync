@@ -23,8 +23,8 @@ namespace VaultSync.CLI.Commands
         public override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings s, CancellationToken ct)
         {
             var ok = true;
-            void Pass(string msg) { if (!s.Quiet) AnsiConsole.MarkupLine($"[green]✔[/] {Markup.Escape(msg)}"); }
-            void Fail(string msg) { ok = false; if (!s.Quiet) AnsiConsole.MarkupLine($"[red]✘[/] {Markup.Escape(msg)}"); }
+            void Pass(string msg) { if (!s.Quiet) AnsiConsole.MarkupLine($"[green]+[/] {Markup.Escape(msg)}"); }
+            void Fail(string msg) { ok = false; if (!s.Quiet) AnsiConsole.MarkupLine($"[red]x[/] {Markup.Escape(msg)}"); }
 
             try
             {
@@ -84,8 +84,8 @@ namespace VaultSync.CLI.Commands
                 var projects = repo.ListProjects();
                 if (!projects.Any()) { if (!s.Quiet) AnsiConsole.MarkupLine("[yellow]No projects registered yet[/]"); }
                 foreach (var p in projects)
-                    if (Directory.Exists(p.RootPath)) Pass($"Project path exists: {p.Name} → {p.RootPath}");
-                    else Fail($"Project path missing: {p.Name} → {p.RootPath}");
+                    if (Directory.Exists(p.RootPath)) Pass($"Project path exists: {p.Name} -> {p.RootPath}");
+                    else Fail($"Project path missing: {p.Name} -> {p.RootPath}");
             }
             catch (Exception ex) { Fail($"Could not inspect projects: {ex.Message}"); }
 

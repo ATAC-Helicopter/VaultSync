@@ -1,0 +1,168 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:viewmodels="using:VaultSync.UI.ViewModels"
+        x:Class="VaultSync.UI.Views.BackupWidgetWindow"
+        x:DataType="viewmodels:BackupWidgetViewModel"
+        Width="360"
+        Height="220"
+        SystemDecorations="None"
+        CanResize="False"
+        Background="{DynamicResource CardBackgroundBrush}"
+        ShowInTaskbar="False"
+        TransparencyLevelHint="None"
+        Topmost="True">
+  <Border BorderBrush="{DynamicResource CardBorderBrush}"
+          BorderThickness="1"
+          CornerRadius="16"
+          Padding="12"
+          Background="{DynamicResource CardBackgroundBrush}"
+          BoxShadow="0 12 30 0 #20000000"
+          PointerPressed="OnDragAreaPointerPressed">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto"
+          RowSpacing="8">
+      <!-- Header: title + status + close -->
+      <Grid Grid.Row="0"
+            ColumnDefinitions="*,Auto"
+            ColumnSpacing="8"
+            PointerPressed="OnDragAreaPointerPressed">
+        <StackPanel Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+          <TextBlock Text="VaultSync"
+                     FontWeight="SemiBold"
+                     FontSize="13" />
+          <Border Background="{DynamicResource AccentSoftBrush}"
+                  Padding="8,2"
+                  CornerRadius="10"
+                  VerticalAlignment="Center">
+            <TextBlock Text="{Binding StatusText}"
+                       FontSize="11"
+                       Foreground="{DynamicResource AccentBrush}"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="90" />
+          </Border>
+        </StackPanel>
+
+        <Button Grid.Column="1"
+                Content="×"
+                Command="{Binding CloseCommand}"
+                Classes="small-button"
+                Padding="6,2"
+                MinWidth="0" />
+      </Grid>
+
+      <!-- Subtitle + buttons -->
+      <Grid Grid.Row="1"
+            ColumnDefinitions="*,Auto"
+            ColumnSpacing="8">
+        <TextBlock Grid.Column="0"
+                   Text="Backups running from tray"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   FontSize="11"
+                   VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis" />
+
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="6">
+          <Button Content="Open VaultSync"
+                  Command="{Binding OpenAppCommand}"
+                  Classes="primary-button"
+                  Padding="10,4"
+                  MinWidth="0" />
+          <Button Content="Hide"
+                  Command="{Binding CloseCommand}"
+                  Classes="small-button"
+                  Padding="10,4"
+                  MinWidth="0" />
+        </StackPanel>
+      </Grid>
+
+      <!-- Active backups list -->
+      <Border Grid.Row="2"
+              Background="{DynamicResource CardBackgroundBrush}"
+              BorderBrush="{DynamicResource CardBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="12"
+              Padding="10">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding ActiveBackups}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="viewmodels:BackupProgressItem">
+                <Border Margin="0,4"
+                        Padding="10"
+                        CornerRadius="10"
+                        Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="1">
+                  <StackPanel Spacing="6">
+        <StackPanel Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+          <TextBlock Text="{Binding ProjectName}"
+                     FontWeight="SemiBold"
+                     FontSize="12"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding Progress, StringFormat='{}{0:0}%'}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     FontSize="11"
+                     IsVisible="{Binding ShowPercent}" />
+        </StackPanel>
+
+        <ProgressBar Height="5"
+                     CornerRadius="3"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="{Binding Progress}"
+                     IsIndeterminate="{Binding IsIndeterminate}"
+                     Foreground="{DynamicResource AccentBrush}"
+                     Background="{DynamicResource CardBackgroundBrush}" />
+
+                    <TextBlock Text="{Binding CurrentFile}"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               MaxHeight="52"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{Binding EtaText}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 IsVisible="{Binding ShowEta}" />
+                      <Button Content="Cancel"
+                              Command="{Binding CancelCommand}"
+                              Classes="small-button"
+                              IsVisible="{Binding CanCancel}"
+                              IsEnabled="{Binding CanCancel}"
+                              Padding="8,2"
+                              MinWidth="0" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+
+      <!-- Footer -->
+      <StackPanel Grid.Row="3"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right">
+        <Button Content="Backups view"
+                Command="{Binding OpenBackupsCommand}"
+                Classes="small-button"
+                Padding="8,3"
+                MinWidth="0" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
