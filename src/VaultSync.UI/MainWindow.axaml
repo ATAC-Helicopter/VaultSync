@@ -3,6 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
     xmlns:viewsControls="clr-namespace:VaultSync.UI.Views.Controls"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     x:Class="VaultSync.UI.MainWindow"
     x:DataType="vm:AppViewModel"
     Width="1200" Height="800"
@@ -19,19 +20,19 @@
 
         <StackPanel Spacing="6">
           <Button Classes="nav" Command="{CompiledBinding NavigateDashboard}">
-            <TextBlock Text="Dashboard"/>
+            <TextBlock Text="{infra:LocalizedString Key=Nav.Dashboard}"/>
           </Button>
 
           <Button Classes="nav" Command="{CompiledBinding NavigateProjects}">
-            <TextBlock Text="Projects"/>
+            <TextBlock Text="{infra:LocalizedString Key=Nav.Projects}"/>
           </Button>
 
           <Button Classes="nav" Command="{CompiledBinding NavigateBackups}">
-            <TextBlock Text="Backups"/>
+            <TextBlock Text="{infra:LocalizedString Key=Nav.Backups}"/>
           </Button>
 
           <Button Classes="nav" Command="{CompiledBinding NavigateSettings}">
-            <TextBlock Text="Settings"/>
+            <TextBlock Text="{infra:LocalizedString Key=Nav.Settings}"/>
           </Button>
         </StackPanel>
 

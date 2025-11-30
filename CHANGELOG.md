@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.0-beta.1] - 2025-11-16
+### Added
+- Patch-based updater downloads delta packages per platform from the `stable` GitHub release channel and stages them for the updater helper.
+- Cross-platform localization pipeline with JSON resource dictionaries, `LocalizationService`, and Italian translations covering Settings, Dashboard, Backups, Projects, and notifications.
+- Language selector in Settings → Advanced plus docs showing how to add new languages.
+### Changed
+- Docs now describe the patch updater + localization workflow ahead of the public beta.
+
+---
+
 ## [0.8.1] - 2025-11-09
 ### Fixed
 - Resolved SQLite **FOREIGN KEY constraint** errors during heavy file churn in watcher mode.

@@ -19,7 +19,7 @@
 - **Dashboard**: quick stats, recent backups, disk health.
 - **Projects**: add/edit projects, choose preset filters, trigger snapshots.
 - **Backups**: per‑project cards, history, start/stop backups, view/keep/delete snapshots.
-- **Settings**: backup destinations, credentials, auto‑backup interval, notifications, appearance.
+- **Settings**: backup destinations, credentials, auto‑backup interval, notifications, appearance, and a new language selector under Advanced.
 - Tray/menu bar: quick snapshot/backup actions; respects “Show window on tray actions” in Settings.
 
 ## Projects & Snapshots

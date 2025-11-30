@@ -158,6 +158,7 @@ namespace VaultSync.Core.Config
         public bool VerboseLogging   { get; set; } = false;
         public bool CheckUpdates     { get; set; } = true;
         public bool SendUsageStats   { get; set; } = false;
+        public string Language       { get; set; } = "en";
     }
 
     // -------- App Behavior / Background Mode --------

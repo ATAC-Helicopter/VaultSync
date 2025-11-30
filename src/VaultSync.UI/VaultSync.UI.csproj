@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>0.1.0</Version>
+    <Version>0.9.0</Version>
     <Product>VaultSync</Product>
     <Company>Flavio Giacchetti</Company>
     <ApplicationIcon>Assets\vaultsync.ico</ApplicationIcon>
@@ -64,5 +64,16 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.19041.0'">
     <PackageReference Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
   </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\..\Localization\strings.en.json">
+        <Link>Localization\strings.en.json</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Include="..\..\Localization\strings.it.json">
+        <Link>Localization\strings.it.json</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
 
 </Project>

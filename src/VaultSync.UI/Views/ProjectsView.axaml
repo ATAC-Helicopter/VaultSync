@@ -4,6 +4,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     x:CompileBindings="False">
 
   <UserControl.Styles>
@@ -81,7 +82,7 @@
 
           <!-- Title + sort -->
           <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-            <TextBlock Text="All projects"
+            <TextBlock Text="{infra:LocalizedString Key=Projects.Page.Title}"
                        FontSize="22"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -109,7 +110,7 @@
                   x:Name="ProjectSearch"
                   Margin="0"
                   Padding="10,8"
-                  Watermark="Search projects..."
+                  Watermark="{infra:LocalizedString Key=Projects.Page.SearchWatermark}"
                   BorderThickness="0"
                   Background="Transparent"
                   Foreground="{DynamicResource TextPrimaryBrush}"
@@ -124,7 +125,7 @@
                     Background="{DynamicResource AccentBrush}"
                     Foreground="{DynamicResource ButtonForegroundBrush}"
                     Command="{Binding RefreshCommand}">
-              Refresh
+              <TextBlock Text="{infra:LocalizedString Key=Projects.Action.Refresh}" />
             </Button>
           </Grid>
 
@@ -255,13 +256,16 @@
                 Foreground="{DynamicResource TextPrimaryBrush}"
                 TextWrapping="NoWrap"
                 TextTrimming="CharacterEllipsis" />
-              <TextBlock
-                Margin="0,4,0,0"
-                Text="{Binding Path, StringFormat='Location: {0}'}"
-                FontSize="12"
-                Foreground="{DynamicResource TextMutedBrush}"
-                TextWrapping="NoWrap"
-                TextTrimming="CharacterEllipsis" />
+                  <TextBlock
+                    Margin="0,4,0,0"
+                    FontSize="12"
+                    Foreground="{DynamicResource TextMutedBrush}"
+                    TextWrapping="NoWrap"
+                    TextTrimming="CharacterEllipsis">
+                    <Run Text="{infra:LocalizedString Key=Projects.Label.Location}" />
+                    <Run Text=" " />
+                    <Run Text="{Binding Path}" />
+                  </TextBlock>
             </StackPanel>
           </Grid>
 
@@ -276,7 +280,7 @@
                     Background="{DynamicResource InputBackgroundBrush}"
                     Foreground="{DynamicResource TextPrimaryBrush}"
                     Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}">
-              Open folder
+              <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.OpenFolder}" />
             </Button>
             <Button Padding="10,4"
                     CornerRadius="999"
@@ -289,7 +293,7 @@
                     Background="{DynamicResource InputBackgroundBrush}"
                     Foreground="{DynamicResource TextPrimaryBrush}"
                     Command="{Binding DataContext.RemoveProjectCommand, ElementName=Root}">
-              Remove from VaultSync
+              <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.RemoveProject}" />
             </Button>
           </StackPanel>
 
@@ -302,7 +306,7 @@
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="10">
               <StackPanel Spacing="4">
-                <TextBlock Text="Snapshot preset"
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <ComboBox
@@ -319,7 +323,7 @@
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="10">
               <StackPanel Spacing="4">
-                <TextBlock Text="Project health"
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectHealth}"
                            FontSize="11"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <Border CornerRadius="999"
@@ -342,7 +346,7 @@
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="10">
               <StackPanel Spacing="2">
-                <TextBlock Text="Last snapshot taken"
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.LastSnapshotLabel}"
                            FontSize="11"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Text="{Binding LastSnapshotSummary}"
@@ -360,7 +364,7 @@
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="10">
               <StackPanel Spacing="2">
-                <TextBlock Text="Project size on disk"
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectSize}"
                            FontSize="11"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Text="{Binding SizeDisplay}"
@@ -385,7 +389,7 @@
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
                         Padding="10">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="Total snapshots"
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TotalSnapshots}"
                                FontSize="11"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding SnapshotCount}"
@@ -400,7 +404,7 @@
                         Padding="10"
                         Grid.Column="1">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="Snapshot storage"
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotStorage}"
                                FontSize="11"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding TotalSnapshotSizeDisplay}"
@@ -415,7 +419,7 @@
                         Padding="10"
                         Grid.Column="2">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="Average snapshot size"
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.AverageSnapshot}"
                                FontSize="11"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding AverageSnapshotSizeDisplay}"
@@ -430,7 +434,7 @@
                         Padding="10"
                         Grid.Column="3">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="Time since last snapshot"
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TimeSinceLast}"
                                FontSize="11"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding DaysSinceLastSnapshotDisplay}"
@@ -449,7 +453,7 @@
               <StackPanel Spacing="10">
 
                 <TextBlock
-                  Text="Snapshot size trend"
+                  Text="{infra:LocalizedString Key=Projects.Stat.SnapshotTrend}"
                   FontSize="13"
                   FontWeight="SemiBold"
                   Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -523,7 +527,7 @@
                             Height="10"
                             CornerRadius="3"
                             Background="#2E6A3E"/>
-                    <TextBlock Text="Decreasing size"
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.Decreasing}"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}"/>
                   </StackPanel>
@@ -532,7 +536,7 @@
                             Height="10"
                             CornerRadius="3"
                             Background="#6A2E2E"/>
-                    <TextBlock Text="Increasing size"
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.Increasing}"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}"/>
                   </StackPanel>
@@ -541,7 +545,7 @@
                             Height="10"
                             CornerRadius="3"
                             Background="#2F3650"/>
-                    <TextBlock Text="First snapshot / unchanged"
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.Unchanged}"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}"/>
                   </StackPanel>
@@ -556,7 +560,7 @@
               <!-- Recent snapshots list -->
               <StackPanel Spacing="8">
                 <TextBlock
-                  Text="Recent snapshots"
+                  Text="{infra:LocalizedString Key=Projects.Stat.RecentSnapshots}"
                   FontSize="13"
                   FontWeight="SemiBold"
                   Foreground="{DynamicResource TextPrimaryBrush}" />

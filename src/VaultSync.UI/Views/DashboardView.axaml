@@ -2,6 +2,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     x:Class="VaultSync.UI.Views.DashboardView"
     x:CompileBindings="False"
     Background="{DynamicResource VS.WindowBackground}">
@@ -25,8 +26,8 @@
         <!-- Header -->
         <Border Classes="header" Padding="16" Grid.Row="0" Margin="4">
           <StackPanel Spacing="6">
-            <TextBlock Text="Dashboard" Classes="section-title" FontSize="28"/>
-            <TextBlock Text="Overview of projects, backups and latest activity" Classes="kicker" FontSize="18"/>
+            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Title}" Classes="section-title" FontSize="28"/>
+            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Description}" Classes="kicker" FontSize="18"/>
           </StackPanel>
         </Border>
 
@@ -34,7 +35,7 @@
         <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16" Margin="4,8,4,0">
           <Border Classes="card" Padding="20" Grid.Column="0">
             <Grid RowDefinitions="Auto,*">
-              <TextBlock Text="Projects" Classes="kicker"/>
+              <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Projects}" Classes="kicker"/>
               <StackPanel Grid.Row="1" Spacing="4">
                 <TextBlock Text="{Binding ProjectCount}" FontSize="36" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding ProjectsHint}" Classes="metric-hint"/>
@@ -44,7 +45,7 @@
 
           <Border Classes="card" Padding="20" Grid.Column="1">
             <Grid RowDefinitions="Auto,*">
-              <TextBlock Text="Backups" Classes="kicker"/>
+              <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Backups}" Classes="kicker"/>
               <StackPanel Grid.Row="1" Spacing="4">
                 <TextBlock Text="{Binding SnapshotCount}" FontSize="36" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding SnapshotsHint}" Classes="metric-hint"/>
@@ -54,7 +55,7 @@
 
           <Border Classes="card" Padding="20" Grid.Column="2">
             <Grid RowDefinitions="Auto,*">
-              <TextBlock Text="Storage" Classes="kicker"/>
+              <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Storage}" Classes="kicker"/>
               <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding StorageUsed}" FontSize="36" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding StorageHint}" Classes="metric-hint" VerticalAlignment="Bottom"/>
@@ -67,7 +68,7 @@
         <Grid Grid.Row="2" Margin="4,12,4,0">
           <Border Classes="card" Padding="14">
             <StackPanel Spacing="6">
-              <TextBlock Text="Backup storage" Classes="section-title"/>
+              <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupStorage}" Classes="section-title"/>
 
               <!-- Base blue bar (used vs total) + segmented overlay (Other + per-project VaultSync) -->
               <Grid Margin="0,4,0,0" Height="12" ClipToBounds="True"
@@ -132,7 +133,7 @@
           <Border Classes="card" Padding="14" Grid.Column="0">
             <Grid RowDefinitions="Auto,*">
               <Grid Grid.Row="0">
-                <TextBlock Text="Backups this week" Classes="section-title"/>
+                <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupsThisWeek}" Classes="section-title"/>
                 <Border HorizontalAlignment="Right" VerticalAlignment="Center" CornerRadius="8" Padding="8,4"
                         Background="{DynamicResource ItemBg}">
                   <TextBlock Text="{Binding TotalSnapshotsWeek, StringFormat='{}{0} this week'}" FontWeight="SemiBold"/>
@@ -153,7 +154,7 @@
           <!-- Donut -->
           <Border Classes="card" Padding="14" Grid.Column="1">
             <Grid RowDefinitions="Auto,*,Auto">
-              <TextBlock Text="Storage usage" Classes="section-title" Margin="0,0,0,8"/>
+                <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.StorageUsage}" Classes="section-title" Margin="0,0,0,8"/>
 
               <Grid Grid.Row="1">
                 <lvc:PieChart
@@ -170,7 +171,7 @@
                             VerticalAlignment="Center"
                             Spacing="2">
                   <TextBlock Text="{Binding StorageUsed}" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                  <TextBlock Text="used" Classes="metric-hint" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.StorageUsageLabel}" Classes="metric-hint" HorizontalAlignment="Center"/>
                 </StackPanel>
               </Grid>
 
@@ -197,7 +198,7 @@
         <!-- Recent activity -->
         <Border Classes="card" Padding="14" Margin="4,12,4,0" Grid.Row="5">
           <Grid RowDefinitions="Auto,*">
-            <TextBlock Text="Recent activity" Classes="section-title" Margin="0,0,0,8"/>
+            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.RecentActivity}" Classes="section-title" Margin="0,0,0,8"/>
             <ListBox Grid.Row="1"
                      ItemsSource="{Binding ActivityItems}"
                      SelectionMode="Single"

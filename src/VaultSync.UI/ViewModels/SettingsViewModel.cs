@@ -69,6 +69,8 @@ namespace VaultSync.UI
         private bool _enableVerboseLogging = false;
         private bool _checkForUpdatesOnStartup = true;
         private bool _sendAnonymousUsageStats = false;
+        private readonly LocalizationService _localizationService;
+        private string _selectedLanguageCode = "en";
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private bool _showLegacyBackupLocation = true;
 
@@ -81,8 +83,12 @@ namespace VaultSync.UI
             ShowLegacyBackupLocation = Destinations.Count == 0;
         }
 
-        public SettingsViewModel()
+        public SettingsViewModel(LocalizationService localizationService)
         {
+            _localizationService = localizationService;
+            _selectedLanguageCode = localizationService.CurrentLanguage;
+            _localizationService.LanguageChanged += () => OnPropertyChanged(nameof(SelectedLanguage));
+
             ThemeOptions = new ObservableCollection<string>
             {
                 "Follow system",
@@ -135,6 +141,9 @@ namespace VaultSync.UI
         private void LoadFromConfig()
         {
             var cfg = AppConfigStore.Load();
+            _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
+                ? _localizationService.CurrentLanguage
+                : cfg.Advanced.Language;
 
             _projectsRootPath      = cfg.ProjectsRoot ?? "";
             _resumeLastSession     = cfg.ResumeLastSession;
@@ -358,6 +367,7 @@ namespace VaultSync.UI
             cfg.Advanced.VerboseLogging = EnableVerboseLogging;
             cfg.Advanced.CheckUpdates   = CheckForUpdatesOnStartup;
             cfg.Advanced.SendUsageStats = SendAnonymousUsageStats;
+            cfg.Advanced.Language       = SelectedLanguageCode;
 
             AppConfigStore.Save(cfg);
             AutoStartService.SetLaunchOnLogin(_launchOnLogin);
@@ -425,7 +435,7 @@ namespace VaultSync.UI
             }
         }
 
-        // ---------------- Theme helper ----------------
+    // ---------------- Theme helper ----------------
 
         private void ApplyThemeFromSelected()
         {
@@ -723,6 +733,39 @@ namespace VaultSync.UI
         {
             get => _sendAnonymousUsageStats;
             set => SetField(ref _sendAnonymousUsageStats, value);
+        }
+
+        public IReadOnlyList<LanguageOption> LanguageOptions => _localizationService.SupportedLanguages;
+
+        public string SelectedLanguageCode
+        {
+            get => _selectedLanguageCode;
+            set
+            {
+                if (_selectedLanguageCode == value)
+                    return;
+
+                if (!_localizationService.SetLanguage(value))
+                    return;
+
+                if (SetField(ref _selectedLanguageCode, value))
+                {
+                    OnPropertyChanged(nameof(SelectedLanguage));
+                }
+            }
+        }
+
+        public LanguageOption? SelectedLanguage
+        {
+            get => LanguageOptions
+                .FirstOrDefault(option => string.Equals(option.Code, _selectedLanguageCode, StringComparison.OrdinalIgnoreCase));
+            set
+            {
+                if (value is null)
+                    return;
+
+                SelectedLanguageCode = value.Code;
+            }
         }
 
         // ---------------- Commands ----------------

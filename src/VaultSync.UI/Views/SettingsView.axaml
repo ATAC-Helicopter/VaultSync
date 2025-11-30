@@ -69,8 +69,8 @@
                 Margin="0,0,0,4">
           <StackPanel Spacing="4">
             <TextBlock Classes="section-title"
-                       Text="Settings" />
-            <TextBlock Text="Tune how VaultSync behaves across projects, backups, and storage."
+                       Text="{infra:LocalizedString Key=Settings.General.Title}" />
+            <TextBlock Text="{infra:LocalizedString Key=Settings.General.Description}"
                        Foreground="{StaticResource TextSecondary}" />
           </StackPanel>
         </Border>
@@ -91,8 +91,8 @@
               <StackPanel Spacing="10">
 
                 <StackPanel Spacing="2">
-                  <TextBlock Text="General" FontWeight="SemiBold" />
-                  <TextBlock Text="Project discovery, startup behaviour, and layout."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.General.Title}" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.General.Description}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
@@ -106,8 +106,8 @@
                               Grid.Column="0"
                               Grid.ColumnSpan="2"
                               Spacing="2">
-                    <TextBlock Text="Projects root" />
-                    <TextBlock Text="Default folder where VaultSync looks for Unity projects."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ProjectsRoot}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ProjectsRootDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -130,8 +130,8 @@
                 <!-- Resume last session -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Resume where you left off" />
-                    <TextBlock Text="Open VaultSync to the last page you were using."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ResumeSession}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ResumeSessionDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -143,8 +143,8 @@
                 <!-- Launch on login -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Launch at system startup" />
-                    <TextBlock Text="Start VaultSync automatically when you sign in."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.LaunchOnLogin}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.LaunchOnLoginDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -156,8 +156,10 @@
                 <!-- Show tray icon -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Show tray icon" />
-                    <TextBlock Text="Keep a tray/menu icon for quick actions." Foreground="{StaticResource TextSecondary}" FontSize="11" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowTrayIcon}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowTrayIconDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
@@ -167,8 +169,10 @@
                 <!-- Run in background when closing -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Run in background when closing" />
-                    <TextBlock Text="Hide to tray instead of quitting when closing the window." Foreground="{StaticResource TextSecondary}" FontSize="11" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.RunInBackground}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.RunInBackgroundDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
@@ -178,8 +182,8 @@
                 <!-- Show main window on tray actions -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Show main window for tray actions" />
-                    <TextBlock Text="Bring VaultSync to front when starting backups or snapshots from the tray."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowWindowOnTray}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowWindowOnTrayDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -191,8 +195,8 @@
                 <!-- Show mini backup widget when starting from tray -->
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Show mini backup widget for tray backups" />
-                    <TextBlock Text="Display a small draggable widget when a tray backup starts."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowMiniWidget}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowMiniWidgetDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -211,8 +215,8 @@
               <StackPanel Spacing="10">
 
                 <StackPanel Spacing="2">
-                  <TextBlock Text="Backups" FontWeight="SemiBold" />
-                  <TextBlock Text="Automatic snapshots, retention, and backup location."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Title}" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Description}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
@@ -220,8 +224,8 @@
                 <!-- Enable auto backups -->
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Enable automatic backups" />
-                    <TextBlock Text="VaultSync will take snapshots in the background while you work."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.EnableAuto}" />
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.EnableAutoDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -234,8 +238,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Backup interval (minutes)" />
-                    <TextBlock Text="How often automatic snapshots are created."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Interval}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.IntervalDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -250,8 +254,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Keep last N snapshots per project" />
-                    <TextBlock Text="Older snapshots will be pruned once this limit is reached."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.KeepSnapshots}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.KeepSnapshotsDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -273,8 +277,8 @@
                               Grid.Column="0"
                               Grid.ColumnSpan="3"
                               Spacing="2">
-                    <TextBlock Text="Fallback backup location" />
-                    <TextBlock Text="Used only if no backup destinations are configured."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FallbackLocation}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FallbackLocationDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                     <Border Background="{Binding BackupLocationStatus, Converter={StaticResource StatusToBrushConverter}, ConverterParameter=bg}"
@@ -317,8 +321,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Compress backups" />
-                    <TextBlock Text="Smaller backups at the cost of slightly longer backup times."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Compress}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.CompressDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -331,8 +335,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Verify backups after creation" />
-                    <TextBlock Text="Run a quick integrity check after each snapshot."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Verify}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.VerifyDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -345,8 +349,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Full snapshot hashing" />
-                    <TextBlock Text="Hash all files on every snapshot (safer, but slower on large projects)."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FullHash}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FullHashDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -359,8 +363,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Pause auto-backups on battery" />
-                    <TextBlock Text="Avoid heavy disk operations while running on battery power."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PauseBattery}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PauseBatteryDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -379,16 +383,16 @@
               <StackPanel Spacing="10">
 
                 <StackPanel Spacing="2">
-                  <TextBlock Text="Storage" FontWeight="SemiBold" />
-                  <TextBlock Text="NAS awareness, free space, and drive health."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.Title}" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.Description}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Prefer NAS / external volumes" />
-                    <TextBlock Text="Use network or external drives as primary backup targets when available."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.PreferExternal}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.PreferExternalDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -400,8 +404,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Show drive health warnings" />
-                    <TextBlock Text="Surface SMART / health warnings when VaultSync detects issues."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.ShowDriveWarnings}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.ShowDriveWarningsDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -413,8 +417,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Reserve free space (%)" />
-                    <TextBlock Text="Stop creating new backups once a disk is below this threshold."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.ReserveFreeSpace}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.ReserveFreeSpaceDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -433,14 +437,14 @@
                         DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
                   <StackPanel Spacing="12">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Backup destinations" FontWeight="SemiBold" />
-                      <TextBlock Text="Configure multiple targets (local, external, or network)."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Title}" FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Description}"
                                  Foreground="{StaticResource TextSecondary}"
                                  FontSize="11" />
                       <Button Classes="settings-ghost"
                               HorizontalAlignment="Left"
                               Command="{Binding OpenHelpCommand}">
-                        Open help
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.OpenHelp}" />
                       </Button>
                     </StackPanel>
 
@@ -456,7 +460,7 @@
                                 <TextBox Width="120"
                                          MaxWidth="160"
                                          HorizontalAlignment="Left"
-                                         Watermark="Alias"
+                                         Watermark="{infra:LocalizedString Key=Settings.Destinations.AliasWatermark}"
                                          Text="{Binding Alias, Mode=TwoWay}" />
                                 <ToggleSwitch IsChecked="{Binding Active, Mode=TwoWay}"
                                               Content="Active" />
@@ -464,13 +468,13 @@
                               <Grid Grid.Column="0" Grid.Row="1" ColumnDefinitions="*,Auto,160,Auto" ColumnSpacing="10">
                                 <TextBox Grid.Column="0"
                                          MaxWidth="320"
-                                         Watermark="Path (\\server\\share or /Volumes/Backup)"
+                                         Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
                                          Text="{Binding Path, Mode=TwoWay}" />
                                 <Button Grid.Column="1"
                                         Classes="settings-ghost"
                                         Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}">
-                                  Select…
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
                                 </Button>
                                 <ComboBox Grid.Column="2"
                                           ItemsSource="{Binding DataContext.CredentialProfiles, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -490,19 +494,19 @@
                                            IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
                               </Grid>
                               <StackPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Spacing="10">
-                                <CheckBox Content="Pre-mounted/guest"
+                                <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.PreMounted}"
                                           ToolTip.Tip="Use if the share is already mounted or is guest-accessible."
                                           IsChecked="{Binding PreMounted, Mode=TwoWay}" />
-                                <CheckBox Content="Auto-mount"
-                                          ToolTip.Tip="Attempt to mount if unreachable using the selected credential."
+                                <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoMount}"
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoMountTooltip}"
                                           IsChecked="{Binding AutoMount, Mode=TwoWay}" />
-                                <CheckBox Content="Auto-unmount"
-                                          ToolTip.Tip="Unmount after backup if we mounted it."
+                                <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
                                           IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
                               </StackPanel>
                               <StackPanel Grid.Column="0" Grid.Row="3" Orientation="Vertical" Spacing="4" Margin="0,8,0,0">
-                                <TextBlock Text="Credential required for auto-mount"
-                                           Foreground="#FF6B6B"
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.CredentialWarning}"
+                                   Foreground="#FF6B6B"
                                            FontSize="11"
                                            IsVisible="{Binding NeedsCredentialWarning}" />
                               </StackPanel>
@@ -516,26 +520,27 @@
                                            HorizontalAlignment="Right"
                                            IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
                                 <Button Classes="settings-ghost"
-                                        Content="Remove"
                                         Command="{Binding DataContext.RemoveDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}" />
-                              </StackPanel>
-                            </Grid>
-                          </Border>
-                        </DataTemplate>
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
+                                </Button>
+                             </StackPanel>
+                           </Grid>
+                         </Border>
+                       </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
                     <Button Classes="settings-ghost"
                             Command="{Binding AddDestinationCommand}">
-                      Add destination
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.AddDestination}" />
                     </Button>
 
                     <Separator />
 
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Credential profiles" FontWeight="SemiBold" />
-                      <TextBlock Text="Saved accounts for NAS/SMB shares (stored in keychain/credential manager when possible)."
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.Title}" FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.Description}"
                                  Foreground="{StaticResource TextSecondary}"
                                  FontSize="11" />
                     </StackPanel>
@@ -549,40 +554,41 @@
                                   Background="{DynamicResource CardBackgroundBrush}">
                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
                               <Grid Grid.Column="0" Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Name" VerticalAlignment="Center"/>
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.NameLabel}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1"
                                          Width="200"
                                          Text="{Binding Name, Mode=TwoWay}"
-                                         Watermark="Profile name" />
+                                         Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Name}" />
                               </Grid>
 
                               <Grid Grid.Column="0" Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Username" VerticalAlignment="Center"/>
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.UsernameLabel}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1"
                                          Width="200"
                                          Text="{Binding Username, Mode=TwoWay}"
-                                         Watermark="user or DOMAIN\\user" />
+                                         Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Username}" />
                               </Grid>
 
                               <Grid Grid.Column="0" Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Password" VerticalAlignment="Center"/>
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.PasswordLabel}" VerticalAlignment="Center"/>
                                 <Grid Grid.Column="1" ColumnDefinitions="200,Auto,Auto" ColumnSpacing="12">
                                   <TextBox Grid.Column="0"
                                            Width="200"
                                            Text="{Binding Password, Mode=TwoWay}"
-                                           Watermark="Stored locally"
+                                           Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Password}"
                                            PasswordChar="{Binding ShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=•}" />
                                   <ToggleSwitch Grid.Column="1"
                                                 VerticalAlignment="Center"
                                                 IsChecked="{Binding ShowPassword, Mode=TwoWay}"
-                                                Content="Show" />
-                                  <Button Grid.Column="2"
-                                          Classes="settings-ghost"
-                                          Content="Remove"
-                                          Command="{Binding DataContext.RemoveCredentialCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                          CommandParameter="{Binding}" />
-                                </Grid>
+                                                Content="{infra:LocalizedString Key=Settings.Credentials.ShowPassword}" />
+                                <Button Grid.Column="2"
+                                        Classes="settings-ghost"
+                                        Command="{Binding DataContext.RemoveCredentialCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
+                                </Button>
                               </Grid>
+                            </Grid>
 
                               <CheckBox Grid.Column="1" Grid.Row="0"
                                         Content="Use keychain/credman"
@@ -743,16 +749,16 @@
               <StackPanel Spacing="10">
 
                 <StackPanel Spacing="2">
-                  <TextBlock Text="Advanced" FontWeight="SemiBold" />
-                  <TextBlock Text="Diagnostics, updates, and telemetry."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.Title}" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.Description}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Enable verbose logging" />
-                    <TextBlock Text="Write more detailed logs to help when debugging issues."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.VerboseLogging}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.VerboseLoggingDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -764,8 +770,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Check for updates on startup" />
-                    <TextBlock Text="Track the GitHub Releases for the stable branch so you can grab the latest installer."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -777,8 +783,29 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Send anonymous usage stats" />
-                    <TextBlock Text="Help improve VaultSync by sharing basic, anonymised metrics."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageLabel}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ComboBox Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Width="160"
+                            ItemsSource="{Binding LanguageOptions}"
+                            SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SendUsageStats}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SendUsageStatsDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -793,7 +820,7 @@
                             Spacing="8">
                   <Button Command="{Binding ResetToDefaultsCommand}"
                           Classes="settings-ghost">
-                    Reset to defaults
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.ResetToDefaults}" />
                   </Button>
                 </StackPanel>
 

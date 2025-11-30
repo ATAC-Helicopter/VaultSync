@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VaultSync.UI.ViewModels"
              xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
+             xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
              x:Class="VaultSync.UI.Views.BackupsView"
              x:DataType="vm:BackupsViewModel"
              x:CompileBindings="False">
@@ -163,10 +164,10 @@
                     VerticalAlignment="Center"
                     Spacing="12">
           <StackPanel>
-            <TextBlock Text="Backups"
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Page.Title}"
                        FontSize="22"
                        FontWeight="SemiBold" />
-            <TextBlock Text="View backup history and per-project backup status."
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Page.Description}"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
           </StackPanel>
@@ -175,7 +176,7 @@
                       Spacing="8"
                       HorizontalAlignment="Right"
                       Margin="16,0,0,0">
-            <Button Content="Back up all projects"
+            <Button Content="{infra:LocalizedString Key=Backups.Action.BackupAll}"
                     HorizontalAlignment="Left"
                     Classes="primary-button"
                     Command="{Binding CreateBackupCommand}"/>
@@ -195,7 +196,7 @@
                   Padding="16">
             <Grid RowDefinitions="Auto,*,Auto">
               <TextBlock Grid.Row="0"
-                         Text="Backups"
+                         Text="{infra:LocalizedString Key=Backups.Summary.Total}"
                          FontSize="12"
                          Foreground="{DynamicResource TextSecondaryBrush}" />
               <TextBlock Grid.Row="1"
@@ -216,7 +217,7 @@
                   Grid.Column="1">
             <Grid RowDefinitions="Auto,*,Auto">
               <TextBlock Grid.Row="0"
-                         Text="Last backup"
+                         Text="{infra:LocalizedString Key=Backups.Summary.Last}"
                          FontSize="12"
                          Foreground="{DynamicResource TextSecondaryBrush}" />
               <TextBlock Grid.Row="1"
@@ -237,7 +238,7 @@
                   Grid.Column="2">
             <Grid RowDefinitions="Auto,*,Auto">
               <TextBlock Grid.Row="0"
-                         Text="Total stored"
+                         Text="{infra:LocalizedString Key=Backups.Summary.TotalStored}"
                          FontSize="12"
                          Foreground="{DynamicResource TextSecondaryBrush}" />
               <TextBlock Grid.Row="1"
@@ -257,7 +258,7 @@
         <Border Classes="card"
                 Padding="16">
           <StackPanel Spacing="6">
-            <TextBlock Text="Backup storage"
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Section.StorageLabel}"
                        FontSize="12"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -293,7 +294,7 @@
                        FontSize="11"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
 
-            <TextBlock Text="Warning: backup disk is below reserve threshold"
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Section.Warning}"
                        FontSize="11"
                        Foreground="#FF6B6B"
                        IsVisible="{Binding BackupDiskIsBelowThreshold}" />
@@ -314,7 +315,7 @@
               <StackPanel Grid.Column="0"
                           Orientation="Horizontal"
                           Spacing="6">
-                <TextBlock Text="Active backups"
+                <TextBlock Text="{infra:LocalizedString Key=Backups.Section.Active}"
                            FontSize="14"
                            FontWeight="SemiBold" />
               </StackPanel>
@@ -370,7 +371,7 @@
                                  Margin="0,0,4,0"
                                  IsVisible="{Binding ShowPercent}" />
                       <Button Grid.Column="2"
-                              Content="Cancel"
+                              Content="{infra:LocalizedString Key=Backups.Section.Cancel}"
                               Command="{Binding CancelCommand}"
                               Classes="small-button"
                               HorizontalAlignment="Right"
@@ -426,9 +427,9 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="Please wait... the backup will appear in history once completed. Do not close the app."
-                         FontSize="11"
-                         Foreground="{DynamicResource TextSecondaryBrush}"
+              <TextBlock Text="{infra:LocalizedString Key=Backups.Section.WaitMessage}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
                          TextWrapping="NoWrap"
                          TextTrimming="CharacterEllipsis" />
             </StackPanel>
@@ -453,10 +454,10 @@
               <StackPanel Orientation="Horizontal"
                           HorizontalAlignment="Stretch">
                 <StackPanel>
-                  <TextBlock Text="Per-project backups"
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.PerProjectTitle}"
                              FontSize="14"
                              FontWeight="SemiBold" />
-                  <TextBlock Text="Back up single projects and check their status."
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.PerProjectDescription}"
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                 </StackPanel>
@@ -516,7 +517,7 @@
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right"
                                 Margin="0,-2,0,0">
-                      <Button Content="Back up now"
+                      <Button Content="{infra:LocalizedString Key=Backups.Section.PerProjectAction}"
                               Classes="project-primary"
                               Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                               CommandParameter="{Binding}" />
@@ -529,7 +530,7 @@
                                 Spacing="2"
                                 VerticalAlignment="Center"
                                 Margin="0,2,0,0">
-                      <TextBlock Text="Auto backups"
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}"
                                  FontSize="11"
                                  FontWeight="SemiBold"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -540,7 +541,7 @@
                                     VerticalAlignment="Center"
                                     MinWidth="0"
                                     HorizontalAlignment="Left"
-                                    ToolTip.Tip="Disable to skip this project during automatic backups." />
+                                    ToolTip.Tip="{infra:LocalizedString Key=Backups.Section.AutoBackupsTooltip}" />
                     </StackPanel>
 
                     <!-- Row 3: last backup info -->
@@ -549,7 +550,7 @@
                                 Orientation="Horizontal"
                                 Spacing="6"
                                 VerticalAlignment="Center">
-                      <TextBlock Text="Last backup:"
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.LastBackupLabel}"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBlock Text="{Binding LastBackupDisplay}"
@@ -565,7 +566,7 @@
                       <TextBlock Text="{Binding SnapshotCount}"
                                  FontSize="11"
                                  FontWeight="SemiBold" />
-                      <TextBlock Text="backups"
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.BackupsLabel}"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBlock Text="·"
@@ -574,7 +575,7 @@
                       <TextBlock Text="{Binding TotalSizeFormatted}"
                                  FontSize="11"
                                  FontWeight="SemiBold" />
-                      <TextBlock Text="stored"
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.StoredLabel}"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
                     </StackPanel>
@@ -601,7 +602,7 @@
                     Margin="0,0,0,4">
 
                 <StackPanel Grid.Column="0">
-                  <TextBlock Text="Backup history"
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.HistoryTitle}"
                              FontSize="14"
                              FontWeight="SemiBold" />
                   <TextBlock Text="{Binding HistoryFilterProjectLabel}"
@@ -614,15 +615,15 @@
                             Orientation="Horizontal"
                             Spacing="6"
                             HorizontalAlignment="Right">
-                  <Button Content="All"
+                  <Button Content="{infra:LocalizedString Key=Backups.Section.FilterAll}"
                           Classes="small-pill"
                           Command="{Binding FilterSnapshotsCommand}"
                           CommandParameter="All" />
-                  <Button Content="Auto"
+                  <Button Content="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
                           Classes="small-pill"
                           Command="{Binding FilterSnapshotsCommand}"
                           CommandParameter="Auto" />
-                  <Button Content="Manual"
+                  <Button Content="{infra:LocalizedString Key=Backups.Section.FilterManual}"
                           Classes="small-pill"
                           Command="{Binding FilterSnapshotsCommand}"
                           CommandParameter="Manual" />
@@ -721,18 +722,18 @@
                                               Orientation="Horizontal"
                                               HorizontalAlignment="Right"
                                               Spacing="6">
-                                    <CheckBox Content="Keep"
+                                    <CheckBox Content="{infra:LocalizedString Key=Backups.Section.Keep}"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding IsProtected, Mode=TwoWay}"
                                               Command="{Binding DataContext.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                               CommandParameter="{Binding}"
                                               FontSize="11"/>
-                                    <Button Content="Restore"
+                                    <Button Content="{infra:LocalizedString Key=Backups.Section.Restore}"
                                             Classes="small-button"
                                             Command="{Binding DataContext.RestoreBackupCommand,
                                                               RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}" />
-                                    <Button Content="Delete"
+                                    <Button Content="{infra:LocalizedString Key=Backups.Section.Delete}"
                                             Classes="small-button"
                                             Command="{Binding DataContext.DeleteBackupCommand,
                                                               RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -751,7 +752,7 @@
               </ItemsControl>
 
               <StackPanel Margin="0,4,0,0">
-                <TextBlock Text="Backups per day (last 7 days)"
+                <TextBlock Text="{infra:LocalizedString Key=Backups.Section.SnapshotsActivity}"
                            FontSize="11"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <StackPanel Orientation="Horizontal"
@@ -804,7 +805,7 @@
                 VerticalAlignment="Center"
                 Width="360">
           <StackPanel Spacing="12">
-            <TextBlock Text="Backup verification failed"
+            <TextBlock Text="{infra:LocalizedString Key=Backups.Verification.Title}"
                        FontSize="16"
                        FontWeight="SemiBold" />
             <TextBlock Text="{Binding VerificationPopupMessage}"
@@ -814,10 +815,10 @@
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Spacing="8">
-              <Button Content="Keep backup"
+              <Button Content="{infra:LocalizedString Key=Backups.Verification.Keep}"
                       MinWidth="100"
                       Command="{Binding CloseVerificationPopupCommand}" />
-              <Button Content="Delete backup"
+              <Button Content="{infra:LocalizedString Key=Backups.Verification.Delete}"
                       MinWidth="110"
                       Command="{Binding DeleteFailedBackupCommand}" />
             </StackPanel>

@@ -105,6 +105,7 @@ namespace VaultSync.UI.ViewModels
         private bool _trayInitiatedBackup;
         private readonly GitHubUpdateService _updateService = new();
         private readonly PatchUpdateService _patchService = new();
+        private readonly LocalizationService _localizationService = new();
         private readonly string _currentVersionString;
         private CancellationTokenSource? _updateCheckCts;
         private UpdateCheckResult? _pendingUpdateResult;
@@ -279,6 +280,11 @@ namespace VaultSync.UI.ViewModels
 
             // 1) Config + DB + services
             _config = AppConfigStore.Load();
+            var targetLang = string.IsNullOrWhiteSpace(_config.Advanced.Language)
+                ? _localizationService.CurrentLanguage
+                : _config.Advanced.Language;
+            _localizationService.SetLanguage(targetLang);
+            LocalizationProvider.Initialize(_localizationService);
 
             _repo = new SqliteRepository(_config.DbPath ?? string.Empty);
             _repo.EnsureSchema();
@@ -294,7 +300,7 @@ namespace VaultSync.UI.ViewModels
             _dashboardViewModel = new DashboardViewModel();
             _projectsViewModel  = new ProjectsViewModel();
             _backupsViewModel   = new BackupsViewModel();
-            _settingsViewModel  = new SettingsViewModel();
+            _settingsViewModel  = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
 
             // 3) Wire BackupsViewModel events to real logic
@@ -750,7 +756,7 @@ namespace VaultSync.UI.ViewModels
             if (_backupsViewModel.IsBusy)
             {
                 ShowBackupSkipNotification(
-                    "A backup is already running. Please wait for it to finish.",
+                    _localizationService["Backups.Notification.AlreadyRunning"],
                     NotificationSeverity.Info);
                 return;
             }
@@ -760,7 +766,7 @@ namespace VaultSync.UI.ViewModels
                 _backupsViewModel.BackupCurrentFile = pauseReason;
                 _backupsViewModel.BusyMessage       = pauseReason;
                 ShowBackupSkipNotification(
-                    "Backups are paused on battery power. Plug in to run backups.",
+                    _localizationService["Backups.Notification.BatteryPaused"],
                     NotificationSeverity.Warning);
                 return;
             }
@@ -768,7 +774,7 @@ namespace VaultSync.UI.ViewModels
             if (item is null)
             {
                 ShowBackupSkipNotification(
-                    "Backup could not start: no project selected.",
+                    _localizationService["Backups.Notification.NoProject"],
                     NotificationSeverity.Warning);
                 return;
             }
@@ -776,7 +782,7 @@ namespace VaultSync.UI.ViewModels
             if (!int.TryParse(item.Id, out var projectId))
             {
                 ShowBackupSkipNotification(
-                    "Backup could not start: invalid project identifier.",
+                    _localizationService["Backups.Notification.InvalidProjectId"],
                     NotificationSeverity.Error);
                 return;
             }
@@ -786,7 +792,7 @@ namespace VaultSync.UI.ViewModels
             if (destinations.Count == 0)
             {
                 ShowBackupSkipNotification(
-                    "Backup could not start: no active destination configured.",
+                    _localizationService["Backups.Notification.NoDestination"],
                     NotificationSeverity.Warning);
                 return; // later: show error in UI
             }
@@ -796,7 +802,7 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
             {
                 ShowBackupSkipNotification(
-                    "Backup could not start: project not found.",
+                    _localizationService["Backups.Notification.ProjectNotFound"],
                     NotificationSeverity.Error);
                 return;
             }
@@ -805,7 +811,7 @@ namespace VaultSync.UI.ViewModels
 
             // Reset progress state
             _backupsViewModel.BackupProgress    = 0;
-            _backupsViewModel.BackupCurrentFile = "Preparing backup...";
+            _backupsViewModel.BackupCurrentFile = _localizationService["Backups.Notification.Preparing"];
             _backupsViewModel.BackupEtaText     = string.Empty;
 
             // Reset per-project cards and add this project
