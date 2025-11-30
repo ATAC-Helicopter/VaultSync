@@ -46,7 +46,9 @@ namespace VaultSync.UI.Services
 
     public sealed class GitHubUpdateService
     {
-        private const string ReleasesEndpoint = "repos/ATAC-Helicopter/VaultSync/releases?per_page=5";
+        private const string ReleasesEndpointBase = "repos/ATAC-Helicopter/VaultSync/releases";
+        private const int ReleasesPerPage = 5;
+        private const int MaxReleasePages = 3;
         private const string StableBranchName = "stable";
 
         private static readonly HttpClient s_httpClient = CreateHttpClient();
@@ -146,15 +148,37 @@ namespace VaultSync.UI.Services
 
         private static async Task<List<GitHubRelease>> FetchReleasesAsync(CancellationToken cancellationToken)
         {
-            try
+            var releases = new List<GitHubRelease>();
+
+            for (var page = 1; page <= MaxReleasePages; page++)
             {
-                var releases = await s_httpClient.GetFromJsonAsync<List<GitHubRelease>>(ReleasesEndpoint, cancellationToken);
-                return releases ?? new List<GitHubRelease>();
+                var endpoint = $"{ReleasesEndpointBase}?per_page={ReleasesPerPage}&page={page}";
+                List<GitHubRelease>? pageReleases;
+
+                try
+                {
+                    pageReleases = await s_httpClient.GetFromJsonAsync<List<GitHubRelease>>(endpoint, cancellationToken);
+                }
+                catch
+                {
+                    break;
+                }
+
+                if (pageReleases is not { Count: > 0 })
+                {
+                    break;
+                }
+
+                releases.AddRange(pageReleases);
+
+                if (pageReleases.Any(r => !r.Draft && !r.Prerelease &&
+                                         string.Equals(r.TargetCommitish, StableBranchName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    break;
+                }
             }
-            catch
-            {
-                return new List<GitHubRelease>();
-            }
+
+            return releases;
         }
 
         private sealed class GitHubRelease
