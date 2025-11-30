@@ -11,8 +11,8 @@
 - Config lives at `~/.vaultsync/appsettings.json` (secrets are kept in keychain/DPAPI via KeyRef).
 
 ## Updates & installers
-- The UI update check tracks the `stable` branch of `ATAC-Helicopter/VaultSync` on GitHub and tells you about new releases posted under the repo’s [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page.
-- Desktop installers are published as assets on that Releases page so the updater can download installers from the repo itself.
+- The UI update check tracks the `stable` branch of `ATAC-Helicopter/VaultSync` on GitHub, compares the latest release metadata to the running version, and warns you when a newer release is available. Every push is treated as an update, but the download/install happens only after you approve it.
+- Desktop installers are published as assets on the Releases page so you can grab the matching binary once you accept the update prompt.
 - Keep the CLI aligned with the same channel by rerunning `dotnet tool update --global vaultsync.cli` after a release is published.
 
 ## UI Primer

@@ -39,11 +39,50 @@
     </Border>
 
     <Border Grid.Row="0" Grid.Column="1" Classes="header" Padding="16">
-      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-        <StackPanel>
+      <Grid ColumnDefinitions="*,Auto"
+            RowDefinitions="Auto,Auto"
+            ColumnSpacing="12"
+            VerticalAlignment="Center">
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
           <TextBlock Text="{CompiledBinding HeaderTitle}" FontSize="22" FontWeight="SemiBold"/>
           <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{StaticResource TextSecondary}"/>
         </StackPanel>
+
+        <Border Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Margin="0,12,0,0"
+                Padding="12"
+                CornerRadius="12"
+                Background="{DynamicResource Surface2}"
+                BorderBrush="{DynamicResource BorderSoft}"
+                BorderThickness="1"
+                IsVisible="{CompiledBinding IsUpdateAvailable}">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="10"
+                  VerticalAlignment="Center">
+              <TextBlock Text="{CompiledBinding UpdateBannerMessage}"
+                         TextWrapping="Wrap"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="{CompiledBinding UpdateTooltip}" />
+              <Button Grid.Column="1"
+                      Command="{CompiledBinding InstallPatchCommand}"
+                      Content="{CompiledBinding InstallButtonText}"
+                      MinWidth="140"
+                      HorizontalAlignment="Right"
+                      IsVisible="{CompiledBinding ShowPatchButton}" />
+              <Button Grid.Column="2"
+                      Command="{CompiledBinding OpenReleasePageCommand}"
+                      Content="Open release"
+                      MinWidth="110"
+                      HorizontalAlignment="Right" />
+            </Grid>
+            <TextBlock Text="{CompiledBinding PatchStatusMessage}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       FontSize="12"
+                       IsVisible="{CompiledBinding ShowPatchStatus}" />
+          </StackPanel>
+        </Border>
       </Grid>
     </Border>
 

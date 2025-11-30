@@ -1,12 +1,14 @@
 ﻿using System;
-using System.IO;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using System.Collections.Concurrent;
-using System.Threading;
-using System.ComponentModel;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -14,9 +16,8 @@ using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
-using VaultSync.UI.ViewModels.Notifications;
-using System.Collections.Generic;
 using VaultSync.UI.Services;
+using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -102,6 +103,18 @@ namespace VaultSync.UI.ViewModels
         private readonly IDriveHealthService _driveHealthService;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
         private bool _trayInitiatedBackup;
+        private readonly GitHubUpdateService _updateService = new();
+        private readonly PatchUpdateService _patchService = new();
+        private readonly string _currentVersionString;
+        private CancellationTokenSource? _updateCheckCts;
+        private UpdateCheckResult? _pendingUpdateResult;
+        private bool _isUpdateAvailable;
+        private string _updateBannerMessage = string.Empty;
+        private string _updateReleaseNotes = string.Empty;
+        private string _updateReleaseUrl = string.Empty;
+        private readonly RelayCommand _installPatchCommand;
+        private bool _isPatchInstalling;
+        private string _patchStatusMessage = string.Empty;
 
         // Helper property to detect when the Backups page is active
         private bool IsOnBackupsPage => CurrentView == _backupsViewModel;
@@ -203,14 +216,67 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public bool IsUpdateAvailable
+        {
+            get => _isUpdateAvailable;
+            private set => SetField(ref _isUpdateAvailable, value);
+        }
+
+        public string UpdateBannerMessage
+        {
+            get => _updateBannerMessage;
+            private set => SetField(ref _updateBannerMessage, value);
+        }
+
+        public string UpdateTooltip => string.IsNullOrWhiteSpace(_updateReleaseNotes)
+            ? "Open the latest release on GitHub"
+            : _updateReleaseNotes;
+
+        public bool IsPatchAvailable => _pendingUpdateResult?.HasPatch ?? false;
+
+        public bool ShowPatchButton => IsPatchAvailable;
+
+        public string InstallButtonText => IsPatchInstalling ? "Preparing patch…" : "Install patch";
+
+        public bool ShowPatchStatus => !string.IsNullOrWhiteSpace(PatchStatusMessage);
+
+        public string PatchStatusMessage
+        {
+            get => _patchStatusMessage;
+            private set
+            {
+                if (SetField(ref _patchStatusMessage, value))
+                {
+                    OnPropertyChanged(nameof(ShowPatchStatus));
+                }
+            }
+        }
+
+        private bool IsPatchInstalling
+        {
+            get => _isPatchInstalling;
+            set
+            {
+                if (SetField(ref _isPatchInstalling, value))
+                {
+                    OnPropertyChanged(nameof(InstallButtonText));
+                    _installPatchCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         // Commands used by the shell / main window
         public ICommand NavigateDashboard { get; }
         public ICommand NavigateProjects  { get; }
         public ICommand NavigateBackups   { get; }
         public ICommand NavigateSettings  { get; }
+        public ICommand OpenReleasePageCommand { get; }
+        public ICommand InstallPatchCommand => _installPatchCommand;
 
         public AppViewModel()
         {
+            _currentVersionString = GetCurrentVersionString();
+
             // 1) Config + DB + services
             _config = AppConfigStore.Load();
 
@@ -264,8 +330,13 @@ namespace VaultSync.UI.ViewModels
             NavigateProjects  = new RelayCommand(_ => SetCurrentView("Projects"));
             NavigateBackups   = new RelayCommand(_ => SetCurrentView("Backups"));
             NavigateSettings  = new RelayCommand(_ => SetCurrentView("Settings"));
+            OpenReleasePageCommand = new RelayCommand(_ => OpenUpdateRelease());
+            _installPatchCommand = new RelayCommand(
+                _ => _ = StartPatchInstallAsync(),
+                _ => IsPatchAvailable && !IsPatchInstalling);
 
             EnsureDestinationProbeStarted();
+            StartUpdateCheck();
         }
 
         public void AttachBackupWidgetService(IBackupWidgetService? service)
@@ -485,6 +556,189 @@ namespace VaultSync.UI.ViewModels
             {
                 ConfigureAutoBackupTimer();
             }
+
+            if (e.PropertyName == nameof(SettingsViewModel.CheckForUpdatesOnStartup))
+            {
+                StartUpdateCheck();
+            }
+        }
+
+        private void StartUpdateCheck()
+        {
+            CancelUpdateCheck();
+
+            if (!_settingsViewModel.CheckForUpdatesOnStartup)
+            {
+                ClearUpdateState();
+                return;
+            }
+
+            _updateCheckCts = new CancellationTokenSource();
+            _ = RunUpdateCheckAsync(_updateCheckCts.Token);
+        }
+
+        private async Task StartPatchInstallAsync()
+        {
+            if (!IsPatchAvailable || _pendingUpdateResult is null || IsPatchInstalling)
+                return;
+
+            IsPatchInstalling = true;
+            PatchStatusMessage = "Downloading patch...";
+
+            try
+            {
+                var plan = await _patchService.PreparePatchAsync(
+                    _pendingUpdateResult,
+                    _currentVersionString,
+                    CancellationToken.None);
+
+                if (plan is null)
+                {
+                    PatchStatusMessage = "Patch manifest cannot be applied to this version.";
+                    return;
+                }
+
+                var archivePath = await _patchService.DownloadPatchArchiveAsync(plan, CancellationToken.None);
+                if (archivePath is null)
+                {
+                    PatchStatusMessage = "Failed to download or verify the patch.";
+                    return;
+                }
+
+                PatchStatusMessage = $"Patch ready at {archivePath}";
+                const string title = "Patch downloaded";
+                const string message = "The delta patch is staged; run the VaultSync patch helper to finish the update.";
+
+                GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Info, title);
+                if (ShouldRaiseSystemNotification)
+                {
+                    GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Info, title);
+                }
+            }
+            finally
+            {
+                IsPatchInstalling = false;
+            }
+        }
+
+        private void NotifyPatchAvailabilityChanged()
+        {
+            OnPropertyChanged(nameof(IsPatchAvailable));
+            OnPropertyChanged(nameof(ShowPatchButton));
+            _installPatchCommand.RaiseCanExecuteChanged();
+        }
+
+        private async Task RunUpdateCheckAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _updateService.CheckForUpdateAsync(_currentVersionString, cancellationToken);
+                if (result is null)
+                    return;
+
+                Dispatcher.UIThread.Post(() => ApplyUpdateResult(result));
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch
+            {
+                // Silently ignore update failures; we don't want to disturb the user.
+            }
+            finally
+            {
+                _updateCheckCts?.Dispose();
+                _updateCheckCts = null;
+            }
+        }
+
+        private void ApplyUpdateResult(UpdateCheckResult result)
+        {
+            IsUpdateAvailable = true;
+            UpdateBannerMessage = $"New update available: {result.ReleaseName} ({result.TagName})";
+            SetUpdateReleaseNotes(result.ReleaseNotes);
+            _updateReleaseUrl = result.ReleaseUrl.ToString();
+            _pendingUpdateResult = result;
+            NotifyPatchAvailabilityChanged();
+            PatchStatusMessage = string.Empty;
+
+            const string title = "Update available";
+            var message = $"VaultSync {result.TagName} is ready. Open the latest release to download it.";
+
+            GlobalNotificationCenter.Instance.Show(
+                message,
+                NotificationSeverity.Info,
+                title);
+
+            if (ShouldRaiseSystemNotification)
+            {
+                GlobalNotificationCenter.Instance.ShowSystem(
+                    message,
+                    NotificationSeverity.Info,
+                    title);
+            }
+        }
+
+        private void SetUpdateReleaseNotes(string? notes)
+        {
+            _updateReleaseNotes = notes ?? string.Empty;
+            OnPropertyChanged(nameof(UpdateTooltip));
+        }
+
+        private void ClearUpdateState()
+        {
+            IsUpdateAvailable = false;
+            UpdateBannerMessage = string.Empty;
+            _updateReleaseUrl = string.Empty;
+            SetUpdateReleaseNotes(string.Empty);
+            _pendingUpdateResult = null;
+            NotifyPatchAvailabilityChanged();
+            PatchStatusMessage = string.Empty;
+        }
+
+        private void CancelUpdateCheck()
+        {
+            if (_updateCheckCts is null)
+                return;
+
+            _updateCheckCts.Cancel();
+            _updateCheckCts.Dispose();
+            _updateCheckCts = null;
+        }
+
+        private void OpenUpdateRelease()
+        {
+            if (string.IsNullOrWhiteSpace(_updateReleaseUrl))
+                return;
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = _updateReleaseUrl,
+                    UseShellExecute = true
+                });
+            }
+            catch
+            {
+                const string title = "Update failed";
+                const string message = "Unable to open the release page; visit the GitHub releases manually.";
+                GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Error, title);
+                if (ShouldRaiseSystemNotification)
+                {
+                    GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Error, title);
+                }
+            }
+        }
+
+        private static string GetCurrentVersionString()
+        {
+            var assembly = typeof(AppViewModel).Assembly;
+            var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (!string.IsNullOrWhiteSpace(informationalVersion))
+                return informationalVersion.Trim();
+
+            return assembly.GetName().Version?.ToString() ?? "0.0.0";
         }
 
         private async void OnBackupProjectRequested(ProjectBackupItem? item)
