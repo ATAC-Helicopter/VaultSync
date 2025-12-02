@@ -1,0 +1,43 @@
+{
+  "previousVersion": "0.9.3",
+  "targetVersion": "0.9.4",
+  "archiveSha256": "fd9846e6d87f9375511ec16068b605cffa01a18a66c2f1defb6abfab83142b8e",
+  "archiveSize": 1602979,
+  "files": [
+    {
+      "path": "VaultSync.Core.dll",
+      "size": 155648,
+      "sha256": "66b01cacd4979ce70a6c00bf8007bb76a56cb5d7b34a54490cfd0a85268323f4"
+    },
+    {
+      "path": "VaultSync.Core.pdb",
+      "size": 44700,
+      "sha256": "d22cdcbeab4ca9f00e4a28500f9ef3eec0b72f40bc34b75b8471e777e238402d"
+    },
+    {
+      "path": "VaultSync.UI.deps.json",
+      "size": 42570,
+      "sha256": "41b4e27d4d0f751efcb0941a70edebd87eb9310f0fc0a40eac4a731fb0fa4417"
+    },
+    {
+      "path": "VaultSync.UI.dll",
+      "size": 1802240,
+      "sha256": "7a8d482020127971c0c93536809bf121f051ebcaa7d832e0be221ecbd49c46c1"
+    },
+    {
+      "path": "VaultSync.UI.exe",
+      "size": 123968,
+      "sha256": "4393a3f6aae4a9d8c64c50b5c51ed095e2fe775c10d91fef9d1dd037978266c8"
+    },
+    {
+      "path": "VaultSync.UI.pdb",
+      "size": 126144,
+      "sha256": "b48cbfc3c5f82990c4427686ef4f18b2a7ca301ef5350088faa41413e10b371c"
+    },
+    {
+      "path": "VaultSync.UI.runtimeconfig.json",
+      "size": 517,
+      "sha256": "2478ffec0f36c29fe73f0dcca677c116efabcf3eeaf4df8b64dd3abc75c2458f"
+    }
+  ]
+}

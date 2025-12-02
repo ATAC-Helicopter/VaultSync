@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.4] - 2025-12-02
+### Changed
+- Bumped the Windows build (Net 8 + `net8.0-windows10.0.19041.0`) to 0.9.4 and republished the installer metadata so the update channel can pick up the hotfix.
+- Added a reusable `VersionHelper` so release and patch manifest comparisons normalize strings like `v0.9.2.0`, letting 0.9.4’s delta manifest validate cleanly against older installs.
+### Fixed
+- Created the `patches/v0.9.4/vaultsync-patch-windows.json` manifest/+zip (and published the delta assets) so 0.9.3 installations can download/apply just the changed `.exe`, `.dll`, and runtime config files.
+
 ## [0.9.0-beta.1] - 2025-11-16
 ### Added
 - Patch-based updater downloads delta packages per platform from the `stable` GitHub release channel and stages them for the updater helper.

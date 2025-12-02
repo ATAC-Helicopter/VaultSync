@@ -101,8 +101,8 @@ namespace VaultSync.UI.Services
 
         private static bool IsReleaseNewer(string releaseTag, string currentVersion)
         {
-            var releaseVersion = TryParseVersion(releaseTag);
-            var localVersion = TryParseVersion(currentVersion);
+            var releaseVersion = VersionHelper.TryParse(releaseTag);
+            var localVersion = VersionHelper.TryParse(currentVersion);
 
             if (releaseVersion is not null && localVersion is not null)
             {
@@ -111,28 +111,8 @@ namespace VaultSync.UI.Services
 
             return !string.Equals(
                 releaseTag,
-                currentVersion,
+                currentVersion?.Trim(),
                 StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static Version? TryParseVersion(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return null;
-
-            var trimmed = value.Trim();
-            if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
-                trimmed = trimmed[1..];
-
-            var separatorIndex = trimmed.IndexOfAny(new[] { '-', '+' });
-            if (separatorIndex >= 0)
-                trimmed = trimmed[..separatorIndex];
-
-            trimmed = trimmed.Trim();
-            if (Version.TryParse(trimmed, out var version))
-                return version;
-
-            return null;
         }
 
         private static HttpClient CreateHttpClient()

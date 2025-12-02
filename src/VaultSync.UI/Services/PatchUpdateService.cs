@@ -74,7 +74,7 @@ namespace VaultSync.UI.Services
             if (manifest is null)
                 return null;
 
-            if (!string.Equals(manifest.PreviousVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+            if (!VersionsMatch(manifest.PreviousVersion, currentVersion))
                 return null;
 
             var archiveName = string.IsNullOrWhiteSpace(updateResult.PatchArchiveName)
@@ -128,6 +128,22 @@ namespace VaultSync.UI.Services
             var hash = await sha.ComputeHashAsync(stream, cancellationToken);
             var actual = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
             return string.Equals(actual, expectedSha256.Trim().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool VersionsMatch(string? previousVersion, string? currentVersion)
+        {
+            var manifestVersion = VersionHelper.TryParse(previousVersion);
+            var currentParsed = VersionHelper.TryParse(currentVersion);
+
+            if (manifestVersion is not null && currentParsed is not null)
+            {
+                return manifestVersion.Equals(currentParsed);
+            }
+
+            return string.Equals(
+                previousVersion?.Trim(),
+                currentVersion?.Trim(),
+                StringComparison.OrdinalIgnoreCase);
         }
 
         private static HttpClient CreateHttpClient()

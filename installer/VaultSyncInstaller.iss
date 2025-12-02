@@ -1,5 +1,5 @@
 #define MyAppName "VaultSync"
-#define MyAppVersion "0.9.3"
+#define MyAppVersion "0.9.4"
 #define MyAppPublisher "Flavio Giacchetti"
 #define MyAppExeName "VaultSync.UI.exe"
 
