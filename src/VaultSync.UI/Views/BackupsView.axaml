@@ -634,15 +634,13 @@
                       BorderThickness="0,1,0,0"
                       Margin="0,4,0,0" />
 
-              <ScrollViewer VerticalScrollBarVisibility="Auto"
-                            CanContentScroll="True"
-                            MaxHeight="520"
-                            Margin="0,6,0,0">
-                <ListBox x:Name="HistoryList"
-                         ItemsSource="{Binding SnapshotGroups}"
-                         BorderThickness="0"
-                         Background="Transparent"
-                         VirtualizationMode="Simple">
+              <ListBox x:Name="HistoryList"
+                       ItemsSource="{Binding SnapshotGroups}"
+                       BorderThickness="0"
+                       Background="Transparent"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       MaxHeight="520"
+                       Margin="0,6,0,0">
                   <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                       <VirtualizingStackPanel/>
@@ -766,7 +764,6 @@
                   </DataTemplate>
                 </ListBox.ItemTemplate>
               </ListBox>
-            </ScrollViewer>
 
               <StackPanel Margin="0,4,0,0">
                 <TextBlock Text="{infra:LocalizedString Key=Backups.Section.SnapshotsActivity}"

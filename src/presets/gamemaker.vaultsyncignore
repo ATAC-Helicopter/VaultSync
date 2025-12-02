@@ -6,6 +6,7 @@ backup/
 output/
 build/
 cache/
+*.exe
 
 # IDE
 .vs/

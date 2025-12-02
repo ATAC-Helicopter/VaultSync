@@ -356,6 +356,11 @@ namespace VaultSync.UI.ViewModels
 
         // ---------- Backups wiring ----------
 
+        private void ReloadBackupsVmData()
+        {
+            _ = ReloadBackupsVmDataAsync();
+        }
+
         private Task ReloadBackupsVmDataAsync()
         {
             // Fetch and materialize data off the UI thread to reduce perceived hangs,
@@ -372,6 +377,19 @@ namespace VaultSync.UI.ViewModels
                 });
             });
         }
+
+        private BackupProjectPreparation CreateManualBackupPreparation(int projectId)
+        {
+            var cfg = AppConfigStore.Load();
+            var destinations = GetActiveDestinations(cfg);
+            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
+            return new BackupProjectPreparation(cfg, destinations, project);
+        }
+
+        private sealed record BackupProjectPreparation(
+            AppConfig Config,
+            List<BackupDestination> Destinations,
+            Project? Project);
 
         private void SetCurrentView(string viewKey, bool remember = true)
         {
@@ -948,9 +966,9 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var cfg        = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
-            if (destinations.Count == 0)
+            var preparation = await Task.Run(() => CreateManualBackupPreparation(projectId));
+
+            if (preparation.Destinations.Count == 0)
             {
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.NoDestination"],
@@ -959,10 +977,8 @@ namespace VaultSync.UI.ViewModels
                     .WithCode("reason", "no_destination"));
                 return; // later: show error in UI
             }
-            var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
 
-            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
-            if (project is null)
+            if (preparation.Project is null)
             {
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.ProjectNotFound"],
@@ -972,7 +988,11 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var useArchiveMode = _settingsViewModel.UseBackupCompression;
+            var cfg              = preparation.Config;
+            var destinations     = preparation.Destinations;
+            var project          = preparation.Project;
+            var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
+            var useArchiveMode   = _settingsViewModel.UseBackupCompression;
             Telemetry.Log("backup_single_start", b => b
                 .WithHashedString("project", project.Name)
                 .WithHashedString("projectRoot", project.RootPath)
@@ -1420,21 +1440,18 @@ namespace VaultSync.UI.ViewModels
             }
 
 
-            var cfg = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
-            if (destinations.Count == 0)
+            var preparation = await Task.Run(() => PrepareBackupAll());
+
+            if (!preparation.IsReady)
             {
-                Telemetry.Log("backup_all_skipped", b => b.WithCode("reason", "no_destination"));
+                Telemetry.Log("backup_all_skipped", b => b.WithCode("reason", preparation.FailureCode ?? "preflight_failed"));
                 return;
             }
 
-            var primaryDest = destinations[0];
-            var preparedPrimary = PrepareDestination(primaryDest, cfg);
-            if (!preparedPrimary.IsSuccess)
-            {
-                Telemetry.Log("backup_all_skipped", b => b.WithCode("reason", "destination_unreachable"));
-                return;
-            }
+            var cfg             = preparation.Config!;
+            var destinations    = preparation.Destinations!;
+            var primaryDest     = preparation.PrimaryDestination!;
+            var preparedPrimary = preparation.PrimaryResolution!;
 
             var backupRoot = preparedPrimary.EffectivePath;
             var primaryAlias = string.IsNullOrWhiteSpace(primaryDest.Alias) ? primaryDest.Path : primaryDest.Alias ?? primaryDest.Path;
@@ -2206,6 +2223,44 @@ namespace VaultSync.UI.ViewModels
             return _networkMountService.PrepareDestination(dest, profile);
         }
 
+        private BackupAllPreparationResult PrepareBackupAll()
+        {
+            var cfg = AppConfigStore.Load();
+            var destinations = GetActiveDestinations(cfg);
+            if (destinations.Count == 0)
+            {
+                return BackupAllPreparationResult.Failure("no_destination");
+            }
+
+            var primaryDest = destinations[0];
+            var preparedPrimary = PrepareDestination(primaryDest, cfg);
+            if (!preparedPrimary.IsSuccess)
+            {
+                return BackupAllPreparationResult.Failure("destination_unreachable");
+            }
+
+            return BackupAllPreparationResult.Success(cfg, destinations, primaryDest, preparedPrimary);
+        }
+
+        private sealed record BackupAllPreparationResult(
+            bool IsReady,
+            string? FailureCode,
+            AppConfig? Config,
+            List<BackupDestination>? Destinations,
+            BackupDestination? PrimaryDestination,
+            DestinationResolution? PrimaryResolution)
+        {
+            public static BackupAllPreparationResult Failure(string reason) =>
+                new(false, reason, null, null, null, null);
+
+            public static BackupAllPreparationResult Success(
+                AppConfig cfg,
+                List<BackupDestination> destinations,
+                BackupDestination primaryDestination,
+                DestinationResolution primaryResolution) =>
+                new(true, null, cfg, destinations, primaryDestination, primaryResolution);
+        }
+
         private void ResolveBackupRoots(
             Project project,
             string configuredBackupRoot,
@@ -2798,4 +2853,3 @@ namespace VaultSync.UI.ViewModels
         }
     }
 }
-

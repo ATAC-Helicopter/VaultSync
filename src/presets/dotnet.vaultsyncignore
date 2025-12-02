@@ -1,5 +1,6 @@
 bin/**
 obj/**
+*.exe
 TestResults/**
 *.user
 *.csproj.user

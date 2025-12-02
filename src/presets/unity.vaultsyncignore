@@ -58,6 +58,7 @@ Thumbs.db
 *.mdb
 *.opendb
 *.VC.db
+*.exe
 
 # Git metadata
 .git/

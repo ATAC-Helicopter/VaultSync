@@ -2,6 +2,7 @@
 .import/**
 mono/**
 export_presets.cfg
+*.exe
 
 # Temporary
 *.tmp

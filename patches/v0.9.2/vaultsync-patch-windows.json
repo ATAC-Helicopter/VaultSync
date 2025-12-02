@@ -1,0 +1,98 @@
+{
+  "previousVersion": "0.9.1",
+  "targetVersion": "0.9.2",
+  "archiveSha256": "6ced2efa0e1241c04988e13ccc902b34642a021b24c5f5263fc2f23013c821dd",
+  "archiveSize": 1736331,
+  "files": [
+    {
+      "path": "Localization/strings.en.json",
+      "size": 22631,
+      "sha256": "06ee1166aa3fff45f54780597c88b5b9d239705d2198cb54ee23580c215240cd"
+    },
+    {
+      "path": "Localization/strings.it.json",
+      "size": 24121,
+      "sha256": "53b8e1d251c8d836631ab974dbf6b2998f85ad19bb81ff8bc0d500e73c222855"
+    },
+    {
+      "path": "VaultSync.Core.dll",
+      "size": 155648,
+      "sha256": "dbadf38df046f1ad65626e1e148eea20e5ff43b45df356578bccd81382d4dc5e"
+    },
+    {
+      "path": "VaultSync.Core.pdb",
+      "size": 44700,
+      "sha256": "0f3e85b8c5713f0d0139bca98e99af1e05ea050c09cffa05091439c61df519cc"
+    },
+    {
+      "path": "VaultSync.UI.deps.json",
+      "size": 34337,
+      "sha256": "93df4d25d2f60ff8a45f6386de22df3e1a152a7d52e616719c941105cd95879e"
+    },
+    {
+      "path": "VaultSync.UI.dll",
+      "size": 1793024,
+      "sha256": "827d6b88f59c8454937d2610f549826ff9a2d69c36d7746e7726f507a993c4be"
+    },
+    {
+      "path": "VaultSync.UI.exe",
+      "size": 235008,
+      "sha256": "c795e614422e6eea3573cc591ccd3591006bc1a4eeaa04bbf96cce56f0d27337"
+    },
+    {
+      "path": "VaultSync.UI.pdb",
+      "size": 124268,
+      "sha256": "ad45d1c91cae10d7edaec120cbd300a7257ea6fb290025decdd67f7c7c9eed54"
+    },
+    {
+      "path": "VaultSync.UI.runtimeconfig.json",
+      "size": 517,
+      "sha256": "2478ffec0f36c29fe73f0dcca677c116efabcf3eeaf4df8b64dd3abc75c2458f"
+    },
+    {
+      "path": "presets/avalonia.vaultsyncignore",
+      "size": 109,
+      "sha256": "9e7d814255be38f42af17678556fb3cfeac28e4874c92f405e50c20b0c91e821"
+    },
+    {
+      "path": "presets/dotnet.vaultsyncignore",
+      "size": 195,
+      "sha256": "904e0fffdb962ad175e88e93d137452505229de580cf319c484e8ab01ad5a981"
+    },
+    {
+      "path": "presets/flutter.vaultsyncignore",
+      "size": 167,
+      "sha256": "793d3f4aace1dc2772bc0c4367e8846d3bb64cbd9c547209aeb19f249c2277af"
+    },
+    {
+      "path": "presets/gamemaker.vaultsyncignore",
+      "size": 142,
+      "sha256": "d56d990b89f8a228577f4d5b7ddc9913efffcfabfe55bfb461d262f1a0801979"
+    },
+    {
+      "path": "presets/go.vaultsyncignore",
+      "size": 94,
+      "sha256": "b6943700879de4e9ef59381363178eef426c6249a8d7064c0cb532889aed3daf"
+    },
+    {
+      "path": "presets/godot.vaultsyncignore",
+      "size": 168,
+      "sha256": "54a1f09d4ff12e31d8d7ce102b5f51740c28207ac66dd84de82c5b6197cd7fc6"
+    },
+    {
+      "path": "presets/rust.vaultsyncignore",
+      "size": 100,
+      "sha256": "e427b74e96f67a735e1787f3dba471e4c4c7d6ad0b6378998d6de2373b276a9d"
+    },
+    {
+      "path": "presets/unity.vaultsyncignore",
+      "size": 1021,
+      "sha256": "36baff6d1ec8b94d3df4ed4ff82483336abfe79b718921b76896d7d06e7872e9"
+    },
+    {
+      "path": "presets/unreal.vaultsyncignore",
+      "size": 277,
+      "sha256": "87336cf8c9b7bd011dd0edfb3092aa2a053fcba275a6124c06bbdb18a2dbf3ec"
+    }
+  ]
+}
