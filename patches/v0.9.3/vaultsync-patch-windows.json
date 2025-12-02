@@ -1,0 +1,193 @@
+{
+  "previousVersion": "0.9.2",
+  "targetVersion": "0.9.3",
+  "archiveSha256": "46e13f1583a99b4b218daf94ad9d9383cfdd370f125ebe2d3701f6a2c769285f",
+  "archiveSize": 88253636,
+  "files": [
+    {
+      "path": "VaultSync.Core 2.pdb",
+      "size": 42272,
+      "sha256": "0be4d47c939af3c7acfd3f4e3284221decc0ba3d04198643098d487fb5af538a"
+    },
+    {
+      "path": "VaultSync.Core.dll",
+      "size": 155648,
+      "sha256": "46e279d46eea3b55c75f41c0944be5ab7ac891b160f5ff0f5043f272e194a599"
+    },
+    {
+      "path": "VaultSync.Core.pdb",
+      "size": 44700,
+      "sha256": "0a114e34c1793ba58f3141993260e8e931b5554a4a731088ba403d08cb598a1f"
+    },
+    {
+      "path": "VaultSync.UI 2.exe",
+      "size": 221737404,
+      "sha256": "716d795a54ebcd31685eed49638175d654ed4b07214352f2f277f0c4d3a92530"
+    },
+    {
+      "path": "VaultSync.UI 2.pdb",
+      "size": 110508,
+      "sha256": "435d5672aa7c8a6f50a813708e6e06f5a8b807c85e6e61011786b7642d52008f"
+    },
+    {
+      "path": "VaultSync.UI.deps.json",
+      "size": 34420,
+      "sha256": "025a1203fd9da8e8f4a2c49144fccc374e37c52e2a93aaa1e171f44e3c47b10b"
+    },
+    {
+      "path": "VaultSync.UI.dll",
+      "size": 1801728,
+      "sha256": "a9d87724c287b2199e9b582100a3b6562147abfada1c4888379ded3c8c262257"
+    },
+    {
+      "path": "VaultSync.UI.exe",
+      "size": 235008,
+      "sha256": "e7cbcf2ffff934143b4dfda30e02520246ed1cf872c425ceea20b99b201c91d6"
+    },
+    {
+      "path": "VaultSync.UI.pdb",
+      "size": 126000,
+      "sha256": "fbdba1f743dd197be039f954c28a6e4d8328579c843f0a3f687c050ca22275ee"
+    },
+    {
+      "path": "VaultSync.UI.runtimeconfig.json",
+      "size": 517,
+      "sha256": "2478ffec0f36c29fe73f0dcca677c116efabcf3eeaf4df8b64dd3abc75c2458f"
+    },
+    {
+      "path": "presets/ableton 2.vaultsyncignore",
+      "size": 106,
+      "sha256": "07f28d46748d3098d87c71ac9ba7d17150a505437e1a6983a385f567e30a9cc3"
+    },
+    {
+      "path": "presets/adobe_after_effects 2.vaultsyncignore",
+      "size": 129,
+      "sha256": "15422194d34af2bc239eefc89421bae8b4bad6249463ab25e22ef1a6a94ebe7c"
+    },
+    {
+      "path": "presets/adobe_premiere 2.vaultsyncignore",
+      "size": 116,
+      "sha256": "1a3f516dca5a97474e8dbc24a579435326a1c8c1f675b225f2aaf77bfe027762"
+    },
+    {
+      "path": "presets/avalonia 2.vaultsyncignore",
+      "size": 102,
+      "sha256": "25ac7d804dd663a0c0d6914093f444f9b6143df4374000895028393f11d6e6c5"
+    },
+    {
+      "path": "presets/blender 2.vaultsyncignore",
+      "size": 139,
+      "sha256": "f54a152cf4753539543467a2cd7b8ac9a92ecb0284c637399cfdb149d960599c"
+    },
+    {
+      "path": "presets/c_cpp 2.vaultsyncignore",
+      "size": 204,
+      "sha256": "ab57510ca691be468f50c97ff7f32a6ab9279c51f7226c0098b3e89bbb88115f"
+    },
+    {
+      "path": "presets/davinci_resolve 2.vaultsyncignore",
+      "size": 107,
+      "sha256": "75dd7075badade7ec007c7aa2e01eb05248a8413213f10dc9d693c595dbb5ff5"
+    },
+    {
+      "path": "presets/docker 2.vaultsyncignore",
+      "size": 152,
+      "sha256": "e6eb72bf38048512a9228a14ec2dd27659745aeb453e0405022fd57be2528285"
+    },
+    {
+      "path": "presets/dotnet 2.vaultsyncignore",
+      "size": 188,
+      "sha256": "508a790c3bfca57651a703ad105d1ebcbf86977af804bf084fb335cd7ec0ab31"
+    },
+    {
+      "path": "presets/fl_studio 2.vaultsyncignore",
+      "size": 66,
+      "sha256": "00901d4ca7f682c2d33542447335689ac50cb2e53de0efd4e07a399143119b0b"
+    },
+    {
+      "path": "presets/flutter 2.vaultsyncignore",
+      "size": 160,
+      "sha256": "8836ce44eef1e8c3a172d34a8dd231cecafa4af12f9b156ebaeac75dccbaac3e"
+    },
+    {
+      "path": "presets/gamemaker 2.vaultsyncignore",
+      "size": 135,
+      "sha256": "9b76fbe28949ea9219ae30331fccf3f817e7b0fdae4481d3262ea7aa7ea1b6d1"
+    },
+    {
+      "path": "presets/go 2.vaultsyncignore",
+      "size": 87,
+      "sha256": "726f5dd57cb68b24ae360a3088673f5bfb948396d9c51f2c788be6f5a39c3f21"
+    },
+    {
+      "path": "presets/godot 2.vaultsyncignore",
+      "size": 161,
+      "sha256": "f97c0b6e84091d1f184c58e04d229c5b537c027a0a4f00d11f52f7b1742ba871"
+    },
+    {
+      "path": "presets/java 2.vaultsyncignore",
+      "size": 121,
+      "sha256": "aa91a61b1ada959996923e1fcf0add6c0b7f39bcc677826af6c7a8dc1a9098f3"
+    },
+    {
+      "path": "presets/jetbrains 2.vaultsyncignore",
+      "size": 49,
+      "sha256": "fe444063011b011f83cfe05520ab7fd96e4bf0fb10851b9995635aaeedca3848"
+    },
+    {
+      "path": "presets/kubernetes 2.vaultsyncignore",
+      "size": 48,
+      "sha256": "960b9bcd03d74ab0fc15bb0a9dda649587bb3d078a7d860b38bd681209b934ca"
+    },
+    {
+      "path": "presets/maya 2.vaultsyncignore",
+      "size": 95,
+      "sha256": "55328e668279a0613d1a43656347118bb1c7d87f5450548a369f9190bf351b73"
+    },
+    {
+      "path": "presets/node 2.vaultsyncignore",
+      "size": 202,
+      "sha256": "26bb26323348957efeec39e7d999491cd3d27a77add16ca3144842f0bb4e6e67"
+    },
+    {
+      "path": "presets/python 2.vaultsyncignore",
+      "size": 213,
+      "sha256": "0155bba62df863f6bdba926f1a3ef85143ddbcdcfe032f7b83cb6d77043b01f0"
+    },
+    {
+      "path": "presets/react_native 2.vaultsyncignore",
+      "size": 160,
+      "sha256": "ca318db046c5835faa34906e833610fa5722791fd7aa7645058fb7c12e7271af"
+    },
+    {
+      "path": "presets/rust 2.vaultsyncignore",
+      "size": 93,
+      "sha256": "14a3df1aa6027072fc04e141ab1b76ce68e1c77cfd6bb626c20ce7b5aaafbc27"
+    },
+    {
+      "path": "presets/terraform 2.vaultsyncignore",
+      "size": 120,
+      "sha256": "96cd228162ca39966afcf46395a15c7abdb62a2c4550eccfe664c14a42944730"
+    },
+    {
+      "path": "presets/unity 2.vaultsyncignore",
+      "size": 1014,
+      "sha256": "92936cf0680cdba1cd32b3ea2bd7f93137c1b6655d38fbddf9b888a34967e432"
+    },
+    {
+      "path": "presets/unreal 2.vaultsyncignore",
+      "size": 270,
+      "sha256": "8c9841f709d3b7f822ba034d7f64bf992a7200911ade64ca2873c2d079d8df83"
+    },
+    {
+      "path": "presets/video 2.vaultsyncignore",
+      "size": 93,
+      "sha256": "d7b9da87ac0eae82e5841961e7279474ad3ec305774ba245c1b6cd3915a6aa8a"
+    },
+    {
+      "path": "presets/vscode 2.vaultsyncignore",
+      "size": 85,
+      "sha256": "ddd805472cc18e9594ca0c9f04e94ec4f856a71d26d3152b425761df69a314d6"
+    }
+  ]
+}

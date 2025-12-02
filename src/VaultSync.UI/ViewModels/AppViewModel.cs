@@ -497,24 +497,18 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                var cfg = AppConfigStore.Load();
-                if (!cfg.Backups.EnableAutoBackups)
+                var preparation = await Task.Run(PrepareAutoBackupRun);
+                if (!preparation.IsReady)
                 {
                     Telemetry.Log("auto_backup_skipped", b => b
-                        .WithCode("reason", "disabled"));
+                        .WithCode("reason", preparation.FailureCode ?? "preflight_failed"));
                     return;
                 }
 
-                var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
-                var projects = _repo.GetAllProjects().ToList();
-
-                var destinations = GetActiveDestinations(cfg);
-                if (destinations.Count == 0)
-                {
-                    Telemetry.Log("auto_backup_skipped", b => b
-                        .WithCode("reason", "no_destination"));
-                    return;
-                }
+                var cfg = preparation.Config;
+                var disabled = preparation.DisabledProjects;
+                var projects = preparation.Projects;
+                var destinations = preparation.Destinations;
 
                 var useArchiveMode = _settingsViewModel.UseBackupCompression;
                 var backupAttempts = 0;
@@ -1826,24 +1820,14 @@ namespace VaultSync.UI.ViewModels
             if (!int.TryParse(snapshot.Id, out var backupId))
                 return;
 
-            // Find backup row to know its relative path
-            var allBackups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
-            var backup     = allBackups.FirstOrDefault(b => b.Id == backupId);
-            if (backup is null)
+            var preparation = await Task.Run(() => PrepareDeleteBackup(backupId));
+            if (!preparation.IsReady)
                 return;
-            var snapshotId = backup.SnapshotId;
-            var projectId  = backup.ProjectId;
-
-            var cfg = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
-            var backupRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
-                ? backup.DestinationPath
-                : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
-            if (string.IsNullOrWhiteSpace(backupRoot))
-                return;
-
-            var project    = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
-            var projectName = project?.Name ?? "Backup";
+            var backup      = preparation.Backup;
+            var snapshotId  = preparation.SnapshotId;
+            var projectId   = preparation.ProjectId;
+            var backupRoot  = preparation.BackupRoot;
+            var projectName = preparation.ProjectName;
             var cardId = $"delete-{backupId}";
 
             _backupsViewModel.ShowTransientOperation(cardId, projectName, L("Backups.Status.Deleting", "Deleting backup files..."));
@@ -1930,6 +1914,112 @@ namespace VaultSync.UI.ViewModels
             Directory.Delete(path, recursive: true);
         }
 
+        private DeleteBackupPreparation PrepareDeleteBackup(int backupId)
+        {
+            var allBackups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
+            var backup = allBackups.FirstOrDefault(b => b.Id == backupId);
+            if (backup is null)
+                return DeleteBackupPreparation.Failure;
+
+            var cfg = AppConfigStore.Load();
+            var destinations = GetActiveDestinations(cfg);
+            var backupRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
+                ? backup.DestinationPath
+                : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
+            if (string.IsNullOrWhiteSpace(backupRoot))
+                return DeleteBackupPreparation.Failure;
+
+            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == backup.ProjectId);
+            var projectName = project?.Name ?? "Backup";
+
+            return new DeleteBackupPreparation(true, backup, backupRoot, projectName, project?.Id ?? 0, backup.SnapshotId);
+        }
+
+        private sealed record DeleteBackupPreparation(
+            bool IsReady,
+            Backup? Backup,
+            string BackupRoot,
+            string ProjectName,
+            int ProjectId,
+            int SnapshotId)
+        {
+            public static DeleteBackupPreparation Failure => new(false, null, string.Empty, string.Empty, 0, 0);
+        }
+
+        private RestoreBackupPreparation PrepareRestoreBackup(int backupId)
+        {
+            var allBackups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
+            var backup = allBackups.FirstOrDefault(b => b.Id == backupId);
+            if (backup is null)
+                return RestoreBackupPreparation.Failure;
+
+            var cfg = AppConfigStore.Load();
+            var destinations = GetActiveDestinations(cfg);
+            var backupRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
+                ? backup.DestinationPath
+                : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
+            if (string.IsNullOrWhiteSpace(backupRoot))
+                return RestoreBackupPreparation.Failure;
+
+            var backupFullPath = Path.Combine(backupRoot, backup.Path ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(backup.Path) || !Directory.Exists(backupFullPath))
+                return RestoreBackupPreparation.Failure;
+
+            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == backup.ProjectId);
+            if (project is null)
+                return RestoreBackupPreparation.Failure;
+
+            var projectRoot = project.RootPath;
+            if (string.IsNullOrWhiteSpace(projectRoot))
+                return RestoreBackupPreparation.Failure;
+
+            return new RestoreBackupPreparation(true, backupFullPath, projectRoot, project.Name);
+        }
+
+        private sealed record RestoreBackupPreparation(
+            bool IsReady,
+            string BackupFullPath,
+            string ProjectRoot,
+            string ProjectName)
+        {
+            public static RestoreBackupPreparation Failure => new(false, string.Empty, string.Empty, string.Empty);
+        }
+
+        private AutoBackupPreparation PrepareAutoBackupRun()
+        {
+            var cfg = AppConfigStore.Load();
+            if (!cfg.Backups.EnableAutoBackups)
+                return AutoBackupPreparation.Failure("disabled");
+
+            var destinations = GetActiveDestinations(cfg);
+            if (destinations.Count == 0)
+                return AutoBackupPreparation.Failure("no_destination");
+
+            var projects = _repo.GetAllProjects().ToList();
+            var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
+
+            return AutoBackupPreparation.Success(cfg, projects, destinations, disabled);
+        }
+
+        private sealed record AutoBackupPreparation(
+            bool IsReady,
+            string? FailureCode,
+            AppConfig? Config,
+            List<Project>? Projects,
+            List<BackupDestination>? Destinations,
+            ISet<int>? DisabledProjects)
+        {
+            public static AutoBackupPreparation Failure(string reason) =>
+                new(false, reason, null, null, null, null);
+
+            public static AutoBackupPreparation Success(
+                AppConfig cfg,
+                List<Project> projects,
+                List<BackupDestination> destinations,
+                ISet<int> disabled) =>
+                new(true, null, cfg, projects, destinations, disabled);
+        }
+
         private async void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
         {
             if (snapshot is null)
@@ -1939,46 +2029,16 @@ namespace VaultSync.UI.ViewModels
                 return;
 
 
-            // Look up the backup row so we know which project and path this backup belongs to.
-            var allBackups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
-            var backup     = allBackups.FirstOrDefault(b => b.Id == backupId);
-            if (backup is null)
+            var preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
+            if (!preparation.IsReady)
             {
                 return;
             }
 
-            var cfg        = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
-            var backupRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
-                ? backup.DestinationPath
-                : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
-            if (string.IsNullOrWhiteSpace(backupRoot))
-            {
-                return;
-            }
-
-            var backupFullPath = Path.Combine(backupRoot, backup.Path ?? string.Empty);
-
-            // Find the associated project so we know where to restore to.
-            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == backup.ProjectId);
-            if (project is null)
-            {
-                return;
-            }
-
-            var projectRoot = project.RootPath;
-            if (string.IsNullOrWhiteSpace(projectRoot))
-            {
-                return;
-            }
-
-            if (!Directory.Exists(backupFullPath))
-            {
-                return;
-            }
-
+            var projectRoot   = preparation.ProjectRoot;
+            var backupFullPath = preparation.BackupFullPath;
             _backupsViewModel.IsBusy      = true;
-            _backupsViewModel.BusyMessage = $"Restoring {project.Name}...";
+            _backupsViewModel.BusyMessage = $"Restoring {preparation.ProjectName}...";
 
             try
             {
