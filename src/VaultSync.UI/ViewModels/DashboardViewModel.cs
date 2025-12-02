@@ -15,6 +15,7 @@ using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.UI.Infrastructure; // for RelayCommand
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -83,6 +84,7 @@ namespace VaultSync.UI.ViewModels
                 if (_snapshotsHint == value) return;
                 _snapshotsHint = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
             }
         }
 
@@ -162,6 +164,7 @@ namespace VaultSync.UI.ViewModels
         public Axis[] SnapshotXAxes { get; private set; } = Array.Empty<Axis>();
         public Axis[] SnapshotYAxes { get; private set; } = Array.Empty<Axis>();
         public string TotalSnapshotsWeek => _snapshotCountsByDay.Sum().ToString();
+        public string TotalSnapshotsWeekLabel => string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), TotalSnapshotsWeek);
 
         // Donut bindings
         public ISeries[] StorageSeries { get; private set; } = Array.Empty<ISeries>();
@@ -178,6 +181,8 @@ namespace VaultSync.UI.ViewModels
         // Internal data for chart aggregation
         private string[] _days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
         private readonly double[] _snapshotCountsByDay = new double[7];
+        private int _backupsThisWeekCount;
+        private int _activeProjectsCount;
 
         public DashboardViewModel()
         {
@@ -229,91 +234,123 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var config = AppConfigStore.Load();
-                UpdateBackupDiskUsage(config);
-
-                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                    ? config.DbPath
-                    : GetDefaultDbPath();
-
-                var repo = new SqliteRepository(dbPath);
-                repo.EnsureSchema();
-
-                var projects = repo.GetAllProjects().ToList();
-                var allBackups = repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
-                var allSnapshots = repo.GetAllSnapshots().ToList();
-
-                // KPIs
-                ProjectCount = projects.Count;
-                SnapshotCount = allBackups.Count;
-
-                var weekAgoUtc = DateTime.UtcNow.AddDays(-7);
-                var backupsThisWeek = allBackups.Where(b => b.CreatedUtc >= weekAgoUtc).ToList();
-                SnapshotsHint = $"{backupsThisWeek.Count} this week";
-
-                // Storage: sum latest snapshot per project and capture per-project slices.
-                long totalLatestBytes = 0;
-                var storageSlices = new List<(Project project, long bytes)>();
-
-                foreach (var p in projects)
+                var data = await Task.Run(() =>
                 {
-                    var latest = repo.GetLatestSnapshot(p.Id);
-                    if (latest != null)
+                    var cfg = AppConfigStore.Load();
+                    var diskUsage = ComputeBackupDiskUsage(cfg);
+
+                    var dbPath = !string.IsNullOrWhiteSpace(cfg.DbPath)
+                        ? cfg.DbPath
+                        : GetDefaultDbPath();
+
+                    var repo = new SqliteRepository(dbPath);
+                    repo.EnsureSchema();
+
+                    var projects = repo.GetAllProjects().ToList();
+                    var allBackups = repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+                    var allSnapshots = repo.GetAllSnapshots().ToList();
+
+                    var weekAgoUtc = DateTime.UtcNow.AddDays(-7);
+                    var backupsThisWeek = allBackups.Where(b => b.CreatedUtc >= weekAgoUtc).ToList();
+
+                    // Storage slices: latest snapshot per project
+                    long totalLatestBytes = 0;
+                    var storageSlices = new List<(Project project, long bytes)>();
+                    foreach (var p in projects)
                     {
-                        totalLatestBytes += latest.TotalBytes;
-                        storageSlices.Add((p, latest.TotalBytes));
+                        var latest = repo.GetLatestSnapshot(p.Id);
+                        if (latest != null)
+                        {
+                            totalLatestBytes += latest.TotalBytes;
+                            storageSlices.Add((p, latest.TotalBytes));
+                        }
                     }
-                }
 
-                StorageUsed = FormatBytes(totalLatestBytes);
+                    // Activity list (newest first)
+                    var activities = new List<(int? ProjectId, DateTime WhenUtc, string Subtitle)>();
+                    foreach (var b in allBackups)
+                    {
+                        var subtitle = string.Equals(b.Type, "auto", StringComparison.OrdinalIgnoreCase)
+                            ? "auto"
+                            : "manual";
+                        activities.Add((b.ProjectId, b.CreatedUtc, subtitle));
+                    }
+                    var snapshotIdsWithBackup = new HashSet<int>(allBackups.Select(x => x.SnapshotId));
+                    foreach (var s in allSnapshots)
+                    {
+                        if (snapshotIdsWithBackup.Contains(s.Id))
+                            continue;
+                        activities.Add((s.ProjectId, s.CreatedUtc, "snapshot"));
+                    }
 
-                var activeProjects = storageSlices.Count;
-                if (projects.Count == 0)
+                    // Backup chart data
+                    var startDate = DateTime.UtcNow.Date.AddDays(-6);
+                    var dayLabels = new string[_days.Length];
+                    for (var i = 0; i < dayLabels.Length; i++)
+                    {
+                        var d = startDate.AddDays(i);
+                        dayLabels[i] = d.ToString("ddd");
+                    }
+
+                    var counts = new double[_snapshotCountsByDay.Length];
+                    foreach (var b in backupsThisWeek)
+                    {
+                        var dayIndex = (int)(b.CreatedUtc.Date - startDate).TotalDays;
+                        if (dayIndex < 0 || dayIndex >= counts.Length)
+                            continue;
+                        counts[dayIndex]++;
+                    }
+
+                    return new DashboardData
+                    {
+                        Config = cfg,
+                        DiskUsage = diskUsage,
+                        Projects = projects,
+                        Backups = allBackups,
+                        Activities = activities,
+                        StorageSlices = storageSlices,
+                        TotalLatestBytes = totalLatestBytes,
+                        BackupsThisWeekCount = backupsThisWeek.Count,
+                        DayLabels = dayLabels,
+                        SnapshotCounts = counts
+                    };
+                });
+
+                // Apply results on UI thread
+                BackupDiskUsedPercent      = data.DiskUsage.UsedPercent;
+                BackupDiskFreeText         = data.DiskUsage.FreeText;
+                BackupDiskThresholdText    = data.DiskUsage.ThresholdText;
+                BackupDiskIsBelowThreshold = data.DiskUsage.IsBelowThreshold;
+
+                ProjectCount = data.Projects.Count;
+                SnapshotCount = data.Backups.Count;
+                _backupsThisWeekCount = data.BackupsThisWeekCount;
+                SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
+
+                _activeProjectsCount = data.StorageSlices.Count;
+                StorageUsed = FormatBytes(data.TotalLatestBytes);
+
+                if (data.Projects.Count == 0)
                 {
-                    ProjectsHint = "No projects yet";
+                    ProjectsHint = L("Dashboard.Hint.NoProjects", "No projects yet");
                 }
-                else if (activeProjects == 0)
+                else if (_activeProjectsCount == 0)
                 {
-                    ProjectsHint = "No snapshots yet";
+                    ProjectsHint = L("Dashboard.Hint.NoSnapshots", "No snapshots yet");
                 }
                 else
                 {
-                    ProjectsHint = activeProjects == 1
-                        ? "1 active project"
-                        : $"{activeProjects} active projects";
+                    ProjectsHint = _activeProjectsCount == 1
+                        ? L("Dashboard.Hint.ActiveProjects.One", "1 active project")
+                        : string.Format(L("Dashboard.Hint.ActiveProjects.Many", "{0} active projects"), _activeProjectsCount);
                 }
 
-                StorageHint = "Total across latest snapshots";
+                StorageHint = _activeProjectsCount == 0
+                    ? L("Dashboard.Hint.StorageLatest", "No storage used")
+                    : L("Dashboard.Hint.StorageLatest", "Total across latest snapshots");
 
-                // Activity: rebuild from latest backups and snapshots (keep top 5 newest)
+                // Activity
                 ActivityItems.Clear();
-
-                // Build a unified activity list:
-                //  - one entry per backup (auto/manual backup created)
-                //  - one entry per snapshot that does NOT have a backup row
-                var activities = new List<(int? ProjectId, DateTime WhenUtc, string Subtitle)>();
-
-                // 1) Backups
-                foreach (var b in allBackups)
-                {
-                    var subtitle = string.Equals(b.Type, "auto", StringComparison.OrdinalIgnoreCase)
-                        ? "Auto backup created"
-                        : "Manual backup created";
-
-                    activities.Add((b.ProjectId, b.CreatedUtc, subtitle));
-                }
-
-                // 2) Snapshots without any backup record ("snapshot-only" events)
-                var snapshotIdsWithBackup = new HashSet<int>(allBackups.Select(x => x.SnapshotId));
-                foreach (var s in allSnapshots)
-                {
-                    if (snapshotIdsWithBackup.Contains(s.Id))
-                        continue; // this snapshot already has a backup entry
-
-                    activities.Add((s.ProjectId, s.CreatedUtc, "Snapshot created"));
-                }
-
-                // Now render the 5 most recent activities, newest first.
                 var projectPalette = new[]
                 {
                     Color.Parse("#4C8DFF"),
@@ -322,24 +359,29 @@ namespace VaultSync.UI.ViewModels
                     Color.Parse("#FF6B6B"),
                     Color.Parse("#9B6BFF")
                 };
-
                 var projectDotBrushes = new Dictionary<int, IBrush>();
                 var paletteIndex = 0;
 
                 async Task<IBrush> CreateBrushAsync(Color color) =>
                     await Dispatcher.UIThread.InvokeAsync(() => (IBrush)new SolidColorBrush(color));
 
-                foreach (var a in activities
+                foreach (var a in data.Activities
                              .OrderByDescending(a => a.WhenUtc)
                              .Take(5))
                 {
                     Project? project = null;
                     if (a.ProjectId.HasValue)
                     {
-                        project = projects.FirstOrDefault(p => p.Id == a.ProjectId.Value);
+                        project = data.Projects.FirstOrDefault(p => p.Id == a.ProjectId.Value);
                     }
 
-                    var title = project != null ? project.Name : "Unknown project";
+                    var title = project != null ? project.Name : L("Dashboard.Activity.UnknownProject", "Unknown project");
+                    var subtitle = a.Subtitle switch
+                    {
+                        "auto"     => L("Dashboard.Activity.AutoBackup", "Auto backup created"),
+                        "manual"   => L("Dashboard.Activity.ManualBackup", "Manual backup created"),
+                        _          => L("Dashboard.Activity.SnapshotCreated", "Snapshot created")
+                    };
                     var when = a.WhenUtc.ToLocalTime().ToString("g");
 
                     IBrush dotBrush;
@@ -363,37 +405,45 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     await Dispatcher.UIThread.InvokeAsync(() =>
-                        ActivityItems.Add(new ActivityItem(title, a.Subtitle, when, dotBrush)));
+                        ActivityItems.Add(new ActivityItem(title, subtitle, when, dotBrush)));
                 }
 
-                // Backup chart: backups per day for the last 7 days (oldest on the left, today on the right).
-                var startDate = DateTime.UtcNow.Date.AddDays(-6); // 7 days inclusive
-                for (var i = 0; i < _days.Length; i++)
+                // Backup chart
+                for (var i = 0; i < _days.Length && i < data.DayLabels.Length; i++)
                 {
-                    var d = startDate.AddDays(i);
-                    _days[i] = d.ToString("ddd");
+                    _days[i] = data.DayLabels[i];
                 }
-
                 Array.Clear(_snapshotCountsByDay, 0, _snapshotCountsByDay.Length);
-                foreach (var b in backupsThisWeek)
+                for (var i = 0; i < _snapshotCountsByDay.Length && i < data.SnapshotCounts.Length; i++)
                 {
-                    var dayIndex = (int)(b.CreatedUtc.Date - startDate).TotalDays;
-                    if (dayIndex < 0 || dayIndex >= _snapshotCountsByDay.Length)
-                        continue;
-
-                    _snapshotCountsByDay[dayIndex]++;
+                    _snapshotCountsByDay[i] = data.SnapshotCounts[i];
                 }
 
                 BuildSnapshotSeries();
-                BuildStorageDonut(storageSlices);
-                BuildBackupUsageBar(config, storageSlices);
+                BuildStorageDonut(data.StorageSlices);
+                BuildBackupUsageBar(data.Config, data.StorageSlices);
 
                 OnPropertyChanged(nameof(TotalSnapshotsWeek));
+                OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
             }
             catch (Exception ex)
             {
                 BuildDemoSeriesIfNeeded();
             }
+        }
+
+        private sealed class DashboardData
+        {
+            public AppConfig Config { get; init; } = new();
+            public (double UsedPercent, string FreeText, string ThresholdText, bool IsBelowThreshold) DiskUsage;
+            public List<Project> Projects { get; init; } = new();
+            public List<Backup> Backups { get; init; } = new();
+            public List<(int? ProjectId, DateTime WhenUtc, string Subtitle)> Activities { get; init; } = new();
+            public List<(Project project, long bytes)> StorageSlices { get; init; } = new();
+            public long TotalLatestBytes { get; init; }
+            public int BackupsThisWeekCount { get; init; }
+            public string[] DayLabels { get; init; } = Array.Empty<string>();
+            public double[] SnapshotCounts { get; init; } = Array.Empty<double>();
         }
 
         private void BuildSnapshotSeries()
@@ -487,16 +537,17 @@ namespace VaultSync.UI.ViewModels
                 _snapshotCountsByDay[i] = new[] { 1d, 3d, 2d, 5d, 4d, 6d, 2d }[i];
 
             ProjectCount   = 0;
-            ProjectsHint   = "No projects yet";
+            ProjectsHint   = L("Dashboard.Hint.NoProjects", "No projects yet");
             SnapshotCount  = 0;
-            SnapshotsHint  = "No snapshots yet";
+            SnapshotsHint  = L("Dashboard.Hint.NoSnapshots", "No snapshots yet");
             StorageUsed    = "0 B";
-            StorageHint    = "No storage used";
+            StorageHint    = L("Dashboard.Hint.StorageLatest", "No storage used");
 
             BuildSnapshotSeries();
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
             BuildBackupUsageBar(AppConfigStore.Load(), Array.Empty<(Project project, long bytes)>());
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
+            OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
         }
 
         private void BuildBackupUsageBar(AppConfig config, IReadOnlyList<(Project project, long bytes)> perProject)
@@ -882,6 +933,39 @@ namespace VaultSync.UI.ViewModels
                 r[i] = sum / count;
             }
             return r;
+        }
+
+        private static string L(string key, string fallback)
+        {
+            var loc = LocalizationProvider.Service;
+            var value = loc?.GetString(key);
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+
+        public void ReapplyLocalization()
+        {
+            SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
+
+            if (ProjectCount == 0)
+            {
+                ProjectsHint = L("Dashboard.Hint.NoProjects", "No projects yet");
+            }
+            else if (_activeProjectsCount == 0)
+            {
+                ProjectsHint = L("Dashboard.Hint.NoSnapshots", "No snapshots yet");
+            }
+            else
+            {
+                ProjectsHint = _activeProjectsCount == 1
+                    ? L("Dashboard.Hint.ActiveProjects.One", "1 active project")
+                    : string.Format(L("Dashboard.Hint.ActiveProjects.Many", "{0} active projects"), _activeProjectsCount);
+            }
+
+            StorageHint = _activeProjectsCount == 0
+                ? L("Dashboard.Hint.StorageLatest", "No storage used")
+                : L("Dashboard.Hint.StorageLatest", "Total across latest snapshots");
+
+            OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
         }
 
         private static string FormatBytes(long bytes)

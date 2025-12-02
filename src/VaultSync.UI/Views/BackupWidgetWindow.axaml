@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:viewmodels="using:VaultSync.UI.ViewModels"
+        xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
         x:Class="VaultSync.UI.Views.BackupWidgetWindow"
         x:DataType="viewmodels:BackupWidgetViewModel"
         Width="360"
@@ -29,7 +30,7 @@
         <StackPanel Orientation="Horizontal"
                     Spacing="6"
                     VerticalAlignment="Center">
-          <TextBlock Text="VaultSync"
+          <TextBlock Text="{infra:LocalizedString Key=BackupWidget.Title}"
                      FontWeight="SemiBold"
                      FontSize="13" />
           <Border Background="{DynamicResource AccentSoftBrush}"
@@ -57,7 +58,7 @@
             ColumnDefinitions="*,Auto"
             ColumnSpacing="8">
         <TextBlock Grid.Column="0"
-                   Text="Backups running from tray"
+                   Text="{infra:LocalizedString Key=BackupWidget.Subtitle}"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="11"
                    VerticalAlignment="Center"
@@ -66,12 +67,12 @@
         <StackPanel Grid.Column="1"
                     Orientation="Horizontal"
                     Spacing="6">
-          <Button Content="Open VaultSync"
+          <Button Content="{infra:LocalizedString Key=BackupWidget.OpenApp}"
                   Command="{Binding OpenAppCommand}"
                   Classes="primary-button"
                   Padding="10,4"
                   MinWidth="0" />
-          <Button Content="Hide"
+          <Button Content="{infra:LocalizedString Key=BackupWidget.Hide}"
                   Command="{Binding CloseCommand}"
                   Classes="small-button"
                   Padding="10,4"
@@ -137,7 +138,7 @@
                                  FontSize="11"
                                  Foreground="{DynamicResource TextSecondaryBrush}"
                                  IsVisible="{Binding ShowEta}" />
-                      <Button Content="Cancel"
+                      <Button Content="{infra:LocalizedString Key=BackupWidget.Cancel}"
                               Command="{Binding CancelCommand}"
                               Classes="small-button"
                               IsVisible="{Binding CanCancel}"
@@ -157,7 +158,7 @@
       <StackPanel Grid.Row="3"
                   Orientation="Horizontal"
                   HorizontalAlignment="Right">
-        <Button Content="Backups view"
+        <Button Content="{infra:LocalizedString Key=BackupWidget.ViewBackups}"
                 Command="{Binding OpenBackupsCommand}"
                 Classes="small-button"
                 Padding="8,3"

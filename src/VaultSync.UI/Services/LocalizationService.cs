@@ -55,6 +55,10 @@ namespace VaultSync.UI.Services
             _pendingLanguage = normalized;
             LanguageChanged?.Invoke();
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item"));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentLanguage)));
+            // Signal all bindings (including sidebar/localized resources) to refresh.
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
             return true;
         }
 

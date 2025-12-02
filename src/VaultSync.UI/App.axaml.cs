@@ -15,7 +15,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using VaultSync.Core.Services;
 using VaultSync.UI.Services;
+using System.Globalization;
 
 namespace VaultSync.UI;
 
@@ -27,9 +29,19 @@ public partial class App : Application
     private TrayIcon? _trayIcon;
     private static App? _instance;
     private static bool _trayRecentLatestOnly = true;
-    private static string _cachedDriveHealthLabel = "Storage health: tap Recheck";
+    private const string DefaultDriveHealthLabel = "Storage health: tap Recheck";
+    private static string _cachedDriveHealthLabel = DefaultDriveHealthLabel;
     private static DriveHealthStatus _cachedDriveHealthStatus = DriveHealthStatus.Unknown;
     private const int MaxRecentBackupsPerProject = 3;
+
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    private static string Lf(string key, string fallback, params object[] args)
+    {
+        var fmt = L(key, fallback);
+        return string.Format(CultureInfo.CurrentCulture, fmt, args);
+    }
 
     public override void Initialize()
     {
@@ -41,7 +53,22 @@ public partial class App : Application
         _instance = this;
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            WireGlobalExceptionHandlers();
+            WireLifecycleBreadcrumbs(desktop);
+
             AppViewModelInstance = new AppViewModel();
+            if (LocalizationProvider.Service is { } locService)
+            {
+                locService.LanguageChanged += () =>
+                {
+                    _cachedDriveHealthLabel = L("Tray.Health.DefaultLabel", DefaultDriveHealthLabel);
+                    if (_trayIcon is not null)
+                    {
+                        _trayIcon.ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups");
+                    }
+                    RefreshTrayMenu();
+                };
+            }
 
             desktop.MainWindow = new MainWindow
             {
@@ -117,7 +144,7 @@ public partial class App : Application
         _trayIcon = new TrayIcon
         {
             Icon = trayIconSource,
-            ToolTipText = "VaultSync - snapshots & backups"
+            ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups")
         };
 
         var menu = BuildTrayMenu(desktop);
@@ -165,24 +192,26 @@ public partial class App : Application
         var menu = new NativeMenu();
 
         // Header (disabled) to give the menu a title and tighter OS alignment.
-        menu.Items.Add(new NativeMenuItem("VaultSync") { IsEnabled = false });
+        menu.Items.Add(new NativeMenuItem(L("Tray.Header", "VaultSync")) { IsEnabled = false });
         if (BuildDriveHealthItem(desktop) is { } healthItem)
         {
             menu.Items.Add(healthItem);
         }
         var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
             ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
-        var destinationRootItem = new NativeMenuItem("Destinations");
+        var destinationRootItem = new NativeMenuItem(L("Tray.Destinations.Title", "Destinations"));
         var destinationMenu = new NativeMenu();
 
         if (destinationSummaries.Any())
         {
             foreach (var dest in destinationSummaries)
             {
-                var status = dest.Reachable ? "Ready" : "Unreachable";
+                var status = dest.Reachable
+                    ? L("Tray.Destinations.Ready", "Ready")
+                    : L("Tray.Destinations.Unreachable", "Unreachable");
                 var text = string.IsNullOrWhiteSpace(dest.Alias)
-                    ? $"{dest.Path} · {status}"
-                    : $"{dest.Alias} · {status}";
+                    ? $"{dest.Path} -> {status}"
+                    : $"{dest.Alias} -> {status}";
 
                 var detail = new NativeMenuItem(text) { IsEnabled = false };
                 destinationMenu.Items.Add(detail);
@@ -190,14 +219,14 @@ public partial class App : Application
         }
         else
         {
-            destinationMenu.Items.Add(new NativeMenuItem("No destinations configured") { IsEnabled = false });
+            destinationMenu.Items.Add(new NativeMenuItem(L("Tray.Destinations.None", "No destinations configured")) { IsEnabled = false });
         }
 
         destinationRootItem.Menu = destinationMenu;
         menu.Items.Add(destinationRootItem);
         menu.Items.Add(new NativeMenuItemSeparator());
         // Open main window
-        var openItem = new NativeMenuItem("Open VaultSync");
+        var openItem = new NativeMenuItem(L("Tray.Open", "Open VaultSync"));
         openItem.Click += (_, _) =>
         {
             var window = desktop.MainWindow;
@@ -216,7 +245,7 @@ public partial class App : Application
         };
 
         // ---------- Backup submenu ----------
-        var backupRootItem = new NativeMenuItem("Backup");
+        var backupRootItem = new NativeMenuItem(L("Tray.Backup.Title", "Backup"));
         var backupMenu = new NativeMenu();
 
         var backupProjects = AppViewModelInstance?.GetProjectsForBackupTray()
@@ -241,7 +270,7 @@ public partial class App : Application
 
             backupMenu.Items.Add(new NativeMenuItemSeparator());
 
-            var backupAllItem = new NativeMenuItem("Backup all projects");
+            var backupAllItem = new NativeMenuItem(L("Tray.Backup.All", "Backup all projects"));
             backupAllItem.Click += (_, _) =>
             {
                 BringWindowToFrontIfUserWants(desktop);
@@ -251,13 +280,13 @@ public partial class App : Application
         }
         else
         {
-            backupMenu.Items.Add(new NativeMenuItem("No projects available") { IsEnabled = false });
+            backupMenu.Items.Add(new NativeMenuItem(L("Tray.Common.NoProjects", "No projects available")) { IsEnabled = false });
         }
 
         backupRootItem.Menu = backupMenu;
 
         // ---------- Snapshot submenu ----------
-        var snapshotRootItem = new NativeMenuItem("Snapshot");
+        var snapshotRootItem = new NativeMenuItem(L("Tray.Snapshot.Title", "Snapshot"));
         var snapshotMenu = new NativeMenu();
 
         var snapshotProjects = AppViewModelInstance?.GetProjectsForSnapshotTray()
@@ -285,7 +314,7 @@ public partial class App : Application
 
             snapshotMenu.Items.Add(new NativeMenuItemSeparator());
 
-            var snapshotAllItem = new NativeMenuItem("Snapshot all projects");
+            var snapshotAllItem = new NativeMenuItem(L("Tray.Snapshot.All", "Snapshot all projects"));
             snapshotAllItem.Click += async (_, _) =>
             {
                 BringWindowToFrontIfUserWants(desktop);
@@ -299,20 +328,20 @@ public partial class App : Application
         }
         else
         {
-            snapshotMenu.Items.Add(new NativeMenuItem("No projects available") { IsEnabled = false });
+            snapshotMenu.Items.Add(new NativeMenuItem(L("Tray.Common.NoProjects", "No projects available")) { IsEnabled = false });
         }
 
         snapshotRootItem.Menu = snapshotMenu;
 
         // ---------- Recent backups (keep/delete) ----------
-        var manageBackupsRoot = new NativeMenuItem("Recent backups");
+        var manageBackupsRoot = new NativeMenuItem(L("Tray.Recent.Title", "Recent backups"));
         var manageBackupsMenu = new NativeMenu();
 
         var recentByProject = recentBackups
                               ?? AppViewModelInstance?.GetRecentBackupsForTray(MaxRecentBackupsPerProject)
                               ?? Array.Empty<AppViewModel.TrayProjectBackups>();
 
-        var latestOnlyToggle = new NativeMenuItem("Show only latest per project")
+        var latestOnlyToggle = new NativeMenuItem(L("Tray.Recent.LatestOnly", "Show only latest per project"))
         {
             IsChecked = _trayRecentLatestOnly
         };
@@ -344,17 +373,17 @@ public partial class App : Application
                 // Restore the older compact format: timestamp label + indented actions.
                 manageBackupsMenu.Items.Add(new NativeMenuItem(backup.Label) { IsEnabled = false });
 
-                var keepLabel = backup.IsProtected ? "Unkeep" : "Keep";
-                var keepItem = new NativeMenuItem($"   * {keepLabel}");
+                var keepLabel = backup.IsProtected ? L("Tray.Recent.Unkeep", "Unkeep") : L("Tray.Recent.Keep", "Keep");
+                var keepItem = new NativeMenuItem(Lf("Tray.Recent.ActionFormat", "   * {0}", keepLabel));
                 keepItem.Click += (_, _) => AppViewModelInstance?.ToggleBackupProtectionFromTray(backup.Id);
 
-                var deleteItem = new NativeMenuItem("   * Delete");
+                var deleteItem = new NativeMenuItem(Lf("Tray.Recent.ActionFormat", "   * {0}", L("Tray.Recent.Delete", "Delete")));
                 deleteItem.Click += (_, _) => AppViewModelInstance?.DeleteBackupFromTray(backup.Id);
 
-                var openFolderItem = new NativeMenuItem("   * Open folder");
+                var openFolderItem = new NativeMenuItem(Lf("Tray.Recent.ActionFormat", "   * {0}", L("Tray.Recent.OpenFolder", "Open folder")));
                 openFolderItem.Click += (_, _) => AppViewModelInstance?.OpenBackupFolderFromTray(backup.Id);
 
-                var viewInAppItem = new NativeMenuItem("   * View in VaultSync");
+                var viewInAppItem = new NativeMenuItem(Lf("Tray.Recent.ActionFormat", "   * {0}", L("Tray.Recent.ViewInApp", "View in VaultSync")));
                 viewInAppItem.Click += (_, _) => AppViewModelInstance?.ShowBackupInAppFromTray(backup.ProjectId);
 
                 manageBackupsMenu.Items.Add(keepItem);
@@ -375,7 +404,7 @@ public partial class App : Application
             if (manageBackupsMenu.Items.LastOrDefault() is not NativeMenuItemSeparator)
                 manageBackupsMenu.Items.Add(new NativeMenuItemSeparator());
 
-            var openBackups = new NativeMenuItem("Open in VaultSync");
+            var openBackups = new NativeMenuItem(L("Tray.Recent.OpenInApp", "Open in VaultSync"));
             openBackups.Click += (_, _) =>
             {
                 BringMainWindowToFront(desktop);
@@ -385,7 +414,7 @@ public partial class App : Application
         }
         else
         {
-            manageBackupsMenu.Items.Add(new NativeMenuItem("No backups yet") { IsEnabled = false });
+            manageBackupsMenu.Items.Add(new NativeMenuItem(L("Tray.Recent.None", "No backups yet")) { IsEnabled = false });
         }
 
         manageBackupsRoot.Menu = manageBackupsMenu;
@@ -394,7 +423,7 @@ public partial class App : Application
         var separator1 = new NativeMenuItemSeparator();
         var separator2 = new NativeMenuItemSeparator();
 
-        var quitItem = new NativeMenuItem("Quit VaultSync");
+        var quitItem = new NativeMenuItem(L("Tray.Quit", "Quit VaultSync"));
         quitItem.Click += (_, _) =>
         {
             // Cleanly shut down the app.
@@ -411,6 +440,83 @@ public partial class App : Application
         return menu;
     }
 
+    /// <summary>
+    /// Global crash/exception hooks that log anonymised details before the process exits.
+    /// </summary>
+    private static void WireGlobalExceptionHandlers()
+    {
+        try
+        {
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            {
+                var ex = e.ExceptionObject as Exception;
+                if (ex is not null)
+                {
+                    Telemetry.Log("app_crash", b => b
+                        .WithException(ex)
+                        .WithCode("source", "unhandled"));
+                }
+                else
+                {
+                    Telemetry.Log("app_crash", b => b
+                        .WithCode("source", "unhandled")
+                        .WithCode("detail", "non_exception"));
+                }
+            };
+
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+            {
+                try
+                {
+                    Telemetry.Log("app_crash", b => b
+                        .WithException(e.Exception)
+                        .WithCode("source", "unobserved_task"));
+                }
+                catch
+                {
+                    // ignore
+                }
+                finally
+                {
+                    e.SetObserved();
+                }
+            };
+        }
+        catch
+        {
+            // Swallow to avoid startup failures; telemetry must never break the app.
+        }
+    }
+
+    /// <summary>
+    /// Lifecycle breadcrumbs for start/exit to correlate crash sessions.
+    /// </summary>
+    private static void WireLifecycleBreadcrumbs(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        try
+        {
+            var cfg = AppConfigStore.Load();
+            Telemetry.SetEnabled(cfg.Advanced.SendUsageStats);
+            Telemetry.SetSessionId(Guid.NewGuid());
+
+            Telemetry.Log("app_start");
+
+            desktop.Exit += (_, _) =>
+            {
+                Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
+            };
+
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
+            };
+        }
+        catch
+        {
+            // Never throw from telemetry wiring.
+        }
+    }
+
     private NativeMenuItem BuildDriveHealthItem(IClassicDesktopStyleApplicationLifetime desktop)
     {
         try
@@ -418,18 +524,22 @@ public partial class App : Application
             var cfg        = AppConfigStore.Load();
             var backupRoot = cfg.Backups.BackupRoot ?? string.Empty;
             var driveLabel = FormatDriveLabel(backupRoot);
+            if (_cachedDriveHealthLabel == DefaultDriveHealthLabel)
+            {
+                _cachedDriveHealthLabel = L("Tray.Health.DefaultLabel", DefaultDriveHealthLabel);
+            }
 
-            var healthMenu = new NativeMenuItem("Storage health");
+            var healthMenu = new NativeMenuItem(L("Tray.Health.Title", "Storage health"));
             var statusMenu = new NativeMenu();
 
             var statusLabel = string.IsNullOrWhiteSpace(backupRoot)
-                ? "Backup path not set"
+                ? L("Tray.Health.NoPath", "Backup path not set")
                 : _cachedDriveHealthLabel;
 
             statusMenu.Items.Add(new NativeMenuItem(statusLabel) { IsEnabled = false });
             statusMenu.Items.Add(new NativeMenuItemSeparator());
 
-            var recheck = new NativeMenuItem("Recheck now");
+            var recheck = new NativeMenuItem(L("Tray.Health.Recheck", "Recheck now"));
             recheck.Click += async (_, _) => await RecheckDriveHealthAsync(desktop);
             statusMenu.Items.Add(recheck);
 
@@ -438,7 +548,7 @@ public partial class App : Application
         }
         catch
         {
-            return new NativeMenuItem("Storage health: unavailable") { IsEnabled = false };
+            return new NativeMenuItem(L("Tray.Health.Unavailable", "Storage health: unavailable")) { IsEnabled = false };
         }
     }
 
@@ -553,7 +663,7 @@ public partial class App : Application
     private static string FormatDriveLabel(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
-            return "unknown";
+            return L("DriveHealth.UnknownDrive", "drive");
 
         try
         {
@@ -583,10 +693,10 @@ public partial class App : Application
     {
         return health.Status switch
         {
-            DriveHealthStatus.Healthy => $"Storage health ({driveLabel}): OK ({health.Message})",
-            DriveHealthStatus.Warning => $"Storage health warning ({driveLabel}): {health.Message}",
-            DriveHealthStatus.Failing => $"Storage health failing ({driveLabel}): {health.Message}",
-            _ => $"Storage health ({driveLabel}): {health.Message}"
+            DriveHealthStatus.Healthy => Lf("DriveHealth.OkMessage", "Storage health ({0}): OK ({1})", driveLabel, health.Message),
+            DriveHealthStatus.Warning => Lf("DriveHealth.WarningMessage", "Drive health warning on {0}: {1}.", driveLabel, health.Message),
+            DriveHealthStatus.Failing => Lf("DriveHealth.FailingMessage", "Storage health failing ({0}): {1}", driveLabel, health.Message),
+            _ => Lf("DriveHealth.GenericMessage", "Storage health ({0}): {1}", driveLabel, health.Message)
         };
     }
 
@@ -603,9 +713,9 @@ public partial class App : Application
                 if (string.IsNullOrWhiteSpace(backupRoot))
                 {
                     GlobalNotificationCenter.Instance.Show(
-                        "Backup path not set. Set a backup location to check drive health.",
+                        L("Tray.Health.NoPathDetail", "Backup path not set. Set a backup location to check drive health."),
                         NotificationSeverity.Warning,
-                        "Drive health");
+                        L("Tray.Health.Title", "Storage health"));
                     return;
                 }
 
@@ -620,17 +730,18 @@ public partial class App : Application
                     _ => NotificationSeverity.Info
                 };
 
-                GlobalNotificationCenter.Instance.Show(_cachedDriveHealthLabel, severity, "Drive health");
+                GlobalNotificationCenter.Instance.Show(_cachedDriveHealthLabel, severity, L("Tray.Health.Title", "Storage health"));
 
                 _instance?.RefreshTrayMenu();
             }
             catch
             {
                 GlobalNotificationCenter.Instance.Show(
-                    "Unable to check drive health.",
+                    L("Tray.Health.Error", "Unable to check drive health."),
                     NotificationSeverity.Warning,
-                    "Drive health");
+                    L("Tray.Health.Title", "Storage health"));
             }
         });
     }
 }
+

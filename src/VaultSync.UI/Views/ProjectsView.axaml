@@ -565,25 +565,32 @@
                   FontWeight="SemiBold"
                   Foreground="{DynamicResource TextPrimaryBrush}" />
 
-                <ItemsControl ItemsSource="{Binding SnapshotHistory}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,2">
-                        <TextBlock
-                          Grid.Column="0"
-                          Text="{Binding DateDisplay}"
-                          FontSize="12"
-                          Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBlock
-                          Grid.Column="1"
-                          Text="{Binding SizeDisplay}"
-                          FontSize="12"
-                          FontWeight="SemiBold"
-                          Foreground="{DynamicResource TextPrimaryBrush}" />
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              MaxHeight="220">
+                  <ItemsControl ItemsSource="{Binding SnapshotHistory}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,2">
+                          <TextBlock
+                            Grid.Column="0"
+                            Text="{Binding DateDisplay}"
+                            FontSize="12"
+                            Foreground="{DynamicResource TextSecondaryBrush}"
+                            TextTrimming="CharacterEllipsis"
+                            TextWrapping="NoWrap" />
+                          <TextBlock
+                            Grid.Column="1"
+                            Text="{Binding SizeDisplay}"
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}"
+                            TextTrimming="CharacterEllipsis"
+                            TextWrapping="NoWrap" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
               </StackPanel>
 
             </StackPanel>

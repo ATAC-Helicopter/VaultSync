@@ -463,7 +463,7 @@
                                          Watermark="{infra:LocalizedString Key=Settings.Destinations.AliasWatermark}"
                                          Text="{Binding Alias, Mode=TwoWay}" />
                                 <ToggleSwitch IsChecked="{Binding Active, Mode=TwoWay}"
-                                              Content="Active" />
+                                              Content="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}" />
                               </StackPanel>
                               <Grid Grid.Column="0" Grid.Row="1" ColumnDefinitions="*,Auto,160,Auto" ColumnSpacing="10">
                                 <TextBox Grid.Column="0"
@@ -495,7 +495,7 @@
                               </Grid>
                               <StackPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Spacing="10">
                                 <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.PreMounted}"
-                                          ToolTip.Tip="Use if the share is already mounted or is guest-accessible."
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.PreMountedTooltip}"
                                           IsChecked="{Binding PreMounted, Mode=TwoWay}" />
                                 <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoMount}"
                                           ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoMountTooltip}"
@@ -591,7 +591,7 @@
                             </Grid>
 
                               <CheckBox Grid.Column="1" Grid.Row="0"
-                                        Content="Use keychain/credman"
+                                        Content="{infra:LocalizedString Key=Settings.Credentials.UseKeychain}"
                                         IsChecked="{Binding UseKeychain, Mode=TwoWay}"
                                         VerticalAlignment="Center"/>
                             </Grid>
@@ -602,7 +602,7 @@
 
                     <Button Classes="settings-ghost"
                             Command="{Binding AddCredentialCommand}">
-                      Add credential
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.AddProfile}" />
                     </Button>
                   </StackPanel>
                 </Border>
@@ -623,16 +623,16 @@
               <StackPanel Spacing="10">
 
                 <StackPanel Spacing="2">
-                  <TextBlock Text="Appearance" FontWeight="SemiBold" />
-                  <TextBlock Text="Control theme, density, and small visual tweaks."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Title}" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Description}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Theme" />
-                    <TextBlock Text="Follow system, or force light/dark."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Theme}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.ThemeDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -646,8 +646,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Compact mode" />
-                    <TextBlock Text="Use tighter spacing for dense project lists."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Compact}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.CompactDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -659,8 +659,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Show project avatars" />
-                    <TextBlock Text="Use icons or initials next to project names where available."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Avatars}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.AvatarsDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -679,8 +679,8 @@
               <StackPanel Spacing="10">
 
                 <StackPanel Spacing="2">
-                  <TextBlock Text="Notifications" FontWeight="SemiBold" />
-                  <TextBlock Text="Control when VaultSync grabs your attention."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.Title}" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.Description}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
@@ -688,8 +688,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,0,0,4">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="Enable notifications" />
-                    <TextBlock Text="Turn all VaultSync notifications on or off."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.Enable}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.EnableDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -700,8 +700,8 @@
 
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="On backup success" />
-                    <TextBlock Text="Show a notification when a backup completes successfully."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnSuccess}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnSuccessDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -714,8 +714,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="On backup failure" />
-                    <TextBlock Text="Always notify when a backup fails."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnFailure}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnFailureDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -728,8 +728,8 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="On low disk space" />
-                    <TextBlock Text="Warn when a backup target is nearly full."
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnLowDisk}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnLowDiskDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
@@ -834,10 +834,10 @@
               <StackPanel Spacing="10">
 
                 <StackPanel Spacing="2">
-                  <TextBlock Text="Danger zone"
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.Title}"
                              FontWeight="SemiBold"
                              Foreground="Tomato" />
-                  <TextBlock Text="Destructive actions. These cannot be undone."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.Description}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
@@ -845,9 +845,9 @@
                 <StackPanel Spacing="6">
                   <Button Command="{Binding ClearLocalCacheCommand}"
                           Classes="settings-ghost">
-                    Clear local cache
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.ClearCache}" />
                   </Button>
-                  <TextBlock Text="Removes cached metadata and state. Project data is not deleted."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.ClearCacheDescription}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="11" />
                 </StackPanel>
@@ -856,9 +856,9 @@
                             Margin="0,4,0,0">
                   <Button Command="{Binding ForgetAllProjectsCommand}"
                           Classes="settings-ghost">
-                    Forget all projects
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.ForgetProjects}" />
                   </Button>
-                  <TextBlock Text="Resets VaultSync's internal database (projects, snapshots, backups). No files on disk or NAS are removed."
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.ForgetProjectsDescription}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="11" />
                 </StackPanel>

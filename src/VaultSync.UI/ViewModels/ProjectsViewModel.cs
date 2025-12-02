@@ -15,6 +15,8 @@ using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
 using System.Linq;
 using VaultSync.UI.Notifications;
+using System.Globalization;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI.ViewModels;
 
@@ -25,6 +27,14 @@ namespace VaultSync.UI.ViewModels;
 public class ProjectsViewModel : ViewModelBase
 {
     private readonly IProjectDiscoveryService _discovery = new ProjectDiscoveryService();
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    private static string Lf(string key, string fallback, params object[] args)
+    {
+        var fmt = L(key, fallback);
+        return string.Format(CultureInfo.CurrentCulture, fmt, args);
+    }
     /// <summary>
     /// Preset options that can be applied to projects. These correspond to
     /// .vaultsyncignore-style profiles (Unity, .NET, etc.) plus an explicit
@@ -48,7 +58,7 @@ public class ProjectsViewModel : ViewModelBase
 
     public bool ShowProjectAvatars { get; private set; } = true;
 
-    private string _snapshotActionLabel = "Snapshot now";
+    private string _snapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
     public string SnapshotActionLabel
     {
         get => _snapshotActionLabel;
@@ -106,7 +116,9 @@ public class ProjectsViewModel : ViewModelBase
     }
 
     public string SortModeLabel =>
-        SortMode == ProjectSortMode.LastSnapshot ? "Sort: Latest snapshot" : "Sort: Name";
+        SortMode == ProjectSortMode.LastSnapshot
+            ? L("Projects.Sort.Latest", "Sort: Latest snapshot")
+            : L("Projects.Sort.Name", "Sort: Name");
 
     private readonly List<ProjectItemViewModel> _allProjects = new();
     private string _searchText = string.Empty;
@@ -143,7 +155,9 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         var severity = success ? NotificationSeverity.Info : NotificationSeverity.Error;
-        var title    = success ? "Snapshot completed" : "Snapshot failed";
+        var title    = success
+            ? L("Snapshots.Notification.SuccessTitle", "Snapshot completed")
+            : L("Snapshots.Notification.FailureTitle", "Snapshot failed");
 
         GlobalNotificationCenter.Instance.Show(message, severity, title);
 
@@ -164,7 +178,7 @@ public class ProjectsViewModel : ViewModelBase
             Name = "VaultSync",
             Path = "/Users/flavio/Desktop/Dev/VaultSync",
             Health = ProjectHealthStatus.Healthy,
-            HealthTag = "Healthy",
+            HealthTag = L("Projects.Health.Healthy", "Healthy"),
             LastSnapshot = DateTime.Today.AddMinutes(-20),
             SizeBytes = 1_800_000_000,
             Preset = "unity"
@@ -178,7 +192,7 @@ public class ProjectsViewModel : ViewModelBase
             Name = "Dumpster Fire Royale",
             Path = "/Volumes/Projects/DumpsterFireRoyale",
             Health = ProjectHealthStatus.Warning,
-            HealthTag = "Warning",
+            HealthTag = L("Projects.Health.Warning", "Warning"),
             LastSnapshot = DateTime.Today.AddDays(-1).AddHours(23),
             SizeBytes = 46_200_000_000,
             Preset = "unity"
@@ -192,7 +206,7 @@ public class ProjectsViewModel : ViewModelBase
             Name = "OverSteer",
             Path = "/Volumes/Projects/OverSteer",
             Health = ProjectHealthStatus.OutOfDate,
-            HealthTag = "Out of date",
+            HealthTag = L("Projects.Health.OutOfDate", "Out of date"),
             LastSnapshot = DateTime.Today.AddDays(-3),
             SizeBytes = 32_900_000_000,
             Preset = "unity"
@@ -249,7 +263,7 @@ public class ProjectsViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                ShowNotification("Could not open backup database while refreshing projects. Snapshot history may be incomplete.", NotificationSeverity.Warning);
+                ShowNotification(L("Projects.Notification.DbOpenFailed", "Could not open backup database while refreshing projects. Snapshot history may be incomplete."), NotificationSeverity.Warning);
             }
 
             Projects.Clear();
@@ -316,25 +330,25 @@ public class ProjectsViewModel : ViewModelBase
                         if (age.TotalDays < 1)
                         {
                             vm.Health    = ProjectHealthStatus.Healthy;
-                            vm.HealthTag = "Healthy (<1d)";
+                            vm.HealthTag = L("Projects.Health.HealthyRecent", "Healthy (<1d)");
                         }
                         else if (age.TotalDays < 7)
                         {
                             vm.Health    = ProjectHealthStatus.Warning;
-                            vm.HealthTag = "Out of date (>1d)";
+                            vm.HealthTag = L("Projects.Health.OutOfDateShort", "Out of date (>1d)");
                         }
                         else
                         {
                             vm.Health    = ProjectHealthStatus.OutOfDate;
-                            vm.HealthTag = "Stale (>7d)";
+                            vm.HealthTag = L("Projects.Health.Stale", "Stale (>7d)");
                         }
                     }
                     else
                     {
                         vm.Health = ProjectHealthStatus.OutOfDate;
                         vm.HealthTag = isRegistered
-                            ? "No snapshots yet"
-                            : "Not added";
+                            ? L("Projects.Health.NoSnapshots", "No snapshots yet")
+                            : L("Projects.Health.NotAdded", "Not added");
                     }
 
                     // Populate snapshot history from DB if available; otherwise fall back to discovery values.
@@ -382,7 +396,7 @@ public class ProjectsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ShowNotification("Error refreshing projects. Check logs for details.", NotificationSeverity.Error);
+            ShowNotification(L("Projects.Notification.RefreshError", "Error refreshing projects. Check logs for details."), NotificationSeverity.Error);
         }
         finally
         {
@@ -570,7 +584,7 @@ public class ProjectsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ShowNotification($"Failed to open folder for '{SelectedProject?.Name}'.", NotificationSeverity.Error);
+            ShowNotification(Lf("Projects.Notification.OpenFolderFailed", "Failed to open folder for '{0}'.", SelectedProject?.Name ?? string.Empty), NotificationSeverity.Error);
         }
     }
 
@@ -597,17 +611,17 @@ public class ProjectsViewModel : ViewModelBase
             var existing = repo.GetProjectByName(removedProjectName);
             if (existing is null)
             {
-                ShowNotification($"Project '{removedProjectName}' was not registered in the backup database.", NotificationSeverity.Warning);
+                ShowNotification(Lf("Projects.Notification.RemoveMissing", "Project '{0}' was not registered in the backup database.", removedProjectName), NotificationSeverity.Warning);
             }
             else
             {
                 repo.RemoveProject(existing.Id);
-                ShowNotification($"Removed project '{removedProjectName}' from the backup database.", NotificationSeverity.Info);
+                ShowNotification(Lf("Projects.Notification.RemoveSuccess", "Removed project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Info);
             }
         }
         catch (Exception ex)
         {
-            ShowNotification($"Failed to remove project '{removedProjectName}' from the backup database.", NotificationSeverity.Error);
+            ShowNotification(Lf("Projects.Notification.RemoveFailed", "Failed to remove project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Error);
         }
 
         // Reset the selected project's details so the right panel no longer shows stale data.
@@ -617,7 +631,7 @@ public class ProjectsViewModel : ViewModelBase
             SelectedProject.SizeBytes    = 0;
             SelectedProject.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
             SelectedProject.Health    = ProjectHealthStatus.OutOfDate;
-            SelectedProject.HealthTag = "Not backed up";
+            SelectedProject.HealthTag = L("Projects.Health.NotBackedUp", "Not backed up");
             SelectedProject.IsRegistered = false;
         }
 
@@ -652,7 +666,7 @@ public class ProjectsViewModel : ViewModelBase
                 // Require a preset (or explicit "no preset") before registering the project.
                 if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
                 {
-                    ShowNotification("Please select a preset (or 'no preset') before adding this project.", NotificationSeverity.Error);
+                    ShowNotification(L("Projects.Preset.Required", "Please select a preset (or 'no preset') before adding this project."), NotificationSeverity.Error);
                     return;
                 }
                 // Register project instead of snapshot.
@@ -665,10 +679,10 @@ public class ProjectsViewModel : ViewModelBase
                 };
 
                 var id = repo.AddProject(project);
-                ShowNotification($"Project '{project.Name}' registered. Next click will create a snapshot.", NotificationSeverity.Info);
+                ShowNotification(Lf("Projects.Notification.Registered", "Project '{0}' registered. Next click will create a snapshot.", project.Name), NotificationSeverity.Info);
 
                 // Update UI label so next click becomes a real snapshot.
-                SnapshotActionLabel = "Snapshot now";
+                SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
                 if (SelectedProject != null)
                 {
                     SelectedProject.IsRegistered = true;
@@ -717,7 +731,7 @@ public class ProjectsViewModel : ViewModelBase
                     }
 
                     SelectedProject.Health    = ProjectHealthStatus.Healthy;
-                    SelectedProject.HealthTag = "Healthy";
+                    SelectedProject.HealthTag = L("Projects.Health.Healthy", "Healthy");
                 }
                 catch (Exception ex)
                 {
@@ -725,14 +739,14 @@ public class ProjectsViewModel : ViewModelBase
             }
             if (SelectedProject != null)
             {
-                var msg = $"Snapshot created for '{SelectedProject.Name}'.";
+                var msg = Lf("Projects.Notification.SnapshotSuccess", "Snapshot created for '{0}'.", SelectedProject.Name);
                 ShowNotification(msg, NotificationSeverity.Info);
                 NotifySnapshotOutcome(msg, success: true);
             }
         }
         catch (Exception ex)
         {
-            const string msg = "Snapshot failed. Check logs for details.";
+            var msg = L("Projects.Notification.SnapshotFailure", "Snapshot failed. Check logs for details.");
             ShowNotification(msg, NotificationSeverity.Error);
             NotifySnapshotOutcome(msg, success: false);
         }
@@ -804,7 +818,7 @@ public class ProjectsViewModel : ViewModelBase
     {
         if (SelectedProject is null)
         {
-            SnapshotActionLabel = "Snapshot now";
+            SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
             return;
         }
 
@@ -821,7 +835,7 @@ public class ProjectsViewModel : ViewModelBase
             var existing = repo.GetProjectByName(SelectedProject.Name);
             if (existing is null)
             {
-                SnapshotActionLabel = "Add project";
+                SnapshotActionLabel = L("Snapshots.Action.AddProject", "Add project");
                 SelectedProject.IsRegistered = false;
 
                 // When not registered yet, force the user to choose a preset explicitly.
@@ -832,7 +846,7 @@ public class ProjectsViewModel : ViewModelBase
             }
             else
             {
-                SnapshotActionLabel = "Snapshot now";
+                SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
                 SelectedProject.IsRegistered = true;
 
                 // Keep the UI in sync with the DB-stored preset.
@@ -841,9 +855,17 @@ public class ProjectsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            SnapshotActionLabel = "Snapshot now";
-            ShowNotification("Could not refresh project registration state. Using default actions.", NotificationSeverity.Warning);
+            SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
+            ShowNotification(L("Projects.Notification.RefreshFailed", "Could not refresh project registration state. Using default actions."), NotificationSeverity.Warning);
         }
+    }
+
+    public void RefreshLocalization()
+    {
+        SnapshotActionLabel = SelectedProject is null || SelectedProject.IsRegistered
+            ? L("Snapshots.Action.Default", "Snapshot now")
+            : L("Snapshots.Action.AddProject", "Add project");
+        OnPropertyChanged(nameof(SortModeLabel));
     }
 
     private void LoadAvailablePresets()

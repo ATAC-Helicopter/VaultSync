@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:VaultSync.UI.ViewModels.Notifications"
+             xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
              x:Class="VaultSync.UI.Views.Controls.NotificationCard"
              x:DataType="vm:NotificationState">
   <UserControl.Styles>
@@ -60,7 +61,7 @@
       <Button Grid.Column="2"
               Classes="notification-dismiss"
               Command="{Binding DismissCommand}"
-              Content="✕"
+              Content="{infra:LocalizedString Key=Notifications.DismissGlyph}"
               HorizontalAlignment="Right"
               VerticalAlignment="Center" />
     </Grid>

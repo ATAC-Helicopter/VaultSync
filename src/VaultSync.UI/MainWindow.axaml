@@ -7,15 +7,15 @@
     x:Class="VaultSync.UI.MainWindow"
     x:DataType="vm:AppViewModel"
     Width="1200" Height="800"
-    Title="VaultSync">
+    Title="{infra:LocalizedString Key=Shell.Title}">
 
   <Grid RowDefinitions="Auto,*" ColumnDefinitions="260,*">
 
     <Border Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="4,6,4,16">
-          <TextBlock Text="VaultSync" FontSize="20" FontWeight="SemiBold"/>
-          <TextBlock Text="Navigation" Foreground="{StaticResource TextSecondary}" />
+          <TextBlock Text="{infra:LocalizedString Key=Shell.Title}" FontSize="20" FontWeight="SemiBold"/>
+          <TextBlock Text="{infra:LocalizedString Key=Shell.Navigation}" Foreground="{StaticResource TextSecondary}" />
         </StackPanel>
 
         <StackPanel Spacing="6">
@@ -74,7 +74,7 @@
                       IsVisible="{CompiledBinding ShowPatchButton}" />
               <Button Grid.Column="2"
                       Command="{CompiledBinding OpenReleasePageCommand}"
-                      Content="Open release"
+                      Content="{infra:LocalizedString Key=Shell.OpenRelease}"
                       MinWidth="110"
                       HorizontalAlignment="Right" />
             </Grid>

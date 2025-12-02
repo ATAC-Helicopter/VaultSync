@@ -112,6 +112,7 @@ namespace VaultSync.UI
             AddCredentialCommand         = new RelayCommand(_ => AddCredential());
             RemoveCredentialCommand      = new RelayCommand(p => RemoveCredential(p as NetworkCredentialViewModel));
             OpenHelpCommand              = new RelayCommand(_ => OpenHelp());
+            ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());
 
             CredentialProfiles.CollectionChanged += (_, _) => OnPropertyChanged(nameof(CredentialNames));
             Destinations.CollectionChanged       += (_, _) => RefreshLegacyVisibility();
@@ -783,6 +784,7 @@ namespace VaultSync.UI
     public ICommand AddCredentialCommand { get; }
     public ICommand RemoveCredentialCommand { get; }
     public ICommand OpenHelpCommand { get; }
+    public ICommand ExportTelemetryCommand { get; }
 
         private async void BrowseProjectsRoot()
         {
@@ -1087,6 +1089,43 @@ namespace VaultSync.UI
             catch
             {
                 // ignore failures
+            }
+        }
+
+        private void ExportTelemetry()
+        {
+            var result = Telemetry.ExportToZip();
+            if (!result.Success || string.IsNullOrWhiteSpace(result.ZipPath))
+            {
+                SaveStatus = result.Message ?? "Telemetry export failed.";
+                GlobalNotificationCenter.Instance.Show(
+                    SaveStatus,
+                    NotificationSeverity.Warning,
+                    "Telemetry export");
+                return;
+            }
+
+            SaveStatus = $"Telemetry exported to {result.ZipPath}";
+            GlobalNotificationCenter.Instance.Show(
+                "Telemetry export ready. You can share the zip file.",
+                NotificationSeverity.Info,
+                "Telemetry export");
+
+            try
+            {
+                var folder = Path.GetDirectoryName(result.ZipPath);
+                if (!string.IsNullOrWhiteSpace(folder))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = folder,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch
+            {
+                // best-effort
             }
         }
     }
