@@ -18,7 +18,16 @@ namespace VaultSync.UI.Services
         private readonly List<LanguageOption> _languageOptions = new()
         {
             new LanguageOption { Code = "en", DisplayName = "English" },
-            new LanguageOption { Code = "it", DisplayName = "Italiano" }
+            new LanguageOption { Code = "it", DisplayName = "Italiano" },
+            new LanguageOption { Code = "es", DisplayName = "Español" },
+            new LanguageOption { Code = "fr", DisplayName = "Français" },
+            new LanguageOption { Code = "de", DisplayName = "Deutsch" },
+            new LanguageOption { Code = "pt", DisplayName = "Português" },
+            new LanguageOption { Code = "zh", DisplayName = "简体中文" },
+            new LanguageOption { Code = "hi", DisplayName = "हिन्दी" },
+            new LanguageOption { Code = "ar", DisplayName = "العربية" },
+            new LanguageOption { Code = "bn", DisplayName = "বাংলা" },
+            new LanguageOption { Code = "ru", DisplayName = "Русский" }
         };
 
         private string _pendingLanguage = "en";
