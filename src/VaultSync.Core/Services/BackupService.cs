@@ -87,7 +87,8 @@ public sealed class BackupService
         int? reuseSnapshotId = null,
         bool writeMetadata = true,
         string? destinationPath = null,
-        string? destinationAlias = null)
+        string? destinationAlias = null,
+        bool skipIfNoChanges = false)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -184,6 +185,18 @@ public sealed class BackupService
             progressCallback?.Invoke(0, string.Empty, "Creating snapshot...");
             var snapshotService = new SnapshotService(_repo, new HashService());
             snapshotId = await snapshotService.CreateSnapshotAsync(project, fullSnapshotHash, maxSnapshotsToKeep, linkedToken);
+
+            var outcome = SnapshotService.LastOutcome;
+            if (skipIfNoChanges &&
+                !reuseSnapshotId.HasValue &&
+                outcome is { Added: 0, Modified: 0, Deleted: 0 })
+            {
+                // No file changes: remove the empty backup folder and snapshot, then skip.
+                DeletePartialBackup(backupFolderUsed);
+                _repo.DeleteSnapshotsById(project.Name, new[] { snapshotId });
+                progressCallback?.Invoke(100, string.Empty, "No changes detected; backup skipped.");
+                return 0;
+            }
         }
 
         try

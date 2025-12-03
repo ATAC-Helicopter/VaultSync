@@ -563,7 +563,8 @@ namespace VaultSync.UI.ViewModels
                                 reuseSnapshotId: metadataWritten ? sharedSnapshotId : null,
                                 writeMetadata: !metadataWritten,
                                 destinationPath: resolution.EffectivePath,
-                                destinationAlias: destLabel);
+                                destinationAlias: destLabel,
+                                skipIfNoChanges: true);
 
                             if (!metadataWritten)
                             {
@@ -784,6 +785,11 @@ namespace VaultSync.UI.ViewModels
                 {
                     GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Info, title);
                 }
+            }
+            catch (Exception ex)
+            {
+                PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
+                Debug.WriteLine($"[Patch] Install failed: {ex}");
             }
             finally
             {

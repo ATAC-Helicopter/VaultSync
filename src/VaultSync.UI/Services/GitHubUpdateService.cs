@@ -119,10 +119,19 @@ namespace VaultSync.UI.Services
         {
             var client = new HttpClient
             {
-                BaseAddress = new Uri("https://api.github.com/")
+                BaseAddress = new Uri("https://api.github.com/"),
+                Timeout     = TimeSpan.FromSeconds(20)
             };
             client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-Updater/1.0");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+
+            var token = Environment.GetEnvironmentVariable("VAULTSYNC_GH_TOKEN")
+                        ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
             return client;
         }
 

@@ -77,6 +77,23 @@ namespace VaultSync.UI
         private bool _isInitialized;
         private bool _isSaving;
 
+        private sealed record DestinationSnapshot(
+            string Alias,
+            string? Path,
+            bool Active,
+            bool AutoMount,
+            bool AutoUnmount,
+            bool PreMounted,
+            string? CredentialName);
+
+        private sealed record CredentialSnapshot(
+            string Name,
+            string Username,
+            string Domain,
+            string KeyRef,
+            bool UseKeychain,
+            string Password);
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void RefreshLegacyVisibility()
         {
@@ -101,7 +118,7 @@ namespace VaultSync.UI
             BrowseProjectsRootCommand    = new RelayCommand(_ => BrowseProjectsRoot());
             BrowseBackupLocationCommand  = new RelayCommand(_ => BrowseBackupLocation());
             ResetToDefaultsCommand       = new RelayCommand(_ => ResetToDefaults());
-            ApplySettingsCommand         = new RelayCommand(_ => SaveToConfig());
+            ApplySettingsCommand         = new RelayCommand(async _ => await SaveToConfigAsync());
             ClearLocalCacheCommand       = new RelayCommand(_ => ClearLocalCache());
             ForgetAllProjectsCommand     = new RelayCommand(_ => ForgetAllProjects());
             TestBackupLocationCommand    = new RelayCommand(_ => TestBackupLocation(), _ => !string.IsNullOrWhiteSpace(BackupLocationPath));
@@ -262,16 +279,38 @@ namespace VaultSync.UI
             OnPropertyChanged(null);
         }
 
-        private void SaveToConfig()
+        private async Task SaveToConfigAsync()
         {
             // Start from the latest persisted config so we don't clobber fields the Settings view doesn't edit
             // (e.g., LastView, DbPath, tray settings).
-            var cfg = AppConfigStore.Load();
-
             if (!ValidateDestinations())
             {
                 return;
             }
+
+            // Snapshot UI state to avoid cross-thread collection access during background work.
+            var destinationSnapshot = Destinations
+                .Select(d => new DestinationSnapshot(
+                    Alias: d.Alias,
+                    Path: d.Path,
+                    Active: d.Active,
+                    AutoMount: d.AutoMount,
+                    AutoUnmount: d.AutoUnmount,
+                    PreMounted: d.PreMounted,
+                    CredentialName: d.SelectedCredential?.Name))
+                .ToList();
+
+            var credentialSnapshot = CredentialProfiles
+                .Select(c => new CredentialSnapshot(
+                    Name: c.Name,
+                    Username: c.Username,
+                    Domain: c.Domain,
+                    KeyRef: c.KeyRef,
+                    UseKeychain: c.UseKeychain,
+                    Password: c.Password))
+                .ToList();
+
+            var cfg = AppConfigStore.Load();
 
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
@@ -298,11 +337,11 @@ namespace VaultSync.UI
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
-            cfg.Backups.Destinations                = Destinations.Select(d => new BackupDestination
+            cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
                 Path           = d.Path,
-                CredentialName = d.SelectedCredential?.Name,
+                CredentialName = d.CredentialName,
                 Active         = d.Active,
                 AutoMount      = d.AutoMount,
                 AutoUnmount    = d.AutoUnmount,
@@ -313,45 +352,49 @@ namespace VaultSync.UI
             cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
             cfg.Storage.MinFreeSpacePercent  = MinimumFreeSpacePercent;
 
-            var savedCreds = new List<NetworkCredentialProfile>();
-            foreach (var c in CredentialProfiles)
+            var saveResult = await Task.Run(() =>
             {
-                var keyRef = _credentialVault.EnsureKeyRef(c.KeyRef, c.Name);
-                c.KeyRef   = keyRef;
-
-                var secret = !string.IsNullOrWhiteSpace(c.Password)
-                    ? c.Password
-                    : _credentialVault.GetSecret(keyRef, c.Username, c.UseKeychain);
-
-                if (!string.IsNullOrWhiteSpace(secret))
+                var savedCreds = new List<NetworkCredentialProfile>();
+                foreach (var c in credentialSnapshot)
                 {
-                    try
+                    var keyRef = _credentialVault.EnsureKeyRef(c.KeyRef, c.Name);
+
+                    var secret = !string.IsNullOrWhiteSpace(c.Password)
+                        ? c.Password
+                        : _credentialVault.GetSecret(keyRef, c.Username, c.UseKeychain);
+
+                    var persistPlaintext = false;
+
+                    if (!string.IsNullOrWhiteSpace(secret))
                     {
-                        _credentialVault.SaveSecret(keyRef, c.Username, secret, c.UseKeychain);
+                        try
+                        {
+                            _credentialVault.SaveSecret(keyRef, c.Username, secret, c.UseKeychain);
+                        }
+                        catch
+                        {
+                            persistPlaintext = true;
+                        }
                     }
-                    catch (Exception ex)
+
+                    savedCreds.Add(new NetworkCredentialProfile
                     {
-                        GlobalNotificationCenter.Instance.Show(
-                            $"Could not store credential '{c.Name}' securely: {ex.Message}",
-                            NotificationSeverity.Error,
-                            "Credential storage");
-                        // Skip writing this credential if we cannot secure it.
-                        continue;
-                    }
+                        Name        = c.Name,
+                        Username    = c.Username,
+                        Domain      = c.Domain,
+                        KeyRef      = keyRef,
+                        UseKeychain = c.UseKeychain,
+                        Password    = persistPlaintext ? secret ?? string.Empty : string.Empty // keep out of config unless we must
+                    });
                 }
 
-                savedCreds.Add(new NetworkCredentialProfile
-                {
-                    Name        = c.Name,
-                    Username    = c.Username,
-                    Domain      = c.Domain,
-                    KeyRef      = keyRef,
-                    UseKeychain = c.UseKeychain,
-                    Password    = string.Empty // keep out of config
-                });
-            }
+                cfg.Network.Credentials = savedCreds;
 
-            cfg.Network.Credentials = savedCreds;
+                // Save to disk (config + credentials).
+                AppConfigStore.Save(cfg);
+
+                return savedCreds.Any(c => !string.IsNullOrEmpty(c.Password)); // indicates plaintext fallback
+            });
 
             cfg.Appearance.Theme              = NormalizeThemeOption(SelectedTheme);
             cfg.Appearance.CompactLayout      = UseCompactLayout;
@@ -370,10 +413,11 @@ namespace VaultSync.UI
             cfg.Advanced.SendUsageStats = SendAnonymousUsageStats;
             cfg.Advanced.Language       = SelectedLanguageCode;
 
-            AppConfigStore.Save(cfg);
             AutoStartService.SetLaunchOnLogin(_launchOnLogin);
 
-            SaveStatus = $"Saved at {DateTime.Now:HH:mm:ss}";
+            SaveStatus = saveResult
+                ? $"Saved (with credential fallback) at {DateTime.Now:HH:mm:ss}"
+                : $"Saved at {DateTime.Now:HH:mm:ss}";
         }
 
         private bool ValidateDestinations()
@@ -414,7 +458,7 @@ namespace VaultSync.UI
             return true;
         }
 
-        private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private async void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (!_isInitialized)
                 return;
@@ -428,7 +472,7 @@ namespace VaultSync.UI
             try
             {
                 _isSaving = true;
-                SaveToConfig();
+                await SaveToConfigAsync();
             }
             finally
             {

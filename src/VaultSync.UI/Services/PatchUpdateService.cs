@@ -95,6 +95,19 @@ namespace VaultSync.UI.Services
             Directory.CreateDirectory(stagingDir);
 
             var destinationPath = Path.Combine(stagingDir, plan.ArchiveName);
+
+            // If the file already exists and matches size/hash, reuse it instead of re-downloading.
+            if (File.Exists(destinationPath))
+            {
+                var existing = new FileInfo(destinationPath);
+                var sizeOk   = plan.Manifest.ArchiveSize <= 0 || existing.Length == plan.Manifest.ArchiveSize;
+                var hashOk   = await VerifyChecksumAsync(destinationPath, plan.Manifest.ArchiveSha256, cancellationToken);
+                if (sizeOk && hashOk)
+                {
+                    return destinationPath;
+                }
+            }
+
             using (var response = await s_httpClient.GetAsync(plan.ArchiveUrl, cancellationToken))
             {
                 if (!response.IsSuccessStatusCode)
@@ -105,8 +118,8 @@ namespace VaultSync.UI.Services
                 await sourceStream.CopyToAsync(destinationStream, cancellationToken);
             }
 
-            var fileInfo = new FileInfo(destinationPath);
-            if (plan.Manifest.ArchiveSize > 0 && fileInfo.Length != plan.Manifest.ArchiveSize)
+            var downloaded = new FileInfo(destinationPath);
+            if (plan.Manifest.ArchiveSize > 0 && downloaded.Length != plan.Manifest.ArchiveSize)
                 return null;
 
             if (!await VerifyChecksumAsync(destinationPath, plan.Manifest.ArchiveSha256, cancellationToken))
@@ -148,9 +161,20 @@ namespace VaultSync.UI.Services
 
         private static HttpClient CreateHttpClient()
         {
-            var client = new HttpClient();
+            var client = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(20)
+            };
             client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-PatchUpdater/1.0");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+
+            var token = Environment.GetEnvironmentVariable("VAULTSYNC_GH_TOKEN")
+                        ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
             return client;
         }
     }

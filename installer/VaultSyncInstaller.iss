@@ -1,7 +1,9 @@
 #define MyAppName "VaultSync"
-#define MyAppVersion "0.9.5"
+#define MyAppVersion "0.9.6"
 #define MyAppPublisher "Flavio Giacchetti"
 #define MyAppExeName "VaultSync.UI.exe"
+#define AppOutputDir "..\\src\\VaultSync.UI\\bin\\Release\\net8.0-windows10.0.19041.0\\win-x64\\publish"
+#define AppIconPath "..\\src\\VaultSync.UI\\Assets\\vaultsync.ico"
 
 [Setup]
 AppId={{A95C0681-2A65-4C8B-BFA9-VAULTSYNC123456}}
@@ -17,7 +19,7 @@ DisableDirPage=no
 DisableProgramGroupPage=yes
 ArchitecturesInstallIn64BitMode=x64
 ; Use your app icon for the installer EXE and wizard
-SetupIconFile="G:\Dev\vaultsync\src\VaultSync.UI\Assets\vaultsync.ico"
+SetupIconFile="{#AppIconPath}"
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -26,7 +28,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Files]
-Source: "G:\Dev\vaultsync\src\VaultSync.UI\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\*"; \
+Source: "{#AppOutputDir}\*"; \
   DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
 [Icons]
