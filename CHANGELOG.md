@@ -1,8 +1,12 @@
-# Changelog
+﻿# Changelog
+
+## [0.9.7.3] - 2025-12-05
+### Fixed
+- Patch helper now copies the full install directory into its temp folder before elevating, so UAC launches keep dependencies and the app restarts after applying the update.
 
 ## [0.9.7.2] - 2025-12-04
 ### Fixed
-- Patch manifest validation now treats missing revision as zero, allowing 0.9.7 → 0.9.7.1/2 deltas to apply when the assembly reports 0.9.7.0.
+- Patch manifest validation now treats missing revision as zero, allowing 0.9.7 â†’ 0.9.7.1/2 deltas to apply when the assembly reports 0.9.7.0.
 - Rebuilt patch assets for 0.9.7.2.
 
 ## [0.9.7.1] - 2025-12-04
@@ -40,7 +44,7 @@
 - Verified stability under stress: rename storms, 400+ file bursts, large binary files, read-only destinations.
 
 ### Changed
-- Watch cycles are now atomic — no overlap possible.
+- Watch cycles are now atomic â€” no overlap possible.
 - Improved log readability during watch cycles (Spectre.Console markup formatting).
 - Debounce logic refined for high-frequency file systems.
 
@@ -117,4 +121,4 @@
 
 ---
 
-© 2025 VaultSync Project. MIT Licensed.
+Â© 2025 VaultSync Project. MIT Licensed.

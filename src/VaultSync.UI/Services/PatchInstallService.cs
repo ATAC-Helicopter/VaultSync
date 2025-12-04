@@ -56,17 +56,18 @@ namespace VaultSync.UI.Services
                     return false;
                 }
 
-                var helperDir = Path.Combine(Path.GetTempPath(), "VaultSync", "patch-helper");
-                Directory.CreateDirectory(helperDir);
-
+                var installDir = AppContext.BaseDirectory;
+                var helperDir = PrepareHelperDirectory(installDir);
                 var helperExe = Path.Combine(helperDir, Path.GetFileName(processPath));
-                File.Copy(processPath, helperExe, overwrite: true);
+                if (!File.Exists(helperExe))
+                {
+                    File.Copy(processPath, helperExe, overwrite: true);
+                }
 
                 var manifestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.manifest.json");
                 var manifestJson = JsonSerializer.Serialize(plan.Manifest);
                 File.WriteAllText(manifestPath, manifestJson, Encoding.UTF8);
 
-                var installDir = AppContext.BaseDirectory;
                 var needsElevation = NeedsElevation(installDir);
 
                 // When elevation is needed (Program Files installs), we must use the shell + arguments string.
@@ -112,6 +113,52 @@ namespace VaultSync.UI.Services
             {
                 error = ex.Message;
                 return false;
+            }
+        }
+
+        private static string PrepareHelperDirectory(string installDir)
+        {
+            var root = Path.Combine(Path.GetTempPath(), "VaultSync");
+            Directory.CreateDirectory(root);
+
+            var helperDir = Path.Combine(root, "patch-helper");
+            try
+            {
+                if (Directory.Exists(helperDir))
+                {
+                    Directory.Delete(helperDir, recursive: true);
+                }
+            }
+            catch
+            {
+                helperDir = Path.Combine(root, $"patch-helper-{Guid.NewGuid():N}");
+            }
+
+            Directory.CreateDirectory(helperDir);
+            CopyInstallToHelper(installDir, helperDir);
+            return helperDir;
+        }
+
+        private static void CopyInstallToHelper(string installDir, string helperDir)
+        {
+            foreach (var dir in Directory.GetDirectories(installDir, "*", SearchOption.AllDirectories))
+            {
+                var relative = Path.GetRelativePath(installDir, dir);
+                var targetDir = Path.Combine(helperDir, relative);
+                Directory.CreateDirectory(targetDir);
+            }
+
+            foreach (var file in Directory.GetFiles(installDir, "*", SearchOption.AllDirectories))
+            {
+                var relative = Path.GetRelativePath(installDir, file);
+                var destination = Path.Combine(helperDir, relative);
+                var destinationDir = Path.GetDirectoryName(destination);
+                if (!string.IsNullOrWhiteSpace(destinationDir))
+                {
+                    Directory.CreateDirectory(destinationDir);
+                }
+
+                File.Copy(file, destination, overwrite: true);
             }
         }
 
