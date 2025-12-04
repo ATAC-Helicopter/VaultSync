@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.9.7.2] - 2025-12-04
+### Fixed
+- Patch manifest validation now treats missing revision as zero, allowing 0.9.7 → 0.9.7.1/2 deltas to apply when the assembly reports 0.9.7.0.
+- Rebuilt patch assets for 0.9.7.2.
+
 ## [0.9.7.1] - 2025-12-04
 ### Fixed
 - Elevated patch helper launch for Program Files installs and resolved compile warnings; rebuilt patch assets for 0.9.7.1.

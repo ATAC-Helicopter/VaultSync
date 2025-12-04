@@ -150,7 +150,24 @@ namespace VaultSync.UI.Services
 
             if (manifestVersion is not null && currentParsed is not null)
             {
-                return manifestVersion.Equals(currentParsed);
+                var sameCore = manifestVersion.Major == currentParsed.Major
+                               && manifestVersion.Minor == currentParsed.Minor
+                               && manifestVersion.Build == currentParsed.Build;
+
+                if (!sameCore)
+                    return false;
+
+                var revA = manifestVersion.Revision;
+                var revB = currentParsed.Revision;
+
+                // Treat missing revision (-1) as 0, but do not ignore non-zero revisions.
+                if (revA == revB)
+                    return true;
+
+                if ((revA == -1 && revB == 0) || (revB == -1 && revA == 0))
+                    return true;
+
+                return false;
             }
 
             return string.Equals(
