@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 
@@ -66,19 +67,37 @@ namespace VaultSync.UI.Services
                 var manifestJson = JsonSerializer.Serialize(plan.Manifest);
                 File.WriteAllText(manifestPath, manifestJson, Encoding.UTF8);
 
+                var installDir = AppContext.BaseDirectory;
+                var needsElevation = NeedsElevation(installDir);
+
+                // When elevation is needed (Program Files installs), we must use the shell + arguments string.
                 var psi = new ProcessStartInfo
                 {
                     FileName = helperExe,
-                    UseShellExecute = false,
-                    WorkingDirectory = helperDir
+                    WorkingDirectory = helperDir,
+                    UseShellExecute = needsElevation,
+                    Verb = needsElevation ? "runas" : string.Empty
                 };
 
-                psi.ArgumentList.Add(ApplyArg);
-                psi.ArgumentList.Add(archivePath);
-                psi.ArgumentList.Add(manifestPath);
-                psi.ArgumentList.Add(installDir);
-                psi.ArgumentList.Add(RestartArg);
-                psi.ArgumentList.Add($"{WaitPidArg}{Process.GetCurrentProcess().Id}");
+                if (needsElevation)
+                {
+                    psi.Arguments = string.Join(" ",
+                        Quote(ApplyArg),
+                        Quote(archivePath),
+                        Quote(manifestPath),
+                        Quote(installDir),
+                        Quote(RestartArg),
+                        Quote($"{WaitPidArg}{Process.GetCurrentProcess().Id}"));
+                }
+                else
+                {
+                    psi.ArgumentList.Add(ApplyArg);
+                    psi.ArgumentList.Add(archivePath);
+                    psi.ArgumentList.Add(manifestPath);
+                    psi.ArgumentList.Add(installDir);
+                    psi.ArgumentList.Add(RestartArg);
+                    psi.ArgumentList.Add($"{WaitPidArg}{Process.GetCurrentProcess().Id}");
+                }
 
                 var started = Process.Start(psi);
                 if (started is null)
@@ -242,6 +261,37 @@ namespace VaultSync.UI.Services
             using var sha = SHA256.Create();
             var bytes = sha.ComputeHash(stream);
             return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
+        private static bool NeedsElevation(string installDir)
+        {
+            if (!OperatingSystem.IsWindows())
+                return false;
+
+            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            var underProgramFiles = (!string.IsNullOrWhiteSpace(programFiles) &&
+                                     installDir.StartsWith(programFiles, StringComparison.OrdinalIgnoreCase)) ||
+                                    (!string.IsNullOrWhiteSpace(programFilesX86) &&
+                                     installDir.StartsWith(programFilesX86, StringComparison.OrdinalIgnoreCase));
+
+            if (!underProgramFiles)
+                return false;
+
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return !principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+
+        private static string Quote(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "\"\"";
+
+            if (value.Contains(' ') || value.Contains('\t'))
+                return $"\"{value}\"";
+
+            return value;
         }
     }
 }
