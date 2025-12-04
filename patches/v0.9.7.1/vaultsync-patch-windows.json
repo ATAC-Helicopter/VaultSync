@@ -1,8 +1,8 @@
 {
     "previousVersion":  "0.9.7",
     "targetVersion":  "0.9.7.1",
-    "archiveSha256":  "1FC87B6E778DA3A51EE0D5335FD500D2BBF48621DAED8D080216E5275FEAB0C3",
-    "archiveSize":  21326138,
+    "archiveSha256":  "FC4B2590D07F65E3038CBB93BDB0935289B2BCAA5BEED0DB0F33160F8EFDD111",
+    "archiveSize":  21326150,
     "files":  [
                   {
                       "path":  ".0-windows10.0.19041.0\\win-x64\\publish\\av_libglesv2.dll",
@@ -421,12 +421,12 @@
                   },
                   {
                       "path":  ".0-windows10.0.19041.0\\win-x64\\publish\\VaultSync.Core.dll",
-                      "sha256":  "4FF0E85F0D1CA4D1293E4D8144D67DC8CFABB3E951987FD45A25F0DC3D3D238D",
+                      "sha256":  "F4B1B99A99C32BD58858031B46F208CA27FDAC4096250BA1385A12AA7CE00A77",
                       "size":  156160
                   },
                   {
                       "path":  ".0-windows10.0.19041.0\\win-x64\\publish\\VaultSync.Core.pdb",
-                      "sha256":  "07E7B4497B272123C0493047DB309CA89A1E9CB19F946F98125A6AC361C865EF",
+                      "sha256":  "63FE6FB3819DB15404420BE747229F742A0882416299C8118046AA4773EC27D4",
                       "size":  44796
                   },
                   {
@@ -436,17 +436,17 @@
                   },
                   {
                       "path":  ".0-windows10.0.19041.0\\win-x64\\publish\\VaultSync.UI.dll",
-                      "sha256":  "824FD967EA6FA4823EE453DAB756DEBBDBE569B6FF5E098DFCB074BD5908B6B8",
+                      "sha256":  "CAE9FF671C859C3DD0B21A32BA245C973D2DB7DFD3A171C53BE1806EBABF5A86",
                       "size":  1821696
                   },
                   {
                       "path":  ".0-windows10.0.19041.0\\win-x64\\publish\\VaultSync.UI.exe",
-                      "sha256":  "744BC068B08CC28E7C5A698E8DE89DF4C6D5E6C8BF48A0B48341835D2D897AD4",
+                      "sha256":  "0EB087AA9EFF0D96BC7DDDE0DA883B1D64E1925E33E1D0A148132F4D535A3C44",
                       "size":  236544
                   },
                   {
                       "path":  ".0-windows10.0.19041.0\\win-x64\\publish\\VaultSync.UI.pdb",
-                      "sha256":  "2842561D421943F4CA50724B2D8361F3D6F80F55A40F7462341528B8471D5ED6",
+                      "sha256":  "0C2B4849052CB44D44473E13A9A144C20611EF49DE728A439285073468706999",
                       "size":  129992
                   },
                   {
