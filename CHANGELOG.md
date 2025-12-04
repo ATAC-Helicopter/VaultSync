@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.9.7.1] - 2025-12-04
+### Fixed
+- Elevated patch helper launch for Program Files installs and resolved compile warnings; rebuilt patch assets for 0.9.7.1.
+
 ## [0.9.7] - 2025-12-04
 ### Changed
 - Bumped Windows metadata to 0.9.7 (installer + assembly) to ship the built-in patch helper flow that self-applies and restarts.

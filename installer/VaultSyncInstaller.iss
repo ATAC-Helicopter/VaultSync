@@ -1,5 +1,5 @@
 #define MyAppName "VaultSync"
-#define MyAppVersion "0.9.7"
+#define MyAppVersion "0.9.7.1"
 #define MyAppPublisher "Flavio Giacchetti"
 #define MyAppExeName "VaultSync.UI.exe"
 #define AppOutputDir "..\\src\\VaultSync.UI\\bin\\Release\\net8.0-windows10.0.19041.0\\win-x64\\publish"
@@ -20,6 +20,10 @@ DisableProgramGroupPage=yes
 ArchitecturesInstallIn64BitMode=x64
 ; Use your app icon for the installer EXE and wizard
 SetupIconFile="{#AppIconPath}"
+SignedUninstaller=yes
+; Adjust the signing command to your certificate/profile.
+; /a picks the best cert in the store; replace with explicit /f and /p if you use a PFX.
+SignTool=signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.sectigo.com /a /d "VaultSync" /du "https://atac-helicopter.github.io/VaultSync" "$f"
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

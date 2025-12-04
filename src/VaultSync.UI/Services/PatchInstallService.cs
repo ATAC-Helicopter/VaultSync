@@ -56,7 +56,6 @@ namespace VaultSync.UI.Services
                     return false;
                 }
 
-                var installDir = AppContext.BaseDirectory;
                 var helperDir = Path.Combine(Path.GetTempPath(), "VaultSync", "patch-helper");
                 Directory.CreateDirectory(helperDir);
 
