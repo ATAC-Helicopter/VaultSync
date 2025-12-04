@@ -162,6 +162,7 @@ namespace VaultSync.UI
             _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
                 ? _localizationService.CurrentLanguage
                 : cfg.Advanced.Language;
+            _localizationService.SetLanguage(_selectedLanguageCode);
 
             _projectsRootPath      = cfg.ProjectsRoot ?? "";
             _resumeLastSession     = cfg.ResumeLastSession;
@@ -172,8 +173,8 @@ namespace VaultSync.UI
             _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
-            _autoBackupIntervalMinutes = cfg.Backups.IntervalMinutes;
-            _maxSnapshotsPerProject    = cfg.Backups.MaxSnapshotsPerProject;
+            _autoBackupIntervalMinutes = ClampInt(cfg.Backups.IntervalMinutes, 1, 10080, 30);
+            _maxSnapshotsPerProject    = ClampInt(cfg.Backups.MaxSnapshotsPerProject, 1, 10000, 20);
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
             _backupLocationPath        = string.IsNullOrWhiteSpace(cfg.Backups.BackupRoot)
                 ? (cfg.Backups.Location ?? string.Empty)
@@ -185,7 +186,7 @@ namespace VaultSync.UI
 
             _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
-            _minimumFreeSpacePercent = cfg.Storage.MinFreeSpacePercent;
+            _minimumFreeSpacePercent = ClampInt(cfg.Storage.MinFreeSpacePercent, 0, 95, 10);
 
             CredentialProfiles.Clear();
             foreach (var cred in cfg.Network.Credentials ?? new List<NetworkCredentialProfile>())
@@ -325,8 +326,8 @@ namespace VaultSync.UI
             cfg.Behavior.ShowBackupWidget        = _showTrayBackupWidget;
 
             cfg.Backups.EnableAutoBackups           = EnableAutoBackups;
-            cfg.Backups.IntervalMinutes             = AutoBackupIntervalMinutes;
-            cfg.Backups.MaxSnapshotsPerProject      = MaxSnapshotsPerProject;
+            cfg.Backups.IntervalMinutes             = ClampInt(AutoBackupIntervalMinutes, 1, 10080, 30);
+            cfg.Backups.MaxSnapshotsPerProject      = ClampInt(MaxSnapshotsPerProject, 1, 10000, 20);
             cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
             // Sync legacy backup root from the first active destination (fallback for older code paths).
             var firstActiveDest = Destinations.FirstOrDefault(d => d.Active) ?? Destinations.FirstOrDefault();
@@ -517,6 +518,13 @@ namespace VaultSync.UI
             };
         }
 
+        private static int ClampInt(int value, int min, int max, int fallback)
+        {
+            if (value < min || value > max)
+                return fallback;
+            return value;
+        }
+
         // ---------------- Properties ----------------
 
         public ObservableCollection<string> ThemeOptions { get; }
@@ -542,13 +550,13 @@ namespace VaultSync.UI
         public int AutoBackupIntervalMinutes
         {
             get => _autoBackupIntervalMinutes;
-            set => SetField(ref _autoBackupIntervalMinutes, value);
+            set => SetField(ref _autoBackupIntervalMinutes, ClampInt(value, 1, 10080, _autoBackupIntervalMinutes));
         }
 
         public int MaxSnapshotsPerProject
         {
             get => _maxSnapshotsPerProject;
-            set => SetField(ref _maxSnapshotsPerProject, value);
+            set => SetField(ref _maxSnapshotsPerProject, ClampInt(value, 1, 10000, _maxSnapshotsPerProject));
         }
 
         public string BackupLocationPath
@@ -614,7 +622,7 @@ namespace VaultSync.UI
         public int MinimumFreeSpacePercent
         {
             get => _minimumFreeSpacePercent;
-            set => SetField(ref _minimumFreeSpacePercent, value);
+            set => SetField(ref _minimumFreeSpacePercent, ClampInt(value, 0, 95, _minimumFreeSpacePercent));
         }
 
         public ObservableCollection<BackupDestinationViewModel> Destinations { get; } = new();
@@ -796,6 +804,7 @@ namespace VaultSync.UI
                 if (SetField(ref _selectedLanguageCode, value))
                 {
                     OnPropertyChanged(nameof(SelectedLanguage));
+                    PersistLanguage();
                 }
             }
         }
@@ -810,6 +819,20 @@ namespace VaultSync.UI
                     return;
 
                 SelectedLanguageCode = value.Code;
+            }
+        }
+
+        private void PersistLanguage()
+        {
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                cfg.Advanced.Language = _selectedLanguageCode;
+                AppConfigStore.Save(cfg);
+            }
+            catch
+            {
+                // Best effort; avoid crashing when persisting language.
             }
         }
 

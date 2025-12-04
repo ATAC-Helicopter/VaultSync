@@ -11,14 +11,48 @@
 
   <Grid RowDefinitions="Auto,*" ColumnDefinitions="260,*">
 
-    <Border Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16">
+    <Border Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
       <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="4,6,4,16">
-          <TextBlock Text="{infra:LocalizedString Key=Shell.Title}" FontSize="20" FontWeight="SemiBold"/>
-          <TextBlock Text="{infra:LocalizedString Key=Shell.Navigation}" Foreground="{StaticResource TextSecondary}" />
+        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="4,10,4,16">
+          <Border CornerRadius="16"
+                  Padding="14,12"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource BorderSoft}">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#1E4F8DFF" Offset="0"/>
+                <GradientStop Color="#102030" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.Background>
+            <StackPanel Spacing="4">
+              <TextBlock Text="{infra:LocalizedString Key=Shell.Title}" FontSize="20" FontWeight="SemiBold"/>
+              <TextBlock Text="Your projects, always safe." Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+            </StackPanel>
+          </Border>
+          <TextBlock Text="{infra:LocalizedString Key=Shell.Navigation}"
+                     Foreground="{StaticResource TextSecondary}"
+                     Margin="2,2,0,0"
+                     FontSize="12" />
         </StackPanel>
 
-        <StackPanel Spacing="6">
+        <Border DockPanel.Dock="Bottom"
+                Margin="0,16,0,0"
+                Padding="12,14,12,10"
+                BorderBrush="{DynamicResource BorderSoft}"
+                BorderThickness="0,1,0,0">
+          <StackPanel Spacing="2">
+            <TextBlock Text="{CompiledBinding FooterProductDisplay}"
+                       Foreground="{StaticResource TextSecondary}"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{CompiledBinding FooterCopyrightDisplay}"
+                       Foreground="{StaticResource TextSecondary}"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel Spacing="4" Margin="0,0,0,10">
           <Button Classes="nav" Command="{CompiledBinding NavigateDashboard}">
             <TextBlock Text="{infra:LocalizedString Key=Nav.Dashboard}"/>
           </Button>
@@ -39,44 +73,44 @@
       </DockPanel>
     </Border>
 
-    <Border Grid.Row="0" Grid.Column="1" Classes="header" Padding="16">
-      <Grid ColumnDefinitions="*,Auto"
-            RowDefinitions="Auto,Auto"
-            ColumnSpacing="12"
-            VerticalAlignment="Center">
-        <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
-          <TextBlock Text="{CompiledBinding HeaderTitle}" FontSize="22" FontWeight="SemiBold"/>
-          <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{StaticResource TextSecondary}"/>
+    <Border Grid.Row="0" Grid.Column="1" Classes="header" Padding="18,14">
+      <StackPanel Spacing="8">
+        <StackPanel>
+          <TextBlock Text="{CompiledBinding HeaderTitle}" FontSize="24" FontWeight="SemiBold"/>
+          <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{StaticResource TextSecondary}" Margin="0,2,0,0"/>
         </StackPanel>
 
-        <Border Grid.Row="1"
-                Grid.ColumnSpan="2"
-                Margin="0,12,0,0"
+        <Border Margin="0,4,0,0"
                 Padding="12"
                 CornerRadius="12"
                 Background="{DynamicResource Surface2}"
                 BorderBrush="{DynamicResource BorderSoft}"
                 BorderThickness="1"
                 IsVisible="{CompiledBinding IsUpdateAvailable}">
-          <StackPanel Spacing="8">
+          <StackPanel Spacing="6">
             <Grid ColumnDefinitions="*,Auto,Auto"
                   ColumnSpacing="10"
                   VerticalAlignment="Center">
               <TextBlock Text="{CompiledBinding UpdateBannerMessage}"
+                         FontWeight="SemiBold"
                          TextWrapping="Wrap"
-                         VerticalAlignment="Center"
                          ToolTip.Tip="{CompiledBinding UpdateTooltip}" />
               <Button Grid.Column="1"
                       Command="{CompiledBinding InstallPatchCommand}"
                       Content="{CompiledBinding InstallButtonText}"
                       MinWidth="140"
                       HorizontalAlignment="Right"
+                      Background="{DynamicResource AccentBrush}"
+                      Foreground="{DynamicResource TextOnPillBrush}"
+                      BorderBrush="{DynamicResource AccentBrush}"
                       IsVisible="{CompiledBinding ShowPatchButton}" />
               <Button Grid.Column="2"
                       Command="{CompiledBinding OpenReleasePageCommand}"
                       Content="{infra:LocalizedString Key=Shell.OpenRelease}"
                       MinWidth="110"
-                      HorizontalAlignment="Right" />
+                      HorizontalAlignment="Right"
+                      Background="{DynamicResource Surface1}"
+                      BorderBrush="{DynamicResource BorderSoft}" />
             </Grid>
             <TextBlock Text="{CompiledBinding PatchStatusMessage}"
                        Foreground="{DynamicResource TextSecondary}"
@@ -84,7 +118,7 @@
                        IsVisible="{CompiledBinding ShowPatchStatus}" />
           </StackPanel>
         </Border>
-      </Grid>
+      </StackPanel>
     </Border>
 
     <Border Grid.Row="1" Grid.Column="1" Padding="16">

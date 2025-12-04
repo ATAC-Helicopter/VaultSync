@@ -1,4 +1,9 @@
 ﻿# Changelog
+## [0.9.8] - 2025-12-05
+### Fixed
+- Language selection now persists across restarts/updates and settings clamp numeric fields (snapshots, intervals, free-space) to avoid crashes.
+- Updated translations and storage labels for a cleaner UI.
+
 
 ## [0.9.7.3] - 2025-12-05
 ### Fixed

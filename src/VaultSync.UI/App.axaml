@@ -77,15 +77,19 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
             <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="{DynamicResource NavButtonPadding}" />
-            <Setter Property="Margin" Value="{DynamicResource NavButtonMargin}" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="FontWeight" Value="Medium" />
         </Style>
 
         <Style Selector="Button.nav:pointerover">
             <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style Selector="Button.nav:pressed">
-            <Setter Property="Background" Value="{DynamicResource Surface3}" />
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
         </Style>
 
         <!-- ListBox cleanup -->

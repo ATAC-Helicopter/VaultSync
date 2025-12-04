@@ -278,6 +278,9 @@ namespace VaultSync.UI.ViewModels
         public ICommand NavigateSettings  { get; }
         public ICommand OpenReleasePageCommand { get; }
         public ICommand InstallPatchCommand => _installPatchCommand;
+        public string CurrentVersionDisplay => $"v{StripBuildMetadata(_currentVersionString)}";
+        public string FooterProductDisplay => $"VaultSync · {CurrentVersionDisplay}";
+        public string FooterCopyrightDisplay => $"© {DateTime.UtcNow.Year} Flavio Giacchetti";
 
         public AppViewModel()
         {
@@ -934,6 +937,12 @@ namespace VaultSync.UI.ViewModels
                 return informationalVersion.Trim();
 
             return assembly.GetName().Version?.ToString() ?? "0.0.0";
+        }
+
+        private static string StripBuildMetadata(string version)
+        {
+            var plus = version.IndexOf('+');
+            return plus >= 0 ? version.Substring(0, plus) : version;
         }
 
         private async void OnBackupProjectRequested(ProjectBackupItem? item)
@@ -2938,3 +2947,5 @@ namespace VaultSync.UI.ViewModels
         }
     }
 }
+
+

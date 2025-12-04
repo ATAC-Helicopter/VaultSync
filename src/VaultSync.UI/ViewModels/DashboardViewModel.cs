@@ -814,8 +814,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     return (
                         0d,
-                        "Backup root not configured",
-                        $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space",
+                        L("Dashboard.Storage.NotConfigured", "Backup root not configured"),
+                        string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
                         false
                     );
                 }
@@ -826,8 +826,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     return (
                         0d,
-                        "Backup target not available",
-                        $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space",
+                        L("Dashboard.Storage.TargetUnavailable", "Backup target not available"),
+                        string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
                         false
                     );
                 }
@@ -837,8 +837,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     return (
                         0d,
-                        "Backup target not available",
-                        $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space",
+                        L("Dashboard.Storage.TargetUnavailable", "Backup target not available"),
+                        string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
                         false
                     );
                 }
@@ -850,8 +850,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     return (
                         0d,
-                        "Backup target size unknown",
-                        $"Reserve at least {config.Storage.MinFreeSpacePercent}% free space",
+                        L("Dashboard.Storage.SizeUnknown", "Backup target size unknown"),
+                        string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
                         false
                     );
                 }
@@ -860,9 +860,15 @@ namespace VaultSync.UI.ViewModels
                 var usedPercent = (double)used / total * 100d;
                 var freePercent = (double)free / total * 100d;
 
-                var freeText = $"Free {FormatBytes(free)} of {FormatBytes(total)} ({freePercent:0.#}%)";
+                var freeText = string.Format(
+                    L("Dashboard.Storage.FreeText", "Free {0} of {1} ({2}%)"),
+                    FormatBytes(free),
+                    FormatBytes(total),
+                    freePercent.ToString("0.#"));
                 var threshold = config.Storage.MinFreeSpacePercent;
-                var thresholdText = $"Reserve at least {threshold}% free space";
+                var thresholdText = string.Format(
+                    L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"),
+                    threshold);
                 var isBelowThreshold = freePercent < threshold;
 
                 return (usedPercent, freeText, thresholdText, isBelowThreshold);
@@ -871,7 +877,7 @@ namespace VaultSync.UI.ViewModels
             {
                 return (
                     0d,
-                    "Backup storage usage unavailable",
+                    L("Dashboard.Storage.UsageUnavailable", "Backup storage usage unavailable"),
                     string.Empty,
                     false
                 );
