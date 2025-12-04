@@ -1,6 +1,6 @@
 # Patch-based Updater
 
-VaultSync now tracks the `stable` branch via GitHub Releases, but the UI no longer forces a full installer download on every push. Instead, we deliver _delta patches_ that touch only the binaries and assets that changed between releases, keep the user data/config untouched, and hand off the final apply step to a small updater helper.
+VaultSync tracks the `stable` branch via GitHub Releases, but the UI no longer forces a full installer download on every push. Instead, we deliver _delta patches_ that touch only the binaries and assets that changed between releases, keep the user data/config untouched, and hand off the apply step to a built-in patch helper.
 
 ## Release pipeline
 
@@ -41,21 +41,25 @@ Each entry lists the relative path (from the install directory), its SHA-256 che
 
 ## Runtime updater responsibilities
 
-VaultSync’s UI downloads the manifest, validates it against the running `AssemblyInformationalVersion`, and stages the ZIP file under `%AppData%/VaultSync/patches`. The patch is verified (size + checksum) before notifying the user that it is ready.
+VaultSync's UI downloads the manifest, validates it against the running `AssemblyInformationalVersion`, and stages the ZIP file under `%AppData%/VaultSync/patches`. The patch is verified (size + checksum) before invoking the built-in helper to apply it.
 
-The actual replacement of files is performed by the updater helper: once the delta is staged, launch the helper (a small console/WinUI utility shipped alongside the main app) with the patch path and manifest. The helper:
+The helper is the same executable launched with:
 
-- Stops VaultSync if it is running.
-- Copies the patched files into the install folder using atomic copy/rename semantics so a failure can roll back.
-- Preserves config/DB located under `~/.vaultsync` / `%APPDATA%/VaultSync`.
-- Restarts VaultSync (or leaves it stopped) and reports success/failure.
+```
+VaultSync.UI.exe --apply-patch <zipPath> <manifestPath> <installDir> [--restart] [--waitpid=<pid>]
+```
+
+- UI calls the helper, then shuts down so files can be replaced.
+- Helper waits for the UI process to exit, extracts the ZIP to a temp folder, verifies each file (size + SHA-256), then copies it into the install directory.
+- Config/DB under `~/.vaultsync` / `%APPDATA%/VaultSync` are untouched.
+- If `--restart` is passed (default from the UI), the app relaunches after a successful apply.
 
 If the delta cannot be applied (wrong `previousVersion`, checksum mismatch, or the helper fails to complete), fall back to the full installer asset.
 
 ## UI flow
 
 - The header warns when a new patch is available and shows release notes in the tooltip.
-- The “Install patch” button downloads the delta and stages it locally (the release page button remains for inspection).
-- A notification and a small status line tell the user where the patch lives and prompt them to run the updater helper.
+- The "Install patch" button downloads the delta, verifies it, and runs the helper; the app exits, applies, and restarts. The release page button remains for manual download if needed.
+- If the helper fails, grab the full installer from the release page.
 
-This keeps the existing per-push update model but switches downloads to a safe, file-level patch process that never overwrites the user’s database or settings.
+This keeps the existing per-push update model but switches downloads to a safe, file-level patch process that never overwrites the user's database or settings.

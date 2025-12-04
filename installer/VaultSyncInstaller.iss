@@ -1,5 +1,5 @@
 #define MyAppName "VaultSync"
-#define MyAppVersion "0.9.6"
+#define MyAppVersion "0.9.7"
 #define MyAppPublisher "Flavio Giacchetti"
 #define MyAppExeName "VaultSync.UI.exe"
 #define AppOutputDir "..\\src\\VaultSync.UI\\bin\\Release\\net8.0-windows10.0.19041.0\\win-x64\\publish"

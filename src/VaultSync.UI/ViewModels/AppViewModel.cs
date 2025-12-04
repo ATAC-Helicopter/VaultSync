@@ -10,6 +10,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -776,15 +778,17 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                PatchStatusMessage = Lf("Patch.Status.ReadyAt", "Patch ready at {0}", archivePath);
-                var title = L("Patch.Status.ReadyTitle", "Patch downloaded");
-                var message = L("Patch.Status.ReadyMessage", "The delta patch is staged; run the VaultSync patch helper to finish the update.");
+                PatchStatusMessage = L("Patch.Status.Installing", "Installing patch and restarting...");
 
-                GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Info, title);
-                if (ShouldRaiseSystemNotification)
+                if (!PatchInstallService.TryLaunchPatchInstaller(plan, archivePath, out var error))
                 {
-                    GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Info, title);
+                    PatchStatusMessage = L("Patch.Status.InstallFailed", "Failed to start the patch installer.");
+                    Debug.WriteLine($"[Patch] Failed to launch helper: {error}");
+                    return;
                 }
+
+                ShutdownForPatchInstall();
+                return;
             }
             catch (Exception ex)
             {
@@ -795,6 +799,21 @@ namespace VaultSync.UI.ViewModels
             {
                 IsPatchInstalling = false;
             }
+        }
+
+        private void ShutdownForPatchInstall()
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    desktop.Shutdown();
+                }
+                else
+                {
+                    Environment.Exit(0);
+                }
+            });
         }
 
         private void NotifyPatchAvailabilityChanged()

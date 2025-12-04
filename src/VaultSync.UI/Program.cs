@@ -1,11 +1,17 @@
-﻿using Avalonia;
+using Avalonia;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI;
 
 internal static class Program
 {
     public static void Main(string[] args)
-        => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    {
+        if (PatchInstallService.TryHandlePatchArgs(args))
+            return;
+
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()

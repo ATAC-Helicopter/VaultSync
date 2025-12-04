@@ -1,9 +1,14 @@
 # Changelog
 
+## [0.9.7] - 2025-12-04
+### Changed
+- Bumped Windows metadata to 0.9.7 (installer + assembly) to ship the built-in patch helper flow that self-applies and restarts.
+- Regenerated the Windows patch assets to match the latest publish output.
+
 ## [0.9.4] - 2025-12-02
 ### Changed
 - Bumped the Windows build (Net 8 + `net8.0-windows10.0.19041.0`) to 0.9.4 and republished the installer metadata so the update channel can pick up the hotfix.
-- Added a reusable `VersionHelper` so release and patch manifest comparisons normalize strings like `v0.9.2.0`, letting 0.9.4’s delta manifest validate cleanly against older installs.
+- Added a reusable `VersionHelper` so release and patch manifest comparisons normalize strings like `v0.9.2.0`, letting 0.9.4 delta manifests validate cleanly against older installs.
 ### Fixed
 - Created the `patches/v0.9.4/vaultsync-patch-windows.json` manifest/+zip (and published the delta assets) so 0.9.3 installations can download/apply just the changed `.exe`, `.dll`, and runtime config files.
 
@@ -11,7 +16,7 @@
 ### Added
 - Patch-based updater downloads delta packages per platform from the `stable` GitHub release channel and stages them for the updater helper.
 - Cross-platform localization pipeline with JSON resource dictionaries, `LocalizationService`, and Italian translations covering Settings, Dashboard, Backups, Projects, and notifications.
-- Language selector in Settings → Advanced plus docs showing how to add new languages.
+- Language selector in Settings -> Advanced plus docs showing how to add new languages.
 ### Changed
 - Docs now describe the patch updater + localization workflow ahead of the public beta.
 
