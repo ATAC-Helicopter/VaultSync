@@ -84,6 +84,16 @@ public sealed class NetworkMountService
             return DestinationResolution.CreateFailure(dest, "Invalid UNC path for Windows mount.");
         }
 
+        if (profile is null)
+        {
+            return DestinationResolution.CreateFailure(dest, "Auto-mount requires a credential profile.");
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            return DestinationResolution.CreateFailure(dest, $"No password available for credential '{profile.Name}'.");
+        }
+
         var psi = new ProcessStartInfo
         {
             FileName               = "net",
@@ -95,14 +105,7 @@ public sealed class NetworkMountService
         psi.ArgumentList.Add("use");
         psi.ArgumentList.Add(dest.Path);
 
-        if (!string.IsNullOrWhiteSpace(password))
-        {
-            psi.ArgumentList.Add(password);
-        }
-        else
-        {
-            psi.ArgumentList.Add("*");
-        }
+        psi.ArgumentList.Add(password);
 
         if (profile is not null && !string.IsNullOrWhiteSpace(profile.Username))
         {
@@ -118,10 +121,17 @@ public sealed class NetworkMountService
                 return DestinationResolution.CreateFailure(dest, "Unable to start 'net use'.");
 
             proc.WaitForExit(10_000);
+            var stdout = proc.StandardOutput.ReadToEnd();
+            var stderr = proc.StandardError.ReadToEnd();
 
-            return proc.ExitCode == 0
-                ? DestinationResolution.CreateSuccess(dest, dest.Path, mounted: true, $"Mounted {DisplayName(dest)}")
-                : DestinationResolution.CreateFailure(dest, $"Failed to mount {DisplayName(dest)} (exit {proc.ExitCode}).");
+            if (proc.ExitCode == 0)
+            {
+                return DestinationResolution.CreateSuccess(dest, dest.Path, mounted: true, $"Mounted {DisplayName(dest)}");
+            }
+
+            var detail = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
+            detail = string.IsNullOrWhiteSpace(detail) ? $"exit {proc.ExitCode}" : detail.Trim();
+            return DestinationResolution.CreateFailure(dest, $"Failed to mount {DisplayName(dest)}: {detail}");
         }
         catch (Exception ex)
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -76,6 +77,7 @@ namespace VaultSync.UI
 
         private bool _isInitialized;
         private bool _isSaving;
+        private bool _savePending;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -131,8 +133,8 @@ namespace VaultSync.UI
             OpenHelpCommand              = new RelayCommand(_ => OpenHelp());
             ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());
 
-            CredentialProfiles.CollectionChanged += (_, _) => OnPropertyChanged(nameof(CredentialNames));
-            Destinations.CollectionChanged       += (_, _) => RefreshLegacyVisibility();
+            CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
+            Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
 
             PropertyChanged += OnSettingsPropertyChanged;
 
@@ -188,6 +190,10 @@ namespace VaultSync.UI
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
             _minimumFreeSpacePercent = ClampInt(cfg.Storage.MinFreeSpacePercent, 0, 95, 10);
 
+            foreach (var cred in CredentialProfiles.ToList())
+            {
+                cred.PropertyChanged -= OnNestedPropertyChanged;
+            }
             CredentialProfiles.Clear();
             foreach (var cred in cfg.Network.Credentials ?? new List<NetworkCredentialProfile>())
             {
@@ -205,6 +211,10 @@ namespace VaultSync.UI
                 });
             }
 
+            foreach (var dest in Destinations.ToList())
+            {
+                dest.PropertyChanged -= OnNestedPropertyChanged;
+            }
             Destinations.Clear();
             if (cfg.Backups.Destinations != null && cfg.Backups.Destinations.Count > 0)
             {
@@ -222,6 +232,7 @@ namespace VaultSync.UI
 
                     vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
                         c.Name.Equals(dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+                    vm.CredentialName = vm.SelectedCredential?.Name ?? dest.CredentialName ?? string.Empty;
 
                     Destinations.Add(vm);
                 }
@@ -298,7 +309,7 @@ namespace VaultSync.UI
                     AutoMount: d.AutoMount,
                     AutoUnmount: d.AutoUnmount,
                     PreMounted: d.PreMounted,
-                    CredentialName: d.SelectedCredential?.Name))
+                    CredentialName: d.SelectedCredential?.Name ?? d.CredentialName))
                 .ToList();
 
             var credentialSnapshot = CredentialProfiles
@@ -459,16 +470,77 @@ namespace VaultSync.UI
             return true;
         }
 
-        private async void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void OnCredentialProfilesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems != null)
+            {
+                foreach (NetworkCredentialViewModel cred in e.NewItems)
+                {
+                    cred.PropertyChanged += OnNestedPropertyChanged;
+                }
+            }
+
+            if (e.OldItems != null)
+            {
+                foreach (NetworkCredentialViewModel cred in e.OldItems)
+                {
+                    cred.PropertyChanged -= OnNestedPropertyChanged;
+                }
+            }
+
+            OnPropertyChanged(nameof(CredentialNames));
+            TriggerAutoSave();
+        }
+
+        private void OnDestinationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems != null)
+            {
+                foreach (BackupDestinationViewModel dest in e.NewItems)
+                {
+                    dest.PropertyChanged += OnNestedPropertyChanged;
+                }
+            }
+
+            if (e.OldItems != null)
+            {
+                foreach (BackupDestinationViewModel dest in e.OldItems)
+                {
+                    dest.PropertyChanged -= OnNestedPropertyChanged;
+                }
+            }
+
+            RefreshLegacyVisibility();
+            TriggerAutoSave();
+        }
+
+        private void OnNestedPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is BackupDestinationViewModel dest &&
+                string.Equals(e.PropertyName, nameof(BackupDestinationViewModel.CredentialName), StringComparison.Ordinal))
+            {
+                // Re-sync SelectedCredential when only the name is set (e.g., via binding)
+                var match = CredentialProfiles.FirstOrDefault(c =>
+                    c.Name.Equals(dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+                if (!ReferenceEquals(dest.SelectedCredential, match))
+                {
+                    dest.SelectedCredential = match;
+                }
+            }
+
+            TriggerAutoSave();
+        }
+
+        private async void TriggerAutoSave()
         {
             if (!_isInitialized)
                 return;
 
-            if (e.PropertyName is null)
-                return;
-
             if (_isSaving)
+            {
+                _savePending = true;
                 return;
+            }
 
             try
             {
@@ -478,7 +550,20 @@ namespace VaultSync.UI
             finally
             {
                 _isSaving = false;
+                if (_savePending)
+                {
+                    _savePending = false;
+                    TriggerAutoSave();
+                }
             }
+        }
+
+        private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is null)
+                return;
+
+            TriggerAutoSave();
         }
 
     // ---------------- Theme helper ----------------
@@ -1233,7 +1318,25 @@ namespace VaultSync.UI
             {
                 if (SetField(ref _selectedCredential, value))
                 {
+                    CredentialName = value?.Name ?? string.Empty;
                     OnPropertyChanged(nameof(NeedsCredentialWarning));
+                }
+            }
+        }
+
+        private string _credentialName = string.Empty;
+        public string CredentialName
+        {
+            get => _credentialName;
+            set
+            {
+                if (SetField(ref _credentialName, value))
+                {
+                    // Keep SelectedCredential in sync when only the name changes
+                    if (SelectedCredential is null || !string.Equals(SelectedCredential.Name, value, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Selection will be resolved via SettingsViewModel handler
+                    }
                 }
             }
         }

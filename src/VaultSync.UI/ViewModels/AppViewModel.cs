@@ -2657,7 +2657,7 @@ namespace VaultSync.UI.ViewModels
                     if (!dest.Active)
                         continue;
 
-                    var result = await Task.Run(() => TryTestDestination(dest));
+                    var result = await Task.Run(() => TryTestDestination(dest, cfg));
                     UpdateDestinationProbeSummary(dest, result);
 
                     if (!result.Reachable)
@@ -2700,15 +2700,26 @@ namespace VaultSync.UI.ViewModels
                 DateTime.UtcNow);
         }
 
-        private static DestinationTestResult TryTestDestination(BackupDestination dest)
+        private DestinationTestResult TryTestDestination(BackupDestination dest, AppConfig cfg)
         {
             if (string.IsNullOrWhiteSpace(dest.Path))
                 return new DestinationTestResult(false, LStatic("Destinations.Test.EmptyPath", "Destination path is empty."));
 
+            var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+                ? null
+                : cfg.Network.Credentials.FirstOrDefault(c =>
+                    c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+
+            var resolution = _networkMountService.PrepareDestination(dest, profile);
+            if (!resolution.IsSuccess)
+                return new DestinationTestResult(false, resolution.Message);
+
+            var testTarget = resolution.EffectivePath;
+
             try
             {
-                Directory.CreateDirectory(dest.Path);
-                var testFile = Path.Combine(dest.Path, ".vaultsync_destination_test");
+                Directory.CreateDirectory(testTarget);
+                var testFile = Path.Combine(testTarget, ".vaultsync_destination_test");
                 File.WriteAllText(testFile, "ok");
                 File.Delete(testFile);
                 return new DestinationTestResult(true, LStatic("Destinations.Test.Reachable", "Reachable"));
@@ -2716,6 +2727,26 @@ namespace VaultSync.UI.ViewModels
             catch (Exception ex)
             {
                 return new DestinationTestResult(false, ex.Message);
+            }
+            finally
+            {
+                if (resolution.MountedByUs)
+                {
+                    // Always disconnect temporary mounts used for reachability probes.
+                    var cleanupDest = new BackupDestination
+                    {
+                        Path           = resolution.EffectivePath,
+                        CredentialName = dest.CredentialName,
+                        Active         = dest.Active,
+                        AutoMount      = dest.AutoMount,
+                        AutoUnmount    = true,
+                        PreMounted     = dest.PreMounted,
+                        Alias          = dest.Alias
+                    };
+
+                    var cleanupResolution = resolution with { Destination = cleanupDest };
+                    _networkMountService.Cleanup(cleanupResolution);
+                }
             }
         }
 
