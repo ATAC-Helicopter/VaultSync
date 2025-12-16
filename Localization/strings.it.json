@@ -109,6 +109,7 @@
     "Destinations.Test.EmptyPath":  "Il percorso della destinazione è vuoto.",
     "Destinations.Test.Reachable":  "Raggiungibile",
     "Destinations.Test.Unavailable":  "Non disponibile",
+    "Destinations.Test.Title":  "Test destinazione",
     "DriveHealth.BlockedMessage":  "Backup ignorato: integrità disco compromessa su {0} ({1}).",
     "DriveHealth.UnknownDrive":  "disco",
     "DriveHealth.OkMessage":  "Integrità archiviazione ({0}): OK ({1})",
@@ -155,6 +156,7 @@
     "Projects.Stat.Unchanged":  "Primo snapshot / invariato",
     "Projects.Health.Healthy":  "Integro",
     "Projects.Health.HealthyRecent":  "Integro (<1g)",
+    "Projects.Health.NotBackedUp":  "Non sottoposto a backup",
     "Projects.Health.NotAdded":  "Non aggiunto",
     "Projects.Health.NoSnapshots":  "Nessuno snapshot",
     "Projects.Health.OutOfDate":  "Non aggiornato",
@@ -179,6 +181,9 @@
     "Snapshots.Notification.FailureTitle":  "Snapshot non riuscito",
     "Snapshots.Notification.SuccessTitle":  "Snapshot completato",
     "Settings.Advanced.CheckUpdates":  "Controlla aggiornamenti all\u0027avvio",
+    "Settings.Advanced.BetaChannel":  "Beta updates",
+    "Settings.Advanced.BetaChannelDescription":  "Track the GitHub Releases for the dev branch and include prerelease builds.",
+    "Settings.Advanced.BetaChannelWarning":  "BETA: Dev branch prereleases may change frequently and can be unstable; expect issues and keep backups ready.",
     "Settings.Advanced.CheckUpdatesDescription":  "Monitora i GitHub Releases del ramo stabile per scaricare il nuovo installer.",
     "Settings.Advanced.Description":  "Diagnostica, aggiornamenti e telemetria.",
     "Settings.Advanced.LanguageDescription":  "Scegli la lingua utilizzata nell\u0027interfaccia.",
@@ -250,8 +255,11 @@
     "Settings.Destinations.Browse":  "Sfoglia",
     "Settings.Destinations.CredentialRequired":  "Credenziale richiesta per il montaggio automatico",
     "Settings.Destinations.CredentialWarning":  "Credenziale richiesta per il montaggio automatico",
+    "Settings.Destinations.CredentialTooltip":  "Profilo credenziali usato per montare/accedere quando Auto-mount è attivo. Lascia vuoto se la condivisione è già montata (Pre-mounted/guest).",
     "Settings.Destinations.CredentialWatermark":  "Nome credenziale",
     "Settings.Destinations.Description":  "Configura destinazioni multiple (locale, esterna o rete).",
+    "Settings.Destinations.Test":  "Test",
+    "Settings.Destinations.TestTooltip":  "Prova ad accedere alla destinazione (e montarla se Auto-mount è attivo).",
     "Settings.Destinations.OpenHelp":  "Apri guida",
     "Settings.Destinations.Path":  "Percorso",
     "Settings.Destinations.PathWatermark":  "Percorso (\\\\server\\\\share o /Volumes/Backup)",
@@ -300,6 +308,10 @@
     "Settings.Storage.ReserveFreeSpaceDescription":  "Interrompi nuovi backup quando un disco è sotto questa soglia.",
     "Settings.Storage.ShowDriveWarnings":  "Mostra avvisi sulla salute dei dischi",
     "Settings.Storage.ShowDriveWarningsDescription":  "Mostra avvisi SMART/salute quando VaultSync rileva problemi.",
+    "Settings.Storage.Title":  "Archiviazione",
+    "Settings.DestinationsMode.Title":  "Modalità destinazioni backup",
+    "Settings.DestinationsMode.Description":  "Semplice usa una singola cartella di backup. Avanzata permette più destinazioni (NAS/USB) con credenziali.",
+    "Settings.DestinationsMode.Tooltip":  "Attiva Avanzata per configurare più destinazioni e credenziali; disattiva per usare una singola cartella di backup.",
     "Tray.Backup.All":  "Backup di tutti i progetti",
     "Tray.Backup.Title":  "Backup",
     "Tray.Common.NoProjects":  "Nessun progetto disponibile",
@@ -335,14 +347,10 @@
     "Shell.OpenRelease":  "Apri release",
     "Shell.OpenReleaseTooltip":  "Apri l\u0027ultima release su GitHub",
     "Shell.Title":  "VaultSync",
+    "Shell.Tagline":  "I tuoi progetti, sempre al sicuro.",
     "Update.Available.Message":  "VaultSync {0} è pronto. Apri l\u0027ultima release per scaricarlo.",
     "Update.Available.Title":  "Aggiornamento disponibile",
     "Update.Banner":  "Nuovo aggiornamento disponibile: {0} ({1})",
     "Update.Failed.Message":  "Impossibile aprire la pagina della release; visita manualmente GitHub.",
     "Update.Failed.Title":  "Aggiornamento non riuscito"
 }
-
-
-
-
-

@@ -296,7 +296,7 @@
 
             <TextBlock Text="{infra:LocalizedString Key=Backups.Section.Warning}"
                        FontSize="11"
-                       Foreground="#FF6B6B"
+                       Foreground="{DynamicResource DangerBrush}"
                        IsVisible="{Binding BackupDiskIsBelowThreshold}" />
 
             <!-- SMART / drive health -->
@@ -808,7 +808,7 @@
     </ScrollViewer>
 
     <Border IsVisible="{Binding IsVerificationPopupOpen}"
-            Background="#80000000"
+            Background="{DynamicResource OverlayScrimBrush}"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch">
       <Grid>

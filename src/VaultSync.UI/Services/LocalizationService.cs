@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -23,7 +23,7 @@ namespace VaultSync.UI.Services
             new LanguageOption { Code = "fr", DisplayName = "Français" },
             new LanguageOption { Code = "de", DisplayName = "Deutsch" },
             new LanguageOption { Code = "pt", DisplayName = "Português" },
-            new LanguageOption { Code = "zh", DisplayName = "简体中文" },
+            new LanguageOption { Code = "zh", DisplayName = "中文" },
             new LanguageOption { Code = "hi", DisplayName = "हिन्दी" },
             new LanguageOption { Code = "ar", DisplayName = "العربية" },
             new LanguageOption { Code = "bn", DisplayName = "বাংলা" },

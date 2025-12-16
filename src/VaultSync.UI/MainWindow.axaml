@@ -20,13 +20,18 @@
                   BorderBrush="{DynamicResource BorderSoft}">
             <Border.Background>
               <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#1E4F8DFF" Offset="0"/>
-                <GradientStop Color="#102030" Offset="1"/>
+                <GradientStop Offset="0" Color="{DynamicResource VsShellBrandStartColor}" />
+                <GradientStop Offset="1" Color="{DynamicResource VsShellBrandEndColor}" />
               </LinearGradientBrush>
             </Border.Background>
             <StackPanel Spacing="4">
-              <TextBlock Text="{infra:LocalizedString Key=Shell.Title}" FontSize="20" FontWeight="SemiBold"/>
-              <TextBlock Text="Your projects, always safe." Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+              <TextBlock Text="{infra:LocalizedString Key=Shell.Title}"
+                         Foreground="{DynamicResource ShellHeaderTextBrush}"
+                         FontSize="20"
+                         FontWeight="SemiBold"/>
+              <TextBlock Text="{infra:LocalizedString Key=Shell.Tagline}"
+                         Foreground="{DynamicResource ShellHeaderTextBrush}"
+                         FontSize="12"/>
             </StackPanel>
           </Border>
           <TextBlock Text="{infra:LocalizedString Key=Shell.Navigation}"

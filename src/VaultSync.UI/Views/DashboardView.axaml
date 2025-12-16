@@ -86,10 +86,10 @@
                 <ProgressBar Minimum="0"
                              Maximum="100"
                              Value="{Binding BackupDiskUsedPercent}"
-                             Height="12"
-                             Margin="0"
-                             Foreground="#8E8E93"
-                             Background="{DynamicResource Surface2}"/>
+                               Height="12"
+                               Margin="0"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Background="{DynamicResource Surface2}"/>
                 <!-- Stacked row chart overlay: breakdown of used space (Other + VaultSync projects) -->
                 <lvc:CartesianChart
                     Series="{Binding BackupUsageSeries}"

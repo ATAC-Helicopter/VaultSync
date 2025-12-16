@@ -267,7 +267,7 @@
                 </Grid>
 
                 <!-- Backup location (legacy fallback) -->
-                <Grid ColumnDefinitions="*,Auto,Auto"
+                <Grid ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto"
                       RowSpacing="4"
                       Margin="0,6,0,0"
@@ -275,7 +275,7 @@
                       IsVisible="{Binding ShowLegacyBackupLocation}">
                   <StackPanel Grid.Row="0"
                               Grid.Column="0"
-                              Grid.ColumnSpan="3"
+                              Grid.ColumnSpan="2"
                               Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FallbackLocation}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FallbackLocationDescription}"
@@ -286,7 +286,8 @@
                             BorderThickness="1"
                             CornerRadius="8"
                             Padding="8,4"
-                            Margin="0,4,0,0">
+                            Margin="0,4,0,0"
+                            IsVisible="{Binding BackupLocationStatus, Converter={StaticResource StringNotEmptyConverter}}">
                       <TextBlock Text="{Binding BackupLocationStatus}"
                                  Foreground="{Binding BackupLocationStatus, Converter={StaticResource StatusToBrushConverter}}"
                                  FontSize="11"
@@ -296,26 +297,51 @@
 
                   <TextBox Grid.Row="1"
                            Grid.Column="0"
-                           Margin="0,2,0,0"
+                           VerticalAlignment="Center"
                            Text="{Binding BackupLocationPath, Mode=TwoWay}"
+                           ToolTip.Tip="Simple mode: VaultSync writes backups under this folder (one destination)."
                            Watermark="Leave empty to store backups next to projects" />
 
-                  <Button Grid.Row="1"
-                          Grid.Column="1"
-                          Margin="8,2,0,0"
-                          Classes="settings-ghost"
-                          Command="{Binding BrowseBackupLocationCommand}">
-                    Browse
-                  </Button>
-
-                  <Button Grid.Row="1"
-                          Grid.Column="2"
-                          Margin="8,2,0,0"
-                          Classes="settings-ghost"
-                          Command="{Binding TestBackupLocationCommand}">
-                    Recheck
-                  </Button>
+                  <StackPanel Grid.Row="1"
+                              Grid.Column="1"
+                              Orientation="Horizontal"
+                              Spacing="8"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right">
+                    <Button Classes="settings-ghost"
+                            Command="{Binding BrowseBackupLocationCommand}">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Browse}" />
+                    </Button>
+                    <Button Classes="settings-ghost"
+                            Command="{Binding TestBackupLocationCommand}">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Recheck}" />
+                    </Button>
+                  </StackPanel>
                 </Grid>
+
+                <Border Classes="card"
+                        Margin="0,6,0,0"
+                        Padding="12"
+                        Background="{DynamicResource Surface2}"
+                        BorderBrush="{DynamicResource BorderSoft}"
+                        CornerRadius="14">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="12"
+                        VerticalAlignment="Center">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.DestinationsMode.Title}"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.DestinationsMode.Description}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding UseAdvancedDestinations, Mode=TwoWay}"
+                                  ToolTip.Tip="{infra:LocalizedString Key=Settings.DestinationsMode.Tooltip}" />
+                  </Grid>
+                </Border>
 
                 <!-- Compression -->
                 <Grid ColumnDefinitions="*,Auto"
@@ -434,6 +460,7 @@
                         Padding="12"
                         CornerRadius="10"
                         Background="{DynamicResource VsCardHighlightBrush}"
+                        IsVisible="{Binding UseAdvancedDestinations}"
                         DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
                   <StackPanel Spacing="12">
                     <StackPanel Spacing="2">
@@ -455,7 +482,7 @@
                                   Margin="0,4,0,0"
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="8">
                               <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Spacing="6">
                                 <TextBox Width="120"
                                          MaxWidth="160"
@@ -463,34 +490,52 @@
                                          Watermark="{infra:LocalizedString Key=Settings.Destinations.AliasWatermark}"
                                          Text="{Binding Alias, Mode=TwoWay}" />
                                 <ToggleSwitch IsChecked="{Binding Active, Mode=TwoWay}"
-                                              Content="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}" />
+                                              Content="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}"
+                                              ToolTip.Tip="When off, this destination is ignored for backups." />
                               </StackPanel>
-                              <Grid Grid.Column="0" Grid.Row="1" ColumnDefinitions="*,Auto,160,Auto" ColumnSpacing="10">
-                                <TextBox Grid.Column="0"
-                                         MaxWidth="320"
+                              <Grid Grid.Column="0" Grid.Row="1"
+                                    ColumnDefinitions="*,Auto,160,Auto"
+                                    RowDefinitions="Auto,Auto"
+                                    ColumnSpacing="10"
+                                    RowSpacing="4">
+                                <TextBox Grid.Column="0" Grid.Row="0"
+                                         MaxWidth="520"
                                          Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
                                          Text="{Binding Path, Mode=TwoWay}" />
-                                <Button Grid.Column="1"
+                                <Button Grid.Column="1" Grid.Row="0"
                                         Classes="settings-ghost"
                                         Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}">
                                   <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
                                 </Button>
-                                <ComboBox Grid.Column="2"
-                                          ItemsSource="{Binding DataContext.CredentialProfiles, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                          SelectedItem="{Binding SelectedCredential, Mode=TwoWay}">
+                                <ComboBox Grid.Column="2" Grid.Row="0"
+                                          ItemsSource="{Binding DataContext.CredentialNames, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          SelectedItem="{Binding SelectedCredentialName, Mode=TwoWay}"
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.CredentialTooltip}">
                                   <ComboBox.ItemTemplate>
                                     <DataTemplate>
-                                      <TextBlock Text="{Binding Name}" />
+                                      <TextBlock Text="{Binding .}" />
                                     </DataTemplate>
                                   </ComboBox.ItemTemplate>
                                 </ComboBox>
-                                <TextBlock Grid.Column="3"
+                                <Button Grid.Column="3" Grid.Row="0"
+                                        Classes="settings-ghost"
+                                        Command="{Binding DataContext.TestDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.TestTooltip}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
+                                </Button>
+                                <TextBlock Grid.Column="0" Grid.Row="1"
+                                           Grid.ColumnSpan="4"
                                            Text="{Binding LastTestStatus}"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Foreground="{StaticResource TextSecondary}"
                                            FontSize="11"
+                                           TextWrapping="Wrap"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxHeight="44"
                                            VerticalAlignment="Center"
-                                           Margin="6,0,0,0"
+                                           Margin="0,0,0,2"
+                                           ToolTip.Tip="{Binding LastTestStatus}"
                                            IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
                               </Grid>
                               <StackPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Spacing="10">
@@ -500,25 +545,21 @@
                                 <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoMount}"
                                           ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoMountTooltip}"
                                           IsChecked="{Binding AutoMount, Mode=TwoWay}" />
-                                <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
+                              <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
                                           ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
                                           IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
                               </StackPanel>
                               <StackPanel Grid.Column="0" Grid.Row="3" Orientation="Vertical" Spacing="4" Margin="0,8,0,0">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.CredentialWarning}"
-                                   Foreground="#FF6B6B"
+                                   Foreground="{DynamicResource WarningTextBrush}"
                                            FontSize="11"
+                                           TextWrapping="Wrap"
                                            IsVisible="{Binding NeedsCredentialWarning}" />
                               </StackPanel>
 
-                              <StackPanel Grid.Column="1" Grid.RowSpan="3"
+                              <StackPanel Grid.Column="1" Grid.RowSpan="4"
                                           Orientation="Vertical"
                                           Spacing="6">
-                                <TextBlock Text="{Binding LastTestStatus}"
-                                           Foreground="{DynamicResource AccentBrush}"
-                                           FontSize="11"
-                                           HorizontalAlignment="Right"
-                                           IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
                                 <Button Classes="settings-ghost"
                                         Command="{Binding DataContext.RemoveDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}">
@@ -576,7 +617,7 @@
                                            Width="200"
                                            Text="{Binding Password, Mode=TwoWay}"
                                            Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Password}"
-                                           PasswordChar="{Binding ShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=•}" />
+                                             PasswordChar="{Binding ShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=*}" />
                                   <ToggleSwitch Grid.Column="1"
                                                 VerticalAlignment="Center"
                                                 IsChecked="{Binding ShowPassword, Mode=TwoWay}"
@@ -783,6 +824,25 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BetaChannel}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BetaChannelDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding BetaChannelEnabled, Mode=TwoWay}" />
+                </Grid>
+                <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BetaChannelWarning}"
+                           Foreground="{DynamicResource WarningTextBrush}"
+                           FontSize="11"
+                           Margin="0,6,0,0"
+                           TextWrapping="Wrap" />
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageLabel}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageDescription}"
                                Foreground="{StaticResource TextSecondary}"
@@ -836,7 +896,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.Title}"
                              FontWeight="SemiBold"
-                             Foreground="Tomato" />
+                             Foreground="{DynamicResource DangerBrush}" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.Description}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="12" />

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
@@ -15,6 +16,8 @@ public sealed class BackupService
 {
     private readonly Dictionary<int, CancellationTokenSource> _cancelMap = new();
     private readonly SqliteRepository _repo;
+
+    public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
 
     public BackupService(SqliteRepository repo)
     {
@@ -69,11 +72,11 @@ public sealed class BackupService
     /// When false, backup data is written but database metadata/retention is skipped.
     /// Useful for mirror destinations that should not create duplicate history entries.
     /// </param>
-    /// <returns>The ID of the created backup row in the database.</returns>
+    /// <returns>Backup run metadata including the created backup ID.</returns>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the project has no snapshots yet, or backupRoot is not configured.
     /// </exception>
-    public async Task<int> RunBackupAsync(
+    public async Task<BackupRunResult> RunBackupAsync(
         Project project,
         string backupRoot,
         bool isAuto,
@@ -195,7 +198,7 @@ public sealed class BackupService
                 DeletePartialBackup(backupFolderUsed);
                 _repo.DeleteSnapshotsById(project.Name, new[] { snapshotId });
                 progressCallback?.Invoke(100, string.Empty, "No changes detected; backup skipped.");
-                return 0;
+                return new BackupRunResult(0, true, false);
             }
         }
 
@@ -222,7 +225,7 @@ public sealed class BackupService
             {
                 Console.WriteLine($"[BackupService] Backup cancelled for '{project.Name}'. Cleaning up.");
                 DeletePartialBackup(backupFolder);
-                return 0;
+                return new BackupRunResult(0, false, true);
             }
 
             // If the native tool is not available or fails unexpectedly, fall back
@@ -343,7 +346,7 @@ public sealed class BackupService
         {
             DeletePartialBackup(backupFolder);
         }
-        return backupId;
+        return new BackupRunResult(backupId, false, false);
     }
 
     /// <summary>
@@ -907,14 +910,29 @@ public sealed class BackupService
     {
         try
         {
-            // Use DriveInfo with the target directory to resolve the underlying volume,
-            // which works for local disks, external drives and mounted network shares.
-            var driveInfo = new DriveInfo(path);
-            if (!driveInfo.IsReady)
-            {
-                Console.WriteLine($"[BackupService] Drive for path '{path}' is not ready.");
+            if (string.IsNullOrWhiteSpace(path))
                 return null;
+
+            var fullPath = Path.GetFullPath(path);
+
+            if (OperatingSystem.IsWindows())
+            {
+                if (!GetDiskFreeSpaceEx(
+                        fullPath,
+                        out var freeBytesAvailable,
+                        out var totalNumberOfBytes,
+                        out _))
+                {
+                    return null;
+                }
+
+                return ((long)totalNumberOfBytes, (long)freeBytesAvailable);
             }
+
+            // Non-Windows: DriveInfo can handle full paths and mount points.
+            var driveInfo = new DriveInfo(fullPath);
+            if (!driveInfo.IsReady)
+                return null;
 
             return (driveInfo.TotalSize, driveInfo.AvailableFreeSpace);
         }
@@ -924,4 +942,11 @@ public sealed class BackupService
             return null;
         }
     }
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool GetDiskFreeSpaceEx(
+        string lpDirectoryName,
+        out ulong lpFreeBytesAvailable,
+        out ulong lpTotalNumberOfBytes,
+        out ulong lpTotalNumberOfFreeBytes);
 }

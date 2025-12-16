@@ -150,12 +150,17 @@ namespace VaultSync.UI.ViewModels
         private bool ShouldShowBackupWidget =>
             _settingsViewModel?.ShowTrayBackupWidget ?? true;
 
+        private GitHubReleaseChannel CurrentUpdateChannel =>
+            _settingsViewModel?.BetaChannelEnabled == true
+                ? GitHubReleaseChannel.Beta
+                : GitHubReleaseChannel.Stable;
+
         public SettingsViewModel SettingsViewModel => _settingsViewModel;
         public BackupsViewModel BackupsViewModel => _backupsViewModel;
 
         private List<BackupDestination> GetActiveDestinations(AppConfig cfg)
         {
-            if (cfg.Backups.Destinations is { Count: > 0 })
+            if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
             {
                 return cfg.Backups.Destinations
                     .Where(d => d.Active)
@@ -413,6 +418,7 @@ namespace VaultSync.UI.ViewModels
                     HeaderKicker = L("Main.HeaderBackups", "Snapshots & history");
                     break;
                 case "Settings":
+                    _settingsViewModel.RebindDestinationCredentials();
                     CurrentView  = _settingsViewModel;
                     HeaderTitle  = L("Nav.Settings", "Settings");
                     HeaderKicker = L("Main.HeaderSettings", "Preferences");
@@ -554,7 +560,7 @@ namespace VaultSync.UI.ViewModels
                         try
                         {
                             backupAttempts++;
-                            var backupId = await _backupService.RunBackupAsync(
+                            var backupResult = await _backupService.RunBackupAsync(
                                 project,
                                 resolution.EffectivePath,
                                 isAuto: true,
@@ -571,17 +577,31 @@ namespace VaultSync.UI.ViewModels
                                 destinationAlias: destLabel,
                                 skipIfNoChanges: true);
 
-                            if (!metadataWritten)
+                            if (backupResult.SkippedForNoChanges)
+                            {
+                                Telemetry.Log("auto_backup_skipped", b => b
+                                    .WithCode("reason", "no_changes")
+                                    .WithHashedString("project", project.Name)
+                                    .WithHashedString("destinationPath", dest.Path ?? string.Empty));
+                                // Skip the remaining destinations for this project to avoid redundant work.
+                                break;
+                            }
+
+                            if (!metadataWritten && backupResult.BackupId > 0)
                             {
                                 metadataWritten = true;
-                                if (!sharedSnapshotId.HasValue && backupId > 0)
+                                if (!sharedSnapshotId.HasValue && backupResult.BackupId > 0)
                                 {
                                     var created = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
-                                        .FirstOrDefault(b => b.Id == backupId);
+                                        .FirstOrDefault(b => b.Id == backupResult.BackupId);
                                     sharedSnapshotId = created?.SnapshotId ?? sharedSnapshotId;
                                 }
                             }
-                            backupSucceeded++;
+
+                            if (backupResult.BackupId > 0)
+                            {
+                                backupSucceeded++;
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -657,6 +677,11 @@ namespace VaultSync.UI.ViewModels
             }
 
             if (e.PropertyName == nameof(SettingsViewModel.CheckForUpdatesOnStartup))
+            {
+                StartUpdateCheck();
+            }
+
+            if (e.PropertyName == nameof(SettingsViewModel.BetaChannelEnabled))
             {
                 StartUpdateCheck();
             }
@@ -830,7 +855,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var result = await _updateService.CheckForUpdateAsync(_currentVersionString, cancellationToken);
+                var result = await _updateService.CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken);
                 if (result is null)
                     return;
 
@@ -1097,10 +1122,10 @@ namespace VaultSync.UI.ViewModels
 
                     try
                     {
-                        await Task.Run(async () =>
+                        var backupResult = await Task.Run(async () =>
                         {
                             attempts++;
-                            var backupId = await _backupService.RunBackupAsync(
+                            var result = await _backupService.RunBackupAsync(
                                 project,
                                 resolution.EffectivePath,
                                 isAuto: false,
@@ -1157,23 +1182,53 @@ namespace VaultSync.UI.ViewModels
                                 destinationAlias: labelPrefix
                             );
 
-                            if (!metadataWritten)
+                            if (!metadataWritten && result.BackupId > 0)
                             {
                                 metadataWritten  = true;
                                 metadataRoot     = resolution.EffectivePath;
-                                metadataBackupId = backupId > 0 ? backupId : metadataBackupId;
+                                metadataBackupId = result.BackupId;
 
-                                if (!sharedSnapshotId.HasValue && backupId > 0)
+                                if (!sharedSnapshotId.HasValue && result.BackupId > 0)
                                 {
                                     var created = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
-                                        .FirstOrDefault(b => b.Id == backupId);
+                                        .FirstOrDefault(b => b.Id == result.BackupId);
                                     sharedSnapshotId = created?.SnapshotId ?? sharedSnapshotId;
                                 }
                             }
+
+                            return result;
                         });
 
-                        _backupsViewModel.MarkDestinationComplete(destId, true, "Completed");
-                        succeeded++;
+                        if (backupResult.SkippedForNoChanges)
+                        {
+                            _backupsViewModel.MarkDestinationComplete(destId, true, L("Backups.Status.NoChanges", "No changes detected"));
+                            Telemetry.Log("backup_single_skipped", b => b
+                                .WithCode("reason", "no_changes")
+                                .WithHashedString("project", project.Name)
+                                .WithHashedString("destinationPath", dest.Path ?? string.Empty));
+                            break;
+                        }
+
+                        if (backupResult.Cancelled)
+                        {
+                            _backupsViewModel.MarkDestinationComplete(destId, false, "Cancelled");
+                            Telemetry.Log("backup_single_cancelled", b => b
+                                .WithHashedString("project", project.Name)
+                                .WithHashedString("destinationPath", dest.Path ?? string.Empty)
+                                .WithFlag("useArchiveMode", useArchiveMode));
+                            break;
+                        }
+
+                        if (backupResult.BackupId > 0)
+                        {
+                            _backupsViewModel.MarkDestinationComplete(destId, true, "Completed");
+                            succeeded++;
+                        }
+                        else
+                        {
+                            _backupsViewModel.MarkDestinationComplete(destId, false, "No backup created");
+                            failed++;
+                        }
                     }
                     catch (OperationCanceledException)
                     {
@@ -1602,7 +1657,7 @@ namespace VaultSync.UI.ViewModels
 
                         try
                         {
-                            await _backupService.RunBackupAsync(
+                            var backupResult = await _backupService.RunBackupAsync(
                                 project,
                                 effectiveBackupRoot,
                                 isAuto: false,
@@ -1643,12 +1698,42 @@ namespace VaultSync.UI.ViewModels
                                 minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
                                 preferredFinalBackupRoot: null,
                                 destinationPath: effectiveBackupRoot,
-                                destinationAlias: primaryAlias
+                                destinationAlias: primaryAlias,
+                                skipIfNoChanges: true
                             );
+
+                            if (backupResult.SkippedForNoChanges)
+                            {
+                                progressPerProject[project.Id] = 100;
+                                _backupsViewModel.UpdateActiveBackup(
+                                    project.Id.ToString(),
+                                    project.Name,
+                                    100,
+                                    L("Backups.Status.NoChanges", "No changes detected"),
+                                    string.Empty);
+                                UpdateAggregateProgress(string.Empty, string.Empty);
+                                results.Add((project.Name, project.RootPath, true));
+                                Telemetry.Log("backup_all_project_skipped", b => b
+                                    .WithHashedString("project", project.Name)
+                                    .WithHashedString("projectRoot", project.RootPath)
+                                    .WithCode("reason", "no_changes"));
+                                return;
+                            }
+
+                            if (backupResult.Cancelled)
+                            {
+                                results.Add((project.Name, project.RootPath, false));
+                                Telemetry.Log("backup_all_project_cancelled", b => b
+                                    .WithHashedString("project", project.Name)
+                                    .WithHashedString("projectRoot", project.RootPath));
+                                progressPerProject[project.Id] = 0;
+                                UpdateAggregateProgress(string.Empty, string.Empty);
+                                return;
+                            }
 
                             progressPerProject[project.Id] = 100;
                             UpdateAggregateProgress(string.Empty, string.Empty);
-                            results.Add((project.Name, project.RootPath, true));
+                            results.Add((project.Name, project.RootPath, backupResult.BackupId > 0));
                             Telemetry.Log("backup_all_project_success", b => b
                                 .WithHashedString("project", project.Name)
                                 .WithHashedString("projectRoot", project.RootPath)
@@ -2978,5 +3063,3 @@ namespace VaultSync.UI.ViewModels
         }
     }
 }
-
-

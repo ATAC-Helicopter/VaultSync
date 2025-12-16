@@ -5,6 +5,7 @@ namespace VaultSync.UI;
 
 internal static class Program
 {
+    [System.STAThread]
     public static void Main(string[] args)
     {
         if (PatchInstallService.TryHandlePatchArgs(args))

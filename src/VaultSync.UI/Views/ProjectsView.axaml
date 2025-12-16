@@ -526,7 +526,7 @@
                     <Border Width="10"
                             Height="10"
                             CornerRadius="3"
-                            Background="#2E6A3E"/>
+                            Background="{DynamicResource LegendDecreaseBrush}"/>
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.Decreasing}"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}"/>
@@ -535,7 +535,7 @@
                     <Border Width="10"
                             Height="10"
                             CornerRadius="3"
-                            Background="#6A2E2E"/>
+                            Background="{DynamicResource LegendIncreaseBrush}"/>
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.Increasing}"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}"/>
@@ -544,7 +544,7 @@
                     <Border Width="10"
                             Height="10"
                             CornerRadius="3"
-                            Background="#2F3650"/>
+                            Background="{DynamicResource LegendUnchangedBrush}"/>
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.Unchanged}"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}"/>

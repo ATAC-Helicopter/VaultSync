@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using VaultSync.Core.Config;
 
@@ -94,49 +95,140 @@ public sealed class NetworkMountService
             return DestinationResolution.CreateFailure(dest, $"No password available for credential '{profile.Name}'.");
         }
 
-        var psi = new ProcessStartInfo
-        {
-            FileName               = "net",
-            RedirectStandardError  = true,
-            RedirectStandardOutput = true,
-            UseShellExecute        = false
-        };
-
-        psi.ArgumentList.Add("use");
-        psi.ArgumentList.Add(dest.Path);
-
-        psi.ArgumentList.Add(password);
-
-        if (profile is not null && !string.IsNullOrWhiteSpace(profile.Username))
-        {
-            psi.ArgumentList.Add($"/user:{profile.Username}");
-        }
-
-        psi.ArgumentList.Add("/persistent:no");
+        var username = BuildWindowsUsername(profile);
 
         try
         {
-            using var proc = Process.Start(psi);
-            if (proc is null)
-                return DestinationResolution.CreateFailure(dest, "Unable to start 'net use'.");
-
-            proc.WaitForExit(10_000);
-            var stdout = proc.StandardOutput.ReadToEnd();
-            var stderr = proc.StandardError.ReadToEnd();
-
-            if (proc.ExitCode == 0)
-            {
+            var firstAttempt = TryNetUseConnect(dest.Path, username, password);
+            if (firstAttempt.ExitCode == 0)
                 return DestinationResolution.CreateSuccess(dest, dest.Path, mounted: true, $"Mounted {DisplayName(dest)}");
+
+            var detail = FormatNetUseError(firstAttempt);
+            if (IsError1219(detail))
+            {
+                // Error 1219 usually means there is an existing connection to the same server with different credentials.
+                // Best-effort disconnect for this share/server and retry once.
+                TryNetUseDelete(dest.Path);
+                if (TryParseShare(dest.Path, out var host, out _))
+                {
+                    TryNetUseDelete($@"\\{host}");
+                }
+
+                var secondAttempt = TryNetUseConnect(dest.Path, username, password);
+                if (secondAttempt.ExitCode == 0)
+                    return DestinationResolution.CreateSuccess(dest, dest.Path, mounted: true, $"Mounted {DisplayName(dest)}");
+
+                var retryDetail = FormatNetUseError(secondAttempt);
+                return DestinationResolution.CreateFailure(
+                    dest,
+                    $"Windows error 1219: another connection to this server is already using different credentials. Disconnect existing connections to that server and retry. Details: {retryDetail}");
             }
 
-            var detail = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
-            detail = string.IsNullOrWhiteSpace(detail) ? $"exit {proc.ExitCode}" : detail.Trim();
             return DestinationResolution.CreateFailure(dest, $"Failed to mount {DisplayName(dest)}: {detail}");
         }
         catch (Exception ex)
         {
             return DestinationResolution.CreateFailure(dest, $"Failed to mount {DisplayName(dest)}: {ex.Message}");
         }
+    }
+
+    private sealed record NetUseResult(int ExitCode, string Stdout, string Stderr);
+
+    private static ProcessStartInfo CreateHiddenProcessStartInfo(string fileName)
+    {
+        return new ProcessStartInfo
+        {
+            FileName               = fileName,
+            RedirectStandardError  = true,
+            RedirectStandardOutput = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+            WindowStyle            = ProcessWindowStyle.Hidden
+        };
+    }
+
+    private static NetUseResult TryNetUseConnect(string uncPath, string? username, string password)
+    {
+        var psi = CreateHiddenProcessStartInfo("net");
+
+        psi.ArgumentList.Add("use");
+        psi.ArgumentList.Add(uncPath);
+        psi.ArgumentList.Add(password);
+
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            psi.ArgumentList.Add($"/user:{username}");
+        }
+
+        psi.ArgumentList.Add("/persistent:no");
+
+        using var proc = Process.Start(psi);
+        if (proc is null)
+            return new NetUseResult(-1, string.Empty, "Unable to start 'net use'.");
+
+        proc.WaitForExit(10_000);
+        var stdout = proc.StandardOutput.ReadToEnd();
+        var stderr = proc.StandardError.ReadToEnd();
+        return new NetUseResult(proc.ExitCode, stdout, stderr);
+    }
+
+    private static void TryNetUseDelete(string uncOrServer)
+    {
+        try
+        {
+            var psi = CreateHiddenProcessStartInfo("net");
+
+            psi.ArgumentList.Add("use");
+            psi.ArgumentList.Add(uncOrServer);
+            psi.ArgumentList.Add("/delete");
+            psi.ArgumentList.Add("/y");
+
+            using var proc = Process.Start(psi);
+            proc?.WaitForExit(5_000);
+        }
+        catch
+        {
+            // best-effort
+        }
+    }
+
+    private static string? BuildWindowsUsername(NetworkCredentialProfile profile)
+    {
+        if (string.IsNullOrWhiteSpace(profile.Username))
+            return null;
+
+        // If the user already provided DOMAIN\user or user@domain, keep it as-is.
+        if (profile.Username.Contains('\\') || profile.Username.Contains('@'))
+            return profile.Username;
+
+        if (!string.IsNullOrWhiteSpace(profile.Domain))
+            return $"{profile.Domain}\\{profile.Username}";
+
+        return profile.Username;
+    }
+
+    private static string FormatNetUseError(NetUseResult result)
+    {
+        if (result.ExitCode == 0)
+            return string.Empty;
+
+        var detail = string.IsNullOrWhiteSpace(result.Stderr) ? result.Stdout : result.Stderr;
+        detail = detail.Replace("\r", string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(detail))
+            return result.ExitCode < 0 ? "Unable to start 'net use'." : $"exit {result.ExitCode}";
+
+        var firstLine = detail.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+        return string.IsNullOrWhiteSpace(firstLine) ? detail : firstLine;
+    }
+
+    private static bool IsError1219(string detail)
+    {
+        if (string.IsNullOrWhiteSpace(detail))
+            return false;
+
+        // Works for localized "Errore di sistema 1219" and English "System error 1219".
+        return detail.Contains("1219", StringComparison.Ordinal);
     }
 
     private static DestinationResolution MountMacShare(
@@ -172,7 +264,8 @@ public sealed class NetworkMountService
             FileName               = "/sbin/mount_smbfs",
             RedirectStandardError  = true,
             RedirectStandardOutput = true,
-            UseShellExecute        = false
+            UseShellExecute        = false,
+            CreateNoWindow         = true
         };
 
         psi.ArgumentList.Add(share);
@@ -204,13 +297,7 @@ public sealed class NetworkMountService
     {
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = "net",
-                RedirectStandardError  = true,
-                RedirectStandardOutput = true,
-                UseShellExecute        = false
-            };
+            var psi = CreateHiddenProcessStartInfo("net");
 
             psi.ArgumentList.Add("use");
             psi.ArgumentList.Add(res.Destination.Path);
@@ -235,7 +322,8 @@ public sealed class NetworkMountService
                 FileName               = "/sbin/umount",
                 RedirectStandardError  = true,
                 RedirectStandardOutput = true,
-                UseShellExecute        = false
+                UseShellExecute        = false,
+                CreateNoWindow         = true
             };
 
             psi.ArgumentList.Add(res.EffectivePath);

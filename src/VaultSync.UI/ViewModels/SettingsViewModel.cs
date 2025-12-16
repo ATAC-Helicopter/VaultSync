@@ -40,6 +40,7 @@ namespace VaultSync.UI
         private int _autoBackupIntervalMinutes = 30;
         private int _maxSnapshotsPerProject = 20;
         private string _backupLocationPath = string.Empty;
+        private bool _useAdvancedDestinations = false;
         private bool _useBackupCompression = true;
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
@@ -69,10 +70,12 @@ namespace VaultSync.UI
 
         private bool _enableVerboseLogging = false;
         private bool _checkForUpdatesOnStartup = true;
+        private bool _betaChannelEnabled = false;
         private bool _sendAnonymousUsageStats = false;
         private readonly LocalizationService _localizationService;
         private string _selectedLanguageCode = "en";
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
+        private readonly NetworkMountService _networkMountService = new();
         private bool _showLegacyBackupLocation = true;
 
         private bool _isInitialized;
@@ -99,7 +102,7 @@ namespace VaultSync.UI
         public event PropertyChangedEventHandler? PropertyChanged;
         private void RefreshLegacyVisibility()
         {
-            ShowLegacyBackupLocation = Destinations.Count == 0;
+            ShowLegacyBackupLocation = !UseAdvancedDestinations;
         }
 
         public SettingsViewModel(LocalizationService localizationService)
@@ -178,6 +181,8 @@ namespace VaultSync.UI
             _autoBackupIntervalMinutes = ClampInt(cfg.Backups.IntervalMinutes, 1, 10080, 30);
             _maxSnapshotsPerProject    = ClampInt(cfg.Backups.MaxSnapshotsPerProject, 1, 10000, 20);
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            // Back-compat: older configs may have Destinations populated but no explicit toggle saved yet.
+            _useAdvancedDestinations   = cfg.Backups.UseAdvancedDestinations || (cfg.Backups.Destinations?.Count > 0);
             _backupLocationPath        = string.IsNullOrWhiteSpace(cfg.Backups.BackupRoot)
                 ? (cfg.Backups.Location ?? string.Empty)
                 : cfg.Backups.BackupRoot;
@@ -279,7 +284,8 @@ namespace VaultSync.UI
 
             _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
-                _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
+            _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
+            _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
 
             // Apply theme + layout when loading config (in case Settings view is opened first)
             ApplyThemeFromSelected();
@@ -298,6 +304,20 @@ namespace VaultSync.UI
             if (!ValidateDestinations())
             {
                 return;
+            }
+
+            // Keep name + object selection aligned before taking snapshots.
+            foreach (var dest in Destinations)
+            {
+                if (dest.SelectedCredential is not null)
+                {
+                    dest.CredentialName = dest.SelectedCredential.Name;
+                }
+                else if (!string.IsNullOrWhiteSpace(dest.CredentialName))
+                {
+                    dest.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
+                        c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+                }
             }
 
             // Snapshot UI state to avoid cross-thread collection access during background work.
@@ -340,10 +360,14 @@ namespace VaultSync.UI
             cfg.Backups.IntervalMinutes             = ClampInt(AutoBackupIntervalMinutes, 1, 10080, 30);
             cfg.Backups.MaxSnapshotsPerProject      = ClampInt(MaxSnapshotsPerProject, 1, 10000, 20);
             cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
-            // Sync legacy backup root from the first active destination (fallback for older code paths).
-            var firstActiveDest = Destinations.FirstOrDefault(d => d.Active) ?? Destinations.FirstOrDefault();
-            var fallbackRoot    = firstActiveDest?.Path ?? (string.IsNullOrWhiteSpace(BackupLocationPath) ? null : BackupLocationPath);
-            cfg.Backups.BackupRoot = fallbackRoot;
+            cfg.Backups.UseAdvancedDestinations     = UseAdvancedDestinations;
+            // Sync legacy backup root so older code paths still work.
+            // - Simple mode: BackupLocationPath is authoritative.
+            // - Advanced mode: use the first active destination as the canonical root.
+            var fallbackRoot = UseAdvancedDestinations
+                ? (Destinations.FirstOrDefault(d => d.Active)?.Path ?? Destinations.FirstOrDefault()?.Path)
+                : BackupLocationPath;
+            cfg.Backups.BackupRoot = string.IsNullOrWhiteSpace(fallbackRoot) ? null : fallbackRoot;
             cfg.Backups.Location   = cfg.Backups.BackupRoot;
             cfg.Backups.UseCompression              = UseBackupCompression;
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
@@ -364,9 +388,11 @@ namespace VaultSync.UI
             cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
             cfg.Storage.MinFreeSpacePercent  = MinimumFreeSpacePercent;
 
-            var saveResult = await Task.Run(() =>
+            var credentialSave = await Task.Run(() =>
             {
                 var savedCreds = new List<NetworkCredentialProfile>();
+                var hadPlaintextFallback = false;
+
                 foreach (var c in credentialSnapshot)
                 {
                     var keyRef = _credentialVault.EnsureKeyRef(c.KeyRef, c.Name);
@@ -389,6 +415,8 @@ namespace VaultSync.UI
                         }
                     }
 
+                    hadPlaintextFallback |= persistPlaintext;
+
                     savedCreds.Add(new NetworkCredentialProfile
                     {
                         Name        = c.Name,
@@ -400,13 +428,10 @@ namespace VaultSync.UI
                     });
                 }
 
-                cfg.Network.Credentials = savedCreds;
-
-                // Save to disk (config + credentials).
-                AppConfigStore.Save(cfg);
-
-                return savedCreds.Any(c => !string.IsNullOrEmpty(c.Password)); // indicates plaintext fallback
+                return (savedCreds, hadPlaintextFallback);
             });
+
+            cfg.Network.Credentials = credentialSave.savedCreds;
 
             cfg.Appearance.Theme              = NormalizeThemeOption(SelectedTheme);
             cfg.Appearance.CompactLayout      = UseCompactLayout;
@@ -420,14 +445,17 @@ namespace VaultSync.UI
             cfg.Notifications.UseOsNotifications = UseOsNotifications;
             cfg.Notifications.OnlyWhenInactive   = NotifyOnlyWhenInactive;
 
-            cfg.Advanced.VerboseLogging = EnableVerboseLogging;
-            cfg.Advanced.CheckUpdates   = CheckForUpdatesOnStartup;
-            cfg.Advanced.SendUsageStats = SendAnonymousUsageStats;
-            cfg.Advanced.Language       = SelectedLanguageCode;
+            cfg.Advanced.VerboseLogging      = EnableVerboseLogging;
+            cfg.Advanced.CheckUpdates        = CheckForUpdatesOnStartup;
+            cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
+            cfg.Advanced.SendUsageStats      = SendAnonymousUsageStats;
+            cfg.Advanced.Language            = SelectedLanguageCode;
 
             AutoStartService.SetLaunchOnLogin(_launchOnLogin);
 
-            SaveStatus = saveResult
+            AppConfigStore.Save(cfg);
+
+            SaveStatus = credentialSave.hadPlaintextFallback
                 ? $"Saved (with credential fallback) at {DateTime.Now:HH:mm:ss}"
                 : $"Saved at {DateTime.Now:HH:mm:ss}";
         }
@@ -458,13 +486,6 @@ namespace VaultSync.UI
                     return false;
                 }
 
-                if (dest.AutoMount && !dest.PreMounted && dest.SelectedCredential is null)
-                {
-                    GlobalNotificationCenter.Instance.Show(
-                        $"Destination '{dest.DisplayName}' is set to auto-mount but no credential is selected.",
-                        NotificationSeverity.Warning,
-                        "Destination validation");
-                }
             }
 
             return true;
@@ -547,6 +568,12 @@ namespace VaultSync.UI
                 _isSaving = true;
                 await SaveToConfigAsync();
             }
+            catch (Exception ex)
+            {
+                // Prevent background save exceptions from crashing the app; surface in status + debug output.
+                SaveStatus = $"Save failed: {ex.Message}";
+                Debug.WriteLine($"[SettingsViewModel] Auto-save failed: {ex}");
+            }
             finally
             {
                 _isSaving = false;
@@ -564,6 +591,19 @@ namespace VaultSync.UI
                 return;
 
             TriggerAutoSave();
+        }
+
+        public void RebindDestinationCredentials()
+        {
+            foreach (var dest in Destinations)
+            {
+                if (!string.IsNullOrWhiteSpace(dest.CredentialName))
+                {
+                    var match = CredentialProfiles.FirstOrDefault(c =>
+                        c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+                    dest.SelectedCredential = match;
+                }
+            }
         }
 
     // ---------------- Theme helper ----------------
@@ -652,6 +692,18 @@ namespace VaultSync.UI
                 if (SetField(ref _backupLocationPath, value))
                 {
                     ValidateBackupLocation(value);
+                }
+            }
+        }
+
+        public bool UseAdvancedDestinations
+        {
+            get => _useAdvancedDestinations;
+            set
+            {
+                if (SetField(ref _useAdvancedDestinations, value))
+                {
+                    RefreshLegacyVisibility();
                 }
             }
         }
@@ -867,6 +919,12 @@ namespace VaultSync.UI
             set => SetField(ref _checkForUpdatesOnStartup, value);
         }
 
+        public bool BetaChannelEnabled
+        {
+            get => _betaChannelEnabled;
+            set => SetField(ref _betaChannelEnabled, value);
+        }
+
         public bool SendAnonymousUsageStats
         {
             get => _sendAnonymousUsageStats;
@@ -1034,31 +1092,62 @@ namespace VaultSync.UI
             var path = dest.Path;
             if (string.IsNullOrWhiteSpace(path))
             {
-                SaveStatus = "Destination path is required.";
-                dest.LastTestStatus   = "Path required";
+                var emptyText = LocalizationProvider.Service?.GetString("Destinations.Test.EmptyPath") ?? "Destination path is empty.";
+                SaveStatus = emptyText;
+                dest.LastTestStatus   = emptyText;
                 dest.LastTestSeverity = "Error";
                 return;
             }
 
             var display = dest.DisplayName;
+            var cfg = AppConfigStore.Load();
+            var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+                ? null
+                : cfg.Network.Credentials.FirstOrDefault(c =>
+                    c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+
+            var destModel = new BackupDestination
+            {
+                Alias          = dest.Alias,
+                Path           = dest.Path,
+                Active         = dest.Active,
+                PreMounted     = dest.PreMounted,
+                AutoMount      = dest.AutoMount,
+                AutoUnmount    = dest.AutoUnmount,
+                CredentialName = dest.CredentialName
+            };
+
+            var resolution = _networkMountService.PrepareDestination(destModel, profile);
+            if (!resolution.IsSuccess)
+            {
+                SaveStatus = $"Destination '{display}' failed: {resolution.Message}";
+                dest.LastTestStatus   = resolution.Message;
+                dest.LastTestSeverity = "Error";
+                GlobalNotificationCenter.Instance.Show(
+                    SaveStatus,
+                    NotificationSeverity.Error,
+                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
+                return;
+            }
 
             try
             {
                 await Task.Run(() =>
                 {
-                    Directory.CreateDirectory(path);
-                    var testFile = Path.Combine(path, ".vaultsync_destination_test");
+                    var effectivePath = resolution.EffectivePath;
+                    Directory.CreateDirectory(effectivePath);
+                    var testFile = Path.Combine(effectivePath, ".vaultsync_destination_test");
                     File.WriteAllText(testFile, "ok");
                     File.Delete(testFile);
                 });
 
                 SaveStatus = $"Destination '{display}' is reachable.";
-                dest.LastTestStatus   = "Reachable";
+                dest.LastTestStatus   = LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable";
                 dest.LastTestSeverity = "Info";
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Info,
-                    "Destination test");
+                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
             }
             catch (Exception ex)
             {
@@ -1068,7 +1157,11 @@ namespace VaultSync.UI
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Error,
-                    "Destination test");
+                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
+            }
+            finally
+            {
+                _networkMountService.Cleanup(resolution);
             }
         }
 
@@ -1338,6 +1431,21 @@ namespace VaultSync.UI
                         // Selection will be resolved via SettingsViewModel handler
                     }
                 }
+            }
+        }
+
+        // Used by the Settings UI ComboBox. When the Settings page is unloaded,
+        // Avalonia may temporarily clear SelectedItem and push a null/empty value
+        // back into the binding; ignore that so the destination keeps its selection.
+        public string SelectedCredentialName
+        {
+            get => CredentialName ?? string.Empty;
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    return;
+
+                CredentialName = value;
             }
         }
 

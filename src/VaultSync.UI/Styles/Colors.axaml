@@ -29,6 +29,9 @@
       <Color x:Key="VsInputBorderColor">#353A4C</Color>
       <Color x:Key="VsInputBorderFocusedColor">#4F8DFF</Color>
       <Color x:Key="VsDividerColor">#303548</Color>
+      <Color x:Key="VsShellBrandStartColor">#10203A</Color>
+      <Color x:Key="VsShellBrandEndColor">#22335A</Color>
+      <Color x:Key="VsShellBrandTextColor">#FFFFFF</Color>
     </ResourceDictionary>
 
     <!-- LIGHT THEME COLORS -->
@@ -57,6 +60,10 @@
       <Color x:Key="VsInputBorderColor">#D0D4E2</Color>
       <Color x:Key="VsInputBorderFocusedColor">#2663FF</Color>
       <Color x:Key="VsDividerColor">#D9DCE8</Color>
+      <Color x:Key="VsShellBrandStartColor">#4C70D6</Color>
+      <Color x:Key="VsShellBrandEndColor">#3552A8</Color>
+      <Color x:Key="VsShellBrandTextColor">#FFFFFF</Color>
+      <Color x:Key="VsShellHeaderColor">#FFFFFF</Color>
     </ResourceDictionary>
 
   </ResourceDictionary.ThemeDictionaries>
@@ -71,20 +78,31 @@
   <SolidColorBrush x:Key="TextSecondary" Color="{DynamicResource VsTextSecondaryColor}" />
   <SolidColorBrush x:Key="TextMuted" Color="{DynamicResource VsTextMutedColor}" />
 
+  <SolidColorBrush x:Key="ShellBrandStartBrush" Color="{DynamicResource VsShellBrandStartColor}" />
+  <SolidColorBrush x:Key="ShellBrandEndBrush" Color="{DynamicResource VsShellBrandEndColor}" />
+
   <!-- Accent brushes -->
   <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource VsAccentColor}" />
   <SolidColorBrush x:Key="AccentSoftBrush" Color="{DynamicResource VsAccentSoftColor}" />
+  <SolidColorBrush x:Key="AccentMutedBrush" Color="{DynamicResource VsAccentSoftColor}" />
 
   <!-- Status / semantic brushes -->
   <SolidColorBrush x:Key="SuccessBrush" Color="{DynamicResource VsSuccessColor}" />
   <SolidColorBrush x:Key="WarningBrush" Color="{DynamicResource VsWarningColor}" />
   <SolidColorBrush x:Key="DangerBrush" Color="{DynamicResource VsDangerColor}" />
+  <SolidColorBrush x:Key="DangerTextBrush" Color="{DynamicResource VsDangerColor}" />
+  <SolidColorBrush x:Key="WarningTextBrush" Color="{DynamicResource VsWarningColor}" />
 
   <!-- Input + borders -->
   <SolidColorBrush x:Key="InputBackgroundBrush" Color="{DynamicResource VsInputBackgroundColor}" />
   <SolidColorBrush x:Key="InputBorderBrush" Color="{DynamicResource VsInputBorderColor}" />
   <SolidColorBrush x:Key="InputBorderFocusedBrush" Color="{DynamicResource VsInputBorderFocusedColor}" />
   <SolidColorBrush x:Key="DividerBrush" Color="{DynamicResource VsDividerColor}" />
+
+  <!-- Scrims + shadows -->
+  <SolidColorBrush x:Key="OverlayScrimBrush" Color="#80000000" />
+  <SolidColorBrush x:Key="ShadowSoftBrush" Color="#20000000" />
+  <SolidColorBrush x:Key="ShadowStrongBrush" Color="#CC000000" />
 
   <!-- Window background -->
   <SolidColorBrush x:Key="WindowBackground" Color="{DynamicResource VsBackgroundColor}" />
@@ -103,6 +121,9 @@
   <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource VsTextSecondaryColor}" />
   <SolidColorBrush x:Key="TextMutedBrush" Color="{DynamicResource VsTextMutedColor}" />
 
+  <SolidColorBrush x:Key="ShellHeaderTextBrush" Color="{DynamicResource VsShellBrandTextColor}" />
+  <SolidColorBrush x:Key="ShellBrandTextBrush" Color="{DynamicResource VsShellBrandTextColor}" />
+
   <!-- Card + surface aliases -->
   <SolidColorBrush x:Key="CardBackgroundBrush" Color="{DynamicResource VsCardColor}" />
   <SolidColorBrush x:Key="CardSelectedBrush" Color="{DynamicResource VsCardHighlightColor}" />
@@ -119,5 +140,10 @@
 
   <!-- Charts and subtle lines -->
   <SolidColorBrush x:Key="SubtleAxisBrush" Color="{DynamicResource VsDividerColor}" />
+
+  <!-- Legends -->
+  <SolidColorBrush x:Key="LegendIncreaseBrush" Color="{DynamicResource VsDangerColor}" />
+  <SolidColorBrush x:Key="LegendDecreaseBrush" Color="{DynamicResource VsSuccessColor}" />
+  <SolidColorBrush x:Key="LegendUnchangedBrush" Color="{DynamicResource VsTextSecondaryColor}" />
 
 </ResourceDictionary>

@@ -8,13 +8,13 @@
 ### Snapshot | Backup | Sync | Verify - for Projects & Workspaces
 
 VaultSync is a cross-platform backup and snapshot manager built for developers, creators, and power-users working with large project folders.  
-It provides fast snapshots, incremental backups, filtering via presets, and a modern desktop UI.
+It provides fast snapshots, filtering via presets, and a modern desktop UI.
 
 ---
 
 ## Features
 
-### CLI (Command Line Interface)
+### CLI 
 - Create snapshots of any project folder  
 - Sync using **rsync** (macOS/Linux) or **robocopy** (Windows)  
 - Hash-based file verification  
@@ -23,8 +23,7 @@ It provides fast snapshots, incremental backups, filtering via presets, and a mo
 - Customizable preset rules per project  
 - Works headless for servers or automation scripts  
 
-### Desktop UI (Avalonia)
-- Modern dashboard (projects, backups, storage usage)  
+### Desktop UI   
 - One-click snapshots and backups (auto + manual)  
 - Live progress overlays and per-project status cards  
 - Backup history with "Keep" (protected) backups that bypass retention  
@@ -41,7 +40,7 @@ Common presets included:
 - Creative tools (Blender, Video Editing, Music DAWs)
 - General development presets (VSCode, JetBrains, Docker, etc.)
 
-You can also create your own, or choose **No preset**.
+or choose **No preset** if no presets apply or you want no file exclusion.
 
 ### Snapshot System
 - Fast directory scanner with filtering  
@@ -54,7 +53,7 @@ You can also create your own, or choose **No preset**.
 - Timestamped folders (e.g., 2025-11-16_20-41-43)  
 - Per-project or "backup all"  
 - Automatic backups (optional)  
-- Progress, file count, and failure handling (NAS sleep detection, retries coming soon)  
+- Progress, file count, and failure handling (NAS sleep detection)  
 - Retention: keep the newest N backups per project; protected ("Keep") backups are never pruned  
 - Integrated snapshot creation: every backup captures a fresh snapshot; orphan snapshots are cleaned up when backups are pruned
 
@@ -78,21 +77,13 @@ dotnet tool update --global vaultsync.cli
 
 ## Updates & installers
 
-VaultSync’s updater polls the `stable` branch of the [ATAC-Helicopter/VaultSync](https://github.com/ATAC-Helicopter/VaultSync) repo each time the app starts (when “Check for updates on startup” is enabled). Every push to that branch is treated as an available update: the UI compares the metadata of the latest release with the running version, warns the user if a newer release exists, and lets the user decide when to download and install.
+VaultSync's updater polls the `stable` branch of the [ATAC-Helicopter/VaultSync](https://github.com/ATAC-Helicopter/VaultSync) repo each time the app starts (when "Check for updates on startup" is enabled). Every push to that branch is treated as an available update: the UI compares the metadata of the latest release with the running version, warns the user if a newer release exists, and lets the user decide when to download and install.
 
-Desktop installers are published as assets on the repo’s [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page, so you can grab the matching installer for your platform once you accept the update prompt. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script (compile it with the Inno Setup compiler after publishing the `win-x64` output), while macOS/Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the same stable channel; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
+Desktop installers are published as assets on the repo's [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page, so you can grab the matching installer for your platform once you accept the update prompt. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script (compile it with the Inno Setup compiler after publishing the `win-x64` output), while macOS/Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the same stable channel; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
 
-VaultSync now exposes a language selector (English + Italiano) under Settings → Advanced; translations are loaded from the `Localization/` folder and can be extended to other languages in future releases.
+VaultSync now exposes a language selector under Settings -> Advanced; translations are loaded from the `Localization/` folder and can be extended to other languages in future releases. A new "Beta channel" toggle in the same section lets you opt into the `dev` branch: it still honors "Check for updates on startup", but selects releases where `target_commitish` equals `dev` and includes prerelease builds so you can try the latest dev work before it lands on `stable`.
 
----
-
-# 0.9.0 Beta
-
-VaultSync **0.9.0-beta.1** introduces the new patch-based updater (see `docs/UPDATER.md`) and ships a localized experience (English + Italiano) for Settings, Dashboard, Backups, and Projects. Select Italiano in Settings → Advanced to see the UI translate instantly, and add more languages by dropping another `Localization/strings.<code>.json`.
-
----
-
-## Quick Start
+## Quick Start (CLI ONLY)
 
 ```sh
 vaultsync init
@@ -137,9 +128,3 @@ See the full license here: [LICENSE](LICENSE).
 ## Credits
 
 Created by **Flavio Giacchetti**
-
-Built with:
-- .NET 8  
-- Avalonia UI  
-- SQLite  
-- rsync / robocopy 

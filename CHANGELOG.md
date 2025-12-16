@@ -1,9 +1,16 @@
 ﻿# Changelog
+## [1.0.0] - 2025-12-07
+### Added
+- Advanced destination mode now shares the same Housekeeping block close to the fallback backup path, with localized descriptions, localized checklist, and a dedicated “Test” flow that mounts/unmounts using credential profiles.
+- Auto backups now compare snapshots before running so they skip when nothing changed and report skips separately in the UI.
+### Changed
+- Dashboard storage/gradient branding, shell tagline localization, and the backup settings layout use theme-aware resources so every element adapts to light/dark variants.
+### Fixed
+- Windows SMB mounts handle error 1219 by disconnecting existing sessions and retrying, and clipboard/mount tooling runs hidden to avoid flickering consoles.
 ## [0.9.8] - 2025-12-05
 ### Fixed
 - Language selection now persists across restarts/updates and settings clamp numeric fields (snapshots, intervals, free-space) to avoid crashes.
 - Updated translations and storage labels for a cleaner UI.
-
 
 ## [0.9.7.3] - 2025-12-05
 ### Fixed

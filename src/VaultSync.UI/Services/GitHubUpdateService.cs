@@ -44,29 +44,37 @@ namespace VaultSync.UI.Services
         public bool HasPatch => !string.IsNullOrWhiteSpace(PatchManifestUrl) && PatchArchiveUrl != null;
     }
 
+    public enum GitHubReleaseChannel
+    {
+        Stable,
+        Beta
+    }
+
     public sealed class GitHubUpdateService
     {
         private const string ReleasesEndpointBase = "repos/ATAC-Helicopter/VaultSync/releases";
         private const int ReleasesPerPage = 5;
         private const int MaxReleasePages = 3;
         private const string StableBranchName = "stable";
+        private const string DevBranchName = "dev";
 
         private static readonly HttpClient s_httpClient = CreateHttpClient();
 
         public async Task<UpdateCheckResult?> CheckForUpdateAsync(
             string currentVersion,
+            GitHubReleaseChannel channel,
             CancellationToken cancellationToken)
         {
             var releases = await FetchReleasesAsync(cancellationToken);
             if (releases == null || releases.Count == 0)
                 return null;
 
-            var stableCandidate = releases
-                .Where(r => !r.Draft && !r.Prerelease && string.Equals(r.TargetCommitish, StableBranchName, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(r => r.PublishedAt ?? DateTime.MinValue)
-                .FirstOrDefault();
+            var candidate = channel switch
+            {
+                GitHubReleaseChannel.Beta => SelectBetaCandidate(releases),
+                _                        => SelectStableCandidate(releases)
+            };
 
-            var candidate = stableCandidate ?? releases.FirstOrDefault(r => !r.Draft && !r.Prerelease);
             if (candidate == null)
                 return null;
 
@@ -160,14 +168,29 @@ namespace VaultSync.UI.Services
 
                 releases.AddRange(pageReleases);
 
-                if (pageReleases.Any(r => !r.Draft && !r.Prerelease &&
-                                         string.Equals(r.TargetCommitish, StableBranchName, StringComparison.OrdinalIgnoreCase)))
-                {
-                    break;
-                }
             }
 
             return releases;
+        }
+
+        private static GitHubRelease? SelectStableCandidate(List<GitHubRelease> releases)
+        {
+            var stableBranch = releases
+                .Where(r => !r.Draft && !r.Prerelease && string.Equals(r.TargetCommitish, StableBranchName, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(r => r.PublishedAt ?? DateTime.MinValue)
+                .FirstOrDefault();
+
+            return stableBranch ?? releases.FirstOrDefault(r => !r.Draft && !r.Prerelease);
+        }
+
+        private static GitHubRelease? SelectBetaCandidate(List<GitHubRelease> releases)
+        {
+            var devBranch = releases
+                .Where(r => !r.Draft && string.Equals(r.TargetCommitish, DevBranchName, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(r => r.PublishedAt ?? DateTime.MinValue)
+                .FirstOrDefault();
+
+            return devBranch ?? SelectStableCandidate(releases);
         }
 
         private sealed class GitHubRelease

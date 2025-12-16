@@ -47,6 +47,12 @@ namespace VaultSync.Core.Config
         public string? Location             { get; set; } = string.Empty;
         // New canonical backup root path used by UI + snapshot service
         public string? BackupRoot { get; set; } = string.Empty;
+
+        /// <summary>
+        /// When true, VaultSync uses the per-destination list (Destinations).
+        /// When false, VaultSync uses the simple single-path backup root (BackupRoot).
+        /// </summary>
+        public bool UseAdvancedDestinations { get; set; } = false;
         /// <summary>
         /// Backward-compatible alias for the backup root path.
         /// Prefer using BackupRoot in new code.
@@ -157,6 +163,7 @@ namespace VaultSync.Core.Config
     {
         public bool VerboseLogging   { get; set; } = false;
         public bool CheckUpdates     { get; set; } = true;
+        public bool BetaChannelEnabled { get; set; } = false;
         public bool SendUsageStats   { get; set; } = false;
         public string Language       { get; set; } = "en";
     }

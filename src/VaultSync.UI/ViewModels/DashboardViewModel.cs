@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
@@ -572,9 +573,7 @@ namespace VaultSync.UI.ViewModels
 
         backupRoot = Path.GetFullPath(backupRoot);
 
-        // Normalize to the actual drive/mount path so external volumes on macOS work.
-        var drivePath = GetDriveInfoPath(backupRoot);
-        if (string.IsNullOrWhiteSpace(drivePath))
+        if (!TryGetDiskSpace(backupRoot, out var totalBytes, out var freeBytes) || totalBytes <= 0)
         {
             BackupUsageSegments = Array.Empty<BackupUsageSegment>();
             BackupUsageSeries   = Array.Empty<ISeries>();
@@ -588,25 +587,6 @@ namespace VaultSync.UI.ViewModels
             return;
         }
 
-        // On Windows this will be e.g. "C:\" or "V:\"
-        // On macOS this will be the mount (e.g., "/Volumes/MyDisk").
-        var drive = new DriveInfo(drivePath);
-        if (!drive.IsReady || drive.TotalSize <= 0)
-        {
-            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-            BackupUsageSeries   = Array.Empty<ISeries>();
-            BackupUsageXAxes    = Array.Empty<Axis>();
-            BackupUsageYAxes    = Array.Empty<Axis>();
-
-            OnPropertyChanged(nameof(BackupUsageSegments));
-            OnPropertyChanged(nameof(BackupUsageSeries));
-            OnPropertyChanged(nameof(BackupUsageXAxes));
-            OnPropertyChanged(nameof(BackupUsageYAxes));
-            return;
-        }
-
-        var totalBytes = drive.TotalSize;
-        var freeBytes  = drive.AvailableFreeSpace;
         var usedBytes  = Math.Max(0L, totalBytes - freeBytes);
 
         if (totalBytes <= 0)
@@ -821,8 +801,7 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 backupRoot = Path.GetFullPath(backupRoot);
-                var drivePath = GetDriveInfoPath(backupRoot);
-                if (string.IsNullOrWhiteSpace(drivePath))
+                if (!TryGetDiskSpace(backupRoot, out var total, out var free))
                 {
                     return (
                         0d,
@@ -831,20 +810,6 @@ namespace VaultSync.UI.ViewModels
                         false
                     );
                 }
-
-                var drive = new DriveInfo(drivePath);
-                if (!drive.IsReady)
-                {
-                    return (
-                        0d,
-                        L("Dashboard.Storage.TargetUnavailable", "Backup target not available"),
-                        string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
-                        false
-                    );
-                }
-
-                var total = drive.TotalSize;
-                var free = drive.AvailableFreeSpace;
 
                 if (total <= 0)
                 {
@@ -914,6 +879,59 @@ namespace VaultSync.UI.ViewModels
             // Fallback: DriveInfo can handle the full path on Unix-like systems.
             return normalized;
         }
+
+        private static bool TryGetDiskSpace(string path, out long totalBytes, out long freeBytes)
+        {
+            totalBytes = 0;
+            freeBytes  = 0;
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                    return false;
+
+                var fullPath = Path.GetFullPath(path);
+
+                if (OperatingSystem.IsWindows())
+                {
+                    if (!GetDiskFreeSpaceEx(
+                            fullPath,
+                            out var freeBytesAvailable,
+                            out var totalNumberOfBytes,
+                            out _))
+                    {
+                        return false;
+                    }
+
+                    totalBytes = (long)totalNumberOfBytes;
+                    freeBytes  = (long)freeBytesAvailable;
+                    return totalBytes > 0;
+                }
+
+                var drivePath = GetDriveInfoPath(fullPath);
+                if (string.IsNullOrWhiteSpace(drivePath))
+                    return false;
+
+                var drive = new DriveInfo(drivePath);
+                if (!drive.IsReady || drive.TotalSize <= 0)
+                    return false;
+
+                totalBytes = drive.TotalSize;
+                freeBytes  = drive.AvailableFreeSpace;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool GetDiskFreeSpaceEx(
+            string lpDirectoryName,
+            out ulong lpFreeBytesAvailable,
+            out ulong lpTotalNumberOfBytes,
+            out ulong lpTotalNumberOfFreeBytes);
 
         private void UpdateBackupDiskUsage(AppConfig config)
         {
