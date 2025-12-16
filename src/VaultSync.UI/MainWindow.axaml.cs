@@ -2,7 +2,10 @@ using System;
 using System.Reflection;
 using Avalonia.Controls;
 using Avalonia;
+using VaultSync.UI.Notifications;
+using VaultSync.UI.Services;
 using VaultSync.UI.ViewModels;
+using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.Core.Config;
 
 namespace VaultSync.UI;
@@ -57,6 +60,7 @@ public partial class MainWindow : Window
                 e.Cancel = true;
                 IsForeground = false;
                 Hide();
+                NotifyRunningInBackground();
                 return;
             }
         }
@@ -144,4 +148,15 @@ public partial class MainWindow : Window
             // ignore - property is optional
         }
     }
+
+    private static void NotifyRunningInBackground()
+    {
+        var title = Localized("Tray.Notification.BackgroundTitle", "VaultSync is still running");
+        var message = Localized("Tray.Notification.BackgroundMessage", "VaultSync continues monitoring projects in the background.");
+        GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Info, title);
+        GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Info, title);
+    }
+
+    private static string Localized(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
 }

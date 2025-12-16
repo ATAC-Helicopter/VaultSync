@@ -343,6 +343,8 @@
     "Tray.Snapshot.All":  "Snapshot all projects",
     "Tray.Snapshot.Title":  "Snapshot",
     "Tray.Tooltip":  "VaultSync - snapshots & backups",
+    "Tray.Notification.BackgroundTitle":  "VaultSync is still running",
+    "Tray.Notification.BackgroundMessage":  "VaultSync continues monitoring your backups in the background. Restore it from the tray icon when needed.",
     "Shell.Navigation":  "Navigation",
     "Shell.OpenRelease":  "Open release",
     "Shell.OpenReleaseTooltip":  "Open the latest release on GitHub",
