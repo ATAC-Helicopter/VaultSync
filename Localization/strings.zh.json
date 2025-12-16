@@ -273,7 +273,7 @@
     "Settings.General.LaunchOnLogin":  "éšç³»ç»Ÿå¯åŠ¨",
     "Settings.General.LaunchOnLoginDescription":  "ç™»å½•æ—¶è‡ªåŠ¨å¯åŠ¨ VaultSyncã€‚",
     "Settings.General.ProjectsRoot":  "é¡¹ç›®æ ¹ç›®å½•",
-    "Settings.General.ProjectsRootDescription":  "VaultSync æŸ¥æ‰¾ Unity é¡¹ç›®çš„é»˜è®¤æ–‡ä»¶å¤¹ã€‚",
+    "Settings.General.ProjectsRootDescription":  "VaultSync 搜索已保存项目的默认文件夹。",
     "Settings.General.ResumeSession":  "æ¢å¤åˆ°ä¸Šæ¬¡ä½ç½®",
     "Settings.General.ResumeSessionDescription":  "æ‰“å¼€ VaultSync æ—¶åœç•™åœ¨ä¸Šæ¬¡ä½¿ç”¨çš„é¡µé¢ã€‚",
     "Settings.General.RunInBackground":  "å…³é—­æ—¶åœ¨åŽå°è¿è¡Œ",

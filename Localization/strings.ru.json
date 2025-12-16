@@ -273,7 +273,7 @@
     "Settings.General.LaunchOnLogin":  "Ð—Ð°Ð¿ÑƒÑÐºÐ°Ñ‚ÑŒ Ð¿Ñ€Ð¸ Ð²Ñ…Ð¾Ð´Ðµ Ð² ÑÐ¸ÑÑ‚ÐµÐ¼Ñƒ",
     "Settings.General.LaunchOnLoginDescription":  "ÐÐ²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸ Ð·Ð°Ð¿ÑƒÑÐºÐ°Ñ‚ÑŒ VaultSync Ð¿Ñ€Ð¸ Ð²Ñ…Ð¾Ð´Ðµ.",
     "Settings.General.ProjectsRoot":  "ÐšÐ¾Ñ€ÐµÐ½ÑŒ Ð¿Ñ€Ð¾ÐµÐºÑ‚Ð¾Ð²",
-    "Settings.General.ProjectsRootDescription":  "ÐŸÐ°Ð¿ÐºÐ° Ð¿Ð¾ ÑƒÐ¼Ð¾Ð»Ñ‡Ð°Ð½Ð¸ÑŽ, Ð³Ð´Ðµ VaultSync Ð¸Ñ‰ÐµÑ‚ Ð¿Ñ€Ð¾ÐµÐºÑ‚Ñ‹ Unity.",
+    "Settings.General.ProjectsRootDescription":  "Папка по умолчанию, в которой VaultSync ищет сохранённые проекты.",
     "Settings.General.ResumeSession":  "ÐŸÑ€Ð¾Ð´Ð¾Ð»Ð¶Ð°Ñ‚ÑŒ Ñ Ð¼ÐµÑÑ‚Ð° Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²ÐºÐ¸",
     "Settings.General.ResumeSessionDescription":  "ÐžÑ‚ÐºÑ€Ñ‹Ð²Ð°Ñ‚ÑŒ VaultSync Ð½Ð° Ð¿Ð¾ÑÐ»ÐµÐ´Ð½ÐµÐ¹ Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ð½Ð½Ð¾Ð¹ ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ðµ.",
     "Settings.General.RunInBackground":  "Ð Ð°Ð±Ð¾Ñ‚Ð°Ñ‚ÑŒ Ð² Ñ„Ð¾Ð½Ðµ Ð¿Ñ€Ð¸ Ð·Ð°ÐºÑ€Ñ‹Ñ‚Ð¸Ð¸",

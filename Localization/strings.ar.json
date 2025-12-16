@@ -263,7 +263,7 @@
     "Settings.General.LaunchOnLogin":  "ØªØ´ØºÙŠÙ„ Ø¹Ù†Ø¯ Ø¨Ø¯Ø¡ Ø§Ù„Ù†Ø¸Ø§Ù…",
     "Settings.General.LaunchOnLoginDescription":  "ØªØ´ØºÙŠÙ„ VaultSync ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹ Ø¹Ù†Ø¯ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„.",
     "Settings.General.ProjectsRoot":  "Ø¬Ø°Ø± Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹",
-    "Settings.General.ProjectsRootDescription":  "Ø§Ù„Ù…Ø¬Ù„Ø¯ Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ Ø§Ù„Ø°ÙŠ ÙŠØ¨Ø­Ø« ÙÙŠÙ‡ VaultSync Ø¹Ù† Ù…Ø´Ø§Ø±ÙŠØ¹ Unity.",
+    "Settings.General.ProjectsRootDescription":  "المجلد الافتراضي حيث يبحث فيه VaultSync عن المشاريع المخزنة.",
     "Settings.General.ResumeSession":  "Ù…ØªØ§Ø¨Ø¹Ø© Ù…Ù† Ø­ÙŠØ« ØªÙˆÙ‚ÙØª",
     "Settings.General.ResumeSessionDescription":  "ÙØªØ­ VaultSync Ø¹Ù„Ù‰ Ø¢Ø®Ø± ØµÙØ­Ø© Ø§Ø³ØªØ®Ø¯Ù…ØªÙ‡Ø§.",
     "Settings.General.RunInBackground":  "Ø§Ù„Ø¹Ù…Ù„ ÙÙŠ Ø§Ù„Ø®Ù„ÙÙŠØ© Ø¹Ù†Ø¯ Ø§Ù„Ø¥ØºÙ„Ø§Ù‚",

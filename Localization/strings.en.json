@@ -273,7 +273,7 @@
     "Settings.General.LaunchOnLogin":  "Launch at system startup",
     "Settings.General.LaunchOnLoginDescription":  "Start VaultSync automatically when you sign in.",
     "Settings.General.ProjectsRoot":  "Projects root",
-    "Settings.General.ProjectsRootDescription":  "Default folder where VaultSync looks for Unity projects.",
+    "Settings.General.ProjectsRootDescription":  "Default folder where VaultSync looks for stored projects.",
     "Settings.General.ResumeSession":  "Resume where you left off",
     "Settings.General.ResumeSessionDescription":  "Open VaultSync to the last page you were using.",
     "Settings.General.RunInBackground":  "Run in background when closing",

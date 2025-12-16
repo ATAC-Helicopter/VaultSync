@@ -273,7 +273,7 @@
     "Settings.General.LaunchOnLogin":  "à¦¸à¦¿à¦¸à§à¦Ÿà§‡à¦® à¦šà¦¾à¦²à§à¦° à¦¸à¦®à¦¯à¦¼ à¦šà¦¾à¦²à¦¾à¦¨",
     "Settings.General.LaunchOnLoginDescription":  "à¦¸à¦¾à¦‡à¦¨ à¦‡à¦¨ à¦•à¦°à¦²à§‡ VaultSync à¦¸à§à¦¬à¦¯à¦¼à¦‚à¦•à§à¦°à¦¿à¦¯à¦¼à¦­à¦¾à¦¬à§‡ à¦¶à§à¦°à§ à¦•à¦°à§à¦¨à¥¤",
     "Settings.General.ProjectsRoot":  "à¦ªà§à¦°à¦•à¦²à§à¦ª à¦°à§à¦Ÿ",
-    "Settings.General.ProjectsRootDescription":  "à¦¡à¦¿à¦«à¦²à§à¦Ÿ à¦«à§‹à¦²à§à¦¡à¦¾à¦° à¦¯à§‡à¦–à¦¾à¦¨à§‡ VaultSync Unity à¦ªà§à¦°à¦•à¦²à§à¦ª à¦–à§‹à¦à¦œà§‡à¥¤",
+    "Settings.General.ProjectsRootDescription":  "VaultSync যেখানে সংরক্ষিত প্রকল্প খুঁজে, সেই ডিফল্ট ফোল্ডার.",
     "Settings.General.ResumeSession":  "à¦¯à§‡à¦–à¦¾à¦¨ à¦¥à§‡à¦•à§‡ à¦¥à§‡à¦®à§‡à¦›à§‡à¦¨ à¦¸à§‡à¦–à¦¾à¦¨ à¦¥à§‡à¦•à§‡ à¦šà¦¾à¦²à¦¿à¦¯à¦¼à§‡ à¦¯à¦¾à¦¨",
     "Settings.General.ResumeSessionDescription":  "VaultSync à¦¶à§‡à¦· à¦¬à§à¦¯à¦¬à¦¹à§ƒà¦¤ à¦ªà§ƒà¦·à§à¦ à¦¾à¦¯à¦¼ à¦–à§à¦²à§à¦¨à¥¤",
     "Settings.General.RunInBackground":  "à¦¬à¦¨à§à¦§ à¦•à¦°à¦²à§‡ à¦¬à§à¦¯à¦¾à¦•à¦—à§à¦°à¦¾à¦‰à¦¨à§à¦¡à§‡ à¦šà¦¾à¦²à¦¾à¦¨",

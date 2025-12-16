@@ -273,7 +273,7 @@
     "Settings.General.LaunchOnLogin":  "à¤¸à¤¿à¤¸à¥à¤Ÿà¤® à¤¸à¥à¤Ÿà¤¾à¤°à¥à¤Ÿà¤…à¤ª à¤ªà¤° à¤²à¥‰à¤¨à¥à¤š",
     "Settings.General.LaunchOnLoginDescription":  "à¤¸à¤¾à¤‡à¤¨ à¤‡à¤¨ à¤ªà¤° VaultSync à¤¸à¥à¤µà¤šà¤¾à¤²à¤¿à¤¤ à¤°à¥‚à¤ª à¤¸à¥‡ à¤¶à¥à¤°à¥‚ à¤•à¤°à¥‡à¤‚à¥¤",
     "Settings.General.ProjectsRoot":  "à¤ªà¥à¤°à¥‹à¤œà¥‡à¤•à¥à¤Ÿ à¤°à¥‚à¤Ÿ",
-    "Settings.General.ProjectsRootDescription":  "à¤¡à¤¿à¤«à¤¼à¥‰à¤²à¥à¤Ÿ à¤«à¤¼à¥‹à¤²à¥à¤¡à¤° à¤œà¤¹à¤¾à¤ VaultSync Unity à¤ªà¥à¤°à¥‹à¤œà¥‡à¤•à¥à¤Ÿ à¤–à¥‹à¤œà¤¤à¤¾ à¤¹à¥ˆà¥¤",
+    "Settings.General.ProjectsRootDescription":  "VaultSync जहाँ संग्रहित परियोजनाओं की तलाश करता है, वह डिफ़ॉल्ट फ़ोल्डर.",
     "Settings.General.ResumeSession":  "à¤œà¤¹à¤¾à¤ à¤›à¥‹à¤¡à¤¼à¤¾ à¤¥à¤¾ à¤µà¤¹à¤¾à¤ à¤¸à¥‡ à¤œà¤¾à¤°à¥€ à¤°à¤–à¥‡à¤‚",
     "Settings.General.ResumeSessionDescription":  "VaultSync à¤•à¥‹ à¤…à¤‚à¤¤à¤¿à¤® à¤‰à¤ªà¤¯à¥‹à¤— à¤•à¤¿à¤ à¤—à¤ à¤ªà¥‡à¤œ à¤ªà¤° à¤–à¥‹à¤²à¥‡à¤‚à¥¤",
     "Settings.General.RunInBackground":  "à¤¬à¤‚à¤¦ à¤•à¤°à¤¨à¥‡ à¤ªà¤° à¤ªà¥ƒà¤·à¥à¤ à¤­à¥‚à¤®à¤¿ à¤®à¥‡à¤‚ à¤šà¤²à¤¾à¤à¤",

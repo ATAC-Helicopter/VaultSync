@@ -1,8 +1,8 @@
 {
     "previousVersion": "0.9.8",
     "targetVersion": "1.0.0",
-    "archiveSha256": "510C6B40B1ED48D39AFB65D82727D2D1255E886C162C767D87FDC6BCEA85EE66",
-    "archiveSize": 22035878,
+    "archiveSha256": "17A5676AC9956A52332F514AF3CDFD4A152853CEAC03BBF87AED6F0E58276B59",
+    "archiveSize": 22036625,
     "files": [
         {
             "path": "Avalonia.Base.dll",
@@ -146,58 +146,58 @@
         },
         {
             "path": "Localization\\strings.ar.json",
-            "sha256": "D6500345F6B0EBB660159FF34F4F786C1C9AE6667E9B06E3F7C4DFE7F004403E",
-            "size": 43567
+            "sha256": "D977C33703C3E3DCAB3788484EB16A32AE237F0F12A843B430C8009619517F33",
+            "size": 43502
         },
         {
             "path": "Localization\\strings.bn.json",
-            "sha256": "31706DF0F370FE7159CDDACD9C9CE7EE73ED1591DC3A72C09538E4053CEB1264",
-            "size": 61903
+            "sha256": "83311A5130BFEF44CA1DAE072F482C9879750A13094FC89EEF94A1090C5AF3A8",
+            "size": 61827
         },
         {
             "path": "Localization\\strings.de.json",
-            "sha256": "47923789D76F48CC0C2C468FD438E9AA0129D3E5607C35DC394B2A3798F88B56",
-            "size": 26579
+            "sha256": "945240EEB46705949BA0CFAA541BB55153E52698C0CB11552CABAB0D66BA7E92",
+            "size": 26802
         },
         {
             "path": "Localization\\strings.en.json",
-            "sha256": "1CE99359379C196923FD6B443B076F15272E6B652067A8EABE36420F3455B807",
-            "size": 24594
+            "sha256": "085841E613B6ADB0E11984A71788A0F0AADE74F3294C37B5C3A015DD30536EA8",
+            "size": 24822
         },
         {
             "path": "Localization\\strings.es.json",
-            "sha256": "1A78C104C76BADC57AA8097C1D790DC33A28A1BE433700DE0F4A385B356573FD",
-            "size": 27148
+            "sha256": "B7A4703A13C41B7037F79DAB04F3FFCB389B44213C20D2603016898018ACBED6",
+            "size": 27403
         },
         {
             "path": "Localization\\strings.fr.json",
-            "sha256": "FA121C4911902C7A016714BBE5A7008E1F598D5367132835FFAA62B81B2ADF3F",
-            "size": 28085
+            "sha256": "C3DFC899A2340F79CCD4703B21DB4EB1B4AA08E5AC4E1833040294F75C4559BB",
+            "size": 28344
         },
         {
             "path": "Localization\\strings.hi.json",
-            "sha256": "46547F2043F808BC477AA28EE9F5E976855C9C6CB354F9E04FFF5218B8C5F0AB",
-            "size": 59974
+            "sha256": "FB6313FE0210FAE0F25D2B156A473730D16008EF743B62C73F8588C7AFE6144A",
+            "size": 59904
         },
         {
             "path": "Localization\\strings.it.json",
-            "sha256": "AC40F3FE037451B3CEC1805E95FBB3C292181AC9FC7C81BA1419ADF551CE6802",
-            "size": 26263
+            "sha256": "FE55470C772378AA9896E70AAE6B3D787682853CDEEE33B68C865892C0776973",
+            "size": 26501
         },
         {
             "path": "Localization\\strings.pt.json",
-            "sha256": "81B1437C2F00449FBF67CA5AC369D6A75AC50BF8993F964406A66DAC35C8F2B7",
-            "size": 26652
+            "sha256": "62D76DCCA063C316A1CC9787CDE6ECC4F4594BBD6ECA2127B00CA57376944F5B",
+            "size": 26908
         },
         {
             "path": "Localization\\strings.ru.json",
-            "sha256": "40C993948CE4D7F5F291F4FB9C2101C458A13623DEEA4C78A6BE753166A9E8A9",
-            "size": 49685
+            "sha256": "680493309CE9AD7656934F01E384CEA565AE89ACAC2E4FA4E10EDAC05EAB4AD2",
+            "size": 49647
         },
         {
             "path": "Localization\\strings.zh.json",
-            "sha256": "3ED0E3840837F14AD7CF4D4B9078D4422DB534FDBA8F56E3837818D83CA80933",
-            "size": 32051
+            "sha256": "CC80E37B7F6ED6CEF62DA2426378B63FD6A2A2A9DF75299EA8FA1B5C0141507A",
+            "size": 32013
         },
         {
             "path": "MicroCom.Runtime.dll",
@@ -266,13 +266,13 @@
         },
         {
             "path": "VaultSync.Core.dll",
-            "sha256": "49A171D59705930F14D818359812FC41F666EB9C8DC2C99A5B194BDEA3CB25A0",
+            "sha256": "1B1B4DCD1FAAF1E23030BE4A519647ED553D4F505F3CBBAF2203FC6C58D599C0",
             "size": 161792
         },
         {
             "path": "VaultSync.Core.pdb",
-            "sha256": "539B5FBDDFC0477F426E05C86378BE5E4F44F3AE8C54EB989CA45E634645F2D3",
-            "size": 45956
+            "sha256": "77E6522F2EE4E76DAAE5CDC01529EA3510D2E9A93EA2A4604A8BD61265F84D25",
+            "size": 45960
         },
         {
             "path": "VaultSync.UI.deps.json",
@@ -281,18 +281,18 @@
         },
         {
             "path": "VaultSync.UI.dll",
-            "sha256": "3F043C4DDAF0EC38C783138CE965A4E73713E9A12F4F1295C43B8455FB100C9F",
-            "size": 1840640
+            "sha256": "1B89480CC6F9509E81B0A68BF4E24824D67405A779F3F1F1C115B84AC52AC963",
+            "size": 1841152
         },
         {
             "path": "VaultSync.UI.exe",
-            "sha256": "B3BCF844111E0A8F259AEA99C8AD25F78AAF68EA5B6F57CBCE952F3F0B374BA9",
+            "sha256": "0F6C2DDF03C1298B1B18A05484CA7B27AD453F2802AFEA57C452DB24E4311FA6",
             "size": 236544
         },
         {
             "path": "VaultSync.UI.pdb",
-            "sha256": "72C7E3ECB4214B74FE6E33B2E34747D13BF781FADB0FC5C9FDD7A6CFE15B5E7E",
-            "size": 133596
+            "sha256": "2DFEB357E3ECB0695BF994029A3ADEFB2010DAE72DF40B3351FD40AB7DA38337",
+            "size": 133696
         },
         {
             "path": "VaultSync.UI.runtimeconfig.json",
