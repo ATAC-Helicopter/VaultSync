@@ -445,7 +445,6 @@
                   CornerRadius="18"
                   Padding="14"
                   MinWidth="360"
-                  MaxWidth="520"
                   Grid.Column="0">
 
             <StackPanel Spacing="8">
