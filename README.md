@@ -4,14 +4,14 @@
   <img src="https://img.shields.io/badge/.NET-8.0-blueviolet" />
 </p>
 <p align="center" style="margin-top:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.1.0">
-    <img src="https://img.shields.io/badge/Latest%20release-v1.1.0-1f6feb?style=for-the-badge" alt="Latest release" />
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">
+    <img src="https://img.shields.io/github/v/release/ATAC-Helicopter/VaultSync?style=for-the-badge" alt="Latest release" />
   </a>
-  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.1.0">
-    <img src="https://img.shields.io/badge/Stable-v1.1.0-2165ff?style=for-the-badge" alt="Stable release" />
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">
+    <img src="https://img.shields.io/github/v/release/ATAC-Helicopter/VaultSync?label=Stable&style=for-the-badge" alt="Stable release" />
   </a>
-  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.1.0">
-    <img src="https://img.shields.io/badge/Beta-v1.1.0-f25c7b?style=for-the-badge" alt="Beta release" />
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
+    <img src="https://img.shields.io/github/v/pre-release/ATAC-Helicopter/VaultSync?label=Beta&style=for-the-badge" alt="Beta release" />
   </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/discussions">
     <img src="https://img.shields.io/badge/Join%20the%20Discussion-24292f?style=for-the-badge&logo=github&logoColor=white" alt="Join the Discussion" />
@@ -161,4 +161,3 @@ See the full license here: [LICENSE](LICENSE).
 ## Credits
 
 Created by **Flavio Giacchetti**
-
