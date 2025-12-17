@@ -3,6 +3,36 @@
   <img src="https://img.shields.io/badge/platform-macOS%20|%20Windows%20|%20Linux-green" />
   <img src="https://img.shields.io/badge/.NET-8.0-blueviolet" />
 </p>
+<p align="center" style="margin-top:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.0.0">
+    <img src="https://img.shields.io/badge/Latest%20release-v1.0.0-1f6feb?style=for-the-badge" alt="Latest release" />
+  </a>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.0.0">
+    <img src="https://img.shields.io/badge/Stable-v1.0.0-2165ff?style=for-the-badge" alt="Stable release" />
+  </a>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.0.0">
+    <img src="https://img.shields.io/badge/Beta-v1.0.0-f25c7b?style=for-the-badge" alt="Beta release" />
+  </a>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/discussions">
+    <img src="https://img.shields.io/badge/Join%20the%20Discussion-24292f?style=for-the-badge&logo=github&logoColor=white" alt="Join the Discussion" />
+  </a>
+  <a href="docs/UPDATER.md">
+    <img src="https://img.shields.io/badge/Documentation-%20-%23686868?style=for-the-badge&logo=bookstack" alt="Documentation" />
+  </a>
+</p>
+<p style="text-align:center;margin:4px 0 12px;font-size:12px;color:#94a3b8;">
+  Stable track shows the latest non-prerelease, Beta track shows the newest prerelease (falls back to stable when none exist).
+</p>
+
+<div style="background:#070b14;border-radius:10px;padding:14px 18px;margin:20px 0;border-left:4px solid #f2c94c;color:#f1f5f9;box-shadow:0 6px 16px rgba(0,0,0,0.4);font-size:15px;line-height:1.5;border:1px solid rgba(255,255,255,0.06);">
+  <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+    <span style="font-size:18px;color:#f2c94c;margin-top:2px;">⚠️</span>
+    <strong style="color:#f2c94c;font-size:16px;">Warning</strong>
+  </div>
+  <p style="margin:0;font-size:14px;color:#dfe8ff;max-width:720px;">
+    VaultSync is currently unsigned, so Windows SmartScreen will flag the installer/program during the first run. To continue, open the SmartScreen dialog, click <strong>More info</strong>, and choose <strong>Run anyway</strong>; the app is safe to install once you trust the publisher.
+  </p>
+</div>
 
 # VaultSync  
 ### Snapshot | Backup | Sync | Verify - for Projects & Workspaces
