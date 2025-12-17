@@ -16,7 +16,7 @@
   <a href="https://github.com/ATAC-Helicopter/VaultSync/discussions">
     <img src="https://img.shields.io/badge/Join%20the%20Discussion-24292f?style=for-the-badge&logo=github&logoColor=white" alt="Join the Discussion" />
   </a>
-  <a href="docs/UPDATER.md">
+<a href="docs/DOCUMENTATION.md">
     <img src="https://img.shields.io/badge/Documentation-%20-%23686868?style=for-the-badge&logo=bookstack" alt="Documentation" />
   </a>
 </p>
