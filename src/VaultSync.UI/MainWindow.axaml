@@ -14,19 +14,10 @@
     <Border Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="4,10,4,16">
-          <Border CornerRadius="16"
-                  Padding="14,12"
-                  BorderThickness="1"
-                  BorderBrush="{DynamicResource BorderSoft}">
-            <Border.Background>
-              <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Offset="0" Color="{DynamicResource VsShellBrandStartColor}" />
-                <GradientStop Offset="1" Color="{DynamicResource VsShellBrandEndColor}" />
-              </LinearGradientBrush>
-            </Border.Background>
-            <StackPanel Spacing="4">
-              <TextBlock Text="{infra:LocalizedString Key=Shell.Title}"
-                         Foreground="{DynamicResource ShellHeaderTextBrush}"
+        <Border Classes="shell-banner">
+          <StackPanel Spacing="4">
+            <TextBlock Text="{infra:LocalizedString Key=Shell.Title}"
+                       Foreground="{DynamicResource ShellHeaderTextBrush}"
                          FontSize="20"
                          FontWeight="SemiBold"/>
               <TextBlock Text="{infra:LocalizedString Key=Shell.Tagline}"

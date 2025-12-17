@@ -92,6 +92,16 @@
             <Setter Property="Background" Value="{DynamicResource Surface2}" />
         </Style>
 
+        <!-- Shell brand banner -->
+        <Style Selector="Border.shell-banner">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+
         <!-- ListBox cleanup -->
         <Style Selector="ListBox">
             <Setter Property="Background" Value="Transparent" />

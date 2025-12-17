@@ -155,8 +155,11 @@
   </UserControl.Styles>
   <Grid>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="24"
-                  Spacing="16">
+      <!-- Stretch to the full available width with a soft cap for readability. -->
+      <Grid MaxWidth="2200"
+            HorizontalAlignment="Stretch">
+        <StackPanel Margin="24"
+                    Spacing="16">
 
         <!-- HEADER -->
         <StackPanel Orientation="Horizontal"
@@ -703,7 +706,7 @@
                                                  TextTrimming="CharacterEllipsis" />
                                       <Border Classes="backup-tag"
                                               Background="{Binding TagBackground}">
-                                        <TextBlock Text="{Binding Type}"
+                                        <TextBlock Text="{Binding TypeLabel}"
                                                    FontSize="11" />
                                       </Border>
                                     </StackPanel>
@@ -803,7 +806,8 @@
 
         </Grid>
 
-      </StackPanel>
+        </StackPanel>
+      </Grid>
     </ScrollViewer>
 
     <Border IsVisible="{Binding IsVerificationPopupOpen}"

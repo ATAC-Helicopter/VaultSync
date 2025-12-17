@@ -49,6 +49,8 @@ public partial class MainWindow : Window
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
     {
+        if (App.IsShuttingDown)
+            return;
         // Respect the RunInBackground behavior flag from AppConfig.
         // When enabled, pressing the close button should hide the window
         // and keep VaultSync running in the background.

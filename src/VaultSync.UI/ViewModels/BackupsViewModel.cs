@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Input;
 using System.ComponentModel;
@@ -17,6 +18,16 @@ namespace VaultSync.UI.ViewModels
 {
     public class BackupsViewModel : ViewModelBase
     {
+        private static string L(string key, string fallback) =>
+            LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+        private static string Lf(string key, string fallback, params object[] args)
+        {
+            var fmt = L(key, fallback);
+            return args.Length == 0
+                ? fmt
+                : string.Format(CultureInfo.CurrentCulture, fmt, args);
+        }
         // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
         protected bool SetProperty<T>(ref T storage, T value)
@@ -67,7 +78,7 @@ namespace VaultSync.UI.ViewModels
         // Type + project filter state
         private string _currentTypeFilter = "All";
         private string? _currentProjectIdFilter = null;
-        public string HistoryFilterProjectLabel { get; private set; } = "All projects";
+        public string HistoryFilterProjectLabel { get; private set; } = L("Backups.Section.HistoryFilterAllProjects", "All projects");
 
         // Per-project backup status
         public ObservableCollection<ProjectBackupItem> ProjectBackups { get; } =
@@ -114,10 +125,13 @@ namespace VaultSync.UI.ViewModels
         public int AutoSnapshotsThisWeek { get; private set; }
         public int ManualSnapshotsThisWeek { get; private set; }
 
-        public string SnapshotsSummaryLine { get; private set; } = "0 today · 0 this week";
-        public string SnapshotActivitySummary { get; private set; } = "No backups in the last 7 days";
+        public string SnapshotsSummaryLine { get; private set; } =
+            Lf("Backups.Summary.TodayWeek", "{0} backups today · {1} this week", 0, 0);
+        public string SnapshotActivitySummary { get; private set; } =
+            L("Backups.Summary.NoActivity", "No backups in the last 7 days");
 
-        public string LastBackupDisplay { get; private set; } = "No backups yet";
+        public string LastBackupDisplay { get; private set; } =
+            L("Backups.Summary.NoBackups", "No backups yet");
         public string LastBackupRelative { get; private set; } = "-";
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
 
@@ -174,7 +188,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private string _backupDiskDriveLabel = "Drive: unknown";
+        private string _backupDiskDriveLabel = string.Empty;
         public string BackupDiskDriveLabel
         {
             get => _backupDiskDriveLabel;
@@ -188,7 +202,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         // Backup disk SMART/health display
-        private string _backupDiskHealthText = "Health: not available";
+        private string _backupDiskHealthText = string.Empty;
         public string BackupDiskHealthText
         {
             get => _backupDiskHealthText;
@@ -371,6 +385,8 @@ namespace VaultSync.UI.ViewModels
             // NOTE:
             // Live data is now provided by LoadFromBackups(...) from the core layer.
             // We no longer seed design-time demo data here.
+
+            InitializeLocalizationDefaults();
         }
 
         // ---------- All-project backup ----------
@@ -432,6 +448,25 @@ namespace VaultSync.UI.ViewModels
             SelectedProject = project;
         }
 
+        private void InitializeLocalizationDefaults()
+        {
+            SnapshotsSummaryLine = Lf("Backups.Summary.TodayWeek", "{0} backups today · {1} this week", 0, 0);
+            SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
+            LastBackupDisplay = L("Backups.Summary.NoBackups", "No backups yet");
+            HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
+
+            var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", L("DriveHealth.UnknownDrive", "drive"));
+            BackupDiskDriveLabel = driveLabel;
+            BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, L("Backups.Health.NotAvailable", "not available"));
+
+            OnPropertyChanged(nameof(SnapshotsSummaryLine));
+            OnPropertyChanged(nameof(SnapshotActivitySummary));
+            OnPropertyChanged(nameof(LastBackupDisplay));
+            OnPropertyChanged(nameof(HistoryFilterProjectLabel));
+            OnPropertyChanged(nameof(BackupDiskDriveLabel));
+            OnPropertyChanged(nameof(BackupDiskHealthText));
+        }
+
         /// <summary>
         /// Called whenever the selected project in the per-project list changes.
         /// Updates the current project filter + label and refreshes the history.
@@ -441,7 +476,7 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
             {
                 _currentProjectIdFilter   = null;
-                HistoryFilterProjectLabel = "All projects";
+                HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
                 OnPropertyChanged(nameof(HistoryFilterProjectLabel));
                 RefreshSnapshotsView(true);
                 return;
@@ -479,7 +514,9 @@ namespace VaultSync.UI.ViewModels
                 item = new BackupProgressItem
                 {
                     ProjectId        = projectId,
-                    ProjectName      = string.IsNullOrWhiteSpace(projectName) ? "Unknown project" : projectName,
+                    ProjectName      = string.IsNullOrWhiteSpace(projectName)
+                        ? L("Dashboard.Activity.UnknownProject", "Unknown project")
+                        : projectName,
                     CancelRequested  = OnCancelActiveBackup
                 };
                 ActiveBackups.Add(item);
@@ -760,18 +797,22 @@ namespace VaultSync.UI.ViewModels
                 string projectName;
                 if (string.IsNullOrWhiteSpace(key))
                 {
-                    projectName = "Global snapshots";
+                    projectName = L("Backups.Section.Group.Global", "Global snapshots");
                 }
                 else if (!projectNameLookup.TryGetValue(key, out projectName!))
                 {
-                    projectName = "Unknown project";
+                    projectName = L("Backups.Section.Group.Unknown", "Unknown project");
                 }
 
+                var summaryKey = ordered.Count == 1
+                    ? "Backups.Section.SnapshotCount.Singular"
+                    : "Backups.Section.SnapshotCount.Plural";
+                var summaryFallback = ordered.Count == 1 ? "{0} backup" : "{0} backups";
                 var groupVm = new SnapshotProjectGroup
                 {
                     ProjectId          = key,
                     ProjectName        = projectName,
-                    Summary            = $"{ordered.Count} backup{(ordered.Count == 1 ? string.Empty : "s")}",
+                    Summary            = Lf(summaryKey, summaryFallback, ordered.Count),
                     TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes)
                 };
 
@@ -810,35 +851,38 @@ namespace VaultSync.UI.ViewModels
                     DashboardViewModel.ComputeBackupDiskUsage(config);
 
                 UpdateBackupDiskUsage(usedPercent, freeText, thresholdText, isBelowThreshold);
-                BackupDiskDriveLabel = $"Drive: {FormatDriveLabel(config.Backups.BackupRoot)}";
+                BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
 
                 // Best-effort SMART/health probe for the backup path
                 var healthService = new DriveHealthService();
                 var backupPath = config.Backups.BackupRoot ?? string.Empty;
                 var health = healthService.CheckPath(backupPath);
 
-                var fallbackMessage = string.IsNullOrWhiteSpace(health.Message) ? "not available" : health.Message;
+                var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
+                    ? L("Backups.Health.NotAvailable", "not available")
+                    : health.Message!;
                 var (text, brush) = health.Status switch
                 {
-                    DriveHealthStatus.Healthy => ($"Health ({BackupDiskDriveLabel}): OK ({health.Message})", (IBrush)new SolidColorBrush(Colors.LimeGreen)),
-                    DriveHealthStatus.Warning => ($"Health warning ({BackupDiskDriveLabel}): {health.Message}", (IBrush)new SolidColorBrush(Colors.Orange)),
-                    DriveHealthStatus.Failing => ($"Health failing ({BackupDiskDriveLabel}): {health.Message}", (IBrush)new SolidColorBrush(Colors.Tomato)),
-                    _ => ($"Health ({BackupDiskDriveLabel}): {fallbackMessage}", (IBrush)new SolidColorBrush(Colors.Gray))
+                    DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.LimeGreen)),
+                    DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Orange)),
+                    DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Tomato)),
+                    _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, fallbackMessage), (IBrush)new SolidColorBrush(Colors.Gray))
                 };
 
                 BackupDiskHealthText  = text;
                 BackupDiskHealthBrush = brush;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 UpdateBackupDiskUsage(
                     0d,
-                    "Backup storage usage unavailable",
+                    L("Dashboard.Storage.UsageUnavailable", "Backup storage usage unavailable"),
                     string.Empty,
                     false);
 
-                BackupDiskDriveLabel  = "Drive: unknown";
-                BackupDiskHealthText  = "Health (Drive: unknown): not available";
+                var driveUnknown = L("DriveHealth.UnknownDrive", "drive");
+                BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", driveUnknown);
+                BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, L("Backups.Health.NotAvailable", "not available"));
                 BackupDiskHealthBrush = new SolidColorBrush(Colors.Gray);
             }
         }
@@ -993,16 +1037,24 @@ namespace VaultSync.UI.ViewModels
                 s.Timestamp.Date >= weekStart &&
                 string.Equals(s.Type, "Manual", StringComparison.OrdinalIgnoreCase));
 
-            SnapshotsSummaryLine = $"{SnapshotsToday} backups today · {SnapshotsThisWeek} this week";
+            SnapshotsSummaryLine = Lf(
+                "Backups.Summary.TodayWeek",
+                "{0} backups today · {1} this week",
+                SnapshotsToday,
+                SnapshotsThisWeek);
 
             if (SnapshotsThisWeek == 0)
             {
-                SnapshotActivitySummary = "No backups in the last 7 days";
+                SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
             }
             else
             {
-                SnapshotActivitySummary =
-                    $"{SnapshotsThisWeek} backups total · {AutoSnapshotsThisWeek} auto · {ManualSnapshotsThisWeek} manual";
+                SnapshotActivitySummary = Lf(
+                    "Backups.Summary.ActivityTotals",
+                    "{0} backups total · {1} auto · {2} manual",
+                    SnapshotsThisWeek,
+                    AutoSnapshotsThisWeek,
+                    ManualSnapshotsThisWeek);
             }
 
             if (_allSnapshots.Count > 0)
@@ -1016,7 +1068,7 @@ namespace VaultSync.UI.ViewModels
             }
             else
             {
-                LastBackupDisplay  = "No backups yet";
+                LastBackupDisplay  = L("Backups.Summary.NoBackups", "No backups yet");
                 LastBackupRelative = "-";
             }
 
@@ -1041,15 +1093,15 @@ namespace VaultSync.UI.ViewModels
         private static string FormatRelative(TimeSpan span)
         {
             if (span < TimeSpan.FromMinutes(1))
-                return "Just now";
+                return L("Backups.Relative.JustNow", "Just now");
             if (span < TimeSpan.FromHours(1))
-                return $"{(int)span.TotalMinutes} min ago";
+                return Lf("Backups.Relative.MinutesAgo", "{0} min ago", (int)span.TotalMinutes);
             if (span < TimeSpan.FromDays(1))
-                return $"{(int)span.TotalHours} h ago";
+                return Lf("Backups.Relative.HoursAgo", "{0} h ago", (int)span.TotalHours);
             if (span < TimeSpan.FromDays(7))
-                return $"{(int)span.TotalDays} days ago";
+                return Lf("Backups.Relative.DaysAgo", "{0} days ago", (int)span.TotalDays);
 
-            return "Over a week ago";
+            return L("Backups.Relative.OverAWeek", "Over a week ago");
         }
 
         // ---------- Weekly activity mini-chart ----------
@@ -1156,18 +1208,20 @@ namespace VaultSync.UI.ViewModels
                     ? backup.DestinationPath
                     : backup.DestinationAlias;
 
+                var isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
                 var uiItem = new BackupSnapshotItem
                 {
                     Id        = backup.Id.ToString(),
                     Timestamp = backup.CreatedUtc.ToLocalTime(),
                     SizeBytes = backup.TotalBytes,
-                    Type      = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase)
-                        ? "Auto"
-                        : "Manual",
+                    Type      = isAutoSnapshot ? "Auto" : "Manual",
+                    TypeLabel = isAutoSnapshot
+                        ? L("Backups.Snapshot.Type.Auto", "Auto")
+                        : L("Backups.Snapshot.Type.Manual", "Manual"),
                     Status    = "Completed",
-                    Label     = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase)
-                        ? "Auto backup"
-                        : "Manual backup",
+                    Label     = isAutoSnapshot
+                        ? L("Backups.Snapshot.Label.Auto", "Auto backup")
+                        : L("Backups.Snapshot.Label.Manual", "Manual backup"),
                     ProjectId = project?.Id.ToString(),
                     IsProtected = backup.IsProtected,
                     DestinationDisplay = destinationDisplay
@@ -1202,6 +1256,9 @@ namespace VaultSync.UI.ViewModels
 
         /// <summary>Label shown inside the tag pill.</summary>
         public string? Label { get; set; }
+
+        /// <summary>Localized type label for display (Auto/Manual).</summary>
+        public string TypeLabel { get; set; } = string.Empty;
 
         /// <summary>Optional project id this snapshot belongs to; null for global.</summary>
         public string? ProjectId { get; set; }
@@ -1342,7 +1399,7 @@ namespace VaultSync.UI.ViewModels
         public string LastBackupDisplay =>
             LastBackupTime.HasValue
                 ? LastBackupTime.Value.ToString("yyyy-MM-dd HH:mm")
-                : "No backups yet";
+                : LocalizationProvider.Service?.GetString("Backups.Summary.NoBackups") ?? "No backups yet";
 
         public string TotalSizeFormatted =>
             BackupSnapshotItem.FormatSize(TotalSizeBytes);

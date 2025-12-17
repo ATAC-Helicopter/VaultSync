@@ -55,11 +55,11 @@
                 HorizontalScrollBarVisibility="Disabled"
                 Padding="12">
 
-    <Viewbox Stretch="Uniform"
-             StretchDirection="DownOnly">
-      <Grid Width="1220"
-            RowDefinitions="Auto,*"
-            RowSpacing="12">
+    <!-- Allow the form to stretch across the viewport while capping width for readability. -->
+    <Grid MaxWidth="2200"
+          HorizontalAlignment="Stretch"
+          RowDefinitions="Auto,*"
+          RowSpacing="12">
 
         <!-- Header -->
         <Border Grid.Row="0"
@@ -123,7 +123,7 @@
                           Margin="8,2,0,0"
                           Classes="settings-ghost"
                           Command="{Binding BrowseProjectsRootCommand}">
-                    Browse
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Browse}" />
                   </Button>
                 </Grid>
 
@@ -931,7 +931,6 @@
         </Grid>
 
       </Grid>
-    </Viewbox>
 
   </ScrollViewer>
 

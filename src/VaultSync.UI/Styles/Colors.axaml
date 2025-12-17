@@ -60,9 +60,9 @@
       <Color x:Key="VsInputBorderColor">#D0D4E2</Color>
       <Color x:Key="VsInputBorderFocusedColor">#2663FF</Color>
       <Color x:Key="VsDividerColor">#D9DCE8</Color>
-      <Color x:Key="VsShellBrandStartColor">#4C70D6</Color>
-      <Color x:Key="VsShellBrandEndColor">#3552A8</Color>
-      <Color x:Key="VsShellBrandTextColor">#FFFFFF</Color>
+      <Color x:Key="VsShellBrandStartColor">#E3E7FF</Color>
+      <Color x:Key="VsShellBrandEndColor">#CCD4E9</Color>
+      <Color x:Key="VsShellBrandTextColor">#11131A</Color>
       <Color x:Key="VsShellHeaderColor">#FFFFFF</Color>
     </ResourceDictionary>
 

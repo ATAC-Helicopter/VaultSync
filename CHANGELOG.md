@@ -1,4 +1,16 @@
 ﻿# Changelog
+## [1.1.0] - 2025-12-17
+### Added
+- Responsive layout scaffolds for Dashboard, Settings, Projects, and Backups so each view uses a centered, width-capped grid instead of `Viewbox` scaling, letting the UI naturally expand and contract on any resolution or DPI without misaligned cards.
+- Added translations for the remaining UI text (advanced settings beta channel text, health badges, buttons, etc.) across all supported locales so switching languages no longer exposes English placeholders.
+### Changed
+- The sidebar header now honors the shared theme brushes (`ShellBrandStartBrush`, `BorderSoft`, etc.) so the VaultSync title/slogan block matches both light and dark palettes instead of hard-coded gradients.
+- Reflowed the storage KPI text so the metric and hint stack vertically and align to the left, keeping the description legible on large screens.
+- Updated the light-theme brand colors (`VsShellBrand*` values) so the shell banner text uses the same primary/foreground tokens as the rest of the app.
+### Fixed
+- Build failures caused by `VaultSync.UI.exe` remaining open are prevented by closing the running app before rebuilding; the shell banner and layout changes now compile cleanly once the process is released.
+- The “VaultSync is still running” notification now fires only when minimizing to the tray, so quitting the app never triggers the toast unexpectedly.
+
 ## [1.0.0] - 2025-12-07
 ### Added
 - Advanced destination mode now shares the same Housekeeping block close to the fallback backup path, with localized descriptions, localized checklist, and a dedicated “Test” flow that mounts/unmounts using credential profiles.

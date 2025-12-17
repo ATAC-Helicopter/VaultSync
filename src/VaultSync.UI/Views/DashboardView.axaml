@@ -7,27 +7,29 @@
     x:CompileBindings="False"
     Background="{DynamicResource VS.WindowBackground}">
 
-  <!-- Vertical scroll for short windows. The whole page scales uniformly inside. -->
+  <!-- Vertical scroll for short windows. The layout flexes to the available width. -->
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="12">
 
-    <!-- Scale EVERYTHING uniformly from this design width -->
-    <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-      <Grid Width="1220">
-        <!-- 6 rows: 0 Header, 1 KPIs, 2 Backup storage, 3 Actions, 4 Charts, 5 Activity -->
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <!-- Expand the layout to fill the available width while capping at 2200px for readability. -->
+    <Grid MaxWidth="2200"
+          HorizontalAlignment="Stretch"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+          RowSpacing="12">
 
         <!-- Header -->
-        <Border Classes="header" Padding="16" Grid.Row="0" Margin="4">
-          <StackPanel Spacing="6">
-            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Title}" Classes="section-title" FontSize="28"/>
-            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Description}" Classes="kicker" FontSize="18"/>
+        <Border Grid.Row="0"
+                Classes="card header"
+                Padding="20"
+                Margin="0,0,0,4"
+                CornerRadius="20">
+          <StackPanel Spacing="4">
+            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Title}"
+                       Classes="section-title"
+                       FontSize="28"
+                       FontWeight="SemiBold"/>
+            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Description}"
+                       Classes="kicker"
+                       FontSize="16"/>
           </StackPanel>
         </Border>
 
@@ -56,7 +58,7 @@
           <Border Classes="card" Padding="20" Grid.Column="2">
             <Grid RowDefinitions="Auto,*">
               <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Storage}" Classes="kicker"/>
-              <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+              <StackPanel Grid.Row="1" Orientation="Vertical" Spacing="6" HorizontalAlignment="Left">
                 <TextBlock Text="{Binding StorageUsed}"
                            FontSize="36"
                            FontWeight="SemiBold"
@@ -65,7 +67,6 @@
                            MaxWidth="200"/>
                 <TextBlock Text="{Binding StorageHint}"
                            Classes="metric-hint"
-                           VerticalAlignment="Bottom"
                            TextWrapping="Wrap"
                            TextTrimming="CharacterEllipsis"/>
               </StackPanel>
@@ -236,6 +237,5 @@
           </Grid>
         </Border>
       </Grid>
-    </Viewbox>
   </ScrollViewer>
 </UserControl>

@@ -23,6 +23,8 @@ namespace VaultSync.UI;
 
 public partial class App : Application
 {
+    public static bool IsShuttingDown { get; private set; }
+
     public static AppViewModel? AppViewModelInstance { get; private set; }
 
     // Keep a reference to the tray/menu-bar icon so it stays alive.
@@ -426,7 +428,8 @@ public partial class App : Application
         var quitItem = new NativeMenuItem(L("Tray.Quit", "Quit VaultSync"));
         quitItem.Click += (_, _) =>
         {
-            // Cleanly shut down the app.
+            // Tell the window we're intentionally shutting down so it doesn't hijack the close.
+            IsShuttingDown = true;
             desktop.Shutdown();
         };
 
@@ -744,4 +747,3 @@ public partial class App : Application
         });
     }
 }
-

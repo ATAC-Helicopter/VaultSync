@@ -58,20 +58,28 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid Margin="32,24,32,24" RowDefinitions="Auto,*" RowSpacing="16">
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="32,24,32,24">
 
-    <controls:NotificationCard
-        Grid.Row="0"
-        Margin="0,0,0,12"
-        DataContext="{Binding Notification}" />
+    <!-- Stretch across available width while keeping a generous cap. -->
+    <Grid MaxWidth="2200"
+          HorizontalAlignment="Stretch"
+          RowDefinitions="Auto,*"
+          RowSpacing="16">
 
-    <!-- Inner content -->
-    <Grid Row="1">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="3*" />
-        <ColumnDefinition Width="32" />
-        <ColumnDefinition Width="4*" />
-      </Grid.ColumnDefinitions>
+      <controls:NotificationCard
+          Grid.Row="0"
+          Margin="0,0,0,12"
+          DataContext="{Binding Notification}" />
+
+      <!-- Inner content -->
+      <Grid Grid.Row="1">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="3*" />
+          <ColumnDefinition Width="32" />
+          <ColumnDefinition Width="4*" />
+        </Grid.ColumnDefinitions>
 
       <!-- LEFT: All projects card -->
       <Border Grid.Column="0"
@@ -600,4 +608,5 @@
       </Border>
     </Grid>
   </Grid>
+</ScrollViewer>
 </UserControl>
