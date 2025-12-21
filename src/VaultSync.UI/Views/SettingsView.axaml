@@ -482,92 +482,96 @@
                                   Margin="0,4,0,0"
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="8">
-                              <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Spacing="6">
-                                <TextBox Width="120"
-                                         MaxWidth="160"
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                  ColumnSpacing="10"
+                                  RowSpacing="6">
+                              <WrapPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" VerticalAlignment="Center">
+                                <TextBox Width="140"
+                                         MaxWidth="200"
                                          HorizontalAlignment="Left"
                                          Watermark="{infra:LocalizedString Key=Settings.Destinations.AliasWatermark}"
                                          Text="{Binding Alias, Mode=TwoWay}" />
-                                <ToggleSwitch IsChecked="{Binding Active, Mode=TwoWay}"
+                                <ToggleSwitch Margin="12,0,0,0"
+                                              IsChecked="{Binding Active, Mode=TwoWay}"
                                               Content="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}"
                                               ToolTip.Tip="When off, this destination is ignored for backups." />
-                              </StackPanel>
-                              <Grid Grid.Column="0" Grid.Row="1"
-                                    ColumnDefinitions="*,Auto,160,Auto"
-                                    RowDefinitions="Auto,Auto"
-                                    ColumnSpacing="10"
-                                    RowSpacing="4">
-                                <TextBox Grid.Column="0" Grid.Row="0"
-                                         MaxWidth="520"
-                                         Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
-                                         Text="{Binding Path, Mode=TwoWay}" />
-                                <Button Grid.Column="1" Grid.Row="0"
-                                        Classes="settings-ghost"
-                                        Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
-                                </Button>
-                                <ComboBox Grid.Column="2" Grid.Row="0"
-                                          ItemsSource="{Binding DataContext.CredentialNames, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                          SelectedItem="{Binding SelectedCredentialName, Mode=TwoWay}"
-                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.CredentialTooltip}">
-                                  <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                      <TextBlock Text="{Binding .}" />
-                                    </DataTemplate>
-                                  </ComboBox.ItemTemplate>
-                                </ComboBox>
-                                <Button Grid.Column="3" Grid.Row="0"
-                                        Classes="settings-ghost"
-                                        Command="{Binding DataContext.TestDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.TestTooltip}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
-                                </Button>
-                                <TextBlock Grid.Column="0" Grid.Row="1"
-                                           Grid.ColumnSpan="4"
-                                           Text="{Binding LastTestStatus}"
+                              </WrapPanel>
+                              <Button Grid.Column="2" Grid.Row="0"
+                                      Classes="settings-ghost"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Center"
+                                      Command="{Binding DataContext.RemoveDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      CommandParameter="{Binding}">
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
+                              </Button>
+
+                              <TextBox Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1"
+                                       Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
+                                       Text="{Binding Path, Mode=TwoWay}" />
+                              <Button Grid.Column="2" Grid.Row="1"
+                                      Classes="settings-ghost"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Center"
+                                      Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      CommandParameter="{Binding}">
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
+                              </Button>
+
+                              <ComboBox Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2"
+                                        MinWidth="160"
+                                        HorizontalAlignment="Stretch"
+                                        ItemsSource="{Binding DataContext.CredentialNames, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        SelectedItem="{Binding SelectedCredentialName, Mode=TwoWay}"
+                                        ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.CredentialTooltip}">
+                                <ComboBox.ItemTemplate>
+                                  <DataTemplate>
+                                    <TextBlock Text="{Binding .}" />
+                                  </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                              </ComboBox>
+                              <Button Grid.Column="2" Grid.Row="2"
+                                      Classes="settings-ghost"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Center"
+                                      Command="{Binding DataContext.TestDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      CommandParameter="{Binding}"
+                                      ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.TestTooltip}">
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
+                              </Button>
+
+                              <WrapPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="3">
+                                <CheckBox Margin="0,0,12,6"
+                                          Content="{infra:LocalizedString Key=Settings.Destinations.PreMounted}"
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.PreMountedTooltip}"
+                                          IsChecked="{Binding PreMounted, Mode=TwoWay}" />
+                                <CheckBox Margin="0,0,12,6"
+                                          Content="{infra:LocalizedString Key=Settings.Destinations.AutoMount}"
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoMountTooltip}"
+                                          IsChecked="{Binding AutoMount, Mode=TwoWay}" />
+                                <CheckBox Margin="0,0,12,6"
+                                          Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
+                                          IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
+                              </WrapPanel>
+
+                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="4" Orientation="Vertical" Spacing="4" Margin="0,6,0,0">
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.CredentialWarning}"
+                                           Foreground="{DynamicResource WarningTextBrush}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding NeedsCredentialWarning}" />
+                                <TextBlock Text="{Binding LastTestStatus}"
                                            Foreground="{StaticResource TextSecondary}"
                                            FontSize="11"
                                            TextWrapping="Wrap"
                                            TextTrimming="CharacterEllipsis"
                                            MaxHeight="44"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,0,2"
                                            ToolTip.Tip="{Binding LastTestStatus}"
                                            IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
-                              </Grid>
-                              <StackPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Spacing="10">
-                                <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.PreMounted}"
-                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.PreMountedTooltip}"
-                                          IsChecked="{Binding PreMounted, Mode=TwoWay}" />
-                                <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoMount}"
-                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoMountTooltip}"
-                                          IsChecked="{Binding AutoMount, Mode=TwoWay}" />
-                              <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
-                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
-                                          IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
                               </StackPanel>
-                              <StackPanel Grid.Column="0" Grid.Row="3" Orientation="Vertical" Spacing="4" Margin="0,8,0,0">
-                                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.CredentialWarning}"
-                                   Foreground="{DynamicResource WarningTextBrush}"
-                                           FontSize="11"
-                                           TextWrapping="Wrap"
-                                           IsVisible="{Binding NeedsCredentialWarning}" />
-                              </StackPanel>
-
-                              <StackPanel Grid.Column="1" Grid.RowSpan="4"
-                                          Orientation="Vertical"
-                                          Spacing="6">
-                                <Button Classes="settings-ghost"
-                                        Command="{Binding DataContext.RemoveDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
-                                </Button>
-                             </StackPanel>
-                           </Grid>
-                         </Border>
+                            </Grid>
+                          </Border>
                        </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -593,28 +597,40 @@
                                   Margin="0,4,0,0"
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
-                              <Grid Grid.Column="0" Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+                              <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.NameLabel}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1"
-                                         Width="200"
+                                         HorizontalAlignment="Stretch"
                                          Text="{Binding Name, Mode=TwoWay}"
                                          Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Name}" />
                               </Grid>
 
-                              <Grid Grid.Column="0" Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                              <CheckBox Grid.Row="1"
+                                        Content="{infra:LocalizedString Key=Settings.Credentials.UseKeychain}"
+                                        IsChecked="{Binding UseKeychain, Mode=TwoWay}" />
+
+                              <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.UsernameLabel}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1"
-                                         Width="200"
+                                         HorizontalAlignment="Stretch"
                                          Text="{Binding Username, Mode=TwoWay}"
                                          Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Username}" />
+                                <Button Grid.Column="2"
+                                        Classes="settings-ghost"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding DataContext.RemoveCredentialCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
+                                </Button>
                               </Grid>
 
-                              <Grid Grid.Column="0" Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                              <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.PasswordLabel}" VerticalAlignment="Center"/>
-                                <Grid Grid.Column="1" ColumnDefinitions="200,Auto,Auto" ColumnSpacing="12">
+                                <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                   <TextBox Grid.Column="0"
-                                           Width="200"
+                                           HorizontalAlignment="Stretch"
                                            Text="{Binding Password, Mode=TwoWay}"
                                            Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Password}"
                                              PasswordChar="{Binding ShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=*}" />
@@ -622,19 +638,8 @@
                                                 VerticalAlignment="Center"
                                                 IsChecked="{Binding ShowPassword, Mode=TwoWay}"
                                                 Content="{infra:LocalizedString Key=Settings.Credentials.ShowPassword}" />
-                                <Button Grid.Column="2"
-                                        Classes="settings-ghost"
-                                        Command="{Binding DataContext.RemoveCredentialCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
-                                </Button>
+                                </Grid>
                               </Grid>
-                            </Grid>
-
-                              <CheckBox Grid.Column="1" Grid.Row="0"
-                                        Content="{infra:LocalizedString Key=Settings.Credentials.UseKeychain}"
-                                        IsChecked="{Binding UseKeychain, Mode=TwoWay}"
-                                        VerticalAlignment="Center"/>
                             </Grid>
                           </Border>
                         </DataTemplate>

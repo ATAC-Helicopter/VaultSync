@@ -138,7 +138,7 @@
         </Grid>
 
         <!-- Charts row -->
-        <Grid Grid.Row="4" ColumnDefinitions="2*,1*" ColumnSpacing="16" Margin="4,12,4,0">
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto" ColumnSpacing="16" Margin="4,12,4,0">
           <!-- Trend -->
           <Border Classes="card" Padding="14" Grid.Column="0">
             <Grid RowDefinitions="Auto,*">
@@ -162,7 +162,7 @@
           </Border>
 
           <!-- Donut -->
-          <Border Classes="card" Padding="14" Grid.Column="1">
+          <Border Classes="card" Padding="14" Grid.Column="1" Width="400" ClipToBounds="True">
             <Grid RowDefinitions="Auto,*,Auto">
                 <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.StorageUsage}" Classes="section-title" Margin="0,0,0,8"/>
 
@@ -171,9 +171,10 @@
                     Series="{Binding StorageSeries}"
                     Background="{Binding $parent[Border].Background}"
                     LegendPosition="Hidden"
+                    Width="360"
                     Height="360"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"/>
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"/>
 
                 <!-- Center label -->
                 <StackPanel IsHitTestVisible="False"
@@ -189,15 +190,19 @@
               <ItemsControl Grid.Row="2" ItemsSource="{Binding StorageLegend}" Margin="0,8,0,0">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
-                    <WrapPanel ItemWidth="180" MinWidth="200"/>
+                    <StackPanel />
                   </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,12,2">
-                      <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Brush}"/>
-                      <TextBlock Text="{Binding Label}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="0,2,0,2">
+                      <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Brush}" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding Label}"
+                                 MaxWidth="320"
+                                 TextWrapping="Wrap"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

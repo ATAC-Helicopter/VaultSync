@@ -7,9 +7,13 @@
 - The sidebar header now honors the shared theme brushes (`ShellBrandStartBrush`, `BorderSoft`, etc.) so the VaultSync title/slogan block matches both light and dark palettes instead of hard-coded gradients.
 - Reflowed the storage KPI text so the metric and hint stack vertically and align to the left, keeping the description legible on large screens.
 - Updated the light-theme brand colors (`VsShellBrand*` values) so the shell banner text uses the same primary/foreground tokens as the rest of the app.
+- Beta update checks now consider stable releases and will upgrade prerelease installs to the matching stable version when available.
 ### Fixed
 - Build failures caused by `VaultSync.UI.exe` remaining open are prevented by closing the running app before rebuilding; the shell banner and layout changes now compile cleanly once the process is released.
-- The “VaultSync is still running” notification now fires only when minimizing to the tray, so quitting the app never triggers the toast unexpectedly.
+- The "VaultSync is still running" notification now fires only when minimizing to the tray, so quitting the app never triggers the toast unexpectedly.
+- Prevented multiple instances of the app from launching and activated the existing window when a second launch is attempted.
+- Dashboard storage pie chart now keeps a consistent size without overlapping the chart card next to it, and the legend list wraps cleanly.
+- Settings destinations/credentials layout now aligns controls and action buttons correctly on narrow and wide windows.
 
 ## [1.0.0] - 2025-12-07
 ### Added

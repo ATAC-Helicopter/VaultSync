@@ -602,6 +602,14 @@ public partial class App : Application
         window.Activate();
     }
 
+    public static void ActivateMainWindowFromSignal()
+    {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+
+        Dispatcher.UIThread.Post(() => BringMainWindowToFront(desktop));
+    }
+
     private static void BringMainWindowToFront(IClassicDesktopStyleApplicationLifetime desktop)
     {
         var window = desktop.MainWindow;

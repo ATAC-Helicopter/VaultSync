@@ -71,7 +71,7 @@ namespace VaultSync.UI.Services
 
             var candidate = channel switch
             {
-                GitHubReleaseChannel.Beta => SelectBetaCandidate(releases),
+                GitHubReleaseChannel.Beta => SelectBestBetaOrStableCandidate(releases),
                 _                        => SelectStableCandidate(releases)
             };
 
@@ -114,13 +114,33 @@ namespace VaultSync.UI.Services
 
             if (releaseVersion is not null && localVersion is not null)
             {
-                return releaseVersion > localVersion;
+                if (releaseVersion > localVersion)
+                    return true;
+                if (releaseVersion < localVersion)
+                    return false;
+
+                var currentIsPrerelease = IsPrereleaseTag(currentVersion);
+                var releaseIsPrerelease = IsPrereleaseTag(releaseTag);
+                return currentIsPrerelease && !releaseIsPrerelease;
             }
 
             return !string.Equals(
                 releaseTag,
                 currentVersion?.Trim(),
                 StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsPrereleaseTag(string? version)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+                return false;
+
+            var trimmed = version.Trim();
+            if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+                trimmed = trimmed[1..];
+
+            var separatorIndex = trimmed.IndexOfAny(new[] { '-', '+' });
+            return separatorIndex >= 0;
         }
 
         private static HttpClient CreateHttpClient()
@@ -191,6 +211,39 @@ namespace VaultSync.UI.Services
                 .FirstOrDefault();
 
             return devBranch ?? SelectStableCandidate(releases);
+        }
+
+        private static GitHubRelease? SelectBestBetaOrStableCandidate(List<GitHubRelease> releases)
+        {
+            var betaCandidate = SelectBetaCandidate(releases);
+            var stableCandidate = SelectStableCandidate(releases);
+
+            if (betaCandidate is null)
+                return stableCandidate;
+            if (stableCandidate is null)
+                return betaCandidate;
+
+            var betaVersion = VersionHelper.TryParse(betaCandidate.TagName);
+            var stableVersion = VersionHelper.TryParse(stableCandidate.TagName);
+
+            if (betaVersion is not null && stableVersion is not null)
+            {
+                if (betaVersion > stableVersion)
+                    return betaCandidate;
+                if (stableVersion > betaVersion)
+                    return stableCandidate;
+                return stableCandidate;
+            }
+
+            var betaDate = betaCandidate.PublishedAt ?? DateTime.MinValue;
+            var stableDate = stableCandidate.PublishedAt ?? DateTime.MinValue;
+
+            if (betaDate > stableDate)
+                return betaCandidate;
+            if (stableDate > betaDate)
+                return stableCandidate;
+
+            return stableCandidate;
         }
 
         private sealed class GitHubRelease
