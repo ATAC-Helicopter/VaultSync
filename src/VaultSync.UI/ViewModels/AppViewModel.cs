@@ -919,6 +919,7 @@ namespace VaultSync.UI.ViewModels
         {
             Dispatcher.UIThread.Post(() =>
             {
+                App.MarkShuttingDown();
                 if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
                     desktop.Shutdown();
