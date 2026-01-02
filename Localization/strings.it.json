@@ -192,8 +192,14 @@
     "Settings.Advanced.SendUsageStats":  "Invia statistiche d\u0027uso anonime",
     "Settings.Advanced.SendUsageStatsDescription":  "Aiuta a migliorare VaultSync condividendo metriche di base e anonime.",
     "Settings.Advanced.Title":  "Avanzate",
-    "Settings.Advanced.VerboseLogging":  "Abilita la registrazione dettagliata",
-    "Settings.Advanced.VerboseLoggingDescription":  "Scrive log più dettagliati per aiutarti a risolvere i problemi.",
+`    "Settings.Advanced.VerboseLogging":  "Abilita la registrazione dettagliata",
+`    "Settings.Advanced.VerboseLoggingDescription":  "Scrive log più dettagliati per aiutare nella risoluzione dei problemi.",
+`    "Settings.Advanced.SaveVerboseLogs":  "Salva i log dettagliati su disco",
+`    "Settings.Advanced.SaveVerboseLogsDescription":  "Scrive i log su un file locale mentre la registrazione dettagliata è attiva.",
+`    "Settings.Advanced.LogConsole":  "Console log",
+`    "Settings.Advanced.LogConsoleDescription":  "Vista in tempo reale delle attività recenti dell'app per la risoluzione dei problemi.",
+`    "Settings.Advanced.LogConsoleOpen":  "Apri console",
+`    "Settings.Advanced.LogConsoleExport":  "Esporta log",
     "Settings.Appearance.Avatars":  "Mostra avatar progetto",
     "Settings.Appearance.AvatarsDescription":  "Usa icone o iniziali accanto ai nomi dei progetti quando disponibili.",
     "Settings.Appearance.Compact":  "Modalità compatta",
@@ -205,23 +211,23 @@
     "Settings.Appearance.ThemeDescription":  "Segui il sistema o forza light/dark.",
     "Settings.Appearance.Title":  "Aspetto",
     "Settings.Backups.Compress":  "Comprimi i backup",
-    "Settings.Backups.CompressDescription":  "Archivi più piccoli al costo di tempi di backup leggermente più lunghi.",
-    "Settings.Backups.Description":  "Snapshot automatici, conservazione e destinazione dei backup.",
+`    "Settings.Backups.CompressDescription":  "Backup più piccoli, ma più lenti da creare.",
+`    "Settings.Backups.Description":  "Backup automatici, conservazione e archiviazione.",
     "Settings.Backups.EnableAuto":  "Abilita backup automatici",
-    "Settings.Backups.EnableAutoDescription":  "VaultSync crea snapshot in background mentre lavori.",
+`    "Settings.Backups.EnableAutoDescription":  "Esegue i backup automaticamente in background mentre lavori.",
     "Settings.Backups.FallbackLocation":  "Posizione di backup alternativa",
     "Settings.Backups.FallbackLocationDescription":  "Usata solo se non sono configurate destinazioni attive.",
     "Settings.Backups.FullHash":  "Hash completo degli snapshot",
-    "Settings.Backups.FullHashDescription":  "Calcola l\u0027hash di tutti i file a ogni snapshot (più sicuro ma più lento).",
+`    "Settings.Backups.FullHashDescription":  "Calcola l'hash di ogni file a ogni snapshot (più sicuro, ma più lento su progetti grandi).",
     "Settings.Backups.Interval":  "Intervallo backup (minuti)",
-    "Settings.Backups.IntervalDescription":  "Quanto spesso vengono creati gli snapshot automatici.",
+`    "Settings.Backups.IntervalDescription":  "Con quale frequenza vengono eseguiti i backup automatici.",
     "Settings.Backups.KeepSnapshots":  "Conserva gli ultimi N snapshot per progetto",
-    "Settings.Backups.KeepSnapshotsDescription":  "Gli snapshot più vecchi verranno eliminati una volta raggiunto il limite.",
+`    "Settings.Backups.KeepSnapshotsDescription":  "Gli snapshot più vecchi vengono rimossi al raggiungimento del limite.",
     "Settings.Backups.PauseBattery":  "Sospendi i backup automatici sulla batteria",
-    "Settings.Backups.PauseBatteryDescription":  "Evita operazioni intensive su disco quando il dispositivo è alimentato a batteria.",
+`    "Settings.Backups.PauseBatteryDescription":  "Sospende operazioni disco pesanti quando si è a batteria.",
     "Settings.Backups.Title":  "Backup",
     "Settings.Backups.Verify":  "Verifica i backup dopo la creazione",
-    "Settings.Backups.VerifyDescription":  "Esegue un controllo rapido sull\u0027integrità dopo ogni snapshot.",
+`    "Settings.Backups.VerifyDescription":  "Esegue un controllo rapido di integrità dopo ogni backup.",
     "Settings.Credentials.AddProfile":  "Aggiungi credenziale",
     "Settings.Credentials.Description":  "Account salvati per condivisioni NAS/SMB (archiviati in keychain/gestore credenziali quando possibile).",
     "Settings.Credentials.Name":  "Nome",
@@ -310,7 +316,7 @@
     "Settings.Storage.ShowDriveWarningsDescription":  "Mostra avvisi SMART/salute quando VaultSync rileva problemi.",
     "Settings.Storage.Title":  "Archiviazione",
     "Settings.DestinationsMode.Title":  "Modalità destinazioni backup",
-    "Settings.DestinationsMode.Description":  "Semplice usa una singola cartella di backup. Avanzata permette più destinazioni (NAS/USB) con credenziali.",
+`    "Settings.DestinationsMode.Description":  "Semplice usa una sola cartella di backup. Avanzata permette di aggiungere più destinazioni (NAS/USB) con credenziali.",
     "Settings.DestinationsMode.Tooltip":  "Attiva Avanzata per configurare più destinazioni e credenziali; disattiva per usare una singola cartella di backup.",
     "Tray.Backup.All":  "Backup di tutti i progetti",
     "Tray.Backup.Title":  "Backup",
@@ -381,3 +387,11 @@
     "Backups.Relative.DaysAgo":  "{0} giorni fa",
     "Backups.Relative.OverAWeek":  "Oltre una settimana fa"
 }
+
+
+
+
+
+
+
+

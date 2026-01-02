@@ -91,7 +91,9 @@ public sealed class BackupService
         bool writeMetadata = true,
         string? destinationPath = null,
         string? destinationAlias = null,
-        bool skipIfNoChanges = false)
+        bool skipIfNoChanges = false,
+        bool useRsyncDelta = false,
+        bool useIncrementalBackups = false)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -202,6 +204,20 @@ public sealed class BackupService
             }
         }
 
+        string? linkDest = null;
+        if (!useArchiveMode && useIncrementalBackups)
+        {
+            linkDest = TryGetPreviousBackupFolder(projectBackupRoot, backupFolder);
+            if (linkDest is null)
+            {
+                Console.WriteLine($"[BackupService] Incremental enabled but no previous backup found for '{project.Name}'.");
+            }
+            else
+            {
+                Console.WriteLine($"[BackupService] Using incremental link-dest '{linkDest}'.");
+            }
+        }
+
         try
         {
             linkedToken.ThrowIfCancellationRequested();
@@ -216,7 +232,15 @@ public sealed class BackupService
             {
                 progressCallback?.Invoke(0, string.Empty, "Running backup (rsync/robocopy)...");
 
-                await RunNativeBackupAsync(project, backupFolder, totalBytes, progressCallback, linkedToken);
+                await RunNativeBackupAsync(
+                    project,
+                    backupFolder,
+                    totalBytes,
+                    progressCallback,
+                    linkedToken,
+                    useRsyncDelta,
+                    useIncrementalBackups,
+                    linkDest);
             }
         }
         catch (Exception ex)
@@ -359,7 +383,10 @@ public sealed class BackupService
         string destDir,
         long totalBytes,
         Action<double, string, string>? progressCallback,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool useRsyncDelta,
+        bool useIncrementalBackups,
+        string? linkDest)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -427,27 +454,53 @@ public sealed class BackupService
 
         if (OperatingSystem.IsWindows())
         {
-            // robocopy-based backup (multi-threaded, robust on Windows)
-            var runner = new RobocopyRunner();
-            exitCode   = await runner.SyncAsync(
-                project,
-                destDir,
-                dryRun: false,
-                callbackForRunner,
-                ct);
+            var bundledRsync = TryGetBundledRsyncPath();
+            if ((useRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath("rsync")))
+            {
+                // rsync-based backup on Windows (when installed)
+                var source = bundledRsync is null ? "PATH" : "bundled";
+                var rsyncPath = bundledRsync ?? "rsync";
+                Console.WriteLine($"[BackupService] Using rsync on Windows ({source}).");
+                var runner = new RsyncRunner(useWholeFile: !useRsyncDelta, rsyncPath: rsyncPath);
+                exitCode   = await runner.SyncAsync(
+                    project,
+                    destDir,
+                    dryRun: false,
+                    callbackForRunner,
+                    useIncrementalBackups ? linkDest : null,
+                    ct);
 
-            if (exitCode != 0)
-                throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
+                if (exitCode != 0)
+                    throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
+            }
+            else
+            {
+                // robocopy-based backup (multi-threaded, robust on Windows)
+                if ((useRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath("rsync"))
+                    Console.WriteLine("[BackupService] rsync not found on PATH; falling back to robocopy.");
+
+                var runner = new RobocopyRunner();
+                exitCode   = await runner.SyncAsync(
+                    project,
+                    destDir,
+                    dryRun: false,
+                    callbackForRunner,
+                    ct);
+
+                if (exitCode != 0)
+                    throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
+            }
         }
         else
         {
             // rsync-based backup (fast, incremental on macOS/Linux)
-            var runner = new RsyncRunner();
+            var runner = new RsyncRunner(useWholeFile: !useRsyncDelta);
             exitCode   = await runner.SyncAsync(
                 project,
                 destDir,
                 dryRun: false,
                 callbackForRunner,
+                useIncrementalBackups ? linkDest : null,
                 ct);
 
             if (exitCode != 0)
@@ -939,6 +992,64 @@ public sealed class BackupService
         catch (Exception ex)
         {
             Console.WriteLine($"[BackupService] Failed to read disk space for '{path}': {ex.Message}");
+            return null;
+        }
+    }
+
+    private static bool IsOnPath(string tool)
+    {
+        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var sep = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':';
+        foreach (var dir in path.Split(sep, StringSplitOptions.RemoveEmptyEntries))
+        {
+            try
+            {
+                var candidate = Path.Combine(dir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"{tool}.exe" : tool);
+                if (File.Exists(candidate))
+                    return true;
+            }
+            catch { /* ignore */ }
+        }
+        return false;
+    }
+
+    private static string? TryGetBundledRsyncPath()
+    {
+        if (!OperatingSystem.IsWindows())
+            return null;
+
+        try
+        {
+            var baseDir = AppContext.BaseDirectory;
+            var direct = Path.Combine(baseDir, "tools", "rsync", "rsync.exe");
+            if (File.Exists(direct))
+                return direct;
+
+            var bin = Path.Combine(baseDir, "tools", "rsync", "bin", "rsync.exe");
+            return File.Exists(bin) ? bin : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? TryGetPreviousBackupFolder(string projectBackupRoot, string currentBackupFolder)
+    {
+        try
+        {
+            if (!Directory.Exists(projectBackupRoot))
+                return null;
+
+            var folders = Directory.EnumerateDirectories(projectBackupRoot)
+                .Where(path => !string.Equals(path, currentBackupFolder, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return folders.FirstOrDefault();
+        }
+        catch
+        {
             return null;
         }
     }

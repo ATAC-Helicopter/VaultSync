@@ -42,6 +42,8 @@ namespace VaultSync.UI
         private string _backupLocationPath = string.Empty;
         private bool _useAdvancedDestinations = false;
         private bool _useBackupCompression = true;
+        private bool _useRsyncDelta = false;
+        private bool _useIncrementalBackups = false;
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
         private bool _useFullSnapshotHash = true;
@@ -69,6 +71,7 @@ namespace VaultSync.UI
         private bool _notifyOnlyWhenInactive = true;
 
         private bool _enableVerboseLogging = false;
+        private bool _saveVerboseLogs = false;
         private bool _checkForUpdatesOnStartup = true;
         private bool _betaChannelEnabled = false;
         private bool _sendAnonymousUsageStats = false;
@@ -81,6 +84,8 @@ namespace VaultSync.UI
         private bool _isInitialized;
         private bool _isSaving;
         private bool _savePending;
+
+        public event Action? OpenLogConsoleRequested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -135,6 +140,8 @@ namespace VaultSync.UI
             RemoveCredentialCommand      = new RelayCommand(p => RemoveCredential(p as NetworkCredentialViewModel));
             OpenHelpCommand              = new RelayCommand(_ => OpenHelp());
             ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());
+            OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
+            ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
@@ -187,6 +194,8 @@ namespace VaultSync.UI
                 ? (cfg.Backups.Location ?? string.Empty)
                 : cfg.Backups.BackupRoot;
             _useBackupCompression      = cfg.Backups.UseCompression;
+            _useRsyncDelta             = cfg.Backups.UseRsyncDelta;
+            _useIncrementalBackups     = cfg.Backups.UseIncrementalBackups;
             _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
             _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
             _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
@@ -283,6 +292,7 @@ namespace VaultSync.UI
                 _useOsNotifications;
 
             _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
+            _saveVerboseLogs           = cfg.Advanced.SaveVerboseLogs;
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
             _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
@@ -370,6 +380,8 @@ namespace VaultSync.UI
             cfg.Backups.BackupRoot = string.IsNullOrWhiteSpace(fallbackRoot) ? null : fallbackRoot;
             cfg.Backups.Location   = cfg.Backups.BackupRoot;
             cfg.Backups.UseCompression              = UseBackupCompression;
+            cfg.Backups.UseRsyncDelta               = UseRsyncDelta;
+            cfg.Backups.UseIncrementalBackups       = UseIncrementalBackups;
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
@@ -446,6 +458,7 @@ namespace VaultSync.UI
             cfg.Notifications.OnlyWhenInactive   = NotifyOnlyWhenInactive;
 
             cfg.Advanced.VerboseLogging      = EnableVerboseLogging;
+            cfg.Advanced.SaveVerboseLogs     = SaveVerboseLogs;
             cfg.Advanced.CheckUpdates        = CheckForUpdatesOnStartup;
             cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
             cfg.Advanced.SendUsageStats      = SendAnonymousUsageStats;
@@ -726,6 +739,31 @@ namespace VaultSync.UI
             set => SetField(ref _useBackupCompression, value);
         }
 
+        public bool UseRsyncDelta
+        {
+            get => _useRsyncDelta;
+            set => SetField(ref _useRsyncDelta, value);
+        }
+
+        public bool UseIncrementalBackups
+        {
+            get => _useIncrementalBackups;
+            set
+            {
+                if (SetField(ref _useIncrementalBackups, value))
+                {
+                    OnPropertyChanged(nameof(IsRsyncDeltaAvailable));
+                    if (value && _useRsyncDelta)
+                    {
+                        _useRsyncDelta = false;
+                        OnPropertyChanged(nameof(UseRsyncDelta));
+                    }
+                }
+            }
+        }
+
+        public bool IsRsyncDeltaAvailable => !_useIncrementalBackups;
+
         public bool VerifyBackupsAfterCreate
         {
             get => _verifyBackupsAfterCreate;
@@ -913,6 +951,12 @@ namespace VaultSync.UI
             set => SetField(ref _enableVerboseLogging, value);
         }
 
+        public bool SaveVerboseLogs
+        {
+            get => _saveVerboseLogs;
+            set => SetField(ref _saveVerboseLogs, value);
+        }
+
         public bool CheckForUpdatesOnStartup
         {
             get => _checkForUpdatesOnStartup;
@@ -983,18 +1027,20 @@ namespace VaultSync.UI
         public ICommand BrowseProjectsRootCommand { get; }
     public ICommand BrowseBackupLocationCommand { get; }
     public ICommand ResetToDefaultsCommand { get; }
-    public ICommand ApplySettingsCommand { get; }
-    public ICommand ClearLocalCacheCommand { get; }
-    public ICommand ForgetAllProjectsCommand { get; }
-    public ICommand TestBackupLocationCommand { get; }
-    public ICommand AddDestinationCommand { get; }
+        public ICommand ApplySettingsCommand { get; }
+        public ICommand ClearLocalCacheCommand { get; }
+        public ICommand ForgetAllProjectsCommand { get; }
+        public ICommand TestBackupLocationCommand { get; }
+        public ICommand AddDestinationCommand { get; }
     public ICommand RemoveDestinationCommand { get; }
     public ICommand BrowseDestinationCommand { get; }
     public ICommand TestDestinationCommand { get; }
     public ICommand AddCredentialCommand { get; }
     public ICommand RemoveCredentialCommand { get; }
-    public ICommand OpenHelpCommand { get; }
-    public ICommand ExportTelemetryCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+        public ICommand ExportTelemetryCommand { get; }
+        public ICommand OpenLogConsoleCommand { get; }
+        public ICommand ExportLogConsoleCommand { get; }
 
         private async void BrowseProjectsRoot()
         {
@@ -1373,6 +1419,34 @@ namespace VaultSync.UI
                 // best-effort
             }
         }
+
+        private void OpenLogConsole()
+        {
+            OpenLogConsoleRequested?.Invoke();
+        }
+
+        private void ExportLogConsole()
+        {
+            var service = Services.LogConsoleProvider.Service;
+            var path = service?.ExportBuffer();
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                SaveStatus = "Log export failed.";
+                GlobalNotificationCenter.Instance.Show(
+                    SaveStatus,
+                    NotificationSeverity.Warning,
+                    "Log export");
+                return;
+            }
+
+            SaveStatus = $"Log exported to {path}";
+            GlobalNotificationCenter.Instance.Show(
+                "Log export ready. You can share the file.",
+                NotificationSeverity.Info,
+                "Log export");
+        }
+
     }
 
     public class BackupDestinationViewModel : VaultSync.UI.ViewModels.ViewModelBase

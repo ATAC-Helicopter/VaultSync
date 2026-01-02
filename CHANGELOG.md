@@ -1,4 +1,28 @@
 ﻿# Changelog
+## [1.2.0] - 2026-01-01
+### Added
+- Incremental backup mode (rsync hardlinks) toggle to keep history while only copying changes.
+- New "Delta sync for large files" backup setting, with persisted config and localized UI copy.
+- Bundled cwRsync client + license bundle under tools/rsync, copied into Windows publish output for zero-install delta sync.
+- Crash handler that writes a crash log and shows a crash dialog with copy/open-log actions.
+- In-app log console with live capture, optional disk logging, and export support via Settings -> Advanced.
+- Dedicated updater window that stays visible while a patch installs and the app restarts.
+### Changed
+- Updater now surfaces installer downloads when patches are incompatible, enabling version skipping and beta-to-stable moves.
+- Incremental backups now disable the delta-sync toggle to avoid slow conflicting modes.
+- Backups can use rsync delta transfers when enabled; Windows prefers bundled rsync and falls back to PATH/robocopy.
+- rsync runner now supports custom executable paths and optional whole-file mode.
+- Refined backup settings descriptions for clarity in the Settings UI.
+- Updated backup and advanced settings translations across all supported languages.
+### Fixed
+- Backup settings text wrapping improved for delta/incremental descriptions.
+- Log console auto-scroll no longer triggers layout loop warnings; noisy layout trace messages are filtered.
+- Log console no longer blocks main window interaction.
+- rsync on Windows now hides the console window and rewrites paths for bundled cwRsync compatibility.
+- Suppress update banners and notifications while handling crashes.
+- ViewLocator now ignores non-view-model data types to avoid mis-instantiating log items.
+### Removed
+- Removed legacy beta notes document.
 ## [1.1.0] - 2025-12-17
 ### Added
 - Responsive layout scaffolds for Dashboard, Settings, Projects, and Backups so each view uses a centered, width-capped grid instead of `Viewbox` scaling, letting the UI naturally expand and contract on any resolution or DPI without misaligned cards.
@@ -17,7 +41,7 @@
 
 ## [1.0.0] - 2025-12-07
 ### Added
-- Advanced destination mode now shares the same Housekeeping block close to the fallback backup path, with localized descriptions, localized checklist, and a dedicated “Test” flow that mounts/unmounts using credential profiles.
+- Advanced destination mode now shares the same Housekeeping block close to the fallback backup path, with localized descriptions, localized checklist, and a dedicated ?Test? flow that mounts/unmounts    using credential profiles.
 - Auto backups now compare snapshots before running so they skip when nothing changed and report skips separately in the UI.
 ### Changed
 - Dashboard storage/gradient branding, shell tagline localization, and the backup settings layout use theme-aware resources so every element adapts to light/dark variants.
@@ -34,7 +58,7 @@
 
 ## [0.9.7.2] - 2025-12-04
 ### Fixed
-- Patch manifest validation now treats missing revision as zero, allowing 0.9.7 â†’ 0.9.7.1/2 deltas to apply when the assembly reports 0.9.7.0.
+- Patch manifest validation now treats missing revision as zero, allowing 0.9.7 ? 0.9.7.1/2 deltas to apply when the assembly reports 0.9.7.0.
 - Rebuilt patch assets for 0.9.7.2.
 
 ## [0.9.7.1] - 2025-12-04
@@ -72,7 +96,9 @@
 - Verified stability under stress: rename storms, 400+ file bursts, large binary files, read-only destinations.
 
 ### Changed
-- Watch cycles are now atomic â€” no overlap possible.
+- Updater now surfaces installer downloads when patches are incompatible, enabling version skipping and beta-to-stable moves.
+- Backup settings text wrapping improved for delta/incremental descriptions.
+- Watch cycles are now atomic ? no overlap possible.
 - Improved log readability during watch cycles (Spectre.Console markup formatting).
 - Debounce logic refined for high-frequency file systems.
 
@@ -149,4 +175,6 @@
 
 ---
 
-Â© 2025 VaultSync Project. MIT Licensed.
+? 2025 VaultSync Project. MIT Licensed.
+
+

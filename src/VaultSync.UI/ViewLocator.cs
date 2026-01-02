@@ -45,6 +45,17 @@ namespace VaultSync.UI
             return new TextBlock { Text = $"View not found for {vmType.Name}" };
         }
 
-        public bool Match(object? data) => data is not null;
+        public bool Match(object? data)
+        {
+            if (data is null)
+                return false;
+
+            if (data is Control || data is string)
+                return true;
+
+            var name = data.GetType().FullName ?? string.Empty;
+            return name.Contains(".ViewModels.", StringComparison.Ordinal) ||
+                   name.EndsWith("ViewModel", StringComparison.Ordinal);
+        }
     }
 }

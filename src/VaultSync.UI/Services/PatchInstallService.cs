@@ -7,9 +7,43 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace VaultSync.UI.Services
 {
+    public sealed class PatchApplyRequest
+    {
+        public PatchApplyRequest(string archivePath, string manifestPath, string installDir, bool restart, int? waitPid)
+        {
+            ArchivePath = archivePath;
+            ManifestPath = manifestPath;
+            InstallDir = installDir;
+            Restart = restart;
+            WaitPid = waitPid;
+        }
+
+        public string ArchivePath { get; }
+        public string ManifestPath { get; }
+        public string InstallDir { get; }
+        public bool Restart { get; }
+        public int? WaitPid { get; }
+    }
+
+    public sealed class PatchApplyResult
+    {
+        public PatchApplyResult(bool success, string? errorMessage, string logPath)
+        {
+            Success = success;
+            ErrorMessage = errorMessage;
+            LogPath = logPath;
+        }
+
+        public bool Success { get; }
+        public string? ErrorMessage { get; }
+        public string LogPath { get; }
+    }
+
     /// <summary>
     /// Applies a downloaded patch archive to the current install.
     /// Can run as a helper process when invoked with --apply-patch.
@@ -22,6 +56,17 @@ namespace VaultSync.UI.Services
 
         public static bool TryHandlePatchArgs(string[] args)
         {
+            if (!TryParsePatchArgs(args, out var request))
+                return false;
+
+            _ = ApplyPatch(request, null, CancellationToken.None);
+            return true;
+        }
+
+        public static bool TryParsePatchArgs(string[] args, out PatchApplyRequest? request)
+        {
+            request = null;
+
             if (args.Length < 4 || !string.Equals(args[0], ApplyArg, StringComparison.OrdinalIgnoreCase))
                 return false;
 
@@ -41,8 +86,16 @@ namespace VaultSync.UI.Services
                 }
             }
 
-            ApplyPatch(archivePath, manifestPath, installDir, restart, waitPid);
+            request = new PatchApplyRequest(archivePath, manifestPath, installDir, restart, waitPid);
             return true;
+        }
+
+        public static Task<PatchApplyResult> ApplyPatchAsync(
+            PatchApplyRequest request,
+            Action<string>? onLog,
+            CancellationToken cancellationToken)
+        {
+            return Task.Run(() => ApplyPatch(request, onLog, cancellationToken), cancellationToken);
         }
 
         public static bool TryLaunchPatchInstaller(PatchPlan plan, string archivePath, out string? error)
@@ -162,41 +215,54 @@ namespace VaultSync.UI.Services
             }
         }
 
-        private static void ApplyPatch(string archivePath, string manifestPath, string installDir, bool restart, int? waitPid)
+        private static PatchApplyResult ApplyPatch(
+            PatchApplyRequest request,
+            Action<string>? onLog,
+            CancellationToken cancellationToken)
         {
             var logDir = Path.Combine(Path.GetTempPath(), "VaultSync");
             Directory.CreateDirectory(logDir);
             var logPath = Path.Combine(logDir, "patch-helper.log");
 
             using var log = new StreamWriter(logPath, append: true) { AutoFlush = true };
-            log.WriteLine($"[{DateTime.UtcNow:O}] Starting patch apply. Archive={archivePath}, InstallDir={installDir}, Restart={restart}");
+            void LogLine(string message)
+            {
+                var line = $"[{DateTime.UtcNow:O}] {message}";
+                log.WriteLine(line);
+                onLog?.Invoke(line);
+            }
+
+            LogLine($"Starting patch apply. Archive={request.ArchivePath}, InstallDir={request.InstallDir}, Restart={request.Restart}");
 
             try
             {
-                if (waitPid is { } pid)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (request.WaitPid is { } pid)
                 {
                     try
                     {
                         var parent = Process.GetProcessById(pid);
                         if (!parent.HasExited)
                         {
-                            log.WriteLine($"Waiting for parent pid {pid} to exit...");
+                            LogLine($"Waiting for parent pid {pid} to exit...");
                             parent.WaitForExit(15000);
                         }
                     }
                     catch (Exception ex)
                     {
-                        log.WriteLine($"Warning: failed waiting for pid {pid}: {ex.Message}");
+                        LogLine($"Warning: failed waiting for pid {pid}: {ex.Message}");
                     }
                 }
 
-                if (!File.Exists(archivePath))
-                    throw new FileNotFoundException("Patch archive not found.", archivePath);
+                if (!File.Exists(request.ArchivePath))
+                    throw new FileNotFoundException("Patch archive not found.", request.ArchivePath);
 
-                if (!File.Exists(manifestPath))
-                    throw new FileNotFoundException("Patch manifest not found.", manifestPath);
+                if (!File.Exists(request.ManifestPath))
+                    throw new FileNotFoundException("Patch manifest not found.", request.ManifestPath);
 
-                var manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(manifestPath));
+                LogLine("Loading patch manifest.");
+                var manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(request.ManifestPath));
                 if (manifest is null)
                     throw new InvalidOperationException("Unable to parse patch manifest.");
 
@@ -205,9 +271,12 @@ namespace VaultSync.UI.Services
 
                 try
                 {
-                    ZipFile.ExtractToDirectory(archivePath, stagingDir);
+                    LogLine("Extracting patch archive.");
+                    ZipFile.ExtractToDirectory(request.ArchivePath, stagingDir);
+                    LogLine("Verifying extracted files.");
                     VerifyExtractedFiles(manifest, stagingDir);
-                    CopyIntoInstall(manifest, stagingDir, installDir, log);
+                    LogLine("Copying updated files.");
+                    CopyIntoInstall(manifest, stagingDir, request.InstallDir, LogLine);
                 }
                 finally
                 {
@@ -221,16 +290,19 @@ namespace VaultSync.UI.Services
                     }
                 }
 
-                log.WriteLine("Patch applied successfully.");
+                LogLine("Patch applied successfully.");
 
-                if (restart)
+                if (request.Restart)
                 {
-                    RestartUpdatedApp(installDir, log);
+                    RestartUpdatedApp(request.InstallDir, LogLine);
                 }
+
+                return new PatchApplyResult(true, null, logPath);
             }
             catch (Exception ex)
             {
-                log.WriteLine($"Patch apply failed: {ex}");
+                LogLine($"Patch apply failed: {ex}");
+                return new PatchApplyResult(false, ex.Message, logPath);
             }
         }
 
@@ -258,7 +330,7 @@ namespace VaultSync.UI.Services
             }
         }
 
-        private static void CopyIntoInstall(PatchManifest manifest, string stagingDir, string installDir, TextWriter log)
+        private static void CopyIntoInstall(PatchManifest manifest, string stagingDir, string installDir, Action<string> logLine)
         {
             foreach (var file in manifest.Files)
             {
@@ -271,11 +343,11 @@ namespace VaultSync.UI.Services
                 }
 
                 File.Copy(source, target, overwrite: true);
-                log.WriteLine($"Replaced {file.RelativePath}");
+                logLine($"Replaced {file.RelativePath}");
             }
         }
 
-        private static void RestartUpdatedApp(string installDir, TextWriter log)
+        private static void RestartUpdatedApp(string installDir, Action<string> logLine)
         {
             var exe = Path.Combine(installDir, "VaultSync.UI.exe");
             if (!File.Exists(exe))
@@ -293,11 +365,11 @@ namespace VaultSync.UI.Services
             try
             {
                 Process.Start(psi);
-                log.WriteLine("Launched updated app.");
+                logLine("Launched updated app.");
             }
             catch (Exception ex)
             {
-                log.WriteLine($"Failed to relaunch app: {ex.Message}");
+                logLine($"Failed to relaunch app: {ex.Message}");
             }
         }
 

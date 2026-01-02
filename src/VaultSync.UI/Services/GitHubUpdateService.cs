@@ -21,7 +21,9 @@ namespace VaultSync.UI.Services
             DateTime publishedAt,
             string? patchManifestUrl,
             Uri? patchArchiveUrl,
-            string? patchArchiveName)
+            string? patchArchiveName,
+            Uri? installerUrl,
+            string? installerName)
         {
             TagName          = tagName;
             ReleaseName      = releaseName;
@@ -31,6 +33,8 @@ namespace VaultSync.UI.Services
             PatchManifestUrl = patchManifestUrl;
             PatchArchiveUrl  = patchArchiveUrl;
             PatchArchiveName = patchArchiveName;
+            InstallerUrl     = installerUrl;
+            InstallerName    = installerName;
         }
 
         public string TagName { get; }
@@ -41,7 +45,10 @@ namespace VaultSync.UI.Services
         public string? PatchManifestUrl { get; }
         public Uri? PatchArchiveUrl { get; }
         public string? PatchArchiveName { get; }
+        public Uri? InstallerUrl { get; }
+        public string? InstallerName { get; }
         public bool HasPatch => !string.IsNullOrWhiteSpace(PatchManifestUrl) && PatchArchiveUrl != null;
+        public bool HasInstaller => InstallerUrl != null;
     }
 
     public enum GitHubReleaseChannel
@@ -95,6 +102,7 @@ namespace VaultSync.UI.Services
             var publishedAt = candidate.PublishedAt ?? DateTime.MinValue;
 
             var (manifestUrl, archiveUrl, archiveName) = GetPatchAssets(candidate.Assets);
+            var (installerUrl, installerName) = GetInstallerAsset(candidate.Assets);
 
             return new UpdateCheckResult(
                 releaseTag,
@@ -104,7 +112,9 @@ namespace VaultSync.UI.Services
                 publishedAt,
                 manifestUrl,
                 archiveUrl,
-                archiveName);
+                archiveName,
+                installerUrl,
+                installerName);
         }
 
         private static bool IsReleaseNewer(string releaseTag, string currentVersion)
@@ -314,6 +324,42 @@ namespace VaultSync.UI.Services
             }
 
             return (manifest.BrowserDownloadUrl, archiveUri, archive.Name);
+        }
+
+        private static (Uri? InstallerUrl, string? InstallerName) GetInstallerAsset(List<GitHubAsset>? assets)
+        {
+            if (assets is null || assets.Count == 0)
+                return (null, null);
+
+            GitHubAsset? asset = null;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                asset = assets.FirstOrDefault(a =>
+                    a.Name is not null &&
+                    a.Name.Contains("setup", StringComparison.OrdinalIgnoreCase) &&
+                    a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                asset = assets.FirstOrDefault(a =>
+                    a.Name is not null &&
+                    a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                asset = assets.FirstOrDefault(a =>
+                    a.Name is not null &&
+                    (a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) ||
+                     a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)));
+            }
+
+            if (asset is null || string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
+                return (null, null);
+
+            return Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var url)
+                ? (url, asset.Name)
+                : (null, null);
         }
 
         private static string GetPlatformSuffix()

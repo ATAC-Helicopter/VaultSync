@@ -1,0 +1,2404 @@
+<!-- Creator     : groff version 1.23.0 -->
+<!-- CreationDate: Wed Jan 15 21:18:14 2025 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
+</style>
+<title>rsyncd.conf</title>
+
+</head>
+<body>
+
+<h1 align="center">rsyncd.conf</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#FILE FORMAT">FILE FORMAT</a><br>
+<a href="#LAUNCHING THE RSYNC DAEMON">LAUNCHING THE RSYNC DAEMON</a><br>
+<a href="#GLOBAL PARAMETERS">GLOBAL PARAMETERS</a><br>
+<a href="#MODULE PARAMETERS">MODULE PARAMETERS</a><br>
+<a href="#CONFIG DIRECTIVES">CONFIG DIRECTIVES</a><br>
+<a href="#AUTHENTICATION STRENGTH">AUTHENTICATION STRENGTH</a><br>
+<a href="#SSL/TLS Daemon Setup">SSL/TLS Daemon Setup</a><br>
+<a href="#DAEMON CONFIG EXAMPLES">DAEMON CONFIG EXAMPLES</a><br>
+<a href="#FILES">FILES</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+<a href="#BUGS">BUGS</a><br>
+<a href="#VERSION">VERSION</a><br>
+<a href="#CREDITS">CREDITS</a><br>
+<a href="#THANKS">THANKS</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+
+<hr>
+
+
+<h2>NAME
+<a name="NAME"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">rsyncd.conf
+&minus; configuration file for rsync in daemon mode</p>
+
+<h2>SYNOPSIS
+<a name="SYNOPSIS"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">rsyncd.conf</p>
+
+<p style="margin-left:9%; margin-top: 1em">The online
+version of this manpage (that includes cross-linking of
+topics) is available at
+<a href="https://download.samba.org/pub/rsync/rsyncd.conf.5">https://download.samba.org/pub/rsync/rsyncd.conf.5</a>.</p>
+
+<h2>DESCRIPTION
+<a name="DESCRIPTION"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">The rsyncd.conf
+file is the runtime configuration file for rsync when run as
+an rsync daemon.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The rsyncd.conf
+file controls authentication, access, logging and available
+modules.</p>
+
+<h2>FILE FORMAT
+<a name="FILE FORMAT"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">The file
+consists of modules and parameters. A module begins with the
+name of the module in square brackets and continues until
+the next module begins. Modules contain parameters of the
+form <b>name&nbsp;=&nbsp;value</b>.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The file is
+line-based&nbsp;&minus;&minus; that is, each
+newline-terminated line represents either a comment, a
+module name or a parameter.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Only the first
+equals sign in a parameter is significant. Whitespace before
+or after the first equals sign is discarded. Leading,
+trailing and internal whitespace in module and parameter
+names is irrelevant. Leading and trailing whitespace in a
+parameter value is discarded. Internal whitespace within a
+parameter value is retained verbatim.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Any line
+<b>beginning</b> with a hash (<b>#</b>) is ignored, as are
+lines containing only whitespace. (If a hash occurs after
+anything other than leading whitespace, it is considered a
+part of the line&rsquo;s content.)</p>
+
+<p style="margin-left:9%; margin-top: 1em">Any line ending
+in a <b>\</b> is &quot;continued&quot; on the next line in
+the customary UNIX fashion.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The values
+following the equals sign in parameters are all either a
+string (no quotes needed) or a boolean, which may be given
+as yes/no, 0/1 or true/false. Case is not significant in
+boolean values, but is preserved in string values.</p>
+
+<h2>LAUNCHING THE RSYNC DAEMON
+<a name="LAUNCHING THE RSYNC DAEMON"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">The rsync daemon
+is launched by specifying the <b>&minus;&minus;daemon</b>
+option to rsync.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The daemon must
+run with root privileges if you wish to use chroot, to bind
+to a port numbered under 1024 (as is the default 873), or to
+set file ownership. Otherwise, it must just have permission
+to read and write the appropriate data, log, and lock
+files.</p>
+
+<p style="margin-left:9%; margin-top: 1em">You can launch
+it either via inetd, as a stand-alone daemon, or from an
+rsync client via a remote shell. If run as a stand-alone
+daemon then just run the command
+&quot;<b>rsync&nbsp;&minus;&minus;daemon</b>&quot; from a
+suitable startup script.</p>
+
+<p style="margin-left:9%; margin-top: 1em">When run via
+inetd you should add a line like this to /etc/services:</p>
+
+<p style="margin-left:14%; margin-top: 1em">rsync
+873/tcp</p>
+
+<p style="margin-left:9%; margin-top: 1em">and a single
+line something like this to /etc/inetd.conf:</p>
+
+<p style="margin-left:14%; margin-top: 1em">rsync stream
+tcp nowait root /usr/local/bin/rsync rsyncd --daemon</p>
+
+<p style="margin-left:9%; margin-top: 1em">Replace
+&quot;/usr/local/bin/rsync&quot; with the path to where you
+have rsync installed on your system. You will then need to
+send inetd a HUP signal to tell it to reread its config
+file.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Note that you
+should <b>not</b> send the rsync daemon a HUP signal to
+force it to reread the <b>rsyncd.conf</b> file. The file is
+re-read on each client connection.</p>
+
+<h2>GLOBAL PARAMETERS
+<a name="GLOBAL PARAMETERS"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">The first
+parameters in the file (before a [module] header) are the
+global parameters: <b><br>
+motd&nbsp;file</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify a &quot;message of the day&quot; (MOTD) to display
+to clients on each connect. This usually contains site
+information and any legal notices. The default is no MOTD
+file. This can be overridden by the
+<b>&minus;&minus;dparam=motdfile=FILE</b> command-line
+option when starting the daemon.</p>
+
+<p style="margin-left:9%;"><b>pid&nbsp;file</b></p>
+
+<p style="margin-left:18%;">This parameter tells the rsync
+daemon to write its process ID to that file. The rsync keeps
+the file locked so that it can know when it is safe to
+overwrite an existing file.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The filename
+can be overridden by the
+<b>&minus;&minus;dparam=pidfile=FILE</b> command-line option
+when starting the daemon.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="5%">
+
+
+<p><b>port</b></p></td>
+<td width="4%"></td>
+<td width="82%">
+
+
+<p>You can override the default port the daemon will listen
+on by specifying this value (defaults to 873). This is
+ignored if the daemon is being run by inetd, and is
+superseded by the <b>&minus;&minus;port</b> command-line
+option.</p> </td></tr>
+</table>
+
+<p style="margin-left:9%;"><b>address</b></p>
+
+<p style="margin-left:18%;">You can override the default IP
+address the daemon will listen on by specifying this value.
+This is ignored if the daemon is being run by inetd, and is
+superseded by the <b>&minus;&minus;address</b> command-line
+option.</p>
+
+<p style="margin-left:9%;"><b>socket&nbsp;options</b></p>
+
+<p style="margin-left:18%;">This parameter can provide
+endless fun for people who like to tune their systems to the
+utmost degree. You can set all sorts of socket options which
+may make transfers faster (or slower!). Read the manpage for
+the <b>setsockopt()</b> system call for details on some of
+the options you may be able to set. By default no special
+socket options are set. These settings can also be specified
+via the <b>&minus;&minus;sockopts</b> command-line
+option.</p>
+
+<p style="margin-left:9%;"><b>listen&nbsp;backlog</b></p>
+
+<p style="margin-left:18%;">You can override the default
+backlog value when the daemon listens for connections. It
+defaults to 5.</p>
+
+<p style="margin-left:9%; margin-top: 1em">You may also
+include any MODULE PARAMETERS in the global part of the
+config file, in which case the supplied value will override
+the default for that parameter.</p>
+
+<p style="margin-left:9%; margin-top: 1em">You may use
+references to environment variables in the values of
+parameters. String parameters will have %VAR% references
+expanded as late as possible (when the string is first used
+in the program), allowing for the use of variables that
+rsync sets at connection time, such as RSYNC_USER_NAME.
+Non-string parameters (such as true/false settings) are
+expanded when read from the config file. If a variable does
+not exist in the environment, or if a sequence of characters
+is not a valid reference (such as an un-paired percent
+sign), the raw characters are passed through unchanged. This
+helps with backward compatibility and safety (e.g. expanding
+a non-existent %VAR% to an empty string in a path could
+result in a very unsafe path). The safest way to insert a
+literal % into a value is to use %%.</p>
+
+<h2>MODULE PARAMETERS
+<a name="MODULE PARAMETERS"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">After the global
+parameters you should define a number of modules, each
+module exports a directory tree as a symbolic name. Modules
+are exported by specifying a module name in square brackets
+[module] followed by the parameters for that module. The
+module name cannot contain a slash or a closing square
+bracket. If the name contains whitespace, each internal
+sequence of whitespace will be changed into a single space,
+while leading or trailing whitespace will be discarded.</p>
+
+<p style="margin-left:9%; margin-top: 1em">There is also a
+special module name of &quot;[global]&quot; that does not
+define a module but instead switches back to the global
+settings context where default parameters can be specified.
+Because each defined module gets its full set of parameters
+as a combination of the default values that are set at that
+position in the config file plus its own parameter list, the
+use of a &quot;[global]&quot; section can help to maintain
+shared config values for multiple modules.</p>
+
+<p style="margin-left:9%; margin-top: 1em">As with GLOBAL
+PARAMETERS, you may use references to environment variables
+in the values of parameters. See that section for details.
+<b><br>
+comment</b></p>
+
+<p style="margin-left:18%;">This parameter specifies a
+description string that is displayed next to the module name
+when clients obtain a list of available modules. The default
+is no comment.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="5%">
+
+
+<p><b>path</b></p></td>
+<td width="4%"></td>
+<td width="82%">
+
+
+<p>This parameter specifies the directory in the
+daemon&rsquo;s filesystem to make available in this module.
+You must specify this parameter for each module in
+<b>rsyncd.conf</b>.</p> </td></tr>
+</table>
+
+<p style="margin-left:18%; margin-top: 1em">If the value
+contains a &quot;/./&quot; element then the path will be
+divided at that point into a chroot dir and an inner-chroot
+subdir. If <b>use&nbsp;chroot</b> is set to false, though,
+the extraneous dot dir is just cleaned out of the path. An
+example of this idiom is:</p>
+
+<p style="margin-left:23%; margin-top: 1em">path =
+/var/rsync/./module1</p>
+
+<p style="margin-left:18%; margin-top: 1em">This will (when
+chrooting) chroot to &quot;/var/rsync&quot; and set the
+inside-chroot path to &quot;/module1&quot;.</p>
+
+<p style="margin-left:18%; margin-top: 1em">You may base
+the path&rsquo;s value off of an environment variable by
+surrounding the variable name with percent signs. You can
+even reference a variable that is set by rsync when the user
+connects. For example, this would use the authorizing
+user&rsquo;s name in the path:</p>
+
+<p style="margin-left:23%; margin-top: 1em">path =
+/home/%RSYNC_USER_NAME%</p>
+
+<p style="margin-left:18%; margin-top: 1em">It is fine if
+the path includes internal spaces&nbsp;&minus;&minus; they
+will be retained verbatim (which means that you
+shouldn&rsquo;t try to escape them). If your final directory
+has a trailing space (and this is somehow not something you
+wish to fix), append a trailing slash to the path to avoid
+losing the trailing whitespace.</p>
+
+<p style="margin-left:9%;"><b>use&nbsp;chroot</b></p>
+
+<p style="margin-left:18%;">If &quot;use chroot&quot; is
+true, the rsync daemon will chroot to the &quot;path&quot;
+before starting the file transfer with the client. This has
+the advantage of extra protection against possible
+implementation security holes, but it has the disadvantages
+of requiring super-user privileges, of not being able to
+follow symbolic links that are either absolute or outside of
+the new root path, and of complicating the preservation of
+users and groups by name (see below).</p>
+
+<p style="margin-left:18%; margin-top: 1em">If
+<b>use&nbsp;chroot</b> is not set, it defaults to trying to
+enable a chroot but allows the daemon to continue (after
+logging a warning) if it fails. The one exception to this is
+when a module&rsquo;s <b>path</b> has a &quot;/./&quot;
+chroot divider in it&nbsp;&minus;&minus; this causes an
+unset value to be treated as true for that module.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Prior to rsync
+3.2.7, the default value was &quot;true&quot;. The new
+&quot;unset&quot; default makes it easier to setup an rsync
+daemon as a non-root user or to run a daemon on a system
+where chroot fails. Explicitly setting the value to
+&quot;true&quot; in rsyncd.conf will always require the
+chroot to succeed.</p>
+
+<p style="margin-left:18%; margin-top: 1em">It is also
+possible to specify a dot-dir in the module&rsquo;s
+&quot;path&quot; to indicate that you want to chdir to the
+earlier part of the path and then serve files from inside
+the latter part of the path (with sanitizing and default
+symlink munging). This can be useful if you need some
+library dirs inside the chroot (typically for uid &amp; gid
+lookups) but don&rsquo;t want to put the lib dir into the
+top of the served path (even though they can be hidden with
+an <b>exclude</b> directive). However, a better choice for a
+modern rsync setup is to use a
+<b>name&nbsp;converter</b>&quot; and try to avoid inner lib
+dirs altogether. See also the <b>daemon&nbsp;chroot</b>
+parameter, which causes rsync to chroot into its own chroot
+area before doing any path-related chrooting.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If the daemon
+is serving the &quot;/&quot; dir (either directly or due to
+being chrooted to the module&rsquo;s path), rsync does not
+do any path sanitizing or (default) munging.</p>
+
+<p style="margin-left:18%; margin-top: 1em">When it has to
+limit access to a particular subdir (either due to chroot
+being disabled or having an inside-chroot path set), rsync
+will munge symlinks (by default) and sanitize paths. Those
+that dislike munged symlinks (and really, really trust their
+users to not break out of the subdir) can disable the
+symlink munging via the &quot;munge symlinks&quot;
+parameter.</p>
+
+<p style="margin-left:18%; margin-top: 1em">When rsync is
+sanitizing paths, it trims &quot;..&quot; path elements from
+args that it believes would escape the module hierarchy. It
+also substitutes leading slashes in absolute paths with the
+module&rsquo;s path (so that options such as
+<b>&minus;&minus;backup-dir</b> &amp;
+<b>&minus;&minus;compare-dest</b> interpret an absolute path
+as rooted in the module&rsquo;s &quot;path&quot; dir).</p>
+
+<p style="margin-left:18%; margin-top: 1em">When a chroot
+is in effect <i>and</i> the &quot;name converter&quot;
+parameter is <i>not</i> set, the &quot;numeric ids&quot;
+parameter will default to being enabled (disabling name
+lookups). This means that if you manually setup name-lookup
+libraries in your chroot (instead of using a name converter)
+that you need to explicitly set
+<b>numeric&nbsp;ids&nbsp;=&nbsp;false</b> for rsync to do
+name lookups.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If you copy
+library resources into the module&rsquo;s chroot area, you
+should protect them through your OS&rsquo;s normal
+user/group or ACL settings (to prevent the rsync
+module&rsquo;s user from being able to change them), and
+then hide them from the user&rsquo;s view via
+&quot;exclude&quot; (see how in the discussion of that
+parameter). However, it&rsquo;s easier and safer to setup a
+name converter.</p>
+
+<p style="margin-left:9%;"><b>daemon&nbsp;chroot</b></p>
+
+<p style="margin-left:18%;">This parameter specifies a path
+to which the daemon will chroot before beginning
+communication with clients. Module paths (and any &quot;use
+chroot&quot; settings) will then be related to this one.
+This lets you choose if you want the whole daemon to be
+chrooted (with this setting), just the transfers to be
+chrooted (with &quot;use chroot&quot;), or both. Keep in
+mind that the &quot;daemon chroot&quot; area may need
+various OS/lib/etc files installed to allow the daemon to
+function. By default the daemon runs without any
+chrooting.</p>
+
+<p style="margin-left:9%;"><b>proxy&nbsp;protocol</b></p>
+
+<p style="margin-left:18%;">When this parameter is enabled,
+all incoming connections must start with a V1 or V2 proxy
+protocol header. If the header is not found, the connection
+is closed.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Setting this to
+<b>true</b> requires a proxy server to forward source IP
+information to rsync, allowing you to log proper IP/host
+info and make use of client-oriented IP restrictions. The
+default of <b>false</b> means that the IP information comes
+directly from the socket&rsquo;s metadata. If rsync is not
+behind a proxy, this should be disabled.</p>
+
+
+<p style="margin-left:18%; margin-top: 1em"><i>CAUTION</i>:
+using this option can be dangerous if you do not ensure that
+only the proxy is allowed to connect to the rsync port. If
+any non-proxied connections are allowed through, the client
+will be able to use a modified rsync to spoof any remote IP
+address that they desire. You can lock this down using
+something like iptables <b>&minus;uid-owner&nbsp;root</b>
+rules (for strict localhost access), various firewall rules,
+or you can require password authorization so that any
+spoofing by users will not grant extra access.</p>
+
+<p style="margin-left:18%; margin-top: 1em">This setting is
+global. If you need some modules to require this and not
+others, then you will need to setup multiple rsync daemon
+processes on different ports.</p>
+
+<p style="margin-left:9%;"><b>name&nbsp;converter</b></p>
+
+<p style="margin-left:18%;">This parameter lets you specify
+a program that will be run by the rsync daemon to do user
+&amp; group conversions between names &amp; ids. This script
+is started prior to any chroot being setup, and runs as the
+daemon user (not the transfer user). You can specify a fully
+qualified pathname or a program name that is on the
+$PATH.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The program can
+be used to do normal user &amp; group lookups without having
+to put any extra files into the chroot area of the module
+<i>or</i> you can do customized conversions.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The nameconvert
+program has access to all of the environment variables that
+are described in the section on <b>pre-xfer&nbsp;exec</b>.
+This is useful if you want to customize the conversion using
+information about the module and/or the copy request.</p>
+
+<p style="margin-left:18%; margin-top: 1em">There is a
+sample python script in the support dir named
+&quot;nameconvert&quot; that implements the normal user
+&amp; group lookups. Feel free to customize it or just use
+it as documentation to implement your own.</p>
+
+<p style="margin-left:9%;"><b>numeric&nbsp;ids</b></p>
+
+<p style="margin-left:18%;">Enabling this parameter
+disables the mapping of users and groups by name for the
+current daemon module. This prevents the daemon from trying
+to load any user/group-related files or libraries. This
+enabling makes the transfer behave as if the client had
+passed the <b>&minus;&minus;numeric-ids</b> command-line
+option. By default, this parameter is enabled for chroot
+modules and disabled for non-chroot modules. Also keep in
+mind that uid/gid preservation requires the module to be
+running as root (see &quot;uid&quot;) or for &quot;fake
+super&quot; to be configured.</p>
+
+<p style="margin-left:18%; margin-top: 1em">A
+chroot-enabled module should not have this parameter set to
+false unless you&rsquo;re using a &quot;name converter&quot;
+program <i>or</i> you&rsquo;ve taken steps to ensure that
+the module has the necessary resources it needs to translate
+names and that it is not possible for a user to change those
+resources.</p>
+
+<p style="margin-left:9%;"><b>munge&nbsp;symlinks</b></p>
+
+<p style="margin-left:18%;">This parameter tells rsync to
+modify all symlinks in the same way as the
+(non-daemon-affecting) <b>&minus;&minus;munge-links</b>
+command-line option (using a method described below). This
+should help protect your files from user trickery when your
+daemon module is writable. The default is disabled when
+&quot;use chroot&quot; is on with an inside-chroot path of
+&quot;/&quot;, OR if &quot;daemon chroot&quot; is on,
+otherwise it is enabled.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If you disable
+this parameter on a daemon that is not read-only, there are
+tricks that a user can play with uploaded symlinks to access
+daemon-excluded items (if your module has any), and, if
+&quot;use chroot&quot; is off, rsync can even be tricked
+into showing or changing data that is outside the
+module&rsquo;s path (as access-permissions allow).</p>
+
+<p style="margin-left:18%; margin-top: 1em">The way rsync
+disables the use of symlinks is to prefix each one with the
+string &quot;/rsyncd-munged/&quot;. This prevents the links
+from being used as long as that directory does not exist.
+When this parameter is enabled, rsync will refuse to run if
+that path is a directory or a symlink to a directory. When
+using the &quot;munge symlinks&quot; parameter in a chroot
+area that has an inside-chroot path of &quot;/&quot;, you
+should add &quot;/rsyncd-munged/&quot; to the exclude
+setting for the module so that a user can&rsquo;t try to
+create it.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Note: rsync
+makes no attempt to verify that any pre-existing symlinks in
+the module&rsquo;s hierarchy are as safe as you want them to
+be (unless, of course, it just copied in the whole
+hierarchy). If you setup an rsync daemon on a new area or
+locally add symlinks, you can manually protect your symlinks
+from being abused by prefixing &quot;/rsyncd-munged/&quot;
+to the start of every symlink&rsquo;s value. There is a perl
+script in the support directory of the source code named
+&quot;munge-symlinks&quot; that can be used to add or remove
+this prefix from your symlinks.</p>
+
+<p style="margin-left:18%; margin-top: 1em">When this
+parameter is disabled on a writable module and &quot;use
+chroot&quot; is off (or the inside-chroot path is not
+&quot;/&quot;), incoming symlinks will be modified to drop a
+leading slash and to remove &quot;..&quot; path elements
+that rsync believes will allow a symlink to escape the
+module&rsquo;s hierarchy. There are tricky ways to work
+around this, though, so you had better trust your users if
+you choose this combination of parameters.</p>
+
+<p style="margin-left:9%;"><b>charset</b></p>
+
+<p style="margin-left:18%;">This specifies the name of the
+character set in which the module&rsquo;s filenames are
+stored. If the client uses an <b>&minus;&minus;iconv</b>
+option, the daemon will use the value of the
+&quot;charset&quot; parameter regardless of the character
+set the client actually passed. This allows the daemon to
+support charset conversion in a chroot module without extra
+files in the chroot area, and also ensures that
+name-translation is done in a consistent manner. If the
+&quot;charset&quot; parameter is not set, the
+<b>&minus;&minus;iconv</b> option is refused, just as if
+&quot;iconv&quot; had been specified via &quot;refuse
+options&quot;.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If you wish to
+force users to always use <b>&minus;&minus;iconv</b> for a
+particular module, add &quot;no-iconv&quot; to the
+&quot;refuse options&quot; parameter. Keep in mind that this
+will restrict access to your module to very new rsync
+clients.</p>
+
+<p style="margin-left:9%;"><b>max&nbsp;connections</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify the maximum number of simultaneous connections you
+will allow. Any clients connecting when the maximum has been
+reached will receive a message telling them to try later.
+The default is 0, which means no limit. A negative value
+disables the module. See also the &quot;lock file&quot;
+parameter.</p>
+
+<p style="margin-left:9%;"><b>log&nbsp;file</b></p>
+
+<p style="margin-left:18%;">When the &quot;log file&quot;
+parameter is set to a non-empty string, the rsync daemon
+will log messages to the indicated file rather than using
+syslog. This is particularly useful on systems (such as AIX)
+where <b>syslog()</b> doesn&rsquo;t work for chrooted
+programs. The file is opened before <b>chroot()</b> is
+called, allowing it to be placed outside the transfer. If
+this value is set on a per-module basis instead of globally,
+the global log will still contain any authorization failures
+or config-file error messages.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If the daemon
+fails to open the specified file, it will fall back to using
+syslog and output an error about the failure. (Note that the
+failure to open the specified log file used to be a fatal
+error.)</p>
+
+<p style="margin-left:18%; margin-top: 1em">This setting
+can be overridden by using the
+<b>&minus;&minus;log-file=FILE</b> or
+<b>&minus;&minus;dparam=logfile=FILE</b> command-line
+options. The former overrides all the log-file parameters of
+the daemon and all module settings. The latter sets the
+daemon&rsquo;s log file and the default for all the modules,
+which still allows modules to override the default
+setting.</p>
+
+<p style="margin-left:9%;"><b>syslog&nbsp;facility</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify the syslog facility name to use when logging
+messages from the rsync daemon. You may use any standard
+syslog facility name which is defined on your system. Common
+names are auth, authpriv, cron, daemon, ftp, kern, lpr,
+mail, news, security, syslog, user, uucp, local0, local1,
+local2, local3, local4, local5, local6 and local7. The
+default is daemon. This setting has no effect if the
+&quot;log file&quot; setting is a non-empty string (either
+set in the per-modules settings, or inherited from the
+global settings).</p>
+
+<p style="margin-left:9%;"><b>syslog&nbsp;tag</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify the syslog tag to use when logging messages from the
+rsync daemon. The default is &quot;rsyncd&quot;. This
+setting has no effect if the &quot;log file&quot; setting is
+a non-empty string (either set in the per-modules settings,
+or inherited from the global settings).</p>
+
+<p style="margin-left:18%; margin-top: 1em">For example, if
+you wanted each authenticated user&rsquo;s name to be
+included in the syslog tag, you could do something like
+this:</p>
+
+<p style="margin-left:23%; margin-top: 1em">syslog tag =
+rsyncd.%RSYNC_USER_NAME%</p>
+
+<p style="margin-left:9%;"><b>max&nbsp;verbosity</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+control the maximum amount of verbose information that
+you&rsquo;ll allow the daemon to generate (since the
+information goes into the log file). The default is 1, which
+allows the client to request one level of verbosity.</p>
+
+<p style="margin-left:18%; margin-top: 1em">This also
+affects the user&rsquo;s ability to request higher levels of
+<b>&minus;&minus;info</b> and <b>&minus;&minus;debug</b>
+logging. If the max value is 2, then no info and/or debug
+value that is higher than what would be set by
+<b>&minus;vv</b> will be honored by the daemon in its
+logging. To see how high of a verbosity level you need to
+accept for a particular info/debug level, refer to
+<b>rsync&nbsp;&minus;&minus;info=help</b> and
+<b>rsync&nbsp;&minus;&minus;debug=help</b>. For instance, it
+takes max-verbosity 4 to be able to output debug TIME2 and
+FLIST3.</p>
+
+<p style="margin-left:9%;"><b>lock&nbsp;file</b></p>
+
+<p style="margin-left:18%;">This parameter specifies the
+file to use to support the &quot;max connections&quot;
+parameter. The rsync daemon uses record locking on this file
+to ensure that the max connections limit is not exceeded for
+the modules sharing the lock file. The default is
+<b>/var/run/rsyncd.lock</b>.</p>
+
+<p style="margin-left:9%;"><b>read&nbsp;only</b></p>
+
+<p style="margin-left:18%;">This parameter determines
+whether clients will be able to upload files or not. If
+&quot;read only&quot; is true then any attempted uploads
+will fail. If &quot;read only&quot; is false then uploads
+will be possible if file permissions on the daemon side
+allow them. The default is for all modules to be read
+only.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Note that
+&quot;auth users&quot; can override this setting on a
+per-user basis.</p>
+
+<p style="margin-left:9%;"><b>write&nbsp;only</b></p>
+
+<p style="margin-left:18%;">This parameter determines
+whether clients will be able to download files or not. If
+&quot;write only&quot; is true then any attempted downloads
+will fail. If &quot;write only&quot; is false then downloads
+will be possible if file permissions on the daemon side
+allow them. The default is for this parameter to be
+disabled.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Helpful hint:
+you probably want to specify &quot;refuse options =
+delete&quot; for a write-only module.</p>
+
+<p style="margin-left:9%;"><b>open&nbsp;noatime</b></p>
+
+<p style="margin-left:18%;">When set to True, this
+parameter tells the rsync daemon to open files with the
+O_NOATIME flag (on systems that support it) to avoid
+changing the access time of the files that are being
+transferred. If your OS does not support the O_NOATIME flag
+then rsync will silently ignore this option. Note also that
+some filesystems are mounted to avoid updating the atime on
+read access even without the O_NOATIME flag being set.</p>
+
+<p style="margin-left:18%; margin-top: 1em">When set to
+False, this parameters ensures that files on the server are
+not opened with O_NOATIME.</p>
+
+<p style="margin-left:18%; margin-top: 1em">When set to
+Unset (the default) the user controls the setting via
+<b>&minus;&minus;open-noatime</b>.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="5%">
+
+
+<p><b>list</b></p></td>
+<td width="4%"></td>
+<td width="82%">
+
+
+<p>This parameter determines whether this module is listed
+when the client asks for a listing of available modules. In
+addition, if this is false, the daemon will pretend the
+module does not exist when a client denied by &quot;hosts
+allow&quot; or &quot;hosts deny&quot; attempts to access it.
+Realize that if &quot;reverse lookup&quot; is disabled
+globally but enabled for the module, the resulting reverse
+lookup to a potentially client-controlled DNS server may
+still reveal to the client that it hit an existing module.
+The default is for modules to be listable.</p></td></tr>
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="5%">
+
+
+<p><b>uid</b></p></td>
+<td width="4%"></td>
+<td width="82%">
+
+
+<p>This parameter specifies the user name or user ID that
+file transfers to and from that module should take place as
+when the daemon was run as root. In combination with the
+&quot;gid&quot; parameter this determines what file
+permissions are available. The default when run by a
+super-user is to switch to the system&rsquo;s
+&quot;nobody&quot; user. The default for a non-super-user is
+to not try to change the user. See also the &quot;gid&quot;
+parameter.</p> </td></tr>
+</table>
+
+<p style="margin-left:18%; margin-top: 1em">The
+RSYNC_USER_NAME environment variable may be used to request
+that rsync run as the authorizing user. For example, if you
+want a rsync to run as the same user that was received for
+the rsync authentication, this setup is useful:</p>
+
+<p style="margin-left:23%; margin-top: 1em">uid =
+%RSYNC_USER_NAME% <br>
+gid = *</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="4%">
+
+
+<p style="margin-top: 1em"><b>gid</b></p></td>
+<td width="5%"></td>
+<td width="82%">
+
+
+<p style="margin-top: 1em">This parameter specifies one or
+more group names/IDs that will be used when accessing the
+module. The first one will be the default group, and any
+extra ones be set as supplemental groups. You may also
+specify a &quot;<b>*</b>&quot; as the first gid in the list,
+which will be replaced by all the normal groups for the
+transfer&rsquo;s user (see &quot;uid&quot;). The default
+when run by a super-user is to switch to your OS&rsquo;s
+&quot;nobody&quot; (or perhaps &quot;nogroup&quot;) group
+with no other supplementary groups. The default for a
+non-super-user is to not change any group attributes (and
+indeed, your OS may not allow a non-super-user to try to
+change their group settings).</p></td></tr>
+</table>
+
+<p style="margin-left:18%; margin-top: 1em">The specified
+list is normally split into tokens based on spaces and
+commas. However, if the list starts with a comma, then the
+list is only split on commas, which allows a group name to
+contain a space. In either case any leading and/or trailing
+whitespace is removed from the tokens and empty tokens are
+ignored.</p>
+
+<p style="margin-left:9%;"><b>daemon&nbsp;uid</b></p>
+
+<p style="margin-left:18%;">This parameter specifies a uid
+under which the daemon will run. The daemon usually runs as
+user root, and when this is left unset the user is left
+unchanged. See also the &quot;uid&quot; parameter.</p>
+
+<p style="margin-left:9%;"><b>daemon&nbsp;gid</b></p>
+
+<p style="margin-left:18%;">This parameter specifies a gid
+under which the daemon will run. The daemon usually runs as
+group root, and when this is left unset, the group is left
+unchanged. See also the &quot;gid&quot; parameter.</p>
+
+<p style="margin-left:9%;"><b>fake&nbsp;super</b></p>
+
+<p style="margin-left:18%;">Setting &quot;fake super =
+yes&quot; for a module causes the daemon side to behave as
+if the <b>&minus;&minus;fake-super</b> command-line option
+had been specified. This allows the full attributes of a
+file to be stored without having to have the daemon actually
+running as root.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="8%">
+
+
+<p><b>filter</b></p></td>
+<td width="1%"></td>
+<td width="82%">
+
+
+<p>The daemon has its own filter chain that determines what
+files it will let the client access. This chain is not sent
+to the client and is independent of any filters the client
+may have specified. Files excluded by the daemon filter
+chain (<b>daemon-excluded</b> files) are treated as
+non-existent if the client tries to pull them, are skipped
+with an error message if the client tries to push them
+(triggering exit code 23), and are never deleted from the
+module. You can use daemon filters to prevent clients from
+downloading or tampering with private administrative files,
+such as files you may add to support uid/gid name
+translations.</p> </td></tr>
+</table>
+
+<p style="margin-left:18%; margin-top: 1em">The daemon
+filter chain is built from the &quot;filter&quot;,
+&quot;include from&quot;, &quot;include&quot;, &quot;exclude
+from&quot;, and &quot;exclude&quot; parameters, in that
+order of priority. Anchored patterns are anchored at the
+root of the module. To prevent access to an entire subtree,
+for example, &quot;<b>/secret</b>&quot;, you <b>must</b>
+exclude everything in the subtree; the easiest way to do
+this is with a triple-star pattern like
+&quot;<b>/secret/***</b>&quot;.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The
+&quot;filter&quot; parameter takes a space-separated list of
+daemon filter rules, though it is smart enough to know not
+to split a token at an internal space in a rule (e.g.
+&quot;<b>&minus;&nbsp;/foo&nbsp;&nbsp;&minus;&nbsp;/bar</b>&quot;
+is parsed as two rules). You may specify one or more
+merge-file rules using the normal syntax. Only one
+&quot;filter&quot; parameter can apply to a given module in
+the config file, so put all the rules you want in a single
+parameter. Note that per-directory merge-file rules do not
+provide as much protection as global rules, but they can be
+used to make <b>&minus;&minus;delete</b> work better during
+a client download operation if the per-dir merge files are
+included in the transfer and the client requests that they
+be used.</p>
+
+<p style="margin-left:9%;"><b>exclude</b></p>
+
+<p style="margin-left:18%;">This parameter takes a
+space-separated list of daemon exclude patterns. As with the
+client <b>&minus;&minus;exclude</b> option, patterns can be
+qualified with &quot;<b>&minus;&nbsp;</b>&quot; or
+&quot;<b>+&nbsp;</b>&quot; to explicitly indicate
+exclude/include. Only one &quot;exclude&quot; parameter can
+apply to a given module. See the &quot;filter&quot;
+parameter for a description of how excluded files affect the
+daemon.</p>
+
+<p style="margin-left:9%;"><b>include</b></p>
+
+<p style="margin-left:18%;">Use an &quot;include&quot; to
+override the effects of the &quot;exclude&quot; parameter.
+Only one &quot;include&quot; parameter can apply to a given
+module. See the &quot;filter&quot; parameter for a
+description of how excluded files affect the daemon.</p>
+
+<p style="margin-left:9%;"><b>exclude&nbsp;from</b></p>
+
+<p style="margin-left:18%;">This parameter specifies the
+name of a file on the daemon that contains daemon exclude
+patterns, one per line. Only one &quot;exclude from&quot;
+parameter can apply to a given module; if you have multiple
+exclude-from files, you can specify them as a merge file in
+the &quot;filter&quot; parameter. See the &quot;filter&quot;
+parameter for a description of how excluded files affect the
+daemon.</p>
+
+<p style="margin-left:9%;"><b>include&nbsp;from</b></p>
+
+<p style="margin-left:18%;">Analogue of &quot;exclude
+from&quot; for a file of daemon include patterns. Only one
+&quot;include from&quot; parameter can apply to a given
+module. See the &quot;filter&quot; parameter for a
+description of how excluded files affect the daemon.</p>
+
+<p style="margin-left:9%;"><b>incoming&nbsp;chmod</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify a set of comma-separated chmod strings that will
+affect the permissions of all incoming files (files that are
+being received by the daemon). These changes happen after
+all other permission calculations, and this will even
+override destination-default and/or existing permissions
+when the client does not specify <b>&minus;&minus;perms</b>.
+See the description of the <b>&minus;&minus;chmod</b> rsync
+option and the <b>chmod</b>(1) manpage for information on
+the format of this string.</p>
+
+<p style="margin-left:9%;"><b>outgoing&nbsp;chmod</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify a set of comma-separated chmod strings that will
+affect the permissions of all outgoing files (files that are
+being sent out from the daemon). These changes happen first,
+making the sent permissions appear to be different than
+those stored in the filesystem itself. For instance, you
+could disable group write permissions on the server while
+having it appear to be on to the clients. See the
+description of the <b>&minus;&minus;chmod</b> rsync option
+and the <b>chmod</b>(1) manpage for information on the
+format of this string.</p>
+
+<p style="margin-left:9%;"><b>auth&nbsp;users</b></p>
+
+<p style="margin-left:18%;">This parameter specifies a
+comma and/or space-separated list of authorization rules. In
+its simplest form, you list the usernames that will be
+allowed to connect to this module. The usernames do not need
+to exist on the local system. The rules may contain shell
+wildcard characters that will be matched against the
+username provided by the client for authentication. If
+&quot;auth users&quot; is set then the client will be
+challenged to supply a username and password to connect to
+the module. A challenge response authentication protocol is
+used for this exchange. The plain text usernames and
+passwords are stored in the file specified by the
+&quot;secrets file&quot; parameter. The default is for all
+users to be able to connect without a password (this is
+called &quot;anonymous rsync&quot;).</p>
+
+<p style="margin-left:18%; margin-top: 1em">In addition to
+username matching, you can specify groupname matching via a
+&rsquo;@&rsquo; prefix. When using groupname matching, the
+authenticating username must be a real user on the system,
+or it will be assumed to be a member of no groups. For
+example, specifying &quot;@rsync&quot; will match the
+authenticating user if the named user is a member of the
+rsync group.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Finally,
+options may be specified after a colon (:). The options
+allow you to &quot;deny&quot; a user or a group, set the
+access to &quot;ro&quot; (read-only), or set the access to
+&quot;rw&quot; (read/write). Setting an auth-rule-specific
+ro/rw setting overrides the module&rsquo;s &quot;read
+only&quot; setting.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Be sure to put
+the rules in the order you want them to be matched, because
+the checking stops at the first matching user or group, and
+that is the only auth that is checked. For example:</p>
+
+<p style="margin-left:23%; margin-top: 1em">auth users =
+joe:deny @guest:deny admin:rw @rsync:ro susan joe sam</p>
+
+<p style="margin-left:18%; margin-top: 1em">In the above
+rule, user joe will be denied access no matter what. Any
+user that is in the group &quot;guest&quot; is also denied
+access. The user &quot;admin&quot; gets access in read/write
+mode, but only if the admin user is not in group
+&quot;guest&quot; (because the admin user-matching rule
+would never be reached if the user is in group
+&quot;guest&quot;). Any other user who is in group
+&quot;rsync&quot; will get read-only access. Finally, users
+susan, joe, and sam get the ro/rw setting of the module, but
+only if the user didn&rsquo;t match an earlier
+group-matching rule.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If you need to
+specify a user or group name with a space in it, start your
+list with a comma to indicate that the list should only be
+split on commas (though leading and trailing whitespace will
+also be removed, and empty entries are just ignored). For
+example:</p>
+
+<p style="margin-left:23%; margin-top: 1em">auth users = ,
+joe:deny, @Some Group:deny, admin:rw, @RO Group:ro</p>
+
+<p style="margin-left:18%; margin-top: 1em">See the
+description of the secrets file for how you can have
+per-user passwords as well as per-group passwords. It also
+explains how a user can authenticate using their user
+password or (when applicable) a group password, depending on
+what rule is being authenticated.</p>
+
+<p style="margin-left:18%; margin-top: 1em">See also the
+section entitled &quot;USING RSYNC-DAEMON FEATURES VIA A
+REMOTE SHELL CONNECTION&quot; in <b>rsync</b>(1) for
+information on how handle an rsyncd.conf-level username that
+differs from the remote-shell-level username when using a
+remote shell to connect to an rsync daemon.</p>
+
+<p style="margin-left:9%;"><b>secrets&nbsp;file</b></p>
+
+<p style="margin-left:18%;">This parameter specifies the
+name of a file that contains the username:password and/or
+@groupname:password pairs used for authenticating this
+module. This file is only consulted if the &quot;auth
+users&quot; parameter is specified. The file is line-based
+and contains one name:password pair per line. Any line has a
+hash (#) as the very first character on the line is
+considered a comment and is skipped. The passwords can
+contain any characters but be warned that many operating
+systems limit the length of passwords that can be typed at
+the client end, so you may find that passwords longer than 8
+characters don&rsquo;t work.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The use of
+group-specific lines are only relevant when the module is
+being authorized using a matching &quot;@groupname&quot;
+rule. When that happens, the user can be authorized via
+either their &quot;username:password&quot; line or the
+&quot;@groupname:password&quot; line for the group that
+triggered the authentication.</p>
+
+<p style="margin-left:18%; margin-top: 1em">It is up to you
+what kind of password entries you want to include, either
+users, groups, or both. The use of group rules in &quot;auth
+users&quot; does not require that you specify a group
+password if you do not want to use shared passwords.</p>
+
+<p style="margin-left:18%; margin-top: 1em">There is no
+default for the &quot;secrets file&quot; parameter, you must
+choose a name (such as <b>/etc/rsyncd.secrets</b>). The file
+must normally not be readable by &quot;other&quot;; see
+&quot;strict modes&quot;. If the file is not found or is
+rejected, no logins for an &quot;auth users&quot; module
+will be possible.</p>
+
+<p style="margin-left:9%;"><b>strict&nbsp;modes</b></p>
+
+<p style="margin-left:18%;">This parameter determines
+whether or not the permissions on the secrets file will be
+checked. If &quot;strict modes&quot; is true, then the
+secrets file must not be readable by any user ID other than
+the one that the rsync daemon is running under. If
+&quot;strict modes&quot; is false, the check is not
+performed. The default is true. This parameter was added to
+accommodate rsync running on the Windows operating
+system.</p>
+
+<p style="margin-left:9%;"><b>hosts&nbsp;allow</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify a list of comma- and/or whitespace-separated
+patterns that are matched against a connecting
+client&rsquo;s hostname and IP address. If none of the
+patterns match, then the connection is rejected.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Each pattern
+can be in one of six forms:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>a dotted decimal IPv4 address of the form a.b.c.d, or an
+IPv6 address of the form a:b:c::d:e:f. In this case the
+incoming machine&rsquo;s IP address must match exactly.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>an address/mask in the form ipaddr/n where ipaddr is the
+IP address and n is the number of one bits in the netmask.
+All IP addresses which match the masked IP address will be
+allowed in.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>an address/mask in the form ipaddr/maskaddr where ipaddr
+is the IP address and maskaddr is the netmask in dotted
+decimal notation for IPv4, or similar for IPv6, e.g.
+ffff:ffff:ffff:ffff:: instead of /64. All IP addresses which
+match the masked IP address will be allowed in.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>a hostname pattern using wildcards. If the hostname of
+the connecting IP (as determined by a reverse lookup)
+matches the wildcarded name (using the same rules as normal
+Unix filename matching), the client is allowed in. This only
+works if &quot;reverse lookup&quot; is enabled (the
+default).</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>a hostname. A plain hostname is matched against the
+reverse DNS of the connecting IP (if &quot;reverse
+lookup&quot; is enabled), and/or the IP of the given
+hostname is matched against the connecting IP (if
+&quot;forward lookup&quot; is enabled, as it is by default).
+Any match will be allowed in.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>an &rsquo;@&rsquo; followed by a netgroup name, which
+will match if the reverse DNS of the connecting IP is in the
+specified netgroup.</p></td></tr>
+</table>
+
+<p style="margin-left:18%; margin-top: 1em">Note IPv6
+link-local addresses can have a scope in the address
+specification:</p>
+
+<p style="margin-left:23%; margin-top: 1em">fe80::1%link1
+<br>
+fe80::%link1/64 <br>
+fe80::%link1/ffff:ffff:ffff:ffff::</p>
+
+<p style="margin-left:18%; margin-top: 1em">You can also
+combine &quot;hosts allow&quot; with &quot;hosts deny&quot;
+as a way to add exceptions to your deny list. When both
+parameters are specified, the &quot;hosts allow&quot;
+parameter is checked first and a match results in the client
+being able to connect. A non-allowed host is then matched
+against the &quot;hosts deny&quot; list to see if it should
+be rejected. A host that does not match either list is
+allowed to connect.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The default is
+no &quot;hosts allow&quot; parameter, which means all hosts
+can connect.</p>
+
+<p style="margin-left:9%;"><b>hosts&nbsp;deny</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify a list of comma- and/or whitespace-separated
+patterns that are matched against a connecting clients
+hostname and IP address. If the pattern matches then the
+connection is rejected. See the &quot;hosts allow&quot;
+parameter for more information.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The default is
+no &quot;hosts deny&quot; parameter, which means all hosts
+can connect.</p>
+
+<p style="margin-left:9%;"><b>reverse&nbsp;lookup</b></p>
+
+<p style="margin-left:18%;">Controls whether the daemon
+performs a reverse lookup on the client&rsquo;s IP address
+to determine its hostname, which is used for &quot;hosts
+allow&quot; &amp; &quot;hosts deny&quot; checks and the
+&quot;%h&quot; log escape. This is enabled by default, but
+you may wish to disable it to save time if you know the
+lookup will not return a useful result, in which case the
+daemon will use the name &quot;UNDETERMINED&quot;
+instead.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If this
+parameter is enabled globally (even by default), rsync
+performs the lookup as soon as a client connects, so
+disabling it for a module will not avoid the lookup. Thus,
+you probably want to disable it globally and then enable it
+for modules that need the information.</p>
+
+<p style="margin-left:9%;"><b>forward&nbsp;lookup</b></p>
+
+<p style="margin-left:18%;">Controls whether the daemon
+performs a forward lookup on any hostname specified in an
+hosts allow/deny setting. By default this is enabled,
+allowing the use of an explicit hostname that would not be
+returned by reverse DNS of the connecting IP.</p>
+
+<p style="margin-left:9%;"><b>ignore&nbsp;errors</b></p>
+
+<p style="margin-left:18%;">This parameter tells rsyncd to
+ignore I/O errors on the daemon when deciding whether to run
+the delete phase of the transfer. Normally rsync skips the
+<b>&minus;&minus;delete</b> step if any I/O errors have
+occurred in order to prevent disastrous deletion due to a
+temporary resource shortage or other I/O error. In some
+cases this test is counter productive so you can use this
+parameter to turn off this behavior.</p>
+
+
+<p style="margin-left:9%;"><b>ignore&nbsp;nonreadable</b></p>
+
+<p style="margin-left:18%;">This tells the rsync daemon to
+completely ignore files that are not readable by the user.
+This is useful for public archives that may have some
+non-readable files among the directories, and the sysadmin
+doesn&rsquo;t want those files to be seen at all.</p>
+
+
+<p style="margin-left:9%;"><b>transfer&nbsp;logging</b></p>
+
+<p style="margin-left:18%;">This parameter enables per-file
+logging of downloads and uploads in a format somewhat
+similar to that used by ftp daemons. The daemon always logs
+the transfer at the end, so if a transfer is aborted, no
+mention will be made in the log file.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If you want to
+customize the log lines, see the &quot;log format&quot;
+parameter.</p>
+
+<p style="margin-left:9%;"><b>log&nbsp;format</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify the format used for logging file transfers when
+transfer logging is enabled. The format is a text string
+containing embedded single-character escape sequences
+prefixed with a percent (%) character. An optional numeric
+field width may also be specified between the percent and
+the escape letter (e.g.
+&quot;<b>%&minus;50n&nbsp;%8l&nbsp;%07p</b>&quot;). In
+addition, one or more apostrophes may be specified prior to
+a numerical escape to indicate that the numerical value
+should be made more human-readable. The 3 supported levels
+are the same as for the <b>&minus;&minus;human-readable</b>
+command-line option, though the default is for
+human-readability to be off. Each added apostrophe increases
+the level (e.g.
+&quot;<b>%&rsquo;&rsquo;l&nbsp;%&rsquo;b&nbsp;%f</b>&quot;).</p>
+
+<p style="margin-left:18%; margin-top: 1em">The default log
+format is
+&quot;<b>%o&nbsp;%h&nbsp;[%a]&nbsp;%m&nbsp;(%u)&nbsp;%f&nbsp;%l</b>&quot;,
+and a &quot;<b>%t&nbsp;[%p]&nbsp;</b>&quot; is always
+prefixed when using the &quot;log file&quot; parameter. (A
+perl script that will summarize this default log format is
+included in the rsync source code distribution in the
+&quot;support&quot; subdirectory: rsyncstats.)</p>
+
+<p style="margin-left:18%; margin-top: 1em">The
+single-character escapes that are understood are as
+follows:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%a the remote IP address (only available for a
+daemon)</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%b the number of bytes actually transferred</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%B the permission bits of the file (e.g. rwxrwxrwt)</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%c the total size of the block checksums received for
+the basis file (only when sending)</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%C the full-file checksum if it is known for the file.
+For older rsync protocols/versions, the checksum was salted,
+and is thus not a useful value (and is not displayed when
+that is the case). For the checksum to output for a file,
+either the <b>&minus;&minus;checksum</b> option must be
+in-effect or the file must have been transferred without a
+salted checksum being used. See the
+<b>&minus;&minus;checksum-choice</b> option for a way to
+choose the algorithm.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%f the filename (long form on sender; no trailing
+&quot;/&quot;)</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%G the gid of the file (decimal) or
+&quot;DEFAULT&quot;</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%h the remote host name (only available for a
+daemon)</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%i an itemized list of what is being updated</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%l the length of the file in bytes</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%L the string
+&quot;&nbsp;<b>&minus;&gt;&nbsp;SYMLINK</b>&quot;,
+&quot;&nbsp;<b>=&gt;&nbsp;HARDLINK</b>&quot;, or
+&quot;&quot; (where <b>SYMLINK</b> or <b>HARDLINK</b> is a
+filename)</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%m the module name</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%M the last-modified time of the file</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%n the filename (short form; trailing &quot;/&quot; on
+dir)</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%o the operation, which is &quot;send&quot;,
+&quot;recv&quot;, or &quot;del.&quot; (the latter includes
+the trailing period)</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%p the process ID of this rsync session</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%P the module path</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%t the current date time</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%u the authenticated username or an empty string</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p>%U the uid of the file (decimal)</p></td></tr>
+</table>
+
+<p style="margin-left:18%; margin-top: 1em">For a list of
+what the characters mean that are output by &quot;%i&quot;,
+see the <b>&minus;&minus;itemize-changes</b> option in the
+rsync manpage.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Note that some
+of the logged output changes when talking with older rsync
+versions. For instance, deleted files were only output as
+verbose messages prior to rsync 2.6.4.</p>
+
+<p style="margin-left:9%;"><b>timeout</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+override the clients choice for I/O timeout for this module.
+Using this parameter you can ensure that rsync won&rsquo;t
+wait on a dead client forever. The timeout is specified in
+seconds. A value of zero means no timeout and is the
+default. A good choice for anonymous rsync daemons may be
+600 (giving a 10 minute timeout).</p>
+
+<p style="margin-left:9%;"><b>refuse&nbsp;options</b></p>
+
+<p style="margin-left:18%;">This parameter allows you to
+specify a space-separated list of rsync command-line options
+that will be refused by your rsync daemon. You may specify
+the full option name, its one-letter abbreviation, or a
+wild-card string that matches multiple options. Beginning in
+3.2.0, you can also negate a match term by starting it with
+a &quot;!&quot;.</p>
+
+<p style="margin-left:18%; margin-top: 1em">When an option
+is refused, the daemon prints an error message and
+exits.</p>
+
+<p style="margin-left:18%; margin-top: 1em">For example,
+this would refuse <b>&minus;&minus;checksum</b>
+(<b>&minus;c</b>) and all the various delete options:</p>
+
+<p style="margin-left:23%; margin-top: 1em">refuse options
+= c delete</p>
+
+<p style="margin-left:18%; margin-top: 1em">The reason the
+above refuses all delete options is that the options imply
+<b>&minus;&minus;delete</b>, and implied options are refused
+just like explicit options.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The use of a
+negated match allows you to fine-tune your refusals after a
+wild-card, such as this:</p>
+
+<p style="margin-left:23%; margin-top: 1em">refuse options
+= delete-* !delete-during</p>
+
+<p style="margin-left:18%; margin-top: 1em">Negated
+matching can also turn your list of refused options into a
+list of accepted options. To do this, begin the list with a
+&quot;<b>*</b>&quot; (to refuse all options) and then
+specify one or more negated matches to accept. For
+example:</p>
+
+<p style="margin-left:23%; margin-top: 1em">refuse options
+= * !a !v !compress*</p>
+
+<p style="margin-left:18%; margin-top: 1em">Don&rsquo;t
+worry that the &quot;<b>*</b>&quot; will refuse certain
+vital options such as <b>&minus;&minus;dry-run</b>,
+<b>&minus;&minus;server</b>, <b>&minus;&minus;no-iconv</b>,
+<b>&minus;&minus;seclude-args</b>, etc. These important
+options are not matched by wild-card, so they must be
+overridden by their exact name. For instance, if
+you&rsquo;re forcing iconv transfers you could use something
+like this:</p>
+
+<p style="margin-left:23%; margin-top: 1em">refuse options
+= * no-iconv !a !v</p>
+
+<p style="margin-left:18%; margin-top: 1em">As an
+additional aid (beginning in 3.2.0), refusing (or
+&quot;<b>!refusing</b>&quot;) the &quot;a&quot; or
+&quot;archive&quot; option also affects all the options that
+the <b>&minus;&minus;archive</b> option implies
+(<b>&minus;rdlptgoD</b>), but only if the option is matched
+explicitly (not using a wildcard). If you want to do
+something tricky, you can use &quot;<b>archive*</b>&quot; to
+avoid this side-effect, but keep in mind that no normal
+rsync client ever sends the actual archive option to the
+server.</p>
+
+<p style="margin-left:18%; margin-top: 1em">As an
+additional safety feature, the refusal of &quot;delete&quot;
+also refuses <b>remove-source-files</b> when the daemon is
+the sender; if you want the latter without the former,
+instead refuse &quot;<b>delete-*</b>&quot; as that refuses
+all the delete modes without affecting
+<b>&minus;&minus;remove-source-files</b>. (Keep in mind that
+the client&rsquo;s <b>&minus;&minus;delete</b> option
+typically results in
+<b>&minus;&minus;delete-during</b>.)</p>
+
+<p style="margin-left:18%; margin-top: 1em">When
+un-refusing delete options, you should either specify
+&quot;<b>!delete*</b>&quot; (to accept all delete options)
+or specify a limited set that includes &quot;delete&quot;,
+such as:</p>
+
+<p style="margin-left:23%; margin-top: 1em">refuse options
+= * !a !delete !delete-during</p>
+
+<p style="margin-left:18%; margin-top: 1em">... whereas
+this accepts any delete option except
+<b>&minus;&minus;delete-after</b>:</p>
+
+<p style="margin-left:23%; margin-top: 1em">refuse options
+= * !a !delete* delete-after</p>
+
+<p style="margin-left:18%; margin-top: 1em">A note on
+refusing &quot;compress&quot;: it may be better to set the
+&quot;dont compress&quot; daemon parameter to
+&quot;<b>*</b>&quot; and ensure that
+<b>RSYNC_COMPRESS_LIST=zlib</b> is set in the environment of
+the daemon in order to disable compression silently instead
+of returning an error that forces the client to remove the
+<b>&minus;z</b> option.</p>
+
+<p style="margin-left:18%; margin-top: 1em">If you are
+un-refusing the compress option, you may want to match
+&quot;<b>!compress*</b>&quot; if you also want to allow the
+<b>&minus;&minus;compress-level</b> option.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Note that the
+&quot;copy-devices&quot; &amp; &quot;write-devices&quot;
+options are refused by default, but they can be explicitly
+accepted with &quot;<b>!copy-devices</b>&quot; and/or
+&quot;<b>!write-devices</b>&quot;. The options
+&quot;log-file&quot; and &quot;log-file-format&quot; are
+forcibly refused and cannot be accepted.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Here are all
+the options that are not matched by wild-cards:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;server</b>: Required for rsync to even
+work.</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;rsh</b>, <b>&minus;e</b>: Required to
+convey compatibility flags to the server.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;out-format</b>: This is required to
+convey output behavior to a remote receiver. While rsync
+passes the older alias <b>&minus;&minus;log-format</b> for
+compatibility reasons, this options should not be confused
+with <b>&minus;&minus;log-file-format</b>.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;sender</b>: Use &quot;write only&quot;
+parameter instead of refusing this.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;dry-run</b>, <b>&minus;n</b>: Who would
+want to disable this?</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;seclude-args</b>, <b>&minus;s</b>: Is
+the oldest arg-protection method.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;from0</b>, <b>&minus;0</b>: Makes it
+easier to accept/refuse <b>&minus;&minus;files-from</b>
+without affecting this helpful modifier.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;iconv</b>: This is auto-disabled based
+on &quot;charset&quot; parameter.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;no-iconv</b>: Most transfers use this
+option.</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;checksum-seed</b>: Is a fairly rare,
+safe option.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>&minus;&minus;write-devices</b>: Is non-wild but also
+auto-disabled.</p> </td></tr>
+</table>
+
+<p style="margin-left:9%;"><b>dont&nbsp;compress</b></p>
+
+<p style="margin-left:18%;"><b>NOTE:</b> This parameter
+currently has no effect except in one instance: if it is set
+to &quot;<b>*</b>&quot; then it minimizes or disables
+compression for all files (for those that don&rsquo;t want
+to refuse the <b>&minus;&minus;compress</b> option
+completely).</p>
+
+<p style="margin-left:18%; margin-top: 1em">This parameter
+allows you to select filenames based on wildcard patterns
+that should not be compressed when pulling files from the
+daemon (no analogous parameter exists to govern the pushing
+of files to a daemon). Compression can be expensive in terms
+of CPU usage, so it is usually good to not try to compress
+files that won&rsquo;t compress well, such as already
+compressed files.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The &quot;dont
+compress&quot; parameter takes a space-separated list of
+case-insensitive wildcard patterns. Any source filename
+matching one of the patterns will be compressed as little as
+possible during the transfer. If the compression algorithm
+has an &quot;off&quot; level, then no compression occurs for
+those files. If an algorithms has the ability to change the
+level in mid-stream, it will be minimized to reduce the CPU
+usage as much as possible.</p>
+
+<p style="margin-left:18%; margin-top: 1em">See the
+<b>&minus;&minus;skip-compress</b> parameter in the
+<b>rsync</b>(1) manpage for the list of file suffixes that
+are skipped by default if this parameter is not set.</p>
+
+<p style="margin-left:9%;"><b>early&nbsp;exec</b>,
+<b>pre-xfer&nbsp;exec</b>, <b>post-xfer&nbsp;exec</b></p>
+
+<p style="margin-left:18%;">You may specify a command to be
+run in the early stages of the connection, or right before
+and/or after the transfer. If the <b>early&nbsp;exec</b> or
+<b>pre-xfer&nbsp;exec</b> command returns an error code, the
+transfer is aborted before it begins. Any output from the
+<b>pre-xfer&nbsp;exec</b> command on stdout (up to several
+KB) will be displayed to the user when aborting, but is
+<i>not</i> displayed if the script returns success. The
+other programs cannot send any text to the user. All output
+except for the <b>pre-xfer&nbsp;exec</b> stdout goes to the
+corresponding daemon&rsquo;s stdout/stderr, which is
+typically discarded. See the <b>&minus;&minus;no-detach</b>
+option for a way to see the daemon&rsquo;s output, which can
+assist with debugging.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Note that the
+<b>early&nbsp;exec</b> command runs before any part of the
+transfer request is known except for the module name. This
+helper script can be used to setup a disk mount or decrypt
+some data into a module dir, but you may need to use
+<b>lock&nbsp;file</b> and <b>max&nbsp;connections</b> to
+avoid concurrency issues. If the client rsync specified the
+<b>&minus;&minus;early-input=FILE</b> option, it can send up
+to about 5K of data to the stdin of the early script. The
+stdin will otherwise be empty.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Note that the
+<b>post-xfer&nbsp;exec</b> command is still run even if one
+of the other scripts returns an error code. The
+<b>pre-xfer&nbsp;exec</b> command will <i>not</i> be run,
+however, if the <b>early&nbsp;exec</b> command fails.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The following
+environment variables will be set, though some are specific
+to the pre-xfer or the post-xfer environment:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_MODULE_NAME</b>: The name of the module being
+accessed.</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_MODULE_PATH</b>: The path configured for the
+module.</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_HOST_ADDR</b>: The accessing host&rsquo;s IP
+address.</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_HOST_NAME</b>: The accessing host&rsquo;s
+name.</p> </td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_USER_NAME</b>: The accessing user&rsquo;s name
+(empty if no user).</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_PID</b>: A unique number for this transfer.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_REQUEST</b>: (pre-xfer only) The module/path
+info specified by the user. Note that the user can specify
+multiple source files, so the request can be something like
+&quot;mod/path1 mod/path2&quot;, etc.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_ARG#</b>: (pre-xfer only) The pre-request
+arguments are set in these numbered values. RSYNC_ARG0 is
+always &quot;rsyncd&quot;, followed by the options that were
+used in RSYNC_ARG1, and so on. There will be a value of
+&quot;.&quot; indicating that the options are done and the
+path args are beginning&nbsp;&minus;&minus; these contain
+similar information to RSYNC_REQUEST, but with values
+separated and the module name stripped off.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_EXIT_STATUS</b>: (post-xfer only) the server
+side&rsquo;s exit value. This will be 0 for a successful
+run, a positive value for an error that the server
+generated, or a &minus;1 if rsync failed to exit properly.
+Note that an error that occurs on the client side does not
+currently get sent to the server side, so this is not the
+final exit status for the whole transfer.</p></td></tr>
+<tr valign="top" align="left">
+<td width="18%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="73%">
+
+
+<p><b>RSYNC_RAW_STATUS</b>: (post-xfer only) the raw exit
+value from <b>waitpid()</b>.</p></td></tr>
+</table>
+
+<p style="margin-left:18%; margin-top: 1em">Even though the
+commands can be associated with a particular module, they
+are run using the permissions of the user that started the
+daemon (not the module&rsquo;s uid/gid setting) without any
+chroot restrictions.</p>
+
+<p style="margin-left:18%; margin-top: 1em">These settings
+honor 2 environment variables: use RSYNC_SHELL to set a
+shell to use when running the command (which otherwise uses
+your <b>system()</b> call&rsquo;s default shell), and use
+RSYNC_NO_XFER_EXEC to disable both options completely.</p>
+
+<h2>CONFIG DIRECTIVES
+<a name="CONFIG DIRECTIVES"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">There are
+currently two config directives available that allow a
+config file to incorporate the contents of other files:
+<b>&amp;include</b> and <b>&amp;merge</b>. Both allow a
+reference to either a file or a directory. They differ in
+how segregated the file&rsquo;s contents are considered to
+be.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The
+<b>&amp;include</b> directive treats each file as more
+distinct, with each one inheriting the defaults of the
+parent file, starting the parameter parsing as
+globals/defaults, and leaving the defaults unchanged for the
+parsing of the rest of the parent file.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The
+<b>&amp;merge</b> directive, on the other hand, treats the
+file&rsquo;s contents as if it were simply inserted in place
+of the directive, and thus it can set parameters in a module
+started in another file, can affect the defaults for other
+files, etc.</p>
+
+<p style="margin-left:9%; margin-top: 1em">When an
+<b>&amp;include</b> or <b>&amp;merge</b> directive refers to
+a directory, it will read in all the <b>*.conf</b> or
+<b>*.inc</b> files (respectively) that are contained inside
+that directory (without any recursive scanning), with the
+files sorted into alpha order. So, if you have a directory
+named &quot;rsyncd.d&quot; with the files
+&quot;foo.conf&quot;, &quot;bar.conf&quot;, and
+&quot;baz.conf&quot; inside it, this directive:</p>
+
+<p style="margin-left:14%; margin-top: 1em">&amp;include
+/path/rsyncd.d</p>
+
+<p style="margin-left:9%; margin-top: 1em">would be the
+same as this set of directives:</p>
+
+<p style="margin-left:14%; margin-top: 1em">&amp;include
+/path/rsyncd.d/bar.conf <br>
+&amp;include /path/rsyncd.d/baz.conf <br>
+&amp;include /path/rsyncd.d/foo.conf</p>
+
+<p style="margin-left:9%; margin-top: 1em">except that it
+adjusts as files are added and removed from the
+directory.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The advantage of
+the <b>&amp;include</b> directive is that you can define one
+or more modules in a separate file without worrying about
+unintended side-effects between the self-contained module
+files.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The advantage of
+the <b>&amp;merge</b> directive is that you can load config
+snippets that can be included into multiple module
+definitions, and you can also set global values that will
+affect connections (such as <b>motd&nbsp;file</b>), or
+globals that will affect other include files.</p>
+
+<p style="margin-left:9%; margin-top: 1em">For example,
+this is a useful /etc/rsyncd.conf file:</p>
+
+<p style="margin-left:14%; margin-top: 1em">port = 873 <br>
+log file = /var/log/rsync.log <br>
+pid file = /var/lock/rsync.lock</p>
+
+<p style="margin-left:14%; margin-top: 1em">&amp;merge
+/etc/rsyncd.d <br>
+&amp;include /etc/rsyncd.d</p>
+
+<p style="margin-left:9%; margin-top: 1em">This would merge
+any <b>/etc/rsyncd.d/*.inc</b> files (for global values that
+should stay in effect), and then include any
+<b>/etc/rsyncd.d/*.conf</b> files (defining modules without
+any global-value cross-talk).</p>
+
+<h2>AUTHENTICATION STRENGTH
+<a name="AUTHENTICATION STRENGTH"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">The
+authentication protocol used in rsync is a 128 bit MD4 based
+challenge response system. This is fairly weak protection,
+though (with at least one brute-force hash-finding algorithm
+publicly available), so if you want really top-quality
+security, then I recommend that you run rsync over ssh.
+(Yes, a future version of rsync will switch over to a
+stronger hashing method.)</p>
+
+<p style="margin-left:9%; margin-top: 1em">Also note that
+the rsync daemon protocol does not currently provide any
+encryption of the data that is transferred over the
+connection. Only authentication is provided. Use ssh as the
+transport if you want encryption.</p>
+
+<p style="margin-left:9%; margin-top: 1em">You can also
+make use of SSL/TLS encryption if you put rsync behind an
+SSL proxy.</p>
+
+<h2>SSL/TLS Daemon Setup
+<a name="SSL/TLS Daemon Setup"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">When setting up
+an rsync daemon for access via SSL/TLS, you will need to
+configure a TCP proxy (such as haproxy or nginx) as the
+front-end that handles the encryption.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="1%">
+
+
+<p style="margin-top: 1em">o</p></td>
+<td width="8%"></td>
+<td width="82%">
+
+
+<p style="margin-top: 1em">You should limit the access to
+the backend-rsyncd port to only allow the proxy to connect.
+If it is on the same host as the proxy, then configuring it
+to only listen on localhost is a good idea.</p></td></tr>
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="1%">
+
+
+<p>o</p></td>
+<td width="8%"></td>
+<td width="82%">
+
+
+<p>You should consider turning on the
+<b>proxy&nbsp;protocol</b> rsync-daemon parameter if your
+proxy supports sending that information. The examples below
+assume that this is enabled.</p></td></tr>
+</table>
+
+<p style="margin-left:9%; margin-top: 1em">An example
+haproxy setup is as follows:</p>
+
+<p style="margin-left:14%; margin-top: 1em">frontend
+fe_rsync-ssl <br>
+bind :::874 ssl crt
+/etc/letsencrypt/example.com/combined.pem <br>
+mode tcp <br>
+use_backend be_rsync</p>
+
+<p style="margin-left:14%; margin-top: 1em">backend
+be_rsync <br>
+mode tcp <br>
+server local-rsync 127.0.0.1:873 check send-proxy</p>
+
+<p style="margin-left:9%; margin-top: 1em">An example nginx
+proxy setup is as follows:</p>
+
+<p style="margin-left:14%; margin-top: 1em">stream { <br>
+server { <br>
+listen 874 ssl; <br>
+listen [::]:874 ssl;</p>
+
+
+<p style="margin-left:14%; margin-top: 1em">ssl_certificate
+/etc/letsencrypt/example.com/fullchain.pem; <br>
+ssl_certificate_key
+/etc/letsencrypt/example.com/privkey.pem;</p>
+
+<p style="margin-left:14%; margin-top: 1em">proxy_pass
+localhost:873; <br>
+proxy_protocol on; # Requires rsyncd.conf &quot;proxy
+protocol = true&quot; <br>
+proxy_timeout 1m; <br>
+proxy_connect_timeout 5s; <br>
+} <br>
+}</p>
+
+<p style="margin-left:9%; margin-top: 1em">If rsyncd should
+be accessible encrypted and unencrypted at the same time
+make the proxy listen on port 873 as well and let it handle
+both streams.</p>
+
+<h2>DAEMON CONFIG EXAMPLES
+<a name="DAEMON CONFIG EXAMPLES"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">A simple
+rsyncd.conf file that allow anonymous rsync to a ftp area at
+<b>/home/ftp</b> would be:</p>
+
+<p style="margin-left:14%; margin-top: 1em">[ftp] <br>
+path = /home/ftp <br>
+comment = ftp export area</p>
+
+<p style="margin-left:9%; margin-top: 1em">A more
+sophisticated example would be:</p>
+
+<p style="margin-left:14%; margin-top: 1em">uid = nobody
+<br>
+gid = nobody <br>
+use chroot = yes <br>
+max connections = 4 <br>
+syslog facility = local5 <br>
+pid file = /var/run/rsyncd.pid</p>
+
+<p style="margin-left:14%; margin-top: 1em">[ftp] <br>
+path = /var/ftp/./pub <br>
+comment = whole ftp area (approx 6.1 GB)</p>
+
+<p style="margin-left:14%; margin-top: 1em">[sambaftp] <br>
+path = /var/ftp/./pub/samba <br>
+comment = Samba ftp area (approx 300 MB)</p>
+
+<p style="margin-left:14%; margin-top: 1em">[rsyncftp] <br>
+path = /var/ftp/./pub/rsync <br>
+comment = rsync ftp area (approx 6 MB)</p>
+
+<p style="margin-left:14%; margin-top: 1em">[sambawww] <br>
+path = /public_html/samba <br>
+comment = Samba WWW pages (approx 240 MB)</p>
+
+<p style="margin-left:14%; margin-top: 1em">[cvs] <br>
+path = /data/cvs <br>
+comment = CVS repository (requires authentication) <br>
+auth users = tridge, susan <br>
+secrets file = /etc/rsyncd.secrets</p>
+
+<p style="margin-left:9%; margin-top: 1em">The
+/etc/rsyncd.secrets file would look something like this:</p>
+
+<p style="margin-left:14%; margin-top: 1em">tridge:mypass
+<br>
+susan:herpass</p>
+
+<h2>FILES
+<a name="FILES"></a>
+</h2>
+
+
+
+<p style="margin-left:9%; margin-top: 1em">/etc/rsyncd.conf
+or rsyncd.conf</p>
+
+<h2>SEE ALSO
+<a name="SEE ALSO"></a>
+</h2>
+
+
+
+<p style="margin-left:9%; margin-top: 1em"><b>rsync</b>(1),
+<b>rsync-ssl</b>(1)</p>
+
+<h2>BUGS
+<a name="BUGS"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">Please report
+bugs! The rsync bug tracking system is online at
+<a href="https://rsync.samba.org/">https://rsync.samba.org/</a>.</p>
+
+<h2>VERSION
+<a name="VERSION"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">This manpage is
+current for version 3.4.1 of rsync.</p>
+
+<h2>CREDITS
+<a name="CREDITS"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">Rsync is
+distributed under the GNU General Public License. See the
+file COPYING for details.</p>
+
+<p style="margin-left:9%; margin-top: 1em">An rsync web
+site is available at
+<a href="https://rsync.samba.org/">https://rsync.samba.org/</a>
+and its github project is
+<a href="https://github.com/RsyncProject/rsync">https://github.com/RsyncProject/rsync</a>.</p>
+
+<h2>THANKS
+<a name="THANKS"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">Thanks to Warren
+Stanley for his original idea and patch for the rsync
+daemon. Thanks to Karsten Thygesen for his many suggestions
+and documentation!</p>
+
+<h2>AUTHOR
+<a name="AUTHOR"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">Rsync was
+originally written by Andrew Tridgell and Paul Mackerras.
+Many people from around the world have helped to maintain
+and improve it.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Mailing lists
+for support and development are available at
+<a href="https://lists.samba.org/">https://lists.samba.org/</a>.</p>
+<hr>
+</body>
+</html>

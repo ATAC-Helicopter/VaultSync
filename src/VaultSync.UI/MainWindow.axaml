@@ -102,9 +102,10 @@
                       IsVisible="{CompiledBinding ShowPatchButton}" />
               <Button Grid.Column="2"
                       Command="{CompiledBinding OpenReleasePageCommand}"
-                      Content="{infra:LocalizedString Key=Shell.OpenRelease}"
+                      Content="{CompiledBinding ReleaseActionText}"
                       MinWidth="110"
                       HorizontalAlignment="Right"
+                      IsEnabled="{CompiledBinding IsReleaseActionEnabled}"
                       Background="{DynamicResource Surface1}"
                       BorderBrush="{DynamicResource BorderSoft}" />
             </Grid>

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
 using VaultSync.UI.ViewModels.Notifications;
+using VaultSync.UI.Views;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -104,19 +106,25 @@ namespace VaultSync.UI.ViewModels
         private readonly INotificationService _notificationService;
         private readonly IPowerStatusProvider _powerStatusProvider;
         private readonly IDriveHealthService _driveHealthService;
+        private readonly LogConsoleService _logConsoleService;
+        private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
         private bool _trayInitiatedBackup;
         private readonly GitHubUpdateService _updateService = new();
         private readonly PatchUpdateService _patchService = new();
         private readonly LocalizationService _localizationService = new();
+        private static readonly HttpClient s_installerClient = CreateInstallerHttpClient();
         private readonly string _currentVersionString;
         private CancellationTokenSource? _updateCheckCts;
         private UpdateCheckResult? _pendingUpdateResult;
+        private bool _patchBlocked;
         private bool _isUpdateAvailable;
+        private bool _isInstallerDownloading;
         private string _updateBannerMessage = string.Empty;
         private string _updateReleaseNotes = string.Empty;
         private string _updateReleaseUrl = string.Empty;
         private readonly RelayCommand _installPatchCommand;
+        private readonly RelayCommand _openReleaseCommand;
         private bool _isPatchInstalling;
         private string _patchStatusMessage = string.Empty;
 
@@ -241,13 +249,21 @@ namespace VaultSync.UI.ViewModels
             ? L("Shell.OpenReleaseTooltip", "Open the latest release on GitHub")
             : _updateReleaseNotes;
 
-        public bool IsPatchAvailable => _pendingUpdateResult?.HasPatch ?? false;
+        public bool IsPatchAvailable => (_pendingUpdateResult?.HasPatch ?? false) && !_patchBlocked;
 
         public bool ShowPatchButton => IsPatchAvailable;
 
         public string InstallButtonText => IsPatchInstalling
             ? L("Patch.InstallButton.Preparing", "Preparing patch...")
             : L("Patch.InstallButton.Install", "Install patch");
+
+        public string ReleaseActionText => _pendingUpdateResult?.HasInstaller == true
+            ? (IsInstallerDownloading
+                ? L("Shell.OpenInstaller.Downloading", "Downloading installer...")
+                : L("Shell.OpenInstaller", "Install update"))
+            : L("Shell.OpenRelease", "Open release");
+
+        public bool IsReleaseActionEnabled => !IsInstallerDownloading;
 
         public bool ShowPatchStatus => !string.IsNullOrWhiteSpace(PatchStatusMessage);
 
@@ -276,12 +292,26 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private bool IsInstallerDownloading
+        {
+            get => _isInstallerDownloading;
+            set
+            {
+                if (SetField(ref _isInstallerDownloading, value))
+                {
+                    OnPropertyChanged(nameof(ReleaseActionText));
+                    OnPropertyChanged(nameof(IsReleaseActionEnabled));
+                    _openReleaseCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         // Commands used by the shell / main window
         public ICommand NavigateDashboard { get; }
         public ICommand NavigateProjects  { get; }
         public ICommand NavigateBackups   { get; }
         public ICommand NavigateSettings  { get; }
-        public ICommand OpenReleasePageCommand { get; }
+        public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
         public string CurrentVersionDisplay => $"v{StripBuildMetadata(_currentVersionString)}";
         public string FooterProductDisplay => $"VaultSync · {CurrentVersionDisplay}";
@@ -316,6 +346,12 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel   = new BackupsViewModel();
             _settingsViewModel  = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
+            _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
+
+            _logConsoleService = new LogConsoleService();
+            _logConsoleService.InstallCapture();
+            LogConsoleProvider.Initialize(_logConsoleService);
+            UpdateLogConsoleSettings();
 
             // 3) Wire BackupsViewModel events to real logic
             _backupsViewModel.BackupProjectRequested += OnBackupProjectRequested;
@@ -350,7 +386,7 @@ namespace VaultSync.UI.ViewModels
             NavigateProjects  = new RelayCommand(_ => SetCurrentView("Projects"));
             NavigateBackups   = new RelayCommand(_ => SetCurrentView("Backups"));
             NavigateSettings  = new RelayCommand(_ => SetCurrentView("Settings"));
-            OpenReleasePageCommand = new RelayCommand(_ => OpenUpdateRelease());
+            _openReleaseCommand = new RelayCommand(_ => _ = OpenUpdateReleaseAsync(), _ => IsReleaseActionEnabled);
             _installPatchCommand = new RelayCommand(
                 _ => _ = StartPatchInstallAsync(),
                 _ => IsPatchAvailable && !IsPatchInstalling);
@@ -575,7 +611,9 @@ namespace VaultSync.UI.ViewModels
                                 writeMetadata: !metadataWritten,
                                 destinationPath: resolution.EffectivePath,
                                 destinationAlias: destLabel,
-                                skipIfNoChanges: true);
+                                skipIfNoChanges: true,
+                                useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
+                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false);
 
                             if (backupResult.SkippedForNoChanges)
                             {
@@ -690,6 +728,52 @@ namespace VaultSync.UI.ViewModels
             {
                 Telemetry.SetEnabled(_settingsViewModel.SendAnonymousUsageStats);
             }
+
+            if (e.PropertyName is nameof(SettingsViewModel.EnableVerboseLogging)
+                or nameof(SettingsViewModel.SaveVerboseLogs))
+            {
+                UpdateLogConsoleSettings();
+            }
+        }
+
+        private void UpdateLogConsoleSettings()
+        {
+            _logConsoleService.Enabled = _settingsViewModel.EnableVerboseLogging;
+            _logConsoleService.SaveToFile = _settingsViewModel.EnableVerboseLogging &&
+                                            _settingsViewModel.SaveVerboseLogs;
+        }
+
+        private void OnOpenLogConsoleRequested()
+        {
+            ShowLogConsole();
+        }
+
+        private void ShowLogConsole()
+        {
+            if (_logConsoleWindow is not null)
+            {
+                _logConsoleWindow.Activate();
+                return;
+            }
+
+            var vm = new LogConsoleViewModel(_logConsoleService);
+            var window = new LogConsoleWindow(vm);
+
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
+            {
+                window.Show();
+            }
+            else
+            {
+                window.Show();
+            }
+
+            window.Closed += (_, _) =>
+            {
+                _logConsoleWindow = null;
+            };
+
+            _logConsoleWindow = window;
         }
 
         private void OnLanguageChanged()
@@ -796,6 +880,8 @@ namespace VaultSync.UI.ViewModels
                 if (plan is null)
                 {
                     PatchStatusMessage = L("Patch.Status.ManifestIncompatible", "Patch manifest cannot be applied to this version.");
+                    _patchBlocked = true;
+                    NotifyPatchAvailabilityChanged();
                     return;
                 }
 
@@ -877,13 +963,20 @@ namespace VaultSync.UI.ViewModels
 
         private void ApplyUpdateResult(UpdateCheckResult result)
         {
+            if (App.IsCrashing)
+                return;
+
+            IsInstallerDownloading = false;
             IsUpdateAvailable = true;
             UpdateBannerMessage = Lf("Update.Banner", "New update available: {0} ({1})", result.ReleaseName, result.TagName);
             SetUpdateReleaseNotes(result.ReleaseNotes);
-            _updateReleaseUrl = result.ReleaseUrl.ToString();
+            _updateReleaseUrl = (result.InstallerUrl ?? result.ReleaseUrl).ToString();
             _pendingUpdateResult = result;
+            _patchBlocked = false;
             NotifyPatchAvailabilityChanged();
             PatchStatusMessage = string.Empty;
+            OnPropertyChanged(nameof(ReleaseActionText));
+            OnPropertyChanged(nameof(IsReleaseActionEnabled));
 
             var title = L("Update.Available.Title", "Update available");
             var message = Lf("Update.Available.Message", "VaultSync {0} is ready. Open the latest release to download it.", result.TagName);
@@ -915,8 +1008,11 @@ namespace VaultSync.UI.ViewModels
             _updateReleaseUrl = string.Empty;
             SetUpdateReleaseNotes(string.Empty);
             _pendingUpdateResult = null;
+            _patchBlocked = false;
             NotifyPatchAvailabilityChanged();
             PatchStatusMessage = string.Empty;
+            OnPropertyChanged(nameof(ReleaseActionText));
+            OnPropertyChanged(nameof(IsReleaseActionEnabled));
         }
 
         private void CancelUpdateCheck()
@@ -929,29 +1025,132 @@ namespace VaultSync.UI.ViewModels
             _updateCheckCts = null;
         }
 
-        private void OpenUpdateRelease()
+        private async Task OpenUpdateReleaseAsync()
         {
+            if (IsInstallerDownloading)
+                return;
+
+            if (_pendingUpdateResult?.HasInstaller == true && _pendingUpdateResult.InstallerUrl is not null)
+            {
+                await DownloadAndLaunchInstallerAsync(_pendingUpdateResult.InstallerUrl, _pendingUpdateResult.InstallerName);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(_updateReleaseUrl))
                 return;
 
+            TryOpenUrl(_updateReleaseUrl);
+        }
+
+        private async Task DownloadAndLaunchInstallerAsync(Uri installerUrl, string? installerName)
+        {
+            IsInstallerDownloading = true;
+            PatchStatusMessage = L("Update.Installer.Downloading", "Downloading installer...");
+
+            try
+            {
+                var downloadDir = Path.Combine(Path.GetTempPath(), "VaultSync", "updates");
+                Directory.CreateDirectory(downloadDir);
+
+                var fileName = string.IsNullOrWhiteSpace(installerName)
+                    ? Path.GetFileName(installerUrl.LocalPath)
+                    : installerName;
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    fileName = "VaultSync-Installer";
+                }
+
+                var tempPath = Path.Combine(downloadDir, $"{fileName}.download");
+                var finalPath = Path.Combine(downloadDir, fileName);
+
+                using var response = await s_installerClient.GetAsync(installerUrl, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                await using (var contentStream = await response.Content.ReadAsStreamAsync())
+                await using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await contentStream.CopyToAsync(fileStream);
+                }
+
+                File.Copy(tempPath, finalPath, overwrite: true);
+                File.Delete(tempPath);
+
+                PatchStatusMessage = L("Update.Installer.Launching", "Launching installer...");
+
+                if (!TryLaunchInstaller(finalPath))
+                {
+                    PatchStatusMessage = L("Update.Installer.LaunchFailed", "Installer downloaded but could not be started.");
+                    ShowUpdateError(PatchStatusMessage);
+                    return;
+                }
+
+                PatchStatusMessage = L("Update.Installer.Launched", "Installer launched. Close VaultSync if prompted.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Update] Installer download failed: {ex}");
+                PatchStatusMessage = L("Update.Installer.DownloadFailed", "Failed to download the installer. Open the release page instead.");
+                ShowUpdateError(PatchStatusMessage);
+            }
+            finally
+            {
+                IsInstallerDownloading = false;
+            }
+        }
+
+        private static bool TryLaunchInstaller(string installerPath)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = installerPath,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void TryOpenUrl(string url)
+        {
             try
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = _updateReleaseUrl,
+                    FileName = url,
                     UseShellExecute = true
                 });
             }
             catch
             {
-                var title = L("Update.Failed.Title", "Update failed");
                 var message = L("Update.Failed.Message", "Unable to open the release page; visit the GitHub releases manually.");
-                GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Error, title);
-                if (ShouldRaiseSystemNotification)
-                {
-                    GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Error, title);
-                }
+                ShowUpdateError(message);
             }
+        }
+
+        private void ShowUpdateError(string message, string? titleOverride = null)
+        {
+            var title = titleOverride ?? L("Update.Failed.Title", "Update failed");
+            GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Error, title);
+            if (ShouldRaiseSystemNotification)
+            {
+                GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Error, title);
+            }
+        }
+
+        private static HttpClient CreateInstallerHttpClient()
+        {
+            var client = new HttpClient
+            {
+                Timeout = TimeSpan.FromMinutes(5)
+            };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-Installer/1.0");
+            return client;
         }
 
         private static string GetCurrentVersionString()
@@ -1179,7 +1378,9 @@ namespace VaultSync.UI.ViewModels
                                 preferredFinalBackupRoot: null,
                                 writeMetadata: !metadataWritten,
                                 destinationPath: resolution.EffectivePath,
-                                destinationAlias: labelPrefix
+                                destinationAlias: labelPrefix,
+                                useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
+                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false
                             );
 
                             if (!metadataWritten && result.BackupId > 0)
@@ -1699,7 +1900,9 @@ namespace VaultSync.UI.ViewModels
                                 preferredFinalBackupRoot: null,
                                 destinationPath: effectiveBackupRoot,
                                 destinationAlias: primaryAlias,
-                                skipIfNoChanges: true
+                                skipIfNoChanges: true,
+                                useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
+                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false
                             );
 
                             if (backupResult.SkippedForNoChanges)

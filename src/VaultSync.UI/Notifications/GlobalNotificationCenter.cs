@@ -42,6 +42,7 @@ namespace VaultSync.UI.Notifications
     public sealed class GlobalNotificationCenter
     {
         public static GlobalNotificationCenter Instance { get; } = new();
+        public bool SuppressNotifications { get; set; }
 
         /// <summary>
         /// Optional filter to decide whether a system notification should be shown.
@@ -66,6 +67,9 @@ namespace VaultSync.UI.Notifications
             string? title = null,
             TimeSpan? duration = null)
         {
+            if (SuppressNotifications)
+                return;
+
             var request = new NotificationRequest(
                 message,
                 severity,
@@ -85,6 +89,9 @@ namespace VaultSync.UI.Notifications
             string? title = null,
             TimeSpan? duration = null)
         {
+            if (SuppressNotifications)
+                return;
+
             var request = new NotificationRequest(
                 message,
                 severity,
