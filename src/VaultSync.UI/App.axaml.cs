@@ -51,6 +51,11 @@ public partial class App : Application
         GlobalNotificationCenter.Instance.SuppressNotifications = true;
     }
 
+    internal static void MarkShuttingDown()
+    {
+        IsShuttingDown = true;
+    }
+
     private static string Lf(string key, string fallback, params object[] args)
     {
         var fmt = L(key, fallback);
