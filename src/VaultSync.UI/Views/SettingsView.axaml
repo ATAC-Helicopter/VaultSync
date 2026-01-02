@@ -357,9 +357,45 @@
                                 IsChecked="{Binding UseBackupCompression, Mode=TwoWay}" />
                 </Grid>
 
-                <!-- Verify backups -->
-                <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
+                <!-- rsync delta -->
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RsyncDelta}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RsyncDeltaDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RsyncDeltaDisabledHint}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap"
+                                 IsVisible="{Binding UseIncrementalBackups}" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding UseRsyncDelta, Mode=TwoWay}"
+                                  IsEnabled="{Binding IsRsyncDeltaAvailable}" />
+                  </Grid>
+
+                  <!-- Incremental backups -->
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Incremental}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.IncrementalDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding UseIncrementalBackups, Mode=TwoWay}" />
+                  </Grid>
+
+                  <!-- Verify backups -->
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Verify}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.VerifyDescription}"
@@ -801,22 +837,56 @@
                              FontSize="12" />
                 </StackPanel>
 
-                <Grid ColumnDefinitions="*,Auto">
-                  <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.VerboseLogging}" />
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.VerboseLoggingDescription}"
-                               Foreground="{StaticResource TextSecondary}"
-                               FontSize="11" />
-                  </StackPanel>
-                  <ToggleSwitch Grid.Column="1"
-                                VerticalAlignment="Center"
-                                IsChecked="{Binding EnableVerboseLogging, Mode=TwoWay}" />
-                </Grid>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.VerboseLogging}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.VerboseLoggingDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding EnableVerboseLogging, Mode=TwoWay}" />
+                  </Grid>
 
-                <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
-                  <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SaveVerboseLogs}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SaveVerboseLogsDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding SaveVerboseLogs, Mode=TwoWay}"
+                                  IsEnabled="{Binding EnableVerboseLogging}" />
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,6,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LogConsole}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LogConsoleDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <Button Content="{infra:LocalizedString Key=Settings.Advanced.LogConsoleOpen}"
+                              Command="{Binding OpenLogConsoleCommand}" />
+                      <Button Content="{infra:LocalizedString Key=Settings.Advanced.LogConsoleExport}"
+                              Command="{Binding ExportLogConsoleCommand}"
+                              IsEnabled="{Binding EnableVerboseLogging}" />
+                    </StackPanel>
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />

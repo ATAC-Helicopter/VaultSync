@@ -1,5 +1,5 @@
-#define MyAppName "VaultSync"
-#define MyAppVersion "1.1.0"
+﻿#define MyAppName "VaultSync"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "Flavio Giacchetti"
 #define MyAppExeName "VaultSync.UI.exe"
 #define AppOutputDir "..\\src\\VaultSync.UI\\bin\\Release\\net8.0-windows10.0.19041.0\\win-x64\\publish"
@@ -41,3 +41,4 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 Filename: "{app}\{#MyAppExeName}"; \
   Description: "Launch {#MyAppName}"; \
   Flags: nowait postinstall skipifsilent
+

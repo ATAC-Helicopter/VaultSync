@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 using System.Globalization;
 
@@ -24,6 +25,7 @@ namespace VaultSync.UI;
 public partial class App : Application
 {
     public static bool IsShuttingDown { get; private set; }
+    public static bool IsCrashing { get; private set; }
 
     public static AppViewModel? AppViewModelInstance { get; private set; }
 
@@ -38,6 +40,16 @@ public partial class App : Application
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    internal static void MarkCrashing()
+    {
+        if (IsCrashing)
+            return;
+
+        IsCrashing = true;
+        IsShuttingDown = true;
+        GlobalNotificationCenter.Instance.SuppressNotifications = true;
+    }
 
     private static string Lf(string key, string fallback, params object[] args)
     {
@@ -55,6 +67,7 @@ public partial class App : Application
         _instance = this;
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            CrashHandler.RegisterAvalonia();
             WireGlobalExceptionHandlers();
             WireLifecycleBreadcrumbs(desktop);
 

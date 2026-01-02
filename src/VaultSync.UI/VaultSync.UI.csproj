@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>VaultSync</Product>
     <Company>Flavio Giacchetti</Company>
     <ApplicationIcon>Assets\vaultsync.ico</ApplicationIcon>
@@ -53,6 +53,14 @@
     <Content Include="..\presets\*.vaultsyncignore">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>presets\%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
+  <!-- Optional bundled rsync for Windows delta sync -->
+  <ItemGroup Condition="Exists('..\..\tools\rsync\bin\rsync.exe') Or Exists('..\..\tools\rsync\rsync.exe')">
+    <Content Include="..\..\tools\rsync\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>tools\rsync\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Content>
   </ItemGroup>
 
@@ -115,3 +123,4 @@
     </ItemGroup>
 
 </Project>
+

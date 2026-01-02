@@ -3,6 +3,7 @@ using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 
 namespace VaultSync.UI;
@@ -16,8 +17,13 @@ internal static class Program
     [System.STAThread]
     public static void Main(string[] args)
     {
-        if (PatchInstallService.TryHandlePatchArgs(args))
+        CrashHandler.RegisterEarly();
+        if (PatchInstallService.TryParsePatchArgs(args, out var request))
+        {
+            UpdaterApp.SetPendingRequest(request);
+            BuildUpdaterApp().StartWithClassicDesktopLifetime(args);
             return;
+        }
 
         _instanceMutex = new Mutex(true, "VaultSync.UI.SingleInstance", out var isFirstInstance);
         if (!isFirstInstance)
@@ -97,5 +103,11 @@ internal static class Program
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont() // optional, ok to keep/remove
+            .LogToTrace();
+
+    private static AppBuilder BuildUpdaterApp()
+        => AppBuilder.Configure<UpdaterApp>()
+            .UsePlatformDetect()
+            .WithInterFont()
             .LogToTrace();
 }

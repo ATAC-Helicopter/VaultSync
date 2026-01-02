@@ -12,11 +12,20 @@ namespace VaultSync.Core.Services
 {
     public sealed class RsyncRunner : ISyncRunner
     {
+        private readonly bool _useWholeFile;
+        private readonly string _rsyncPath;
+
+        public RsyncRunner(bool useWholeFile = true, string? rsyncPath = null)
+        {
+            _useWholeFile = useWholeFile;
+            _rsyncPath = string.IsNullOrWhiteSpace(rsyncPath) ? "rsync" : rsyncPath;
+        }
+
         public string Name => "rsync";
 
         // ISyncRunner implementation (without progress callback)
         public Task<int> SyncAsync(Project project, string destination, bool dryRun, CancellationToken ct)
-            => SyncAsync(project, destination, dryRun, progressCallback: null, ct);
+            => SyncAsync(project, destination, dryRun, progressCallback: null, linkDest: null, ct);
 
         /// <summary>
         /// Run rsync to mirror project.RootPath into destination, optionally reporting progress.
@@ -26,6 +35,7 @@ namespace VaultSync.Core.Services
             string destination,
             bool dryRun,
             Action<double, string, string>? progressCallback,
+            string? linkDest = null,
             CancellationToken ct = default)
         {
             // Build ignore filter file based on project's preset and local .vaultsyncignore
@@ -41,11 +51,17 @@ namespace VaultSync.Core.Services
 
             var psi = new ProcessStartInfo
             {
-                FileName               = "rsync",
+                FileName               = _rsyncPath,
                 UseShellExecute        = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError  = true
             };
+
+            if (OperatingSystem.IsWindows())
+            {
+                psi.CreateNoWindow = true;
+                psi.WindowStyle = ProcessWindowStyle.Hidden;
+            }
 
             // trailing slash on source for rsync semantics (copy contents)
             var src = project.RootPath.EndsWith(Path.DirectorySeparatorChar)
@@ -57,15 +73,22 @@ namespace VaultSync.Core.Services
             psi.ArgumentList.Add("--delete");
             psi.ArgumentList.Add("--human-readable");
 
-            // Fast LAN / local copy optimizations: do not compress, send whole files.
+            // Fast LAN / local copy optimizations: do not compress, optionally send whole files.
             psi.ArgumentList.Add("--no-compress"); // avoid wasting CPU on compression over LAN / local FS
-            psi.ArgumentList.Add("--whole-file");  // skip delta algorithm, faster for LAN and mounted shares
+            if (_useWholeFile)
+                psi.ArgumentList.Add("--whole-file");  // skip delta algorithm, faster for LAN and mounted shares
 
             // Make rsync actually print progress lines with percentages.
             psi.ArgumentList.Add("--progress");
 
             // progress2 gives us aggregate stats; combined with --progress we should see % in output.
             psi.ArgumentList.Add("--info=progress2");
+
+            if (!string.IsNullOrWhiteSpace(linkDest))
+            {
+                var linkPath = OperatingSystem.IsWindows() ? ToRsyncPath(linkDest) : linkDest;
+                psi.ArgumentList.Add($"--link-dest={linkPath}");
+            }
 
             // macOS: avoid metadata noise; on Linux it's harmless
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -75,13 +98,26 @@ namespace VaultSync.Core.Services
                 psi.ArgumentList.Add("--dry-run");
 
             // Apply exclude-from file if we generated one
-            if (tempExcludeFile != null)
+            if (OperatingSystem.IsWindows())
             {
-                psi.ArgumentList.Add($"--exclude-from={tempExcludeFile}");
-            }
+                if (tempExcludeFile != null)
+                {
+                    psi.ArgumentList.Add($"--exclude-from={ToRsyncPath(tempExcludeFile)}");
+                }
 
-            psi.ArgumentList.Add(src);
-            psi.ArgumentList.Add(destination);
+                psi.ArgumentList.Add(ToRsyncPath(src));
+                psi.ArgumentList.Add(ToRsyncPath(destination));
+            }
+            else
+            {
+                if (tempExcludeFile != null)
+                {
+                    psi.ArgumentList.Add($"--exclude-from={tempExcludeFile}");
+                }
+
+                psi.ArgumentList.Add(src);
+                psi.ArgumentList.Add(destination);
+            }
 
             using var proc = new Process { StartInfo = psi, EnableRaisingEvents = false };
 
@@ -194,6 +230,37 @@ namespace VaultSync.Core.Services
             }
 
             return null;
+        }
+
+        private static string ToRsyncPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return path;
+
+            var normalized = path;
+            if (normalized.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = "\\" + normalized.Substring(7);
+            }
+            else if (normalized.StartsWith(@"\\?\", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized.Substring(4);
+            }
+
+            if (normalized.StartsWith(@"\\", StringComparison.Ordinal))
+            {
+                return "//" + normalized.TrimStart('\\').Replace('\\', '/');
+            }
+
+            var full = Path.GetFullPath(normalized);
+            if (full.Length >= 2 && full[1] == ':')
+            {
+                var drive = char.ToLowerInvariant(full[0]);
+                var rest = full.Substring(2).TrimStart('\\').Replace('\\', '/');
+                return $"/cygdrive/{drive}/{rest}";
+            }
+
+            return full.Replace('\\', '/');
         }
     }
 }

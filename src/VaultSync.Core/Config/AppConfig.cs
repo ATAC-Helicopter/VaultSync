@@ -68,6 +68,16 @@ namespace VaultSync.Core.Config
         }
         public bool   UseCompression        { get; set; } = true;
         /// <summary>
+        /// When true, rsync can use its delta-transfer algorithm on macOS/Linux.
+        /// Windows backups (robocopy) are unaffected.
+        /// </summary>
+        public bool   UseRsyncDelta         { get; set; } = false;
+        /// <summary>
+        /// When true, backups use rsync --link-dest to hardlink unchanged files
+        /// from the previous backup, keeping history while saving space/time.
+        /// </summary>
+        public bool   UseIncrementalBackups { get; set; } = false;
+        /// <summary>
         /// Controls whether snapshots always compute full hashes for all files.
         /// When false, snapshots may reuse hashes for unchanged files to speed up runs.
         /// </summary>
@@ -162,6 +172,7 @@ namespace VaultSync.Core.Config
     public sealed class AdvancedConfig
     {
         public bool VerboseLogging   { get; set; } = false;
+        public bool SaveVerboseLogs  { get; set; } = false;
         public bool CheckUpdates     { get; set; } = true;
         public bool BetaChannelEnabled { get; set; } = false;
         public bool SendUsageStats   { get; set; } = false;
