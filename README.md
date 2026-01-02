@@ -10,9 +10,10 @@
   <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">
     <img src="https://img.shields.io/github/v/release/ATAC-Helicopter/VaultSync?label=Stable&style=for-the-badge" alt="Stable release" />
   </a>
-  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
-    <img src="https://img.shields.io/github/v/pre-release/ATAC-Helicopter/VaultSync?label=Beta&style=for-the-badge" alt="Beta release" />
-  </a>
+<a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
+  <img src="https://img.shields.io/github/v/tag/ATAC-Helicopter/VaultSync?include_prereleases&label=Beta&style=for-the-badge" alt="Beta release" />
+</a>
+
   <a href="https://github.com/ATAC-Helicopter/VaultSync/discussions">
     <img src="https://img.shields.io/badge/Join%20the%20Discussion-24292f?style=for-the-badge&logo=github&logoColor=white" alt="Join the Discussion" />
   </a>
