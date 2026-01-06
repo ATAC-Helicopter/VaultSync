@@ -1,4 +1,17 @@
 ﻿# Changelog
+## [1.2.3] - 2026-01-02
+### Added
+- Configurable update check interval in Settings -> Advanced.
+- Manual "Check for updates now" action for on-demand update checks.
+- Roadmap outline for upcoming features and priorities.
+### Changed
+- Update-available notification now calls out the active update channel (stable/beta).
+- Windows uninstaller now removes bundled tools under `tools`.
+### Fixed
+- Update banner now clears when no newer release is available, preventing stale "update available" states.
+- Patch installs now shut down cleanly without triggering the "still running" tray notification.
+- Patch helper relaunch no longer fails due to an invalid app manifest XML header.
+
 ## [1.2.0] - 2026-01-01
 ### Added
 - Incremental backup mode (rsync hardlinks) toggle to keep history while only copying changes.

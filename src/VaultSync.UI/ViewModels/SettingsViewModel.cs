@@ -73,6 +73,7 @@ namespace VaultSync.UI
         private bool _enableVerboseLogging = false;
         private bool _saveVerboseLogs = false;
         private bool _checkForUpdatesOnStartup = true;
+        private int _updateCheckIntervalMinutes = 120;
         private bool _betaChannelEnabled = false;
         private bool _sendAnonymousUsageStats = false;
         private readonly LocalizationService _localizationService;
@@ -86,6 +87,7 @@ namespace VaultSync.UI
         private bool _savePending;
 
         public event Action? OpenLogConsoleRequested;
+        public event Action? UpdateCheckRequested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -142,6 +144,7 @@ namespace VaultSync.UI
             ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());
             OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
+            CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
@@ -294,6 +297,7 @@ namespace VaultSync.UI
             _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
             _saveVerboseLogs           = cfg.Advanced.SaveVerboseLogs;
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
+            _updateCheckIntervalMinutes = ClampInt(cfg.Advanced.UpdateCheckIntervalMinutes, 15, 10080, 120);
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
             _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
 
@@ -460,6 +464,7 @@ namespace VaultSync.UI
             cfg.Advanced.VerboseLogging      = EnableVerboseLogging;
             cfg.Advanced.SaveVerboseLogs     = SaveVerboseLogs;
             cfg.Advanced.CheckUpdates        = CheckForUpdatesOnStartup;
+            cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(UpdateCheckIntervalMinutes, 15, 10080, 120);
             cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
             cfg.Advanced.SendUsageStats      = SendAnonymousUsageStats;
             cfg.Advanced.Language            = SelectedLanguageCode;
@@ -963,6 +968,12 @@ namespace VaultSync.UI
             set => SetField(ref _checkForUpdatesOnStartup, value);
         }
 
+        public int UpdateCheckIntervalMinutes
+        {
+            get => _updateCheckIntervalMinutes;
+            set => SetField(ref _updateCheckIntervalMinutes, value);
+        }
+
         public bool BetaChannelEnabled
         {
             get => _betaChannelEnabled;
@@ -1041,6 +1052,7 @@ namespace VaultSync.UI
         public ICommand ExportTelemetryCommand { get; }
         public ICommand OpenLogConsoleCommand { get; }
         public ICommand ExportLogConsoleCommand { get; }
+        public ICommand CheckUpdatesNowCommand { get; }
 
         private async void BrowseProjectsRoot()
         {
@@ -1423,6 +1435,11 @@ namespace VaultSync.UI
         private void OpenLogConsole()
         {
             OpenLogConsoleRequested?.Invoke();
+        }
+
+        private void CheckUpdatesNow()
+        {
+            UpdateCheckRequested?.Invoke();
         }
 
         private void ExportLogConsole()

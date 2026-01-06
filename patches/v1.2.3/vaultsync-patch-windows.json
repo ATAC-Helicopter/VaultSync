@@ -1,0 +1,593 @@
+{
+    "previousVersion":  "1.2.2",
+    "targetVersion":  "1.2.3",
+    "archiveSha256":  "37C48ADBC2D5A21557DA12B4CB50520F839BDECE7D87B8CC1F2E3A64DE4AE891",
+    "archiveSize":  26862574,
+    "files":  [
+                  {
+                      "path":  "av_libglesv2.dll",
+                      "sha256":  "9B203E40323B49DAD29546A52B8B67D200BBA8FF4CAB9709A79CEDE23BA847D4",
+                      "size":  5426176
+                  },
+                  {
+                      "path":  "Avalonia.Base.dll",
+                      "sha256":  "16C8B57BF4E23A8AB15542A4E67241E3BE80D7F0D11049ADBD089D9FD6FD0F6A",
+                      "size":  2114560
+                  },
+                  {
+                      "path":  "Avalonia.Controls.dll",
+                      "sha256":  "3B784B2FDBC7D6EF908D9BAA551713934D922C098F95AAF0985D2DF344DB0B8D",
+                      "size":  1078272
+                  },
+                  {
+                      "path":  "Avalonia.DesignerSupport.dll",
+                      "sha256":  "7E64F54339CE0A21084DA5631BF749942F23EF0B444866FF858604D1AAA92078",
+                      "size":  209920
+                  },
+                  {
+                      "path":  "Avalonia.Desktop.dll",
+                      "sha256":  "1D1ECB2F45E66B6D07640157EFC0FCA0EB022CC1FF23D88198B19DA1BF450D1A",
+                      "size":  15360
+                  },
+                  {
+                      "path":  "Avalonia.Dialogs.dll",
+                      "sha256":  "30FA3B1F15118090D7298C8C613001759748235D180FF9FFE580762C540B25C4",
+                      "size":  243200
+                  },
+                  {
+                      "path":  "Avalonia.dll",
+                      "sha256":  "47B3BB6AA5D818ECB793F208DC6C5CD9CE058F6B8A22CEBF1DF68ED7C4577D3E",
+                      "size":  4096
+                  },
+                  {
+                      "path":  "Avalonia.Fonts.Inter.dll",
+                      "sha256":  "69F14D3DDBF67F26C970E3197B8DE3499907FCC9A07039CC090D80123BBBE475",
+                      "size":  1892864
+                  },
+                  {
+                      "path":  "Avalonia.FreeDesktop.dll",
+                      "sha256":  "2EFB358278D2E07CF23FD193CD78BD608E32D7C19AF7C3F330B9BA14D8F8CBB2",
+                      "size":  197632
+                  },
+                  {
+                      "path":  "Avalonia.Markup.dll",
+                      "sha256":  "F900337D8AD76428A8CCF41738F94A431F1685CA8896A8A497A75818922E75B9",
+                      "size":  65536
+                  },
+                  {
+                      "path":  "Avalonia.Markup.Xaml.dll",
+                      "sha256":  "E3251C9E565D86F57AEAFD9D8F5399711111DE439E3A43404DC0D464FAEF4814",
+                      "size":  84992
+                  },
+                  {
+                      "path":  "Avalonia.Metal.dll",
+                      "sha256":  "3D72D0441B84E747D13FD2289CB7E686BCE01DEBD993ED34318E70859F5A1D94",
+                      "size":  15360
+                  },
+                  {
+                      "path":  "Avalonia.MicroCom.dll",
+                      "sha256":  "130DBECB8858C50CEE565E9AB1DE1AFAFCD7A27C609584F9956542C477848CB9",
+                      "size":  15872
+                  },
+                  {
+                      "path":  "Avalonia.Native.dll",
+                      "sha256":  "65D39BBB1CF135B646F704C82874C9E1A18BC06823B51BF599EFEF595240CD78",
+                      "size":  327680
+                  },
+                  {
+                      "path":  "Avalonia.OpenGL.dll",
+                      "sha256":  "D40E1DBBAC79C4FD57265009FCF608C126A66AB703BDE2AA093DA3BF9790D8B3",
+                      "size":  115712
+                  },
+                  {
+                      "path":  "Avalonia.Remote.Protocol.dll",
+                      "sha256":  "5BA5DBBA651DB4C2E09C6A5C136F2D2F48E2E75B4410B578BE49826029B71E61",
+                      "size":  70144
+                  },
+                  {
+                      "path":  "Avalonia.Skia.dll",
+                      "sha256":  "3425689BB1498AAE846E6A5D052E73BD6F8E856BB9F1CD3ECEC18EE8E92E5B9E",
+                      "size":  131584
+                  },
+                  {
+                      "path":  "Avalonia.Themes.Fluent.dll",
+                      "sha256":  "731C949EB50C9291DD7B888C08DA127E22E498FD73B12E1859BC10CFBDA47356",
+                      "size":  585728
+                  },
+                  {
+                      "path":  "Avalonia.Vulkan.dll",
+                      "sha256":  "4C683C63EECBCDC0356F7C79BDF1539D3FF62129F7000ABCBE2F8E978776D999",
+                      "size":  190464
+                  },
+                  {
+                      "path":  "Avalonia.Win32.Automation.dll",
+                      "sha256":  "050417F248E6F60B3DDF16E7E20BC4A940AFFD601846B0FF0F522FC931AD127F",
+                      "size":  114176
+                  },
+                  {
+                      "path":  "Avalonia.Win32.dll",
+                      "sha256":  "FA18C3E2E7390C65773511C02A1462828454BBCAAF4FBE09CD7DBA078EE2E345",
+                      "size":  911872
+                  },
+                  {
+                      "path":  "Avalonia.X11.dll",
+                      "sha256":  "F98BC7229DA34DAA34F3D169DC07866838287A672F1C82A4B393D7899281F68A",
+                      "size":  356352
+                  },
+                  {
+                      "path":  "CommunityToolkit.WinUI.Notifications.dll",
+                      "sha256":  "04DC9462D07AF6243B597D7D67740A0E9987077B25E57A365B399AE5E5CF07F7",
+                      "size":  144080
+                  },
+                  {
+                      "path":  "Dapper.dll",
+                      "sha256":  "784D15BA9FC95CDF049C927416486B15EB4FFCA707195EF1AB32413B7F22F97C",
+                      "size":  245760
+                  },
+                  {
+                      "path":  "DynamicData.dll",
+                      "sha256":  "BD42F8428307A47C140B3C02C24E8EFB51BA4C87ADBA1E2B332AF9531BFCF82E",
+                      "size":  813568
+                  },
+                  {
+                      "path":  "e_sqlite3.dll",
+                      "sha256":  "39923CFDAD272169C217406A60214FFE9BD6C1B3BD396A3EFF94B781BD8D3376",
+                      "size":  1759232
+                  },
+                  {
+                      "path":  "HarfBuzzSharp.dll",
+                      "sha256":  "0AF80D1AB31B9B92EF7A5D20923FC300FE72906035743BE95EDBB81323F83DA9",
+                      "size":  122440
+                  },
+                  {
+                      "path":  "libHarfBuzzSharp.dll",
+                      "sha256":  "EB76238C9E8E41D44B5A5B18167C4C5B39CA5DB4277AF5DBE92D730F0FC14A7D",
+                      "size":  1804872
+                  },
+                  {
+                      "path":  "libSkiaSharp.dll",
+                      "sha256":  "9A0D95E8CAAA852C70D085AF6A40A744242172AD9EA3FD6BC7599875A8A1DBCD",
+                      "size":  9414216
+                  },
+                  {
+                      "path":  "LiveChartsCore.dll",
+                      "sha256":  "79BA30726A557BDF247FCB3FCEC39575F79748F4C3A5EC439020158F6AA5F311",
+                      "size":  774656
+                  },
+                  {
+                      "path":  "LiveChartsCore.SkiaSharpView.Avalonia.dll",
+                      "sha256":  "F96DD784F7C7C37EB9F62A782325006F8DB06FE6611958A1C1F3564F7AE29475",
+                      "size":  348672
+                  },
+                  {
+                      "path":  "LiveChartsCore.SkiaSharpView.dll",
+                      "sha256":  "2E60B3EB5B03025CB82B5E9C8833A8670C3DAE47B09085BD4FA86792AAA82CFE",
+                      "size":  133120
+                  },
+                  {
+                      "path":  "Localization\\strings.ar.json",
+                      "sha256":  "25B5E7B50E20B28DD98995FB045461265BC31FB7577D23193781C5CF3508A205",
+                      "size":  45887
+                  },
+                  {
+                      "path":  "Localization\\strings.bn.json",
+                      "sha256":  "161043B32604C25053688521224FB1559D230C4CE27004EA852FB2E07B24A8B3",
+                      "size":  64441
+                  },
+                  {
+                      "path":  "Localization\\strings.de.json",
+                      "sha256":  "12F0E028F1CEFE5645D1D05F0FCDB26162C71926592AD7A3791E4F25A6AAB6D9",
+                      "size":  28989
+                  },
+                  {
+                      "path":  "Localization\\strings.en.json",
+                      "sha256":  "96DBB71567258BA7EC01DAE0AF5D5FF44BA835DCC7987ECD7354524185FA4D5D",
+                      "size":  28299
+                  },
+                  {
+                      "path":  "Localization\\strings.es.json",
+                      "sha256":  "0FCECB3A252F19D5AEB298FDA03225167BB9E514E2F31F328A7579D1DA4B44BD",
+                      "size":  29617
+                  },
+                  {
+                      "path":  "Localization\\strings.fr.json",
+                      "sha256":  "3392F08698012D74D3EF660EEC029B46C609EF0FE2B684F4F6297CE1F8527021",
+                      "size":  30596
+                  },
+                  {
+                      "path":  "Localization\\strings.hi.json",
+                      "sha256":  "9484FBE3119858E23F8726B68D1A803A75D9FF9ECEB0D52B8E6E7324A29324C9",
+                      "size":  62532
+                  },
+                  {
+                      "path":  "Localization\\strings.it.json",
+                      "sha256":  "923BFB4E1AEE8972DD6D306F9A293F95F702CBED619336A040A4B7189FDA6A9D",
+                      "size":  28644
+                  },
+                  {
+                      "path":  "Localization\\strings.pt.json",
+                      "sha256":  "EB4E40E14D6EEC1F2D8317608C3B6C7C4E776815986F7AD890CD8154493F59E7",
+                      "size":  29089
+                  },
+                  {
+                      "path":  "Localization\\strings.ru.json",
+                      "sha256":  "12F5145E107027FD2F5AC02C5BE4B5A9B7AA0F4391AB14FE7B858046A2E4C69F",
+                      "size":  52436
+                  },
+                  {
+                      "path":  "Localization\\strings.zh.json",
+                      "sha256":  "7F404276CF9E6E215589A1C4D54CFAA7F6301272A237C69C9AA86E2C991A9798",
+                      "size":  33652
+                  },
+                  {
+                      "path":  "MicroCom.Runtime.dll",
+                      "sha256":  "59839E18E46B06AB23B633944AE3C3B552A300C5DA389DA870DFA980BCEF93C1",
+                      "size":  14336
+                  },
+                  {
+                      "path":  "Microsoft.Data.Sqlite.dll",
+                      "sha256":  "5E77453AB06D530E60FC27408AB7F3721CAE30A2D5D7443AAA69F387F8210952",
+                      "size":  176696
+                  },
+                  {
+                      "path":  "Microsoft.Windows.SDK.NET.dll",
+                      "sha256":  "0EC371D93798852E36461C8ADDDBEADCE0F963A04752F0B64E54FE19C1C834A7",
+                      "size":  24877600
+                  },
+                  {
+                      "path":  "presets\\ableton.vaultsyncignore",
+                      "sha256":  "5DC7875153F624A4949E027A2C14F2938AA90C01CE0FA2CE9C58A8FD817E66D2",
+                      "size":  114
+                  },
+                  {
+                      "path":  "presets\\adobe_after_effects.vaultsyncignore",
+                      "sha256":  "A6512C41F4AD67D9180EBC4BDAF5FEBCA3221559A9D2C46561197B4C0BFDA082",
+                      "size":  143
+                  },
+                  {
+                      "path":  "presets\\adobe_premiere.vaultsyncignore",
+                      "sha256":  "C2AAE1F57A762835DEB15F802FD0B669F7500579C5D6048ED4E0501F24323070",
+                      "size":  128
+                  },
+                  {
+                      "path":  "presets\\avalonia.vaultsyncignore",
+                      "sha256":  "B2397391235975301BFA8D84C58D8A4032C8FB2C181B8B7E5F63C81CAAB7DA00",
+                      "size":  128
+                  },
+                  {
+                      "path":  "presets\\blender.vaultsyncignore",
+                      "sha256":  "9F72780DEB58D11E0DA99BA5C049D80D59C1EAFC45D444EA30B2CE5D49964639",
+                      "size":  154
+                  },
+                  {
+                      "path":  "presets\\c_cpp.vaultsyncignore",
+                      "sha256":  "30F16D76FE004DA6EA29B93B4D40C86F22EB54CF89164E779EFE91F8C6F4A81E",
+                      "size":  233
+                  },
+                  {
+                      "path":  "presets\\davinci_resolve.vaultsyncignore",
+                      "sha256":  "D1132FDDE248A6413AEB5C8DE1522DB84D2BB7EF8D437B71307EEF2D8472E83C",
+                      "size":  118
+                  },
+                  {
+                      "path":  "presets\\docker.vaultsyncignore",
+                      "sha256":  "95577A8859606336CECF6D36C8A2041CC7BD9657122B4A44A658A9CD1B597FD9",
+                      "size":  168
+                  },
+                  {
+                      "path":  "presets\\dotnet.vaultsyncignore",
+                      "sha256":  "3EE5FBC6FD0BCC14D41C06739CF4869CC7285A54ABA3FB8B9365A8E8046718E9",
+                      "size":  222
+                  },
+                  {
+                      "path":  "presets\\fl_studio.vaultsyncignore",
+                      "sha256":  "25FEE21010AA7535B3BFE185B833820AFF115C2AA10E9B7D85565979A76CEF68",
+                      "size":  74
+                  },
+                  {
+                      "path":  "presets\\flutter.vaultsyncignore",
+                      "sha256":  "29A4F96D6B95D2A4B983CA831756BB5729584B3D88FAD16C93075736F0F82848",
+                      "size":  186
+                  },
+                  {
+                      "path":  "presets\\gamemaker.vaultsyncignore",
+                      "sha256":  "3BAA4E159D113B6D64EB780280ACEA9841EFD35AAA19E32E9052B42764D79C66",
+                      "size":  163
+                  },
+                  {
+                      "path":  "presets\\go.vaultsyncignore",
+                      "sha256":  "E8C665FFEE80428D8BAFC3318D4A2357E7CE93FA3C35AE0051566DAF9C55F0DB",
+                      "size":  110
+                  },
+                  {
+                      "path":  "presets\\godot.vaultsyncignore",
+                      "sha256":  "FA57DACD2FB58F83C7020AB68E71FC657D69B33845BF0C7E81175B5A1FD430F8",
+                      "size":  190
+                  },
+                  {
+                      "path":  "presets\\java.vaultsyncignore",
+                      "sha256":  "FE34226F1F0030D66B1BD535B3BF7F420D50B4253BFFC9E00888DEC569EEF65E",
+                      "size":  139
+                  },
+                  {
+                      "path":  "presets\\jetbrains.vaultsyncignore",
+                      "sha256":  "7C52C7675DADBB2BD494F94DE0320CB1795AF940FE29A45822B62F2B53C7D35E",
+                      "size":  56
+                  },
+                  {
+                      "path":  "presets\\kubernetes.vaultsyncignore",
+                      "sha256":  "8E97917C4FD35C5252175C39ACA33C128EC869C54C57CC53991858AE5C483700",
+                      "size":  54
+                  },
+                  {
+                      "path":  "presets\\maya.vaultsyncignore",
+                      "sha256":  "51DE30E18E9EFAFA7E85F77D7438EBA81DD953BFA30D411A6061A595F9BC13FB",
+                      "size":  107
+                  },
+                  {
+                      "path":  "presets\\node.vaultsyncignore",
+                      "sha256":  "C4188B96136E336D24E072F671BB45F05088BAED2FFEF145E39C81802653E3D0",
+                      "size":  225
+                  },
+                  {
+                      "path":  "presets\\python.vaultsyncignore",
+                      "sha256":  "17FC14626526F472316FA1D34C3E7CD3E514FB98BEC93B87891F89210518F59E",
+                      "size":  238
+                  },
+                  {
+                      "path":  "presets\\react_native.vaultsyncignore",
+                      "sha256":  "6574CE5CC71E0522C9F932DC0418BAC8647F4BE817D6B64E4115FD84613CA8F9",
+                      "size":  179
+                  },
+                  {
+                      "path":  "presets\\rust.vaultsyncignore",
+                      "sha256":  "425864593908E5B9325C513F0E3859CEB0A9B929479CAA2A718BEF9F1D4E4AB1",
+                      "size":  115
+                  },
+                  {
+                      "path":  "presets\\terraform.vaultsyncignore",
+                      "sha256":  "525E1A11B06A3D8212847575B46CB5F3CB02084E81FC53D607DB941B30353431",
+                      "size":  132
+                  },
+                  {
+                      "path":  "presets\\unity.vaultsyncignore",
+                      "sha256":  "DC13E1FCFAEC8362C3F7A5615E2753115BA9CEC2A771D2B1C9CF62A1241EC253",
+                      "size":  1098
+                  },
+                  {
+                      "path":  "presets\\unreal.vaultsyncignore",
+                      "sha256":  "68D3C4B0DD3C3BA51A847CEB2AAEA12DE5FEEA43D38A0D8B22B8704DF944228D",
+                      "size":  306
+                  },
+                  {
+                      "path":  "presets\\video.vaultsyncignore",
+                      "sha256":  "60E4B0B362F9B9407CAC6ED4DF8D9BD6E39BB57A51E503B6AFAF4E6331169B73",
+                      "size":  104
+                  },
+                  {
+                      "path":  "presets\\vscode.vaultsyncignore",
+                      "sha256":  "932C7FB47B3732579CF4ACC3B8A19A84FA60D226C15623721BE22BE808EFA104",
+                      "size":  91
+                  },
+                  {
+                      "path":  "ReactiveUI.dll",
+                      "sha256":  "1D4109E6B3CFF9C0D9A93913A451C9B13DE2969134F2FBFBDE4EEA2121B9B6C4",
+                      "size":  316944
+                  },
+                  {
+                      "path":  "SkiaSharp.dll",
+                      "sha256":  "17EE1284313749F73A5CF5F309318D831741A8D6D397C998C5FC6485843C28BB",
+                      "size":  437808
+                  },
+                  {
+                      "path":  "SkiaSharp.HarfBuzz.dll",
+                      "sha256":  "2888E9117E8EB044F1F74AF109095BAD6CA77B71819E4A1AC593F649BAF12AD3",
+                      "size":  22072
+                  },
+                  {
+                      "path":  "Splat.dll",
+                      "sha256":  "46A0C2AAE4700E066D66176097346C9BA0BBADB08F27EDA3FD6B1953BE7B8307",
+                      "size":  140304
+                  },
+                  {
+                      "path":  "SQLitePCLRaw.batteries_v2.dll",
+                      "sha256":  "0981B1E1E24DDF18E42D0F6CEA7A318E735B875F987B3E306F555118726B24A7",
+                      "size":  5120
+                  },
+                  {
+                      "path":  "SQLitePCLRaw.core.dll",
+                      "sha256":  "DBCFD04E95AEFA9EF0DCAD4CD20009B018DD3D2943C8CCF3F40597B9ED9161B8",
+                      "size":  51200
+                  },
+                  {
+                      "path":  "SQLitePCLRaw.provider.e_sqlite3.dll",
+                      "sha256":  "D4D3797E9AA3E3A9465AA5E3682D34A3303FEAF429148AAF1462E114A319DBBE",
+                      "size":  36864
+                  },
+                  {
+                      "path":  "System.IO.Pipelines.dll",
+                      "sha256":  "86D0F5BFAAF1B2AB19331B543A736D87B5B58E72158F4DED282122B2E6665F83",
+                      "size":  77984
+                  },
+                  {
+                      "path":  "System.Reactive.dll",
+                      "sha256":  "E8CD00FB4BF7A522A360405509A223A875602CA480D7C05EA2522AD60AB53C02",
+                      "size":  1403984
+                  },
+                  {
+                      "path":  "Tmds.DBus.Protocol.dll",
+                      "sha256":  "111FDDDA3D7F523E41D8FE55380FA60CE4FA09EF0984972E97030790D18AA7D6",
+                      "size":  200704
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cygcrypto-3.dll",
+                      "sha256":  "5C9EA074BAE8685B0C498BB0AF7505E4CE71DA9C4244FA32B2E47257917A15E4",
+                      "size":  3831456
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cyggcc_s-seh-1.dll",
+                      "sha256":  "B5BE9413DC7A5879969F0F487EDAA2DC04E8C9C6064E56A5E1A0FF9B22298FAB",
+                      "size":  115360
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cygiconv-2.dll",
+                      "sha256":  "84213DF7F685FEFC2BE70766A133E08802E7945CA85B8931CBD75DE6D4DFFBD0",
+                      "size":  1094304
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cygintl-8.dll",
+                      "sha256":  "A563DCAC3C0DF297F46569CB3DD80B8C10F6026EF5B1B6DC2593D32985515B04",
+                      "size":  114336
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cyglz4-1.dll",
+                      "sha256":  "C89B4F50F0E0FB07BB192AD43396270CA1249E73D4ECEEC558E0DA921DFC37B7",
+                      "size":  145056
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cygpopt-0.dll",
+                      "sha256":  "E3A2449D827E4E11E94309DBD4A82A3E7F67EE86D32367776DB408348FAAC980",
+                      "size":  49312
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cygwin1.dll",
+                      "sha256":  "50BE65D12847242D11165BA391B9DD38D067E0A99D1A8C8AE06F4B45E78FAB55",
+                      "size":  3165376
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cygxxhash-0.dll",
+                      "sha256":  "AABE457155206E1398DFE5F34F078E2A819FFBE7670643632DD6E848869A181D",
+                      "size":  40608
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cygz.dll",
+                      "sha256":  "656B0D9057FB31C24F9257F83F78F567EA8A5AD57BF3856FCF4BFBA81C8AB253",
+                      "size":  95904
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\cygzstd-1.dll",
+                      "sha256":  "0B0AF87477A5DA8140EDE9A39A9A93C471632DF79303EFC341BC1E0B05D603CB",
+                      "size":  686752
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\rsync.exe",
+                      "sha256":  "5C8020B679D36D9AEFF8CD1B7F01396EEBD0C858F009EF30E9DA4F31005AE682",
+                      "size":  495240
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\ssh.exe",
+                      "sha256":  "870F62CB40EECA01A2672C0379FF1A4E962E4138F68764D321CEBB531349B99B",
+                      "size":  922760
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\ssh-add.exe",
+                      "sha256":  "7D4A299B753BE1B49A3C520469770156E8020C5FF38B1D37038A155C0C4C86CC",
+                      "size":  402056
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\ssh-agent.exe",
+                      "sha256":  "50AA5CAD26BE8E2649660515D5105A1F37B02AE6DCDF20E080AB856A0B46D5B4",
+                      "size":  379528
+                  },
+                  {
+                      "path":  "tools\\rsync\\bin\\ssh-keygen.exe",
+                      "sha256":  "F77287195AB21AF6C9F33A93EFDB272283FA885C6703A8CF8B4A62E253A070D2",
+                      "size":  515720
+                  },
+                  {
+                      "path":  "tools\\rsync\\cwrsync.cmd",
+                      "sha256":  "F4A01E6C40FCFCE3D05510C62D99B17A8B070304C8DFB492CD0DDB7C62A4651E",
+                      "size":  1553
+                  },
+                  {
+                      "path":  "tools\\rsync\\etc\\nsswitch.conf",
+                      "sha256":  "DEBBA1811D82A618BD3723E33E3E78C69670298F0129953560CD40E955C93477",
+                      "size":  17
+                  },
+                  {
+                      "path":  "tools\\rsync\\etc\\ssh_config",
+                      "sha256":  "3DBD15355CF08B2B0EC7377AB5EAD286E6AA040E2B0EABEDCF599EA10CA11A9C",
+                      "size":  31
+                  },
+                  {
+                      "path":  "tools\\rsync\\LICENSES\\Apache-2.0.txt",
+                      "sha256":  "3DDF9BE5C28FE27DAD143A5DC76EEA25222AD1DD68934A047064E56ED2FA40C5",
+                      "size":  11560
+                  },
+                  {
+                      "path":  "tools\\rsync\\LICENSES\\cwrsync-client-LICENSE.txt",
+                      "sha256":  "857FA508B970CE53D2212826A4B9E2F192DCB8A532E8C5D9187F3AB8E3B06C7B",
+                      "size":  1328
+                  },
+                  {
+                      "path":  "tools\\rsync\\LICENSES\\GPL-3.0.txt",
+                      "sha256":  "230184F60BAE2FEAF244F10A8BAC053C8FF33A183BCC365B4D8B876D2B7F4809",
+                      "size":  35823
+                  },
+                  {
+                      "path":  "tools\\rsync\\README.cwrsync.txt",
+                      "sha256":  "6E1CA7FF1F04B20F2B406AE179DF0B26AD25E00930AA1477F967D4696261753D",
+                      "size":  1633
+                  },
+                  {
+                      "path":  "tools\\rsync\\README.rsync.txt",
+                      "sha256":  "CB9E3A0725A017D7559D9986A4D53D92DA8DCF08CBC34D8597455F4A42E9BB89",
+                      "size":  4310
+                  },
+                  {
+                      "path":  "tools\\rsync\\README.txt",
+                      "sha256":  "53AADC320C18B56234CE71D9E6E243DB8D965222A299591F2DDB802AA0716871",
+                      "size":  362
+                  },
+                  {
+                      "path":  "tools\\rsync\\rsync.html",
+                      "sha256":  "8230140038A80B3D17DA2A41BFE8ABC6DAEE0ADB6E117190C438D684E9F7D0B6",
+                      "size":  331076
+                  },
+                  {
+                      "path":  "tools\\rsync\\rsyncd.conf.html",
+                      "sha256":  "72D07AC1D9DADCFD10CF12403EA952FAEB0F68552D19D3E9BB91A180347544E4",
+                      "size":  86364
+                  },
+                  {
+                      "path":  "VaultSync.Core.dll",
+                      "sha256":  "958EB267DF1AEA3132DFD91D2CAF97209327B51DF19772C5FB08C089CF8EF01C",
+                      "size":  165376
+                  },
+                  {
+                      "path":  "VaultSync.Core.pdb",
+                      "sha256":  "6BA972A099419695F717104F6330E1682E94CAFB422A37450D612223572982BC",
+                      "size":  47048
+                  },
+                  {
+                      "path":  "VaultSync.UI.deps.json",
+                      "sha256":  "28F22AAA8E81F0DB3F5B33CAD3D0F865D2715D0281E26EEDA5ECF8AAD539E742",
+                      "size":  24699
+                  },
+                  {
+                      "path":  "VaultSync.UI.dll",
+                      "sha256":  "7E232735BC52361FAD2D801D940A558D53286B20430537D0AD15CF7CFE646A98",
+                      "size":  1906688
+                  },
+                  {
+                      "path":  "VaultSync.UI.exe",
+                      "sha256":  "5D03B4C301B8196758CB7F451E03E0D359BF656B3CBC259EE89ACE49D5F3419A",
+                      "size":  236544
+                  },
+                  {
+                      "path":  "VaultSync.UI.pdb",
+                      "sha256":  "3743DF2C320816584E8CA1205764355ADC8F267F98E33532DF398AFDD6226590",
+                      "size":  149720
+                  },
+                  {
+                      "path":  "VaultSync.UI.runtimeconfig.json",
+                      "sha256":  "FED2BD28DE35C44D18F633B854A634FF2BCACAAE98EEA6015DE0612E4EBFA606",
+                      "size":  593
+                  },
+                  {
+                      "path":  "WinRT.Runtime.dll",
+                      "sha256":  "BCF3A14E8712A90837FC5C0D8C8A24696AF2BD7F74E9767597EC81EDEDFB23DB",
+                      "size":  528944
+                  }
+              ]
+}

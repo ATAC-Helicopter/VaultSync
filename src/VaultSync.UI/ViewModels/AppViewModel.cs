@@ -116,6 +116,8 @@ namespace VaultSync.UI.ViewModels
         private static readonly HttpClient s_installerClient = CreateInstallerHttpClient();
         private readonly string _currentVersionString;
         private CancellationTokenSource? _updateCheckCts;
+        private Timer? _updateCheckTimer;
+        private int _updateCheckInFlight;
         private UpdateCheckResult? _pendingUpdateResult;
         private bool _patchBlocked;
         private bool _isUpdateAvailable;
@@ -347,6 +349,7 @@ namespace VaultSync.UI.ViewModels
             _settingsViewModel  = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
+            _settingsViewModel.UpdateCheckRequested += OnUpdateCheckRequested;
 
             _logConsoleService = new LogConsoleService();
             _logConsoleService.InstallCapture();
@@ -393,6 +396,7 @@ namespace VaultSync.UI.ViewModels
 
             EnsureDestinationProbeStarted();
             StartUpdateCheck();
+            ConfigureUpdateCheckTimer();
         }
 
         public void AttachBackupWidgetService(IBackupWidgetService? service)
@@ -717,11 +721,17 @@ namespace VaultSync.UI.ViewModels
             if (e.PropertyName == nameof(SettingsViewModel.CheckForUpdatesOnStartup))
             {
                 StartUpdateCheck();
+                ConfigureUpdateCheckTimer();
             }
 
             if (e.PropertyName == nameof(SettingsViewModel.BetaChannelEnabled))
             {
                 StartUpdateCheck();
+            }
+
+            if (e.PropertyName == nameof(SettingsViewModel.UpdateCheckIntervalMinutes))
+            {
+                ConfigureUpdateCheckTimer();
             }
 
             if (e.PropertyName == nameof(SettingsViewModel.SendAnonymousUsageStats))
@@ -746,6 +756,11 @@ namespace VaultSync.UI.ViewModels
         private void OnOpenLogConsoleRequested()
         {
             ShowLogConsole();
+        }
+
+        private void OnUpdateCheckRequested()
+        {
+            StartUpdateCheck(ignoreSettings: true);
         }
 
         private void ShowLogConsole()
@@ -848,11 +863,11 @@ namespace VaultSync.UI.ViewModels
             CurrentView = current;
         }
 
-        private void StartUpdateCheck()
+        private void StartUpdateCheck(bool ignoreSettings = false)
         {
             CancelUpdateCheck();
 
-            if (!_settingsViewModel.CheckForUpdatesOnStartup)
+            if (!ignoreSettings && !_settingsViewModel.CheckForUpdatesOnStartup)
             {
                 ClearUpdateState();
                 return;
@@ -860,6 +875,36 @@ namespace VaultSync.UI.ViewModels
 
             _updateCheckCts = new CancellationTokenSource();
             _ = RunUpdateCheckAsync(_updateCheckCts.Token);
+        }
+
+        private void ConfigureUpdateCheckTimer()
+        {
+            _updateCheckTimer?.Dispose();
+            _updateCheckTimer = null;
+
+            if (!_settingsViewModel.CheckForUpdatesOnStartup)
+                return;
+
+            var intervalMinutes = Math.Max(15, _settingsViewModel.UpdateCheckIntervalMinutes);
+            var interval = TimeSpan.FromMinutes(intervalMinutes);
+
+            _updateCheckTimer = new Timer(_ =>
+            {
+                if (!_settingsViewModel.CheckForUpdatesOnStartup)
+                    return;
+
+                if (Interlocked.Exchange(ref _updateCheckInFlight, 1) == 1)
+                    return;
+
+                try
+                {
+                    StartUpdateCheck(ignoreSettings: true);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _updateCheckInFlight, 0);
+                }
+            }, null, interval, interval);
         }
 
         private async Task StartPatchInstallAsync()
@@ -944,7 +989,10 @@ namespace VaultSync.UI.ViewModels
             {
                 var result = await _updateService.CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken);
                 if (result is null)
+                {
+                    Dispatcher.UIThread.Post(ClearUpdateState);
                     return;
+                }
 
                 Dispatcher.UIThread.Post(() => ApplyUpdateResult(result));
             }
@@ -980,7 +1028,10 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(IsReleaseActionEnabled));
 
             var title = L("Update.Available.Title", "Update available");
-            var message = Lf("Update.Available.Message", "VaultSync {0} is ready. Open the latest release to download it.", result.TagName);
+            var channelLabel = CurrentUpdateChannel == GitHubReleaseChannel.Beta
+                ? L("Update.Channel.Beta", "Beta")
+                : L("Update.Channel.Stable", "Stable");
+            var message = Lf("Update.Available.MessageChannel", "VaultSync {0} is ready on the {1} channel.", result.TagName, channelLabel);
 
             GlobalNotificationCenter.Instance.Show(
                 message,

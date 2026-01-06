@@ -883,10 +883,10 @@
                     </StackPanel>
                   </Grid>
 
-                  <Grid ColumnDefinitions="*,Auto"
-                        Margin="0,4,0,0">
-                    <StackPanel Grid.Column="0" Spacing="2">
-                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
@@ -894,6 +894,37 @@
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
                                 IsChecked="{Binding CheckForUpdatesOnStartup, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateInterval}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateIntervalDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <TextBox Grid.Column="1"
+                           Width="60"
+                           HorizontalContentAlignment="Center"
+                           Text="{Binding UpdateCheckIntervalMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           HorizontalAlignment="Right"
+                           IsEnabled="{Binding CheckForUpdatesOnStartup}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNowDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <Button Grid.Column="1"
+                          Classes="settings-ghost"
+                          Command="{Binding CheckUpdatesNowCommand}">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
+                  </Button>
                 </Grid>
 
                 <Grid ColumnDefinitions="*,Auto"
