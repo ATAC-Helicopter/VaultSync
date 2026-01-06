@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace VaultSync.UI.Services
@@ -92,20 +93,58 @@ namespace VaultSync.UI.Services
             var path = Path.Combine(AppContext.BaseDirectory, "Localization", $"strings.{code}.json");
             if (!File.Exists(path))
             {
+                Console.WriteLine($"[Localization] Missing file: {path}");
                 return false;
             }
 
             try
             {
-                var json = File.ReadAllText(path);
+                var json = ReadTextWithFallback(path);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    Console.WriteLine($"[Localization] Empty or unreadable file: {path}");
+                    return false;
+                }
                 var dictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
                     ?? new Dictionary<string, string>();
                 _cache[code] = dictionary;
                 return true;
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Localization] Failed to parse: {path} ({ex.GetType().Name}: {ex.Message})");
+                return false;
+            }
+        }
+
+        private static string? ReadTextWithFallback(string path)
+        {
+            try
+            {
+                using var stream = File.OpenRead(path);
+                using var reader = new StreamReader(
+                    stream,
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true),
+                    detectEncodingFromByteOrderMarks: true);
+                return reader.ReadToEnd();
+            }
             catch
             {
-                return false;
+                try
+                {
+                    return Encoding.GetEncoding(1252).GetString(File.ReadAllBytes(path));
+                }
+                catch
+                {
+                    try
+                    {
+                        return Encoding.Latin1.GetString(File.ReadAllBytes(path));
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                }
             }
         }
     }

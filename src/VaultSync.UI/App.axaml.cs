@@ -516,8 +516,6 @@ public partial class App : Application
     {
         try
         {
-            var cfg = AppConfigStore.Load();
-            Telemetry.SetEnabled(cfg.Advanced.SendUsageStats);
             Telemetry.SetSessionId(Guid.NewGuid());
 
             Telemetry.Log("app_start");

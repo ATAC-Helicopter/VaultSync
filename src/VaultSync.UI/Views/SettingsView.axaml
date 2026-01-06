@@ -927,6 +927,17 @@
                   </Button>
                 </Grid>
 
+                <StackPanel Margin="0,4,0,0" Spacing="2">
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateStatusLabel}" />
+                  <TextBlock Text="{Binding UpdateCheckStatusText}"
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="11" />
+                  <TextBlock Text="{Binding UpdateCheckErrorText}"
+                             Foreground="{DynamicResource WarningTextBrush}"
+                             FontSize="11"
+                             IsVisible="{Binding HasUpdateCheckError}" />
+                </StackPanel>
+
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
@@ -965,19 +976,6 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                </Grid>
-
-                <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
-                  <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SendUsageStats}" />
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SendUsageStatsDescription}"
-                               Foreground="{StaticResource TextSecondary}"
-                               FontSize="11" />
-                  </StackPanel>
-                  <ToggleSwitch Grid.Column="1"
-                                VerticalAlignment="Center"
-                                IsChecked="{Binding SendAnonymousUsageStats, Mode=TwoWay}" />
                 </Grid>
 
                 <StackPanel Orientation="Horizontal"

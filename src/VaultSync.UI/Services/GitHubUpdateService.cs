@@ -72,25 +72,48 @@ namespace VaultSync.UI.Services
             GitHubReleaseChannel channel,
             CancellationToken cancellationToken)
         {
+            Console.WriteLine($"[Update] Fetching GitHub releases (channel={channel}, current={currentVersion}).");
             var releases = await FetchReleasesAsync(cancellationToken);
             if (releases == null || releases.Count == 0)
-                return null;
-
-            var candidate = channel switch
             {
-                GitHubReleaseChannel.Beta => SelectBestBetaOrStableCandidate(releases),
-                _                        => SelectStableCandidate(releases)
-            };
+                Console.WriteLine("[Update] No releases returned from GitHub.");
+                return null;
+            }
+
+            if (channel == GitHubReleaseChannel.Beta)
+            {
+                var betaCandidate = SelectBetaCandidate(releases);
+                var stableCandidate = SelectStableCandidate(releases);
+                Console.WriteLine($"[Update] Beta candidate: {DescribeRelease(betaCandidate)}");
+                Console.WriteLine($"[Update] Stable candidate: {DescribeRelease(stableCandidate)}");
+            }
+            else
+            {
+                var stableCandidate = SelectStableCandidate(releases);
+                Console.WriteLine($"[Update] Stable candidate: {DescribeRelease(stableCandidate)}");
+            }
+
+            var candidate = channel == GitHubReleaseChannel.Beta
+                ? SelectBestBetaOrStableCandidate(releases)
+                : SelectStableCandidate(releases);
 
             if (candidate == null)
+            {
+                Console.WriteLine("[Update] No suitable release candidate found.");
                 return null;
+            }
 
             var releaseTag = (candidate.TagName ?? string.Empty).Trim();
             if (string.IsNullOrEmpty(releaseTag))
                 return null;
 
+            Console.WriteLine($"[Update] Candidate release: tag={releaseTag}, prerelease={candidate.Prerelease}, published={candidate.PublishedAt:O}, target={candidate.TargetCommitish}.");
+
             if (!IsReleaseNewer(releaseTag, currentVersion))
+            {
+                Console.WriteLine("[Update] Candidate is not newer than current version.");
                 return null;
+            }
 
             if (!Uri.TryCreate(candidate.HtmlUrl, UriKind.Absolute, out var releaseUri))
             {
@@ -371,6 +394,17 @@ namespace VaultSync.UI.Services
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 return "linux";
             return string.Empty;
+        }
+
+        private static string DescribeRelease(GitHubRelease? release)
+        {
+            if (release is null)
+                return "none";
+
+            var tag = release.TagName ?? "?";
+            var target = string.IsNullOrWhiteSpace(release.TargetCommitish) ? "?" : release.TargetCommitish;
+            var published = release.PublishedAt?.ToString("O") ?? "?";
+            return $"tag={tag}, prerelease={release.Prerelease}, published={published}, target={target}";
         }
     }
 }

@@ -117,7 +117,10 @@ namespace VaultSync.UI.ViewModels
         private readonly string _currentVersionString;
         private CancellationTokenSource? _updateCheckCts;
         private Timer? _updateCheckTimer;
+        private Timer? _updateCheckRetryTimer;
         private int _updateCheckInFlight;
+        private DateTimeOffset? _lastUpdateCheckAt;
+        private string? _lastUpdateCheckError;
         private UpdateCheckResult? _pendingUpdateResult;
         private bool _patchBlocked;
         private bool _isUpdateAvailable;
@@ -350,6 +353,7 @@ namespace VaultSync.UI.ViewModels
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
             _settingsViewModel.UpdateCheckRequested += OnUpdateCheckRequested;
+            _settingsViewModel.UpdateUpdateCheckStatus(null, null);
 
             _logConsoleService = new LogConsoleService();
             _logConsoleService.InstallCapture();
@@ -734,11 +738,6 @@ namespace VaultSync.UI.ViewModels
                 ConfigureUpdateCheckTimer();
             }
 
-            if (e.PropertyName == nameof(SettingsViewModel.SendAnonymousUsageStats))
-            {
-                Telemetry.SetEnabled(_settingsViewModel.SendAnonymousUsageStats);
-            }
-
             if (e.PropertyName is nameof(SettingsViewModel.EnableVerboseLogging)
                 or nameof(SettingsViewModel.SaveVerboseLogs))
             {
@@ -760,6 +759,7 @@ namespace VaultSync.UI.ViewModels
 
         private void OnUpdateCheckRequested()
         {
+            Console.WriteLine("[Update] Manual update check requested.");
             StartUpdateCheck(ignoreSettings: true);
         }
 
@@ -866,6 +866,7 @@ namespace VaultSync.UI.ViewModels
         private void StartUpdateCheck(bool ignoreSettings = false)
         {
             CancelUpdateCheck();
+            CancelUpdateRetry();
 
             if (!ignoreSettings && !_settingsViewModel.CheckForUpdatesOnStartup)
             {
@@ -874,6 +875,7 @@ namespace VaultSync.UI.ViewModels
             }
 
             _updateCheckCts = new CancellationTokenSource();
+            Console.WriteLine($"[Update] Starting update check (channel={CurrentUpdateChannel}).");
             _ = RunUpdateCheckAsync(_updateCheckCts.Token);
         }
 
@@ -881,6 +883,7 @@ namespace VaultSync.UI.ViewModels
         {
             _updateCheckTimer?.Dispose();
             _updateCheckTimer = null;
+            CancelUpdateRetry();
 
             if (!_settingsViewModel.CheckForUpdatesOnStartup)
                 return;
@@ -990,18 +993,23 @@ namespace VaultSync.UI.ViewModels
                 var result = await _updateService.CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken);
                 if (result is null)
                 {
+                    Console.WriteLine("[Update] No update available.");
+                    RecordUpdateCheckSuccess();
                     Dispatcher.UIThread.Post(ClearUpdateState);
                     return;
                 }
 
+                Console.WriteLine($"[Update] Update available: tag={result.TagName}, name={result.ReleaseName}, patch={result.HasPatch}, installer={result.HasInstaller}.");
+                RecordUpdateCheckSuccess();
                 Dispatcher.UIThread.Post(() => ApplyUpdateResult(result));
             }
             catch (OperationCanceledException)
             {
             }
-            catch
+            catch (Exception ex)
             {
                 // Silently ignore update failures; we don't want to disturb the user.
+                RecordUpdateCheckFailure(ex);
             }
             finally
             {
@@ -1075,6 +1083,49 @@ namespace VaultSync.UI.ViewModels
             _updateCheckCts.Cancel();
             _updateCheckCts.Dispose();
             _updateCheckCts = null;
+        }
+
+        private void CancelUpdateRetry()
+        {
+            _updateCheckRetryTimer?.Dispose();
+            _updateCheckRetryTimer = null;
+        }
+
+        private void RecordUpdateCheckSuccess()
+        {
+            _lastUpdateCheckAt = DateTimeOffset.Now;
+            _lastUpdateCheckError = null;
+            CancelUpdateRetry();
+            Dispatcher.UIThread.Post(() =>
+                _settingsViewModel.UpdateUpdateCheckStatus(_lastUpdateCheckAt, _lastUpdateCheckError));
+        }
+
+        private void RecordUpdateCheckFailure(Exception ex)
+        {
+            _lastUpdateCheckAt = DateTimeOffset.Now;
+            _lastUpdateCheckError = ex.Message;
+            Console.WriteLine($"[Update] Update check failed: {ex.GetType().Name}: {ex.Message}");
+            Dispatcher.UIThread.Post(() =>
+                _settingsViewModel.UpdateUpdateCheckStatus(_lastUpdateCheckAt, _lastUpdateCheckError));
+            ScheduleUpdateRetry();
+        }
+
+        private void ScheduleUpdateRetry()
+        {
+            if (_updateCheckRetryTimer is not null)
+                return;
+
+            var delay = TimeSpan.FromMinutes(5);
+            _updateCheckRetryTimer = new Timer(_ =>
+            {
+                _updateCheckRetryTimer?.Dispose();
+                _updateCheckRetryTimer = null;
+
+                if (!_settingsViewModel.CheckForUpdatesOnStartup)
+                    return;
+
+                StartUpdateCheck(ignoreSettings: true);
+            }, null, delay, Timeout.InfiniteTimeSpan);
         }
 
         private async Task OpenUpdateReleaseAsync()

@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.VisualTree;
+using VaultSync.UI.Services;
 using VaultSync.UI.ViewModels;
 
 namespace VaultSync.UI.Views
@@ -13,6 +14,11 @@ namespace VaultSync.UI.Views
         private readonly LogConsoleViewModel _viewModel;
         private ScrollViewer? _scrollViewer;
         private bool _autoScroll = true;
+
+        public LogConsoleWindow()
+            : this(new LogConsoleViewModel(LogConsoleProvider.Service ?? new LogConsoleService()))
+        {
+        }
 
         public LogConsoleWindow(LogConsoleViewModel viewModel)
         {

@@ -7,10 +7,18 @@
 ### Changed
 - Update-available notification now calls out the active update channel (stable/beta).
 - Windows uninstaller now removes bundled tools under `tools`.
+- Backup compression now defaults to off for new installs.
+- Update checks now expose richer diagnostic logging (candidates, decisions, errors).
 ### Fixed
 - Update banner now clears when no newer release is available, preventing stale "update available" states.
 - Patch installs now shut down cleanly without triggering the "still running" tray notification.
 - Patch helper relaunch no longer fails due to an invalid app manifest XML header.
+- Language switching now loads legacy-encoded localization files correctly.
+- Log console filters noisy Avalonia trace spam for layout/input/render-loop glitches.
+- Manual update checks now log their progress and outcomes for troubleshooting.
+- Cleaned mojibake in localized strings so non-ASCII languages render correctly.
+### Removed
+- Anonymous usage stats toggle and related localization strings.
 
 ## [1.2.0] - 2026-01-01
 ### Added
