@@ -9,6 +9,10 @@
 
   <UserControl.Styles>
     <!-- Inputs -->
+    <Style Selector="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="TextTrimming" Value="None" />
+    </Style>
     <Style Selector="TextBox">
       <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
@@ -51,7 +55,8 @@
       <controls:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
     </UserControl.Resources>
 
-  <ScrollViewer VerticalScrollBarVisibility="Auto"
+  <ScrollViewer x:Name="SettingsScrollViewer"
+                VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
                 Padding="12">
 
@@ -876,8 +881,10 @@
                                 Spacing="8"
                                 VerticalAlignment="Center">
                       <Button Content="{infra:LocalizedString Key=Settings.Advanced.LogConsoleOpen}"
+                              Classes="action-primary"
                               Command="{Binding OpenLogConsoleCommand}" />
                       <Button Content="{infra:LocalizedString Key=Settings.Advanced.LogConsoleExport}"
+                              Classes="action-ghost"
                               Command="{Binding ExportLogConsoleCommand}"
                               IsEnabled="{Binding EnableVerboseLogging}" />
                     </StackPanel>
@@ -921,7 +928,7 @@
                                FontSize="11" />
                   </StackPanel>
                   <Button Grid.Column="1"
-                          Classes="settings-ghost"
+                          Classes="action-primary"
                           Command="{Binding CheckUpdatesNowCommand}">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
                   </Button>

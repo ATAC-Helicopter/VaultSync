@@ -1,4 +1,4 @@
-﻿{
+{
     "Backups.Action.BackupAll": "Back up all projects",
     "Backups.Busy.All": "Backing up all projects...",
     "Backups.Busy.Single": "Backing up {0}...",
@@ -51,6 +51,12 @@
     "Backups.Section.StoredLabel": "stored",
     "Backups.Section.WaitMessage": "Please wait... the backup will appear in history once completed. Do not close the app.",
     "Backups.Section.Warning": "Warning: backup disk is below reserve threshold",
+    "Backups.Stage.Preparing": "Preparing",
+    "Backups.Stage.Hashing": "Hashing files",
+    "Backups.Stage.BackingUp": "Backing up files",
+    "Backups.Stage.Compressing": "Compressing archive",
+    "Backups.Stage.Uploading": "Uploading archive",
+    "Backups.Stage.Working": "Working...",
     "Backups.Status.Cancelled": "Cancelled",
     "Backups.Status.Completed": "Completed",
     "Backups.Status.Deleted": "Deleted",
@@ -116,7 +122,7 @@
     "DriveHealth.FailingMessage": "Storage health failing ({0}): {1}",
     "DriveHealth.GenericMessage": "Storage health ({0}): {1}",
     "DriveHealth.WarningMessage": "Drive health warning on {0}: {1}.",
-    "General.Bullet": "•",
+    "General.Bullet": "�",
     "Main.HeaderBackups": "Snapshots & history",
     "Main.HeaderOverview": "Overview",
     "Main.HeaderProjects": "All repositories",
@@ -126,7 +132,7 @@
     "Nav.Projects": "Projects",
     "Nav.Settings": "Settings",
     "Notifications.Dismiss": "Dismiss",
-    "Notifications.DismissGlyph": "×",
+    "Notifications.DismissGlyph": "�",
     "Patch.InstallButton.Install": "Install patch",
     "Patch.InstallButton.Preparing": "Preparing patch...",
     "Patch.Status.DownloadFailed": "Failed to download or verify the patch.",
@@ -249,7 +255,7 @@
     "Settings.Credentials.Watermark.Name": "Profile name",
     "Settings.Credentials.Watermark.Password": "Stored locally",
     "Settings.Credentials.Watermark.Username": "user or DOMAIN\\user",
-    "Settings.Danger.ClearCache": "Removes cached metadata and state. Project data is not deleted.",
+    "Settings.Danger.ClearCache": "Clear local cache",
     "Settings.Danger.ClearCacheDescription": "Removes cached metadata and state. Project data is not deleted.",
     "Settings.Danger.Description": "Destructive actions. These cannot be undone.",
     "Settings.Danger.ForgetProjects": "Forget all projects",
@@ -390,9 +396,9 @@
     "Backups.Section.HistoryFilterAllProjects": "All projects",
     "Backups.Section.Group.Global": "Global snapshots",
     "Backups.Section.Group.Unknown": "Unknown project",
-    "Backups.Summary.TodayWeek": "{0} backups today · {1} this week",
+    "Backups.Summary.TodayWeek": "{0} backups today � {1} this week",
     "Backups.Summary.NoActivity": "No backups in the last 7 days",
-    "Backups.Summary.ActivityTotals": "{0} backups total · {1} auto · {2} manual",
+    "Backups.Summary.ActivityTotals": "{0} backups total � {1} auto � {2} manual",
     "Backups.Summary.NoBackups": "No backups yet",
     "Backups.Section.SnapshotCount.Singular": "{0} backup",
     "Backups.Section.SnapshotCount.Plural": "{0} backups",
@@ -414,5 +420,12 @@
     "Settings.Advanced.UpdateStatusLabel": "Update status",
     "Settings.Advanced.UpdateStatusNever": "Never checked",
     "Settings.Advanced.UpdateStatusLast": "Last check: {0}",
-    "Settings.Advanced.UpdateStatusError": "Last error: {0}"
+    "Settings.Advanced.UpdateStatusError": "Last error: {0}",
+
+    "Backups.Stage.Copying": "Copying files",
+
+    "Backups.Status.Finalizing": "Finalizing...",
+    "Backups.Progress.Estimating": "Estimating...",
+    "Backups.Progress.WaitingForFirstFile": "Waiting for first file...",
+    "Backups.Progress.CopyingRobocopy": "Copying files (robocopy)..."
 }

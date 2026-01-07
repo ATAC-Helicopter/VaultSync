@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -60,12 +61,15 @@ namespace VaultSync.UI.Services
     public sealed class GitHubUpdateService
     {
         private const string ReleasesEndpointBase = "repos/ATAC-Helicopter/VaultSync/releases";
-        private const int ReleasesPerPage = 5;
-        private const int MaxReleasePages = 3;
+        private const int ReleasesPerPage = 10;
+        private const int MaxReleasePages = 1;
         private const string StableBranchName = "stable";
         private const string DevBranchName = "dev";
 
         private static readonly HttpClient s_httpClient = CreateHttpClient();
+        private static readonly object s_releaseCacheLock = new();
+        private static string? s_releaseEtag;
+        private static List<GitHubRelease>? s_releaseCache;
 
         public async Task<UpdateCheckResult?> CheckForUpdateAsync(
             string currentVersion,
@@ -199,15 +203,41 @@ namespace VaultSync.UI.Services
         private static async Task<List<GitHubRelease>> FetchReleasesAsync(CancellationToken cancellationToken)
         {
             var releases = new List<GitHubRelease>();
+            var useCache = false;
 
             for (var page = 1; page <= MaxReleasePages; page++)
             {
                 var endpoint = $"{ReleasesEndpointBase}?per_page={ReleasesPerPage}&page={page}";
-                List<GitHubRelease>? pageReleases;
+                List<GitHubRelease>? pageReleases = null;
+                HttpResponseMessage? response = null;
 
                 try
                 {
-                    pageReleases = await s_httpClient.GetFromJsonAsync<List<GitHubRelease>>(endpoint, cancellationToken);
+                    using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+                    string? cachedEtag;
+                    lock (s_releaseCacheLock)
+                    {
+                        cachedEtag = s_releaseEtag;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(cachedEtag))
+                    {
+                        request.Headers.IfNoneMatch.ParseAdd(cachedEtag);
+                    }
+
+                    response = await s_httpClient.SendAsync(request, cancellationToken);
+                    if (response.StatusCode == HttpStatusCode.NotModified)
+                    {
+                        useCache = true;
+                        break;
+                    }
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        break;
+                    }
+
+                    pageReleases = await response.Content.ReadFromJsonAsync<List<GitHubRelease>>(cancellationToken: cancellationToken);
                 }
                 catch
                 {
@@ -221,6 +251,32 @@ namespace VaultSync.UI.Services
 
                 releases.AddRange(pageReleases);
 
+                var responseEtag = response?.Headers.ETag?.Tag;
+                if (!string.IsNullOrWhiteSpace(responseEtag))
+                {
+                    lock (s_releaseCacheLock)
+                    {
+                        s_releaseEtag = responseEtag;
+                        s_releaseCache = new List<GitHubRelease>(releases);
+                    }
+                }
+
+            }
+
+            if (useCache)
+            {
+                lock (s_releaseCacheLock)
+                {
+                    return s_releaseCache ?? new List<GitHubRelease>();
+                }
+            }
+
+            if (releases.Count > 0)
+            {
+                lock (s_releaseCacheLock)
+                {
+                    s_releaseCache = new List<GitHubRelease>(releases);
+                }
             }
 
             return releases;

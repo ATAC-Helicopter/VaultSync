@@ -393,5 +393,19 @@
     "Settings.Advanced.UpdateStatusLabel": "Update status",
     "Settings.Advanced.UpdateStatusNever": "Never checked",
     "Settings.Advanced.UpdateStatusLast": "Last check: {0}",
-    "Settings.Advanced.UpdateStatusError": "Last error: {0}"
+    "Settings.Advanced.UpdateStatusError": "Last error: {0}",
+
+    "Backups.Stage.Preparing": "Preparing",
+    "Backups.Stage.Hashing": "Hashing files",
+    "Backups.Stage.BackingUp": "Backing up files",
+    "Backups.Stage.Compressing": "Compressing archive",
+    "Backups.Stage.Uploading": "Uploading archive",
+    "Backups.Stage.Working": "Working...",
+
+    "Backups.Stage.Copying": "Copying files",
+
+    "Backups.Status.Finalizing": "Finalizing...",
+    "Backups.Progress.Estimating": "Calcolo in corso...",
+    "Backups.Progress.WaitingForFirstFile": "Attesa del primo file...",
+    "Backups.Progress.CopyingRobocopy": "Copia file (robocopy)..."
 }

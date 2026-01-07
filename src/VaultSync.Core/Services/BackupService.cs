@@ -117,7 +117,7 @@ public sealed class BackupService
         linkedToken.ThrowIfCancellationRequested();
 
         Console.WriteLine($"[BackupService] RunBackupAsync entered for project '{project.Name}' (Id={project.Id}), backupRoot='{backupRoot}', isAuto={isAuto}, useArchiveMode={useArchiveMode}");
-        progressCallback?.Invoke(0, string.Empty, "Preparing backup...");
+        progressCallback?.Invoke(0, "Preparing backup...", string.Empty);
 
         // Normalise backup root and ensure it exists (e.g. mounted NAS/share).
         backupRoot = Path.GetFullPath(backupRoot);
@@ -179,17 +179,28 @@ public sealed class BackupService
         Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
 
         int snapshotId;
+        int totalFilesForProgress = 0;
+        List<FileEntry>? filesForProgress = null;
         if (reuseSnapshotId.HasValue)
         {
             snapshotId = reuseSnapshotId.Value;
-            progressCallback?.Invoke(0, string.Empty, "Reusing existing snapshot...");
+            progressCallback?.Invoke(0, "Reusing existing snapshot...", string.Empty);
         }
         else
         {
             // Always create a fresh snapshot before backing up so history stays aligned.
-            progressCallback?.Invoke(0, string.Empty, "Creating snapshot...");
+            progressCallback?.Invoke(0, "Preparing backup...", string.Empty);
             var snapshotService = new SnapshotService(_repo, new HashService());
-            snapshotId = await snapshotService.CreateSnapshotAsync(project, fullSnapshotHash, maxSnapshotsToKeep, linkedToken);
+            snapshotId = await snapshotService.CreateSnapshotAsync(
+                project,
+                fullSnapshotHash,
+                hashNow: false,
+                maxSnapshotsToKeep,
+                linkedToken,
+                (percent, currentFile, etaText) =>
+                {
+                    progressCallback?.Invoke(percent, currentFile, etaText);
+                });
 
             var outcome = SnapshotService.LastOutcome;
             if (skipIfNoChanges &&
@@ -202,6 +213,17 @@ public sealed class BackupService
                 progressCallback?.Invoke(100, string.Empty, "No changes detected; backup skipped.");
                 return new BackupRunResult(0, true, false);
             }
+        }
+
+        try
+        {
+            filesForProgress = _repo.GetFilesForSnapshot(snapshotId).ToList();
+            totalFilesForProgress = filesForProgress.Count;
+        }
+        catch
+        {
+            totalFilesForProgress = 0;
+            filesForProgress = null;
         }
 
         string? linkDest = null;
@@ -224,18 +246,20 @@ public sealed class BackupService
 
             if (useArchiveMode)
             {
-                progressCallback?.Invoke(0, string.Empty, "Preparing archive backup...");
+                progressCallback?.Invoke(0, "Preparing archive backup...", string.Empty);
 
-                await RunArchiveBackupAsync(project, backupFolder, totalBytes, progressCallback, linkedToken);
+                await RunArchiveBackupAsync(project, backupFolder, totalBytes, totalFilesForProgress, progressCallback, linkedToken);
             }
             else
             {
-                progressCallback?.Invoke(0, string.Empty, "Running backup (rsync/robocopy)...");
+                progressCallback?.Invoke(0, "Copying files...", string.Empty);
 
                 await RunNativeBackupAsync(
                     project,
                     backupFolder,
                     totalBytes,
+                    totalFilesForProgress,
+                    filesForProgress,
                     progressCallback,
                     linkedToken,
                     useRsyncDelta,
@@ -382,6 +406,8 @@ public sealed class BackupService
         Project project,
         string destDir,
         long totalBytes,
+        int totalFiles,
+        List<FileEntry>? filesForProgress,
         Action<double, string, string>? progressCallback,
         CancellationToken ct,
         bool useRsyncDelta,
@@ -397,8 +423,25 @@ public sealed class BackupService
         // Wrap the runner's raw percentage/file progress to compute ETA and speed
         // based on the totalBytes we computed up front.
         Action<double, string, string>? callbackForRunner;
+        CancellationTokenSource? monitorCts = null;
+        Task? monitorTask = null;
+        RunnerProgressState? runnerState = null;
+        var useHybridMonitor = progressCallback is not null
+            && totalBytes > 0
+            && filesForProgress is not null
+            && filesForProgress.Count > 0;
 
-        if (progressCallback is null || totalBytes <= 0)
+        if (useHybridMonitor)
+        {
+            monitorCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            runnerState = new RunnerProgressState();
+            monitorTask = MonitorCopyProgressAsync(destDir, filesForProgress!, totalBytes, progressCallback!, monitorCts.Token, runnerState);
+            callbackForRunner = (percent, currentFile, etaText) =>
+            {
+                runnerState.Update(percent, currentFile, etaText);
+            };
+        }
+        else if (progressCallback is null || totalBytes <= 0)
         {
             // Nothing to decorate; just pass through whatever the runner reports.
             callbackForRunner = progressCallback;
@@ -435,7 +478,15 @@ public sealed class BackupService
                     var remainingSeconds  = elapsedSeconds * remainingFraction;
                     var eta               = TimeSpan.FromSeconds(remainingSeconds);
 
-                    etaText = $"{speedMbSec:0.0} MB/s · ETA {eta:mm\\:ss}";
+                    if (totalFiles > 0)
+                    {
+                        var approxDone = (int)Math.Round(totalFiles * (percent / 100.0));
+                        etaText = $"Copying ~{approxDone}/{totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+                    }
+                    else
+                    {
+                        etaText = $"Copying - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+                    }
                 }
                 else if (percent >= 100 && elapsed.TotalSeconds > 0)
                 {
@@ -443,25 +494,70 @@ public sealed class BackupService
                     var speedBytesSec  = totalBytes / elapsedSeconds;
                     var speedMbSec     = speedBytesSec / (1024 * 1024);
 
-                    etaText = $"{speedMbSec:0.0} MB/s · Completed";
+                    if (totalFiles > 0)
+                    {
+                        etaText = $"Copying ~{totalFiles}/{totalFiles} files - {speedMbSec:0.0} MB/s - Finalizing";
+                    }
+                    else
+                    {
+                        etaText = $"Copying - {speedMbSec:0.0} MB/s - Finalizing";
+                    }
                 }
 
-                progressCallback(percent, currentFile, etaText);
+                progressCallback!(percent, currentFile, etaText);
             };
         }
 
         int exitCode;
 
-        if (OperatingSystem.IsWindows())
+        try
         {
-            var bundledRsync = TryGetBundledRsyncPath();
-            if ((useRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath("rsync")))
+            if (OperatingSystem.IsWindows())
             {
-                // rsync-based backup on Windows (when installed)
-                var source = bundledRsync is null ? "PATH" : "bundled";
-                var rsyncPath = bundledRsync ?? "rsync";
-                Console.WriteLine($"[BackupService] Using rsync on Windows ({source}).");
-                var runner = new RsyncRunner(useWholeFile: !useRsyncDelta, rsyncPath: rsyncPath);
+                var bundledRsync = TryGetBundledRsyncPath();
+                if ((useRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath("rsync")))
+                {
+                    // rsync-based backup on Windows (when installed)
+                    var source = bundledRsync is null ? "PATH" : "bundled";
+                    var rsyncPath = bundledRsync ?? "rsync";
+                    Console.WriteLine($"[BackupService] Starting rsync backup (source={source}, delta={useRsyncDelta}, incremental={useIncrementalBackups}).");
+                    Console.WriteLine($"[BackupService] Using rsync on Windows ({source}).");
+                    var runner = new RsyncRunner(useWholeFile: !useRsyncDelta, rsyncPath: rsyncPath);
+                    exitCode   = await runner.SyncAsync(
+                        project,
+                        destDir,
+                        dryRun: false,
+                        callbackForRunner,
+                        useIncrementalBackups ? linkDest : null,
+                        ct);
+
+                    if (exitCode != 0)
+                        throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
+                }
+                else
+                {
+                    // robocopy-based backup (multi-threaded, robust on Windows)
+                    if ((useRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath("rsync"))
+                        Console.WriteLine("[BackupService] rsync not found on PATH; falling back to robocopy.");
+
+                    Console.WriteLine($"[BackupService] Starting robocopy backup (threads={Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2))}).");
+                    var runner = new RobocopyRunner();
+                    exitCode   = await runner.SyncAsync(
+                        project,
+                        destDir,
+                        dryRun: false,
+                        callbackForRunner,
+                        ct);
+
+                    if (exitCode != 0)
+                        throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
+                }
+            }
+            else
+            {
+                // rsync-based backup (fast, incremental on macOS/Linux)
+                Console.WriteLine($"[BackupService] Starting rsync backup (delta={useRsyncDelta}, incremental={useIncrementalBackups}).");
+                var runner = new RsyncRunner(useWholeFile: !useRsyncDelta);
                 exitCode   = await runner.SyncAsync(
                     project,
                     destDir,
@@ -473,38 +569,191 @@ public sealed class BackupService
                 if (exitCode != 0)
                     throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
             }
-            else
+        }
+        finally
+        {
+            if (monitorCts is not null)
             {
-                // robocopy-based backup (multi-threaded, robust on Windows)
-                if ((useRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath("rsync"))
-                    Console.WriteLine("[BackupService] rsync not found on PATH; falling back to robocopy.");
-
-                var runner = new RobocopyRunner();
-                exitCode   = await runner.SyncAsync(
-                    project,
-                    destDir,
-                    dryRun: false,
-                    callbackForRunner,
-                    ct);
-
-                if (exitCode != 0)
-                    throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
+                monitorCts.Cancel();
+                try
+                {
+                    if (monitorTask is not null)
+                        await monitorTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // expected when stopping monitor
+                }
+                monitorCts.Dispose();
             }
         }
-        else
-        {
-            // rsync-based backup (fast, incremental on macOS/Linux)
-            var runner = new RsyncRunner(useWholeFile: !useRsyncDelta);
-            exitCode   = await runner.SyncAsync(
-                project,
-                destDir,
-                dryRun: false,
-                callbackForRunner,
-                useIncrementalBackups ? linkDest : null,
-                ct);
+    }
 
-            if (exitCode != 0)
-                throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
+    private static async Task MonitorCopyProgressAsync(
+        string destDir,
+        List<FileEntry> filesForProgress,
+        long totalBytes,
+        Action<double, string, string> progressCallback,
+        CancellationToken ct,
+        RunnerProgressState? runnerState)
+    {
+        var startTime     = DateTime.UtcNow;
+        var lastSample    = startTime;
+        long lastBytes    = 0;
+        var totalEntries  = filesForProgress.Count;
+        if (totalEntries == 0)
+            return;
+
+        var observedSizes = new long[totalEntries];
+        var completed     = new bool[totalEntries];
+        var completedFiles = 0;
+        long copiedBytes   = 0;
+
+        var minInterval = totalEntries > 4000
+            ? TimeSpan.FromMilliseconds(1000)
+            : TimeSpan.FromMilliseconds(500);
+        var logInterval = TimeSpan.FromSeconds(5);
+        var lastLog = startTime;
+
+        var chunkSize = totalEntries switch
+        {
+            > 20000 => 150,
+            > 10000 => 250,
+            > 4000 => 400,
+            > 1000 => 600,
+            _ => 900
+        };
+
+        var scanIndex = 0;
+
+        while (!ct.IsCancellationRequested)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var scanned = 0;
+            string? lastTouched = null;
+
+            while (scanned < chunkSize && totalEntries > 0)
+            {
+                var index = scanIndex++ % totalEntries;
+                var entry = filesForProgress[index];
+                var targetPath = Path.Combine(destDir, entry.RelPath);
+
+                long size = 0;
+                try
+                {
+                    var info = new FileInfo(targetPath);
+                    if (!info.Exists)
+                    {
+                        scanned++;
+                        continue;
+                    }
+
+                    size = info.Length;
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    Console.WriteLine($"[BackupService] Progress scan skipped '{targetPath}': {ex.Message}");
+                    scanned++;
+                    continue;
+                }
+
+                size = Math.Min(size, entry.Size);
+                if (size <= 0)
+                {
+                    scanned++;
+                    continue;
+                }
+
+                var previousSize = observedSizes[index];
+                if (size != previousSize)
+                {
+                    observedSizes[index] = size;
+                    var delta = size - previousSize;
+                    if (delta > 0)
+                        copiedBytes += delta;
+                }
+
+                if (!completed[index] && entry.Size > 0 && size >= entry.Size)
+                {
+                    completed[index] = true;
+                    completedFiles++;
+                }
+
+                lastTouched = entry.RelPath;
+                scanned++;
+            }
+
+            var now = DateTime.UtcNow;
+            var elapsed = now - lastSample;
+            if (elapsed.TotalSeconds < 0.1)
+                elapsed = TimeSpan.FromSeconds(0.1);
+
+            var deltaBytes = copiedBytes - lastBytes;
+            if (deltaBytes < 0)
+                deltaBytes = 0;
+
+            lastBytes  = copiedBytes;
+            lastSample = now;
+
+            double percent = totalBytes > 0
+                ? Math.Min(99.5d, copiedBytes * 100d / totalBytes)
+                : 0d;
+
+            var speedBytesSec = deltaBytes / elapsed.TotalSeconds;
+            var speedMbSec = speedBytesSec / (1024 * 1024);
+
+            string etaText;
+            if (speedBytesSec > 0 && totalBytes > 0)
+            {
+                var remainingBytes = Math.Max(0, totalBytes - copiedBytes);
+                var etaSeconds = remainingBytes / speedBytesSec;
+                var eta = TimeSpan.FromSeconds(etaSeconds);
+                etaText = $"Copying {completedFiles}/{totalEntries} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+            }
+            else
+            {
+                if (runnerState is not null && runnerState.HasRecentUpdate(TimeSpan.FromSeconds(10)))
+                {
+                    var fallback = runnerState.LastEtaText;
+                    if (string.IsNullOrWhiteSpace(fallback) && !string.IsNullOrWhiteSpace(runnerState.LastFile))
+                    {
+                        etaText = "Copying files (robocopy)...";
+                    }
+                    else
+                    {
+                        etaText = string.IsNullOrWhiteSpace(fallback)
+                            ? $"Copying {completedFiles}/{totalEntries} files - Estimating..."
+                            : fallback;
+                    }
+                }
+                else
+                {
+                    etaText = $"Copying {completedFiles}/{totalEntries} files - Waiting for first file...";
+                }
+            }
+
+            var currentFile = string.IsNullOrWhiteSpace(lastTouched) ? string.Empty : lastTouched;
+            if (string.IsNullOrWhiteSpace(currentFile) && runnerState is not null)
+            {
+                currentFile = runnerState.LastFile ?? string.Empty;
+            }
+
+            if (copiedBytes <= 0 && runnerState is not null)
+            {
+                var fallbackPercent = runnerState.LastPercent;
+                if (fallbackPercent > 0)
+                    percent = Math.Min(99.0d, fallbackPercent);
+            }
+            progressCallback(percent, currentFile, etaText);
+
+            if ((now - lastLog) >= logInterval)
+            {
+                Console.WriteLine($"[BackupService] Copy progress: {completedFiles}/{totalEntries} files, {percent:0.0}% ({speedMbSec:0.0} MB/s).");
+                lastLog = now;
+            }
+
+            await Task.Delay(minInterval, ct);
         }
     }
 
@@ -517,6 +766,7 @@ public sealed class BackupService
         Project project,
         string destDir,
         long totalBytes,
+        int totalFiles,
         Action<double, string, string>? progressCallback,
         CancellationToken ct)
     {
@@ -534,6 +784,7 @@ public sealed class BackupService
         var allFiles = Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories)
             .Where(path => !filter.ShouldExclude(sourceDir, path))
             .ToArray();
+        var archiveTotalFiles = totalFiles > 0 ? totalFiles : allFiles.Length;
 
         // 3. Prepare destination and local temp folder.
         Directory.CreateDirectory(destDir);
@@ -566,6 +817,7 @@ public sealed class BackupService
             // PHASE 1: Compress files into local ZIP
             // --------------------
             long processedBytes = 0;
+            var processedFiles = 0;
             var  startTime      = DateTime.UtcNow;
             var  lastUiUpdate   = startTime;
             var  minUiInterval  = TimeSpan.FromMilliseconds(100);
@@ -597,6 +849,8 @@ public sealed class BackupService
 
                     if (progressCallback is not null)
                     {
+                        processedFiles++;
+
                         // Map compression progress into 0-90% of overall progress.
                         double compressPercent = (totalBytes > 0)
                             ? Math.Min(100d, (processedBytes * 100d / totalBytes))
@@ -621,11 +875,25 @@ public sealed class BackupService
                             var remainingFraction = (90d - overallPercent) / overallPercent;
                             var remainingSeconds  = elapsedSeconds * remainingFraction;
                             var eta               = TimeSpan.FromSeconds(remainingSeconds);
-                            etaText               = $"{speedMbSec:0.0} MB/s · Compressing · ETA {eta:mm\\:ss}";
+                            if (archiveTotalFiles > 0)
+                            {
+                                etaText = $"Compressing {processedFiles}/{archiveTotalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+                            }
+                            else
+                            {
+                                etaText = $"{speedMbSec:0.0} MB/s - Compressing - ETA {eta:mm\\:ss}";
+                            }
                         }
                         else if (overallPercent >= 90)
                         {
-                            etaText = $"{speedMbSec:0.0} MB/s · Compressing";
+                            if (archiveTotalFiles > 0)
+                            {
+                                etaText = $"Compressing {processedFiles}/{archiveTotalFiles} files - {speedMbSec:0.0} MB/s";
+                            }
+                            else
+                            {
+                                etaText = $"{speedMbSec:0.0} MB/s - Compressing";
+                            }
                         }
                         else
                         {
@@ -680,11 +948,11 @@ public sealed class BackupService
                             var remainingFraction = (100d - uploadPercent) / uploadPercent;
                             var remainingSeconds  = elapsedSeconds * remainingFraction;
                             var eta               = TimeSpan.FromSeconds(remainingSeconds);
-                            etaText               = $"{speedMbSec:0.0} MB/s · Uploading archive · ETA {eta:mm\\:ss}";
+                            etaText               = $"{speedMbSec:0.0} MB/s - Uploading archive - ETA {eta:mm\\:ss}";
                         }
                         else
                         {
-                            etaText = $"{speedMbSec:0.0} MB/s · Uploading archive · Completed";
+                            etaText = $"{speedMbSec:0.0} MB/s - Uploading archive - Finalizing";
                         }
 
                         progressCallback(overallPercent, Path.GetFileName(finalArchivePath), etaText);
@@ -783,6 +1051,7 @@ public sealed class BackupService
         var totalFiles     = allFiles.Length;
         var processedFiles = 0;
         var startTime      = DateTime.UtcNow;
+        long copiedBytes   = 0;
 
         foreach (var filePath in allFiles)
         {
@@ -815,6 +1084,7 @@ public sealed class BackupService
                         output.Write(buffer, 0, read);
                         copiedForThisFile += read;
                         totalBytes += read;
+                        copiedBytes += read;
 
                         if (progressCallback is not null)
                         {
@@ -841,7 +1111,9 @@ public sealed class BackupService
                                 var remainingFraction = (100d - percent) / percent;
                                 var remainingSeconds  = elapsedSeconds * remainingFraction;
                                 var eta               = TimeSpan.FromSeconds(remainingSeconds);
-                                etaText               = $"ETA {eta:mm\\:ss}";
+                                var speedBytesSec     = copiedBytes / elapsedSeconds;
+                                var speedMbSec        = speedBytesSec / (1024 * 1024);
+                                etaText = $"Copying {processedFiles + 1}/{totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
                             }
 
                             progressCallback(percent, relative, etaText);
@@ -959,6 +1231,41 @@ public sealed class BackupService
             Console.WriteLine($"[BackupService] Failed to delete orphan snapshot (projectId={projectId}, snapshotId={snapshotId}): {ex.Message}");
         }
     }
+
+    private sealed class RunnerProgressState
+    {
+        private readonly object _lock = new();
+        private DateTime _lastUpdateUtc = DateTime.MinValue;
+
+        public double LastPercent { get; private set; }
+        public string? LastFile { get; private set; }
+        public string? LastEtaText { get; private set; }
+
+        public void Update(double percent, string currentFile, string etaText)
+        {
+            lock (_lock)
+            {
+                if (percent > 0)
+                    LastPercent = percent;
+
+                if (!string.IsNullOrWhiteSpace(currentFile))
+                    LastFile = currentFile;
+
+                if (!string.IsNullOrWhiteSpace(etaText))
+                    LastEtaText = etaText;
+
+                _lastUpdateUtc = DateTime.UtcNow;
+            }
+        }
+
+        public bool HasRecentUpdate(TimeSpan window)
+        {
+            lock (_lock)
+            {
+                return (DateTime.UtcNow - _lastUpdateUtc) <= window;
+            }
+        }
+    }
     private static (long totalBytes, long freeBytes)? TryGetDiskSpace(string path)
     {
         try
@@ -1061,3 +1368,4 @@ public sealed class BackupService
         out ulong lpTotalNumberOfBytes,
         out ulong lpTotalNumberOfFreeBytes);
 }
+

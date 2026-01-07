@@ -4,11 +4,34 @@
 - Configurable update check interval in Settings -> Advanced.
 - Manual "Check for updates now" action for on-demand update checks.
 - Roadmap outline for upcoming features and priorities.
+- Active backup cards now show explicit stages (preparing, hashing, backing up, compressing, uploading).
+- Snapshot hashing now reports progress and ETA during backups.
+- Active backup detail line now shows the current file name plus files moved/total and speed.
 ### Changed
 - Update-available notification now calls out the active update channel (stable/beta).
 - Windows uninstaller now removes bundled tools under `tools`.
 - Backup compression now defaults to off for new installs.
 - Update checks now expose richer diagnostic logging (candidates, decisions, errors).
+- Settings and log console buttons now use unified action styles.
+- Log console window now matches app card styling and layout.
+- Active backup card layout refreshed with clearer status/ETA and staging.
+- Active backup phases now reset the progress bar between hashing and copy phases.
+- Copy phase now reports estimated file counts and copy speed in MB/s.
+- Copy phase now derives progress from destination file sizes for steadier percentages.
+- Copy progress sampling now batches file checks to reduce stalls on large backups.
+- Backup snapshots now defer hashing until after data is copied to speed up the copy phase.
+- Post-backup verification and hashing now run asynchronously to avoid blocking the UI.
+- Auto-backup runs now parallelize projects for faster completion.
+- Robocopy thread count now scales with CPU cores for higher throughput.
+- Active backup cards now show live elapsed time per phase.
+- Backup/mount steps now emit detailed console logs for destinations and network mounts.
+- Copy progress now logs periodic file/percent/speed updates in the console.
+- Robocopy progress now feeds ETA/percent lines to the UI when file-size scanning is slow.
+- Robocopy output now logs periodic progress/file hints to the console.
+- Copy phase now surfaces "robocopy" activity even before file sizes start reporting.
+- Backup ETA helper text now localizes across supported languages.
+- App settings writes now retry with a temp file to avoid crashes during concurrent saves.
+- Update checks now use ETag caching and a single release page to reduce rate-limit pressure.
 ### Fixed
 - Update banner now clears when no newer release is available, preventing stale "update available" states.
 - Patch installs now shut down cleanly without triggering the "still running" tray notification.
@@ -17,6 +40,10 @@
 - Log console filters noisy Avalonia trace spam for layout/input/render-loop glitches.
 - Manual update checks now log their progress and outcomes for troubleshooting.
 - Cleaned mojibake in localized strings so non-ASCII languages render correctly.
+- Settings view no longer jumps to the top when switching language.
+- Settings descriptions now wrap cleanly instead of clipping in narrow windows.
+- Active backup progress bars no longer jump to 100% prematurely.
+- Backup verification now runs off the UI thread to prevent completion freezes.
 ### Removed
 - Anonymous usage stats toggle and related localization strings.
 
@@ -44,6 +71,7 @@
 - ViewLocator now ignores non-view-model data types to avoid mis-instantiating log items.
 ### Removed
 - Removed legacy beta notes document.
+
 ## [1.1.0] - 2025-12-17
 ### Added
 - Responsive layout scaffolds for Dashboard, Settings, Projects, and Backups so each view uses a centered, width-capped grid instead of `Viewbox` scaling, letting the UI naturally expand and contract on any resolution or DPI without misaligned cards.

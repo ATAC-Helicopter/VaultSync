@@ -8,41 +8,52 @@
         Height="600"
         Title="VaultSync Log Console"
         WindowStartupLocation="CenterOwner">
-  <Grid RowDefinitions="Auto,*" Margin="16">
-    <Border Background="{DynamicResource CardBackgroundBrush}"
-            CornerRadius="12"
-            Padding="12">
+  <Grid RowDefinitions="Auto,*" Margin="16" RowSpacing="12">
+    <Border Classes="card"
+            Margin="0"
+            Padding="14">
       <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
         <StackPanel Grid.Row="0" Spacing="2">
-          <TextBlock Text="Log console" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="Log console"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
           <TextBlock Text="Enable verbose logging to capture new entries."
                      Foreground="{StaticResource TextSecondary}"
-                     FontSize="11" />
+                     FontSize="11"
+                     TextWrapping="Wrap" />
         </StackPanel>
         <StackPanel Grid.Row="0"
                     Grid.Column="1"
                     Orientation="Horizontal"
                     Spacing="8"
                     VerticalAlignment="Center">
-          <Button Content="Open folder" Command="{Binding OpenFolderCommand}" />
-          <Button Content="Clear" Command="{Binding ClearCommand}" />
-          <Button Content="Export" Command="{Binding ExportCommand}" />
+          <Button Content="Open folder"
+                  Classes="action-ghost"
+                  Command="{Binding OpenFolderCommand}" />
+          <Button Content="Clear"
+                  Classes="action-ghost"
+                  Command="{Binding ClearCommand}" />
+          <Button Content="Export"
+                  Classes="action-primary"
+                  Command="{Binding ExportCommand}" />
         </StackPanel>
 
         <TextBlock Grid.Row="1"
                    Text="{Binding StatusMessage}"
                    Foreground="{StaticResource TextSecondary}"
-                   FontSize="11" />
+                   FontSize="11"
+                   TextWrapping="Wrap" />
       </Grid>
     </Border>
 
     <Border Grid.Row="1"
-            Margin="0,12,0,0"
-            Background="{DynamicResource CardBackgroundBrush}"
-            CornerRadius="12"
+            Classes="card"
+            Margin="0"
             Padding="12">
       <ListBox x:Name="LogList"
-               ItemsSource="{Binding Lines}">
+               ItemsSource="{Binding Lines}"
+               Background="Transparent"
+               BorderThickness="0">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="svc:LogLine">
             <TextBlock Text="{Binding Display}"

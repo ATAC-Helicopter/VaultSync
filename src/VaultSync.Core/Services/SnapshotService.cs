@@ -15,7 +15,19 @@ public class SnapshotService
         _hash = hash;
     }
 
-    public async Task<int> CreateSnapshotAsync(Project project, bool fullHash, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
+    public Task<int> CreateSnapshotAsync(Project project, bool fullHash, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
+        => CreateSnapshotAsync(project, fullHash, hashNow: true, maxSnapshotsToKeep, ct, null);
+
+    public Task<int> CreateSnapshotAsync(Project project, bool fullHash, bool hashNow, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
+        => CreateSnapshotAsync(project, fullHash, hashNow, maxSnapshotsToKeep, ct, null);
+
+    public async Task<int> CreateSnapshotAsync(
+        Project project,
+        bool fullHash,
+        bool hashNow,
+        int? maxSnapshotsToKeep,
+        CancellationToken ct,
+        Action<double, string, string>? progressCallback)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -110,6 +122,58 @@ public class SnapshotService
                 .Except(currMetaByRel.Keys, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
+            if (!hashNow)
+            {
+                long snapshotTotalBytes = 0;
+                var snapshotEntries = new List<FileEntry>(currMetaByRel.Count);
+
+                foreach (var meta in currMetaByRel.Values)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    var hash = string.Empty;
+                    if (!fullHash &&
+                        prevFiles.TryGetValue(meta.Rel, out var prevEntry) &&
+                        !string.IsNullOrWhiteSpace(prevEntry.HashSha256))
+                    {
+                        hash = prevEntry.HashSha256;
+                    }
+
+                    snapshotEntries.Add(new FileEntry(meta.Rel, meta.Info.Length, meta.Info.LastWriteTimeUtc, hash));
+                    snapshotTotalBytes += meta.Info.Length;
+                }
+
+                var snapshotId = _repo.CreateSnapshot(project.Id, snapshotEntries.Count, snapshotTotalBytes);
+                _repo.InsertFiles(snapshotId, snapshotEntries.OrderBy(e => e.RelPath, StringComparer.OrdinalIgnoreCase));
+
+                if (maxSnapshotsToKeep.HasValue && maxSnapshotsToKeep.Value > 0)
+                {
+                    try
+                    {
+                        ApplySnapshotRetention(project, Math.Max(1, maxSnapshotsToKeep.Value));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
+                    }
+                }
+
+                LastOutcome = new SnapshotOutcome
+                (
+                    Added:      added.Count,
+                    Modified:   modified.Count,
+                    Deleted:    deleted.Count,
+                    Unchanged:  unchanged.Count,
+                    TotalFiles: snapshotEntries.Count,
+                    TotalBytes: snapshotTotalBytes
+                );
+
+                Console.WriteLine($"[SnapshotService] Finished snapshot for '{project.Name}': " +
+                                  $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={snapshotEntries.Count}, totalBytes={snapshotTotalBytes}");
+
+                return snapshotId;
+            }
+
             // Hash strategy
             var entries    = new ConcurrentBag<FileEntry>();
             long totalBytes = 0;
@@ -145,6 +209,61 @@ public class SnapshotService
 
             Console.WriteLine($"[SnapshotService] toHash = {toHash.Count}, fullHash={fullHash}, added={added.Count}, modified={modified.Count}, unchanged={unchanged.Count}, deleted={deleted.Count}");
 
+            var totalToHash = toHash.Count;
+            var totalHashBytes = toHash.Sum(m => m.Info.Length);
+            var hashedCount = 0;
+            long hashedBytes = 0;
+            var hashStart = DateTime.UtcNow;
+            var lastReport = hashStart;
+            var reportInterval = TimeSpan.FromMilliseconds(200);
+            var progressLock = new object();
+
+            void ReportHashProgress(string relPath, bool force)
+            {
+                if (progressCallback is null)
+                    return;
+
+                var now = DateTime.UtcNow;
+                lock (progressLock)
+                {
+                    if (!force && (now - lastReport) < reportInterval)
+                        return;
+
+                    lastReport = now;
+                    var count = hashedCount;
+                    var bytes = hashedBytes;
+                    var percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
+
+                    var elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
+                    var speedBytesSec = bytes / elapsedSeconds;
+                    var speedMbSec = speedBytesSec / (1024d * 1024d);
+
+                    string etaText;
+                    if (count >= totalToHash)
+                    {
+                        etaText = $"Hashing {count}/{totalToHash}";
+                    }
+                    else if (count > 0 && totalHashBytes > 0 && speedBytesSec > 0)
+                    {
+                        var remainingBytes = Math.Max(0L, totalHashBytes - bytes);
+                        var remainingSeconds = remainingBytes / speedBytesSec;
+                        var eta = TimeSpan.FromSeconds(remainingSeconds);
+                        etaText = $"Hashing {count}/{totalToHash} - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+                    }
+                    else
+                    {
+                        etaText = $"Hashing {count}/{totalToHash}";
+                    }
+
+                    progressCallback(percent, relPath, etaText);
+                }
+            }
+
+            if (progressCallback is not null && totalToHash == 0)
+            {
+                progressCallback(0, string.Empty, "Hashing 0/0");
+            }
+
             // Hash in parallel (CPU-heavy, but off the UI thread and cancellable)
             await Parallel.ForEachAsync(
                 toHash,
@@ -157,6 +276,10 @@ public class SnapshotService
                 {
                     var h = await _hash.Sha256Async(m.Full, token);
                     AddEntry(m.Rel, m.Info.Length, m.Info.LastWriteTimeUtc, h);
+
+                    Interlocked.Add(ref hashedBytes, m.Info.Length);
+                    var currentCount = Interlocked.Increment(ref hashedCount);
+                    ReportHashProgress(m.Rel, currentCount >= totalToHash);
                 });
 
             ct.ThrowIfCancellationRequested();
@@ -200,6 +323,106 @@ public class SnapshotService
 
     // simple store for most recent outcome in-process
     public static SnapshotOutcome? LastOutcome { get; private set; }
+
+    public async Task<int> HashMissingFilesAsync(
+        Project project,
+        int snapshotId,
+        CancellationToken ct = default,
+        Action<double, string, string>? progressCallback = null)
+    {
+        if (project is null) throw new ArgumentNullException(nameof(project));
+        if (string.IsNullOrWhiteSpace(project.RootPath))
+            throw new InvalidOperationException("Project.RootPath is not set.");
+
+        var files = _repo.GetFilesForSnapshot(snapshotId)
+            .Where(f => string.IsNullOrWhiteSpace(f.HashSha256))
+            .ToList();
+
+        if (files.Count == 0)
+            return 0;
+
+        var totalToHash = files.Count;
+        var totalBytes = files.Sum(f => f.Size);
+        var hashedCount = 0;
+        long hashedBytes = 0;
+        var hashStart = DateTime.UtcNow;
+        var lastReport = hashStart;
+        var reportInterval = TimeSpan.FromMilliseconds(250);
+        var progressLock = new object();
+        var updates = new ConcurrentBag<(string RelPath, string HashSha256)>();
+
+        void ReportProgress(string relPath, bool force)
+        {
+            if (progressCallback is null)
+                return;
+
+            var now = DateTime.UtcNow;
+            lock (progressLock)
+            {
+                if (!force && (now - lastReport) < reportInterval)
+                    return;
+
+                lastReport = now;
+                var count = hashedCount;
+                var bytes = hashedBytes;
+                var percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
+
+                var elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
+                var speedBytesSec = bytes / elapsedSeconds;
+                var speedMbSec = speedBytesSec / (1024d * 1024d);
+
+                string etaText;
+                if (count >= totalToHash)
+                {
+                    etaText = $"Hashing {count}/{totalToHash}";
+                }
+                else if (count > 0 && totalBytes > 0 && speedBytesSec > 0)
+                {
+                    var remainingBytes = Math.Max(0L, totalBytes - bytes);
+                    var remainingSeconds = remainingBytes / speedBytesSec;
+                    var eta = TimeSpan.FromSeconds(remainingSeconds);
+                    etaText = $"Hashing {count}/{totalToHash} - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+                }
+                else
+                {
+                    etaText = $"Hashing {count}/{totalToHash}";
+                }
+
+                progressCallback(percent, relPath, etaText);
+            }
+        }
+
+        await Parallel.ForEachAsync(
+            files,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = ct
+            },
+            async (entry, token) =>
+            {
+                var relPath = entry.RelPath.Replace('/', Path.DirectorySeparatorChar);
+                var fullPath = Path.Combine(project.RootPath, relPath);
+                try
+                {
+                    var hash = await _hash.Sha256Async(fullPath, token);
+                    updates.Add((entry.RelPath, hash));
+
+                    Interlocked.Add(ref hashedBytes, entry.Size);
+                    var currentCount = Interlocked.Increment(ref hashedCount);
+                    ReportProgress(entry.RelPath, currentCount >= totalToHash);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    Console.WriteLine($"[SnapshotService] Failed to hash '{fullPath}': {ex.Message}");
+                }
+            });
+
+        ct.ThrowIfCancellationRequested();
+        _repo.UpdateFileHashes(snapshotId, updates);
+        return updates.Count;
+    }
+
     private void ApplySnapshotRetention(Project project, int maxSnapshotsToKeep)
     {
         // Load all snapshots for this project (newest first)
