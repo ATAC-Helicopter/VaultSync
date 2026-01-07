@@ -345,67 +345,66 @@
                   BorderThickness="0,1,0,0">
             <StackPanel Spacing="8">
               <ItemsControl x:Name="ActiveBackupsList" ItemsSource="{Binding ActiveBackups}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal"
-                               ItemWidth="260" />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Border Margin="0,4,12,4"
-                            Padding="10"
-                            CornerRadius="12"
-                            Background="{DynamicResource CardBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}"
-                            BorderThickness="1">
-                      <StackPanel Spacing="4">
-                        <Grid ColumnDefinitions="*,Auto,Auto"
-                          ColumnSpacing="6">
-                      <TextBlock Grid.Column="0"
-                                 Text="{Binding ProjectName}"
-                                 FontSize="12"
-                                 FontWeight="SemiBold"
-                                 TextTrimming="CharacterEllipsis" />
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding Progress, StringFormat='{}{0:0}%'}"
-                                 FontSize="11"
-                                 Foreground="{DynamicResource TextSecondaryBrush}"
-                                 Margin="0,0,4,0"
-                                 IsVisible="{Binding ShowPercent}" />
-                      <Button Grid.Column="2"
-                              Content="{infra:LocalizedString Key=Backups.Section.Cancel}"
-                              Command="{Binding CancelCommand}"
-                              Classes="small-button"
-                              HorizontalAlignment="Right"
-                                  VerticalAlignment="Center"
-                                  Padding="8,2"
-                                  MinWidth="0"
-                                  IsEnabled="{Binding CanCancel}"
-                                  IsVisible="{Binding CanCancel}" />
-                        </Grid>
-                        <ProgressBar Minimum="0"
-                                     Maximum="100"
-                                     Value="{Binding Progress}"
-                                     IsIndeterminate="{Binding IsIndeterminate}"
-                                     Height="4"
-                                     CornerRadius="2" />
-                        <TextBlock Classes="progress-detail"
-                                   Text="{Binding CurrentFile}"
-                                   FontSize="11"
-                                   MaxWidth="340"
-                                   TextTrimming="CharacterEllipsis"
-                                   TextWrapping="NoWrap" />
-                        <TextBlock Classes="progress-detail"
-                                   Text="{Binding EtaText}"
-                                   FontSize="10"
-                                   HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   IsVisible="{Binding ShowEta}" />
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel Orientation="Horizontal"
+                               ItemWidth="320" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Margin="0,4,12,4"
+                              Padding="12"
+                              CornerRadius="14"
+                              Background="{DynamicResource CardBackgroundBrush}"
+                              BorderBrush="{DynamicResource CardBorderBrush}"
+                              BorderThickness="1">
+                        <StackPanel Spacing="6">
+                          <Grid ColumnDefinitions="*,Auto"
+                                ColumnSpacing="10">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding ProjectName}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <StackPanel Grid.Column="1"
+                                        Spacing="4"
+                                        HorizontalAlignment="Right">
+                              <TextBlock Text="{Binding ProgressLabel}"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                         HorizontalAlignment="Right" />
+                              <Button Content="{infra:LocalizedString Key=Backups.Section.Cancel}"
+                                      Command="{Binding CancelCommand}"
+                                      Classes="small-button"
+                                      Padding="8,2"
+                                      MinWidth="0"
+                                      IsEnabled="{Binding CanCancel}"
+                                      IsVisible="{Binding CanCancel}" />
+                            </StackPanel>
+                          </Grid>
+                          <ProgressBar Minimum="0"
+                                       Maximum="100"
+                                       Value="{Binding DisplayProgress}"
+                                       IsIndeterminate="{Binding IsIndeterminate}"
+                                       Height="6"
+                                       CornerRadius="3" />
+                          <TextBlock Text="{Binding StageDisplay}"
+                                     FontSize="11"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextSecondaryBrush}"
+                                     TextWrapping="Wrap"
+                                     TextTrimming="None" />
+                          <TextBlock Text="{Binding CurrentFileDisplay}"
+                                     FontSize="11"
+                                     Foreground="{DynamicResource TextSecondaryBrush}"
+                                     TextTrimming="None"
+                                     TextWrapping="Wrap" />
+                          <!-- ETA is already included in CurrentFileDisplay when available -->
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
               </ItemsControl>
               <ItemsControl ItemsSource="{Binding DestinationStatuses}"
                             IsVisible="{Binding HasDestinationStatuses}">

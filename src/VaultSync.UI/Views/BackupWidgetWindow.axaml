@@ -103,18 +103,19 @@
                         BorderBrush="{DynamicResource CardBorderBrush}"
                         BorderThickness="1">
                   <StackPanel Spacing="6">
-        <StackPanel Orientation="Horizontal"
-                    Spacing="6"
-                    VerticalAlignment="Center">
-          <TextBlock Text="{Binding ProjectName}"
-                     FontWeight="SemiBold"
-                     FontSize="12"
-                     TextTrimming="CharacterEllipsis" />
-          <TextBlock Text="{Binding Progress, StringFormat='{}{0:0}%'}"
-                     Foreground="{DynamicResource TextSecondaryBrush}"
-                     FontSize="11"
-                     IsVisible="{Binding ShowPercent}" />
-        </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8">
+                      <TextBlock Grid.Column="0"
+                                 Text="{Binding ProjectName}"
+                                 FontWeight="SemiBold"
+                                 FontSize="12"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding ProgressLabel}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 FontSize="11"
+                                 HorizontalAlignment="Right" />
+                    </Grid>
 
         <ProgressBar Height="5"
                      CornerRadius="3"
@@ -125,27 +126,29 @@
                      Foreground="{DynamicResource AccentBrush}"
                      Background="{DynamicResource CardBackgroundBrush}" />
 
-                    <TextBlock Text="{Binding CurrentFile}"
+                    <TextBlock Text="{Binding StageDisplay}"
                                FontSize="11"
-                               TextWrapping="Wrap"
-                               MaxHeight="52"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" />
 
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="6"
-                                VerticalAlignment="Center">
-                      <TextBlock Text="{Binding EtaText}"
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8">
+                      <TextBlock Grid.Column="0"
+                                 Text="{Binding CurrentFileDisplay}"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextSecondaryBrush}"
-                                 IsVisible="{Binding ShowEta}" />
-                      <Button Content="{infra:LocalizedString Key=BackupWidget.Cancel}"
+                                 TextWrapping="Wrap"
+                                 IsVisible="{Binding HasCurrentFileDisplay}" />
+                      <Button Grid.Column="1"
+                              Content="{infra:LocalizedString Key=BackupWidget.Cancel}"
                               Command="{Binding CancelCommand}"
                               Classes="small-button"
                               IsVisible="{Binding CanCancel}"
                               IsEnabled="{Binding CanCancel}"
                               Padding="8,2"
                               MinWidth="0" />
-                    </StackPanel>
+                    </Grid>
                   </StackPanel>
                 </Border>
               </DataTemplate>

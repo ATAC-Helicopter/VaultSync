@@ -418,6 +418,28 @@ DELETE FROM sqlite_sequence;";
                 tx);
             tx.Commit();
         }
+
+        public void UpdateFileHashes(int snapshotId, IEnumerable<(string RelPath, string HashSha256)> updates)
+        {
+            using var c = Open();
+            using var tx = c.BeginTransaction();
+
+            c.Execute(
+                """
+                UPDATE files
+                SET hash_sha256 = @HashSha256
+                WHERE snapshot_id = @SnapshotId AND rel_path = @RelPath
+                """,
+                updates.Select(u => new
+                {
+                    SnapshotId = snapshotId,
+                    u.RelPath,
+                    u.HashSha256
+                }),
+                tx);
+
+            tx.Commit();
+        }
         // ---------- Backups ----------
 
         public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath, string destinationPath, string destinationAlias, bool isProtected = false)
@@ -467,6 +489,29 @@ DELETE FROM sqlite_sequence;";
                 LIMIT 1;
                 """,
                 new { pid = projectId });
+        }
+
+        public Backup? GetBackupById(int backupId)
+        {
+            using var c = Open();
+            return c.QueryFirstOrDefault<Backup>(
+                """
+                SELECT
+                  id,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  is_protected as IsProtected
+                FROM backups
+                WHERE id = @id
+                LIMIT 1;
+                """,
+                new { id = backupId });
         }
 
         public IEnumerable<Backup> GetBackupsForProject(int projectId)

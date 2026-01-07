@@ -120,15 +120,12 @@ namespace VaultSync.UI.Services
             if (!Enabled || string.IsNullOrWhiteSpace(message))
                 return;
 
-            if (source == "trace" &&
-                message.Contains("Layout cycle detected", StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
             foreach (var line in message.Replace("\r", string.Empty).Split('\n'))
             {
                 if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                if (source == "trace" && IsNoisyTrace(line))
                     continue;
 
                 var entry = new LogLine(DateTimeOffset.Now, source, line);
@@ -144,6 +141,15 @@ namespace VaultSync.UI.Services
                     AppendToFile(entry);
                 }
             }
+        }
+
+        private static bool IsNoisyTrace(string line)
+        {
+            return line.Contains("Layout cycle detected", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("PlatformImpl is null, couldn't handle input", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("RenderTargetCorruptedException", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("Exception in render loop", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("Resize failed", StringComparison.OrdinalIgnoreCase);
         }
 
         private void TrimIfNeeded()

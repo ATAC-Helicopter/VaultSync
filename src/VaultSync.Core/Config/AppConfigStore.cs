@@ -1,12 +1,14 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 
 
 namespace VaultSync.Core.Config
 {
     public static class AppConfigStore
     {
+        private static readonly object SaveLock = new();
         private static readonly string ConfigDir =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync");
 
@@ -76,7 +78,7 @@ namespace VaultSync.Core.Config
         {
             Directory.CreateDirectory(ConfigDir);
             var json = JsonSerializer.Serialize(config, JsonOptions);
-            File.WriteAllText(ConfigFilePath, json);
+            WriteConfigWithRetry(json);
         }
 
         public static string GetDefaultDbPath()
@@ -85,6 +87,35 @@ namespace VaultSync.Core.Config
             var dir = Path.Combine(appData, "VaultSync");
             Directory.CreateDirectory(dir);
             return Path.Combine(dir, "vaultsync.db");
+        }
+
+        private static void WriteConfigWithRetry(string json)
+        {
+            const int maxAttempts = 5;
+            var delay = 40;
+
+            lock (SaveLock)
+            {
+                for (var attempt = 1; attempt <= maxAttempts; attempt++)
+                {
+                    try
+                    {
+                        var tempPath = Path.Combine(ConfigDir, $"appsettings.tmp.{Guid.NewGuid():N}.json");
+                        File.WriteAllText(tempPath, json);
+                        File.Copy(tempPath, ConfigFilePath, overwrite: true);
+                        File.Delete(tempPath);
+                        return;
+                    }
+                    catch (IOException) when (attempt < maxAttempts)
+                    {
+                        Thread.Sleep(delay);
+                        delay *= 2;
+                    }
+                }
+
+                // Last attempt: allow exception to surface for diagnostics.
+                File.WriteAllText(ConfigFilePath, json);
+            }
         }
     }
 }

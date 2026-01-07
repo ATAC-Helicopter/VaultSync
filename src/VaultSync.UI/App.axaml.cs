@@ -212,39 +212,13 @@ public partial class App : Application
         var menu = new NativeMenu();
 
         // Header (disabled) to give the menu a title and tighter OS alignment.
-        menu.Items.Add(new NativeMenuItem(L("Tray.Header", "VaultSync")) { IsEnabled = false });
-        if (BuildDriveHealthItem(desktop) is { } healthItem)
+        var headerText = L("Tray.Header", "VaultSync");
+        var versionLabel = AppViewModelInstance?.CurrentVersionDisplay;
+        if (!string.IsNullOrWhiteSpace(versionLabel))
         {
-            menu.Items.Add(healthItem);
+            headerText = $"{headerText} {versionLabel}";
         }
-        var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
-            ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
-        var destinationRootItem = new NativeMenuItem(L("Tray.Destinations.Title", "Destinations"));
-        var destinationMenu = new NativeMenu();
-
-        if (destinationSummaries.Any())
-        {
-            foreach (var dest in destinationSummaries)
-            {
-                var status = dest.Reachable
-                    ? L("Tray.Destinations.Ready", "Ready")
-                    : L("Tray.Destinations.Unreachable", "Unreachable");
-                var text = string.IsNullOrWhiteSpace(dest.Alias)
-                    ? $"{dest.Path} -> {status}"
-                    : $"{dest.Alias} -> {status}";
-
-                var detail = new NativeMenuItem(text) { IsEnabled = false };
-                destinationMenu.Items.Add(detail);
-            }
-        }
-        else
-        {
-            destinationMenu.Items.Add(new NativeMenuItem(L("Tray.Destinations.None", "No destinations configured")) { IsEnabled = false });
-        }
-
-        destinationRootItem.Menu = destinationMenu;
-        menu.Items.Add(destinationRootItem);
-        menu.Items.Add(new NativeMenuItemSeparator());
+        menu.Items.Add(new NativeMenuItem(headerText) { IsEnabled = false });
         // Open main window
         var openItem = new NativeMenuItem(L("Tray.Open", "Open VaultSync"));
         openItem.Click += (_, _) =>
@@ -263,6 +237,72 @@ public partial class App : Application
 
             window.Activate();
         };
+
+        // ---------- Storage health ----------
+        var healthItem = BuildDriveHealthItem(desktop);
+
+        // ---------- Destinations submenu ----------
+        var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
+            ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
+        var destinationRootItem = new NativeMenuItem(L("Tray.Destinations.Title", "Destinations"));
+        var destinationMenu = new NativeMenu();
+
+        if (destinationSummaries.Any())
+        {
+            foreach (var dest in destinationSummaries)
+            {
+                var status = dest.Reachable
+                    ? L("Tray.Destinations.Ready", "Ready")
+                    : L("Tray.Destinations.Unreachable", "Unreachable");
+                var text = string.IsNullOrWhiteSpace(dest.Alias)
+                    ? $"{dest.Path} ({status})"
+                    : $"{dest.Alias} ({status})";
+
+                var detail = new NativeMenuItem(text) { IsEnabled = false };
+                destinationMenu.Items.Add(detail);
+            }
+        }
+        else
+        {
+            var cfg = AppConfigStore.Load();
+            var configured = new List<BackupDestination>();
+
+            if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
+            {
+                configured = cfg.Backups.Destinations
+                    .Where(d => d.Active)
+                    .ToList();
+            }
+            else if (!string.IsNullOrWhiteSpace(cfg.Backups.BackupLocation))
+            {
+                configured.Add(new BackupDestination
+                {
+                    Alias       = "Primary",
+                    Path        = cfg.Backups.BackupLocation,
+                    Active      = true,
+                    PreMounted  = true,
+                    AutoMount   = false,
+                    AutoUnmount = false
+                });
+            }
+
+            if (configured.Any())
+            {
+                foreach (var dest in configured)
+                {
+                    var label = string.IsNullOrWhiteSpace(dest.Alias)
+                        ? dest.Path ?? string.Empty
+                        : dest.Alias;
+                    destinationMenu.Items.Add(new NativeMenuItem(label) { IsEnabled = false });
+                }
+            }
+            else
+            {
+                destinationMenu.Items.Add(new NativeMenuItem(L("Tray.Destinations.None", "No destinations configured")) { IsEnabled = false });
+            }
+        }
+
+        destinationRootItem.Menu = destinationMenu;
 
         // ---------- Backup submenu ----------
         var backupRootItem = new NativeMenuItem(L("Tray.Backup.Title", "Backup"));
@@ -438,10 +478,10 @@ public partial class App : Application
         }
 
         manageBackupsRoot.Menu = manageBackupsMenu;
-        menu.Items.Add(manageBackupsRoot);
 
         var separator1 = new NativeMenuItemSeparator();
         var separator2 = new NativeMenuItemSeparator();
+        var separator3 = new NativeMenuItemSeparator();
 
         var quitItem = new NativeMenuItem(L("Tray.Quit", "Quit VaultSync"));
         quitItem.Click += (_, _) =>
@@ -453,9 +493,16 @@ public partial class App : Application
 
         menu.Items.Add(openItem);
         menu.Items.Add(separator1);
+        if (healthItem is not null)
+        {
+            menu.Items.Add(healthItem);
+        }
+        menu.Items.Add(destinationRootItem);
+        menu.Items.Add(manageBackupsRoot);
+        menu.Items.Add(separator2);
         menu.Items.Add(backupRootItem);
         menu.Items.Add(snapshotRootItem);
-        menu.Items.Add(separator2);
+        menu.Items.Add(separator3);
         menu.Items.Add(quitItem);
 
         return menu;
@@ -516,8 +563,6 @@ public partial class App : Application
     {
         try
         {
-            var cfg = AppConfigStore.Load();
-            Telemetry.SetEnabled(cfg.Advanced.SendUsageStats);
             Telemetry.SetSessionId(Guid.NewGuid());
 
             Telemetry.Log("app_start");
@@ -543,14 +588,19 @@ public partial class App : Application
         try
         {
             var cfg        = AppConfigStore.Load();
-            var backupRoot = cfg.Backups.BackupRoot ?? string.Empty;
+            var backupRoot = cfg.Backups.BackupLocation ?? string.Empty;
             var driveLabel = FormatDriveLabel(backupRoot);
             if (_cachedDriveHealthLabel == DefaultDriveHealthLabel)
             {
                 _cachedDriveHealthLabel = L("Tray.Health.DefaultLabel", DefaultDriveHealthLabel);
             }
 
-            var healthMenu = new NativeMenuItem(L("Tray.Health.Title", "Storage health"));
+            var healthTitle = L("Tray.Health.Title", "Storage health");
+            if (!string.IsNullOrWhiteSpace(backupRoot) && !string.IsNullOrWhiteSpace(driveLabel))
+            {
+                healthTitle = $"{healthTitle} ({driveLabel})";
+            }
+            var healthMenu = new NativeMenuItem(healthTitle);
             var statusMenu = new NativeMenu();
 
             var statusLabel = string.IsNullOrWhiteSpace(backupRoot)

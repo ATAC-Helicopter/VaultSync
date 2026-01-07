@@ -19,6 +19,12 @@ namespace VaultSync.Core.Services
     public sealed class RobocopyRunner : ISyncRunner
     {
         public string Name => "robocopy";
+        private readonly bool _isNetworkDestination;
+
+        public RobocopyRunner(bool isNetworkDestination = false)
+        {
+            _isNetworkDestination = isNetworkDestination;
+        }
 
         // ISyncRunner base signature (no progress)
         public Task<int> SyncAsync(Project project, string destination, bool dryRun, CancellationToken ct)
@@ -68,7 +74,17 @@ namespace VaultSync.Core.Services
             // Keep it fast and predictable
             psi.ArgumentList.Add("/R:1");
             psi.ArgumentList.Add("/W:1");
-            psi.ArgumentList.Add("/MT:16");
+            var threadCount = _isNetworkDestination
+                ? Math.Min(32, Math.Max(4, Environment.ProcessorCount))
+                : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2));
+            psi.ArgumentList.Add($"/MT:{threadCount}");
+            if (_isNetworkDestination)
+            {
+                // Network share tuning: restartable + tolerate time granularity, avoid cache thrash.
+                psi.ArgumentList.Add("/Z");
+                psi.ArgumentList.Add("/FFT");
+                psi.ArgumentList.Add("/J");
+            }
             // Apply exclusions (preset + local)
             AddRobocopyExcludes(psi, excludeFiles, excludeDirs);
 
@@ -88,9 +104,14 @@ namespace VaultSync.Core.Services
                 // For progress parsing we keep file lines, but remove header/summary noise.
                 psi.ArgumentList.Add("/NJH"); // no header
                 psi.ArgumentList.Add("/NJS"); // no summary
+                psi.ArgumentList.Add("/ETA"); // enable percent + ETA lines
+                psi.ArgumentList.Add("/FP");  // include full paths in file lines
             }
 
             string? currentFile = null;
+            double? lastPercent = null;
+            var lastLog = DateTime.UtcNow;
+            var logInterval = TimeSpan.FromSeconds(5);
             using var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
 
             var stdout = new StringBuilder();
@@ -111,9 +132,17 @@ namespace VaultSync.Core.Services
                         var percent = TryParsePercent(line);
                         if (percent is double p)
                         {
+                            lastPercent = p;
                             // Use the last-seen file path as the "current file" label if we have one.
                             var fileLabel = currentFile ?? string.Empty;
-                            progressCallback(p, fileLabel, string.Empty);
+                            var etaText = line;
+                            progressCallback(p, fileLabel, etaText);
+
+                            if ((DateTime.UtcNow - lastLog) >= logInterval)
+                            {
+                                Console.WriteLine($"[RobocopyRunner] {line}");
+                                lastLog = DateTime.UtcNow;
+                            }
                         }
                         else
                         {
@@ -137,6 +166,14 @@ namespace VaultSync.Core.Services
                                 {
                                     // As a fallback, keep the whole line.
                                     currentFile = line;
+                                }
+
+                                progressCallback(lastPercent ?? 0, currentFile ?? string.Empty, string.Empty);
+
+                                if ((DateTime.UtcNow - lastLog) >= logInterval)
+                                {
+                                    Console.WriteLine($"[RobocopyRunner] {currentFile}");
+                                    lastLog = DateTime.UtcNow;
                                 }
                             }
                         }
@@ -391,19 +428,36 @@ namespace VaultSync.Core.Services
             if (idx <= 0)
                 return null;
 
-            var end   = idx - 1;
+            var end = idx - 1;
             var start = end;
+            var hasDigit = false;
 
-            while (start >= 0 && char.IsDigit(line[start]))
-                start--;
+            while (start >= 0)
+            {
+                var ch = line[start];
+                if (char.IsDigit(ch))
+                {
+                    hasDigit = true;
+                    start--;
+                    continue;
+                }
+
+                if ((ch == '.' || ch == ',') && hasDigit)
+                {
+                    start--;
+                    continue;
+                }
+
+                break;
+            }
 
             start++;
 
-            if (start > end)
+            if (!hasDigit || start > end)
                 return null;
 
             var numberSpan = line[start..(end + 1)];
-            if (double.TryParse(numberSpan, out var value))
+            if (double.TryParse(numberSpan, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value))
             {
                 if (value >= 0 && value <= 100)
                     return value;

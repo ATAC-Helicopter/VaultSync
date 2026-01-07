@@ -66,7 +66,7 @@ namespace VaultSync.Core.Config
                 Location   = value;
             }
         }
-        public bool   UseCompression        { get; set; } = true;
+        public bool   UseCompression        { get; set; } = false;
         /// <summary>
         /// When true, rsync can use its delta-transfer algorithm on macOS/Linux.
         /// Windows backups (robocopy) are unaffected.
@@ -174,9 +174,10 @@ namespace VaultSync.Core.Config
         public bool VerboseLogging   { get; set; } = false;
         public bool SaveVerboseLogs  { get; set; } = false;
         public bool CheckUpdates     { get; set; } = true;
+        public int UpdateCheckIntervalMinutes { get; set; } = 120;
         public bool BetaChannelEnabled { get; set; } = false;
-        public bool SendUsageStats   { get; set; } = false;
         public string Language       { get; set; } = "en";
+        public string SkippedUpdateTag { get; set; } = string.Empty;
     }
 
     // -------- App Behavior / Background Mode --------

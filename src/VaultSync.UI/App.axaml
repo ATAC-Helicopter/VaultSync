@@ -24,6 +24,7 @@
             <Thickness x:Key="MetricHintMargin">0,2,0,0</Thickness>
             <x:Double x:Key="MetricFontSize">36</x:Double>
             <x:Double x:Key="SectionTitleFontSize">16</x:Double>
+            <FontFamily x:Key="AppFontFamily">Inter, Segoe UI, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, Meiryo, Malgun Gothic, Arial Unicode MS, Arial, Tahoma</FontFamily>
         </ResourceDictionary>
     </Application.Resources>
 
@@ -40,6 +41,10 @@
         <!-- Window background uses our brush from Colors.axaml -->
         <Style Selector="Window">
             <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
+        </Style>
+
+        <Style Selector="Control">
+            <Setter Property="TextElement.FontFamily" Value="{DynamicResource AppFontFamily}" />
         </Style>
 
         <!-- Card surface -->
@@ -90,6 +95,43 @@
 
         <Style Selector="Button.nav:pressed">
             <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
+
+        <!-- Action buttons -->
+        <Style Selector="Button.action-ghost">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+        <Style Selector="Button.action-ghost:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
+        <Style Selector="Button.action-ghost:pressed">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
+
+        <Style Selector="Button.action-primary">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+        <Style Selector="Button.action-primary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="Button.action-primary:pressed">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
         </Style>
 
         <!-- Shell brand banner -->

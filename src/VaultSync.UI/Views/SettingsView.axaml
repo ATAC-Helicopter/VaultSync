@@ -9,6 +9,10 @@
 
   <UserControl.Styles>
     <!-- Inputs -->
+    <Style Selector="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="TextTrimming" Value="None" />
+    </Style>
     <Style Selector="TextBox">
       <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
@@ -51,7 +55,8 @@
       <controls:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
     </UserControl.Resources>
 
-  <ScrollViewer VerticalScrollBarVisibility="Auto"
+  <ScrollViewer x:Name="SettingsScrollViewer"
+                VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
                 Padding="12">
 
@@ -597,14 +602,12 @@
                                            FontSize="11"
                                            TextWrapping="Wrap"
                                            IsVisible="{Binding NeedsCredentialWarning}" />
-                                <TextBlock Text="{Binding LastTestStatus}"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           FontSize="11"
-                                           TextWrapping="Wrap"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxHeight="44"
-                                           ToolTip.Tip="{Binding LastTestStatus}"
-                                           IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
+                                  <TextBlock Text="{Binding LastTestStatus}"
+                                             Foreground="{StaticResource TextSecondary}"
+                                             FontSize="11"
+                                             TextWrapping="Wrap"
+                                             ToolTip.Tip="{Binding LastTestStatus}"
+                                             IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
                               </StackPanel>
                             </Grid>
                           </Border>
@@ -876,17 +879,19 @@
                                 Spacing="8"
                                 VerticalAlignment="Center">
                       <Button Content="{infra:LocalizedString Key=Settings.Advanced.LogConsoleOpen}"
+                              Classes="action-primary"
                               Command="{Binding OpenLogConsoleCommand}" />
                       <Button Content="{infra:LocalizedString Key=Settings.Advanced.LogConsoleExport}"
+                              Classes="action-ghost"
                               Command="{Binding ExportLogConsoleCommand}"
                               IsEnabled="{Binding EnableVerboseLogging}" />
                     </StackPanel>
                   </Grid>
 
-                  <Grid ColumnDefinitions="*,Auto"
-                        Margin="0,4,0,0">
-                    <StackPanel Grid.Column="0" Spacing="2">
-                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesDescription}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
@@ -895,6 +900,48 @@
                                 VerticalAlignment="Center"
                                 IsChecked="{Binding CheckForUpdatesOnStartup, Mode=TwoWay}" />
                 </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateInterval}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateIntervalDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <TextBox Grid.Column="1"
+                           Width="60"
+                           HorizontalContentAlignment="Center"
+                           Text="{Binding UpdateCheckIntervalMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           HorizontalAlignment="Right"
+                           IsEnabled="{Binding CheckForUpdatesOnStartup}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNowDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <Button Grid.Column="1"
+                          Classes="action-primary"
+                          Command="{Binding CheckUpdatesNowCommand}">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
+                  </Button>
+                </Grid>
+
+                <StackPanel Margin="0,4,0,0" Spacing="2">
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateStatusLabel}" />
+                  <TextBlock Text="{Binding UpdateCheckStatusText}"
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="11" />
+                  <TextBlock Text="{Binding UpdateCheckErrorText}"
+                             Foreground="{DynamicResource WarningTextBrush}"
+                             FontSize="11"
+                             IsVisible="{Binding HasUpdateCheckError}" />
+                </StackPanel>
 
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
@@ -934,19 +981,6 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                </Grid>
-
-                <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
-                  <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SendUsageStats}" />
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SendUsageStatsDescription}"
-                               Foreground="{StaticResource TextSecondary}"
-                               FontSize="11" />
-                  </StackPanel>
-                  <ToggleSwitch Grid.Column="1"
-                                VerticalAlignment="Center"
-                                IsChecked="{Binding SendAnonymousUsageStats, Mode=TwoWay}" />
                 </Grid>
 
                 <StackPanel Orientation="Horizontal"

@@ -168,9 +168,11 @@
 
               <Grid Grid.Row="1">
                 <lvc:PieChart
+                    x:Name="StorageDonutChart"
                     Series="{Binding StorageSeries}"
                     Background="{Binding $parent[Border].Background}"
                     LegendPosition="Hidden"
+                    ClipToBounds="True"
                     Width="360"
                     Height="360"
                     HorizontalAlignment="Center"

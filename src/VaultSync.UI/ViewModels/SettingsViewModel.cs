@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -41,7 +42,7 @@ namespace VaultSync.UI
         private int _maxSnapshotsPerProject = 20;
         private string _backupLocationPath = string.Empty;
         private bool _useAdvancedDestinations = false;
-        private bool _useBackupCompression = true;
+        private bool _useBackupCompression = false;
         private bool _useRsyncDelta = false;
         private bool _useIncrementalBackups = false;
         private bool _verifyBackupsAfterCreate = true;
@@ -73,9 +74,13 @@ namespace VaultSync.UI
         private bool _enableVerboseLogging = false;
         private bool _saveVerboseLogs = false;
         private bool _checkForUpdatesOnStartup = true;
+        private int _updateCheckIntervalMinutes = 120;
         private bool _betaChannelEnabled = false;
-        private bool _sendAnonymousUsageStats = false;
         private readonly LocalizationService _localizationService;
+        private DateTimeOffset? _lastUpdateCheckAt;
+        private string? _lastUpdateCheckError;
+        private string _updateCheckStatusText = string.Empty;
+        private string _updateCheckErrorText = string.Empty;
         private string _selectedLanguageCode = "en";
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly NetworkMountService _networkMountService = new();
@@ -86,6 +91,7 @@ namespace VaultSync.UI
         private bool _savePending;
 
         public event Action? OpenLogConsoleRequested;
+        public event Action? UpdateCheckRequested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -114,7 +120,11 @@ namespace VaultSync.UI
         {
             _localizationService = localizationService;
             _selectedLanguageCode = localizationService.CurrentLanguage;
-            _localizationService.LanguageChanged += () => OnPropertyChanged(nameof(SelectedLanguage));
+            _localizationService.LanguageChanged += () =>
+            {
+                OnPropertyChanged(nameof(SelectedLanguage));
+                RefreshUpdateCheckStatus();
+            };
 
             ThemeOptions = new ObservableCollection<string>
             {
@@ -142,6 +152,7 @@ namespace VaultSync.UI
             ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());
             OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
+            CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
@@ -150,6 +161,7 @@ namespace VaultSync.UI
 
             // AUTO-LOAD CONFIG ON STARTUP
             LoadFromConfig();
+            UpdateUpdateCheckStatus(null, null);
             _isInitialized = true;
         }
 
@@ -294,8 +306,8 @@ namespace VaultSync.UI
             _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
             _saveVerboseLogs           = cfg.Advanced.SaveVerboseLogs;
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
+            _updateCheckIntervalMinutes = ClampInt(cfg.Advanced.UpdateCheckIntervalMinutes, 15, 10080, 120);
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
-            _sendAnonymousUsageStats   = cfg.Advanced.SendUsageStats;
 
             // Apply theme + layout when loading config (in case Settings view is opened first)
             ApplyThemeFromSelected();
@@ -460,8 +472,8 @@ namespace VaultSync.UI
             cfg.Advanced.VerboseLogging      = EnableVerboseLogging;
             cfg.Advanced.SaveVerboseLogs     = SaveVerboseLogs;
             cfg.Advanced.CheckUpdates        = CheckForUpdatesOnStartup;
+            cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(UpdateCheckIntervalMinutes, 15, 10080, 120);
             cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
-            cfg.Advanced.SendUsageStats      = SendAnonymousUsageStats;
             cfg.Advanced.Language            = SelectedLanguageCode;
 
             AutoStartService.SetLaunchOnLogin(_launchOnLogin);
@@ -963,17 +975,37 @@ namespace VaultSync.UI
             set => SetField(ref _checkForUpdatesOnStartup, value);
         }
 
+        public int UpdateCheckIntervalMinutes
+        {
+            get => _updateCheckIntervalMinutes;
+            set => SetField(ref _updateCheckIntervalMinutes, value);
+        }
+
         public bool BetaChannelEnabled
         {
             get => _betaChannelEnabled;
             set => SetField(ref _betaChannelEnabled, value);
         }
 
-        public bool SendAnonymousUsageStats
+        public string UpdateCheckStatusText
         {
-            get => _sendAnonymousUsageStats;
-            set => SetField(ref _sendAnonymousUsageStats, value);
+            get => _updateCheckStatusText;
+            private set => SetField(ref _updateCheckStatusText, value);
         }
+
+        public string UpdateCheckErrorText
+        {
+            get => _updateCheckErrorText;
+            private set
+            {
+                if (SetField(ref _updateCheckErrorText, value))
+                {
+                    OnPropertyChanged(nameof(HasUpdateCheckError));
+                }
+            }
+        }
+
+        public bool HasUpdateCheckError => !string.IsNullOrWhiteSpace(_updateCheckErrorText);
 
         public IReadOnlyList<LanguageOption> LanguageOptions => _localizationService.SupportedLanguages;
 
@@ -1023,6 +1055,42 @@ namespace VaultSync.UI
             }
         }
 
+        public void UpdateUpdateCheckStatus(DateTimeOffset? lastCheck, string? errorMessage)
+        {
+            _lastUpdateCheckAt = lastCheck;
+            _lastUpdateCheckError = errorMessage;
+            RefreshUpdateCheckStatus();
+        }
+
+        private void RefreshUpdateCheckStatus()
+        {
+            var neverText = L("Settings.Advanced.UpdateStatusNever", "Never checked");
+            var lastTemplate = L("Settings.Advanced.UpdateStatusLast", "Last check: {0}");
+            var errorTemplate = L("Settings.Advanced.UpdateStatusError", "Last error: {0}");
+
+            if (_lastUpdateCheckAt.HasValue)
+            {
+                var formatted = _lastUpdateCheckAt.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+                UpdateCheckStatusText = string.Format(CultureInfo.CurrentCulture, lastTemplate, formatted);
+            }
+            else
+            {
+                UpdateCheckStatusText = neverText;
+            }
+
+            UpdateCheckErrorText = string.IsNullOrWhiteSpace(_lastUpdateCheckError)
+                ? string.Empty
+                : string.Format(CultureInfo.CurrentCulture, errorTemplate, _lastUpdateCheckError);
+        }
+
+        private string L(string key, string fallback)
+        {
+            var value = _localizationService.GetString(key);
+            return string.Equals(value, key, StringComparison.OrdinalIgnoreCase)
+                ? fallback
+                : value;
+        }
+
         // ---------------- Commands ----------------
         public ICommand BrowseProjectsRootCommand { get; }
     public ICommand BrowseBackupLocationCommand { get; }
@@ -1041,6 +1109,7 @@ namespace VaultSync.UI
         public ICommand ExportTelemetryCommand { get; }
         public ICommand OpenLogConsoleCommand { get; }
         public ICommand ExportLogConsoleCommand { get; }
+        public ICommand CheckUpdatesNowCommand { get; }
 
         private async void BrowseProjectsRoot()
         {
@@ -1423,6 +1492,11 @@ namespace VaultSync.UI
         private void OpenLogConsole()
         {
             OpenLogConsoleRequested?.Invoke();
+        }
+
+        private void CheckUpdatesNow()
+        {
+            UpdateCheckRequested?.Invoke();
         }
 
         private void ExportLogConsole()

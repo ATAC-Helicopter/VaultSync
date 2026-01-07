@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows.Input;
 using System.ComponentModel;
@@ -92,6 +93,7 @@ namespace VaultSync.UI.ViewModels
         // Active per-project backup progress items (for running backups)
         public ObservableCollection<BackupProgressItem> ActiveBackups { get; } =
             new ObservableCollection<BackupProgressItem>();
+        private readonly DispatcherTimer _activeBackupTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
 
         // Per-destination status for the current backup run
         public ObservableCollection<DestinationStatusItem> DestinationStatuses { get; } =
@@ -381,12 +383,36 @@ namespace VaultSync.UI.ViewModels
             DeleteFailedBackupCommand     = new RelayCommand(_ => DeleteFailedBackup());
 
             DestinationStatuses.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDestinationStatuses));
+            ActiveBackups.CollectionChanged += (_, _) => UpdateActiveBackupTimer();
+            _activeBackupTimer.Tick += (_, _) => TickActiveBackupDurations();
 
             // NOTE:
             // Live data is now provided by LoadFromBackups(...) from the core layer.
             // We no longer seed design-time demo data here.
 
             InitializeLocalizationDefaults();
+        }
+
+        private void UpdateActiveBackupTimer()
+        {
+            if (ActiveBackups.Count > 0)
+            {
+                if (!_activeBackupTimer.IsEnabled)
+                    _activeBackupTimer.Start();
+            }
+            else
+            {
+                if (_activeBackupTimer.IsEnabled)
+                    _activeBackupTimer.Stop();
+            }
+        }
+
+        private void TickActiveBackupDurations()
+        {
+            foreach (var item in ActiveBackups)
+            {
+                item.TickStageClock();
+            }
         }
 
         // ---------- All-project backup ----------
@@ -526,13 +552,13 @@ namespace VaultSync.UI.ViewModels
                 item.ProjectName = projectName;
             }
 
-            item.Progress = progress;
             item.AllowCancel = allowCancel;
 
             if (!string.IsNullOrWhiteSpace(currentFile))
                 item.CurrentFile = currentFile;
 
             item.EtaText = etaText ?? string.Empty;
+            item.Progress = progress;
         }
 
         /// <summary>
@@ -1437,6 +1463,9 @@ namespace VaultSync.UI.ViewModels
 
     public class BackupProgressItem : ViewModelBase
     {
+        private static string L(string key, string fallback) =>
+            LocalizationProvider.Service?.GetString(key) ?? fallback;
+
         public string ProjectId { get; set; } = string.Empty;
         public string ProjectName { get; set; } = string.Empty;
 
@@ -1454,8 +1483,8 @@ namespace VaultSync.UI.ViewModels
                 _allowCancel = value;
                 OnPropertyChanged(nameof(AllowCancel));
                 OnPropertyChanged(nameof(CanCancel));
-                OnPropertyChanged(nameof(ShowPercent));
                 OnPropertyChanged(nameof(IsIndeterminate));
+                NotifyProgressPresentationChanged();
             }
         }
 
@@ -1467,6 +1496,9 @@ namespace VaultSync.UI.ViewModels
         }
 
         private double _progress;
+        private double _displayProgress;
+        private string _lastStageKey = string.Empty;
+        private DateTime _stageStartUtc = DateTime.UtcNow;
         public double Progress
         {
             get => _progress;
@@ -1476,12 +1508,19 @@ namespace VaultSync.UI.ViewModels
                     return;
 
                 _progress = value;
+                UpdateDisplayProgress();
                 OnPropertyChanged(nameof(Progress));
                 OnPropertyChanged(nameof(IsCompleted));
-                OnPropertyChanged(nameof(ShowEta));
                 OnPropertyChanged(nameof(CanCancel));
+                NotifyProgressPresentationChanged();
             }
         }
+
+        public double DisplayProgress => _displayProgress;
+
+        public bool HasProgress => HasRawProgress;
+
+        private bool HasRawProgress => _progress > 0.1d;
 
         private string _currentFile = string.Empty;
         public string CurrentFile
@@ -1494,10 +1533,19 @@ namespace VaultSync.UI.ViewModels
 
                 _currentFile = value ?? string.Empty;
                 OnPropertyChanged(nameof(CurrentFile));
+                OnPropertyChanged(nameof(HasCurrentFile));
+                OnPropertyChanged(nameof(CurrentFileDisplay));
+                OnPropertyChanged(nameof(HasCurrentFileDisplay));
+                OnPropertyChanged(nameof(StageLabel));
+                UpdateDisplayProgress();
+                NotifyProgressPresentationChanged();
             }
         }
 
+        public bool HasCurrentFile => !string.IsNullOrWhiteSpace(_currentFile);
+
         private string _etaText = string.Empty;
+        private string _lastProgressDetail = string.Empty;
         public string EtaText
         {
             get => _etaText;
@@ -1508,18 +1556,287 @@ namespace VaultSync.UI.ViewModels
 
                 _etaText = value ?? string.Empty;
                 OnPropertyChanged(nameof(EtaText));
+                OnPropertyChanged(nameof(HasEtaText));
+                OnPropertyChanged(nameof(EtaDisplay));
+                OnPropertyChanged(nameof(HasEtaDisplay));
+                var detail = ExtractProgressDetail(EtaDisplay);
+                if (!string.IsNullOrWhiteSpace(detail))
+                {
+                    _lastProgressDetail = detail;
+                }
+                OnPropertyChanged(nameof(CurrentFileDisplay));
+                OnPropertyChanged(nameof(HasCurrentFileDisplay));
+                OnPropertyChanged(nameof(StageLabel));
+                UpdateDisplayProgress();
+                NotifyProgressPresentationChanged();
             }
         }
 
-        public bool IsCompleted => Progress >= 100d;
+        public bool HasEtaText => !string.IsNullOrWhiteSpace(_etaText);
 
-        public bool ShowEta => Progress < 100d;
+        public string EtaDisplay => NormalizeEtaText(_etaText);
+
+        public bool HasEtaDisplay => !string.IsNullOrWhiteSpace(EtaDisplay);
+
+        public string CurrentFileDisplay
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(_lastProgressDetail))
+                    return _lastProgressDetail;
+
+                return StageDisplay;
+            }
+        }
+
+        public bool HasCurrentFileDisplay => !string.IsNullOrWhiteSpace(CurrentFileDisplay);
+
+        public bool IsCompleted => string.Equals(GetStageKey(), "Completed", StringComparison.OrdinalIgnoreCase);
+
+        public bool ShowEta => Progress < 100d && HasEtaDisplay;
 
         public bool CanCancel => AllowCancel && !IsCompleted;
 
-        public bool ShowPercent => AllowCancel;
+        public bool ShowPercent => AllowCancel && HasProgress && IsProgressReliable;
 
-        public bool IsIndeterminate => !AllowCancel;
+        public bool IsIndeterminate => !AllowCancel || !IsProgressReliable || IsStageIndeterminate;
+
+        public string ProgressLabel =>
+            IsProgressReliable && HasProgress
+                ? string.Format(CultureInfo.CurrentCulture, "{0:0}%", DisplayProgress)
+                : L("Backups.Progress.Estimating", "Estimating...");
+
+        public string StageLabel
+        {
+            get
+            {
+                var stageKey = GetStageKey();
+                return stageKey switch
+                {
+                    "Completed" => L("Backups.Status.Completed", "Completed"),
+                    "Compressing" => L("Backups.Stage.Compressing", "Compressing archive"),
+                    "Uploading" => L("Backups.Stage.Uploading", "Uploading archive"),
+                    "Hashing" => L("Backups.Stage.Hashing", "Hashing files"),
+                    "Copying" => L("Backups.Stage.Copying", "Copying files"),
+                    "Preparing" => L("Backups.Stage.Preparing", "Preparing"),
+                    "BackingUp" => L("Backups.Stage.BackingUp", "Backing up files"),
+                    _ => L("Backups.Stage.Working", "Working...")
+                };
+            }
+        }
+
+        public string StageDisplay
+            => IsCompleted ? StageLabel : $"{StageLabel} - {FormatElapsed(_stageStartUtc)}";
+
+        private bool IsProgressReliable
+        {
+            get
+            {
+                if (!HasRawProgress)
+                    return false;
+
+                return true;
+            }
+        }
+
+        private bool IsStageIndeterminate
+            => string.Equals(StageLabel, L("Backups.Stage.Preparing", "Preparing"), StringComparison.OrdinalIgnoreCase);
+
+        private bool IsHashingStage => string.Equals(GetStageKey(), "Hashing", StringComparison.OrdinalIgnoreCase);
+
+        private bool HasCompletionSignal()
+        {
+            if (ContainsToken(_etaText, "Completed"))
+                return true;
+
+            return ContainsToken(_currentFile, L("Backups.Status.Completed", "Completed"))
+                || ContainsToken(_currentFile, L("Backups.Status.NoChanges", "No changes detected"))
+                || ContainsToken(_currentFile, L("Backups.Status.Cancelled", "Cancelled"))
+                || ContainsToken(_currentFile, L("Backups.Status.Deleted", "Deleted"));
+        }
+
+        private static bool ContainsToken(string? value, string token)
+        {
+            if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(token))
+                return false;
+
+            return value.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static string ExtractFileName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var trimmed = value.Trim();
+
+            // Drop destination prefix like "[Alias]" if present.
+            if (trimmed.StartsWith("[", StringComparison.Ordinal))
+            {
+                var end = trimmed.IndexOf(']');
+                if (end >= 0 && end + 1 < trimmed.Length)
+                {
+                    trimmed = trimmed[(end + 1)..].Trim();
+                }
+            }
+
+            var candidate = trimmed;
+            if (candidate.Contains('\\') || candidate.Contains('/'))
+            {
+                candidate = Path.GetFileName(candidate);
+            }
+
+            return candidate;
+        }
+
+        private static string ExtractProgressDetail(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var trimmed = value.Trim();
+            if (string.Equals(trimmed, L("Backups.Progress.CopyingRobocopy", "Copying files (robocopy)..."), StringComparison.OrdinalIgnoreCase))
+                return string.Empty;
+            if (trimmed.StartsWith("Copying ", StringComparison.OrdinalIgnoreCase))
+                return L("Backups.Progress.MovedPrefix", "moved ") + trimmed["Copying ".Length..];
+            if (trimmed.StartsWith("Compressing ", StringComparison.OrdinalIgnoreCase))
+                return trimmed["Compressing ".Length..];
+            if (trimmed.StartsWith("Uploading ", StringComparison.OrdinalIgnoreCase))
+                return trimmed["Uploading ".Length..];
+            if (trimmed.StartsWith("Hashing ", StringComparison.OrdinalIgnoreCase))
+                return trimmed;
+
+            return trimmed;
+        }
+
+        private static string NormalizeEtaText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var trimmed = value.Trim();
+            if (trimmed.Contains("Waiting for first file", StringComparison.OrdinalIgnoreCase))
+                return L("Backups.Progress.WaitingForFirstFile", "Waiting for first file...");
+
+            if (trimmed.Contains("Copying files (robocopy)", StringComparison.OrdinalIgnoreCase))
+                return L("Backups.Progress.CopyingRobocopy", "Copying files (robocopy)...");
+
+            return trimmed;
+        }
+
+        private void NotifyProgressPresentationChanged()
+        {
+            OnPropertyChanged(nameof(DisplayProgress));
+            OnPropertyChanged(nameof(HasProgress));
+            OnPropertyChanged(nameof(IsIndeterminate));
+            OnPropertyChanged(nameof(ProgressLabel));
+            OnPropertyChanged(nameof(ShowPercent));
+            OnPropertyChanged(nameof(ShowEta));
+            OnPropertyChanged(nameof(StageLabel));
+            OnPropertyChanged(nameof(StageDisplay));
+            OnPropertyChanged(nameof(EtaDisplay));
+            OnPropertyChanged(nameof(HasEtaDisplay));
+        }
+
+        private void UpdateDisplayProgress()
+        {
+            var stageKey = GetStageKey();
+            if (!string.Equals(stageKey, _lastStageKey, StringComparison.OrdinalIgnoreCase))
+            {
+                _displayProgress = 0d;
+                _lastStageKey = stageKey;
+                _stageStartUtc = DateTime.UtcNow;
+                OnPropertyChanged(nameof(StageDisplay));
+            }
+
+            if (!HasRawProgress || !IsProgressReliable)
+            {
+                _displayProgress = 0d;
+                return;
+            }
+
+            var next = Math.Clamp(_progress, 0d, 100d);
+            if (!HasCompletionSignal() && !IsHashingStage)
+            {
+                next = Math.Min(next, 99d);
+            }
+
+            if (IsCopyingStage && (DateTime.UtcNow - _stageStartUtc) < TimeSpan.FromSeconds(2) && next >= 99d)
+            {
+                next = Math.Min(next, 5d);
+            }
+
+            if (next < _displayProgress)
+            {
+                if (!HasCompletionSignal())
+                {
+                    _displayProgress = next;
+                }
+                return;
+            }
+
+            _displayProgress = next;
+        }
+
+        public void TickStageClock()
+        {
+            if (!IsCompleted)
+            {
+                OnPropertyChanged(nameof(StageDisplay));
+            }
+        }
+
+        private static string FormatElapsed(DateTime startUtc)
+        {
+            var elapsed = DateTime.UtcNow - startUtc;
+            if (elapsed < TimeSpan.Zero)
+                elapsed = TimeSpan.Zero;
+
+            return elapsed.TotalHours >= 1
+                ? elapsed.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
+                : elapsed.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
+        }
+
+        private string GetStageKey()
+        {
+            if (ContainsToken(_currentFile, L("Backups.Status.Completed", "Completed")) ||
+                ContainsToken(_currentFile, L("Backups.Status.NoChanges", "No changes detected")) ||
+                ContainsToken(_currentFile, L("Backups.Status.Cancelled", "Cancelled")) ||
+                ContainsToken(_currentFile, L("Backups.Status.Deleted", "Deleted")) ||
+                (ContainsToken(_etaText, "Completed") && !ContainsToken(_etaText, "Hashing")))
+                return "Completed";
+
+            if (ContainsToken(_etaText, "Compressing"))
+                return "Compressing";
+
+            if (ContainsToken(_etaText, "Uploading"))
+                return "Uploading";
+
+            if (ContainsToken(_etaText, "Hashing"))
+                return "Hashing";
+
+            if (ContainsToken(_etaText, "Copying"))
+                return "Copying";
+
+            if (ContainsToken(_currentFile, L("Backups.Status.Preparing", "Preparing backup...")))
+                return "Preparing";
+
+            if (ContainsToken(_currentFile, "Reusing existing snapshot") ||
+                ContainsToken(_currentFile, "Creating snapshot") ||
+                ContainsToken(_currentFile, "Hashing"))
+                return "Hashing";
+
+            if (ContainsToken(_currentFile, L("Backups.Status.Running", "Running backup...")) ||
+                ContainsToken(_currentFile, L("Backups.Status.RunningMultiple", "Running backups...")))
+                return "BackingUp";
+
+            if (HasCurrentFile)
+                return "BackingUp";
+
+            return "Working";
+        }
+
+        private bool IsCopyingStage => string.Equals(GetStageKey(), "Copying", StringComparison.OrdinalIgnoreCase);
     }
 
     public class SnapshotActivityPoint

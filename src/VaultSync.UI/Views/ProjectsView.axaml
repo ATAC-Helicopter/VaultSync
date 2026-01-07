@@ -316,7 +316,9 @@
               <StackPanel Spacing="4">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           TextTrimming="None" />
                 <ComboBox
                     Classes="preset-combo"
                     ItemsSource="{Binding DataContext.AvailablePresets, ElementName=Root}"
@@ -333,7 +335,9 @@
               <StackPanel Spacing="4">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectHealth}"
                            FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           TextTrimming="None" />
                 <Border CornerRadius="999"
                         Background="{Binding HealthBackground}"
                         Padding="6,2">
@@ -356,7 +360,9 @@
               <StackPanel Spacing="2">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.LastSnapshotLabel}"
                            FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           TextTrimming="None" />
                 <TextBlock Text="{Binding LastSnapshotSummary}"
                            FontSize="13"
                            FontWeight="SemiBold"
@@ -374,7 +380,9 @@
               <StackPanel Spacing="2">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectSize}"
                            FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           TextTrimming="None" />
                 <TextBlock Text="{Binding SizeDisplay}"
                            FontSize="13"
                            FontWeight="SemiBold"
@@ -399,7 +407,9 @@
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TotalSnapshots}"
                                FontSize="11"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               TextTrimming="None" />
                     <TextBlock Text="{Binding SnapshotCount}"
                                FontSize="13"
                                FontWeight="SemiBold"
@@ -414,7 +424,9 @@
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotStorage}"
                                FontSize="11"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               TextTrimming="None" />
                     <TextBlock Text="{Binding TotalSnapshotSizeDisplay}"
                                FontSize="13"
                                FontWeight="SemiBold"
@@ -429,7 +441,9 @@
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.AverageSnapshot}"
                                FontSize="11"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               TextTrimming="None" />
                     <TextBlock Text="{Binding AverageSnapshotSizeDisplay}"
                                FontSize="13"
                                FontWeight="SemiBold"
@@ -444,7 +458,9 @@
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TimeSinceLast}"
                                FontSize="11"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               TextTrimming="None" />
                     <TextBlock Text="{Binding DaysSinceLastSnapshotDisplay}"
                                FontSize="13"
                                FontWeight="SemiBold"
