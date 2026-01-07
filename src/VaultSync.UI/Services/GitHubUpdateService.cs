@@ -176,8 +176,7 @@ namespace VaultSync.UI.Services
             if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
                 trimmed = trimmed[1..];
 
-            var separatorIndex = trimmed.IndexOfAny(new[] { '-', '+' });
-            return separatorIndex >= 0;
+            return trimmed.Contains('-', StringComparison.Ordinal);
         }
 
         private static HttpClient CreateHttpClient()

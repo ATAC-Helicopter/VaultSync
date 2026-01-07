@@ -1,8 +1,8 @@
 ﻿{
     "previousVersion":  "1.2.1",
     "targetVersion":  "1.2.3",
-    "archiveSha256":  "2597480A9F3121B76AB6950C8C86AC6C25C139F1514ECAEA7BF5DEBDCB8357ED",
-    "archiveSize":  26884836,
+    "archiveSha256":  "ED183359367168B30E7641EA12EF7A0D31DE9E623486606B419BF1B4C968D330",
+    "archiveSize":  26884970,
     "files":  [
                   {
                       "path":  "Avalonia.Base.dll",
@@ -231,12 +231,12 @@
                   },
                   {
                       "path":  "VaultSync.Core.dll",
-                      "sha256":  "EBCA7BC62646F358747E71B3E8F414C57DF573E37A32444D497270CFB2EEF171",
+                      "sha256":  "A444355EC4968584D97B86C6A961312C53714740AF839200ECB159FFF9521885",
                       "size":  184320
                   },
                   {
                       "path":  "VaultSync.Core.pdb",
-                      "sha256":  "BF44B8F5E69B2853E806A25AAA1AA9BB5D44C131E4230CC0B3C04FC958D7FC02",
+                      "sha256":  "2B1C596B93CEB3A9ECA4DD72411037E04A2CCD051EC0CC2214288EAB67F53898",
                       "size":  51392
                   },
                   {
@@ -246,18 +246,18 @@
                   },
                   {
                       "path":  "VaultSync.UI.dll",
-                      "sha256":  "1A7321F006885A7F1414575C62A2BFDC24C09302E4ED0778577FD3685B5E8608",
-                      "size":  1935360
+                      "sha256":  "0EE2507A7E997C7762F6BB56D30C1607753970006CF5A59C034966EFB611D78C",
+                      "size":  1935872
                   },
                   {
                       "path":  "VaultSync.UI.exe",
-                      "sha256":  "4E6FDB5F1A87918F68FAECB3320AC73B00DBC5FFC19ECA64635B7893E28EC0E1",
+                      "sha256":  "5B8268E2794AD0BE5419AB35C24BB394AE89D506B0B2C419F19A4ADAB8F4F7AF",
                       "size":  236544
                   },
                   {
                       "path":  "VaultSync.UI.pdb",
-                      "sha256":  "780A62606CD53CE5D93B1377AF865C6DA5505D1FBAB58E1FF174C240A63805EA",
-                      "size":  156348
+                      "sha256":  "E508C757473B6CE42B653C9855B534DB37EEAD9AA241C4F12933F7B578B926F9",
+                      "size":  156380
                   },
                   {
                       "path":  "VaultSync.UI.runtimeconfig.json",
