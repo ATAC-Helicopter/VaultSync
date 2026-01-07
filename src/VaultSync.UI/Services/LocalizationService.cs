@@ -37,6 +37,7 @@ namespace VaultSync.UI.Services
         {
             CurrentLanguage = "en";
             LoadLanguage(CurrentLanguage);
+            WarmCache();
         }
 
         public IReadOnlyList<LanguageOption> SupportedLanguages => _languageOptions;
@@ -114,6 +115,15 @@ namespace VaultSync.UI.Services
             {
                 Console.WriteLine($"[Localization] Failed to parse: {path} ({ex.GetType().Name}: {ex.Message})");
                 return false;
+            }
+        }
+
+        private void WarmCache()
+        {
+            foreach (var option in _languageOptions)
+            {
+                if (!LoadLanguage(option.Code))
+                    Console.WriteLine($"[Localization] Failed to load language: {option.Code}");
             }
         }
 

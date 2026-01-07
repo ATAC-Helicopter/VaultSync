@@ -508,6 +508,16 @@ public sealed class BackupService
             };
         }
 
+        var isNetworkDestination = IsNetworkPath(destDir);
+        var effectiveUseRsyncDelta = useRsyncDelta;
+        if (OperatingSystem.IsWindows() && isNetworkDestination && !useRsyncDelta && !useIncrementalBackups)
+        {
+            if (TryGetBundledRsyncPath() is not null || IsOnPath("rsync"))
+            {
+                effectiveUseRsyncDelta = true;
+            }
+        }
+
         int exitCode;
 
         try
@@ -515,14 +525,14 @@ public sealed class BackupService
             if (OperatingSystem.IsWindows())
             {
                 var bundledRsync = TryGetBundledRsyncPath();
-                if ((useRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath("rsync")))
+                if ((effectiveUseRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath("rsync")))
                 {
                     // rsync-based backup on Windows (when installed)
                     var source = bundledRsync is null ? "PATH" : "bundled";
                     var rsyncPath = bundledRsync ?? "rsync";
-                    Console.WriteLine($"[BackupService] Starting rsync backup (source={source}, delta={useRsyncDelta}, incremental={useIncrementalBackups}).");
+                    Console.WriteLine($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}).");
                     Console.WriteLine($"[BackupService] Using rsync on Windows ({source}).");
-                    var runner = new RsyncRunner(useWholeFile: !useRsyncDelta, rsyncPath: rsyncPath);
+                    var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta, rsyncPath: rsyncPath);
                     exitCode   = await runner.SyncAsync(
                         project,
                         destDir,
@@ -537,11 +547,11 @@ public sealed class BackupService
                 else
                 {
                     // robocopy-based backup (multi-threaded, robust on Windows)
-                    if ((useRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath("rsync"))
+                    if ((effectiveUseRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath("rsync"))
                         Console.WriteLine("[BackupService] rsync not found on PATH; falling back to robocopy.");
 
-                    Console.WriteLine($"[BackupService] Starting robocopy backup (threads={Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2))}).");
-                    var runner = new RobocopyRunner();
+                    Console.WriteLine($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}).");
+                    var runner = new RobocopyRunner(isNetworkDestination);
                     exitCode   = await runner.SyncAsync(
                         project,
                         destDir,
@@ -556,8 +566,8 @@ public sealed class BackupService
             else
             {
                 // rsync-based backup (fast, incremental on macOS/Linux)
-                Console.WriteLine($"[BackupService] Starting rsync backup (delta={useRsyncDelta}, incremental={useIncrementalBackups}).");
-                var runner = new RsyncRunner(useWholeFile: !useRsyncDelta);
+                Console.WriteLine($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}).");
+                var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta);
                 exitCode   = await runner.SyncAsync(
                     project,
                     destDir,
@@ -586,6 +596,30 @@ public sealed class BackupService
                 }
                 monitorCts.Dispose();
             }
+        }
+    }
+
+    private static bool IsNetworkPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        try
+        {
+            var root = Path.GetPathRoot(path);
+            if (string.IsNullOrWhiteSpace(root))
+                return false;
+
+            var drive = new DriveInfo(root);
+            return drive.DriveType == DriveType.Network;
+        }
+        catch
+        {
+            return false;
         }
     }
 

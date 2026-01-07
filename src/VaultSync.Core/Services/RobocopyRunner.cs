@@ -19,6 +19,12 @@ namespace VaultSync.Core.Services
     public sealed class RobocopyRunner : ISyncRunner
     {
         public string Name => "robocopy";
+        private readonly bool _isNetworkDestination;
+
+        public RobocopyRunner(bool isNetworkDestination = false)
+        {
+            _isNetworkDestination = isNetworkDestination;
+        }
 
         // ISyncRunner base signature (no progress)
         public Task<int> SyncAsync(Project project, string destination, bool dryRun, CancellationToken ct)
@@ -68,8 +74,17 @@ namespace VaultSync.Core.Services
             // Keep it fast and predictable
             psi.ArgumentList.Add("/R:1");
             psi.ArgumentList.Add("/W:1");
-            var threadCount = Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2));
+            var threadCount = _isNetworkDestination
+                ? Math.Min(32, Math.Max(4, Environment.ProcessorCount))
+                : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2));
             psi.ArgumentList.Add($"/MT:{threadCount}");
+            if (_isNetworkDestination)
+            {
+                // Network share tuning: restartable + tolerate time granularity, avoid cache thrash.
+                psi.ArgumentList.Add("/Z");
+                psi.ArgumentList.Add("/FFT");
+                psi.ArgumentList.Add("/J");
+            }
             // Apply exclusions (preset + local)
             AddRobocopyExcludes(psi, excludeFiles, excludeDirs);
 

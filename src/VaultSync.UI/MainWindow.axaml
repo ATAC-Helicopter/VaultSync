@@ -82,38 +82,51 @@
                 Background="{DynamicResource Surface2}"
                 BorderBrush="{DynamicResource BorderSoft}"
                 BorderThickness="1"
-                IsVisible="{CompiledBinding IsUpdateAvailable}">
-          <StackPanel Spacing="6">
-            <Grid ColumnDefinitions="*,Auto,Auto"
-                  ColumnSpacing="10"
-                  VerticalAlignment="Center">
+                IsVisible="{CompiledBinding ShowUpdateBanner}">
+          <Grid ColumnDefinitions="*,Auto"
+                RowDefinitions="Auto,Auto"
+                ColumnSpacing="16"
+                RowSpacing="6">
+            <StackPanel Grid.RowSpan="2" Spacing="4">
               <TextBlock Text="{CompiledBinding UpdateBannerMessage}"
                          FontWeight="SemiBold"
                          TextWrapping="Wrap"
                          ToolTip.Tip="{CompiledBinding UpdateTooltip}" />
-              <Button Grid.Column="1"
-                      Command="{CompiledBinding InstallPatchCommand}"
+              <TextBlock Text="{CompiledBinding PatchStatusMessage}"
+                         Foreground="{DynamicResource TextSecondary}"
+                         FontSize="12"
+                         IsVisible="{CompiledBinding ShowPatchStatus}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="6" HorizontalAlignment="Right">
+              <Button Command="{CompiledBinding InstallPatchCommand}"
                       Content="{CompiledBinding InstallButtonText}"
-                      MinWidth="140"
+                      MinWidth="130"
                       HorizontalAlignment="Right"
                       Background="{DynamicResource AccentBrush}"
                       Foreground="{DynamicResource TextOnPillBrush}"
                       BorderBrush="{DynamicResource AccentBrush}"
                       IsVisible="{CompiledBinding ShowPatchButton}" />
-              <Button Grid.Column="2"
-                      Command="{CompiledBinding OpenReleasePageCommand}"
+              <Button Command="{CompiledBinding OpenReleasePageCommand}"
                       Content="{CompiledBinding ReleaseActionText}"
-                      MinWidth="110"
+                      MinWidth="130"
                       HorizontalAlignment="Right"
                       IsEnabled="{CompiledBinding IsReleaseActionEnabled}"
                       Background="{DynamicResource Surface1}"
+                      BorderBrush="{DynamicResource BorderSoft}"
+                      IsVisible="{CompiledBinding ShowInstallerFallback}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+              <Button Command="{CompiledBinding SkipUpdateCommand}"
+                      Content="{infra:LocalizedString Key=Update.SkipVersion}"
+                      IsEnabled="{CompiledBinding CanSkipUpdate}"
+                      Background="{DynamicResource Surface1}"
                       BorderBrush="{DynamicResource BorderSoft}" />
-            </Grid>
-            <TextBlock Text="{CompiledBinding PatchStatusMessage}"
-                       Foreground="{DynamicResource TextSecondary}"
-                       FontSize="12"
-                       IsVisible="{CompiledBinding ShowPatchStatus}" />
-          </StackPanel>
+              <Button Command="{CompiledBinding DismissUpdateBannerCommand}"
+                      Content="{infra:LocalizedString Key=Update.CloseBanner}"
+                      Background="{DynamicResource Surface1}"
+                      BorderBrush="{DynamicResource BorderSoft}" />
+            </StackPanel>
+          </Grid>
         </Border>
       </StackPanel>
     </Border>

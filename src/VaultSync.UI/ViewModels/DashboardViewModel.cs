@@ -506,18 +506,22 @@ namespace VaultSync.UI.ViewModels
                 if (bytes <= 0) continue;
 
                 var color = palette[i % palette.Length];
+                var projectName = project.Name;
+                var sliceBytes = bytes;
 
                 series.Add(new PieSeries<double>
                 {
                     Values      = new[] { (double)bytes },
-                    Name        = project.Name,
+                    Name        = projectName,
                     InnerRadius = 90,
                     Stroke      = null,
-                    Fill        = new SolidColorPaint(color)
+                    Fill        = new SolidColorPaint(color),
+                    ToolTipLabelFormatter = point =>
+                        $"{projectName} {FormatBytes(sliceBytes)}"
                 });
 
                 legend.Add(new LegendItem(
-                    $"{project.Name} {FormatBytes(bytes)}",
+                    $"{projectName} {FormatBytes(bytes)}",
                     new ImmutableSolidColorBrush(Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue))));
             }
 

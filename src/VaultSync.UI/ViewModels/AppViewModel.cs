@@ -123,13 +123,17 @@ namespace VaultSync.UI.ViewModels
         private string? _lastUpdateCheckError;
         private UpdateCheckResult? _pendingUpdateResult;
         private bool _patchBlocked;
+        private bool _patchFailed;
         private bool _isUpdateAvailable;
+        private bool _isUpdateBannerDismissed;
         private bool _isInstallerDownloading;
         private string _updateBannerMessage = string.Empty;
         private string _updateReleaseNotes = string.Empty;
         private string _updateReleaseUrl = string.Empty;
         private readonly RelayCommand _installPatchCommand;
         private readonly RelayCommand _openReleaseCommand;
+        private readonly RelayCommand _skipUpdateCommand;
+        private readonly RelayCommand _dismissUpdateBannerCommand;
         private bool _isPatchInstalling;
         private string _patchStatusMessage = string.Empty;
 
@@ -180,14 +184,15 @@ namespace VaultSync.UI.ViewModels
                     .ToList();
             }
 
-            if (!string.IsNullOrWhiteSpace(cfg.Backups.BackupRoot))
+            var backupRoot = cfg.Backups.BackupLocation;
+            if (!string.IsNullOrWhiteSpace(backupRoot))
             {
                 return new List<BackupDestination>
                 {
                     new BackupDestination
                     {
                         Alias       = "Primary",
-                        Path        = cfg.Backups.BackupRoot,
+                        Path        = backupRoot,
                         Active      = true,
                         PreMounted  = true,
                         AutoMount   = false,
@@ -244,6 +249,8 @@ namespace VaultSync.UI.ViewModels
             private set => SetField(ref _isUpdateAvailable, value);
         }
 
+        public bool ShowUpdateBanner => IsUpdateAvailable && !_isUpdateBannerDismissed;
+
         public string UpdateBannerMessage
         {
             get => _updateBannerMessage;
@@ -257,6 +264,10 @@ namespace VaultSync.UI.ViewModels
         public bool IsPatchAvailable => (_pendingUpdateResult?.HasPatch ?? false) && !_patchBlocked;
 
         public bool ShowPatchButton => IsPatchAvailable;
+
+        public bool ShowInstallerFallback => _patchFailed && (_pendingUpdateResult?.HasInstaller == true);
+
+        public bool CanSkipUpdate => _pendingUpdateResult is not null;
 
         public string InstallButtonText => IsPatchInstalling
             ? L("Patch.InstallButton.Preparing", "Preparing patch...")
@@ -318,6 +329,8 @@ namespace VaultSync.UI.ViewModels
         public ICommand NavigateSettings  { get; }
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
+        public ICommand SkipUpdateCommand => _skipUpdateCommand;
+        public ICommand DismissUpdateBannerCommand => _dismissUpdateBannerCommand;
         public string CurrentVersionDisplay => $"v{StripBuildMetadata(_currentVersionString)}";
         public string FooterProductDisplay => $"VaultSync · {CurrentVersionDisplay}";
         public string FooterCopyrightDisplay => $"© {DateTime.UtcNow.Year} Flavio Giacchetti";
@@ -397,6 +410,8 @@ namespace VaultSync.UI.ViewModels
             _installPatchCommand = new RelayCommand(
                 _ => _ = StartPatchInstallAsync(),
                 _ => IsPatchAvailable && !IsPatchInstalling);
+            _skipUpdateCommand = new RelayCommand(_ => SkipUpdateVersion());
+            _dismissUpdateBannerCommand = new RelayCommand(_ => DismissUpdateBanner());
 
             EnsureDestinationProbeStarted();
             StartUpdateCheck();
@@ -827,7 +842,6 @@ namespace VaultSync.UI.ViewModels
                 _projectsViewModel.RefreshLocalization();
                 RefreshHeadersForCurrentView();
                 RefreshCurrentViewLocalization();
-                RefreshCurrentViewVisual();
                 TrayMenuRefreshRequested?.Invoke();
             });
         }
@@ -866,17 +880,10 @@ namespace VaultSync.UI.ViewModels
             {
                 ReloadBackupsVmData();
             }
-        }
-
-        // Force Avalonia to re-render the current view so markup-based localization bindings update immediately.
-        private void RefreshCurrentViewVisual()
-        {
-            var current = CurrentView;
-            if (current is null)
-                return;
-
-            CurrentView = null;
-            CurrentView = current;
+            else if (CurrentView == _projectsViewModel)
+            {
+                _projectsViewModel.RefreshLocalization();
+            }
         }
 
         private void StartUpdateCheck(bool ignoreSettings = false)
@@ -933,6 +940,8 @@ namespace VaultSync.UI.ViewModels
 
             IsPatchInstalling = true;
             PatchStatusMessage = L("Patch.Status.Downloading", "Downloading patch...");
+            _patchFailed = false;
+            OnPropertyChanged(nameof(ShowInstallerFallback));
 
             try
             {
@@ -945,7 +954,9 @@ namespace VaultSync.UI.ViewModels
                 {
                     PatchStatusMessage = L("Patch.Status.ManifestIncompatible", "Patch manifest cannot be applied to this version.");
                     _patchBlocked = true;
+                    _patchFailed = true;
                     NotifyPatchAvailabilityChanged();
+                    OnPropertyChanged(nameof(ShowInstallerFallback));
                     return;
                 }
 
@@ -953,6 +964,8 @@ namespace VaultSync.UI.ViewModels
                 if (archivePath is null)
                 {
                     PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
+                    _patchFailed = true;
+                    OnPropertyChanged(nameof(ShowInstallerFallback));
                     return;
                 }
 
@@ -962,6 +975,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     PatchStatusMessage = L("Patch.Status.InstallFailed", "Failed to start the patch installer.");
                     Debug.WriteLine($"[Patch] Failed to launch helper: {error}");
+                    _patchFailed = true;
+                    OnPropertyChanged(nameof(ShowInstallerFallback));
                     return;
                 }
 
@@ -972,6 +987,8 @@ namespace VaultSync.UI.ViewModels
             {
                 PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
                 Debug.WriteLine($"[Patch] Install failed: {ex}");
+                _patchFailed = true;
+                OnPropertyChanged(nameof(ShowInstallerFallback));
             }
             finally
             {
@@ -1015,6 +1032,15 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
+                if (!string.IsNullOrWhiteSpace(_config.Advanced.SkippedUpdateTag)
+                    && string.Equals(result.TagName, _config.Advanced.SkippedUpdateTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[Update] Update skipped: tag={result.TagName}.");
+                    RecordUpdateCheckSuccess();
+                    Dispatcher.UIThread.Post(ClearUpdateState);
+                    return;
+                }
+
                 Console.WriteLine($"[Update] Update available: tag={result.TagName}, name={result.ReleaseName}, patch={result.HasPatch}, installer={result.HasInstaller}.");
                 RecordUpdateCheckSuccess();
                 Dispatcher.UIThread.Post(() => ApplyUpdateResult(result));
@@ -1040,6 +1066,8 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             IsInstallerDownloading = false;
+            _patchFailed = false;
+            _isUpdateBannerDismissed = false;
             IsUpdateAvailable = true;
             UpdateBannerMessage = Lf("Update.Banner", "New update available: {0} ({1})", result.ReleaseName, result.TagName);
             SetUpdateReleaseNotes(result.ReleaseNotes);
@@ -1048,8 +1076,11 @@ namespace VaultSync.UI.ViewModels
             _patchBlocked = false;
             NotifyPatchAvailabilityChanged();
             PatchStatusMessage = string.Empty;
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+            OnPropertyChanged(nameof(ShowInstallerFallback));
             OnPropertyChanged(nameof(ReleaseActionText));
             OnPropertyChanged(nameof(IsReleaseActionEnabled));
+            OnPropertyChanged(nameof(CanSkipUpdate));
 
             var title = L("Update.Available.Title", "Update available");
             var channelLabel = CurrentUpdateChannel == GitHubReleaseChannel.Beta
@@ -1085,10 +1116,39 @@ namespace VaultSync.UI.ViewModels
             SetUpdateReleaseNotes(string.Empty);
             _pendingUpdateResult = null;
             _patchBlocked = false;
+            _patchFailed = false;
+            _isUpdateBannerDismissed = false;
             NotifyPatchAvailabilityChanged();
             PatchStatusMessage = string.Empty;
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+            OnPropertyChanged(nameof(ShowInstallerFallback));
             OnPropertyChanged(nameof(ReleaseActionText));
             OnPropertyChanged(nameof(IsReleaseActionEnabled));
+            OnPropertyChanged(nameof(CanSkipUpdate));
+        }
+
+        private void SkipUpdateVersion()
+        {
+            if (_pendingUpdateResult is null)
+                return;
+
+            var cfg = AppConfigStore.Load();
+            cfg.Advanced.SkippedUpdateTag = _pendingUpdateResult.TagName ?? string.Empty;
+            _config.Advanced.SkippedUpdateTag = cfg.Advanced.SkippedUpdateTag;
+            AppConfigStore.Save(cfg);
+
+            ClearUpdateState();
+            _isUpdateBannerDismissed = true;
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+        }
+
+        private void DismissUpdateBanner()
+        {
+            if (!IsUpdateAvailable)
+                return;
+
+            _isUpdateBannerDismissed = true;
+            OnPropertyChanged(nameof(ShowUpdateBanner));
         }
 
         private void CancelUpdateCheck()
@@ -3084,9 +3144,32 @@ namespace VaultSync.UI.ViewModels
         }
 
         public IReadOnlyList<DestinationProbeSummary> GetDestinationProbeSummaries()
-            => _destinationProbeSummaries.Values
+        {
+            var cfg = AppConfigStore.Load();
+            var destinations = GetActiveDestinations(cfg);
+            if (destinations.Count == 0)
+            {
+                _destinationProbeSummaries.Clear();
+                return Array.Empty<DestinationProbeSummary>();
+            }
+
+            var activeIds = new HashSet<string>(
+                destinations.Select(DestinationStatusItem.GetId),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var id in _destinationProbeSummaries.Keys.ToList())
+            {
+                if (!activeIds.Contains(id))
+                {
+                    _destinationProbeSummaries.TryRemove(id, out _);
+                }
+            }
+
+            return _destinationProbeSummaries.Values
+                .Where(s => activeIds.Contains(s.Id))
                 .OrderBy(s => s.Alias, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+        }
 
         private async Task ProbeDestinationsAsync()
         {

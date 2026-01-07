@@ -602,14 +602,12 @@
                                            FontSize="11"
                                            TextWrapping="Wrap"
                                            IsVisible="{Binding NeedsCredentialWarning}" />
-                                <TextBlock Text="{Binding LastTestStatus}"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           FontSize="11"
-                                           TextWrapping="Wrap"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxHeight="44"
-                                           ToolTip.Tip="{Binding LastTestStatus}"
-                                           IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
+                                  <TextBlock Text="{Binding LastTestStatus}"
+                                             Foreground="{StaticResource TextSecondary}"
+                                             FontSize="11"
+                                             TextWrapping="Wrap"
+                                             ToolTip.Tip="{Binding LastTestStatus}"
+                                             IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
                               </StackPanel>
                             </Grid>
                           </Border>

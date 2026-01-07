@@ -1545,6 +1545,7 @@ namespace VaultSync.UI.ViewModels
         public bool HasCurrentFile => !string.IsNullOrWhiteSpace(_currentFile);
 
         private string _etaText = string.Empty;
+        private string _lastProgressDetail = string.Empty;
         public string EtaText
         {
             get => _etaText;
@@ -1558,6 +1559,11 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(HasEtaText));
                 OnPropertyChanged(nameof(EtaDisplay));
                 OnPropertyChanged(nameof(HasEtaDisplay));
+                var detail = ExtractProgressDetail(EtaDisplay);
+                if (!string.IsNullOrWhiteSpace(detail))
+                {
+                    _lastProgressDetail = detail;
+                }
                 OnPropertyChanged(nameof(CurrentFileDisplay));
                 OnPropertyChanged(nameof(HasCurrentFileDisplay));
                 OnPropertyChanged(nameof(StageLabel));
@@ -1576,16 +1582,10 @@ namespace VaultSync.UI.ViewModels
         {
             get
             {
-                if (!HasCurrentFile && !HasEtaDisplay)
-                    return string.Empty;
+                if (!string.IsNullOrWhiteSpace(_lastProgressDetail))
+                    return _lastProgressDetail;
 
-                var fileName = ExtractFileName(_currentFile);
-                var detail = ExtractProgressDetail(EtaDisplay);
-
-                if (!string.IsNullOrWhiteSpace(fileName) && !string.IsNullOrWhiteSpace(detail))
-                    return $"{fileName} · {detail}";
-
-                return !string.IsNullOrWhiteSpace(fileName) ? fileName : detail;
+                return StageDisplay;
             }
         }
 
@@ -1695,8 +1695,10 @@ namespace VaultSync.UI.ViewModels
                 return string.Empty;
 
             var trimmed = value.Trim();
+            if (string.Equals(trimmed, L("Backups.Progress.CopyingRobocopy", "Copying files (robocopy)..."), StringComparison.OrdinalIgnoreCase))
+                return string.Empty;
             if (trimmed.StartsWith("Copying ", StringComparison.OrdinalIgnoreCase))
-                return "moved " + trimmed["Copying ".Length..];
+                return L("Backups.Progress.MovedPrefix", "moved ") + trimmed["Copying ".Length..];
             if (trimmed.StartsWith("Compressing ", StringComparison.OrdinalIgnoreCase))
                 return trimmed["Compressing ".Length..];
             if (trimmed.StartsWith("Uploading ", StringComparison.OrdinalIgnoreCase))

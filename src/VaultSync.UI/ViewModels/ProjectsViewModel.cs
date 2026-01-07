@@ -866,6 +866,46 @@ public class ProjectsViewModel : ViewModelBase
             ? L("Snapshots.Action.Default", "Snapshot now")
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
+        RefreshHealthTags();
+        RefreshSnapshotText();
+    }
+
+    private void RefreshHealthTags()
+    {
+        foreach (var project in _allProjects)
+        {
+            project.HealthTag = GetHealthTag(project);
+        }
+    }
+
+    private void RefreshSnapshotText()
+    {
+        foreach (var project in _allProjects)
+        {
+            project.NotifySnapshotTextChanged();
+        }
+    }
+
+    private string GetHealthTag(ProjectItemViewModel project)
+    {
+        if (project.LastSnapshot == default)
+        {
+            return project.IsRegistered
+                ? L("Projects.Health.NoSnapshots", "No snapshots yet")
+                : L("Projects.Health.NotAdded", "Not added");
+        }
+
+        if (!project.IsRegistered)
+            return L("Projects.Health.NotBackedUp", "Not backed up");
+
+        var age = DateTime.UtcNow - project.LastSnapshot;
+        if (age.TotalDays < 1)
+            return L("Projects.Health.HealthyRecent", "Healthy (<1d)");
+
+        if (age.TotalDays < 7)
+            return L("Projects.Health.OutOfDateShort", "Out of date (>1d)");
+
+        return L("Projects.Health.Stale", "Stale (>7d)");
     }
 
     private void LoadAvailablePresets()
@@ -1039,6 +1079,15 @@ public enum ProjectHealthStatus
 /// </summary>
 public class ProjectItemViewModel : ViewModelBase
 {
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    private static string Lf(string key, string fallback, params object[] args)
+    {
+        var fmt = L(key, fallback);
+        return string.Format(CultureInfo.CurrentCulture, fmt, args);
+    }
+
     private string _name = string.Empty;
     public string Name
     {
@@ -1205,30 +1254,37 @@ public class ProjectItemViewModel : ViewModelBase
 
     public string LastSnapshotSummary =>
         LastSnapshot == default
-            ? "No snapshots yet"
-            : $"{LastSnapshot:g}";
+            ? L("Projects.LastSnapshot.None", "No snapshots yet")
+            : LastSnapshot.ToString("g", CultureInfo.CurrentCulture);
 
     public string LastSnapshotShort =>
         LastSnapshot == default
-            ? "No snapshots yet"
-            : LastSnapshot.ToString("ddd · HH:mm");
+            ? L("Projects.LastSnapshot.NoneShort", "No snapshots yet")
+            : LastSnapshot.ToString("ddd · HH:mm", CultureInfo.CurrentCulture);
 
     public string DaysSinceLastSnapshotDisplay
     {
         get
         {
             if (LastSnapshot == default)
-                return "Never";
+                return L("Projects.TimeSinceLast.Never", "Never");
 
             var diff = DateTime.Today - LastSnapshot.Date;
             if (diff.TotalDays < 1)
-                return "< 1 day";
+                return L("Projects.TimeSinceLast.LessThanDay", "< 1 day");
 
             if (Math.Abs(diff.TotalDays - 1) < 0.1)
-                return "1 day";
+                return L("Projects.TimeSinceLast.OneDay", "1 day");
 
-            return $"{(int)diff.TotalDays} days";
+            return Lf("Projects.TimeSinceLast.ManyDays", "{0} days", (int)diff.TotalDays);
         }
+    }
+
+    public void NotifySnapshotTextChanged()
+    {
+        OnPropertyChanged(nameof(LastSnapshotSummary));
+        OnPropertyChanged(nameof(LastSnapshotShort));
+        OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
     }
 
     public string SizeDisplay

@@ -393,19 +393,14 @@
                                      FontSize="11"
                                      FontWeight="SemiBold"
                                      Foreground="{DynamicResource TextSecondaryBrush}"
-                                     TextWrapping="NoWrap"
-                                     TextTrimming="CharacterEllipsis" />
+                                     TextWrapping="Wrap"
+                                     TextTrimming="None" />
                           <TextBlock Text="{Binding CurrentFileDisplay}"
                                      FontSize="11"
                                      Foreground="{DynamicResource TextSecondaryBrush}"
-                                     TextTrimming="CharacterEllipsis"
-                                     TextWrapping="NoWrap"
-                                     IsVisible="{Binding HasCurrentFileDisplay}" />
-                          <TextBlock Text="{Binding EtaDisplay}"
-                                     FontSize="10"
-                                     Foreground="{DynamicResource TextSecondaryBrush}"
-                                     TextWrapping="Wrap"
-                                     IsVisible="{Binding ShowEta}" />
+                                     TextTrimming="None"
+                                     TextWrapping="Wrap" />
+                          <!-- ETA is already included in CurrentFileDisplay when available -->
                         </StackPanel>
                       </Border>
                     </DataTemplate>
