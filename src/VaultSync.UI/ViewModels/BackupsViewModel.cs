@@ -868,7 +868,7 @@ namespace VaultSync.UI.ViewModels
         /// the mini backup storage card. This reuses the DashboardViewModel static helper
         /// so both views stay consistent.
         /// </summary>
-        public void RefreshBackupDiskUsage()
+        public void RefreshBackupDiskUsage(bool includeHealthProbe = false)
         {
             try
             {
@@ -879,24 +879,27 @@ namespace VaultSync.UI.ViewModels
                 UpdateBackupDiskUsage(usedPercent, freeText, thresholdText, isBelowThreshold);
                 BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
 
-                // Best-effort SMART/health probe for the backup path
-                var healthService = new DriveHealthService();
-                var backupPath = config.Backups.BackupRoot ?? string.Empty;
-                var health = healthService.CheckPath(backupPath);
-
-                var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
-                    ? L("Backups.Health.NotAvailable", "not available")
-                    : health.Message!;
-                var (text, brush) = health.Status switch
+                if (includeHealthProbe)
                 {
-                    DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.LimeGreen)),
-                    DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Orange)),
-                    DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Tomato)),
-                    _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, fallbackMessage), (IBrush)new SolidColorBrush(Colors.Gray))
-                };
+                    // Best-effort SMART/health probe for the backup path
+                    var healthService = new DriveHealthService();
+                    var backupPath = config.Backups.BackupRoot ?? string.Empty;
+                    var health = healthService.CheckPath(backupPath);
 
-                BackupDiskHealthText  = text;
-                BackupDiskHealthBrush = brush;
+                    var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
+                        ? L("Backups.Health.NotAvailable", "not available")
+                        : health.Message!;
+                    var (text, brush) = health.Status switch
+                    {
+                        DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.LimeGreen)),
+                        DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Orange)),
+                        DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Tomato)),
+                        _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, fallbackMessage), (IBrush)new SolidColorBrush(Colors.Gray))
+                    };
+
+                    BackupDiskHealthText  = text;
+                    BackupDiskHealthBrush = brush;
+                }
             }
             catch (Exception)
             {
@@ -1260,6 +1263,11 @@ namespace VaultSync.UI.ViewModels
             RefreshSnapshotsView(true);
             RecalculateSummary();
             RefreshBackupDiskUsage();
+        }
+
+        public void RefreshBackupDriveHealth()
+        {
+            RefreshBackupDiskUsage(includeHealthProbe: true);
         }
     }
 
