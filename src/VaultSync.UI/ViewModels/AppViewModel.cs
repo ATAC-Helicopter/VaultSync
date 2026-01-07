@@ -1041,6 +1041,24 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
+                if (result.HasPatch)
+                {
+                    var plan = await _patchService.PreparePatchAsync(result, _currentVersionString, cancellationToken);
+                    if (plan is null)
+                    {
+                        _patchBlocked = true;
+                        Console.WriteLine("[Update] Patch manifest is not compatible with the current version; hiding patch option.");
+                    }
+                    else
+                    {
+                        _patchBlocked = false;
+                    }
+                }
+                else
+                {
+                    _patchBlocked = false;
+                }
+
                 Console.WriteLine($"[Update] Update available: tag={result.TagName}, name={result.ReleaseName}, patch={result.HasPatch}, installer={result.HasInstaller}.");
                 RecordUpdateCheckSuccess();
                 Dispatcher.UIThread.Post(() => ApplyUpdateResult(result));
@@ -1073,7 +1091,6 @@ namespace VaultSync.UI.ViewModels
             SetUpdateReleaseNotes(result.ReleaseNotes);
             _updateReleaseUrl = (result.InstallerUrl ?? result.ReleaseUrl).ToString();
             _pendingUpdateResult = result;
-            _patchBlocked = false;
             NotifyPatchAvailabilityChanged();
             PatchStatusMessage = string.Empty;
             OnPropertyChanged(nameof(ShowUpdateBanner));
