@@ -271,6 +271,64 @@
                            HorizontalAlignment="Right" />
                 </Grid>
 
+                <!-- History sync -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,6,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.HistorySync}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.HistorySyncDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding EnableMetadataSync, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AutoImportMetadata}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AutoImportMetadataDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding AutoImportMetadata, Mode=TwoWay}"
+                                IsEnabled="{Binding EnableMetadataSync}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PromptRestore}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PromptRestoreDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding PromptRestoreAfterImport, Mode=TwoWay}"
+                                IsEnabled="{Binding EnableMetadataSync}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RefreshHistory}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RefreshHistoryDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <Button Grid.Column="1"
+                          Classes="settings-ghost"
+                          Command="{Binding RefreshHistoryCommand}"
+                          IsEnabled="{Binding EnableMetadataSync}">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RefreshHistory}" />
+                  </Button>
+                </Grid>
+
                 <!-- Backup location (legacy fallback) -->
                 <Grid ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto"
@@ -594,6 +652,13 @@
                                           Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
                                           ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
                                           IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
+                                <CheckBox Margin="0,0,12,6"
+                                          Content="{infra:LocalizedString Key=Settings.Destinations.SyncHistory}"
+                                          IsChecked="{Binding EnableMetadataSync, Mode=TwoWay}" />
+                                <CheckBox Margin="0,0,12,6"
+                                          Content="{infra:LocalizedString Key=Settings.Destinations.AutoImportHistory}"
+                                          IsChecked="{Binding AutoImportMetadata, Mode=TwoWay}"
+                                          IsEnabled="{Binding EnableMetadataSync}" />
                               </WrapPanel>
 
                               <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="4" Orientation="Vertical" Spacing="4" Margin="0,6,0,0">

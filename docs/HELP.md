@@ -40,6 +40,12 @@ Each destination has:
 
 Use the **Test** button to check reachability/writability and confirm mount/login behavior.
 
+## Cross-machine history sync
+- VaultSync can store portable history metadata in `.vaultsync/meta/` on destinations.
+- When a destination is discovered, history is imported into the local DB and merged.
+- If a project was auto-imported, VaultSync prompts to restore the latest backup before new snapshots/backups.
+- Read-only destinations can be imported from, but history updates are not written back.
+
 ## Projects & Snapshots
 - Add a project (Projects page) with name + root path, select a preset filter.
 - Snapshots capture file state into SQLite; "Keep" prevents retention pruning.

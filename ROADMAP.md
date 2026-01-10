@@ -6,16 +6,37 @@
 - [x] Documentation refresh: expanded wiki with setup, usage, and troubleshooting guidance.
 
 ## Near term
-- [ ] Cross-machine migration: import VaultSync projects and restore full history (sizes, snapshots, backups).
+- [ ] Cross-machine migration: restore a project and its full history (snapshots, backups, sizes, settings) across machines.
+  - User flow:
+    - Machine A creates backups to a destination.
+    - Machine B selects that destination; if it finds history not in the local DB, it auto-imports and merges it to reach parity (no restore required).
+    - Optional restore still pulls files; history merge happens even without restore.
+    - When returning to Machine A, the same destination syncs new history back so both machines converge.
+    - All of this is toggleable in settings (global + per-destination).
   - Integration plan:
-    - Source of truth: backup destination stores portable metadata; local DB mirrors it.
-    - Backup metadata: write/refresh `.vaultsync/meta` on each backup (history, snapshots, totals).
-    - Sync: auto-merge metadata across machines; conflict resolution via timestamps + machine IDs.
-    - Opt-out: per-destination toggle to disable metadata sync.
-    - Encryption support: store encryption flags + key derivation params (never secrets).
-    - Password flow: prompt on restore; cache only in-memory for session.
-    - Non-zip backups: store per-backup metadata file next to data folder with encryption marker.
-    - Tests: missing metadata, stale metadata refresh, merge conflicts, partial backup sets.
+    - Source of truth: backup destination stores portable metadata; local DB mirrors it. Project root can also act as a source when it contains backups + metadata.
+    - Discovery rule: destination is considered VaultSync-ready when `.vaultsync/meta/` exists and schema version is supported.
+    - Metadata location: `.vaultsync/meta/` at destination root; one store per destination.
+    - Storage: small SQLite store for fast sync + JSON summaries for quick UI.
+    - Project identity: stable project ID + machine ID to merge history without collisions.
+    - Auto-merge scope: if project is missing locally, auto-create it from metadata; if it exists, merge by project ID (root-path match is fallback). If both match, project ID wins.
+    - Restore prompt: after importing a new project from metadata, prompt to restore the latest backup before allowing new snapshots/backups.
+    - Merge rules: last-write-wins for settings, append-only for backups/snapshots, dedupe by IDs/hashes.
+    - Sync triggers: startup, destination mount, after backup, manual refresh.
+    - Opt-out: per-destination toggle disables metadata sync + auto-import.
+    - Compatibility: retention/totals read merged history so cleanup + UI stay consistent.
+    - Encryption support: store encryption flags + key-derivation params (never secrets).
+    - Non-zip backups: write per-backup metadata next to data folder with encryption marker.
+    - Deleted backups: use tombstones to prevent reimport of intentionally deleted entries.
+    - Read-only destinations: allow import/merge; skip metadata writes and show warning.
+    - First sync UX: toast/banner with counts (projects, backups) and a details link.
+    - Safety gate: optional confirm when importing > N backups or > X GB.
+    - Schema migration: versioned metadata with clear upgrade rules and backward compatibility.
+    - Version compatibility: allow read/merge across app versions; if incompatible, block writes/merges and prompt to update both sides.
+    - Rollback: snapshot local DB before merge; keep rolling retention (similar to backup retention) to revert a bad merge.
+    - Merge logs: record decisions in logs for diagnostics (per project/backup ID).
+    - Performance: incremental metadata scan and hash checks; avoid full rescan every time.
+    - Tests: missing metadata, stale refresh, merge conflicts, partial backup sets.
 - [ ] Per-project destination selection when multiple destinations are configured.
   - Integration plan:
     - Data: `PreferredDestinationId` (nullable) to Project; migration default null.

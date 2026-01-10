@@ -10,6 +10,9 @@ This page summarizes key settings and how they affect behavior.
 - Backup root (simple mode): single destination path.
 - Advanced destinations: multiple targets with per-destination options.
 - Auto backups: schedule or trigger-based runs.
+- Sync backup history across devices: enables portable metadata in `.vaultsync/meta/`.
+- Auto-import history on discovery: merge destination history into local DB.
+- Prompt to restore after import: ask to restore latest backup before new snapshots/backups.
 
 ## Notifications
 - Enable/disable notifications.

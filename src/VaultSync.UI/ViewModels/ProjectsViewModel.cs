@@ -690,6 +690,12 @@ public class ProjectsViewModel : ViewModelBase
                 return;
             }
 
+            if (config.Backups.PromptRestoreAfterImport && existing.NeedsRestore)
+            {
+                ShowNotification(L("Projects.Notification.RestoreRequired", "Restore the latest backup before creating new snapshots."), NotificationSeverity.Warning);
+                return;
+            }
+
             // 4. Run snapshot via Core engine.
             var hashService     = new HashService();
             var snapshotService = new SnapshotService(repo, hashService);

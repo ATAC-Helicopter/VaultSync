@@ -48,6 +48,9 @@ namespace VaultSync.UI
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
         private bool _useFullSnapshotHash = true;
+        private bool _enableMetadataSync = true;
+        private bool _autoImportMetadata = true;
+        private bool _promptRestoreAfterImport = true;
         private string _backupLocationStatus = string.Empty;
 
         private bool _preferExternalDrives = true;
@@ -92,6 +95,7 @@ namespace VaultSync.UI
 
         public event Action? OpenLogConsoleRequested;
         public event Action? UpdateCheckRequested;
+        public event Action? RefreshHistoryRequested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -100,7 +104,9 @@ namespace VaultSync.UI
             bool AutoMount,
             bool AutoUnmount,
             bool PreMounted,
-            string? CredentialName);
+            string? CredentialName,
+            bool EnableMetadataSync,
+            bool AutoImportMetadata);
 
         private sealed record CredentialSnapshot(
             string Name,
@@ -153,6 +159,7 @@ namespace VaultSync.UI
             OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
+            RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
@@ -211,6 +218,9 @@ namespace VaultSync.UI
             _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
             _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
             _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
+            _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
+            _autoImportMetadata        = cfg.Backups.AutoImportMetadata;
+            _promptRestoreAfterImport  = cfg.Backups.PromptRestoreAfterImport;
 
             _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
@@ -253,7 +263,9 @@ namespace VaultSync.UI
                         Active       = dest.Active,
                         AutoMount    = dest.AutoMount,
                         AutoUnmount  = dest.AutoUnmount,
-                        PreMounted   = dest.PreMounted
+                        PreMounted   = dest.PreMounted,
+                        EnableMetadataSync = dest.EnableMetadataSync,
+                        AutoImportMetadata = dest.AutoImportMetadata
                     };
 
                     vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
@@ -275,7 +287,9 @@ namespace VaultSync.UI
                     Active      = true,
                     PreMounted  = true,
                     AutoMount   = false,
-                    AutoUnmount = false
+                    AutoUnmount = false,
+                    EnableMetadataSync = true,
+                    AutoImportMetadata = true
                 });
             }
             }
@@ -351,7 +365,9 @@ namespace VaultSync.UI
                     AutoMount: d.AutoMount,
                     AutoUnmount: d.AutoUnmount,
                     PreMounted: d.PreMounted,
-                    CredentialName: d.SelectedCredential?.Name ?? d.CredentialName))
+                    CredentialName: d.SelectedCredential?.Name ?? d.CredentialName,
+                    EnableMetadataSync: d.EnableMetadataSync,
+                    AutoImportMetadata: d.AutoImportMetadata))
                 .ToList();
 
             var credentialSnapshot = CredentialProfiles
@@ -397,6 +413,9 @@ namespace VaultSync.UI
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
+            cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
+            cfg.Backups.AutoImportMetadata          = AutoImportMetadata;
+            cfg.Backups.PromptRestoreAfterImport    = PromptRestoreAfterImport;
             cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
@@ -405,7 +424,9 @@ namespace VaultSync.UI
                 Active         = d.Active,
                 AutoMount      = d.AutoMount,
                 AutoUnmount    = d.AutoUnmount,
-                PreMounted     = d.PreMounted
+                PreMounted     = d.PreMounted,
+                EnableMetadataSync = d.EnableMetadataSync,
+                AutoImportMetadata = d.AutoImportMetadata
             }).ToList();
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
@@ -794,6 +815,24 @@ namespace VaultSync.UI
             set => SetField(ref _useFullSnapshotHash, value);
         }
 
+        public bool EnableMetadataSync
+        {
+            get => _enableMetadataSync;
+            set => SetField(ref _enableMetadataSync, value);
+        }
+
+        public bool AutoImportMetadata
+        {
+            get => _autoImportMetadata;
+            set => SetField(ref _autoImportMetadata, value);
+        }
+
+        public bool PromptRestoreAfterImport
+        {
+            get => _promptRestoreAfterImport;
+            set => SetField(ref _promptRestoreAfterImport, value);
+        }
+
         public bool PreferExternalDrives
         {
             get => _preferExternalDrives;
@@ -1110,6 +1149,7 @@ namespace VaultSync.UI
         public ICommand OpenLogConsoleCommand { get; }
         public ICommand ExportLogConsoleCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
+        public ICommand RefreshHistoryCommand { get; }
 
         private async void BrowseProjectsRoot()
         {
@@ -1631,6 +1671,12 @@ namespace VaultSync.UI
 
         public bool NeedsCredentialWarning =>
             AutoMount && !PreMounted && SelectedCredential is null;
+
+        private bool _enableMetadataSync = true;
+        public bool EnableMetadataSync { get => _enableMetadataSync; set => SetField(ref _enableMetadataSync, value); }
+
+        private bool _autoImportMetadata = true;
+        public bool AutoImportMetadata { get => _autoImportMetadata; set => SetField(ref _autoImportMetadata, value); }
 
         private string _lastTestStatus = string.Empty;
         public string LastTestStatus

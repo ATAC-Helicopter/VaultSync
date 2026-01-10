@@ -45,6 +45,9 @@ namespace VaultSync.Core.Config
         public int    MaxSnapshotsPerProject{ get; set; } = 20;
         public List<int> AutoBackupDisabledProjects { get; set; } = new();
         public string? Location             { get; set; } = string.Empty;
+        public bool   EnableMetadataSync    { get; set; } = true;
+        public bool   AutoImportMetadata    { get; set; } = true;
+        public bool   PromptRestoreAfterImport { get; set; } = true;
         // New canonical backup root path used by UI + snapshot service
         public string? BackupRoot { get; set; } = string.Empty;
 
@@ -131,6 +134,8 @@ namespace VaultSync.Core.Config
         public bool AutoUnmount { get; set; } = false;            // unmount after backup if we mounted it
         public bool PreMounted { get; set; } = false;             // treat as already mounted/guest; skip mount/creds
         public string? Alias { get; set; } = string.Empty;        // optional display label
+        public bool EnableMetadataSync { get; set; } = true;
+        public bool AutoImportMetadata { get; set; } = true;
     }
 
     // -------- Appearance --------

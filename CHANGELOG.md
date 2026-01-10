@@ -1,4 +1,18 @@
-﻿# Changelog
+# Changelog
+## [1.3.0] - TBD
+### Added
+- Cross-machine backup history metadata store (`.vaultsync/meta/`) with portable project/snapshot/backup records.
+- External IDs for projects/snapshots/backups to support cross-machine merging.
+- Metadata sync toggles (global + per-destination) and manual "Refresh history now" action.
+- Read-only destination detection for metadata import.
+- Restore-required gating for auto-imported projects.
+### Changed
+- Drive health probe deferred to reduce startup impact.
+- Destination probe now tracks effective path and read-only status.
+- Auto-imported projects now prompt for restore before new snapshots/backups.
+### Fixed
+- Prevented schema/index startup crash during metadata migrations.
+
 ## [1.2.3] - 2026-01-07
 ### Added
 - Configurable update check interval in Settings -> Advanced.
