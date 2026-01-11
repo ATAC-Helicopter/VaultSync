@@ -33,7 +33,7 @@
     <strong style="color:#f2c94c;font-size:16px;">Warning</strong>
   </div>
   <p style="margin:0;font-size:14px;color:#dfe8ff;max-width:720px;">
-    VaultSync is currently unsigned, so Windows SmartScreen will flag the installer/program during the first run. To continue, open the SmartScreen dialog, click <strong>More info</strong>, and choose <strong>Run anyway</strong>; the app is safe to install once you trust the publisher.
+    VaultSync is currently unsigned: Windows SmartScreen will flag the installer/program (click <strong>More info</strong> → <strong>Run anyway</strong>), and macOS Gatekeeper will block the first launch. On macOS (both Apple Silicon arm64 and Intel x64), download <code>VaultSync-macos-arm64.dmg</code> or <code>VaultSync-macos-x64.dmg</code>, open it, drag <code>VaultSync-macos-arm64.app</code> or <code>VaultSync-macos-x64.app</code> into <strong>Applications</strong>, then right-click → Open. If Gatekeeper still blocks it, run <code>xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app</code> or <code>xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app</code>.
   </p>
 </div>
 
