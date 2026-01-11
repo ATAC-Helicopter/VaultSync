@@ -6,12 +6,26 @@
 - Metadata sync toggles (global + per-destination) and manual "Refresh history now" action.
 - Read-only destination detection for metadata import.
 - Restore-required gating for auto-imported projects.
+- macOS rsync bundling support with arch-specific binaries and licenses.
+- macOS Settings hint when rsync is missing or too old for progress reporting.
+- Metadata sync logging for import/export troubleshooting (counts, failures, fallbacks).
+- Metadata export backfills full project history the first time a project is written to a store.
+- Per-destination force full history export toggle for metadata backfill.
 ### Changed
 - Drive health probe deferred to reduce startup impact.
 - Destination probe now tracks effective path and read-only status.
 - Auto-imported projects now prompt for restore before new snapshots/backups.
+- macOS rsync runner now sets library search paths for bundled dylibs.
+- macOS publish output now includes only the matching architecture rsync bundle.
+- macOS log folder open now handles paths with spaces correctly.
+- Metadata import now retries from a temp copy when the metadata store cannot be opened on macOS shares.
+- Manual per-project backups can now run concurrently (unless backup-all is active).
+- Force full history export toggle moved to per-destination settings and auto-clears after successful export.
+- updated docs to reflect new features
 ### Fixed
 - Prevented schema/index startup crash during metadata migrations.
+- Backup size pre-scan removed to avoid redundant macOS filesystem scans before backups.
+- Fixed localization strings across all languages.
 
 ## [1.2.3] - 2026-01-07
 ### Added
@@ -250,5 +264,3 @@
 ---
 
 ? 2025 VaultSync Project. MIT Licensed.
-
-

@@ -240,6 +240,8 @@
     "Settings.Backups.HistorySyncDescription": "Store portable metadata in destinations so other machines can merge history.",
     "Settings.Backups.AutoImportMetadata": "Auto-import history when found",
     "Settings.Backups.AutoImportMetadataDescription": "Automatically merge history when a destination becomes reachable.",
+    "Settings.Destinations.ForceHistoryExport": "Force full history export",
+    "Settings.Destinations.ForceHistoryExportDescription": "On the next backup, export the entire project history to the metadata store.",
     "Settings.Backups.PromptRestore": "Prompt to restore after import",
     "Settings.Backups.PromptRestoreDescription": "Ask to restore the latest backup before creating new snapshots or backups.",
     "Settings.Backups.RefreshHistory": "Refresh history now",
@@ -441,5 +443,6 @@
     "Backups.Progress.CopyingRobocopy": "Copying files (robocopy)...",
     "Backups.Progress.Estimating": "Estimating...",
     "Backups.Progress.MovedPrefix": "moved ",
-    "Backups.Stage.Compressing": "Compressing archive"
+    "Backups.Stage.Compressing": "Compressing archive",
+    "Backups.Stage.Uploading": "Uploading archive"
 }

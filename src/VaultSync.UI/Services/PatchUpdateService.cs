@@ -194,5 +194,6 @@ namespace VaultSync.UI.Services
 
             return client;
         }
+
     }
 }

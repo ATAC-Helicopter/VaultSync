@@ -57,10 +57,30 @@
   </ItemGroup>
 
   <!-- Optional bundled rsync for Windows delta sync -->
-  <ItemGroup Condition="Exists('..\..\tools\rsync\bin\rsync.exe') Or Exists('..\..\tools\rsync\rsync.exe')">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.19041.0' And (Exists('..\..\tools\rsync\bin\rsync.exe') Or Exists('..\..\tools\rsync\rsync.exe'))">
     <Content Include="..\..\tools\rsync\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>tools\rsync\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
+  <!-- Optional bundled rsync for macOS delta sync -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64' And Exists('..\..\tools\rsync-macos\arm64\bin\rsync')">
+    <Content Include="..\..\tools\rsync-macos\arm64\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>tools\rsync\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64' And Exists('..\..\tools\rsync-macos\x64\bin\rsync')">
+    <Content Include="..\..\tools\rsync-macos\x64\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>tools\rsync\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+  <ItemGroup Condition="('$(RuntimeIdentifier)' == 'osx-x64' Or '$(RuntimeIdentifier)' == 'osx-arm64') And Exists('..\..\tools\rsync-macos\LICENSES')">
+    <Content Include="..\..\tools\rsync-macos\LICENSES\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>tools\rsync\LICENSES\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Content>
   </ItemGroup>
 
@@ -123,4 +143,3 @@
     </ItemGroup>
 
 </Project>
-

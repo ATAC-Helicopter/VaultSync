@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -84,6 +85,8 @@ namespace VaultSync.UI
         private string? _lastUpdateCheckError;
         private string _updateCheckStatusText = string.Empty;
         private string _updateCheckErrorText = string.Empty;
+        private string _rsyncStatusHint = string.Empty;
+        private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly NetworkMountService _networkMountService = new();
@@ -106,7 +109,8 @@ namespace VaultSync.UI
             bool PreMounted,
             string? CredentialName,
             bool EnableMetadataSync,
-            bool AutoImportMetadata);
+            bool AutoImportMetadata,
+            bool ForceMetadataBackfill);
 
         private sealed record CredentialSnapshot(
             string Name,
@@ -130,6 +134,7 @@ namespace VaultSync.UI
             {
                 OnPropertyChanged(nameof(SelectedLanguage));
                 RefreshUpdateCheckStatus();
+                RefreshRsyncStatusHint();
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -225,6 +230,7 @@ namespace VaultSync.UI
             _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
             _minimumFreeSpacePercent = ClampInt(cfg.Storage.MinFreeSpacePercent, 0, 95, 10);
+            RefreshRsyncStatusHint();
 
             foreach (var cred in CredentialProfiles.ToList())
             {
@@ -265,7 +271,8 @@ namespace VaultSync.UI
                         AutoUnmount  = dest.AutoUnmount,
                         PreMounted   = dest.PreMounted,
                         EnableMetadataSync = dest.EnableMetadataSync,
-                        AutoImportMetadata = dest.AutoImportMetadata
+                        AutoImportMetadata = dest.AutoImportMetadata,
+                        ForceMetadataBackfill = dest.ForceMetadataBackfill
                     };
 
                     vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
@@ -289,7 +296,8 @@ namespace VaultSync.UI
                     AutoMount   = false,
                     AutoUnmount = false,
                     EnableMetadataSync = true,
-                    AutoImportMetadata = true
+                    AutoImportMetadata = true,
+                    ForceMetadataBackfill = false
                 });
             }
             }
@@ -367,7 +375,8 @@ namespace VaultSync.UI
                     PreMounted: d.PreMounted,
                     CredentialName: d.SelectedCredential?.Name ?? d.CredentialName,
                     EnableMetadataSync: d.EnableMetadataSync,
-                    AutoImportMetadata: d.AutoImportMetadata))
+                    AutoImportMetadata: d.AutoImportMetadata,
+                    ForceMetadataBackfill: d.ForceMetadataBackfill))
                 .ToList();
 
             var credentialSnapshot = CredentialProfiles
@@ -426,7 +435,8 @@ namespace VaultSync.UI
                 AutoUnmount    = d.AutoUnmount,
                 PreMounted     = d.PreMounted,
                 EnableMetadataSync = d.EnableMetadataSync,
-                AutoImportMetadata = d.AutoImportMetadata
+                AutoImportMetadata = d.AutoImportMetadata,
+                ForceMetadataBackfill = d.ForceMetadataBackfill
             }).ToList();
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
@@ -797,6 +807,18 @@ namespace VaultSync.UI
 
         public bool IsRsyncDeltaAvailable => !_useIncrementalBackups;
 
+        public string RsyncStatusHint
+        {
+            get => _rsyncStatusHint;
+            private set => SetField(ref _rsyncStatusHint, value);
+        }
+
+        public bool ShowRsyncStatusHint
+        {
+            get => _showRsyncStatusHint;
+            private set => SetField(ref _showRsyncStatusHint, value);
+        }
+
         public bool VerifyBackupsAfterCreate
         {
             get => _verifyBackupsAfterCreate;
@@ -1122,12 +1144,191 @@ namespace VaultSync.UI
                 : string.Format(CultureInfo.CurrentCulture, errorTemplate, _lastUpdateCheckError);
         }
 
+        private void RefreshRsyncStatusHint()
+        {
+            if (!OperatingSystem.IsMacOS())
+            {
+                ShowRsyncStatusHint = false;
+                RsyncStatusHint = string.Empty;
+                return;
+            }
+
+            var rsyncPath = TryGetBundledRsyncPath() ?? TryFindRsyncOnPath();
+            if (string.IsNullOrWhiteSpace(rsyncPath))
+            {
+                ShowRsyncStatusHint = true;
+                RsyncStatusHint = L(
+                    "Settings.Backups.RsyncMissingHint",
+                    "rsync not found. VaultSync will fall back to the built-in copy method. Reinstall the app or install rsync to restore delta sync."
+                );
+                return;
+            }
+
+            var version = TryGetRsyncVersion(rsyncPath);
+            if (version is null || version < new Version(3, 1, 0))
+            {
+                ShowRsyncStatusHint = true;
+                RsyncStatusHint = L(
+                    "Settings.Backups.RsyncOldHint",
+                    "Your rsync version is too old for progress reporting. Backups will still run, but progress may be limited."
+                );
+                return;
+            }
+
+            ShowRsyncStatusHint = false;
+            RsyncStatusHint = string.Empty;
+        }
+
         private string L(string key, string fallback)
         {
             var value = _localizationService.GetString(key);
             return string.Equals(value, key, StringComparison.OrdinalIgnoreCase)
                 ? fallback
                 : value;
+        }
+
+        private static string? TryFindRsyncOnPath()
+        {
+            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (var dir in path.Split(':', StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    var candidate = Path.Combine(dir, "rsync");
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch
+                {
+                    // ignore invalid PATH entries
+                }
+            }
+
+            return null;
+        }
+
+        private static string? TryGetBundledRsyncPath()
+        {
+            try
+            {
+                var baseDir = AppContext.BaseDirectory;
+                var arch = RuntimeInformation.OSArchitecture;
+                var candidates = new List<string>();
+                if (arch == Architecture.Arm64)
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "rsync"));
+                }
+                else if (arch == Architecture.X64)
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "rsync"));
+                }
+                else
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                }
+
+                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "rsync"));
+                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "bin", "rsync"));
+
+                foreach (var candidate in candidates)
+                {
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        private static Version? TryGetRsyncVersion(string rsyncPath)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = rsyncPath,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                ConfigureMacLibraryPath(psi, rsyncPath);
+                psi.ArgumentList.Add("--version");
+
+                using var proc = Process.Start(psi);
+                if (proc is null)
+                    return null;
+
+                if (!proc.WaitForExit(2000))
+                {
+                    try { proc.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                    return null;
+                }
+
+                var output = proc.StandardOutput.ReadToEnd();
+                return ParseVersion(output);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Version? ParseVersion(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+                return null;
+
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (lines.Length == 0)
+                return null;
+
+            var tokens = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var versionToken = tokens.FirstOrDefault(t => t.Any(char.IsDigit) && t.Contains('.'));
+            return Version.TryParse(versionToken, out var parsed) ? parsed : null;
+        }
+
+        private static void ConfigureMacLibraryPath(ProcessStartInfo psi, string rsyncPath)
+        {
+            if (!OperatingSystem.IsMacOS())
+                return;
+
+            var directory = Path.GetDirectoryName(rsyncPath);
+            if (string.IsNullOrWhiteSpace(directory))
+                return;
+
+            var libDir = Path.GetFullPath(Path.Combine(directory, "..", "lib"));
+            if (!Directory.Exists(libDir))
+                return;
+
+            var existing = psi.Environment.TryGetValue("DYLD_LIBRARY_PATH", out var current)
+                ? current ?? string.Empty
+                : string.Empty;
+            psi.Environment["DYLD_LIBRARY_PATH"] = PrependPathEntry(existing, libDir);
+
+            var fallback = psi.Environment.TryGetValue("DYLD_FALLBACK_LIBRARY_PATH", out var fallbackCurrent)
+                ? fallbackCurrent ?? string.Empty
+                : string.Empty;
+            psi.Environment["DYLD_FALLBACK_LIBRARY_PATH"] = PrependPathEntry(fallback, libDir);
+        }
+
+        private static string PrependPathEntry(string existing, string entry)
+        {
+            if (string.IsNullOrWhiteSpace(existing))
+                return entry;
+
+            var parts = existing.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Any(p => string.Equals(p, entry, StringComparison.Ordinal)))
+                return existing;
+
+            return $"{entry}:{existing}";
         }
 
         // ---------------- Commands ----------------
@@ -1677,6 +1878,9 @@ namespace VaultSync.UI
 
         private bool _autoImportMetadata = true;
         public bool AutoImportMetadata { get => _autoImportMetadata; set => SetField(ref _autoImportMetadata, value); }
+
+        private bool _forceMetadataBackfill;
+        public bool ForceMetadataBackfill { get => _forceMetadataBackfill; set => SetField(ref _forceMetadataBackfill, value); }
 
         private string _lastTestStatus = string.Empty;
         public string LastTestStatus

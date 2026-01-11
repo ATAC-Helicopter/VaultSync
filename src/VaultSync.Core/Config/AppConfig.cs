@@ -136,6 +136,7 @@ namespace VaultSync.Core.Config
         public string? Alias { get; set; } = string.Empty;        // optional display label
         public bool EnableMetadataSync { get; set; } = true;
         public bool AutoImportMetadata { get; set; } = true;
+        public bool ForceMetadataBackfill { get; set; } = false;
     }
 
     // -------- Appearance --------

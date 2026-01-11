@@ -21,3 +21,9 @@ Tracking cross-machine history sync work.
 ## Notes
 - Metadata sync is history-only; file restore is explicit.
 - Read-only destinations allow import but block writes.
+
+## Feature: macOS + Windows parity 
+- [x] Add rsync capability probe (version + supported flags) and adjust arguments (macOS 2.6.x vs 3.x, Windows bundled).
+- [x] macOS updater: detect non-writable install dir and fall back to installer/release flow.
+- [x] Destination path validation per OS (UNC on Windows, smb:// or /Volumes on macOS).
+- [x] Add doctor check + Settings hint for rsync version/availability on macOS.

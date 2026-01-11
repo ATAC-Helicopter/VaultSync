@@ -1,10 +1,11 @@
 # Updates
 
-VaultSync supports patch updates and full installer updates.
+VaultSync supports patch updates and full installer updates for macOS, Windows, and Linux.
 
 ## Patch updates
 - Smaller and faster when available.
 - If a patch fails, the installer fallback is offered.
+- Patch assets are named `vaultsync-patch-<platform>.json` and `vaultsync-patch-<platform>.zip`.
 
 ## Manual update check
 - Settings > Advanced > Check for updates now.
@@ -20,3 +21,7 @@ VaultSync supports patch updates and full installer updates.
 
 Switch channels in Settings > Advanced.
 
+## Installers
+- Windows: `.exe` installer (Inno Setup).
+- macOS: `.dmg` installer.
+- Linux: `.AppImage` or `.tar.gz` assets.

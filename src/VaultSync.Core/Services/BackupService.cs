@@ -162,21 +162,7 @@ public sealed class BackupService
         var backupRootUsed   = backupRoot;
         var backupFolderUsed = backupFolder;
 
-        // Compute total bytes off the UI thread, using the same filter logic as snapshots.
-        long totalBytes;
-        try
-        {
-            totalBytes = await Task.Run(
-                () => ComputeBackupSize(project.RootPath, project.Preset, linkedToken),
-                linkedToken);
-        }
-        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-        {
-            Console.WriteLine($"[BackupService] Failed to compute backup size for '{project.Name}' ({project.RootPath}': {ex.Message}. Proceeding with totalBytes=0.");
-            totalBytes = 0;
-        }
-
-        Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
+        long totalBytes = 0;
 
         int snapshotId;
         int totalFilesForProgress = 0;
@@ -219,12 +205,15 @@ public sealed class BackupService
         {
             filesForProgress = _repo.GetFilesForSnapshot(snapshotId).ToList();
             totalFilesForProgress = filesForProgress.Count;
+            totalBytes = filesForProgress.Sum(f => f.Size);
         }
         catch
         {
             totalFilesForProgress = 0;
             filesForProgress = null;
         }
+
+        Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
 
         string? linkDest = null;
         if (!useArchiveMode && useIncrementalBackups)
@@ -1356,23 +1345,57 @@ public sealed class BackupService
 
     private static string? TryGetBundledRsyncPath()
     {
-        if (!OperatingSystem.IsWindows())
-            return null;
-
         try
         {
             var baseDir = AppContext.BaseDirectory;
-            var direct = Path.Combine(baseDir, "tools", "rsync", "rsync.exe");
-            if (File.Exists(direct))
-                return direct;
+            if (OperatingSystem.IsWindows())
+            {
+                var direct = Path.Combine(baseDir, "tools", "rsync", "rsync.exe");
+                if (File.Exists(direct))
+                    return direct;
 
-            var bin = Path.Combine(baseDir, "tools", "rsync", "bin", "rsync.exe");
-            return File.Exists(bin) ? bin : null;
+                var bin = Path.Combine(baseDir, "tools", "rsync", "bin", "rsync.exe");
+                return File.Exists(bin) ? bin : null;
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                var candidates = new List<string>();
+                var arch = RuntimeInformation.OSArchitecture;
+                if (arch == Architecture.Arm64)
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "rsync"));
+                }
+                else if (arch == Architecture.X64)
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "rsync"));
+                }
+                else
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                }
+
+                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "rsync"));
+                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "bin", "rsync"));
+
+                foreach (var candidate in candidates)
+                {
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+
+                return null;
+            }
         }
         catch
         {
             return null;
         }
+
+        return null;
     }
 
     private static string? TryGetPreviousBackupFolder(string projectBackupRoot, string currentBackupFolder)
@@ -1402,4 +1425,3 @@ public sealed class BackupService
         out ulong lpTotalNumberOfBytes,
         out ulong lpTotalNumberOfFreeBytes);
 }
-

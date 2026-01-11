@@ -43,4 +43,4 @@ How it works:
 Notes:
 - This sync is metadata-only; files are restored only when you choose to restore.
 - Read-only destinations can be imported from, but VaultSync will not write updates.
-
+- If a destination has partial history, enable "Force full history export" on that destination and run a backup to backfill the store.

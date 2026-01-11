@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ namespace VaultSync.Core.Services
 {
     public sealed class RsyncRunner : ISyncRunner
     {
+        private static readonly ConcurrentDictionary<string, RsyncCapabilities> s_capabilityCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly bool _useWholeFile;
         private readonly string _rsyncPath;
 
@@ -56,6 +58,7 @@ namespace VaultSync.Core.Services
                 RedirectStandardOutput = true,
                 RedirectStandardError  = true
             };
+            ConfigureMacLibraryPath(psi, _rsyncPath);
 
             if (OperatingSystem.IsWindows())
             {
@@ -81,8 +84,11 @@ namespace VaultSync.Core.Services
             // Make rsync actually print progress lines with percentages.
             psi.ArgumentList.Add("--progress");
 
-            // progress2 gives us aggregate stats; combined with --progress we should see % in output.
-            psi.ArgumentList.Add("--info=progress2");
+            // progress2 gives us aggregate stats; only available on newer rsync builds.
+            if (GetCapabilities(_rsyncPath).SupportsInfoProgress2)
+            {
+                psi.ArgumentList.Add("--info=progress2");
+            }
 
             if (!string.IsNullOrWhiteSpace(linkDest))
             {
@@ -204,6 +210,69 @@ namespace VaultSync.Core.Services
             return proc.ExitCode;
         }
 
+        private sealed record RsyncCapabilities(Version? Version, bool SupportsInfoProgress2);
+
+        private static RsyncCapabilities GetCapabilities(string rsyncPath)
+        {
+            if (s_capabilityCache.TryGetValue(rsyncPath, out var cached))
+                return cached;
+
+            var detected = DetectCapabilities(rsyncPath);
+            s_capabilityCache[rsyncPath] = detected;
+            return detected;
+        }
+
+        private static RsyncCapabilities DetectCapabilities(string rsyncPath)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = rsyncPath,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                ConfigureMacLibraryPath(psi, rsyncPath);
+                psi.ArgumentList.Add("--version");
+
+                using var proc = Process.Start(psi);
+                if (proc is null)
+                    return new RsyncCapabilities(null, false);
+
+                if (!proc.WaitForExit(2000))
+                {
+                    try { proc.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                    return new RsyncCapabilities(null, false);
+                }
+
+                var output = proc.StandardOutput.ReadToEnd();
+                var version = ParseVersion(output);
+                var supportsProgress2 = version is not null && version >= new Version(3, 1, 0);
+                return new RsyncCapabilities(version, supportsProgress2);
+            }
+            catch
+            {
+                return new RsyncCapabilities(null, false);
+            }
+        }
+
+        private static Version? ParseVersion(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+                return null;
+
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (lines.Length == 0)
+                return null;
+
+            // Expected: "rsync  version 3.4.1  protocol version 32"
+            var tokens = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var versionToken = tokens.FirstOrDefault(t => t.Any(char.IsDigit) && t.Contains('.'));
+            return Version.TryParse(versionToken, out var parsed) ? parsed : null;
+        }
+
         private static double? TryParsePercent(string line)
         {
             // Very simple heuristic: find the first '%' and read the preceding digits.
@@ -261,6 +330,46 @@ namespace VaultSync.Core.Services
             }
 
             return full.Replace('\\', '/');
+        }
+
+        private static void ConfigureMacLibraryPath(ProcessStartInfo psi, string rsyncPath)
+        {
+            if (!OperatingSystem.IsMacOS())
+                return;
+
+            if (string.IsNullOrWhiteSpace(rsyncPath))
+                return;
+
+            var directory = Path.GetDirectoryName(rsyncPath);
+            if (string.IsNullOrWhiteSpace(directory))
+                return;
+
+            var libDir = Path.GetFullPath(Path.Combine(directory, "..", "lib"));
+            if (!Directory.Exists(libDir))
+                return;
+
+            var existing = psi.Environment.TryGetValue("DYLD_LIBRARY_PATH", out var current)
+                ? current ?? string.Empty
+                : string.Empty;
+            psi.Environment["DYLD_LIBRARY_PATH"] = PrependPathEntry(existing, libDir);
+
+            var fallback = psi.Environment.TryGetValue("DYLD_FALLBACK_LIBRARY_PATH", out var fallbackCurrent)
+                ? fallbackCurrent ?? string.Empty
+                : string.Empty;
+            psi.Environment["DYLD_FALLBACK_LIBRARY_PATH"] = PrependPathEntry(fallback, libDir);
+        }
+
+        private static string PrependPathEntry(string existing, string entry)
+        {
+            if (string.IsNullOrWhiteSpace(existing))
+                return entry;
+
+            var separator = ':';
+            var parts = existing.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Any(p => string.Equals(p, entry, StringComparison.Ordinal)))
+                return existing;
+
+            return $"{entry}{separator}{existing}";
         }
     }
 }

@@ -18,3 +18,8 @@
   - [Reporting bugs](Reporting-Bugs)
   - [Troubleshooting](Troubleshooting)
   - [FAQ](FAQ)
+- Repository docs
+  - [README](../../README.md)
+  - [Documentation](../../DOCUMENTATION.md)
+  - [Roadmap](../../ROADMAP.md)
+  - [Changelog](../../CHANGELOG.md)

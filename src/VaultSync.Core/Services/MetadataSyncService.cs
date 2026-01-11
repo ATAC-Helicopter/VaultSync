@@ -5,6 +5,7 @@ using System.Linq;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
+using Microsoft.Data.Sqlite;
 
 namespace VaultSync.Core.Services;
 
@@ -22,12 +23,42 @@ public sealed class MetadataSyncService
         var opts = options ?? MetadataSyncOptions.Default;
 
         if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            Console.WriteLine("[MetadataSync] Import failed: root path is empty.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
+        }
 
         var store = new MetadataStore(rootPath);
         if (!File.Exists(store.DatabasePath))
+        {
+            Console.WriteLine($"[MetadataSync] Import skipped: store not found at '{store.DatabasePath}'.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.NoStore, "Metadata store not found.");
+        }
 
+        try
+        {
+            return ImportFromStoreInternal(rootPath, store, opts);
+        }
+        catch (SqliteException ex) when (IsCannotOpen(ex))
+        {
+            Console.WriteLine($"[MetadataSync] Import failed opening store at '{store.DatabasePath}': {ex.Message}");
+            if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
+                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
+
+            Console.WriteLine($"[MetadataSync] Import retrying from temp copy: '{tempRoot}'.");
+            try
+            {
+                return ImportFromStoreInternal(rootPath, new MetadataStore(tempRoot), opts);
+            }
+            finally
+            {
+                TryDeleteTempStore(tempRoot);
+            }
+        }
+    }
+
+    private MetadataSyncResult ImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
+    {
         MetaInfo? metaInfo;
         try
         {
@@ -35,11 +66,15 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpen(sqliteEx))
+                throw;
+            Console.WriteLine($"[MetadataSync] Import failed: invalid store at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
         }
 
         if (metaInfo != null && metaInfo.SchemaVersion > MetadataStore.CurrentSchemaVersion)
         {
+            Console.WriteLine($"[MetadataSync] Import blocked: schema {metaInfo.SchemaVersion} > supported {MetadataStore.CurrentSchemaVersion}.");
             return MetadataSyncResult.Failure(
                 MetadataSyncStatus.Incompatible,
                 $"Metadata schema {metaInfo.SchemaVersion} is newer than supported {MetadataStore.CurrentSchemaVersion}.");
@@ -75,6 +110,9 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpen(sqliteEx))
+                throw;
+            Console.WriteLine($"[MetadataSync] Import failed while reading store '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
         }
 
@@ -203,19 +241,62 @@ public sealed class MetadataSyncService
             }
         }
 
-        return new MetadataSyncResult(
+        var result = new MetadataSyncResult(
             MetadataSyncStatus.Success,
             importedProjects,
             importedSnapshots,
             importedBackups,
             appliedTombstones,
             string.Empty);
+        Console.WriteLine($"[MetadataSync] Import complete from '{rootPath}': projects={importedProjects}, snapshots={importedSnapshots}, backups={importedBackups}, tombstones={appliedTombstones}.");
+        return result;
     }
 
-    public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId)
+    private static bool IsCannotOpen(SqliteException ex)
+    {
+        return ex.SqliteErrorCode == 14;
+    }
+
+    private static bool TryCopyStoreForRead(string databasePath, out string tempRoot)
+    {
+        tempRoot = string.Empty;
+        try
+        {
+            var root = Path.Combine(Path.GetTempPath(), "vaultsync-meta-import", Guid.NewGuid().ToString("N"));
+            var tempDir = Path.Combine(root, ".vaultsync", "meta");
+            Directory.CreateDirectory(tempDir);
+            var destPath = Path.Combine(tempDir, Path.GetFileName(databasePath));
+            File.Copy(databasePath, destPath, overwrite: true);
+            tempRoot = root;
+            return true;
+        }
+        catch
+        {
+            tempRoot = string.Empty;
+            return false;
+        }
+    }
+
+    private static void TryDeleteTempStore(string tempRoot)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(tempRoot) && Directory.Exists(tempRoot))
+                Directory.Delete(tempRoot, recursive: true);
+        }
+        catch
+        {
+            // best effort cleanup
+        }
+    }
+
+    public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill = false)
     {
         if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            Console.WriteLine("[MetadataSync] Export failed: root path is empty.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
+        }
 
         var store = new MetadataStore(rootPath);
         try
@@ -224,20 +305,30 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[MetadataSync] Export failed: store init error at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
 
         var backup = _repo.GetBackupById(backupId);
         if (backup == null)
+        {
+            Console.WriteLine($"[MetadataSync] Export failed: backup {backupId} not found.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Backup not found.");
+        }
 
         var project = _repo.GetProjectById(backup.ProjectId);
         if (project == null)
+        {
+            Console.WriteLine($"[MetadataSync] Export failed: project {backup.ProjectId} not found.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
+        }
 
         var snapshot = _repo.GetSnapshotById(backup.SnapshotId);
         if (snapshot == null)
+        {
+            Console.WriteLine($"[MetadataSync] Export failed: snapshot {backup.SnapshotId} not found.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Snapshot not found.");
+        }
 
         var projectExternalId = EnsureProjectExternalId(project);
         var snapshotExternalId = EnsureSnapshotExternalId(snapshot);
@@ -263,27 +354,135 @@ public sealed class MetadataSyncService
             metaInfo.WriterMachineId = machineId;
         }
 
+        var exportedProjects = 0;
+        var exportedSnapshots = 0;
+        var exportedBackups = 0;
+        var backfilled = false;
+
         try
         {
             store.UpsertMetaInfo(metaInfo);
-            store.UpsertProject(new MetaProject
+            if (forceBackfill || !store.HasProject(projectExternalId))
             {
-                ExternalId = projectExternalId,
-                Name = project.Name,
-                Preset = project.Preset,
-                RootPathHint = project.RootPath,
-                CreatedUtc = project.CreatedUtc,
-                SettingsJson = "{}",
-                UpdatedUtc = now
-            });
+                backfilled = true;
+                var counts = ExportProjectHistory(store, project, projectExternalId, now);
+                exportedProjects = 1;
+                exportedSnapshots = counts.snapshots;
+                exportedBackups = counts.backups;
+            }
+            else
+            {
+                store.UpsertProject(new MetaProject
+                {
+                    ExternalId = projectExternalId,
+                    Name = project.Name,
+                    Preset = project.Preset,
+                    RootPathHint = project.RootPath,
+                    CreatedUtc = project.CreatedUtc,
+                    SettingsJson = "{}",
+                    UpdatedUtc = now
+                });
+                store.UpsertSnapshot(new MetaSnapshot
+                {
+                    ExternalId = snapshotExternalId,
+                    ProjectExternalId = projectExternalId,
+                    CreatedUtc = snapshot.CreatedUtc,
+                    FileCount = snapshot.FileCount,
+                    TotalBytes = snapshot.TotalBytes
+                });
+                store.UpsertBackup(new MetaBackup
+                {
+                    ExternalId = backupExternalId,
+                    ProjectExternalId = projectExternalId,
+                    SnapshotExternalId = snapshotExternalId,
+                    CreatedUtc = backup.CreatedUtc,
+                    Type = backup.Type,
+                    TotalBytes = backup.TotalBytes,
+                    PathRel = backup.Path,
+                    DestinationAlias = backup.DestinationAlias ?? string.Empty,
+                    IsProtected = backup.IsProtected,
+                    IsEncrypted = false,
+                    KdfParamsJson = "{}"
+                });
+                exportedBackups = 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Export failed writing store '{rootPath}': {ex.Message}");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+        }
+
+        var exportResult = new MetadataSyncResult(
+            MetadataSyncStatus.Success,
+            exportedProjects,
+            exportedSnapshots,
+            exportedBackups,
+            0,
+            string.Empty);
+        Console.WriteLine(backfilled
+            ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{rootPath}': snapshots={exportedSnapshots}, backups={exportedBackups}."
+            : $"[MetadataSync] Export complete for backup {backupId} to '{rootPath}'.");
+        return exportResult;
+    }
+
+    private (int snapshots, int backups) ExportProjectHistory(
+        MetadataStore store,
+        Project project,
+        string projectExternalId,
+        DateTime now)
+    {
+        var snapshots = _repo.GetSnapshotsForProject(project.Name).ToList();
+        var backups = _repo.GetBackupsForProject(project.Id).ToList();
+        var snapshotExternalIds = new Dictionary<int, string>();
+
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = projectExternalId,
+            Name = project.Name,
+            Preset = project.Preset,
+            RootPathHint = project.RootPath,
+            CreatedUtc = project.CreatedUtc,
+            SettingsJson = "{}",
+            UpdatedUtc = now
+        });
+
+        foreach (var snap in snapshots)
+        {
+            var snapExternal = EnsureSnapshotExternalId(snap);
+            snapshotExternalIds[snap.Id] = snapExternal;
             store.UpsertSnapshot(new MetaSnapshot
             {
-                ExternalId = snapshotExternalId,
+                ExternalId = snapExternal,
                 ProjectExternalId = projectExternalId,
-                CreatedUtc = snapshot.CreatedUtc,
-                FileCount = snapshot.FileCount,
-                TotalBytes = snapshot.TotalBytes
+                CreatedUtc = snap.CreatedUtc,
+                FileCount = snap.FileCount,
+                TotalBytes = snap.TotalBytes
             });
+        }
+
+        var exportedBackups = 0;
+        foreach (var backup in backups)
+        {
+            if (!snapshotExternalIds.TryGetValue(backup.SnapshotId, out var snapshotExternalId))
+            {
+                var snap = _repo.GetSnapshotById(backup.SnapshotId);
+                if (snap is null)
+                    continue;
+
+                snapshotExternalId = EnsureSnapshotExternalId(snap);
+                snapshotExternalIds[snap.Id] = snapshotExternalId;
+                store.UpsertSnapshot(new MetaSnapshot
+                {
+                    ExternalId = snapshotExternalId,
+                    ProjectExternalId = projectExternalId,
+                    CreatedUtc = snap.CreatedUtc,
+                    FileCount = snap.FileCount,
+                    TotalBytes = snap.TotalBytes
+                });
+            }
+
+            var backupExternalId = EnsureBackupExternalId(backup);
             store.UpsertBackup(new MetaBackup
             {
                 ExternalId = backupExternalId,
@@ -293,24 +492,15 @@ public sealed class MetadataSyncService
                 Type = backup.Type,
                 TotalBytes = backup.TotalBytes,
                 PathRel = backup.Path,
-                DestinationAlias = backup.DestinationAlias,
+                DestinationAlias = backup.DestinationAlias ?? string.Empty,
                 IsProtected = backup.IsProtected,
                 IsEncrypted = false,
                 KdfParamsJson = "{}"
             });
-        }
-        catch (Exception ex)
-        {
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+            exportedBackups++;
         }
 
-        return new MetadataSyncResult(
-            MetadataSyncStatus.Success,
-            0,
-            0,
-            1,
-            0,
-            string.Empty);
+        return (snapshots.Count, exportedBackups);
     }
 
     private string EnsureProjectExternalId(Project project)

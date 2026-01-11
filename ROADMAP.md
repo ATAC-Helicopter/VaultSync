@@ -1,12 +1,14 @@
 # Roadmap
 
 
-## completed 
+## Completed
 - [x] Stabilize updater: relaunch fixes, clearer status, UI redesign, and patch compatibility guardrails.
 - [x] Documentation refresh: expanded wiki with setup, usage, and troubleshooting guidance.
-
-## Near term
-- [ ] Cross-machine migration: restore a project and its full history (snapshots, backups, sizes, settings) across machines.
+- [x] [1.3.0] macOS support: ensure bundled tools (rsync) ship per-arch and verify updater/patch workflows.
+  - Include mac rsync arm64/x64 bundles in publish output and validate dylib loading.
+  - Add Settings diagnostics for rsync availability/version.
+  - Confirm installer/patch fallback behavior for non-writable install locations.
+- [x] [1.3.0] Cross-machine migration: restore a project and its full history (snapshots, backups, sizes, settings) across machines.
   - User flow:
     - Machine A creates backups to a destination.
     - Machine B selects that destination; if it finds history not in the local DB, it auto-imports and merges it to reach parity (no restore required).
@@ -37,14 +39,26 @@
     - Merge logs: record decisions in logs for diagnostics (per project/backup ID).
     - Performance: incremental metadata scan and hash checks; avoid full rescan every time.
     - Tests: missing metadata, stale refresh, merge conflicts, partial backup sets.
-- [ ] Per-project destination selection when multiple destinations are configured.
+
+## Near term
+- [ ] [1.4.0] Per-project destination selection when multiple destinations are configured.
   - Integration plan:
     - Data: `PreferredDestinationId` (nullable) to Project; migration default null.
     - UI: project settings -> destination dropdown (All/Auto/Specific); show in project card.
     - Backup flow: resolve destination list per project; if set, route only to that destination (fallback to active if missing).
     - Status: show destination label in active backup card + console lines.
     - Validation: warn if selected destination is inactive/unreachable; allow override.
-- [ ] Backup encryption and password-protected backups.
+- [ ] [1.4.0] Faster snapshot scanning on large projects (skip unchanged folders, cache heuristics).
+  - Integration plan:
+    - Cache: store per-project scan cache (path, mtime, size, file count).
+    - Heuristics: skip folders with unchanged mtime/size; fall back on deep scan when uncertain.
+    - Safety: periodic full scan (e.g., every N runs) to avoid drift.
+    - Telemetry: record scan time and skipped counts; surface in logs.
+    - Settings: optional "Aggressive scan cache" toggle for power users.
+    - Tests: cache hit/miss, rename/move detection, safety full scan cadence.
+- [ ] [1.4.0] Dry-run backups (estimate size/time before starting).
+  - Plan: preflight scan to estimate bytes/files; show ETA + destination fit; allow cancel.
+- [ ] [1.5.0] Backup encryption and password-protected backups.
   - Integration plan:
     - Data: add encryption settings (per-project + global defaults), store in config; no plaintext keys.
     - UX: encryption toggle with password + confirm; strength hint; require password on restore.
@@ -56,43 +70,32 @@
     - Migration: encrypted backups restore by password; export/import includes encryption metadata (never secrets).
     - Migration: existing backups remain unencrypted; show mixed-state badge.
     - Tests: encryption round-trip, wrong password, performance guardrails.
-- [ ] Faster snapshot scanning on large projects (skip unchanged folders, cache heuristics).
-  - Integration plan:
-    - Cache: store per-project scan cache (path, mtime, size, file count).
-    - Heuristics: skip folders with unchanged mtime/size; fall back on deep scan when uncertain.
-    - Safety: periodic full scan (e.g., every N runs) to avoid drift.
-    - Telemetry: record scan time and skipped counts; surface in logs.
-    - Settings: optional "Aggressive scan cache" toggle for power users.
-    - Tests: cache hit/miss, rename/move detection, safety full scan cadence.
-- [ ] Team workflows: shared vaults, access control, audit trails.
-  - Plan: define shared-vault model; add audit log schema; role-based access controls.
-- [ ] Dry-run backups (estimate size/time before starting).
-  - Plan: preflight scan to estimate bytes/files; show ETA + destination fit; allow cancel.
-- [ ] Backup bandwidth limits and quiet hours (avoid congesting networks).
+- [ ] [1.5.0] Backup bandwidth limits and quiet hours (avoid congesting networks).
   - Plan: schedule window + throttling settings; apply to network copy workers; show active policy in status.
-- [ ] Richer restore flows (selective restore, dry-run previews, conflict prompts).
-  - Plan: restore wizard; preview file list + size; conflict resolution prompts.
-- [ ] Incremental backups UX: clearer retention behavior, restore guidance, size reporting.
+- [ ] [1.5.0] Incremental backups UX: clearer retention behavior, restore guidance, size reporting.
   - Plan: explain retention rules in UI; show "last full vs delta" info; add restore tips.
-- [ ] Snapshot diff summaries (top changed folders/files, size deltas).
+- [ ] [1.5.0] Snapshot diff summaries (top changed folders/files, size deltas).
   - Plan: compute delta summary after backup; show top changes; exportable summary.
 
 ## Mid term
-- [ ] Smarter storage usage reporting (per-project deltas, last-change summaries).
-- [ ] Custom preset editor for filters and ignore rules.
-- [ ] Backup health timeline (success rate, last failure reason, trend chart).
-- [ ] Project tagging and bulk actions (pause, backup, snapshot by tag).
-- [ ] Per-destination retry policy with backoff and user-facing status summary.
-- [ ] Exportable config bundle for easy migration and support.
-- [ ] Destination quotas and cleanup suggestions (per-target caps).
-- [ ] Restore point browser with compare and timeline view.
+- [ ] [1.6.0] Richer restore flows (selective restore, dry-run previews, conflict prompts).
+  - Plan: restore wizard; preview file list + size; conflict resolution prompts.
+- [ ] [1.6.0] Restore point browser with compare and timeline view.
+- [ ] [1.6.0] Smarter storage usage reporting (per-project deltas, last-change summaries).
+- [ ] [1.6.0] Custom preset editor for filters and ignore rules.
+- [ ] [1.6.0] Backup health timeline (success rate, last failure reason, trend chart).
+- [ ] [1.6.0] Exportable config bundle for easy migration and support.
+- [ ] [1.7.0] Project tagging and bulk actions (pause, backup, snapshot by tag).
+- [ ] [1.7.0] Per-destination retry policy with backoff and user-facing status summary.
+- [ ] [1.7.0] Destination quotas and cleanup suggestions (per-target caps).
+- [ ] [1.7.0] Team workflows: shared vaults, access control, audit trails.
+  - Plan: define shared-vault model; add audit log schema; role-based access controls.
 
 ## Long term
-- [ ] Multi-destination health scoring and auto-failover.
-- [ ] Cloud backup targets (S3-compatible, Backblaze, etc.) with encryption options.
-- [ ] Advanced automation hooks (webhooks, scripts on backup/restore events).
-- [ ] CLI parity with UI features.
-- [ ] macOS support.
-- [ ] Per-project verification toggle (always verify, verify on schedule, or manual).
-- [ ] App signing for trusted distribution.
-- [ ] Background integrity audits with alerts.
+- [ ] [1.x.0] Multi-destination health scoring and auto-failover.
+- [ ] [1.x.0] Cloud backup targets (S3-compatible, Backblaze, etc.) with encryption options.
+- [ ] [1.x.0] Advanced automation hooks (webhooks, scripts on backup/restore events).
+- [ ] [1.x.0] CLI parity with UI features.
+- [ ] [1.x.0] Per-project verification toggle (always verify, verify on schedule, or manual).
+- [ ] [1.x.0] App signing for trusted distribution.
+- [ ] [1.x.0] Background integrity audits with alerts.

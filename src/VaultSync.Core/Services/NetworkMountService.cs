@@ -16,26 +16,32 @@ public sealed class NetworkMountService
         var alias = DisplayName(dest);
         Console.WriteLine($"[NetworkMount] PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
 
+        var normalizedPath = NormalizePath(dest.Path, out var normalizeError);
+        if (!string.IsNullOrWhiteSpace(normalizeError))
+        {
+            return DestinationResolution.CreateFailure(dest, normalizeError);
+        }
+
         if (dest.PreMounted)
         {
             Console.WriteLine($"[NetworkMount] Using pre-mounted path for '{alias}'.");
-            return Directory.Exists(dest.Path)
-                ? DestinationResolution.CreateSuccess(dest, dest.Path, mounted: false, $"Using pre-mounted path '{dest.Path}'")
+            return Directory.Exists(normalizedPath)
+                ? DestinationResolution.CreateSuccess(dest, normalizedPath, mounted: false, $"Using pre-mounted path '{normalizedPath}'")
                 : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
         }
 
-        var isNetwork = IsNetworkPath(dest.Path);
+        var isNetwork = IsNetworkPath(normalizedPath);
         if (!isNetwork)
         {
             try
             {
-                Directory.CreateDirectory(dest.Path);
-                Console.WriteLine($"[NetworkMount] Using local path '{dest.Path}'.");
-                return DestinationResolution.CreateSuccess(dest, dest.Path, mounted: false, $"Using local path '{dest.Path}'");
+                Directory.CreateDirectory(normalizedPath);
+                Console.WriteLine($"[NetworkMount] Using local path '{normalizedPath}'.");
+                return DestinationResolution.CreateSuccess(dest, normalizedPath, mounted: false, $"Using local path '{normalizedPath}'");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[NetworkMount] Local path '{dest.Path}' failed: {ex.Message}");
+                Console.WriteLine($"[NetworkMount] Local path '{normalizedPath}' failed: {ex.Message}");
                 return DestinationResolution.CreateFailure(dest, $"Cannot use destination '{alias}': {ex.Message}");
             }
         }
@@ -43,8 +49,8 @@ public sealed class NetworkMountService
         if (!dest.AutoMount)
         {
             Console.WriteLine($"[NetworkMount] Auto-mount disabled for '{alias}'.");
-            return Directory.Exists(dest.Path)
-                ? DestinationResolution.CreateSuccess(dest, dest.Path, mounted: false, $"Using reachable network path '{dest.Path}'")
+            return Directory.Exists(normalizedPath)
+                ? DestinationResolution.CreateSuccess(dest, normalizedPath, mounted: false, $"Using reachable network path '{normalizedPath}'")
                 : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is unreachable and auto-mount is disabled.");
         }
 
@@ -55,12 +61,12 @@ public sealed class NetworkMountService
 
         if (OperatingSystem.IsWindows())
         {
-            return ConnectWindowsShare(dest, profile, password);
+            return ConnectWindowsShare(dest, normalizedPath, profile, password);
         }
 
         if (OperatingSystem.IsMacOS())
         {
-            return MountMacShare(dest, profile, password);
+            return MountMacShare(dest, normalizedPath, profile, password);
         }
 
         return DestinationResolution.CreateFailure(dest, "Auto-mount is only supported on Windows and macOS.");
@@ -84,10 +90,11 @@ public sealed class NetworkMountService
 
     private static DestinationResolution ConnectWindowsShare(
         BackupDestination dest,
+        string normalizedPath,
         NetworkCredentialProfile? profile,
         string? password)
     {
-        if (!IsNetworkPath(dest.Path))
+        if (!IsNetworkPath(normalizedPath))
         {
             return DestinationResolution.CreateFailure(dest, "Invalid UNC path for Windows mount.");
         }
@@ -106,26 +113,26 @@ public sealed class NetworkMountService
 
         try
         {
-            var firstAttempt = TryNetUseConnect(dest.Path, username, password);
+            var firstAttempt = TryNetUseConnect(normalizedPath, username, password);
             Console.WriteLine($"[NetworkMount] net use connect attempt exit={firstAttempt.ExitCode}.");
             if (firstAttempt.ExitCode == 0)
-                return DestinationResolution.CreateSuccess(dest, dest.Path, mounted: true, $"Mounted {DisplayName(dest)}");
+                return DestinationResolution.CreateSuccess(dest, normalizedPath, mounted: true, $"Mounted {DisplayName(dest)}");
 
             var detail = FormatNetUseError(firstAttempt);
             if (IsError1219(detail))
             {
                 // Error 1219 usually means there is an existing connection to the same server with different credentials.
                 // Best-effort disconnect for this share/server and retry once.
-                TryNetUseDelete(dest.Path);
-                if (TryParseShare(dest.Path, out var host, out _))
+                TryNetUseDelete(normalizedPath);
+                if (TryParseShare(normalizedPath, out var host, out _))
                 {
                     TryNetUseDelete($@"\\{host}");
                 }
 
-                var secondAttempt = TryNetUseConnect(dest.Path, username, password);
+                var secondAttempt = TryNetUseConnect(normalizedPath, username, password);
                 Console.WriteLine($"[NetworkMount] net use retry exit={secondAttempt.ExitCode}.");
                 if (secondAttempt.ExitCode == 0)
-                    return DestinationResolution.CreateSuccess(dest, dest.Path, mounted: true, $"Mounted {DisplayName(dest)}");
+                    return DestinationResolution.CreateSuccess(dest, normalizedPath, mounted: true, $"Mounted {DisplayName(dest)}");
 
                 var retryDetail = FormatNetUseError(secondAttempt);
                 return DestinationResolution.CreateFailure(
@@ -242,10 +249,11 @@ public sealed class NetworkMountService
 
     private static DestinationResolution MountMacShare(
         BackupDestination dest,
+        string normalizedPath,
         NetworkCredentialProfile? profile,
         string? password)
     {
-        if (!TryParseShare(dest.Path, out var shareHost, out var shareName))
+        if (!TryParseShare(normalizedPath, out var shareHost, out var shareName))
         {
             return DestinationResolution.CreateFailure(dest, "Destination must be an smb:// or UNC path for auto-mount.");
         }
@@ -311,7 +319,7 @@ public sealed class NetworkMountService
             var psi = CreateHiddenProcessStartInfo("net");
 
             psi.ArgumentList.Add("use");
-            psi.ArgumentList.Add(res.Destination.Path);
+            psi.ArgumentList.Add(string.IsNullOrWhiteSpace(res.EffectivePath) ? res.Destination.Path : res.EffectivePath);
             psi.ArgumentList.Add("/delete");
             psi.ArgumentList.Add("/y");
 
@@ -392,6 +400,25 @@ public sealed class NetworkMountService
         }
 
         return false;
+    }
+
+    private static string NormalizePath(string raw, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(raw))
+            return raw;
+
+        var trimmed = raw.Trim();
+
+        if (OperatingSystem.IsWindows() && trimmed.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseShare(trimmed, out var host, out var share))
+                return $@"\\{host}\{share}";
+
+            error = "Destination must be a UNC path on Windows.";
+        }
+
+        return trimmed;
     }
 
     private static string DisplayName(BackupDestination dest)

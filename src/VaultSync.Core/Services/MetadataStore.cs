@@ -235,6 +235,17 @@ public sealed class MetadataStore
             """);
     }
 
+    public bool HasProject(string externalId)
+    {
+        if (string.IsNullOrWhiteSpace(externalId))
+            return false;
+
+        using var c = Open(write: false);
+        return c.ExecuteScalar<int>(
+            "SELECT 1 FROM projects WHERE external_id = @id LIMIT 1;",
+            new { id = externalId }) == 1;
+    }
+
     public IEnumerable<MetaSnapshot> ListSnapshots()
     {
         using var c = Open(write: false);

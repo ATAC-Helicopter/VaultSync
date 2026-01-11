@@ -395,11 +395,23 @@ internal static class CrashHandler
             }
             else if (OperatingSystem.IsMacOS())
             {
-                Process.Start("open", folder);
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "open",
+                    UseShellExecute = false
+                };
+                psi.ArgumentList.Add(folder);
+                Process.Start(psi);
             }
             else if (OperatingSystem.IsLinux())
             {
-                Process.Start("xdg-open", folder);
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "xdg-open",
+                    UseShellExecute = false
+                };
+                psi.ArgumentList.Add(folder);
+                Process.Start(psi);
             }
             else
             {

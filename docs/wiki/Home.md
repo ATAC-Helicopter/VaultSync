@@ -21,3 +21,9 @@ This wiki explains how the app works, how to configure it, and how to troublesho
 - [Reporting bugs](Reporting-Bugs)
 - [Troubleshooting](Troubleshooting)
 - [FAQ](FAQ)
+
+## Repository docs
+- [README](../../README.md)
+- [Documentation overview](../../DOCUMENTATION.md)
+- [Roadmap](../../ROADMAP.md)
+- [Changelog](../../CHANGELOG.md)

@@ -434,6 +434,11 @@
                                  FontSize="11"
                                  TextWrapping="Wrap"
                                  IsVisible="{Binding UseIncrementalBackups}" />
+                      <TextBlock Text="{Binding RsyncStatusHint}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap"
+                                 IsVisible="{Binding ShowRsyncStatusHint}" />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1"
                                   VerticalAlignment="Center"
@@ -658,6 +663,11 @@
                                 <CheckBox Margin="0,0,12,6"
                                           Content="{infra:LocalizedString Key=Settings.Destinations.AutoImportHistory}"
                                           IsChecked="{Binding AutoImportMetadata, Mode=TwoWay}"
+                                          IsEnabled="{Binding EnableMetadataSync}" />
+                                <CheckBox Margin="0,0,12,6"
+                                          Content="{infra:LocalizedString Key=Settings.Destinations.ForceHistoryExport}"
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.ForceHistoryExportDescription}"
+                                          IsChecked="{Binding ForceMetadataBackfill, Mode=TwoWay}"
                                           IsEnabled="{Binding EnableMetadataSync}" />
                               </WrapPanel>
 
