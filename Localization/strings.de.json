@@ -427,6 +427,7 @@
     "Backups.Progress.CopyingRobocopy": "Dateien werden kopiert (robocopy)...",
     "Backups.Progress.Estimating": "Wird geschätzt...",
     "Backups.Progress.MovedPrefix": "verschoben ",
+    "Backups.Progress.WaitingForFirstFile": "Warten auf die erste Datei...",
     "Backups.Stage.Compressing": "Archiv wird komprimiert",
     "Backups.Stage.Uploading": "Archiv wird hochgeladen",
     "Backups.Notification.RestoreRequired": "Stelle die neueste Sicherung wieder her, bevor neue Sicherungen für dieses Projekt erstellt werden.",

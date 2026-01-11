@@ -427,6 +427,7 @@
     "Backups.Progress.CopyingRobocopy": "फ़ाइलें कॉपी हो रही हैं (robocopy)...",
     "Backups.Progress.Estimating": "अनुमान लगाया जा रहा है...",
     "Backups.Progress.MovedPrefix": "स्थानांतरित ",
+    "Backups.Progress.WaitingForFirstFile": "पहली फ़ाइल की प्रतीक्षा...",
     "Backups.Stage.Compressing": "आर्काइव संपीड़ित हो रहा है",
     "Backups.Stage.Uploading": "आर्काइव अपलोड हो रहा है",
     "Backups.Notification.RestoreRequired": "इस प्रोजेक्ट के लिए नए बैकअप बनाने से पहले नवीनतम बैकअप बहाल करें।",

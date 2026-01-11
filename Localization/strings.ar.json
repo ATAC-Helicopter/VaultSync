@@ -427,6 +427,7 @@
     "Backups.Progress.CopyingRobocopy": "جارٍ نسخ الملفات (robocopy)...",
     "Backups.Progress.Estimating": "جارٍ التقدير...",
     "Backups.Progress.MovedPrefix": "تم النقل ",
+    "Backups.Progress.WaitingForFirstFile": "جارٍ انتظار أول ملف...",
     "Backups.Stage.Compressing": "جارٍ ضغط الأرشيف",
     "Backups.Stage.Uploading": "جارٍ رفع الأرشيف",
     "Backups.Notification.RestoreRequired": "يرجى استعادة أحدث نسخة احتياطية قبل إنشاء نسخ احتياطية جديدة لهذا المشروع.",

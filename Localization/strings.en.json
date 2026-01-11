@@ -443,6 +443,7 @@
     "Backups.Progress.CopyingRobocopy": "Copying files (robocopy)...",
     "Backups.Progress.Estimating": "Estimating...",
     "Backups.Progress.MovedPrefix": "moved ",
+    "Backups.Progress.WaitingForFirstFile": "Waiting for first file...",
     "Backups.Stage.Compressing": "Compressing archive",
     "Backups.Stage.Uploading": "Uploading archive"
 }

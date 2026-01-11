@@ -427,6 +427,7 @@
     "Backups.Progress.CopyingRobocopy": "正在复制文件（robocopy）...",
     "Backups.Progress.Estimating": "正在估算...",
     "Backups.Progress.MovedPrefix": "已移动 ",
+    "Backups.Progress.WaitingForFirstFile": "正在等待第一个文件...",
     "Backups.Stage.Compressing": "正在压缩存档",
     "Backups.Stage.Uploading": "正在上传存档",
     "Backups.Notification.RestoreRequired": "在为此项目创建新备份之前，请先恢复最新备份。",

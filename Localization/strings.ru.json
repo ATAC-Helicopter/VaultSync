@@ -427,6 +427,7 @@
     "Backups.Progress.CopyingRobocopy": "Копирование файлов (robocopy)...",
     "Backups.Progress.Estimating": "Оценка...",
     "Backups.Progress.MovedPrefix": "перемещено ",
+    "Backups.Progress.WaitingForFirstFile": "Ожидание первого файла...",
     "Backups.Stage.Compressing": "Сжатие архива",
     "Backups.Stage.Uploading": "Отправка архива",
     "Backups.Notification.RestoreRequired": "Восстановите последнюю резервную копию перед созданием новых резервных копий для этого проекта.",

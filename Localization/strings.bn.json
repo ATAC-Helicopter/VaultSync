@@ -427,6 +427,7 @@
     "Backups.Progress.CopyingRobocopy": "ফাইল কপি হচ্ছে (robocopy)...",
     "Backups.Progress.Estimating": "অনুমান করা হচ্ছে...",
     "Backups.Progress.MovedPrefix": "সরানো হয়েছে ",
+    "Backups.Progress.WaitingForFirstFile": "প্রথম ফাইলের জন্য অপেক্ষা করা হচ্ছে...",
     "Backups.Stage.Compressing": "আর্কাইভ সংকুচিত হচ্ছে",
     "Backups.Stage.Uploading": "আর্কাইভ আপলোড হচ্ছে",
     "Backups.Notification.RestoreRequired": "এই প্রকল্পের জন্য নতুন ব্যাকআপ তৈরি করার আগে সর্বশেষ ব্যাকআপ পুনরুদ্ধার করুন।",

@@ -26,6 +26,10 @@
 - Prevented schema/index startup crash during metadata migrations.
 - Backup size pre-scan removed to avoid redundant macOS filesystem scans before backups.
 - Fixed localization strings across all languages.
+- Added missing "Waiting for first file" progress localization key across languages.
+- Canceling one backup during backup-all no longer aborts other running backups.
+- Metadata import now retries from a temp copy when the store is locked (SQLite busy).
+- Metadata export now logs the target store path and row counts after write.
 
 ## [1.2.3] - 2026-01-07
 ### Added

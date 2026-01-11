@@ -2244,6 +2244,22 @@ namespace VaultSync.UI.ViewModels
                                 .WithHashedString("projectRoot", project.RootPath)
                                 .WithFlag("useArchiveMode", useArchiveMode));
                         }
+                        catch (OperationCanceledException)
+                        {
+                            results.Add((project.Name, project.RootPath, false));
+                            Telemetry.Log("backup_all_project_cancelled", b => b
+                                .WithHashedString("project", project.Name)
+                                .WithHashedString("projectRoot", project.RootPath));
+                            progressPerProject[project.Id] = 0;
+                            UpdateAggregateProgress(string.Empty, string.Empty);
+                            _backupsViewModel.UpdateActiveBackup(
+                                project.Id.ToString(),
+                                project.Name,
+                                0,
+                                L("Backups.Status.Cancelled", "Cancelled"),
+                                string.Empty);
+                            return;
+                        }
                         catch (Exception ex)
                         {
                             results.Add((project.Name, project.RootPath, false));

@@ -39,7 +39,7 @@ public sealed class MetadataSyncService
         {
             return ImportFromStoreInternal(rootPath, store, opts);
         }
-        catch (SqliteException ex) when (IsCannotOpen(ex))
+        catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
         {
             Console.WriteLine($"[MetadataSync] Import failed opening store at '{store.DatabasePath}': {ex.Message}");
             if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
@@ -66,7 +66,7 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpen(sqliteEx))
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
                 throw;
             Console.WriteLine($"[MetadataSync] Import failed: invalid store at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
@@ -110,7 +110,7 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpen(sqliteEx))
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
                 throw;
             Console.WriteLine($"[MetadataSync] Import failed while reading store '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
@@ -252,9 +252,9 @@ public sealed class MetadataSyncService
         return result;
     }
 
-    private static bool IsCannotOpen(SqliteException ex)
+    private static bool IsCannotOpenOrLocked(SqliteException ex)
     {
-        return ex.SqliteErrorCode == 14;
+        return ex.SqliteErrorCode == 14 || ex.SqliteErrorCode == 5;
     }
 
     private static bool TryCopyStoreForRead(string databasePath, out string tempRoot)
@@ -299,6 +299,7 @@ public sealed class MetadataSyncService
         }
 
         var store = new MetadataStore(rootPath);
+        Console.WriteLine($"[MetadataSync] Export target store: '{store.DatabasePath}'.");
         try
         {
             store.EnsureSchema();
@@ -423,6 +424,7 @@ public sealed class MetadataSyncService
         Console.WriteLine(backfilled
             ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{rootPath}': snapshots={exportedSnapshots}, backups={exportedBackups}."
             : $"[MetadataSync] Export complete for backup {backupId} to '{rootPath}'.");
+        LogStoreCounts(store);
         return exportResult;
     }
 
@@ -501,6 +503,21 @@ public sealed class MetadataSyncService
         }
 
         return (snapshots.Count, exportedBackups);
+    }
+
+    private static void LogStoreCounts(MetadataStore store)
+    {
+        try
+        {
+            var projects = store.ListProjects().Count();
+            var snapshots = store.ListSnapshots().Count();
+            var backups = store.ListBackups().Count();
+            Console.WriteLine($"[MetadataSync] Store counts at '{store.DatabasePath}': projects={projects}, snapshots={snapshots}, backups={backups}.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Store count read failed at '{store.DatabasePath}': {ex.Message}");
+        }
     }
 
     private string EnsureProjectExternalId(Project project)
