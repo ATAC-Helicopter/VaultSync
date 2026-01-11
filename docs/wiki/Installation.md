@@ -8,8 +8,9 @@ VaultSync is distributed via platform installers and patch updates.
 
 ## Install
 1. Download the latest release from GitHub Releases.
-2. Run the installer for your platform (.exe/.dmg/.AppImage or .tar.gz).
-3. Launch VaultSync.
+2. Windows: run the `.exe` installer. Linux: use `.AppImage` or `.tar.gz`. macOS: open the `.dmg` and drag `VaultSync.app` to `/Applications`.
+3. On macOS, the app is unsigned: right-click → Open the first time (or run `xattr -dr com.apple.quarantine /Applications/VaultSync.app`).
+4. Launch VaultSync.
 
 
 ## Update channels

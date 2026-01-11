@@ -57,6 +57,45 @@ public sealed class MetadataSyncService
         }
     }
 
+    public MetadataSyncPreview PreviewImportFromStore(string rootPath, MetadataSyncOptions? options = null)
+    {
+        var opts = options ?? MetadataSyncOptions.Default;
+
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            Console.WriteLine("[MetadataSync] Preview failed: root path is empty.");
+            return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidPath, rootPath, string.Empty, "Root path is empty.");
+        }
+
+        var store = new MetadataStore(rootPath);
+        if (!File.Exists(store.DatabasePath))
+        {
+            Console.WriteLine($"[MetadataSync] Preview skipped: store not found at '{store.DatabasePath}'.");
+            return MetadataSyncPreview.Failure(MetadataSyncStatus.NoStore, rootPath, store.DatabasePath, "Metadata store not found.");
+        }
+
+        try
+        {
+            return PreviewImportFromStoreInternal(rootPath, store, opts);
+        }
+        catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+        {
+            Console.WriteLine($"[MetadataSync] Preview failed opening store at '{store.DatabasePath}': {ex.Message}");
+            if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
+                return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
+
+            Console.WriteLine($"[MetadataSync] Preview retrying from temp copy: '{tempRoot}'.");
+            try
+            {
+                return PreviewImportFromStoreInternal(rootPath, new MetadataStore(tempRoot), opts);
+            }
+            finally
+            {
+                TryDeleteTempStore(tempRoot);
+            }
+        }
+    }
+
     private MetadataSyncResult ImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
     {
         MetaInfo? metaInfo;
@@ -252,6 +291,152 @@ public sealed class MetadataSyncService
         return result;
     }
 
+    private MetadataSyncPreview PreviewImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
+    {
+        MetaInfo? metaInfo;
+        try
+        {
+            metaInfo = store.GetMetaInfo();
+        }
+        catch (Exception ex)
+        {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
+            Console.WriteLine($"[MetadataSync] Preview failed: invalid store at '{rootPath}': {ex.Message}");
+            return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
+        }
+
+        if (metaInfo != null && metaInfo.SchemaVersion > MetadataStore.CurrentSchemaVersion)
+        {
+            Console.WriteLine($"[MetadataSync] Preview blocked: schema {metaInfo.SchemaVersion} > supported {MetadataStore.CurrentSchemaVersion}.");
+            return MetadataSyncPreview.Failure(
+                MetadataSyncStatus.Incompatible,
+                rootPath,
+                store.DatabasePath,
+                $"Metadata schema {metaInfo.SchemaVersion} is newer than supported {MetadataStore.CurrentSchemaVersion}.");
+        }
+
+        var addProjects = 0;
+        var linkProjects = 0;
+        var addSnapshots = 0;
+        var addBackups = 0;
+        var deleteBackups = 0;
+
+        var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var localProjects = _repo.GetAllProjects().ToList();
+
+        foreach (var p in localProjects)
+        {
+            if (!string.IsNullOrWhiteSpace(p.ExternalId))
+                projectMap[p.ExternalId] = p.Id;
+        }
+
+        IEnumerable<MetaProject> metaProjects;
+        IEnumerable<MetaSnapshot> metaSnapshots;
+        IEnumerable<MetaBackup> metaBackups;
+        IEnumerable<MetaTombstone> metaTombstones;
+
+        try
+        {
+            metaProjects = store.ListProjects().ToList();
+            metaSnapshots = store.ListSnapshots().ToList();
+            metaBackups = store.ListBackups().ToList();
+            metaTombstones = store.ListTombstones().ToList();
+        }
+        catch (Exception ex)
+        {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
+            Console.WriteLine($"[MetadataSync] Preview failed while reading store '{rootPath}': {ex.Message}");
+            return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
+        }
+
+        foreach (var metaProject in metaProjects)
+        {
+            if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
+                continue;
+
+            if (projectMap.ContainsKey(metaProject.ExternalId))
+                continue;
+
+            var existingByName = localProjects.FirstOrDefault(p =>
+                string.Equals(p.Name, metaProject.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (existingByName != null)
+            {
+                if (string.IsNullOrWhiteSpace(existingByName.ExternalId))
+                {
+                    linkProjects++;
+                }
+
+                projectMap[metaProject.ExternalId] = existingByName.Id;
+                continue;
+            }
+
+            if (!opts.AllowCreateProjects)
+                continue;
+
+            addProjects++;
+            projectMap[metaProject.ExternalId] = -1;
+        }
+
+        foreach (var metaSnapshot in metaSnapshots)
+        {
+            if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
+                continue;
+
+            if (!projectMap.ContainsKey(metaSnapshot.ProjectExternalId))
+                continue;
+
+            var existing = _repo.GetSnapshotByExternalId(metaSnapshot.ExternalId);
+            if (existing != null)
+                continue;
+
+            addSnapshots++;
+        }
+
+        foreach (var metaBackup in metaBackups)
+        {
+            if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
+                continue;
+
+            if (!projectMap.ContainsKey(metaBackup.ProjectExternalId))
+                continue;
+
+            var existing = _repo.GetBackupByExternalId(metaBackup.ExternalId);
+            if (existing != null)
+                continue;
+
+            addBackups++;
+        }
+
+        foreach (var tombstone in metaTombstones)
+        {
+            if (string.IsNullOrWhiteSpace(tombstone.EntityId))
+                continue;
+
+            if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            {
+                var existing = _repo.GetBackupByExternalId(tombstone.EntityId);
+                if (existing != null)
+                {
+                    deleteBackups++;
+                }
+            }
+        }
+
+        return new MetadataSyncPreview(
+            MetadataSyncStatus.Success,
+            rootPath,
+            store.DatabasePath,
+            addProjects,
+            linkProjects,
+            addSnapshots,
+            addBackups,
+            deleteBackups,
+            string.Empty);
+    }
+
     private static bool IsCannotOpenOrLocked(SqliteException ex)
     {
         return ex.SqliteErrorCode == 14 || ex.SqliteErrorCode == 5;
@@ -267,6 +452,8 @@ public sealed class MetadataSyncService
             Directory.CreateDirectory(tempDir);
             var destPath = Path.Combine(tempDir, Path.GetFileName(databasePath));
             File.Copy(databasePath, destPath, overwrite: true);
+            TryCopySidecar(databasePath, destPath, "-wal");
+            TryCopySidecar(databasePath, destPath, "-shm");
             tempRoot = root;
             return true;
         }
@@ -287,6 +474,23 @@ public sealed class MetadataSyncService
         catch
         {
             // best effort cleanup
+        }
+    }
+
+    private static void TryCopySidecar(string sourceDbPath, string destDbPath, string suffix)
+    {
+        try
+        {
+            var source = sourceDbPath + suffix;
+            if (!File.Exists(source))
+                return;
+
+            var dest = destDbPath + suffix;
+            File.Copy(source, dest, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Temp copy missing sidecar '{suffix}': {ex.Message}");
         }
     }
 
@@ -363,13 +567,13 @@ public sealed class MetadataSyncService
         try
         {
             store.UpsertMetaInfo(metaInfo);
-            if (forceBackfill || !store.HasProject(projectExternalId))
-            {
-                backfilled = true;
-                var counts = ExportProjectHistory(store, project, projectExternalId, now);
-                exportedProjects = 1;
-                exportedSnapshots = counts.snapshots;
-                exportedBackups = counts.backups;
+        if (forceBackfill || !store.HasProject(projectExternalId))
+        {
+            backfilled = true;
+            var counts = ExportProjectHistory(store, project, projectExternalId, now);
+            exportedProjects = 1;
+            exportedSnapshots = counts.snapshots;
+            exportedBackups = counts.backups;
             }
             else
             {
@@ -436,6 +640,7 @@ public sealed class MetadataSyncService
     {
         var snapshots = _repo.GetSnapshotsForProject(project.Name).ToList();
         var backups = _repo.GetBackupsForProject(project.Id).ToList();
+        Console.WriteLine($"[MetadataSync] Export history for '{project.Name}': snapshots={snapshots.Count}, backups={backups.Count}.");
         var snapshotExternalIds = new Dictionary<int, string>();
 
         store.UpsertProject(new MetaProject
@@ -464,13 +669,17 @@ public sealed class MetadataSyncService
         }
 
         var exportedBackups = 0;
+        var skippedBackups = 0;
         foreach (var backup in backups)
         {
             if (!snapshotExternalIds.TryGetValue(backup.SnapshotId, out var snapshotExternalId))
             {
                 var snap = _repo.GetSnapshotById(backup.SnapshotId);
                 if (snap is null)
+                {
+                    skippedBackups++;
                     continue;
+                }
 
                 snapshotExternalId = EnsureSnapshotExternalId(snap);
                 snapshotExternalIds[snap.Id] = snapshotExternalId;
@@ -500,6 +709,11 @@ public sealed class MetadataSyncService
                 KdfParamsJson = "{}"
             });
             exportedBackups++;
+        }
+
+        if (skippedBackups > 0)
+        {
+            Console.WriteLine($"[MetadataSync] Export history skipped {skippedBackups} backups without snapshots for '{project.Name}'.");
         }
 
         return (snapshots.Count, exportedBackups);
@@ -568,6 +782,28 @@ public sealed record MetadataSyncResult(
 {
     public static MetadataSyncResult Failure(MetadataSyncStatus status, string message) =>
         new(status, 0, 0, 0, 0, message);
+}
+
+public sealed record MetadataSyncPreview(
+    MetadataSyncStatus Status,
+    string RootPath,
+    string DatabasePath,
+    int NewProjects,
+    int LinkedProjects,
+    int NewSnapshots,
+    int NewBackups,
+    int DeletedBackups,
+    string Message)
+{
+    public bool HasChanges =>
+        NewProjects > 0 ||
+        LinkedProjects > 0 ||
+        NewSnapshots > 0 ||
+        NewBackups > 0 ||
+        DeletedBackups > 0;
+
+    public static MetadataSyncPreview Failure(MetadataSyncStatus status, string rootPath, string databasePath, string message) =>
+        new(status, rootPath, databasePath, 0, 0, 0, 0, 0, message);
 }
 
 public enum MetadataSyncStatus

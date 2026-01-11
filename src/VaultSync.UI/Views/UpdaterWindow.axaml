@@ -4,7 +4,7 @@
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
     x:Class="VaultSync.UI.Views.UpdaterWindow"
     x:DataType="vm:UpdaterViewModel"
-    Title="VaultSync Updater"
+    Title="{Binding Title}"
     Width="720"
     Height="440"
     MinWidth="600"

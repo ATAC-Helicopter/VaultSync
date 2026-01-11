@@ -43,6 +43,7 @@ Use the **Test** button to check reachability/writability and confirm mount/logi
 ## Cross-machine history sync
 - VaultSync can store portable history metadata in `.vaultsync/meta/` on destinations.
 - When a destination is discovered, history is imported into the local DB and merged.
+- Manual refresh shows a review dialog with counts of records to add/link/delete before applying.
 - If a project was auto-imported, VaultSync prompts to restore the latest backup before new snapshots/backups.
 - Read-only destinations can be imported from, but history updates are not written back.
 - Use "Force full history export" per destination in Settings to backfill a project's full history into the metadata store.

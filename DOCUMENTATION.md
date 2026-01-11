@@ -57,7 +57,7 @@ VaultSync is a cross-platform snapshot, backup, sync, and verification toolkit f
 - Clone or download the repo, build installers via `dotnet pack` (CLI) or `installer/VaultSyncInstaller.iss` (Windows).
 - Desktop updates poll the `stable` GitHub release channel on startup when “Check for updates” is enabled. The UI compares release metadata, warns when a newer version exists, and lets users choose to install.
 - CLI updates happen via `dotnet tool update --global vaultsync.cli` after a release is published.
-- macOS uses `.dmg` installers and delta patches; macOS/Linux updates use delta patches produced by the updater. See `docs/UPDATER.md` for the step-by-step flow and patch packaging instructions.
+- macOS currently ships unsigned `.dmg` images of the `.app` bundle on GitHub Releases; macOS/Linux updates use delta patches produced by the updater. See `docs/UPDATER.md` for the step-by-step flow and patch packaging instructions.
 
 ## Release Channels
 

@@ -43,3 +43,5 @@ packages/
 .vaultsync/
 .vaultsync_selftest/
 .vaultsync_write_test
+# Build artifacts
+dist/

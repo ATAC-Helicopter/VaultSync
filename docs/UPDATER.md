@@ -9,5 +9,5 @@ This toggle is labeled **BETA** because dev-branch prereleases may be unstableâ€
 - Patch manifest: `vaultsync-patch-<platform>.json`
 - Patch archive: `vaultsync-patch-<platform>.zip`
 - Windows installer: `.exe` (Inno Setup)
-- macOS installer: `.dmg`
+- macOS release asset: unsigned `.dmg` containing the `.app` bundle (right-click â†’ Open on first launch).
 - Linux installer: `.AppImage` or `.tar.gz`

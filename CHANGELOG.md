@@ -1,5 +1,5 @@
 # Changelog
-## [1.3.0] - TBD
+## [1.3.0] - BETA 11.01.2026
 ### Added
 - Cross-machine backup history metadata store (`.vaultsync/meta/`) with portable project/snapshot/backup records.
 - External IDs for projects/snapshots/backups to support cross-machine merging.
@@ -11,6 +11,7 @@
 - Metadata sync logging for import/export troubleshooting (counts, failures, fallbacks).
 - Metadata export backfills full project history the first time a project is written to a store.
 - Per-destination force full history export toggle for metadata backfill.
+- Metadata import review dialog showing planned additions/links/deletions before applying changes.
 ### Changed
 - Drive health probe deferred to reduce startup impact.
 - Destination probe now tracks effective path and read-only status.
@@ -30,6 +31,15 @@
 - Canceling one backup during backup-all no longer aborts other running backups.
 - Metadata import now retries from a temp copy when the store is locked (SQLite busy).
 - Metadata export now logs the target store path and row counts after write.
+- Metadata export now logs per-project history counts and skipped backups during backfill.
+- Metadata import temp-copy now includes SQLite WAL/SHM sidecars to avoid empty reads during locked writes.
+- Manual metadata refresh now updates projects/backups lists immediately.
+- Auto metadata import now updates projects/backups lists immediately.
+- Dashboard storage total now reflects total stored across all backups.
+- Dashboard backup storage bar now shows per-project color segments.
+- Dashboard storage donut tooltip now positions itself on the hovered slice.
+- Localized remaining hardcoded UI strings (log console, crash dialog, dashboard labels).
+- Documented unsigned macOS DMG release flow and generated DMG assets.
 
 ## [1.2.3] - 2026-01-07
 ### Added

@@ -16,6 +16,9 @@
   <a href="https://github.com/ATAC-Helicopter/VaultSync/discussions">
     <img src="https://img.shields.io/badge/Join%20the%20Discussion-24292f?style=for-the-badge&logo=github&logoColor=white" alt="Join the Discussion" />
   </a>
+  <a href="https://www.reddit.com/r/VaultSync/">
+    <img src="https://img.shields.io/badge/Reddit-Join%20the%20subreddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="VaultSync subreddit" />
+  </a>
 <a href="DOCUMENTATION.md">
     <img src="https://img.shields.io/badge/Documentation-%20-%23686868?style=for-the-badge&logo=bookstack" alt="Documentation" />
   </a>
@@ -117,7 +120,7 @@ dotnet tool update --global vaultsync.cli
 
 VaultSync's updater polls the `stable` branch of the [ATAC-Helicopter/VaultSync](https://github.com/ATAC-Helicopter/VaultSync) repo each time the app starts (when "Check for updates on startup" is enabled). Every push to that branch is treated as an available update: the UI compares the metadata of the latest release with the running version, warns the user if a newer release exists, and lets the user decide when to download and install.
 
-Desktop installers are published as assets on the repo's [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page, so you can grab the matching installer for your platform once you accept the update prompt. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script (compile it with the Inno Setup compiler after publishing the `win-x64` output). macOS uses `.dmg` installers, and macOS/Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the same stable channel; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
+Desktop installers are published as assets on the repo's [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page, so you can grab the matching installer for your platform once you accept the update prompt. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script (compile it with the Inno Setup compiler after publishing the `win-x64` output). macOS builds are shipped as unsigned `.dmg` images containing the `.app` bundle; users may need to right-click → Open or clear quarantine (`xattr -dr com.apple.quarantine /Applications/VaultSync.app`). macOS/Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the same stable channel; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
 
 VaultSync now exposes a language selector under Settings -> Advanced; translations are loaded from the `Localization/` folder and can be extended to other languages in future releases. A new "Beta channel" toggle in the same section lets you opt into the `dev` branch: it still honors "Check for updates on startup", but selects releases where `target_commitish` equals `dev` and includes prerelease builds so you can try the latest dev work before it lands on `stable`.
 

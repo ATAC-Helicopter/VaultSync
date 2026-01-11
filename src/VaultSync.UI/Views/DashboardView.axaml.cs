@@ -21,7 +21,7 @@ public partial class DashboardView : UserControl
         var tooltipBackground = GetResourceColor("VsCardHighlightColor", Colors.Black);
         var tooltipText = GetResourceColor("VsTextPrimaryColor", Colors.White);
 
-        StorageDonutChart.TooltipPosition = TooltipPosition.Top;
+        StorageDonutChart.TooltipPosition = TooltipPosition.Auto;
         StorageDonutChart.TooltipTextSize = 13;
         StorageDonutChart.TooltipBackgroundPaint = new SolidColorPaint(ToSkColor(tooltipBackground));
         StorageDonutChart.TooltipTextPaint = new SolidColorPaint(ToSkColor(tooltipText));

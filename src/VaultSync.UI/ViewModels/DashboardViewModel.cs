@@ -254,17 +254,20 @@ namespace VaultSync.UI.ViewModels
                     var weekAgoUtc = DateTime.UtcNow.AddDays(-7);
                     var backupsThisWeek = allBackups.Where(b => b.CreatedUtc >= weekAgoUtc).ToList();
 
-                    // Storage slices: latest snapshot per project
+                    // Storage slices: total backups per project
                     long totalLatestBytes = 0;
                     var storageSlices = new List<(Project project, long bytes)>();
+                    var backupsByProject = allBackups
+                        .GroupBy(b => b.ProjectId)
+                        .ToDictionary(g => g.Key, g => g.Sum(b => b.TotalBytes));
+
                     foreach (var p in projects)
                     {
-                        var latest = repo.GetLatestSnapshot(p.Id);
-                        if (latest != null)
-                        {
-                            totalLatestBytes += latest.TotalBytes;
-                            storageSlices.Add((p, latest.TotalBytes));
-                        }
+                        if (!backupsByProject.TryGetValue(p.Id, out var projectTotal))
+                            continue;
+
+                        totalLatestBytes += projectTotal;
+                        storageSlices.Add((p, projectTotal));
                     }
 
                     // Activity list (newest first)
@@ -347,8 +350,8 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 StorageHint = _activeProjectsCount == 0
-                    ? L("Dashboard.Hint.StorageLatest", "No storage used")
-                    : L("Dashboard.Hint.StorageLatest", "Total across latest snapshots");
+                    ? L("Dashboard.Hint.StorageEmpty", "No storage used")
+                    : L("Dashboard.Hint.StorageTotal", "Total across all backups");
 
                 // Activity
                 ActivityItems.Clear();
@@ -546,7 +549,7 @@ namespace VaultSync.UI.ViewModels
             SnapshotCount  = 0;
             SnapshotsHint  = L("Dashboard.Hint.NoSnapshots", "No snapshots yet");
             StorageUsed    = "0 B";
-            StorageHint    = L("Dashboard.Hint.StorageLatest", "No storage used");
+            StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
 
             BuildSnapshotSeries();
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
@@ -633,7 +636,7 @@ namespace VaultSync.UI.ViewModels
         if (otherPercent > 0)
         {
             segments.Add(new BackupUsageSegment(
-                "Other",
+                L("Dashboard.Storage.Other", "Other"),
                 otherPercent,
                 new ImmutableSolidColorBrush(Color.Parse("#8E8E93"))));
         }
@@ -724,7 +727,7 @@ namespace VaultSync.UI.ViewModels
             if (seg.SizeBytes <= 0)
                 continue;
 
-            if (seg.Brush is not SolidColorBrush solid)
+            if (seg.Brush is not ISolidColorBrush solid)
                 continue;
 
             var skColor = new SKColor(solid.Color.R, solid.Color.G, solid.Color.B, solid.Color.A);
@@ -990,8 +993,8 @@ namespace VaultSync.UI.ViewModels
             }
 
             StorageHint = _activeProjectsCount == 0
-                ? L("Dashboard.Hint.StorageLatest", "No storage used")
-                : L("Dashboard.Hint.StorageLatest", "Total across latest snapshots");
+                ? L("Dashboard.Hint.StorageEmpty", "No storage used")
+                : L("Dashboard.Hint.StorageTotal", "Total across all backups");
 
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
         }

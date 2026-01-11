@@ -23,5 +23,5 @@ Switch channels in Settings > Advanced.
 
 ## Installers
 - Windows: `.exe` installer (Inno Setup).
-- macOS: `.dmg` installer.
+- macOS: unsigned `.dmg` of the `.app` bundle.
 - Linux: `.AppImage` or `.tar.gz` assets.

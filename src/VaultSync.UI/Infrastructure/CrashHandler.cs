@@ -13,6 +13,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI.Infrastructure;
 
@@ -36,6 +37,9 @@ internal static class CrashHandler
         HandleException(e.Exception, "UI thread", isTerminating: false);
         e.Handled = true;
     }
+
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
 
     private static void OnAppDomainUnhandledException(object? sender, UnhandledExceptionEventArgs e)
     {
@@ -261,7 +265,7 @@ internal static class CrashHandler
 
         window = new Window
         {
-            Title = "VaultSync crashed",
+            Title = L("Crash.Title", "VaultSync crashed"),
             Content = root,
             CanResize = false,
             Width = 720,
@@ -282,7 +286,7 @@ internal static class CrashHandler
         {
             var copyButton = new Button
             {
-                Content = "Copy log path"
+                Content = L("Crash.CopyLogPath", "Copy log path")
             };
             copyButton.Click += async (_, _) =>
             {
@@ -293,7 +297,7 @@ internal static class CrashHandler
 
             var openFolderButton = new Button
             {
-                Content = "Open folder"
+                Content = L("Crash.OpenFolder", "Open folder")
             };
             openFolderButton.Click += (_, _) =>
             {
@@ -309,7 +313,7 @@ internal static class CrashHandler
 
         var closeButton = new Button
         {
-            Content = "Close",
+            Content = L("Crash.Close", "Close"),
             MinWidth = 90
         };
         closeButton.Click += (_, _) => desktop.Shutdown(1);
