@@ -11,10 +11,14 @@ if [[ -z "$version" || -z "$arch" || -z "$publish_dir" ]]; then
 fi
 
 base_dist="dist/macos"
-iconset="$base_dist/icons/VaultSync.iconset"
 icns="$base_dist/VaultSync.icns"
+repo_icns="src/VaultSync.UI/Assets/VaultSync.icns"
+iconset="$base_dist/icons/VaultSync.iconset"
 
-if [[ ! -f "$icns" ]]; then
+if [[ -f "$repo_icns" ]]; then
+  mkdir -p "$base_dist"
+  cp "$repo_icns" "$icns"
+elif [[ -f "$iconset/icon_512x512.png" ]]; then
   iconutil -c icns "$iconset" -o "$icns"
 fi
 
