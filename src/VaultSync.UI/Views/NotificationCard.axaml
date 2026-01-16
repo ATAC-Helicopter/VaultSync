@@ -9,7 +9,6 @@
     <Style Selector="Border.notification-card">
       <Setter Property="CornerRadius" Value="14" />
       <Setter Property="Padding" Value="12" />
-      <Setter Property="Margin" Value="0,8,0,0" />
       <!-- Use app card background to stay on-theme -->
       <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
@@ -34,11 +33,19 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
     </Style>
+
+    <!-- Optional action button -->
+    <Style Selector="Button.notification-action">
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Background" Value="{DynamicResource Surface1}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+    </Style>
   </UserControl.Styles>
 
   <Border Classes="notification-card"
           IsVisible="{Binding IsVisible}">
-    <Grid ColumnDefinitions="Auto,*,Auto"
+    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
           ColumnSpacing="8"
           VerticalAlignment="Center">
 
@@ -57,8 +64,16 @@
                  TextWrapping="Wrap"
                  VerticalAlignment="Center" />
 
-      <!-- Dismiss button -->
+      <!-- Optional action button -->
       <Button Grid.Column="2"
+              Classes="notification-action"
+              Command="{Binding ActionCommand}"
+              Content="{Binding ActionLabel}"
+              IsVisible="{Binding HasAction}"
+              VerticalAlignment="Center" />
+
+      <!-- Dismiss button -->
+      <Button Grid.Column="3"
               Classes="notification-dismiss"
               Command="{Binding DismissCommand}"
               Content="{infra:LocalizedString Key=Notifications.DismissGlyph}"

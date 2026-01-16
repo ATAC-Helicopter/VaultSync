@@ -6,6 +6,7 @@ VaultSync supports patch updates and full installer updates for macOS, Windows, 
 - Smaller and faster when available.
 - If a patch fails, the installer fallback is offered.
 - Patch assets are named `vaultsync-patch-<platform>.json` and `vaultsync-patch-<platform>.zip`.
+  - macOS checks for arch-specific assets first (`vaultsync-patch-macos-apple-silicon.*` or `vaultsync-patch-macos-intel.*`).
 
 ## Manual update check
 - Settings > Advanced > Check for updates now.

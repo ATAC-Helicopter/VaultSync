@@ -20,6 +20,7 @@ namespace VaultSync.UI.Infrastructure;
 internal static class CrashHandler
 {
     private static int _handling;
+    private static int _softHandling;
 
     public static void RegisterEarly()
     {
@@ -34,7 +35,7 @@ internal static class CrashHandler
 
     private static void OnUiUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        HandleException(e.Exception, "UI thread", isTerminating: false);
+        HandleUiExceptionSoft(e.Exception);
         e.Handled = true;
     }
 
@@ -64,6 +65,33 @@ internal static class CrashHandler
         App.MarkCrashing();
         var logPath = WriteCrashLog(ex, source, isTerminating);
         TryShowCrashDialog(logPath);
+    }
+
+    private static void HandleUiExceptionSoft(Exception ex)
+    {
+        if (Interlocked.Exchange(ref _softHandling, 1) != 0)
+        {
+            return;
+        }
+
+        var logPath = WriteCrashLog(ex, "UI thread", isTerminating: false);
+        TryShowSoftCrashBanner(logPath);
+    }
+
+    private static void TryShowSoftCrashBanner(string? logPath)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            ShowSoftCrashBanner(logPath);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => ShowSoftCrashBanner(logPath), DispatcherPriority.Send);
+    }
+
+    private static void ShowSoftCrashBanner(string? logPath)
+    {
+        App.AppViewModelInstance?.NotifySoftCrashBanner(logPath);
     }
 
     private static string? WriteCrashLog(Exception ex, string source, bool isTerminating)

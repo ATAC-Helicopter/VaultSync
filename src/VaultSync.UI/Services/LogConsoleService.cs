@@ -115,6 +115,49 @@ namespace VaultSync.UI.Services
             }
         }
 
+        public string? GetRecentSnippet(int maxLines, string? header = null)
+        {
+            try
+            {
+                if (maxLines <= 0)
+                    return null;
+
+                List<LogLine> snapshot;
+                if (Dispatcher.UIThread.CheckAccess())
+                {
+                    snapshot = _lines.ToList();
+                }
+                else
+                {
+                    snapshot = Dispatcher.UIThread.InvokeAsync(() => _lines.ToList())
+                        .GetAwaiter()
+                        .GetResult();
+                }
+
+                if (snapshot.Count == 0)
+                    return null;
+
+                var start = Math.Max(0, snapshot.Count - maxLines);
+                var sb = new StringBuilder();
+                if (!string.IsNullOrWhiteSpace(header))
+                {
+                    sb.AppendLine(header);
+                }
+
+                for (var i = start; i < snapshot.Count; i++)
+                {
+                    var line = snapshot[i];
+                    sb.AppendLine($"[{line.Timestamp:O}] {line.Source}: {line.Message}");
+                }
+
+                return sb.ToString().TrimEnd();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         internal void Append(string? message, string source)
         {
             if (!Enabled || string.IsNullOrWhiteSpace(message))

@@ -12,13 +12,17 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Avalonia.Media;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 using System.Globalization;
+using Avalonia.VisualTree;
+using System.Collections.Specialized;
 
 namespace VaultSync.UI;
 
@@ -31,12 +35,26 @@ public partial class App : Application
 
     // Keep a reference to the tray/menu-bar icon so it stays alive.
     private TrayIcon? _trayIcon;
+    private NativeMenu? _trayMenu;
     private static App? _instance;
     private static bool _trayRecentLatestOnly = true;
     private const string DefaultDriveHealthLabel = "Storage health: tap Recheck";
     private static string _cachedDriveHealthLabel = DefaultDriveHealthLabel;
     private static DriveHealthStatus _cachedDriveHealthStatus = DriveHealthStatus.Unknown;
     private const int MaxRecentBackupsPerProject = 3;
+    private int _trayMenuRefreshInFlight;
+    private int _trayMenuRefreshQueued;
+    private const string DefaultFontFallback =
+        "Inter, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, " +
+        "Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, " +
+        "Noto Naskh Arabic, Arial Unicode MS, Arial, Tahoma";
+    private FontFamily? _defaultFontFamily;
+    private readonly HashSet<Window> _arabicFontHooked = new();
+    private static readonly FontFamily ArabicFontFamily = new(
+        $"avares://VaultSync.UI/Assets/Fonts/#Noto Sans Arabic, avares://VaultSync.UI/Assets/Fonts/#Noto Sans, {DefaultFontFallback}");
+    private static readonly FontFamily ArabicMacFontFamily = new(
+        $"avares://VaultSync.UI/Assets/Fonts/#Noto Sans Arabic, avares://VaultSync.UI/Assets/Fonts/#Noto Sans, " +
+        "Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial");
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -77,6 +95,11 @@ public partial class App : Application
             WireLifecycleBreadcrumbs(desktop);
 
             AppViewModelInstance = new AppViewModel();
+            if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out var fontResource))
+            {
+                _defaultFontFamily = fontResource as FontFamily;
+            }
+            ApplyLanguageFontOverrides();
             if (LocalizationProvider.Service is { } locService)
             {
                 locService.LanguageChanged += () =>
@@ -86,6 +109,7 @@ public partial class App : Application
                     {
                         _trayIcon.ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups");
                     }
+                    ApplyLanguageFontOverrides();
                     RefreshTrayMenu();
                 };
             }
@@ -94,6 +118,24 @@ public partial class App : Application
             {
                 DataContext = AppViewModelInstance
             };
+            ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
+            if (desktop.Windows is INotifyCollectionChanged windowsChanged)
+            {
+                windowsChanged.CollectionChanged += (_, e) =>
+                {
+                    if (e.NewItems is null)
+                        return;
+                    foreach (var item in e.NewItems)
+                    {
+                        if (item is Window newWindow)
+                        {
+                            ApplyArabicFontOverridesToWindow(newWindow, IsArabicActive());
+                        }
+                    }
+                };
+            }
+
+            Dispatcher.UIThread.Post(() => TryShowWhatsNew(desktop));
 
             // Small always-on-top widget that lights up for tray-started backups.
             var backupWidgetService = new BackupWidgetService(
@@ -149,6 +191,74 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    private void ApplyLanguageFontOverrides()
+    {
+        if (IsArabicActive())
+        {
+            Resources["AppFontFamily"] = OperatingSystem.IsMacOS()
+                ? ArabicMacFontFamily
+                : ArabicFontFamily;
+            ApplyArabicFontOverridesToWindows(true);
+            return;
+        }
+
+        if (_defaultFontFamily is not null)
+        {
+            Resources["AppFontFamily"] = _defaultFontFamily;
+        }
+        ApplyArabicFontOverridesToWindows(false);
+    }
+
+    private static bool IsArabicActive()
+    {
+        return string.Equals(LocalizationProvider.Service?.CurrentLanguage, "ar", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ApplyArabicFontOverridesToWindows(bool enable)
+    {
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+
+        foreach (var window in desktop.Windows)
+        {
+            ApplyArabicFontOverridesToWindow(window, enable);
+        }
+    }
+
+    private void ApplyArabicFontOverridesToWindow(Window window, bool enable)
+    {
+        if (_arabicFontHooked.Add(window))
+        {
+            void Apply() => ApplyArabicFontOverridesToWindowCore(window, IsArabicActive());
+            window.Opened += (_, __) => Apply();
+            window.AttachedToVisualTree += (_, __) => Apply();
+            window.Closed += (_, __) => _arabicFontHooked.Remove(window);
+        }
+
+        ApplyArabicFontOverridesToWindowCore(window, enable);
+    }
+
+    private void ApplyArabicFontOverridesToWindowCore(Window window, bool enable)
+    {
+        var fontFamily = OperatingSystem.IsMacOS() ? ArabicMacFontFamily : ArabicFontFamily;
+        foreach (var textBlock in window.GetVisualDescendants().OfType<TextBlock>())
+        {
+            if (enable)
+            {
+                textBlock.FontFamily = fontFamily;
+                if (textBlock.FontWeight >= FontWeight.SemiBold)
+                {
+                    textBlock.FontWeight = FontWeight.Normal;
+                }
+            }
+            else
+            {
+                textBlock.ClearValue(TextBlock.FontFamilyProperty);
+                textBlock.ClearValue(TextBlock.FontWeightProperty);
+            }
+        }
+    }
+
     private void CreateTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
     {
         // Avoid creating multiple tray icons.
@@ -167,10 +277,126 @@ public partial class App : Application
             ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups")
         };
 
-        var menu = BuildTrayMenu(desktop);
+        _trayMenu = new NativeMenu();
+        PopulateTrayMenu(_trayMenu, desktop);
 
-        _trayIcon.Menu = menu;
+        _trayIcon.Menu = _trayMenu;
         _trayIcon.IsVisible = true;
+    }
+
+    private void TryShowWhatsNew(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        if (AppViewModelInstance is null)
+            return;
+
+        var cfg = AppConfigStore.Load();
+        var currentVersion = AppViewModelInstance.CurrentVersionDisplay.TrimStart('v');
+        if (string.IsNullOrWhiteSpace(currentVersion))
+            return;
+
+        if (string.Equals(cfg.Advanced.LastWhatsNewVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var sections = LoadWhatsNewSections(currentVersion);
+        if (sections.Count == 0)
+        {
+            sections.Add(new WhatsNewSection(L("WhatsNew.Section.General", "Highlights")));
+            sections[0].Items.Add(L("WhatsNew.Fallback", "This update includes improvements and fixes across VaultSync."));
+        }
+
+        var vm = new WhatsNewViewModel($"v{currentVersion}");
+        foreach (var section in sections)
+        {
+            vm.AddSection(section.Title, section.Items.ToArray());
+        }
+
+        var window = new WhatsNewWindow
+        {
+            DataContext = vm
+        };
+
+        vm.CloseRequested += () =>
+        {
+            cfg.Advanced.LastWhatsNewVersion = currentVersion;
+            AppConfigStore.Save(cfg);
+            window.Close();
+        };
+
+        window.ShowDialog(desktop.MainWindow);
+    }
+
+    private static List<WhatsNewSection> LoadWhatsNewSections(string currentVersion)
+    {
+        var sections = new List<WhatsNewSection>();
+        var baseDir = AppContext.BaseDirectory;
+        var candidates = new[]
+        {
+            Path.Combine(baseDir, "WHATS_NEW.md"),
+            Path.Combine(baseDir, "docs", "WHATS_NEW.md"),
+            Path.Combine(baseDir, "CHANGELOG.md"),
+            Path.Combine(baseDir, "..", "CHANGELOG.md"),
+            Path.Combine(baseDir, "..", "..", "CHANGELOG.md")
+        };
+
+        string? content = null;
+        foreach (var path in candidates)
+        {
+            if (!File.Exists(path))
+                continue;
+            try
+            {
+                content = File.ReadAllText(path);
+                break;
+            }
+            catch
+            {
+                content = null;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(content))
+            return sections;
+
+        var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+        var hasWhatsNewHeader = Array.Exists(lines, line => line.StartsWith("#", StringComparison.Ordinal) && line.Contains("What's New", StringComparison.OrdinalIgnoreCase));
+        var startIndex = 0;
+        if (!hasWhatsNewHeader)
+        {
+            var headerPrefix = $"## [{currentVersion}]";
+            startIndex = Array.FindIndex(lines, line => line.StartsWith(headerPrefix, StringComparison.OrdinalIgnoreCase));
+            if (startIndex < 0)
+                return sections;
+        }
+
+        WhatsNewSection? currentSection = null;
+        var lineStart = hasWhatsNewHeader ? 0 : startIndex + 1;
+        for (var i = lineStart; i < lines.Length; i++)
+        {
+            var line = lines[i].TrimEnd();
+            if (!hasWhatsNewHeader && line.StartsWith("## [", StringComparison.Ordinal))
+                break;
+
+            if (line.StartsWith("### ", StringComparison.Ordinal))
+            {
+                var title = line[4..].Trim();
+                currentSection = new WhatsNewSection(title);
+                sections.Add(currentSection);
+                continue;
+            }
+
+            if (currentSection is null)
+                continue;
+
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("-", StringComparison.Ordinal))
+            {
+                var item = trimmed.TrimStart('-').Trim();
+                if (!string.IsNullOrWhiteSpace(item))
+                    currentSection.Items.Add(item);
+            }
+        }
+
+        return sections;
     }
 
     private void DestroyTrayIcon()
@@ -181,6 +407,7 @@ public partial class App : Application
         _trayIcon.IsVisible = false;
         _trayIcon.Dispose();
         _trayIcon = null;
+        _trayMenu = null;
     }
 
     private void UpdateTrayIconVisibility(IClassicDesktopStyleApplicationLifetime desktop)
@@ -204,12 +431,13 @@ public partial class App : Application
         }
     }
 
-    private NativeMenu BuildTrayMenu(
+    private void PopulateTrayMenu(
+        NativeMenu menu,
         IClassicDesktopStyleApplicationLifetime desktop,
         IReadOnlyList<AppViewModel.TrayProjectBackups>? recentBackups = null)
     {
         // Build a small context menu: header / Open / Backup / Snapshot / Recent backups / Quit.
-        var menu = new NativeMenu();
+        menu.Items.Clear();
 
         // Header (disabled) to give the menu a title and tighter OS alignment.
         var headerText = L("Tray.Header", "VaultSync");
@@ -505,7 +733,6 @@ public partial class App : Application
         menu.Items.Add(separator3);
         menu.Items.Add(quitItem);
 
-        return menu;
     }
 
     /// <summary>
@@ -623,13 +850,19 @@ public partial class App : Application
         }
     }
 
-        public async void RefreshTrayMenu()
-        {
-            if (_trayIcon is null)
-                return;
+    public async void RefreshTrayMenu()
+    {
+        if (_trayIcon is null)
+            return;
 
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
+
+        if (Interlocked.Exchange(ref _trayMenuRefreshInFlight, 1) == 1)
+        {
+            Interlocked.Exchange(ref _trayMenuRefreshQueued, 1);
+            return;
+        }
 
         var recent = await Task.Run(() =>
             AppViewModelInstance?.GetRecentBackupsForTray(MaxRecentBackupsPerProject)
@@ -639,17 +872,30 @@ public partial class App : Application
         {
             try
             {
-                // Reset first to avoid Avalonia native menu mismatch errors on macOS.
-                _trayIcon.Menu = null;
-                _trayIcon.Menu = BuildTrayMenu(desktop, recent);
+                if (_trayMenu is null)
+                {
+                    _trayMenu = new NativeMenu();
+                }
+
+                PopulateTrayMenu(_trayMenu, desktop, recent);
+                _trayIcon.Menu = _trayMenu;
             }
             catch (Exception ex)
             {
                 // Best-effort: avoid crashing the app if tray menu rebuild fails.
                 Console.WriteLine($"[Tray] Failed to refresh tray menu: {ex.Message}");
             }
+            finally
+            {
+                Interlocked.Exchange(ref _trayMenuRefreshInFlight, 0);
+                if (Interlocked.Exchange(ref _trayMenuRefreshQueued, 0) == 1)
+                {
+                    RefreshTrayMenu();
+                }
+            }
         });
     }
+
 
     private static void BringWindowToFrontIfUserWants(IClassicDesktopStyleApplicationLifetime desktop)
     {

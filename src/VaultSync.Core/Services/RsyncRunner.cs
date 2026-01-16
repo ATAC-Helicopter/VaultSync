@@ -193,6 +193,7 @@ namespace VaultSync.Core.Services
             }
             catch (OperationCanceledException)
             {
+                Console.WriteLine("[RsyncRunner] Cancellation requested; stopping rsync process.");
                 try { proc.CancelErrorRead(); } catch { /* ignore */ }
                 try { proc.CancelOutputRead(); } catch { /* ignore */ }
                 try { proc.Kill(entireProcessTree: true); } catch { /* ignore */ }

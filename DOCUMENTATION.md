@@ -69,6 +69,8 @@ VaultSync is a cross-platform snapshot, backup, sync, and verification toolkit f
 ## Troubleshooting & Notes
 
 - **Unsigned builds** trigger Windows SmartScreen: click **More info** → **Run anyway** once you trust VaultSync.
+- **macOS NFS**: auto-mount is not supported (requires admin privileges). Pre-mount the share (sudo `mount_nfs`) and
+  set the destination to the local mount path with **Pre-mounted** enabled and **Auto-mount** disabled.
 - Check the `Localization/` folder for strings and help translate additional languages.
 - `docs/UPDATER.md` documents delta patch generation, updater helpers, and platform-specific behaviors.
 - Need help? Use GitHub Discussions (`/discussions`) or open an issue on the repo.

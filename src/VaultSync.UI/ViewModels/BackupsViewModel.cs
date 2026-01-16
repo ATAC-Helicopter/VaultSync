@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Windows.Input;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
@@ -80,6 +82,34 @@ namespace VaultSync.UI.ViewModels
         private string _currentTypeFilter = "All";
         private string? _currentProjectIdFilter = null;
         public string HistoryFilterProjectLabel { get; private set; } = L("Backups.Section.HistoryFilterAllProjects", "All projects");
+        private bool _onlyErrorsFilter;
+        private bool _onlyManualFilter;
+
+        public bool OnlyErrorsFilter
+        {
+            get => _onlyErrorsFilter;
+            set
+            {
+                if (SetProperty(ref _onlyErrorsFilter, value))
+                {
+                    OnPropertyChanged(nameof(OnlyErrorsFilter));
+                    RefreshSnapshotsView(false);
+                }
+            }
+        }
+
+        public bool OnlyManualFilter
+        {
+            get => _onlyManualFilter;
+            set
+            {
+                if (SetProperty(ref _onlyManualFilter, value))
+                {
+                    OnPropertyChanged(nameof(OnlyManualFilter));
+                    RefreshSnapshotsView(false);
+                }
+            }
+        }
 
         // Per-project backup status
         public ObservableCollection<ProjectBackupItem> ProjectBackups { get; } =
@@ -99,6 +129,8 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<DestinationStatusItem> DestinationStatuses { get; } =
             new ObservableCollection<DestinationStatusItem>();
         public bool HasDestinationStatuses => DestinationStatuses.Count > 0;
+
+        private int _diskUsageInFlight;
 
         // Currently selected project in the per-project list
         private ProjectBackupItem? _selectedProject;
@@ -348,6 +380,7 @@ namespace VaultSync.UI.ViewModels
         public event Action<ProjectBackupItem?>? BackupProjectRequested;
         public event Action<BackupSnapshotItem?>? RestoreBackupRequested;
         public event Action<BackupSnapshotItem?>? DeleteBackupRequested;
+        public event Action<BackupSnapshotItem?>? OpenBackupFolderRequested;
         public event Action<BackupProgressItem?>? CancelActiveBackupRequested;
         public event Action<int, bool>? BackupProtectionChanged;
 
@@ -355,6 +388,7 @@ namespace VaultSync.UI.ViewModels
         public ICommand CreateBackupCommand { get; }
         public ICommand RestoreBackupCommand { get; }
         public ICommand DeleteBackupCommand { get; }
+        public ICommand OpenBackupFolderCommand { get; }
         public ICommand ToggleBackupProtectionCommand { get; }
 
         public ICommand BackupProjectCommand { get; }
@@ -371,6 +405,7 @@ namespace VaultSync.UI.ViewModels
             // Global history actions
             RestoreBackupCommand = new RelayCommand(p => RestoreBackup(p as BackupSnapshotItem));
             DeleteBackupCommand  = new RelayCommand(p => DeleteBackup(p as BackupSnapshotItem));
+            OpenBackupFolderCommand = new RelayCommand(p => OpenBackupFolder(p as BackupSnapshotItem));
             ToggleBackupProtectionCommand = new RelayCommand(p => ToggleBackupProtection(p as BackupSnapshotItem));
 
             // Per-project actions
@@ -442,6 +477,14 @@ namespace VaultSync.UI.ViewModels
 
             // Let external code handle deletion (DB row + files), then refresh this VM.
             DeleteBackupRequested?.Invoke(snapshot);
+        }
+
+        private void OpenBackupFolder(BackupSnapshotItem? snapshot)
+        {
+            if (snapshot is null)
+                return;
+
+            OpenBackupFolderRequested?.Invoke(snapshot);
         }
 
         private void ToggleBackupProtection(BackupSnapshotItem? item)
@@ -623,7 +666,8 @@ namespace VaultSync.UI.ViewModels
                     Alias  = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path,
                     Path   = dest.Path,
                     Status = dest.Active ? "Pending" : "Inactive",
-                    Severity = "Info"
+                    Severity = "Info",
+                    LastCheckedUtc = null
                 });
             }
             OnPropertyChanged(nameof(HasDestinationStatuses));
@@ -643,6 +687,7 @@ namespace VaultSync.UI.ViewModels
 
             item.Status   = status;
             item.Severity = severity;
+            item.LastCheckedUtc = DateTime.UtcNow;
         }
 
         public void MarkDestinationComplete(string id, bool success, string status)
@@ -771,6 +816,12 @@ namespace VaultSync.UI.ViewModels
             else if (_currentTypeFilter == "Manual")
                 source = source.Where(s => s.Type == "Manual");
 
+            if (OnlyManualFilter)
+                source = source.Where(s => s.Type == "Manual");
+
+            if (OnlyErrorsFilter)
+                source = source.Where(s => string.Equals(s.Status, "Failed", StringComparison.OrdinalIgnoreCase));
+
             // Project filter
             if (!string.IsNullOrWhiteSpace(_currentProjectIdFilter))
                 source = source.Where(s => s.ProjectId == _currentProjectIdFilter);
@@ -795,6 +846,9 @@ namespace VaultSync.UI.ViewModels
             var projectNameLookup = ProjectBackups
                 .GroupBy(p => p.Id)
                 .ToDictionary(g => g.Key, g => g.First().Name);
+            var projectColorLookup = ProjectBackups
+                .GroupBy(p => p.Id)
+                .ToDictionary(g => g.Key, g => g.First().AvatarColor);
 
             var grouped = filtered
                 .GroupBy(s => s.ProjectId ?? string.Empty)
@@ -806,6 +860,10 @@ namespace VaultSync.UI.ViewModels
                 });
 
             var seenProjects = new HashSet<string>();
+            var latestOverall = filtered
+                .OrderByDescending(s => s.Timestamp)
+                .FirstOrDefault()
+                ?.Timestamp ?? DateTime.MinValue;
 
             foreach (var g in grouped)
             {
@@ -819,6 +877,7 @@ namespace VaultSync.UI.ViewModels
                     .OrderByDescending(s => s.Timestamp)
                     .ToList();
                 long totalBytes = ordered.Sum(s => s.SizeBytes);
+                var latest = ordered.FirstOrDefault()?.Timestamp ?? DateTime.MinValue;
 
                 string projectName;
                 if (string.IsNullOrWhiteSpace(key))
@@ -834,12 +893,33 @@ namespace VaultSync.UI.ViewModels
                     ? "Backups.Section.SnapshotCount.Singular"
                     : "Backups.Section.SnapshotCount.Plural";
                 var summaryFallback = ordered.Count == 1 ? "{0} backup" : "{0} backups";
+
+                var accentBrush = new ImmutableSolidColorBrush(Color.Parse("#33405A"));
+                if (!string.IsNullOrWhiteSpace(key) && projectColorLookup.TryGetValue(key, out var colorValue))
+                {
+                    try
+                    {
+                        accentBrush = new ImmutableSolidColorBrush(Color.Parse(colorValue));
+                    }
+                    catch
+                    {
+                        accentBrush = new ImmutableSolidColorBrush(Color.Parse("#33405A"));
+                    }
+                }
+
+                var isExpanded = !string.IsNullOrWhiteSpace(_currentProjectIdFilter)
+                    ? string.Equals(_currentProjectIdFilter, key, StringComparison.OrdinalIgnoreCase)
+                    : latest == latestOverall;
+
                 var groupVm = new SnapshotProjectGroup
                 {
                     ProjectId          = key,
                     ProjectName        = projectName,
                     Summary            = Lf(summaryKey, summaryFallback, ordered.Count),
-                    TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes)
+                    TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes),
+                    LatestBackupDisplay = latest == DateTime.MinValue ? "-" : latest.ToString("yyyy-MM-dd HH:mm"),
+                    AccentBrush        = accentBrush,
+                    IsExpanded         = isExpanded
                 };
 
                 foreach (var snap in ordered)
@@ -870,50 +950,71 @@ namespace VaultSync.UI.ViewModels
         /// </summary>
         public void RefreshBackupDiskUsage(bool includeHealthProbe = false)
         {
-            try
+            if (Interlocked.Exchange(ref _diskUsageInFlight, 1) == 1)
+                return;
+
+            _ = Task.Run(() =>
             {
-                var config = AppConfigStore.Load();
-                var (usedPercent, freeText, thresholdText, isBelowThreshold) =
-                    DashboardViewModel.ComputeBackupDiskUsage(config);
-
-                UpdateBackupDiskUsage(usedPercent, freeText, thresholdText, isBelowThreshold);
-                BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
-
-                if (includeHealthProbe)
+                try
                 {
-                    // Best-effort SMART/health probe for the backup path
-                    var healthService = new DriveHealthService();
-                    var backupPath = config.Backups.BackupRoot ?? string.Empty;
-                    var health = healthService.CheckPath(backupPath);
+                    var config = AppConfigStore.Load();
+                    var (usedPercent, freeText, thresholdText, isBelowThreshold) =
+                        DashboardViewModel.ComputeBackupDiskUsage(config);
+                    var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
 
-                    var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
-                        ? L("Backups.Health.NotAvailable", "not available")
-                        : health.Message!;
-                    var (text, brush) = health.Status switch
+                    string? healthText = null;
+                    IBrush? healthBrush = null;
+
+                    if (includeHealthProbe)
                     {
-                        DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.LimeGreen)),
-                        DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Orange)),
-                        DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", BackupDiskDriveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Tomato)),
-                        _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, fallbackMessage), (IBrush)new SolidColorBrush(Colors.Gray))
-                    };
+                        var healthService = new DriveHealthService();
+                        var backupPath = config.Backups.BackupRoot ?? string.Empty;
+                        var health = healthService.CheckPath(backupPath);
 
-                    BackupDiskHealthText  = text;
-                    BackupDiskHealthBrush = brush;
+                        var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
+                            ? L("Backups.Health.NotAvailable", "not available")
+                            : health.Message!;
+                        (healthText, healthBrush) = health.Status switch
+                        {
+                            DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.LimeGreen)),
+                            DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Orange)),
+                            DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Tomato)),
+                            _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, fallbackMessage), (IBrush)new SolidColorBrush(Colors.Gray))
+                        };
+                    }
+
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        UpdateBackupDiskUsage(usedPercent, freeText, thresholdText, isBelowThreshold);
+                        BackupDiskDriveLabel = driveLabel;
+                        if (includeHealthProbe && healthText is not null && healthBrush is not null)
+                        {
+                            BackupDiskHealthText = healthText;
+                            BackupDiskHealthBrush = healthBrush;
+                        }
+                    });
                 }
-            }
-            catch (Exception)
-            {
-                UpdateBackupDiskUsage(
-                    0d,
-                    L("Dashboard.Storage.UsageUnavailable", "Backup storage usage unavailable"),
-                    string.Empty,
-                    false);
+                catch (Exception)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        UpdateBackupDiskUsage(
+                            0d,
+                            L("Dashboard.Storage.UsageUnavailable", "Backup storage usage unavailable"),
+                            string.Empty,
+                            false);
 
-                var driveUnknown = L("DriveHealth.UnknownDrive", "drive");
-                BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", driveUnknown);
-                BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, L("Backups.Health.NotAvailable", "not available"));
-                BackupDiskHealthBrush = new SolidColorBrush(Colors.Gray);
-            }
+                        var driveUnknown = L("DriveHealth.UnknownDrive", "drive");
+                        BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", driveUnknown);
+                        BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, L("Backups.Health.NotAvailable", "not available"));
+                        BackupDiskHealthBrush = new SolidColorBrush(Colors.Gray);
+                    });
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _diskUsageInFlight, 0);
+                }
+            });
         }
 
         private static string FormatDriveLabel(string? path)
@@ -962,7 +1063,11 @@ namespace VaultSync.UI.ViewModels
         /// Severity can be "Info", "Warning", or "Error".
         /// This is a thin wrapper around the shared NotificationState model.
         /// </summary>
-        public void ShowNotification(string message, string severity = "Info")
+        public void ShowNotification(
+            string message,
+            string severity = "Info",
+            string? actionLabel = null,
+            ICommand? actionCommand = null)
         {
             var sev = severity switch
             {
@@ -971,7 +1076,7 @@ namespace VaultSync.UI.ViewModels
                 _         => NotificationSeverity.Info
             };
 
-            Notification.Show(message, sev);
+            Notification.Show(message, sev, actionLabel: actionLabel, actionCommand: actionCommand);
         }
 
         private void OnAutoBackupChanged(ProjectBackupItem item)
@@ -1144,33 +1249,79 @@ namespace VaultSync.UI.ViewModels
                 .Select(offset => now.Date.AddDays(-6 + offset))
                 .ToArray();
 
-            var countsByDate = _allSnapshots
+            var autoByDate = _allSnapshots
+                .Where(s => string.Equals(s.Type, "Auto", StringComparison.OrdinalIgnoreCase))
                 .GroupBy(s => s.Timestamp.Date)
                 .ToDictionary(g => g.Key, g => g.Count());
+            var manualByDate = _allSnapshots
+                .Where(s => string.Equals(s.Type, "Manual", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(s => s.Timestamp.Date)
+                .ToDictionary(g => g.Key, g => g.Count());
+            var bytesByDate = _allSnapshots
+                .GroupBy(s => s.Timestamp.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.SizeBytes));
 
-            int max = countsByDate.Values.DefaultIfEmpty(0).Max();
-            if (max == 0)
-                max = 1; // avoid divide-by-zero
+            var totals = days
+                .Select(d =>
+                {
+                    autoByDate.TryGetValue(d, out var autoCount);
+                    manualByDate.TryGetValue(d, out var manualCount);
+                    return autoCount + manualCount;
+                })
+                .ToList();
+
+            int maxTotal = totals.DefaultIfEmpty(0).Max();
+            if (maxTotal == 0)
+                maxTotal = 1; // avoid divide-by-zero
+
+            long maxBytes = bytesByDate.Values.DefaultIfEmpty(0L).Max();
+            if (maxBytes == 0)
+                maxBytes = 1;
 
             foreach (var day in days)
             {
-                countsByDate.TryGetValue(day, out var count);
+                autoByDate.TryGetValue(day, out var autoCount);
+                manualByDate.TryGetValue(day, out var manualCount);
+                bytesByDate.TryGetValue(day, out var totalBytes);
 
-                double normalized = count / (double)max;
-                // base height 4-8px plus up to ~40px for busy days
-                double height = count == 0 ? 4 : 8 + normalized * 40;
+                var totalCount = autoCount + manualCount;
+                var normalized = totalBytes > 0
+                    ? totalBytes / (double)maxBytes
+                    : totalCount / (double)maxTotal;
+                // base height 6-10px plus up to ~42px for busy days
+                var totalHeight = totalCount == 0 ? 6 : 10 + normalized * 42;
 
-                // Accent color, dim if no snapshots (use immutable brushes so we can build off UI thread)
-                IBrush brush = count == 0
-                    ? new ImmutableSolidColorBrush(Color.Parse("#22FFFFFF"))
-                    : new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
+                var autoHeight = 0d;
+                var manualHeight = 0d;
+                if (totalCount > 0)
+                {
+                    autoHeight = autoCount == 0 ? 0 : Math.Max(3, totalHeight * autoCount / totalCount);
+                    manualHeight = manualCount == 0 ? 0 : Math.Max(3, totalHeight * manualCount / totalCount);
+
+                    var combined = autoHeight + manualHeight;
+                    if (combined > totalHeight && combined > 0)
+                    {
+                        var scale = totalHeight / combined;
+                        autoHeight *= scale;
+                        manualHeight *= scale;
+                    }
+                }
+
+                var dayLabel = day.ToString("ddd");
+                var tooltip = totalCount == 0
+                    ? Lf("Backups.Activity.TooltipNone", "{0}: No backups", dayLabel)
+                    : Lf("Backups.Activity.Tooltip", "{0}: {1} backups · {2}", dayLabel, totalCount, BackupSnapshotItem.FormatSize(totalBytes));
 
                 SnapshotActivity.Add(new SnapshotActivityPoint
                 {
-                    DayLabel  = day.ToString("dd"),
-                    Count     = count,
-                    BarHeight = height,
-                    BarBrush  = brush
+                    DayLabel     = dayLabel,
+                    ShowLabel    = true,
+                    AutoCount    = autoCount,
+                    ManualCount  = manualCount,
+                    TotalBytes   = totalBytes,
+                    AutoHeight   = autoHeight,
+                    ManualHeight = manualHeight,
+                    TooltipText  = tooltip
                 });
             }
         }
@@ -1372,6 +1523,9 @@ namespace VaultSync.UI.ViewModels
         public string ProjectName { get; set; } = string.Empty;
         public string Summary { get; set; } = string.Empty;
         public string TotalSizeFormatted { get; set; } = string.Empty;
+        public string LatestBackupDisplay { get; set; } = string.Empty;
+        public IBrush AccentBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#33405A"));
+        public bool IsExpanded { get; set; }
 
         public ObservableCollection<BackupSnapshotItem> Snapshots { get; } =
             new ObservableCollection<BackupSnapshotItem>();
@@ -1463,6 +1617,36 @@ namespace VaultSync.UI.ViewModels
         {
             get => _severity;
             set => SetField(ref _severity, value);
+        }
+
+        private DateTime? _lastCheckedUtc;
+        public DateTime? LastCheckedUtc
+        {
+            get => _lastCheckedUtc;
+            set
+            {
+                if (SetField(ref _lastCheckedUtc, value))
+                {
+                    OnPropertyChanged(nameof(LastCheckedDisplay));
+                }
+            }
+        }
+
+        public string LastCheckedDisplay
+        {
+            get
+            {
+                if (!LastCheckedUtc.HasValue)
+                {
+                    return LocalizationProvider.Service?.GetString("Destinations.Status.LastCheckedNever")
+                           ?? "Last checked: never";
+                }
+
+                var label = LocalizationProvider.Service?.GetString("Destinations.Status.LastChecked")
+                           ?? "Last checked: {0}";
+                var local = LastCheckedUtc.Value.ToLocalTime().ToString("HH:mm:ss");
+                return string.Format(CultureInfo.CurrentCulture, label, local);
+            }
         }
 
         public static string GetId(BackupDestination dest) =>
@@ -1590,10 +1774,13 @@ namespace VaultSync.UI.ViewModels
         {
             get
             {
-                if (!string.IsNullOrWhiteSpace(_lastProgressDetail))
+                if (TryExtractFileName(_currentFile, out var fileName))
+                    return fileName;
+
+                if (!string.IsNullOrWhiteSpace(_lastProgressDetail) && !ContainsSpeedOrEta(_lastProgressDetail))
                     return _lastProgressDetail;
 
-                return StageDisplay;
+                return string.Empty;
             }
         }
 
@@ -1622,6 +1809,8 @@ namespace VaultSync.UI.ViewModels
                 return stageKey switch
                 {
                     "Completed" => L("Backups.Status.Completed", "Completed"),
+                    "Cancelling" => L("Backups.Status.Cancelling", "Cancelling..."),
+                    "Deleting" => L("Backups.Stage.Deleting", "Deleting"),
                     "Compressing" => L("Backups.Stage.Compressing", "Compressing archive"),
                     "Uploading" => L("Backups.Stage.Uploading", "Uploading archive"),
                     "Hashing" => L("Backups.Stage.Hashing", "Hashing files"),
@@ -1695,6 +1884,32 @@ namespace VaultSync.UI.ViewModels
             }
 
             return candidate;
+        }
+
+        private static bool TryExtractFileName(string value, out string fileName)
+        {
+            fileName = string.Empty;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            if (!value.Contains('\\') && !value.Contains('/'))
+                return false;
+
+            var extracted = ExtractFileName(value);
+            if (string.IsNullOrWhiteSpace(extracted))
+                return false;
+
+            fileName = extracted;
+            return true;
+        }
+
+        private static bool ContainsSpeedOrEta(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return value.Contains("ETA", StringComparison.OrdinalIgnoreCase)
+                   || value.Contains("MB/s", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string ExtractProgressDetail(string value)
@@ -1814,6 +2029,9 @@ namespace VaultSync.UI.ViewModels
                 (ContainsToken(_etaText, "Completed") && !ContainsToken(_etaText, "Hashing")))
                 return "Completed";
 
+            if (ContainsToken(_currentFile, L("Backups.Status.Cancelling", "Cancelling...")))
+                return "Cancelling";
+
             if (ContainsToken(_etaText, "Compressing"))
                 return "Compressing";
 
@@ -1825,6 +2043,10 @@ namespace VaultSync.UI.ViewModels
 
             if (ContainsToken(_etaText, "Copying"))
                 return "Copying";
+
+            if (ContainsToken(_currentFile, L("Backups.Status.Deleting", "Deleting backup files...")) ||
+                ContainsToken(_currentFile, L("Backups.Stage.Deleting", "Deleting")))
+                return "Deleting";
 
             if (ContainsToken(_currentFile, L("Backups.Status.Preparing", "Preparing backup...")))
                 return "Preparing";
@@ -1850,9 +2072,20 @@ namespace VaultSync.UI.ViewModels
     public class SnapshotActivityPoint
     {
         public string DayLabel { get; set; } = string.Empty;
-        public int Count { get; set; }
-        public double BarHeight { get; set; }
-        public IBrush BarBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
+        public bool ShowLabel { get; set; } = true;
+        public int AutoCount { get; set; }
+        public int ManualCount { get; set; }
+        public long TotalBytes { get; set; }
+        public double AutoHeight { get; set; }
+        public double ManualHeight { get; set; }
+        public bool IsEmpty => AutoCount + ManualCount == 0;
+        public double EmptyHeight => IsEmpty ? 6 : 0;
+        public bool HasAuto => AutoCount > 0;
+        public bool HasManual => ManualCount > 0;
+        public IBrush AutoBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
+        public IBrush ManualBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
+        public IBrush EmptyBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#22FFFFFF"));
+        public string TooltipText { get; set; } = string.Empty;
     }
 
     /// <summary>

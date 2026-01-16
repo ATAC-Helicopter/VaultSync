@@ -49,6 +49,7 @@ namespace VaultSync.UI
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
         private bool _useFullSnapshotHash = true;
+        private bool _enableArchiveUploadAutoTune = true;
         private bool _enableMetadataSync = true;
         private bool _autoImportMetadata = true;
         private bool _promptRestoreAfterImport = true;
@@ -68,6 +69,7 @@ namespace VaultSync.UI
         private bool _notifyOnBackupFailure = true;
         private bool _notifyOnLowDiskSpace = true;
         private bool _showTrayBackupWidget = true;
+        private bool _confirmDeleteBackup = true;
 
         private bool _notifyOnSnapshotSuccess = false;
         private bool _notifyOnSnapshotFailure = true;
@@ -207,6 +209,7 @@ namespace VaultSync.UI
             _runInBackground         = cfg.Behavior.RunInBackground;
             _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
             _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
+            _confirmDeleteBackup     = cfg.Behavior.ConfirmDeleteBackup;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
             _autoBackupIntervalMinutes = ClampInt(cfg.Backups.IntervalMinutes, 1, 10080, 30);
@@ -223,6 +226,7 @@ namespace VaultSync.UI
             _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
             _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
             _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
+            _enableArchiveUploadAutoTune = cfg.Backups.EnableArchiveUploadAutoTune;
             _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
             _autoImportMetadata        = cfg.Backups.AutoImportMetadata;
             _promptRestoreAfterImport  = cfg.Backups.PromptRestoreAfterImport;
@@ -402,6 +406,7 @@ namespace VaultSync.UI
             cfg.Behavior.ShowTrayIcon            = _showTrayIcon;
             cfg.Behavior.RunInBackground         = _runInBackground;
             cfg.Behavior.ShowBackupWidget        = _showTrayBackupWidget;
+            cfg.Behavior.ConfirmDeleteBackup     = _confirmDeleteBackup;
 
             cfg.Backups.EnableAutoBackups           = EnableAutoBackups;
             cfg.Backups.IntervalMinutes             = ClampInt(AutoBackupIntervalMinutes, 1, 10080, 30);
@@ -422,6 +427,7 @@ namespace VaultSync.UI
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
+            cfg.Backups.EnableArchiveUploadAutoTune = _enableArchiveUploadAutoTune;
             cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
             cfg.Backups.AutoImportMetadata          = AutoImportMetadata;
             cfg.Backups.PromptRestoreAfterImport    = PromptRestoreAfterImport;
@@ -837,6 +843,12 @@ namespace VaultSync.UI
             set => SetField(ref _useFullSnapshotHash, value);
         }
 
+        public bool EnableArchiveUploadAutoTune
+        {
+            get => _enableArchiveUploadAutoTune;
+            set => SetField(ref _enableArchiveUploadAutoTune, value);
+        }
+
         public bool EnableMetadataSync
         {
             get => _enableMetadataSync;
@@ -915,6 +927,12 @@ namespace VaultSync.UI
         {
             get => _showTrayBackupWidget;
             set => SetField(ref _showTrayBackupWidget, value);
+        }
+
+        public bool ConfirmDeleteBackups
+        {
+            get => _confirmDeleteBackup;
+            set => SetField(ref _confirmDeleteBackup, value);
         }
 
         public bool LaunchOnLogin
@@ -1473,52 +1491,98 @@ namespace VaultSync.UI
                 CredentialName = dest.CredentialName
             };
 
-            var resolution = _networkMountService.PrepareDestination(destModel, profile);
-            if (!resolution.IsSuccess)
+            var result = await Task.Run(() =>
             {
-                SaveStatus = $"Destination '{display}' failed: {resolution.Message}";
-                dest.LastTestStatus   = resolution.Message;
-                dest.LastTestSeverity = "Error";
-                GlobalNotificationCenter.Instance.Show(
-                    SaveStatus,
-                    NotificationSeverity.Error,
-                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
-                return;
-            }
+                var resolution = _networkMountService.PrepareDestination(destModel, profile);
+                if (!resolution.IsSuccess)
+                {
+                    return (resolution, success: false, readable: false, writable: false, message: resolution.Message);
+                }
 
-            try
-            {
-                await Task.Run(() =>
+                try
                 {
                     var effectivePath = resolution.EffectivePath;
                     Directory.CreateDirectory(effectivePath);
-                    var testFile = Path.Combine(effectivePath, ".vaultsync_destination_test");
-                    File.WriteAllText(testFile, "ok");
-                    File.Delete(testFile);
-                });
 
-                SaveStatus = $"Destination '{display}' is reachable.";
-                dest.LastTestStatus   = LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable";
-                dest.LastTestSeverity = "Info";
-                GlobalNotificationCenter.Instance.Show(
-                    SaveStatus,
-                    NotificationSeverity.Info,
-                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
-            }
-            catch (Exception ex)
+                    var writable = TryWriteProbeFile(effectivePath);
+                    var message = writable
+                        ? (LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable")
+                        : (LocalizationProvider.Service?.GetString("Destinations.Test.ReadOnly") ?? "Read-only");
+
+                    return (resolution, success: true, readable: true, writable: writable, message: message);
+                }
+                catch (Exception ex)
+                {
+                    return (resolution, success: false, readable: false, writable: false, message: ex.Message);
+                }
+                finally
+                {
+                    _networkMountService.Cleanup(resolution);
+                }
+            });
+
+            if (!result.success)
             {
-                SaveStatus = $"Destination '{display}' failed: {ex.Message}";
-                dest.LastTestStatus   = ex.Message;
+                SaveStatus = $"Destination '{display}' failed: {result.message}";
+                dest.LastTestStatus   = result.message;
                 dest.LastTestSeverity = "Error";
+                var actionLabel = LocalizationProvider.Service?.GetString("Logs.CopySnippet") ?? "Copy log snippet";
+                var actionCommand = CreateCopyLogSnippetCommand($"Destination test failed for '{display}'.");
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Error,
-                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
+                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test",
+                    actionLabel: actionLabel,
+                    actionCommand: actionCommand);
+                return;
+            }
+
+            SaveStatus = $"Destination '{display}' is reachable.";
+            dest.LastTestStatus   = result.message;
+            dest.LastTestSeverity = result.writable ? "Info" : "Warning";
+            GlobalNotificationCenter.Instance.Show(
+                SaveStatus,
+                result.writable ? NotificationSeverity.Info : NotificationSeverity.Warning,
+                LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
+        }
+
+        private static bool TryWriteProbeFile(string effectivePath)
+        {
+            var testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
+            try
+            {
+                File.WriteAllText(testFile, "ok");
+                File.Delete(testFile);
+                return true;
+            }
+            catch
+            {
+                return false;
             }
             finally
             {
-                _networkMountService.Cleanup(resolution);
+                try
+                {
+                    if (File.Exists(testFile))
+                        File.Delete(testFile);
+                }
+                catch
+                {
+                    // best effort cleanup
+                }
             }
+        }
+
+        private ICommand CreateCopyLogSnippetCommand(string contextLabel)
+        {
+            return new RelayCommand(async _ =>
+            {
+                var snippet = Services.LogConsoleProvider.Service?.GetRecentSnippet(30, contextLabel);
+                if (string.IsNullOrWhiteSpace(snippet))
+                    return;
+
+                await ClipboardHelper.TryCopyAsync(snippet);
+            });
         }
 
         private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)

@@ -14,6 +14,8 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -113,6 +115,9 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
         private readonly ConcurrentDictionary<string, DateTime> _metadataImportAttempts = new();
         private readonly ConcurrentDictionary<int, byte> _manualBackupInFlight = new();
+        private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
+        private readonly ConcurrentDictionary<int, byte> _restoreAdvisoryShown = new();
+        private readonly ConcurrentDictionary<int, byte> _projectRootMissingNotified = new();
         private int _manualBackupInFlightCount;
         private int _backupAllInProgress;
         private bool _trayInitiatedBackup;
@@ -140,8 +145,13 @@ namespace VaultSync.UI.ViewModels
         private readonly RelayCommand _openReleaseCommand;
         private readonly RelayCommand _skipUpdateCommand;
         private readonly RelayCommand _dismissUpdateBannerCommand;
+        private readonly RelayCommand _dismissSoftCrashBannerCommand;
+        private readonly RelayCommand _copySoftCrashLogCommand;
         private bool _isPatchInstalling;
         private string _patchStatusMessage = string.Empty;
+        private bool _showSoftCrashBanner;
+        private string _softCrashBannerMessage = string.Empty;
+        private string? _softCrashLogPath;
 
         // Helper property to detect when the Backups page is active
         private bool IsOnBackupsPage => CurrentView == _backupsViewModel;
@@ -172,6 +182,33 @@ namespace VaultSync.UI.ViewModels
 
         private bool ShouldShowBackupWidget =>
             _settingsViewModel?.ShowTrayBackupWidget ?? true;
+
+        private static bool IsRemoteDestinationPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("//", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (!OperatingSystem.IsMacOS())
+                return false;
+
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var mountRoot = Path.Combine(home, "Library", "Application Support", "VaultSync", "mounts");
+            if (path.StartsWith(mountRoot, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (path.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return false;
+        }
 
         private GitHubReleaseChannel CurrentUpdateChannel =>
             _settingsViewModel?.BetaChannelEnabled == true
@@ -337,9 +374,20 @@ namespace VaultSync.UI.ViewModels
         public ICommand InstallPatchCommand => _installPatchCommand;
         public ICommand SkipUpdateCommand => _skipUpdateCommand;
         public ICommand DismissUpdateBannerCommand => _dismissUpdateBannerCommand;
+        public ICommand DismissSoftCrashBannerCommand => _dismissSoftCrashBannerCommand;
+        public ICommand CopySoftCrashLogCommand => _copySoftCrashLogCommand;
         public string CurrentVersionDisplay => $"v{StripBuildMetadata(_currentVersionString)}";
         public string FooterProductDisplay => $"VaultSync · {CurrentVersionDisplay}";
         public string FooterCopyrightDisplay => $"© {DateTime.UtcNow.Year} Flavio Giacchetti";
+        public bool ShowSoftCrashBanner => _showSoftCrashBanner;
+        public string SoftCrashBannerMessage
+        {
+            get => _softCrashBannerMessage;
+            private set => SetField(ref _softCrashBannerMessage, value);
+        }
+        public bool CanCopySoftCrashLog => !string.IsNullOrWhiteSpace(_softCrashLogPath);
+        public string SoftCrashDismissLabel => L("Errors.SoftCrash.Dismiss", "Dismiss");
+        public string SoftCrashCopyLabel => L("Errors.SoftCrash.CopyLogPath", "Copy log path");
 
         public AppViewModel()
         {
@@ -358,6 +406,7 @@ namespace VaultSync.UI.ViewModels
             _repo.EnsureSchema();
 
             _backupService       = new BackupService(_repo);
+            _backupService.BackupRetentionDeleted += OnBackupRetentionDeleted;
             _metadataSyncService = new MetadataSyncService(_repo);
             _networkMountService = new NetworkMountService();
             _credentialVault     = CredentialVault.Instance;
@@ -381,18 +430,21 @@ namespace VaultSync.UI.ViewModels
             LogConsoleProvider.Initialize(_logConsoleService);
             UpdateLogConsoleSettings();
 
+            _ = Task.Run(() => CleanupIncompleteBackupsOnStartup());
+            _ = Task.Run(() => EnforceRetentionOnStartup());
+
             // 3) Wire BackupsViewModel events to real logic
             _backupsViewModel.BackupProjectRequested += OnBackupProjectRequested;
             _backupsViewModel.CreateBackupForAllProjectsRequested += OnCreateBackupForAllProjectsRequested;
             _backupsViewModel.DeleteBackupRequested += OnDeleteBackupRequested;
             _backupsViewModel.RestoreBackupRequested += OnRestoreBackupRequested; // stub for later
+            _backupsViewModel.OpenBackupFolderRequested += OnOpenBackupFolderRequested;
             _backupsViewModel.CancelActiveBackupRequested += OnCancelActiveBackupRequested;
             _backupsViewModel.AutoBackupPreferenceChanged += OnAutoBackupPreferenceChanged;
             _backupsViewModel.BackupProtectionChanged += OnBackupProtectionChanged;
 
             // 4) Initial load of backup data
             ReloadBackupsVmData();
-            _ = _dashboardViewModel.RefreshAsync();
 
             // 5) Default route
             // Default route (may be overridden by resume-last-session)
@@ -420,11 +472,158 @@ namespace VaultSync.UI.ViewModels
                 _ => IsPatchAvailable && !IsPatchInstalling);
             _skipUpdateCommand = new RelayCommand(_ => SkipUpdateVersion());
             _dismissUpdateBannerCommand = new RelayCommand(_ => DismissUpdateBanner());
+            _dismissSoftCrashBannerCommand = new RelayCommand(_ => DismissSoftCrashBanner());
+            _copySoftCrashLogCommand = new RelayCommand(_ => _ = CopySoftCrashLogAsync(), _ => CanCopySoftCrashLog);
 
             EnsureDestinationProbeStarted();
             _ = Task.Run(() => TryImportMetadataFromRoot(_config.ProjectsRoot ?? string.Empty));
             StartUpdateCheck();
             ConfigureUpdateCheckTimer();
+        }
+
+        public void NotifySoftCrashBanner(string? logPath)
+        {
+            SoftCrashBannerMessage = L(
+                "Errors.SoftCrash.Message",
+                "VaultSync hit an unexpected error but kept running. A log was saved.");
+            _softCrashLogPath = logPath;
+            _showSoftCrashBanner = true;
+            OnPropertyChanged(nameof(ShowSoftCrashBanner));
+            OnPropertyChanged(nameof(CanCopySoftCrashLog));
+            _copySoftCrashLogCommand.RaiseCanExecuteChanged();
+        }
+
+        private void DismissSoftCrashBanner()
+        {
+            _showSoftCrashBanner = false;
+            OnPropertyChanged(nameof(ShowSoftCrashBanner));
+        }
+
+        private async Task CopySoftCrashLogAsync()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_softCrashLogPath))
+                    return;
+
+                if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime &&
+                    lifetime.MainWindow?.Clipboard is { } clipboard)
+                {
+                    await clipboard.SetTextAsync(_softCrashLogPath);
+                }
+            }
+            catch
+            {
+                // Best effort: ignore clipboard failures.
+            }
+        }
+
+        private ICommand CreateCopyLogSnippetCommand(string contextLabel)
+        {
+            return new RelayCommand(async _ =>
+            {
+                var snippet = _logConsoleService.GetRecentSnippet(30, contextLabel);
+                if (string.IsNullOrWhiteSpace(snippet))
+                    return;
+
+                await ClipboardHelper.TryCopyAsync(snippet);
+            });
+        }
+
+        private void EnforceRetentionOnStartup()
+        {
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                var maxToKeep = cfg.Backups.MaxSnapshotsPerProject;
+                if (maxToKeep <= 0)
+                    return;
+
+                var backupRoot = cfg.Backups.BackupLocation ?? string.Empty;
+                var projects = _repo.GetAllProjects().ToList();
+                foreach (var project in projects)
+                {
+                    _backupService.EnforceRetentionForProject(project.Id, backupRoot, maxToKeep);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BackupRetention] Startup retention failed: {ex.Message}");
+            }
+        }
+
+        private void OnBackupRetentionDeleted(Backup backup)
+        {
+            if (backup is null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(backup.ExternalId))
+                return;
+
+            if (string.IsNullOrWhiteSpace(backup.DestinationPath))
+                return;
+
+            var cfg = AppConfigStore.Load();
+            var enabled = cfg.Backups.EnableMetadataSync;
+            if (!enabled)
+                return;
+
+            var machineId = Environment.MachineName;
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    Console.WriteLine($"[MetadataSync] Export tombstone for backup {backup.Id} -> '{backup.DestinationPath}'.");
+                    _metadataSyncService.ExportBackupTombstoneToStore(
+                        backup.DestinationPath,
+                        backup.ExternalId,
+                        _currentVersionString,
+                        machineId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MetadataSync] Export tombstone failed for backup {backup.Id}: {ex.Message}");
+                }
+            });
+        }
+
+        private void CleanupIncompleteBackupsOnStartup()
+        {
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                var destinations = GetActiveDestinations(cfg);
+                if (destinations.Count == 0)
+                    return;
+
+                foreach (var dest in destinations)
+                {
+                    var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+                        ? null
+                        : cfg.Network.Credentials.FirstOrDefault(c =>
+                            c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+
+                    var resolution = _networkMountService.PrepareDestination(dest, profile);
+                    if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                        continue;
+
+                    var projects = _repo.GetAllProjects();
+                    var projectFolders = projects
+                        .Select(p => BackupService.GetProjectBackupFolderName(p.Name))
+                        .ToList();
+                    var removed = _backupService.CleanupIncompleteBackups(resolution.EffectivePath, projectFolders);
+                    if (removed > 0)
+                    {
+                        Console.WriteLine($"[BackupCleanup] Removed {removed} incomplete backup(s) under '{resolution.EffectivePath}'.");
+                    }
+
+                    _networkMountService.Cleanup(resolution);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BackupCleanup] Startup cleanup failed: {ex.Message}");
+            }
         }
 
         public void AttachBackupWidgetService(IBackupWidgetService? service)
@@ -480,7 +679,6 @@ namespace VaultSync.UI.ViewModels
                     break;
                 case "Backups":
                     ReloadBackupsVmData();
-                    _ = _dashboardViewModel.RefreshAsync();
                     CurrentView  = _backupsViewModel;
                     HeaderTitle  = L("Nav.Backups", "Backups");
                     HeaderKicker = L("Main.HeaderBackups", "Snapshots & history");
@@ -607,11 +805,23 @@ namespace VaultSync.UI.ViewModels
                         {
                             if (cfg.Backups.PromptRestoreAfterImport && project.NeedsRestore)
                             {
-                                Telemetry.Log("auto_backup_skipped", b => b
-                                    .WithCode("reason", "restore_required")
+                                MaybeNotifyRestoreRecommended(project);
+                                Telemetry.Log("auto_backup_advisory", b => b
+                                    .WithCode("reason", "restore_recommended")
                                     .WithHashedString("project", project.Name));
+                            }
+
+                            if (!TryResolveProjectRoot(project, cfg, out var resolvedProject, out var rootError))
+                            {
+                                MaybeNotifyProjectRootMissing(project, rootError);
+                                Telemetry.Log("auto_backup_skipped", b => b
+                                    .WithCode("reason", "project_root_missing")
+                                    .WithHashedString("project", project.Name)
+                                    .WithHashedString("projectRoot", project.RootPath));
                                 return;
                             }
+
+                            project = resolvedProject;
                             int? sharedSnapshotId = null;
                             bool metadataWritten = false;
 
@@ -639,7 +849,15 @@ namespace VaultSync.UI.ViewModels
 
                                 try
                                 {
+                                    var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
+                                        dest,
+                                        cfg,
+                                        resolution.EffectivePath,
+                                        useArchiveMode,
+                                        CancellationToken.None);
                                     Interlocked.Increment(ref backupAttempts);
+                                    var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
+                                        || IsRemoteDestinationPath(dest.Path);
                                     var backupResult = await _backupService.RunBackupAsync(
                                         project,
                                         resolution.EffectivePath,
@@ -657,7 +875,10 @@ namespace VaultSync.UI.ViewModels
                                         destinationAlias: destLabel,
                                         skipIfNoChanges: true,
                                         useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
-                                        useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false);
+                                        useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
+                                        archiveUploadBufferBytes: archiveUploadBufferBytes,
+                                        preferRunnerProgressOnly: isRemoteDestination,
+                                        preferParallelArchiveUpload: isRemoteDestination);
 
                                     if (backupResult.SkippedForNoChanges)
                                     {
@@ -1499,15 +1720,22 @@ namespace VaultSync.UI.ViewModels
             var cfg              = preparation.Config;
             var destinations     = preparation.Destinations;
             var project          = preparation.Project;
+            if (!TryResolveProjectRoot(project, cfg, out var resolvedProject, out var rootError))
+            {
+                MaybeNotifyProjectRootMissing(project, rootError);
+                Telemetry.Log("backup_single_skipped", b => b
+                    .WithCode("reason", "project_root_missing")
+                    .WithHashedString("project", project.Name)
+                    .WithHashedString("projectRoot", project.RootPath));
+                return;
+            }
+            project = resolvedProject;
             if (cfg.Backups.PromptRestoreAfterImport && project.NeedsRestore)
             {
-                ShowBackupSkipNotification(
-                    _localizationService["Backups.Notification.RestoreRequired"],
-                    NotificationSeverity.Warning);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "restore_required")
+                MaybeNotifyRestoreRecommended(project);
+                Telemetry.Log("backup_single_advisory", b => b
+                    .WithCode("reason", "restore_recommended")
                     .WithHashedString("project", project.Name));
-                return;
             }
 
             if (!_manualBackupInFlight.TryAdd(projectId, 0))
@@ -1565,6 +1793,7 @@ namespace VaultSync.UI.ViewModels
             {
                 int? sharedSnapshotId  = null;
                 bool metadataWritten   = false;
+                bool cancelled         = false;
                 string? metadataRoot   = null;
                 int? metadataBackupId  = null;
                 var attempts = 0;
@@ -1576,7 +1805,7 @@ namespace VaultSync.UI.ViewModels
                 foreach (var dest in destinations)
                 {
                     var destId     = DestinationStatusItem.GetId(dest);
-                    var resolution = PrepareDestination(dest, cfg);
+                    var resolution = await PrepareDestinationAsync(dest, cfg);
                     _backupsViewModel.UpdateDestinationStatus(
                         destId,
                         resolution.Message,
@@ -1606,21 +1835,40 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     var labelPrefix = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
+                    var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
+                        dest,
+                        cfg,
+                        resolution.EffectivePath,
+                        useArchiveMode,
+                        CancellationToken.None);
 
                     try
                     {
                         var backupResult = await Task.Run(async () =>
                         {
                             attempts++;
+                            var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
+                                || IsRemoteDestinationPath(dest.Path);
                             var result = await _backupService.RunBackupAsync(
                                 project,
                                 resolution.EffectivePath,
                                 isAuto: false,
                                 progressCallback: (percent, currentFile, etaText) =>
                                 {
+                                    if (_backupCancelRequested.ContainsKey(project.Id))
+                                        return;
+
                                     // Build a nice label for this project
                                     string label;
-                                    if (!string.IsNullOrWhiteSpace(currentFile))
+                                    if (!string.IsNullOrWhiteSpace(etaText) && etaText.Contains("Uploading", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        label = L("Backups.Stage.Uploading", "Uploading archive");
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(etaText) && etaText.Contains("Compressing", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        label = L("Backups.Stage.Compressing", "Compressing archive");
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(currentFile))
                                     {
                                         label = currentFile;
                                     }
@@ -1680,7 +1928,10 @@ namespace VaultSync.UI.ViewModels
                                 destinationPath: resolution.EffectivePath,
                                 destinationAlias: labelPrefix,
                                 useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
-                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false
+                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
+                                archiveUploadBufferBytes: archiveUploadBufferBytes,
+                                preferRunnerProgressOnly: isRemoteDestination,
+                                preferParallelArchiveUpload: isRemoteDestination
                             );
 
                             if (!metadataWritten && result.BackupId > 0)
@@ -1710,9 +1961,17 @@ namespace VaultSync.UI.ViewModels
                             break;
                         }
 
-                              if (backupResult.Cancelled)
-                              {
-                            _backupsViewModel.MarkDestinationComplete(destId, false, "Cancelled");
+                        if (backupResult.Cancelled)
+                        {
+                            cancelled = true;
+                            _backupsViewModel.UpdateActiveBackup(
+                                project.Id.ToString(),
+                                project.Name,
+                                100,
+                                L("Backups.Status.Cancelled", "Cancelled"),
+                                string.Empty,
+                                allowCancel: false);
+                            _backupsViewModel.MarkDestinationComplete(destId, false, L("Backups.Status.Cancelled", "Cancelled"));
                             Telemetry.Log("backup_single_cancelled", b => b
                                 .WithHashedString("project", project.Name)
                                 .WithHashedString("destinationPath", dest.Path ?? string.Empty)
@@ -1720,27 +1979,27 @@ namespace VaultSync.UI.ViewModels
                             break;
                         }
 
-                              if (backupResult.BackupId > 0)
-                              {
-                                  _backupsViewModel.UpdateActiveBackup(
-                                      project.Id.ToString(),
-                                      project.Name,
-                                      100,
-                                      L("Backups.Status.Completed", "Completed"),
-                                      string.Empty);
-                                  _backupsViewModel.MarkDestinationComplete(destId, true, "Completed");
-                                  succeeded++;
-                                  TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.BackupId);
-                              }
+                        if (backupResult.BackupId > 0)
+                        {
+                            _backupsViewModel.UpdateActiveBackup(
+                                project.Id.ToString(),
+                                project.Name,
+                                100,
+                                L("Backups.Status.Completed", "Completed"),
+                                string.Empty);
+                            _backupsViewModel.MarkDestinationComplete(destId, true, L("Backups.Status.Completed", "Completed"));
+                            succeeded++;
+                            TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.BackupId);
+                        }
                         else
                         {
-                            _backupsViewModel.MarkDestinationComplete(destId, false, "No backup created");
+                            _backupsViewModel.MarkDestinationComplete(destId, false, L("Backups.Status.NoBackupCreated", "No backup created"));
                             failed++;
                         }
                     }
                     catch (OperationCanceledException)
                     {
-                        _backupsViewModel.MarkDestinationComplete(destId, false, "Cancelled");
+                        _backupsViewModel.MarkDestinationComplete(destId, false, L("Backups.Status.Cancelled", "Cancelled"));
                         Telemetry.Log("backup_single_cancelled", b => b
                             .WithHashedString("project", project.Name)
                             .WithHashedString("destinationPath", dest.Path)
@@ -1763,6 +2022,11 @@ namespace VaultSync.UI.ViewModels
                     {
                         _networkMountService.Cleanup(resolution);
                     }
+                }
+
+                if (cancelled && !metadataWritten)
+                {
+                    return;
                 }
 
                 if (!metadataWritten)
@@ -1931,13 +2195,22 @@ namespace VaultSync.UI.ViewModels
                     {
                         var msg   = Lf("Backups.Notification.FailureMessage", "Backup failed for '{0}'. Check logs for details.", project.Name);
                         var title = L("Backups.Notification.FailureTitle", "Backup failed");
+                        var actionLabel = L("Logs.CopySnippet", "Copy log snippet");
+                        var actionCommand = CreateCopyLogSnippetCommand(
+                            Lf("Logs.Snippet.BackupFailure", "Backup failure for '{0}'.", project.Name));
 
-                        if (!IsOnBackupsPage)
+                        if (IsOnBackupsPage)
+                        {
+                            _backupsViewModel.ShowNotification(msg, "Error", actionLabel, actionCommand);
+                        }
+                        else
                         {
                             GlobalNotificationCenter.Instance.Show(
                                 msg,
                                 NotificationSeverity.Error,
-                                title);
+                                title,
+                                actionLabel: actionLabel,
+                                actionCommand: actionCommand);
                         }
 
                         if (ShouldRaiseSystemNotification)
@@ -1961,6 +2234,9 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
+                if (projectId != 0)
+                    _backupCancelRequested.TryRemove(projectId, out _);
+
                 if (inFlightAdded)
                 {
                     _manualBackupInFlight.TryRemove(projectId, out _);
@@ -2024,6 +2300,12 @@ namespace VaultSync.UI.ViewModels
             var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
 
             var useArchiveMode = _settingsViewModel.UseBackupCompression;
+            var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
+                primaryDest,
+                cfg,
+                backupRoot,
+                useArchiveMode,
+                CancellationToken.None);
             Telemetry.Log("backup_all_start", b => b
                 .WithHashedString("destinationPath", primaryDest.Path)
                 .WithHashedString("destinationAlias", primaryDest.Alias ?? string.Empty)
@@ -2109,7 +2391,30 @@ namespace VaultSync.UI.ViewModels
 
                     var tasks = projects.Select(project => Task.Run(async () =>
                     {
+                        var projectId = project.Id;
                         var effectiveBackupRoot = backupRoot;
+                        if (!TryResolveProjectRoot(project, cfg, out var resolvedProject, out var rootError))
+                        {
+                            results.Add((project.Name, project.RootPath, false));
+                            Telemetry.Log("backup_all_project_skipped", b => b
+                                .WithHashedString("project", project.Name)
+                                .WithHashedString("projectRoot", project.RootPath)
+                                .WithCode("reason", "project_root_missing"));
+                            progressPerProject[project.Id] = 100;
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _backupsViewModel.UpdateActiveBackup(
+                                    project.Id.ToString(),
+                                    project.Name,
+                                    100,
+                                    rootError,
+                                    string.Empty);
+                            });
+                            UpdateAggregateProgress(rootError, string.Empty);
+                            return;
+                        }
+
+                        project = resolvedProject;
 
                         var driveDecision = await EvaluateDriveHealthAsync(project.RootPath, effectiveBackupRoot);
                         if (!string.IsNullOrWhiteSpace(driveDecision.Message))
@@ -2139,15 +2444,28 @@ namespace VaultSync.UI.ViewModels
 
                         try
                         {
+                            var isRemoteDestination = IsRemoteDestinationPath(effectiveBackupRoot)
+                                || IsRemoteDestinationPath(primaryDest?.Path);
                             var backupResult = await _backupService.RunBackupAsync(
                                 project,
                                 effectiveBackupRoot,
                                 isAuto: false,
                                 progressCallback: (percent, currentFile, etaText) =>
                                 {
+                                    if (_backupCancelRequested.ContainsKey(project.Id))
+                                        return;
+
                                     // Per-project label for its own card
                                     string label;
-                                    if (!string.IsNullOrWhiteSpace(currentFile))
+                                    if (!string.IsNullOrWhiteSpace(etaText) && etaText.Contains("Uploading", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        label = L("Backups.Stage.Uploading", "Uploading archive");
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(etaText) && etaText.Contains("Compressing", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        label = L("Backups.Stage.Compressing", "Compressing archive");
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(currentFile))
                                     {
                                         label = currentFile;
                                     }
@@ -2195,7 +2513,10 @@ namespace VaultSync.UI.ViewModels
                                 destinationAlias: primaryAlias,
                                 skipIfNoChanges: true,
                                 useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
-                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false
+                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
+                                archiveUploadBufferBytes: archiveUploadBufferBytes,
+                                preferRunnerProgressOnly: isRemoteDestination,
+                                preferParallelArchiveUpload: isRemoteDestination
                             );
 
                             if (backupResult.SkippedForNoChanges)
@@ -2224,6 +2545,13 @@ namespace VaultSync.UI.ViewModels
                                     .WithHashedString("projectRoot", project.RootPath));
                                 progressPerProject[project.Id] = 0;
                                 UpdateAggregateProgress(string.Empty, string.Empty);
+                                _backupsViewModel.UpdateActiveBackup(
+                                    project.Id.ToString(),
+                                    project.Name,
+                                    100,
+                                    L("Backups.Status.Cancelled", "Cancelled"),
+                                    string.Empty,
+                                    allowCancel: false);
                                 return;
                             }
 
@@ -2258,7 +2586,8 @@ namespace VaultSync.UI.ViewModels
                                 project.Name,
                                 0,
                                 L("Backups.Status.Cancelled", "Cancelled"),
-                                string.Empty);
+                                string.Empty,
+                                allowCancel: false);
                             return;
                         }
                         catch (Exception ex)
@@ -2270,6 +2599,10 @@ namespace VaultSync.UI.ViewModels
                                 .WithFlag("useArchiveMode", useArchiveMode)
                                 .WithException(ex));
                             throw;
+                        }
+                        finally
+                        {
+                            _backupCancelRequested.TryRemove(projectId, out _);
                         }
                     })).ToList();
 
@@ -2363,13 +2696,22 @@ namespace VaultSync.UI.ViewModels
                 {
                     var msg   = L("Backups.Notification.AllFailureMessage", "Backup all projects failed. Check logs for details.");
                     var title = L("Backups.Notification.AllFailureTitle", "Backup-all failed");
+                    var actionLabel = L("Logs.CopySnippet", "Copy log snippet");
+                    var actionCommand = CreateCopyLogSnippetCommand(
+                        L("Logs.Snippet.BackupAllFailure", "Backup-all failure."));
 
-                    if (!IsOnBackupsPage)
+                    if (IsOnBackupsPage)
+                    {
+                        _backupsViewModel.ShowNotification(msg, "Error", actionLabel, actionCommand);
+                    }
+                    else
                     {
                         GlobalNotificationCenter.Instance.Show(
                             msg,
                             NotificationSeverity.Error,
-                            title);
+                            title,
+                            actionLabel: actionLabel,
+                            actionCommand: actionCommand);
                     }
 
                     if (ShouldRaiseSystemNotification)
@@ -2511,6 +2853,11 @@ namespace VaultSync.UI.ViewModels
             var projectName = preparation.ProjectName;
             var cardId = $"delete-{backupId}";
 
+            if (!await ConfirmDeleteBackupAsync(projectName, snapshot.Timestamp))
+            {
+                return;
+            }
+
             _backupsViewModel.ShowTransientOperation(cardId, projectName, L("Backups.Status.Deleting", "Deleting backup files..."));
 
             _backupsViewModel.IsBusy      = true;
@@ -2560,6 +2907,156 @@ namespace VaultSync.UI.ViewModels
                 _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
             }
+        }
+
+        private void OnOpenBackupFolderRequested(BackupSnapshotItem? snapshot)
+        {
+            if (snapshot is null)
+                return;
+
+            if (!int.TryParse(snapshot.Id, out var backupId))
+                return;
+
+            OpenBackupFolder(backupId);
+        }
+
+        private async Task<bool> ConfirmDeleteBackupAsync(string projectName, DateTime timestamp)
+        {
+            var cfg = AppConfigStore.Load();
+            if (!cfg.Behavior.ConfirmDeleteBackup)
+                return true;
+
+            var timeLabel = timestamp.ToString("g", CultureInfo.CurrentCulture);
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Delete.Title", "Delete backup?"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var question = new TextBlock
+                {
+                    Text = Lf("Backups.Delete.Message", "Delete the backup for '{0}' from {1}?", projectName, timeLabel),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var warning = new TextBlock
+                {
+                    Text = L("Backups.Delete.Warning", "This removes data on the destination."),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                if (GetBrush("TextSecondary") is { } warningBrush)
+                {
+                    warning.Foreground = warningBrush;
+                }
+
+                var dontShowAgain = new CheckBox
+                {
+                    Content = L("Backups.Delete.DontShowAgain", "Don't show again"),
+                    Margin = new Thickness(0, 2, 0, 0)
+                };
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var deleteButton = new Button
+                {
+                    Content = L("Backups.Delete.Confirm", "Delete backup"),
+                    MinWidth = 140
+                };
+                deleteButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                cancelButton.Click += (_, _) => window?.Close();
+                deleteButton.Click += (_, _) =>
+                {
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(deleteButton);
+
+                var content = new StackPanel
+                {
+                    Spacing = 12
+                };
+                content.Children.Add(title);
+                content.Children.Add(question);
+                content.Children.Add(warning);
+                content.Children.Add(dontShowAgain);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Delete.Title", "Delete backup?"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 540,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                if (confirmed && dontShowAgain.IsChecked == true)
+                {
+                    cfg.Behavior.ConfirmDeleteBackup = false;
+                    AppConfigStore.Save(cfg);
+                    if (_settingsViewModel is not null)
+                    {
+                        _settingsViewModel.ConfirmDeleteBackups = false;
+                    }
+                }
+
+                return confirmed;
+            });
+        }
+
+        private static IBrush? GetBrush(string key)
+        {
+            if (Application.Current?.Resources.TryGetValue(key, out var value) == true)
+            {
+                return value as IBrush;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -2800,7 +3297,16 @@ namespace VaultSync.UI.ViewModels
             }
 
             // Actually cancel the running backup for this project.
+            _backupCancelRequested[projectId] = 1;
             _backupService.CancelBackup(projectId);
+            _backupsViewModel.UpdateActiveBackup(
+                item.ProjectId,
+                item.ProjectName,
+                item.Progress,
+                L("Backups.Status.Cancelling", "Cancelling..."),
+                string.Empty,
+                allowCancel: false);
+            Console.WriteLine($"[Backup] Cancel requested for projectId={projectId} ({item.ProjectName}).");
             Telemetry.Log("backup_cancel_requested", b => b
                 .WithHashedString("projectId", item.ProjectId));
 
@@ -2971,6 +3477,11 @@ namespace VaultSync.UI.ViewModels
             return resolution;
         }
 
+        private Task<DestinationResolution> PrepareDestinationAsync(BackupDestination dest, AppConfig cfg)
+        {
+            return Task.Run(() => PrepareDestination(dest, cfg));
+        }
+
         private BackupAllPreparationResult PrepareBackupAll()
         {
             var cfg = AppConfigStore.Load();
@@ -3115,6 +3626,11 @@ namespace VaultSync.UI.ViewModels
         public sealed record TrayBackupItem(int Id, int ProjectId, string Label, bool IsProtected);
         public sealed record TrayProjectBackups(int ProjectId, string ProjectName, IReadOnlyList<TrayBackupItem> Backups);
         public void OpenBackupFolderFromTray(int backupId)
+        {
+            OpenBackupFolder(backupId);
+        }
+
+        private void OpenBackupFolder(int backupId)
         {
             try
             {
@@ -3546,9 +4062,11 @@ namespace VaultSync.UI.ViewModels
 
                 try
                 {
-                    var testFile = Path.Combine(testTarget, ".vaultsync_destination_test");
-                    File.WriteAllText(testFile, "ok");
-                    File.Delete(testFile);
+                    if (!TryWriteProbeFile(testTarget))
+                    {
+                        writable = false;
+                        message = LStatic("Destinations.Test.ReadOnly", "Read-only");
+                    }
                 }
                 catch
                 {
@@ -3566,14 +4084,14 @@ namespace VaultSync.UI.ViewModels
             {
                 if (resolution.MountedByUs)
                 {
-                    // Always disconnect temporary mounts used for reachability probes.
+                    // Respect destination auto-unmount setting for reachability probes.
                     var cleanupDest = new BackupDestination
                     {
                         Path           = resolution.EffectivePath,
                         CredentialName = dest.CredentialName,
                         Active         = dest.Active,
                         AutoMount      = dest.AutoMount,
-                        AutoUnmount    = true,
+                        AutoUnmount    = dest.AutoUnmount,
                         PreMounted     = dest.PreMounted,
                         Alias          = dest.Alias
                     };
@@ -3585,6 +4103,202 @@ namespace VaultSync.UI.ViewModels
         }
 
         private sealed record DestinationTestResult(bool Reachable, bool Writable, string EffectivePath, string Message);
+
+        private static bool TryWriteProbeFile(string effectivePath)
+        {
+            var testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
+            try
+            {
+                File.WriteAllText(testFile, "ok");
+                File.Delete(testFile);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(testFile))
+                        File.Delete(testFile);
+                }
+                catch
+                {
+                    // best effort cleanup
+                }
+            }
+        }
+
+        private async Task<int?> EnsureArchiveUploadBufferAsync(
+            BackupDestination dest,
+            AppConfig cfg,
+            string effectivePath,
+            bool useArchiveMode,
+            CancellationToken ct)
+        {
+            if (!useArchiveMode)
+                return null;
+
+            if (!cfg.Backups.EnableArchiveUploadAutoTune)
+                return GetConfiguredArchiveUploadBufferBytes(cfg, dest);
+
+            var existing = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
+            if (existing.HasValue && existing.Value > 0)
+                return existing.Value;
+
+            try
+            {
+                var display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
+                Console.WriteLine($"[DestinationProbe] Auto-tuning archive upload buffer for '{display}'.");
+
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(3));
+                var result = await Task.Run(() => ProbeArchiveUploadBufferBytes(effectivePath, timeoutCts.Token), timeoutCts.Token);
+                SaveArchiveUploadBufferBytes(cfg, dest, result.BufferBytes);
+
+                var bufferMb = result.BufferBytes / (1024d * 1024d);
+                Console.WriteLine($"[DestinationProbe] Archive upload buffer for '{display}' set to {bufferMb:0.#} MB ({result.Mbps:0.0} MB/s).");
+
+                return result.BufferBytes;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DestinationProbe] Auto-tune failed for '{dest.Path}': {ex.Message}");
+                return null;
+            }
+        }
+
+        private int? GetConfiguredArchiveUploadBufferBytes(AppConfig cfg, BackupDestination dest)
+        {
+            if (cfg.Backups.UseAdvancedDestinations)
+            {
+                var match = FindMatchingDestination(cfg, dest);
+                return match?.ArchiveUploadBufferBytes;
+            }
+
+            return cfg.Backups.LegacyArchiveUploadBufferBytes;
+        }
+
+        private void SaveArchiveUploadBufferBytes(AppConfig cfg, BackupDestination dest, int bufferBytes)
+        {
+            if (bufferBytes <= 0)
+                return;
+
+            if (cfg.Backups.UseAdvancedDestinations)
+            {
+                var match = FindMatchingDestination(cfg, dest);
+                if (match is null)
+                    return;
+
+                match.ArchiveUploadBufferBytes = bufferBytes;
+            }
+            else
+            {
+                cfg.Backups.LegacyArchiveUploadBufferBytes = bufferBytes;
+            }
+
+            AppConfigStore.Save(cfg);
+        }
+
+        private static (int BufferBytes, double Mbps) ProbeArchiveUploadBufferBytes(string effectivePath, CancellationToken ct)
+        {
+            const int probeSizeBytes = 8 * 1024 * 1024;
+            const int chunkSizeBytes = 1024 * 1024;
+            const int fallbackBytes  = 4 * 1024 * 1024;
+
+            var probeDir  = Path.Combine(effectivePath, ".vaultsync");
+            var probeFile = Path.Combine(probeDir, $".upload_probe_{Guid.NewGuid():N}.bin");
+            var createdDir = false;
+
+            try
+            {
+                if (!Directory.Exists(probeDir))
+                {
+                    Directory.CreateDirectory(probeDir);
+                    createdDir = true;
+                }
+
+                var buffer = new byte[chunkSizeBytes];
+                var remaining = probeSizeBytes;
+                var sw = Stopwatch.StartNew();
+
+                using (var fs = new FileStream(
+                           probeFile,
+                           FileMode.Create,
+                           FileAccess.Write,
+                           FileShare.None,
+                           chunkSizeBytes,
+                           FileOptions.SequentialScan))
+                {
+                    while (remaining > 0)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        var toWrite = Math.Min(chunkSizeBytes, remaining);
+                        fs.Write(buffer, 0, toWrite);
+                        remaining -= toWrite;
+                    }
+
+                    fs.Flush(true);
+                }
+
+                sw.Stop();
+                var seconds = Math.Max(0.05, sw.Elapsed.TotalSeconds);
+                var mbps = (probeSizeBytes / seconds) / (1024d * 1024d);
+                var bufferBytes = SelectArchiveUploadBufferBytes(mbps);
+                return (bufferBytes, mbps);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return (fallbackBytes, 0);
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(probeFile))
+                        File.Delete(probeFile);
+                }
+                catch
+                {
+                    // best-effort cleanup
+                }
+
+                if (createdDir)
+                {
+                    try
+                    {
+                        if (Directory.Exists(probeDir) && !Directory.EnumerateFileSystemEntries(probeDir).Any())
+                            Directory.Delete(probeDir);
+                    }
+                    catch
+                    {
+                        // best-effort cleanup
+                    }
+                }
+            }
+        }
+
+        private static int SelectArchiveUploadBufferBytes(double mbps)
+        {
+            if (mbps < 5)
+                return 16 * 1024 * 1024;
+            if (mbps < 15)
+                return 8 * 1024 * 1024;
+            if (mbps < 50)
+                return 4 * 1024 * 1024;
+
+            return 2 * 1024 * 1024;
+        }
 
         private bool IsMetadataSyncEnabled(AppConfig cfg, BackupDestination dest)
         {
@@ -3643,6 +4357,15 @@ namespace VaultSync.UI.ViewModels
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[MetadataSync] Auto import failed for '{name}': {ex.Message}");
+                    var actionLabel = L("Logs.CopySnippet", "Copy log snippet");
+                    var actionCommand = CreateCopyLogSnippetCommand(
+                        Lf("Logs.Snippet.MetadataImportFailure", "Metadata import failed for '{0}'.", name));
+                    GlobalNotificationCenter.Instance.Show(
+                        Lf("MetadataSync.Notification.ImportFailed", "Metadata import failed for '{0}'. Check logs for details.", name),
+                        NotificationSeverity.Error,
+                        L("MetadataSync.Notification.Title", "Metadata import"),
+                        actionLabel: actionLabel,
+                        actionCommand: actionCommand);
                 }
             });
         }
@@ -3669,6 +4392,15 @@ namespace VaultSync.UI.ViewModels
             catch (Exception ex)
             {
                 Console.WriteLine($"[MetadataSync] Auto import failed for projects root: {ex.Message}");
+                var actionLabel = L("Logs.CopySnippet", "Copy log snippet");
+                var actionCommand = CreateCopyLogSnippetCommand(
+                    L("Logs.Snippet.MetadataImportRootFailure", "Metadata import failed for projects root."));
+                GlobalNotificationCenter.Instance.Show(
+                    L("MetadataSync.Notification.ImportRootFailed", "Metadata import failed for projects root. Check logs for details."),
+                    NotificationSeverity.Error,
+                    L("MetadataSync.Notification.Title", "Metadata import"),
+                    actionLabel: actionLabel,
+                    actionCommand: actionCommand);
             }
         }
 
@@ -4007,6 +4739,67 @@ namespace VaultSync.UI.ViewModels
                     severity,
                     title);
             }
+        }
+
+        private void MaybeNotifyRestoreRecommended(Project project)
+        {
+            if (project == null)
+                return;
+
+            if (!_restoreAdvisoryShown.TryAdd(project.Id, 0))
+                return;
+
+            ShowBackupSkipNotification(
+                _localizationService["Backups.Notification.RestoreRequired"],
+                NotificationSeverity.Warning);
+        }
+
+        private bool TryResolveProjectRoot(Project project, AppConfig cfg, out Project resolvedProject, out string errorMessage)
+        {
+            resolvedProject = project;
+            errorMessage = string.Empty;
+
+            if (project is null)
+            {
+                errorMessage = L("Backups.Notification.ProjectRootMissing", "Project is not available on this machine. Update the project path or restore it.");
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
+                return true;
+
+            var projectsRoot = cfg.ProjectsRoot;
+            if (!string.IsNullOrWhiteSpace(projectsRoot))
+            {
+                var fallback = Path.Combine(projectsRoot, project.Name);
+                if (Directory.Exists(fallback))
+                {
+                    _repo.UpdateProjectPath(project.Name, fallback, out _);
+                    resolvedProject = project with { RootPath = fallback };
+                    return true;
+                }
+            }
+
+            var expected = string.IsNullOrWhiteSpace(project.RootPath)
+                ? (projectsRoot ?? string.Empty)
+                : project.RootPath;
+            errorMessage = Lf(
+                "Backups.Notification.ProjectRootMissing",
+                "Project '{0}' isn't available on this machine. Expected at '{1}'. Update the project path or restore it.",
+                project.Name,
+                expected);
+            return false;
+        }
+
+        private void MaybeNotifyProjectRootMissing(Project project, string message)
+        {
+            if (project == null || string.IsNullOrWhiteSpace(message))
+                return;
+
+            if (!_projectRootMissingNotified.TryAdd(project.Id, 0))
+                return;
+
+            ShowBackupSkipNotification(message, NotificationSeverity.Error);
         }
     }
 }

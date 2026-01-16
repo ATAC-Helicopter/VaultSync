@@ -20,8 +20,8 @@ This is the lightweight GitHub release flow used today. The app is unsigned, so 
    dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r osx-x64 --self-contained true
    ```
 2. Build the `.app` bundle + `.dmg` (already scripted in the repo steps used today):
-   - `.app` bundle path: `dist/macos/VaultSync-<arch>.app`
-   - DMG output: `dist/macos/VaultSync-macos-<arch>.dmg`
+   - `.app` bundle path: `dist/macos/VaultSync-macos-<arch>.app`
+   - DMG output: `dist/macos/VaultSync-<version>-macos-apple-silicon.dmg` or `dist/macos/VaultSync-<version>-macos-intel.dmg`
 3. Upload both `.dmg` files to the GitHub Release.
 
 Gatekeeper note (unsigned builds):

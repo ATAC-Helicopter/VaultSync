@@ -23,6 +23,8 @@ namespace VaultSync.UI.ViewModels.Notifications
         private string _title   = string.Empty;
         private NotificationSeverity _severity = NotificationSeverity.Info;
         private bool _isVisible;
+        private string _actionLabel = string.Empty;
+        private ICommand? _actionCommand;
         private CancellationTokenSource? _cts;
 
         public string Message
@@ -52,6 +54,32 @@ namespace VaultSync.UI.ViewModels.Notifications
             set => SetField(ref _isVisible, value);
         }
 
+        public string ActionLabel
+        {
+            get => _actionLabel;
+            set
+            {
+                if (SetField(ref _actionLabel, value))
+                {
+                    OnPropertyChanged(nameof(HasAction));
+                }
+            }
+        }
+
+        public ICommand? ActionCommand
+        {
+            get => _actionCommand;
+            set
+            {
+                if (SetField(ref _actionCommand, value))
+                {
+                    OnPropertyChanged(nameof(HasAction));
+                }
+            }
+        }
+
+        public bool HasAction => !string.IsNullOrWhiteSpace(ActionLabel) && ActionCommand is not null;
+
         public ICommand DismissCommand { get; }
 
         public NotificationState()
@@ -66,11 +94,15 @@ namespace VaultSync.UI.ViewModels.Notifications
             string message,
             NotificationSeverity severity = NotificationSeverity.Info,
             string? title = null,
-            TimeSpan? duration = null)
+            TimeSpan? duration = null,
+            string? actionLabel = null,
+            ICommand? actionCommand = null)
         {
             Message  = message;
             Title    = title ?? string.Empty;
             Severity = severity;
+            ActionLabel = actionLabel ?? string.Empty;
+            ActionCommand = actionCommand;
             IsVisible = true;
 
             StartAutoDismiss(duration ?? TimeSpan.FromSeconds(4));
@@ -83,6 +115,8 @@ namespace VaultSync.UI.ViewModels.Notifications
         {
             Message  = string.Empty;
             Title    = string.Empty;
+            ActionLabel = string.Empty;
+            ActionCommand = null;
             IsVisible = false;
         }
 

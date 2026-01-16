@@ -1,45 +1,42 @@
 # Changelog
-## [1.3.0] - BETA 11.01.2026
+## [1.3.1] - BETA 16.01.2026
 ### Added
-- Cross-machine backup history metadata store (`.vaultsync/meta/`) with portable project/snapshot/backup records.
-- External IDs for projects/snapshots/backups to support cross-machine merging.
-- Metadata sync toggles (global + per-destination) and manual "Refresh history now" action.
-- Read-only destination detection for metadata import.
-- Restore-required gating for auto-imported projects.
-- macOS rsync bundling support with arch-specific binaries and licenses.
-- macOS Settings hint when rsync is missing or too old for progress reporting.
-- Metadata sync logging for import/export troubleshooting (counts, failures, fallbacks).
-- Metadata export backfills full project history the first time a project is written to a store.
-- Per-destination force full history export toggle for metadata backfill.
-- Metadata import review dialog showing planned additions/links/deletions before applying changes.
+- Cross-machine metadata store (`.vaultsync/meta/`) with portable project/snapshot/backup records and external IDs.
+- Metadata sync controls (global + per-destination), manual refresh, and review dialog.
+- Metadata backfill options with per-destination force-export toggle.
+- macOS rsync bundling (arch-specific) plus Settings hint when rsync is missing/too old.
+- Archive upload auto-tuning per destination (small probe file).
+- "What's new" popup shown once per version on first launch after updating.
+- Editable `docs/WHATS_NEW.md` content for the "What's new" popup.
 ### Changed
+- Auto-imported projects now advise restore only when imported history is newer.
+- Manual per-project backups can run concurrently (unless backup-all is active).
 - Drive health probe deferred to reduce startup impact.
-- Destination probe now tracks effective path and read-only status.
-- Auto-imported projects now prompt for restore before new snapshots/backups.
-- macOS rsync runner now sets library search paths for bundled dylibs.
-- macOS publish output now includes only the matching architecture rsync bundle.
-- macOS log folder open now handles paths with spaces correctly.
-- Metadata import now retries from a temp copy when the metadata store cannot be opened on macOS shares.
-- Manual per-project backups can now run concurrently (unless backup-all is active).
-- Force full history export toggle moved to per-destination settings and auto-clears after successful export.
-- updated docs to reflect new features
+- Destination probe tracks effective path/read-only status.
+- Backups page right panel now uses expandable project headers with clearer stats.
+- Removed sample “default” projects when no real projects exist. (thanks to King_Hippo for reporting)
+- Scroll layout now scales more reliably at higher DPI. (thanks to King_Hippo for reporting)
+- Docs updated to cover new features and macOS release flow.
+- macOS NFS auto-mount is disabled; pre-mounted paths are required instead.
 ### Fixed
-- Prevented schema/index startup crash during metadata migrations.
-- Backup size pre-scan removed to avoid redundant macOS filesystem scans before backups.
-- Fixed localization strings across all languages.
-- Added missing "Waiting for first file" progress localization key across languages.
-- Canceling one backup during backup-all no longer aborts other running backups.
-- Metadata import now retries from a temp copy when the store is locked (SQLite busy).
-- Metadata export now logs the target store path and row counts after write.
-- Metadata export now logs per-project history counts and skipped backups during backfill.
-- Metadata import temp-copy now includes SQLite WAL/SHM sidecars to avoid empty reads during locked writes.
-- Manual metadata refresh now updates projects/backups lists immediately.
-- Auto metadata import now updates projects/backups lists immediately.
-- Dashboard storage total now reflects total stored across all backups.
-- Dashboard backup storage bar now shows per-project color segments.
-- Dashboard storage donut tooltip now positions itself on the hovered slice.
-- Localized remaining hardcoded UI strings (log console, crash dialog, dashboard labels).
-- Documented unsigned macOS DMG release flow and generated DMG assets.
+- Fixed localization coverage across all languages (including backup progress/status keys).
+- Arabic UI font fallback now uses bundled Noto Sans + Noto Sans Arabic to avoid missing glyphs.
+- Metadata import handles locked/missing stores (temp copy with WAL/SHM, schema ensure).
+- Manual/auto metadata refresh now updates UI lists immediately.
+- Backup retention and cleanup now respect destination paths and skip unrelated directories; interrupted backups are
+  cleaned safely.
+- Backup status cards no longer duplicate speed/ETA, support cancelling/deleting states, and avoid auto-scroll 
+  jumps.
+- Dashboard storage totals, per-project segments, and donut tooltips now match actual stored data.
+- Backups page right panel/history styling cleaned up with clearer hierarchy.
+- Toast notifications no longer render a duplicated band.
+- macOS mounts now use a user-writable root, redact SMB passwords, validate SMB/NFS mounts, and report permission
+  errors instead of crashing.
+- macOS/Linux free-space checks now use statvfs and avoid false readings on unmanaged mounts.
+- Destination tests use unique probe files to avoid repeated "file exists" warnings.
+- Archive upload auto-tune now times out quickly and can be disabled in Settings.
+- Backup cancellation now shows a cancelling state and avoids failed notifications after cleanup.
+- macOS fullscreen now falls back to maximized to avoid a crash during the native fullscreen transition.
 
 ## [1.2.3] - 2026-01-07
 ### Added

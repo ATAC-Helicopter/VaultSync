@@ -381,27 +381,32 @@ namespace VaultSync.UI.Services
             if (assets is null || assets.Count == 0)
                 return (null, null, null);
 
-            var platformSuffix = GetPlatformSuffix();
-            if (string.IsNullOrEmpty(platformSuffix))
+            var suffixes = GetPlatformSuffixes();
+            if (suffixes.Count == 0)
                 return (null, null, null);
 
-            var manifestName = $"vaultsync-patch-{platformSuffix}.json";
-            var archiveName = $"vaultsync-patch-{platformSuffix}.zip";
-
-            var manifest = assets.FirstOrDefault(a => string.Equals(a.Name, manifestName, StringComparison.OrdinalIgnoreCase));
-            var archive = assets.FirstOrDefault(a => string.Equals(a.Name, archiveName, StringComparison.OrdinalIgnoreCase));
-
-            if (manifest is null || archive is null || string.IsNullOrEmpty(manifest.BrowserDownloadUrl))
-                return (null, null, null);
-
-            Uri? archiveUri = null;
-            if (!string.IsNullOrWhiteSpace(archive.BrowserDownloadUrl) &&
-                Uri.TryCreate(archive.BrowserDownloadUrl, UriKind.Absolute, out var parsed))
+            foreach (var platformSuffix in suffixes)
             {
-                archiveUri = parsed;
+                var manifestName = $"vaultsync-patch-{platformSuffix}.json";
+                var archiveName = $"vaultsync-patch-{platformSuffix}.zip";
+
+                var manifest = assets.FirstOrDefault(a => string.Equals(a.Name, manifestName, StringComparison.OrdinalIgnoreCase));
+                var archive = assets.FirstOrDefault(a => string.Equals(a.Name, archiveName, StringComparison.OrdinalIgnoreCase));
+
+                if (manifest is null || archive is null || string.IsNullOrEmpty(manifest.BrowserDownloadUrl))
+                    continue;
+
+                Uri? archiveUri = null;
+                if (!string.IsNullOrWhiteSpace(archive.BrowserDownloadUrl) &&
+                    Uri.TryCreate(archive.BrowserDownloadUrl, UriKind.Absolute, out var parsed))
+                {
+                    archiveUri = parsed;
+                }
+
+                return (manifest.BrowserDownloadUrl, archiveUri, archive.Name);
             }
 
-            return (manifest.BrowserDownloadUrl, archiveUri, archive.Name);
+            return (null, null, null);
         }
 
         private static (Uri? InstallerUrl, string? InstallerName) GetInstallerAsset(List<GitHubAsset>? assets)
@@ -440,15 +445,20 @@ namespace VaultSync.UI.Services
                 : (null, null);
         }
 
-        private static string GetPlatformSuffix()
+        private static List<string> GetPlatformSuffixes()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return "windows";
+                return new List<string> { "windows" };
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return "macos";
+            {
+                var suffix = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                    ? "macos-apple-silicon"
+                    : "macos-intel";
+                return new List<string> { suffix, "macos" };
+            }
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                return "linux";
-            return string.Empty;
+                return new List<string> { "linux" };
+            return new List<string>();
         }
 
         private static string DescribeRelease(GitHubRelease? release)

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>1.3.0</Version>
+    <Version>1.3.1</Version>
     <Product>VaultSync</Product>
     <Company>Flavio Giacchetti</Company>
     <ApplicationIcon>Assets\vaultsync.ico</ApplicationIcon>
@@ -28,19 +28,19 @@
 
   <!-- Base Avalonia + dependencies -->
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.8" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.8" />
-    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.8">
+    <PackageReference Include="Avalonia" Version="11.3.11" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.11" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.11" />
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.11">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
 
     <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.9" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
-    <PackageReference Include="ReactiveUI" Version="19.5.39" />
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="ReactiveUI" Version="22.3.1" />
+    <PackageReference Include="System.Text.Json" Version="10.0.2" />
   </ItemGroup>
 
   <!-- Reference to core project -->
@@ -53,6 +53,10 @@
     <Content Include="..\presets\*.vaultsyncignore">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>presets\%(Filename)%(Extension)</Link>
+    </Content>
+    <Content Include="..\..\docs\WHATS_NEW.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>WHATS_NEW.md</Link>
     </Content>
   </ItemGroup>
 
@@ -87,6 +91,10 @@
   <!-- Tray/Menu bar icon -->
   <ItemGroup>
     <AvaloniaResource Include="Assets/vaultsync-tray.png" />
+    <AvaloniaResource Include="Assets/Fonts/NotoSans[wdth,wght].ttf" />
+    <AvaloniaResource Include="Assets/Fonts/NotoSansArabic[wdth,wght].ttf" />
+    <AvaloniaResource Include="Assets/Fonts/NotoSansArabic-Regular.ttf" />
+    <AvaloniaResource Include="Assets/Fonts/NotoSansArabic-Bold.ttf" />
   </ItemGroup>
 
   <!-- Windows notifications -->

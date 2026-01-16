@@ -23,6 +23,11 @@ VaultSync supports two modes:
 - Auto-mount/unmount: allow VaultSync to mount and clean up network paths.
 - Sync history: enables portable metadata sync for this destination.
 
+### macOS NFS
+- NFS auto-mount is not supported on macOS (requires admin privileges).
+- Pre-mount the share with `sudo mount_nfs`, then set the destination to the local mount path and enable
+  **Pre-mounted** with **Auto-mount** disabled.
+
 ## Health checks
 - The tray menu shows storage health and destination reachability.
 - Use "Recheck now" to refresh the status.

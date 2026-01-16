@@ -37,6 +37,16 @@ public sealed class MetadataSyncService
 
         try
         {
+            store.EnsureSchema();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Import failed: store init error at '{store.DatabasePath}': {ex.Message}");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
+        }
+
+        try
+        {
             return ImportFromStoreInternal(rootPath, store, opts);
         }
         catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
@@ -72,6 +82,16 @@ public sealed class MetadataSyncService
         {
             Console.WriteLine($"[MetadataSync] Preview skipped: store not found at '{store.DatabasePath}'.");
             return MetadataSyncPreview.Failure(MetadataSyncStatus.NoStore, rootPath, store.DatabasePath, "Metadata store not found.");
+        }
+
+        try
+        {
+            store.EnsureSchema();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Preview failed: store init error at '{store.DatabasePath}': {ex.Message}");
+            return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
         }
 
         try
@@ -191,7 +211,7 @@ public sealed class MetadataSyncService
                 RootPath = projectRoot,
                 Preset = metaProject.Preset,
                 CreatedUtc = metaProject.CreatedUtc,
-                NeedsRestore = opts.MarkNeedsRestoreOnImport
+                NeedsRestore = false
             };
 
             var newId = _repo.AddProject(project);
@@ -287,8 +307,37 @@ public sealed class MetadataSyncService
             importedBackups,
             appliedTombstones,
             string.Empty);
+        if (opts.MarkNeedsRestoreOnImport)
+        {
+            UpdateNeedsRestoreFlags(projectMap, metaBackups);
+        }
         Console.WriteLine($"[MetadataSync] Import complete from '{rootPath}': projects={importedProjects}, snapshots={importedSnapshots}, backups={importedBackups}, tombstones={appliedTombstones}.");
         return result;
+    }
+
+    private void UpdateNeedsRestoreFlags(IReadOnlyDictionary<string, int> projectMap, IEnumerable<MetaBackup> metaBackups)
+    {
+        if (projectMap.Count == 0)
+            return;
+
+        var localLatestByProject = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
+            .GroupBy(b => b.ProjectId)
+            .ToDictionary(g => g.Key, g => g.Max(b => b.CreatedUtc));
+
+        var importedLatestByExternalId = metaBackups
+            .Where(b => !string.IsNullOrWhiteSpace(b.ProjectExternalId))
+            .GroupBy(b => b.ProjectExternalId)
+            .ToDictionary(g => g.Key, g => g.Max(b => b.CreatedUtc), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (externalId, projectId) in projectMap)
+        {
+            if (!importedLatestByExternalId.TryGetValue(externalId, out var importedLatest))
+                continue;
+
+            localLatestByProject.TryGetValue(projectId, out var localLatest);
+            var needsRestore = importedLatest > localLatest;
+            _repo.UpdateProjectNeedsRestore(projectId, needsRestore);
+        }
     }
 
     private MetadataSyncPreview PreviewImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
@@ -630,6 +679,59 @@ public sealed class MetadataSyncService
             : $"[MetadataSync] Export complete for backup {backupId} to '{rootPath}'.");
         LogStoreCounts(store);
         return exportResult;
+    }
+
+    public void ExportBackupTombstoneToStore(string rootPath, string backupExternalId, string appVersion, string machineId)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
+            return;
+
+        var store = new MetadataStore(rootPath);
+        try
+        {
+            store.EnsureSchema();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Tombstone export failed: store init error at '{rootPath}': {ex.Message}");
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var metaInfo = store.GetMetaInfo();
+        if (metaInfo == null)
+        {
+            metaInfo = new MetaInfo
+            {
+                SchemaVersion = MetadataStore.CurrentSchemaVersion,
+                CreatedUtc = now,
+                LastWriteUtc = now,
+                WriterAppVersion = appVersion,
+                WriterMachineId = machineId
+            };
+        }
+        else
+        {
+            metaInfo.LastWriteUtc = now;
+            metaInfo.WriterAppVersion = appVersion;
+            metaInfo.WriterMachineId = machineId;
+        }
+
+        try
+        {
+            store.UpsertMetaInfo(metaInfo);
+            store.AddTombstone(new MetaTombstone
+            {
+                EntityType = "backup",
+                EntityId = backupExternalId,
+                DeletedUtc = now,
+                OriginMachineId = machineId
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{rootPath}': {ex.Message}");
+        }
     }
 
     private (int snapshots, int backups) ExportProjectHistory(

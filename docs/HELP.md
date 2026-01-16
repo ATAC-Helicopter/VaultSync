@@ -40,6 +40,11 @@ Each destination has:
 
 Use the **Test** button to check reachability/writability and confirm mount/login behavior.
 
+### macOS NFS note
+- NFS auto-mount is not supported on macOS (requires admin privileges).
+- Pre-mount the share with `mount_nfs`, set the destination to the local mount path, enable **Pre-mounted**, and
+  disable **Auto-mount**.
+
 ## Cross-machine history sync
 - VaultSync can store portable history metadata in `.vaultsync/meta/` on destinations.
 - When a destination is discovered, history is imported into the local DB and merged.

@@ -22,7 +22,13 @@ namespace VaultSync.UI.ViewModels.Notifications
             void Apply()
             {
                 var toast = new NotificationState();
-                toast.Show(request.Message, request.Severity, request.Title, request.Duration);
+                toast.Show(
+                    request.Message,
+                    request.Severity,
+                    request.Title,
+                    request.Duration,
+                    request.ActionLabel,
+                    request.ActionCommand);
 
                 // We keep it simple for now: when the toast auto-clears, it just becomes invisible.
                 // If we later want to prune the collection, we can extend NotificationState to raise

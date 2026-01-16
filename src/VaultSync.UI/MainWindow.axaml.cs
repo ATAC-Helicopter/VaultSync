@@ -1,7 +1,9 @@
 using System;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia;
+using Avalonia.Threading;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
 using VaultSync.UI.ViewModels;
@@ -13,6 +15,8 @@ namespace VaultSync.UI;
 public partial class MainWindow : Window
 {
     private readonly AppViewModel _appVm;
+    private bool _fullscreenSuppressed;
+    private bool _macFullscreenDisabled;
 
     /// <summary>
     /// Indicates whether the main window is currently active (in the foreground).
@@ -31,7 +35,14 @@ public partial class MainWindow : Window
 
         // --------- FOREGROUND / BACKGROUND TRACKING ----------
         // Window opened = definitely foreground.
-        Opened += (_, _) => IsForeground = true;
+        Opened += (_, _) =>
+        {
+            IsForeground = true;
+            if (!_macFullscreenDisabled)
+            {
+                _macFullscreenDisabled = TryDisableMacFullscreen();
+            }
+        };
 
         // Activated = user focused the window again.
         Activated += (_, _) => IsForeground = true;
@@ -45,6 +56,27 @@ public partial class MainWindow : Window
         // Intercept closing to optionally run in background instead of quitting.
         Closing += OnMainWindowClosing;
         // ------------------------------------------------------
+
+        PropertyChanged += (_, e) =>
+        {
+            if (!OperatingSystem.IsMacOS())
+                return;
+            if (e.Property != WindowStateProperty)
+                return;
+            if (_fullscreenSuppressed)
+                return;
+
+            if (WindowState == WindowState.FullScreen)
+            {
+                _fullscreenSuppressed = true;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    WindowState = WindowState.Maximized;
+                    _fullscreenSuppressed = false;
+                    Console.WriteLine("[Window] Fullscreen is disabled on macOS; using maximized instead.");
+                });
+            }
+        };
     }
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
@@ -161,4 +193,34 @@ public partial class MainWindow : Window
 
     private static string Localized(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    private bool TryDisableMacFullscreen()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return false;
+
+        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (handle == IntPtr.Zero)
+            return false;
+
+        try
+        {
+            var selector = sel_registerName("setCollectionBehavior:");
+            objc_msgSend(handle, selector, (nint)NSWindowCollectionBehaviorFullScreenNone);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Window] Failed to disable macOS fullscreen: {ex.Message}");
+            return false;
+        }
+    }
+
+    private const ulong NSWindowCollectionBehaviorFullScreenNone = 1UL << 9;
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "sel_registerName")]
+    private static extern IntPtr sel_registerName(string selectorName);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend(IntPtr receiver, IntPtr selector, nint arg1);
 }

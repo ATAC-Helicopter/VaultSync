@@ -9,6 +9,7 @@
 - Confirm the path is accessible in File Explorer.
 - Check credentials and permissions.
 - Use the destination test action in Settings.
+- macOS NFS requires pre-mounting with `sudo mount_nfs`; auto-mount is not supported.
 
 ## Tray says no destinations
 - Confirm at least one destination is active.

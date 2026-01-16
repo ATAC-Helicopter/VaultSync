@@ -24,7 +24,7 @@
             <Thickness x:Key="MetricHintMargin">0,2,0,0</Thickness>
             <x:Double x:Key="MetricFontSize">36</x:Double>
             <x:Double x:Key="SectionTitleFontSize">16</x:Double>
-            <FontFamily x:Key="AppFontFamily">Inter, Segoe UI, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, Meiryo, Malgun Gothic, Arial Unicode MS, Arial, Tahoma</FontFamily>
+            <FontFamily x:Key="AppFontFamily">Inter, Noto Sans, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial, Tahoma</FontFamily>
         </ResourceDictionary>
     </Application.Resources>
 
@@ -45,6 +45,7 @@
 
         <Style Selector="Control">
             <Setter Property="TextElement.FontFamily" Value="{DynamicResource AppFontFamily}" />
+            <Setter Property="ScrollViewer.BringIntoViewOnFocusChange" Value="False" />
         </Style>
 
         <!-- Card surface -->
@@ -148,6 +149,10 @@
         <Style Selector="ListBox">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ScrollViewer">
+            <Setter Property="BringIntoViewOnFocusChange" Value="False" />
         </Style>
 
         <Style Selector="ListBoxItem">

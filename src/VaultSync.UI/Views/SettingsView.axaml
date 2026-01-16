@@ -63,7 +63,7 @@
     <!-- Allow the form to stretch across the viewport while capping width for readability. -->
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
-          RowDefinitions="Auto,*"
+          RowDefinitions="Auto,Auto"
           RowSpacing="12">
 
         <!-- Header -->
@@ -271,6 +271,20 @@
                            HorizontalAlignment="Right" />
                 </Grid>
 
+                <!-- Confirm before deleting backups -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ConfirmDelete}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ConfirmDeleteDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding ConfirmDeleteBackups, Mode=TwoWay}" />
+                </Grid>
+
                 <!-- History sync -->
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,6,0,0">
@@ -459,6 +473,21 @@
                     <ToggleSwitch Grid.Column="1"
                                   VerticalAlignment="Center"
                                   IsChecked="{Binding UseIncrementalBackups, Mode=TwoWay}" />
+                  </Grid>
+
+                  <!-- Archive upload auto-tune -->
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AutoTuneArchive}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AutoTuneArchiveDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding EnableArchiveUploadAutoTune, Mode=TwoWay}" />
                   </Grid>
 
                   <!-- Verify backups -->
