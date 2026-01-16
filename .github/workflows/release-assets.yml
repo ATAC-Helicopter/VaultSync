@@ -34,7 +34,7 @@ jobs:
         run: choco install innosetup -y --no-progress
 
       - name: Build installer
-        run: iscc installer\\VaultSyncInstaller.iss
+        run: iscc /Odist\\windows installer\\VaultSyncInstaller.iss
 
       - name: Build patch assets
         shell: pwsh
@@ -54,7 +54,7 @@ jobs:
         with:
           name: windows-release-assets
           path: |
-            installer/VaultSync-Setup-*.exe
+            dist/windows/VaultSync-Setup-*.exe
             patches/v${{ inputs.target_version }}/vaultsync-patch-windows.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-windows.zip
 
