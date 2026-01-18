@@ -165,7 +165,11 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     NormalizeBackupPathSeparators(c);
 }
 
-private sealed record BackupPathRow(int Id, string Path);
+private sealed class BackupPathRow
+{
+    public long Id { get; init; }
+    public string Path { get; init; } = string.Empty;
+}
 
 private void NormalizeBackupPathSeparators(SqliteConnection connection)
 {
