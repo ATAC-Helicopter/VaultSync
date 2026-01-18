@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -48,6 +49,11 @@ namespace VaultSync.UI
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
         private bool _useFullSnapshotHash = true;
+        private bool _enableArchiveUploadAutoTune = true;
+        private bool _enableParallelArchiveUpload = true;
+        private bool _enableMetadataSync = true;
+        private bool _autoImportMetadata = true;
+        private bool _promptRestoreAfterImport = true;
         private string _backupLocationStatus = string.Empty;
 
         private bool _preferExternalDrives = true;
@@ -64,6 +70,7 @@ namespace VaultSync.UI
         private bool _notifyOnBackupFailure = true;
         private bool _notifyOnLowDiskSpace = true;
         private bool _showTrayBackupWidget = true;
+        private bool _confirmDeleteBackup = true;
 
         private bool _notifyOnSnapshotSuccess = false;
         private bool _notifyOnSnapshotFailure = true;
@@ -81,6 +88,8 @@ namespace VaultSync.UI
         private string? _lastUpdateCheckError;
         private string _updateCheckStatusText = string.Empty;
         private string _updateCheckErrorText = string.Empty;
+        private string _rsyncStatusHint = string.Empty;
+        private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly NetworkMountService _networkMountService = new();
@@ -92,6 +101,7 @@ namespace VaultSync.UI
 
         public event Action? OpenLogConsoleRequested;
         public event Action? UpdateCheckRequested;
+        public event Action? RefreshHistoryRequested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -100,7 +110,10 @@ namespace VaultSync.UI
             bool AutoMount,
             bool AutoUnmount,
             bool PreMounted,
-            string? CredentialName);
+            string? CredentialName,
+            bool EnableMetadataSync,
+            bool AutoImportMetadata,
+            bool ForceMetadataBackfill);
 
         private sealed record CredentialSnapshot(
             string Name,
@@ -124,6 +137,7 @@ namespace VaultSync.UI
             {
                 OnPropertyChanged(nameof(SelectedLanguage));
                 RefreshUpdateCheckStatus();
+                RefreshRsyncStatusHint();
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -153,6 +167,7 @@ namespace VaultSync.UI
             OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
+            RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
@@ -195,6 +210,7 @@ namespace VaultSync.UI
             _runInBackground         = cfg.Behavior.RunInBackground;
             _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
             _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
+            _confirmDeleteBackup     = cfg.Behavior.ConfirmDeleteBackup;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
             _autoBackupIntervalMinutes = ClampInt(cfg.Backups.IntervalMinutes, 1, 10080, 30);
@@ -211,10 +227,16 @@ namespace VaultSync.UI
             _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
             _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
             _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
+            _enableArchiveUploadAutoTune = cfg.Backups.EnableArchiveUploadAutoTune;
+            _enableParallelArchiveUpload = cfg.Backups.EnableParallelArchiveUpload;
+            _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
+            _autoImportMetadata        = cfg.Backups.AutoImportMetadata;
+            _promptRestoreAfterImport  = cfg.Backups.PromptRestoreAfterImport;
 
             _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
             _minimumFreeSpacePercent = ClampInt(cfg.Storage.MinFreeSpacePercent, 0, 95, 10);
+            RefreshRsyncStatusHint();
 
             foreach (var cred in CredentialProfiles.ToList())
             {
@@ -253,7 +275,10 @@ namespace VaultSync.UI
                         Active       = dest.Active,
                         AutoMount    = dest.AutoMount,
                         AutoUnmount  = dest.AutoUnmount,
-                        PreMounted   = dest.PreMounted
+                        PreMounted   = dest.PreMounted,
+                        EnableMetadataSync = dest.EnableMetadataSync,
+                        AutoImportMetadata = dest.AutoImportMetadata,
+                        ForceMetadataBackfill = dest.ForceMetadataBackfill
                     };
 
                     vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
@@ -275,7 +300,10 @@ namespace VaultSync.UI
                     Active      = true,
                     PreMounted  = true,
                     AutoMount   = false,
-                    AutoUnmount = false
+                    AutoUnmount = false,
+                    EnableMetadataSync = true,
+                    AutoImportMetadata = true,
+                    ForceMetadataBackfill = false
                 });
             }
             }
@@ -351,7 +379,10 @@ namespace VaultSync.UI
                     AutoMount: d.AutoMount,
                     AutoUnmount: d.AutoUnmount,
                     PreMounted: d.PreMounted,
-                    CredentialName: d.SelectedCredential?.Name ?? d.CredentialName))
+                    CredentialName: d.SelectedCredential?.Name ?? d.CredentialName,
+                    EnableMetadataSync: d.EnableMetadataSync,
+                    AutoImportMetadata: d.AutoImportMetadata,
+                    ForceMetadataBackfill: d.ForceMetadataBackfill))
                 .ToList();
 
             var credentialSnapshot = CredentialProfiles
@@ -377,6 +408,7 @@ namespace VaultSync.UI
             cfg.Behavior.ShowTrayIcon            = _showTrayIcon;
             cfg.Behavior.RunInBackground         = _runInBackground;
             cfg.Behavior.ShowBackupWidget        = _showTrayBackupWidget;
+            cfg.Behavior.ConfirmDeleteBackup     = _confirmDeleteBackup;
 
             cfg.Backups.EnableAutoBackups           = EnableAutoBackups;
             cfg.Backups.IntervalMinutes             = ClampInt(AutoBackupIntervalMinutes, 1, 10080, 30);
@@ -397,6 +429,11 @@ namespace VaultSync.UI
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
+            cfg.Backups.EnableArchiveUploadAutoTune = _enableArchiveUploadAutoTune;
+            cfg.Backups.EnableParallelArchiveUpload = _enableParallelArchiveUpload;
+            cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
+            cfg.Backups.AutoImportMetadata          = AutoImportMetadata;
+            cfg.Backups.PromptRestoreAfterImport    = PromptRestoreAfterImport;
             cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
@@ -405,7 +442,10 @@ namespace VaultSync.UI
                 Active         = d.Active,
                 AutoMount      = d.AutoMount,
                 AutoUnmount    = d.AutoUnmount,
-                PreMounted     = d.PreMounted
+                PreMounted     = d.PreMounted,
+                EnableMetadataSync = d.EnableMetadataSync,
+                AutoImportMetadata = d.AutoImportMetadata,
+                ForceMetadataBackfill = d.ForceMetadataBackfill
             }).ToList();
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
@@ -776,6 +816,18 @@ namespace VaultSync.UI
 
         public bool IsRsyncDeltaAvailable => !_useIncrementalBackups;
 
+        public string RsyncStatusHint
+        {
+            get => _rsyncStatusHint;
+            private set => SetField(ref _rsyncStatusHint, value);
+        }
+
+        public bool ShowRsyncStatusHint
+        {
+            get => _showRsyncStatusHint;
+            private set => SetField(ref _showRsyncStatusHint, value);
+        }
+
         public bool VerifyBackupsAfterCreate
         {
             get => _verifyBackupsAfterCreate;
@@ -792,6 +844,36 @@ namespace VaultSync.UI
         {
             get => _useFullSnapshotHash;
             set => SetField(ref _useFullSnapshotHash, value);
+        }
+
+        public bool EnableArchiveUploadAutoTune
+        {
+            get => _enableArchiveUploadAutoTune;
+            set => SetField(ref _enableArchiveUploadAutoTune, value);
+        }
+
+        public bool EnableParallelArchiveUpload
+        {
+            get => _enableParallelArchiveUpload;
+            set => SetField(ref _enableParallelArchiveUpload, value);
+        }
+
+        public bool EnableMetadataSync
+        {
+            get => _enableMetadataSync;
+            set => SetField(ref _enableMetadataSync, value);
+        }
+
+        public bool AutoImportMetadata
+        {
+            get => _autoImportMetadata;
+            set => SetField(ref _autoImportMetadata, value);
+        }
+
+        public bool PromptRestoreAfterImport
+        {
+            get => _promptRestoreAfterImport;
+            set => SetField(ref _promptRestoreAfterImport, value);
         }
 
         public bool PreferExternalDrives
@@ -854,6 +936,12 @@ namespace VaultSync.UI
         {
             get => _showTrayBackupWidget;
             set => SetField(ref _showTrayBackupWidget, value);
+        }
+
+        public bool ConfirmDeleteBackups
+        {
+            get => _confirmDeleteBackup;
+            set => SetField(ref _confirmDeleteBackup, value);
         }
 
         public bool LaunchOnLogin
@@ -1083,12 +1171,191 @@ namespace VaultSync.UI
                 : string.Format(CultureInfo.CurrentCulture, errorTemplate, _lastUpdateCheckError);
         }
 
+        private void RefreshRsyncStatusHint()
+        {
+            if (!OperatingSystem.IsMacOS())
+            {
+                ShowRsyncStatusHint = false;
+                RsyncStatusHint = string.Empty;
+                return;
+            }
+
+            var rsyncPath = TryGetBundledRsyncPath() ?? TryFindRsyncOnPath();
+            if (string.IsNullOrWhiteSpace(rsyncPath))
+            {
+                ShowRsyncStatusHint = true;
+                RsyncStatusHint = L(
+                    "Settings.Backups.RsyncMissingHint",
+                    "rsync not found. VaultSync will fall back to the built-in copy method. Reinstall the app or install rsync to restore delta sync."
+                );
+                return;
+            }
+
+            var version = TryGetRsyncVersion(rsyncPath);
+            if (version is null || version < new Version(3, 1, 0))
+            {
+                ShowRsyncStatusHint = true;
+                RsyncStatusHint = L(
+                    "Settings.Backups.RsyncOldHint",
+                    "Your rsync version is too old for progress reporting. Backups will still run, but progress may be limited."
+                );
+                return;
+            }
+
+            ShowRsyncStatusHint = false;
+            RsyncStatusHint = string.Empty;
+        }
+
         private string L(string key, string fallback)
         {
             var value = _localizationService.GetString(key);
             return string.Equals(value, key, StringComparison.OrdinalIgnoreCase)
                 ? fallback
                 : value;
+        }
+
+        private static string? TryFindRsyncOnPath()
+        {
+            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (var dir in path.Split(':', StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    var candidate = Path.Combine(dir, "rsync");
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch
+                {
+                    // ignore invalid PATH entries
+                }
+            }
+
+            return null;
+        }
+
+        private static string? TryGetBundledRsyncPath()
+        {
+            try
+            {
+                var baseDir = AppContext.BaseDirectory;
+                var arch = RuntimeInformation.OSArchitecture;
+                var candidates = new List<string>();
+                if (arch == Architecture.Arm64)
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "rsync"));
+                }
+                else if (arch == Architecture.X64)
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "rsync"));
+                }
+                else
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                }
+
+                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "rsync"));
+                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "bin", "rsync"));
+
+                foreach (var candidate in candidates)
+                {
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        private static Version? TryGetRsyncVersion(string rsyncPath)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = rsyncPath,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                ConfigureMacLibraryPath(psi, rsyncPath);
+                psi.ArgumentList.Add("--version");
+
+                using var proc = Process.Start(psi);
+                if (proc is null)
+                    return null;
+
+                if (!proc.WaitForExit(2000))
+                {
+                    try { proc.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                    return null;
+                }
+
+                var output = proc.StandardOutput.ReadToEnd();
+                return ParseVersion(output);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Version? ParseVersion(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+                return null;
+
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (lines.Length == 0)
+                return null;
+
+            var tokens = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var versionToken = tokens.FirstOrDefault(t => t.Any(char.IsDigit) && t.Contains('.'));
+            return Version.TryParse(versionToken, out var parsed) ? parsed : null;
+        }
+
+        private static void ConfigureMacLibraryPath(ProcessStartInfo psi, string rsyncPath)
+        {
+            if (!OperatingSystem.IsMacOS())
+                return;
+
+            var directory = Path.GetDirectoryName(rsyncPath);
+            if (string.IsNullOrWhiteSpace(directory))
+                return;
+
+            var libDir = Path.GetFullPath(Path.Combine(directory, "..", "lib"));
+            if (!Directory.Exists(libDir))
+                return;
+
+            var existing = psi.Environment.TryGetValue("DYLD_LIBRARY_PATH", out var current)
+                ? current ?? string.Empty
+                : string.Empty;
+            psi.Environment["DYLD_LIBRARY_PATH"] = PrependPathEntry(existing, libDir);
+
+            var fallback = psi.Environment.TryGetValue("DYLD_FALLBACK_LIBRARY_PATH", out var fallbackCurrent)
+                ? fallbackCurrent ?? string.Empty
+                : string.Empty;
+            psi.Environment["DYLD_FALLBACK_LIBRARY_PATH"] = PrependPathEntry(fallback, libDir);
+        }
+
+        private static string PrependPathEntry(string existing, string entry)
+        {
+            if (string.IsNullOrWhiteSpace(existing))
+                return entry;
+
+            var parts = existing.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Any(p => string.Equals(p, entry, StringComparison.Ordinal)))
+                return existing;
+
+            return $"{entry}:{existing}";
         }
 
         // ---------------- Commands ----------------
@@ -1110,6 +1377,7 @@ namespace VaultSync.UI
         public ICommand OpenLogConsoleCommand { get; }
         public ICommand ExportLogConsoleCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
+        public ICommand RefreshHistoryCommand { get; }
 
         private async void BrowseProjectsRoot()
         {
@@ -1232,52 +1500,98 @@ namespace VaultSync.UI
                 CredentialName = dest.CredentialName
             };
 
-            var resolution = _networkMountService.PrepareDestination(destModel, profile);
-            if (!resolution.IsSuccess)
+            var result = await Task.Run(() =>
             {
-                SaveStatus = $"Destination '{display}' failed: {resolution.Message}";
-                dest.LastTestStatus   = resolution.Message;
-                dest.LastTestSeverity = "Error";
-                GlobalNotificationCenter.Instance.Show(
-                    SaveStatus,
-                    NotificationSeverity.Error,
-                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
-                return;
-            }
+                var resolution = _networkMountService.PrepareDestination(destModel, profile);
+                if (!resolution.IsSuccess)
+                {
+                    return (resolution, success: false, readable: false, writable: false, message: resolution.Message);
+                }
 
-            try
-            {
-                await Task.Run(() =>
+                try
                 {
                     var effectivePath = resolution.EffectivePath;
                     Directory.CreateDirectory(effectivePath);
-                    var testFile = Path.Combine(effectivePath, ".vaultsync_destination_test");
-                    File.WriteAllText(testFile, "ok");
-                    File.Delete(testFile);
-                });
 
-                SaveStatus = $"Destination '{display}' is reachable.";
-                dest.LastTestStatus   = LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable";
-                dest.LastTestSeverity = "Info";
-                GlobalNotificationCenter.Instance.Show(
-                    SaveStatus,
-                    NotificationSeverity.Info,
-                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
-            }
-            catch (Exception ex)
+                    var writable = TryWriteProbeFile(effectivePath);
+                    var message = writable
+                        ? (LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable")
+                        : (LocalizationProvider.Service?.GetString("Destinations.Test.ReadOnly") ?? "Read-only");
+
+                    return (resolution, success: true, readable: true, writable: writable, message: message);
+                }
+                catch (Exception ex)
+                {
+                    return (resolution, success: false, readable: false, writable: false, message: ex.Message);
+                }
+                finally
+                {
+                    _networkMountService.Cleanup(resolution);
+                }
+            });
+
+            if (!result.success)
             {
-                SaveStatus = $"Destination '{display}' failed: {ex.Message}";
-                dest.LastTestStatus   = ex.Message;
+                SaveStatus = $"Destination '{display}' failed: {result.message}";
+                dest.LastTestStatus   = result.message;
                 dest.LastTestSeverity = "Error";
+                var actionLabel = LocalizationProvider.Service?.GetString("Logs.CopySnippet") ?? "Copy log snippet";
+                var actionCommand = CreateCopyLogSnippetCommand($"Destination test failed for '{display}'.");
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Error,
-                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
+                    LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test",
+                    actionLabel: actionLabel,
+                    actionCommand: actionCommand);
+                return;
+            }
+
+            SaveStatus = $"Destination '{display}' is reachable.";
+            dest.LastTestStatus   = result.message;
+            dest.LastTestSeverity = result.writable ? "Info" : "Warning";
+            GlobalNotificationCenter.Instance.Show(
+                SaveStatus,
+                result.writable ? NotificationSeverity.Info : NotificationSeverity.Warning,
+                LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
+        }
+
+        private static bool TryWriteProbeFile(string effectivePath)
+        {
+            var testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
+            try
+            {
+                File.WriteAllText(testFile, "ok");
+                File.Delete(testFile);
+                return true;
+            }
+            catch
+            {
+                return false;
             }
             finally
             {
-                _networkMountService.Cleanup(resolution);
+                try
+                {
+                    if (File.Exists(testFile))
+                        File.Delete(testFile);
+                }
+                catch
+                {
+                    // best effort cleanup
+                }
             }
+        }
+
+        private ICommand CreateCopyLogSnippetCommand(string contextLabel)
+        {
+            return new RelayCommand(async _ =>
+            {
+                var snippet = Services.LogConsoleProvider.Service?.GetRecentSnippet(30, contextLabel);
+                if (string.IsNullOrWhiteSpace(snippet))
+                    return;
+
+                await ClipboardHelper.TryCopyAsync(snippet);
+            });
         }
 
         private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)
@@ -1631,6 +1945,15 @@ namespace VaultSync.UI
 
         public bool NeedsCredentialWarning =>
             AutoMount && !PreMounted && SelectedCredential is null;
+
+        private bool _enableMetadataSync = true;
+        public bool EnableMetadataSync { get => _enableMetadataSync; set => SetField(ref _enableMetadataSync, value); }
+
+        private bool _autoImportMetadata = true;
+        public bool AutoImportMetadata { get => _autoImportMetadata; set => SetField(ref _autoImportMetadata, value); }
+
+        private bool _forceMetadataBackfill;
+        public bool ForceMetadataBackfill { get => _forceMetadataBackfill; set => SetField(ref _forceMetadataBackfill, value); }
 
         private string _lastTestStatus = string.Empty;
         public string LastTestStatus

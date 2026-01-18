@@ -97,7 +97,7 @@
                     XAxes="{Binding BackupUsageXAxes}"
                     YAxes="{Binding BackupUsageYAxes}"
                     Background="Transparent"
-                    IsVisible="False"
+                    IsVisible="{Binding HasBackupUsageSegments}"
                     LegendPosition="Hidden"
                     Height="12"
                     Margin="0"

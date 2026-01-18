@@ -13,12 +13,14 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI.Infrastructure;
 
 internal static class CrashHandler
 {
     private static int _handling;
+    private static int _softHandling;
 
     public static void RegisterEarly()
     {
@@ -33,9 +35,12 @@ internal static class CrashHandler
 
     private static void OnUiUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        HandleException(e.Exception, "UI thread", isTerminating: false);
+        HandleUiExceptionSoft(e.Exception);
         e.Handled = true;
     }
+
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
 
     private static void OnAppDomainUnhandledException(object? sender, UnhandledExceptionEventArgs e)
     {
@@ -60,6 +65,33 @@ internal static class CrashHandler
         App.MarkCrashing();
         var logPath = WriteCrashLog(ex, source, isTerminating);
         TryShowCrashDialog(logPath);
+    }
+
+    private static void HandleUiExceptionSoft(Exception ex)
+    {
+        if (Interlocked.Exchange(ref _softHandling, 1) != 0)
+        {
+            return;
+        }
+
+        var logPath = WriteCrashLog(ex, "UI thread", isTerminating: false);
+        TryShowSoftCrashBanner(logPath);
+    }
+
+    private static void TryShowSoftCrashBanner(string? logPath)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            ShowSoftCrashBanner(logPath);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => ShowSoftCrashBanner(logPath), DispatcherPriority.Send);
+    }
+
+    private static void ShowSoftCrashBanner(string? logPath)
+    {
+        App.AppViewModelInstance?.NotifySoftCrashBanner(logPath);
     }
 
     private static string? WriteCrashLog(Exception ex, string source, bool isTerminating)
@@ -261,7 +293,7 @@ internal static class CrashHandler
 
         window = new Window
         {
-            Title = "VaultSync crashed",
+            Title = L("Crash.Title", "VaultSync crashed"),
             Content = root,
             CanResize = false,
             Width = 720,
@@ -282,7 +314,7 @@ internal static class CrashHandler
         {
             var copyButton = new Button
             {
-                Content = "Copy log path"
+                Content = L("Crash.CopyLogPath", "Copy log path")
             };
             copyButton.Click += async (_, _) =>
             {
@@ -293,7 +325,7 @@ internal static class CrashHandler
 
             var openFolderButton = new Button
             {
-                Content = "Open folder"
+                Content = L("Crash.OpenFolder", "Open folder")
             };
             openFolderButton.Click += (_, _) =>
             {
@@ -309,7 +341,7 @@ internal static class CrashHandler
 
         var closeButton = new Button
         {
-            Content = "Close",
+            Content = L("Crash.Close", "Close"),
             MinWidth = 90
         };
         closeButton.Click += (_, _) => desktop.Shutdown(1);
@@ -395,11 +427,23 @@ internal static class CrashHandler
             }
             else if (OperatingSystem.IsMacOS())
             {
-                Process.Start("open", folder);
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "open",
+                    UseShellExecute = false
+                };
+                psi.ArgumentList.Add(folder);
+                Process.Start(psi);
             }
             else if (OperatingSystem.IsLinux())
             {
-                Process.Start("xdg-open", folder);
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "xdg-open",
+                    UseShellExecute = false
+                };
+                psi.ArgumentList.Add(folder);
+                Process.Start(psi);
             }
             else
             {

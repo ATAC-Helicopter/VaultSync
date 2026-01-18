@@ -77,11 +77,13 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     // journal_mode returns a value; read it to avoid driver complaints
     _ = c.ExecuteScalar<string>("PRAGMA journal_mode = WAL;");
 
-    // Schema objects and indexes
+    // Schema objects
     c.Execute("""
         -- Projects
         CREATE TABLE IF NOT EXISTS projects(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          external_id TEXT NOT NULL DEFAULT '',
+          needs_restore INTEGER NOT NULL DEFAULT 0,
           name TEXT NOT NULL UNIQUE,
           root_path TEXT NOT NULL,
           preset TEXT NOT NULL,
@@ -91,6 +93,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
         -- Snapshots (cascade to files when a snapshot is deleted; cascade to snapshots when project is deleted)
         CREATE TABLE IF NOT EXISTS snapshots(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          external_id TEXT NOT NULL DEFAULT '',
           project_id INTEGER NOT NULL,
           created_utc TEXT NOT NULL,
           file_count INTEGER NOT NULL,
@@ -112,6 +115,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
         -- Backups
         CREATE TABLE IF NOT EXISTS backups(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          external_id TEXT NOT NULL DEFAULT '',
           project_id INTEGER NOT NULL,
           snapshot_id INTEGER NOT NULL,
           created_utc TEXT NOT NULL,
@@ -123,12 +127,25 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
+    """);
 
-        -- Indexes (idempotent)
+    // Migrations: add missing columns
+    EnsureColumnExists("backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+
+    // Indexes (idempotent)
+    c.Execute("""
         CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
+        CREATE INDEX IF NOT EXISTS idx_projects_external ON projects(external_id);
 
         CREATE INDEX IF NOT EXISTS idx_snapshots_project_created
           ON snapshots(project_id, created_utc DESC);
+        CREATE INDEX IF NOT EXISTS idx_snapshots_external ON snapshots(external_id);
 
         CREATE INDEX IF NOT EXISTS idx_files_snapshot ON files(snapshot_id);
 
@@ -137,16 +154,44 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 
         CREATE INDEX IF NOT EXISTS idx_backups_created
           ON backups(created_utc DESC);
+        CREATE INDEX IF NOT EXISTS idx_backups_external ON backups(external_id);
 
         -- Avoid duplicate file rows per snapshot (same logical path)
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
           ON files(snapshot_id, rel_path);
     """);
 
-    // Migrations: add missing columns
-    EnsureColumnExists("backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
-    EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
+    // Normalize stored backup paths to the current OS separators for retention cleanup.
+    NormalizeBackupPathSeparators(c);
+}
+
+private sealed record BackupPathRow(int Id, string Path);
+
+private void NormalizeBackupPathSeparators(SqliteConnection connection)
+{
+    var rows = connection.Query<BackupPathRow>(
+        "SELECT id, path FROM backups WHERE path LIKE '%\\\\%' OR path LIKE '%/%';").ToList();
+    if (rows.Count == 0)
+        return;
+
+    var separator = Path.DirectorySeparatorChar;
+    foreach (var row in rows)
+    {
+        if (string.IsNullOrWhiteSpace(row.Path))
+            continue;
+
+        var normalized = row.Path
+            .Replace('\\', separator)
+            .Replace('/', separator)
+            .TrimStart(separator);
+
+        if (string.Equals(normalized, row.Path, StringComparison.Ordinal))
+            continue;
+
+        connection.Execute(
+            "UPDATE backups SET path = @path WHERE id = @id;",
+            new { path = normalized, id = row.Id });
+    }
 }
 
         /// <summary>
@@ -178,8 +223,16 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
                 new { name });
+        }
+
+        public Project? GetProjectById(int id)
+        {
+            using var c = Open();
+            return c.QueryFirstOrDefault<Project>(
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
+                new { id });
         }
 
         public void RemoveProject(int projectId)
@@ -197,7 +250,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.Query<Project>(
-                "SELECT id, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
         }
 
         /// <summary>
@@ -221,13 +274,59 @@ DELETE FROM sqlite_sequence;";
         public int AddProject(Project p)
         {
             using var c = Open();
+            var externalId = string.IsNullOrWhiteSpace(p.ExternalId)
+                ? NewExternalId()
+                : p.ExternalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO projects(name, root_path, preset, created_utc)
-                VALUES(@Name, @RootPath, @Preset, @CreatedUtc);
+                INSERT INTO projects(external_id, needs_restore, name, root_path, preset, created_utc)
+                VALUES(@ExternalId, @NeedsRestore, @Name, @RootPath, @Preset, @CreatedUtc);
                 SELECT last_insert_rowid();
                 """,
-                p);
+                new
+                {
+                    ExternalId = externalId,
+                    NeedsRestore = p.NeedsRestore ? 1 : 0,
+                    p.Name,
+                    p.RootPath,
+                    p.Preset,
+                    CreatedUtc = p.CreatedUtc.ToString("u", CultureInfo.InvariantCulture)
+                });
+        }
+
+        public void UpdateProjectNeedsRestore(int projectId, bool needsRestore)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET needs_restore = @needs WHERE id = @id;",
+                new { needs = needsRestore ? 1 : 0, id = projectId });
+        }
+
+        public Project? GetProjectByExternalId(string externalId)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                return null;
+
+            using var c = Open();
+            return c.QueryFirstOrDefault<Project>(
+                """
+                SELECT id, external_id as ExternalId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
+                FROM projects
+                WHERE external_id = @externalId
+                LIMIT 1;
+                """,
+                new { externalId });
+        }
+
+        public void UpdateProjectExternalId(int projectId, string externalId)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                return;
+
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET external_id = @externalId WHERE id = @id;",
+                new { externalId, id = projectId });
         }
 
         public bool UpdateProjectPath(string name, string newPath, out string? oldPath)
@@ -274,13 +373,94 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+            var externalId = NewExternalId();
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO snapshots(project_id, created_utc, file_count, total_bytes)
-                VALUES(@ProjectId, @CreatedUtc, @FileCount, @TotalBytes);
+                INSERT INTO snapshots(external_id, project_id, created_utc, file_count, total_bytes)
+                VALUES(@ExternalId, @ProjectId, @CreatedUtc, @FileCount, @TotalBytes);
                 SELECT last_insert_rowid();
                 """,
-                new { ProjectId = projectId, CreatedUtc = created, FileCount = fileCount, TotalBytes = totalBytes });
+                new
+                {
+                    ExternalId = externalId,
+                    ProjectId = projectId,
+                    CreatedUtc = created,
+                    FileCount = fileCount,
+                    TotalBytes = totalBytes
+                });
+        }
+
+        public int CreateSnapshotFromMetadata(string externalId, int projectId, DateTime createdUtc, long fileCount, long totalBytes)
+        {
+            using var c = Open();
+            var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
+            var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
+            return c.ExecuteScalar<int>(
+                """
+                INSERT INTO snapshots(external_id, project_id, created_utc, file_count, total_bytes)
+                VALUES(@ExternalId, @ProjectId, @CreatedUtc, @FileCount, @TotalBytes);
+                SELECT last_insert_rowid();
+                """,
+                new
+                {
+                    ExternalId = idToUse,
+                    ProjectId = projectId,
+                    CreatedUtc = created,
+                    FileCount = fileCount,
+                    TotalBytes = totalBytes
+                });
+        }
+
+        public Snapshot? GetSnapshotByExternalId(string externalId)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                return null;
+
+            using var c = Open();
+            return c.QueryFirstOrDefault<Snapshot>(
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id  AS ProjectId,
+                  created_utc AS CreatedUtc,
+                  file_count  AS FileCount,
+                  total_bytes AS TotalBytes
+                FROM snapshots
+                WHERE external_id = @externalId
+                LIMIT 1;
+                """,
+                new { externalId });
+        }
+
+        public Snapshot? GetSnapshotById(int id)
+        {
+            using var c = Open();
+            return c.QueryFirstOrDefault<Snapshot>(
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id  AS ProjectId,
+                  created_utc AS CreatedUtc,
+                  file_count  AS FileCount,
+                  total_bytes AS TotalBytes
+                FROM snapshots
+                WHERE id = @id
+                LIMIT 1;
+                """,
+                new { id });
+        }
+
+        public void UpdateSnapshotExternalId(int snapshotId, string externalId)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                return;
+
+            using var c = Open();
+            c.Execute(
+                "UPDATE snapshots SET external_id = @externalId WHERE id = @id;",
+                new { externalId, id = snapshotId });
         }
 
         public Snapshot? GetLatestSnapshot(int projectId)
@@ -295,6 +475,7 @@ DELETE FROM sqlite_sequence;";
                 """
                 SELECT
                   id,
+                  external_id as ExternalId,
                   project_id  AS ProjectId,
                   created_utc AS CreatedUtc,
                   file_count  AS FileCount,
@@ -317,6 +498,7 @@ DELETE FROM sqlite_sequence;";
                 """
                 SELECT
                   id,
+                  external_id as ExternalId,
                   project_id as ProjectId,
                   created_utc as CreatedUtc,
                   file_count as FileCount,
@@ -342,6 +524,7 @@ DELETE FROM sqlite_sequence;";
                 """
                 SELECT
                   id,
+                  external_id as ExternalId,
                   project_id as ProjectId,
                   created_utc as CreatedUtc,
                   file_count as FileCount,
@@ -446,15 +629,17 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+            var externalId = NewExternalId();
 
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected)
-                VALUES(@ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected);
                 SELECT last_insert_rowid();
                 """,
                 new
                 {
+                    ExternalId     = externalId,
                     ProjectId       = projectId,
                     SnapshotId      = snapshotId,
                     CreatedUtc      = created,
@@ -467,6 +652,80 @@ DELETE FROM sqlite_sequence;";
                 });
         }
 
+        public int CreateBackupFromMetadata(
+            string externalId,
+            int projectId,
+            int snapshotId,
+            DateTime createdUtc,
+            string type,
+            long totalBytes,
+            string relativePath,
+            string destinationPath,
+            string destinationAlias,
+            bool isProtected)
+        {
+            using var c = Open();
+            var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
+            var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
+            return c.ExecuteScalar<int>(
+                """
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected);
+                SELECT last_insert_rowid();
+                """,
+                new
+                {
+                    ExternalId      = idToUse,
+                    ProjectId       = projectId,
+                    SnapshotId      = snapshotId,
+                    CreatedUtc      = created,
+                    Type            = type,
+                    TotalBytes      = totalBytes,
+                    Path            = relativePath ?? string.Empty,
+                    DestinationPath = destinationPath ?? string.Empty,
+                    DestinationAlias = destinationAlias ?? string.Empty,
+                    IsProtected     = isProtected ? 1 : 0
+                });
+        }
+
+        public Backup? GetBackupByExternalId(string externalId)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                return null;
+
+            using var c = Open();
+            return c.QueryFirstOrDefault<Backup>(
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  is_protected as IsProtected
+                FROM backups
+                WHERE external_id = @externalId
+                LIMIT 1;
+                """,
+                new { externalId });
+        }
+
+        public void UpdateBackupExternalId(int backupId, string externalId)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                return;
+
+            using var c = Open();
+            c.Execute(
+                "UPDATE backups SET external_id = @externalId WHERE id = @id;",
+                new { externalId, id = backupId });
+        }
+
         public Backup? GetLatestBackupForProject(int projectId)
         {
             using var c = Open();
@@ -474,6 +733,7 @@ DELETE FROM sqlite_sequence;";
                 """
                 SELECT
                   id,
+                  external_id as ExternalId,
                   project_id  as ProjectId,
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
@@ -498,6 +758,7 @@ DELETE FROM sqlite_sequence;";
                 """
                 SELECT
                   id,
+                  external_id as ExternalId,
                   project_id  as ProjectId,
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
@@ -521,6 +782,7 @@ DELETE FROM sqlite_sequence;";
                 """
                 SELECT
                   id,
+                  external_id as ExternalId,
                   project_id  as ProjectId,
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
@@ -557,6 +819,7 @@ DELETE FROM sqlite_sequence;";
                 """
                 SELECT
                   id,
+                  external_id as ExternalId,
                   project_id  as ProjectId,
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
@@ -593,6 +856,7 @@ DELETE FROM sqlite_sequence;";
                 """
                 SELECT
                   id,
+                  external_id as ExternalId,
                   project_id  as ProjectId,
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
@@ -637,6 +901,8 @@ DELETE FROM sqlite_sequence;";
             Console.WriteLine($"[SqliteRepository] Failed to ensure column {column} on {table}: {ex.Message}");
         }
     }
+
+    private static string NewExternalId() => Guid.NewGuid().ToString("N");
 
         public (int autoCount, int manualCount) GetBackupTypeCounts()
         {

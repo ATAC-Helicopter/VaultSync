@@ -33,7 +33,7 @@
     <strong style="color:#f2c94c;font-size:16px;">Warning</strong>
   </div>
   <p style="margin:0;font-size:14px;color:#dfe8ff;max-width:720px;">
-    VaultSync is currently unsigned: Windows SmartScreen will flag the installer/program (click <strong>More info</strong> → <strong>Run anyway</strong>), and macOS Gatekeeper will block the first launch. On macOS (both Apple Silicon arm64 and Intel x64), download <code>VaultSync-macos-arm64.dmg</code> or <code>VaultSync-macos-x64.dmg</code>, open it, drag <code>VaultSync-macos-arm64.app</code> or <code>VaultSync-macos-x64.app</code> into <strong>Applications</strong>, then right-click → Open. If Gatekeeper still blocks it, run <code>xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app</code> or <code>xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app</code>.
+    VaultSync is currently unsigned: Windows SmartScreen will flag the installer/program (click <strong>More info</strong> → <strong>Run anyway</strong>), and macOS Gatekeeper will block the first launch. On macOS (both Apple Silicon and Intel), download <code>VaultSync-&lt;version&gt;-macos-apple-silicon.dmg</code> or <code>VaultSync-&lt;version&gt;-macos-intel.dmg</code>, open it, drag <code>VaultSync-macos-arm64.app</code> or <code>VaultSync-macos-x64.app</code> into <strong>Applications</strong>, then right-click → Open. If Gatekeeper still blocks it, run <code>xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app</code> or <code>xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app</code>.
   </p>
 </div>
 
@@ -97,6 +97,14 @@ or choose **No preset** if no presets apply or you want no file exclusion.
 - Progress, file count, and failure handling (NAS sleep detection)  
 - Retention: keep the newest N backups per project; protected ("Keep") backups are never pruned  
 - Integrated snapshot creation: every backup captures a fresh snapshot; orphan snapshots are cleaned up when backups are pruned
+
+### Network shares (SMB/NFS)
+- SMB auto-mount is supported on Windows and macOS using credential profiles.
+- NFS auto-mount is **not** supported on macOS (requires admin privileges). Pre-mount the share and set the destination
+  to the local mount path with **Pre-mounted** enabled and **Auto-mount** disabled.
+- Example NFS destination on macOS:
+  - Mount: `sudo /sbin/mount_nfs -o rw,resvport 192.168.1.138:/export/Flavio_Share "/Users/flavio/Library/Application Support/VaultSync/mounts/nfs-share"`
+  - Destination path: `/Users/flavio/Library/Application Support/VaultSync/mounts/nfs-share/Dev`
 
 ---
 

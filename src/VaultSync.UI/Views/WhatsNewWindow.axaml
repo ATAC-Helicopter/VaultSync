@@ -1,0 +1,90 @@
+<Window
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+    xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
+    x:Class="VaultSync.UI.Views.WhatsNewWindow"
+    x:DataType="vm:WhatsNewViewModel"
+    Width="520"
+    Height="680"
+    CanResize="True"
+    WindowStartupLocation="CenterOwner"
+    Title="{infra:LocalizedString Key=WhatsNew.Title}">
+
+  <Border Padding="20" Background="{DynamicResource Surface0}">
+    <Border Background="{DynamicResource Surface1}"
+            BorderBrush="{DynamicResource BorderSoft}"
+            BorderThickness="1"
+            CornerRadius="22"
+            Padding="18">
+      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
+        <StackPanel Grid.Row="0" Spacing="8">
+          <TextBlock Text="{CompiledBinding Title}"
+                     FontSize="22"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="{CompiledBinding VersionLabel}"
+                     Foreground="{DynamicResource TextSecondary}"
+                     FontSize="12" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="18">
+            <ItemsControl ItemsSource="{CompiledBinding Sections}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:WhatsNewSection">
+                  <Border Background="{DynamicResource Surface2}"
+                          BorderBrush="{DynamicResource BorderSoft}"
+                          BorderThickness="1"
+                          CornerRadius="14"
+                          Padding="16">
+                    <StackPanel Spacing="10">
+                      <TextBlock Text="{CompiledBinding Title}"
+                                 FontWeight="SemiBold"
+                                 FontSize="14" />
+                      <ItemsControl ItemsSource="{CompiledBinding Items}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                              <Border Width="8"
+                                      Height="8"
+                                      CornerRadius="4"
+                                      Background="{DynamicResource AccentBrush}"
+                                      Margin="0,8,0,0" />
+                              <controls:RichTextBlock Grid.Column="1"
+                                                      RichText="{Binding}"
+                                                      TextWrapping="Wrap"
+                                                      LineHeight="22"
+                                                      Foreground="{DynamicResource TextSecondary}" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2"
+                Background="{DynamicResource Surface2}"
+                BorderBrush="{DynamicResource BorderSoft}"
+                BorderThickness="1"
+                CornerRadius="16"
+                Padding="12"
+                Margin="0">
+          <Button Content="{infra:LocalizedString Key=WhatsNew.Close}"
+                  Command="{CompiledBinding CloseCommand}"
+                  Background="{DynamicResource AccentBrush}"
+                  Foreground="{DynamicResource TextOnPillBrush}"
+                  BorderBrush="{DynamicResource AccentBrush}"
+                  CornerRadius="10"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" />
+        </Border>
+      </Grid>
+    </Border>
+  </Border>
+</Window>

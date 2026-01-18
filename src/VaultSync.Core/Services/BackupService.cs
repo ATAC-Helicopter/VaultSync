@@ -16,6 +16,9 @@ public sealed class BackupService
 {
     private readonly Dictionary<int, CancellationTokenSource> _cancelMap = new();
     private readonly SqliteRepository _repo;
+    private const string InProgressMarkerFileName = ".vaultsync_inprogress";
+    private const string CompletedMarkerFileName = ".vaultsync_complete";
+    public event Action<Backup>? BackupRetentionDeleted;
 
     public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
 
@@ -28,6 +31,7 @@ public sealed class BackupService
     {
         if (_cancelMap.TryGetValue(projectId, out var cts))
         {
+            Console.WriteLine($"[BackupService] Cancel requested for projectId={projectId}.");
             try { cts.Cancel(); } catch { }
         }
     }
@@ -43,6 +47,108 @@ public sealed class BackupService
         {
             Console.WriteLine($"[BackupService] Failed to delete partial backup '{backupFolder}': {ex.Message}");
         }
+    }
+
+    private static void WriteMarkerFile(string backupFolder, string fileName, string contents)
+    {
+        try
+        {
+            var markerPath = Path.Combine(backupFolder, fileName);
+            File.WriteAllText(markerPath, contents);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to write marker '{fileName}' in '{backupFolder}': {ex.Message}");
+        }
+    }
+
+    private static void RemoveMarkerFile(string backupFolder, string fileName)
+    {
+        try
+        {
+            var markerPath = Path.Combine(backupFolder, fileName);
+            if (File.Exists(markerPath))
+                File.Delete(markerPath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to remove marker '{fileName}' in '{backupFolder}': {ex.Message}");
+        }
+    }
+
+    public int CleanupIncompleteBackups(string backupRoot, IEnumerable<string>? projectFolderNames = null)
+    {
+        if (string.IsNullOrWhiteSpace(backupRoot) || !Directory.Exists(backupRoot))
+            return 0;
+
+        var removed = 0;
+        var projectDirs = projectFolderNames?.ToList();
+        if (projectDirs is { Count: > 0 })
+        {
+            foreach (var folder in projectDirs)
+            {
+                if (string.IsNullOrWhiteSpace(folder))
+                    continue;
+
+                var projectDir = Path.Combine(backupRoot, folder);
+                if (!Directory.Exists(projectDir))
+                    continue;
+
+                removed += CleanupIncompleteBackupsUnderProject(projectDir);
+            }
+
+            return removed;
+        }
+
+        foreach (var projectDir in SafeEnumerateDirectories(backupRoot))
+        {
+            removed += CleanupIncompleteBackupsUnderProject(projectDir);
+        }
+
+        return removed;
+    }
+
+    private int CleanupIncompleteBackupsUnderProject(string projectDir)
+    {
+        var removed = 0;
+        {
+            foreach (var backupDir in SafeEnumerateDirectories(projectDir))
+            {
+                try
+                {
+                    var markerPath = Path.Combine(backupDir, InProgressMarkerFileName);
+                    if (!File.Exists(markerPath))
+                        continue;
+
+                    DeletePartialBackup(backupDir);
+                    removed++;
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+                {
+                    Console.WriteLine($"[BackupService] Skipping incomplete backup cleanup for '{backupDir}': {ex.Message}");
+                }
+            }
+        }
+
+        return removed;
+    }
+
+    private static IEnumerable<string> SafeEnumerateDirectories(string root)
+    {
+        try
+        {
+            return Directory.GetDirectories(root);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+        {
+            Console.WriteLine($"[BackupService] Skipping directory scan for '{root}': {ex.Message}");
+            return Array.Empty<string>();
+        }
+    }
+
+    public void EnforceRetentionForProject(int projectId, string backupRoot, int? maxSnapshotsToKeep)
+    {
+        ApplyBackupRetention(projectId, backupRoot, maxSnapshotsToKeep);
     }
 
     /// <summary>
@@ -93,7 +199,10 @@ public sealed class BackupService
         string? destinationAlias = null,
         bool skipIfNoChanges = false,
         bool useRsyncDelta = false,
-        bool useIncrementalBackups = false)
+        bool useIncrementalBackups = false,
+        int? archiveUploadBufferBytes = null,
+        bool preferRunnerProgressOnly = false,
+        bool preferParallelArchiveUpload = false)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -113,6 +222,8 @@ public sealed class BackupService
 
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
         var linkedToken = linkedCts.Token;
+        using var cancelLog = linkedToken.Register(() =>
+            Console.WriteLine($"[BackupService] Cancellation observed for project '{project.Name}' (Id={project.Id})."));
 
         linkedToken.ThrowIfCancellationRequested();
 
@@ -159,24 +270,11 @@ public sealed class BackupService
         var folderName = timestamp.ToString("yyyy-MM-dd_HH-mm-ss");
         var backupFolder = Path.Combine(projectBackupRoot, folderName);
         Directory.CreateDirectory(backupFolder);
+        WriteMarkerFile(backupFolder, InProgressMarkerFileName, $"started:{DateTime.UtcNow:O}");
         var backupRootUsed   = backupRoot;
         var backupFolderUsed = backupFolder;
 
-        // Compute total bytes off the UI thread, using the same filter logic as snapshots.
-        long totalBytes;
-        try
-        {
-            totalBytes = await Task.Run(
-                () => ComputeBackupSize(project.RootPath, project.Preset, linkedToken),
-                linkedToken);
-        }
-        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-        {
-            Console.WriteLine($"[BackupService] Failed to compute backup size for '{project.Name}' ({project.RootPath}': {ex.Message}. Proceeding with totalBytes=0.");
-            totalBytes = 0;
-        }
-
-        Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
+        long totalBytes = 0;
 
         int snapshotId;
         int totalFilesForProgress = 0;
@@ -219,12 +317,15 @@ public sealed class BackupService
         {
             filesForProgress = _repo.GetFilesForSnapshot(snapshotId).ToList();
             totalFilesForProgress = filesForProgress.Count;
+            totalBytes = filesForProgress.Sum(f => f.Size);
         }
         catch
         {
             totalFilesForProgress = 0;
             filesForProgress = null;
         }
+
+        Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
 
         string? linkDest = null;
         if (!useArchiveMode && useIncrementalBackups)
@@ -248,7 +349,16 @@ public sealed class BackupService
             {
                 progressCallback?.Invoke(0, "Preparing archive backup...", string.Empty);
 
-                await RunArchiveBackupAsync(project, backupFolder, totalBytes, totalFilesForProgress, progressCallback, linkedToken);
+                var uploadBufferBytes = NormalizeArchiveUploadBufferBytes(archiveUploadBufferBytes);
+                await RunArchiveBackupAsync(
+                    project,
+                    backupFolder,
+                    totalBytes,
+                    totalFilesForProgress,
+                    progressCallback,
+                    linkedToken,
+                    uploadBufferBytes,
+                    preferParallelArchiveUpload);
             }
             else
             {
@@ -264,7 +374,8 @@ public sealed class BackupService
                     linkedToken,
                     useRsyncDelta,
                     useIncrementalBackups,
-                    linkDest);
+                    linkDest,
+                    preferRunnerProgressOnly);
             }
         }
         catch (Exception ex)
@@ -272,8 +383,18 @@ public sealed class BackupService
             if (linkedToken.IsCancellationRequested)
             {
                 Console.WriteLine($"[BackupService] Backup cancelled for '{project.Name}'. Cleaning up.");
-                DeletePartialBackup(backupFolder);
+                DeletePartialBackup(backupFolderUsed);
+                if (!string.Equals(backupFolderUsed, backupFolder, StringComparison.OrdinalIgnoreCase))
+                    DeletePartialBackup(backupFolder);
+                RemoveMarkerFile(backupFolderUsed, InProgressMarkerFileName);
+                RemoveMarkerFile(backupFolder, InProgressMarkerFileName);
                 return new BackupRunResult(0, false, true);
+            }
+
+            if (useArchiveMode)
+            {
+                Console.WriteLine($"[BackupService] Archive backup failed for '{project.Name}': {ex}");
+                throw;
             }
 
             // If the native tool is not available or fails unexpectedly, fall back
@@ -382,6 +503,9 @@ public sealed class BackupService
             }
         }
 
+        RemoveMarkerFile(backupFolderUsed, InProgressMarkerFileName);
+        WriteMarkerFile(backupFolderUsed, CompletedMarkerFileName, $"completed:{DateTime.UtcNow:O}");
+
         progressCallback?.Invoke(100, string.Empty, useArchiveMode ? "Backup completed (archive)." : "Backup completed.");
 
         if (_cancelMap.TryGetValue(project.Id, out var finishedCts))
@@ -412,7 +536,8 @@ public sealed class BackupService
         CancellationToken ct,
         bool useRsyncDelta,
         bool useIncrementalBackups,
-        string? linkDest)
+        string? linkDest,
+        bool preferRunnerProgressOnly)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -429,10 +554,12 @@ public sealed class BackupService
         var useHybridMonitor = progressCallback is not null
             && totalBytes > 0
             && filesForProgress is not null
-            && filesForProgress.Count > 0;
+            && filesForProgress.Count > 0
+            && !preferRunnerProgressOnly;
 
         if (useHybridMonitor)
         {
+            Console.WriteLine("[BackupService] Progress monitor enabled (destination scans for progress).");
             monitorCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             runnerState = new RunnerProgressState();
             monitorTask = MonitorCopyProgressAsync(destDir, filesForProgress!, totalBytes, progressCallback!, monitorCts.Token, runnerState);
@@ -594,6 +721,7 @@ public sealed class BackupService
                 {
                     // expected when stopping monitor
                 }
+                Console.WriteLine("[BackupService] Progress monitor cancelled.");
                 monitorCts.Dispose();
             }
         }
@@ -637,6 +765,8 @@ public sealed class BackupService
         var totalEntries  = filesForProgress.Count;
         if (totalEntries == 0)
             return;
+
+        Console.WriteLine($"[BackupService] Progress monitor started for '{destDir}' (entries={totalEntries}).");
 
         var observedSizes = new long[totalEntries];
         var completed     = new bool[totalEntries];
@@ -789,6 +919,8 @@ public sealed class BackupService
 
             await Task.Delay(minInterval, ct);
         }
+
+        Console.WriteLine($"[BackupService] Progress monitor stopped for '{destDir}'.");
     }
 
     /// <summary>
@@ -796,13 +928,33 @@ public sealed class BackupService
     /// destination directory. The archive contains only files that pass the same filter
     /// rules used by snapshots.
     /// </summary>
+    private static int NormalizeArchiveUploadBufferBytes(int? requestedBytes)
+    {
+        const int defaultBytes = 4 * 1024 * 1024;
+        const int minBytes     = 256 * 1024;
+        const int maxBytes     = 16 * 1024 * 1024;
+
+        if (requestedBytes is null || requestedBytes.Value <= 0)
+            return defaultBytes;
+
+        var value = requestedBytes.Value;
+        if (value < minBytes)
+            return minBytes;
+        if (value > maxBytes)
+            return maxBytes;
+
+        return value;
+    }
+
     private static async Task RunArchiveBackupAsync(
         Project project,
         string destDir,
         long totalBytes,
         int totalFiles,
         Action<double, string, string>? progressCallback,
-        CancellationToken ct)
+        CancellationToken ct,
+        int uploadBufferBytes,
+        bool preferParallelUpload)
     {
         var sourceDir = project.RootPath;
         var srcInfo   = new DirectoryInfo(sourceDir);
@@ -946,52 +1098,192 @@ public sealed class BackupService
 
             var zipInfo   = new FileInfo(localArchive);
             var zipSize   = zipInfo.Length;
-            long uploaded = 0;
+            var bufferSize = uploadBufferBytes;
+            var stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
 
-            var uploadStart = DateTime.UtcNow;
-
-            const int bufferSize = 128 * 1024;
-            var       buffer     = new byte[bufferSize];
-
-            using (var src = new FileStream(localArchive, FileMode.Open, FileAccess.Read, FileShare.Read))
-            using (var dst = new FileStream(finalArchivePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            async Task UploadSingleAttemptAsync(long startOffset)
             {
-                int read;
-                while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                long uploaded = 0;
+                var uploadStart = DateTime.UtcNow;
+                var lastLogTime = uploadStart;
+                long lastLogBytes = 0;
+                var lastUiUpdate = uploadStart;
+                long lastUiBytes = startOffset;
+                var buffer = new byte[bufferSize];
+                var lastProgressTicks = uploadStart.Ticks;
+                var stalled = 0;
+
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                var monitor = Task.Run(async () =>
                 {
-                    ct.ThrowIfCancellationRequested();
-
-                    await dst.WriteAsync(buffer.AsMemory(0, read), ct);
-                    uploaded += read;
-
-                    if (progressCallback is not null && zipSize > 0)
+                    while (!linkedCts.IsCancellationRequested)
                     {
-                        var uploadPercent   = Math.Min(100d, (uploaded * 100d / zipSize));
-                        var overallPercent  = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
-                        if (overallPercent > 100d) overallPercent = 100d;
-
-                        var now            = DateTime.UtcNow;
-                        var elapsed        = now - uploadStart;
-                        var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                        var speedBytesSec  = uploaded / elapsedSeconds;
-                        var speedMbSec     = speedBytesSec / (1024 * 1024);
-
-                        string etaText;
-                        if (uploadPercent > 0 && uploadPercent < 100)
+                        try
                         {
-                            var remainingFraction = (100d - uploadPercent) / uploadPercent;
-                            var remainingSeconds  = elapsedSeconds * remainingFraction;
-                            var eta               = TimeSpan.FromSeconds(remainingSeconds);
-                            etaText               = $"{speedMbSec:0.0} MB/s - Uploading archive - ETA {eta:mm\\:ss}";
+                            await Task.Delay(TimeSpan.FromSeconds(5), linkedCts.Token);
                         }
-                        else
+                        catch (TaskCanceledException)
                         {
-                            etaText = $"{speedMbSec:0.0} MB/s - Uploading archive - Finalizing";
+                            return;
                         }
 
-                        progressCallback(overallPercent, Path.GetFileName(finalArchivePath), etaText);
+                        var lastProgress = new DateTime(Interlocked.Read(ref lastProgressTicks), DateTimeKind.Utc);
+                        if (DateTime.UtcNow - lastProgress > stallTimeout)
+                        {
+                            Interlocked.Exchange(ref stalled, 1);
+                            linkedCts.Cancel();
+                            return;
+                        }
+                    }
+                });
+
+                using (var src = new FileStream(
+                           localArchive,
+                           FileMode.Open,
+                           FileAccess.Read,
+                           FileShare.Read,
+                           bufferSize,
+                           FileOptions.SequentialScan | FileOptions.Asynchronous))
+                using (var dst = new FileStream(
+                           finalArchivePath,
+                           FileMode.OpenOrCreate,
+                           FileAccess.Write,
+                           FileShare.None,
+                           bufferSize,
+                           FileOptions.SequentialScan | FileOptions.Asynchronous))
+                {
+                    if (startOffset > 0)
+                    {
+                        src.Seek(startOffset, SeekOrigin.Begin);
+                        dst.Seek(startOffset, SeekOrigin.Begin);
+                        uploaded = startOffset;
+                    }
+
+                    int read;
+                    while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), linkedCts.Token)) > 0)
+                    {
+                        linkedCts.Token.ThrowIfCancellationRequested();
+
+                        await dst.WriteAsync(buffer.AsMemory(0, read), linkedCts.Token);
+                        uploaded += read;
+                        Interlocked.Exchange(ref lastProgressTicks, DateTime.UtcNow.Ticks);
+
+                        if (progressCallback is not null && zipSize > 0)
+                        {
+                            var uploadPercent   = Math.Min(100d, (uploaded * 100d / zipSize));
+                            var overallPercent  = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
+                            if (overallPercent > 100d) overallPercent = 100d;
+
+                            var now            = DateTime.UtcNow;
+                            var intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
+                            var intervalBytes   = Math.Max(0, uploaded - lastUiBytes);
+                            var speedBytesSec   = intervalBytes / intervalSeconds;
+                            var speedMbSec      = speedBytesSec / (1024 * 1024);
+                            lastUiUpdate        = now;
+                            lastUiBytes         = uploaded;
+
+                            var uploadedMb = uploaded / (1024d * 1024d);
+                            var totalMb    = zipSize / (1024d * 1024d);
+
+                            string etaText;
+                            if (uploadPercent >= 100)
+                            {
+                                etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Finalizing";
+                            }
+                            else if (speedBytesSec < 1024)
+                            {
+                                etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Waiting for network...";
+                            }
+                            else
+                            {
+                                var remainingBytes   = Math.Max(0, zipSize - uploaded);
+                                var remainingSeconds = remainingBytes / speedBytesSec;
+                                var eta              = TimeSpan.FromSeconds(remainingSeconds);
+                                etaText              = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
+                            }
+
+                            progressCallback(overallPercent, Path.GetFileName(finalArchivePath), etaText);
+                        }
+
+                        if ((DateTime.UtcNow - lastLogTime) >= TimeSpan.FromSeconds(5))
+                        {
+                            var now = DateTime.UtcNow;
+                            var intervalSeconds = Math.Max(0.1, (now - lastLogTime).TotalSeconds);
+                            var intervalBytes = uploaded - lastLogBytes;
+                            var intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
+                            Console.WriteLine($"[BackupService] Archive upload (single) {uploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
+                            lastLogTime = now;
+                            lastLogBytes = uploaded;
+                        }
                     }
                 }
+
+                linkedCts.Cancel();
+                await monitor;
+
+                if (Interlocked.CompareExchange(ref stalled, 0, 0) == 1)
+                {
+                    throw new TimeoutException("No upload progress detected during single archive upload.");
+                }
+            }
+
+            async Task UploadSingleWithResumeAsync(int maxRetries)
+            {
+                var attempt = 0;
+                while (true)
+                {
+                    attempt++;
+                    long existingLength = 0;
+
+                    try
+                    {
+                        if (File.Exists(finalArchivePath))
+                        {
+                            existingLength = new FileInfo(finalArchivePath).Length;
+                            if (existingLength > zipSize)
+                            {
+                                using var truncate = new FileStream(finalArchivePath, FileMode.Open, FileAccess.Write, FileShare.None);
+                                truncate.SetLength(zipSize);
+                                existingLength = zipSize;
+                            }
+                        }
+
+                        await UploadSingleAttemptAsync(existingLength);
+                        return;
+                    }
+                    catch (TimeoutException ex) when (attempt <= maxRetries)
+                    {
+                        Console.WriteLine($"[BackupService] Single archive upload stalled (attempt {attempt}/{maxRetries}). Retrying from {existingLength} bytes.");
+                        await Task.Delay(TimeSpan.FromSeconds(2), ct);
+                    }
+                }
+            }
+
+            await EnsureDestinationWriteReadyAsync(destDir, ct);
+
+            if (preferParallelUpload && zipSize >= bufferSize * 8L)
+            {
+                Console.WriteLine($"[BackupService] Uploading archive with parallel writer (parts={Math.Clamp(Environment.ProcessorCount / 2, 2, 4)}, buffer={bufferSize / (1024 * 1024)} MB).");
+                try
+                {
+                    await UploadArchiveParallelAsync(
+                        localArchive,
+                        finalArchivePath,
+                        zipSize,
+                        bufferSize,
+                        progressCallback,
+                        ct);
+                }
+                catch (TimeoutException ex)
+                {
+                    Console.WriteLine($"[BackupService] Parallel archive upload stalled: {ex.Message}. Falling back to single stream.");
+                    await UploadSingleWithResumeAsync(2);
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[BackupService] Uploading archive with single writer (buffer={bufferSize / (1024 * 1024)} MB).");
+                await UploadSingleWithResumeAsync(2);
             }
 
             Console.WriteLine($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalZipSize={zipSize} bytes");
@@ -1015,6 +1307,314 @@ public sealed class BackupService
                 // ignore cleanup errors
             }
         }
+    }
+
+    private static async Task UploadArchiveParallelAsync(
+        string localArchive,
+        string finalArchivePath,
+        long zipSize,
+        int bufferSize,
+        Action<double, string, string>? progressCallback,
+        CancellationToken ct)
+    {
+        if (zipSize <= 0)
+            return;
+
+        var finalDir = Path.GetDirectoryName(finalArchivePath);
+        if (string.IsNullOrWhiteSpace(finalDir))
+            throw new DirectoryNotFoundException($"Archive destination directory is missing for '{finalArchivePath}'.");
+
+        Directory.CreateDirectory(finalDir);
+
+        var parallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
+        var chunkSize = (long)Math.Ceiling(zipSize / (double)parallelism);
+        var fileName = Path.GetFileName(finalArchivePath);
+        var uploadStart = DateTime.UtcNow;
+        var minUiInterval = TimeSpan.FromMilliseconds(150);
+        var progressLock = new object();
+        var lastUiUpdate = uploadStart;
+        long lastUiBytes = 0;
+        long uploaded = 0;
+        var lastLogTime = uploadStart;
+        long lastLogBytes = 0;
+        var logLock = new object();
+        var stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
+        var lastProgressTicks = uploadStart.Ticks;
+        var stalled = 0;
+
+        using (var init = new FileStream(
+                   finalArchivePath,
+                   FileMode.Create,
+                   FileAccess.Write,
+                   FileShare.Write,
+                   1,
+                   FileOptions.Asynchronous))
+        {
+            init.SetLength(zipSize);
+        }
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var monitor = Task.Run(async () =>
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
+
+                var lastProgress = new DateTime(Interlocked.Read(ref lastProgressTicks), DateTimeKind.Utc);
+                if (DateTime.UtcNow - lastProgress > stallTimeout)
+                {
+                    Interlocked.Exchange(ref stalled, 1);
+                    cts.Cancel();
+                    return;
+                }
+            }
+        });
+        var heartbeat = Task.Run(async () =>
+        {
+            if (progressCallback is null)
+                return;
+
+            var heartbeatInterval = TimeSpan.FromSeconds(5);
+            while (!cts.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(heartbeatInterval, cts.Token);
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
+
+                var snapshotUploaded = Interlocked.Read(ref uploaded);
+                var now = DateTime.UtcNow;
+                double intervalSeconds;
+                long intervalBytes;
+                lock (progressLock)
+                {
+                    if ((now - lastUiUpdate) < heartbeatInterval)
+                        continue;
+
+                    intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
+                    intervalBytes = Math.Max(0, snapshotUploaded - lastUiBytes);
+                    lastUiUpdate = now;
+                    lastUiBytes = snapshotUploaded;
+                }
+
+                var speedBytesSec = intervalBytes / intervalSeconds;
+                var speedMbSec = speedBytesSec / (1024 * 1024);
+                var uploadPercent = Math.Min(100d, snapshotUploaded * 100d / zipSize);
+                var overallPercent = 90d + uploadPercent * 0.1;
+                if (overallPercent > 100d)
+                    overallPercent = 100d;
+
+                var uploadedMb = snapshotUploaded / (1024d * 1024d);
+                var totalMb = zipSize / (1024d * 1024d);
+
+                string etaText;
+                if (uploadPercent >= 100)
+                {
+                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Finalizing";
+                }
+                else if (speedBytesSec < 1024)
+                {
+                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Waiting for network...";
+                }
+                else
+                {
+                    var remainingBytes = Math.Max(0, zipSize - snapshotUploaded);
+                    var remainingSeconds = remainingBytes / speedBytesSec;
+                    var eta = TimeSpan.FromSeconds(remainingSeconds);
+                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
+                }
+
+                progressCallback(overallPercent, fileName, etaText);
+            }
+        });
+        var tasks = Enumerable.Range(0, parallelism)
+            .Select(index =>
+            {
+                var start = chunkSize * index;
+                if (start >= zipSize)
+                    return Task.CompletedTask;
+
+                var length = Math.Min(chunkSize, zipSize - start);
+                return Task.Run(async () =>
+                {
+                    var buffer = new byte[bufferSize];
+                    using var src = new FileStream(
+                        localArchive,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.Read,
+                        bufferSize,
+                        FileOptions.SequentialScan | FileOptions.Asynchronous);
+                    using var dst = new FileStream(
+                        finalArchivePath,
+                        FileMode.Open,
+                        FileAccess.Write,
+                        FileShare.Write,
+                        bufferSize,
+                        FileOptions.Asynchronous);
+
+                    src.Seek(start, SeekOrigin.Begin);
+                    dst.Seek(start, SeekOrigin.Begin);
+
+                    long remaining = length;
+                    while (remaining > 0)
+                    {
+                        cts.Token.ThrowIfCancellationRequested();
+
+                        var toRead = (int)Math.Min(buffer.Length, remaining);
+                        var read = await src.ReadAsync(buffer.AsMemory(0, toRead), cts.Token);
+                        if (read == 0)
+                            break;
+
+                        await dst.WriteAsync(buffer.AsMemory(0, read), cts.Token);
+                        remaining -= read;
+
+                        if (progressCallback is null)
+                        {
+                            Interlocked.Add(ref uploaded, read);
+                            Interlocked.Exchange(ref lastProgressTicks, DateTime.UtcNow.Ticks);
+                            continue;
+                        }
+
+                        var totalUploaded = Interlocked.Add(ref uploaded, read);
+                        Interlocked.Exchange(ref lastProgressTicks, DateTime.UtcNow.Ticks);
+                        var uploadPercent = Math.Min(100d, totalUploaded * 100d / zipSize);
+                        var overallPercent = 90d + uploadPercent * 0.1;
+                        if (overallPercent > 100d)
+                            overallPercent = 100d;
+
+                        var now = DateTime.UtcNow;
+                        var shouldUpdate = true;
+                        var intervalSeconds = 0d;
+                        long intervalBytes = 0;
+                        lock (progressLock)
+                        {
+                            if (uploadPercent < 100 && (now - lastUiUpdate) < minUiInterval)
+                            {
+                                shouldUpdate = false;
+                            }
+                            else
+                            {
+                                intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
+                                intervalBytes = Math.Max(0, totalUploaded - lastUiBytes);
+                                lastUiUpdate = now;
+                                lastUiBytes = totalUploaded;
+                            }
+                        }
+
+                        if (!shouldUpdate)
+                            continue;
+
+                        var speedBytesSec = intervalBytes / intervalSeconds;
+                        var speedMbSec = speedBytesSec / (1024 * 1024);
+                        var uploadedMb = totalUploaded / (1024d * 1024d);
+                        var totalMb    = zipSize / (1024d * 1024d);
+
+                        string etaText;
+                        if (uploadPercent >= 100)
+                        {
+                            etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Finalizing";
+                        }
+                        else if (speedBytesSec < 1024)
+                        {
+                            etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Waiting for network...";
+                        }
+                        else
+                        {
+                            var remainingBytes   = Math.Max(0, zipSize - totalUploaded);
+                            var remainingSeconds = remainingBytes / speedBytesSec;
+                            var eta              = TimeSpan.FromSeconds(remainingSeconds);
+                            etaText              = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
+                        }
+
+                        progressCallback(overallPercent, fileName, etaText);
+                    }
+
+                    var logNow = DateTime.UtcNow;
+                    var snapshotUploaded = Interlocked.Read(ref uploaded);
+                    lock (logLock)
+                    {
+                        if ((logNow - lastLogTime) >= TimeSpan.FromSeconds(5))
+                        {
+                            var intervalSeconds = Math.Max(0.1, (logNow - lastLogTime).TotalSeconds);
+                            var intervalBytes = snapshotUploaded - lastLogBytes;
+                            var intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
+                            Console.WriteLine($"[BackupService] Archive upload (parallel) {snapshotUploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
+                            lastLogTime = logNow;
+                            lastLogBytes = snapshotUploaded;
+                        }
+                    }
+                }, cts.Token);
+            })
+            .ToList();
+
+        try
+        {
+            await Task.WhenAll(tasks.Concat(new[] { monitor, heartbeat }));
+        }
+        catch
+        {
+            cts.Cancel();
+            throw;
+        }
+
+        if (Interlocked.CompareExchange(ref stalled, 0, 0) == 1)
+        {
+            throw new TimeoutException("No upload progress detected during parallel archive upload.");
+        }
+    }
+
+    private static TimeSpan ComputeArchiveUploadStallTimeout(int bufferSize)
+    {
+        const long minBytesPerSec = 16 * 1024;
+        const int minSeconds = 120;
+        const int maxSeconds = 1800;
+
+        var seconds = (int)Math.Ceiling(bufferSize / (double)minBytesPerSec * 2d);
+        seconds = Math.Clamp(seconds, minSeconds, maxSeconds);
+        return TimeSpan.FromSeconds(seconds);
+    }
+
+    private static async Task EnsureDestinationWriteReadyAsync(string destDir, CancellationToken ct)
+    {
+        var probePath = Path.Combine(destDir, ".vaultsync_upload_probe");
+        var timeout = TimeSpan.FromSeconds(15);
+
+        var task = Task.Run(() =>
+        {
+            Directory.CreateDirectory(destDir);
+            using (var fs = new FileStream(
+                       probePath,
+                       FileMode.Create,
+                       FileAccess.Write,
+                       FileShare.None,
+                       1,
+                       FileOptions.WriteThrough))
+            {
+                fs.WriteByte(0);
+                fs.Flush(true);
+            }
+            File.Delete(probePath);
+        }, ct);
+
+        var completed = await Task.WhenAny(task, Task.Delay(timeout, ct));
+        if (completed != task)
+        {
+            throw new TimeoutException($"Destination write probe timed out for '{destDir}'.");
+        }
+
+        await task;
     }
 
     /// <summary>
@@ -1186,6 +1786,8 @@ public sealed class BackupService
 
         return cleaned.Trim('-');
     }
+
+    public static string GetProjectBackupFolderName(string name) => Slugify(name);
     private void ApplyBackupRetention(int projectId, string backupRoot, int? maxSnapshotsToKeep)
     {
         if (!maxSnapshotsToKeep.HasValue || maxSnapshotsToKeep.Value <= 0)
@@ -1219,9 +1821,20 @@ public sealed class BackupService
         {
             try
             {
-                var fullPath = Path.Combine(backupRoot, backup.Path);
+                var baseRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
+                    ? backup.DestinationPath
+                    : backupRoot;
+                var relativePath = string.IsNullOrWhiteSpace(backup.Path)
+                    ? string.Empty
+                    : backup.Path
+                        .Replace('\\', Path.DirectorySeparatorChar)
+                        .Replace('/', Path.DirectorySeparatorChar)
+                        .TrimStart(Path.DirectorySeparatorChar);
+                var fullPath = string.IsNullOrWhiteSpace(baseRoot)
+                    ? string.Empty
+                    : Path.Combine(baseRoot, relativePath);
 
-                if (Directory.Exists(fullPath))
+                if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
                 {
                     Console.WriteLine($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
                     Directory.Delete(fullPath, recursive: true);
@@ -1238,6 +1851,7 @@ public sealed class BackupService
             }
             finally
             {
+                BackupRetentionDeleted?.Invoke(backup);
                 _repo.DeleteBackupById(backup.Id);
                 MaybeDeleteSnapshotIfOrphan(projectId, backup.SnapshotId);
             }
@@ -1323,7 +1937,17 @@ public sealed class BackupService
                 return ((long)totalNumberOfBytes, (long)freeBytesAvailable);
             }
 
-            // Non-Windows: DriveInfo can handle full paths and mount points.
+            if (OperatingSystem.IsMacOS() && IsMacManagedMountPath(fullPath) && !IsNetworkMountPath(fullPath))
+            {
+                Console.WriteLine($"[BackupService] Skipping free-space check for '{fullPath}': network mount not detected.");
+                return null;
+            }
+
+            var unixSpace = TryGetUnixDiskSpace(fullPath);
+            if (unixSpace is not null)
+                return unixSpace.Value;
+
+            // Non-Windows fallback: DriveInfo can handle full paths and mount points.
             var driveInfo = new DriveInfo(fullPath);
             if (!driveInfo.IsReady)
                 return null;
@@ -1336,6 +1960,161 @@ public sealed class BackupService
             return null;
         }
     }
+
+    private static (long totalBytes, long freeBytes)? TryGetUnixDiskSpace(string path)
+    {
+        try
+        {
+            var stats = new Statvfs();
+            if (statvfs(path, ref stats) != 0)
+                return null;
+
+            var blockSize = stats.f_frsize != 0 ? stats.f_frsize : stats.f_bsize;
+            if (blockSize == 0)
+                return null;
+
+            var total = (long)stats.f_blocks * (long)blockSize;
+            var free = (long)stats.f_bavail * (long)blockSize;
+            if (total <= 0)
+                return null;
+
+            return (total, free);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool IsMacManagedMountPath(string path)
+    {
+        if (!OperatingSystem.IsMacOS())
+            return false;
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var mountRoot = Path.Combine(home, "Library", "Application Support", "VaultSync", "mounts");
+        return path.StartsWith(mountRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSmbfsMountPath(string path)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "/sbin/mount",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var proc = Process.Start(psi);
+            if (proc is null)
+                return false;
+
+            proc.WaitForExit(3_000);
+            var output = proc.StandardOutput.ReadToEnd();
+            if (string.IsNullOrWhiteSpace(output))
+                return false;
+
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var line in lines)
+            {
+                if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                if (onIndex <= 0)
+                    continue;
+
+                var rest = line[(onIndex + 4)..];
+                var mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                if (string.IsNullOrWhiteSpace(mountedAt))
+                    continue;
+
+                if (path.StartsWith(mountedAt, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool IsNfsMountPath(string path)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "/sbin/mount",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var proc = Process.Start(psi);
+            if (proc is null)
+                return false;
+
+            proc.WaitForExit(3_000);
+            var output = proc.StandardOutput.ReadToEnd();
+            if (string.IsNullOrWhiteSpace(output))
+                return false;
+
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var line in lines)
+            {
+                if (!line.Contains(" nfs", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                if (onIndex <= 0)
+                    continue;
+
+                var rest = line[(onIndex + 4)..];
+                var mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                if (string.IsNullOrWhiteSpace(mountedAt))
+                    continue;
+
+                if (path.StartsWith(mountedAt, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool IsNetworkMountPath(string path)
+        => IsSmbfsMountPath(path) || IsNfsMountPath(path);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Statvfs
+    {
+        public ulong f_bsize;
+        public ulong f_frsize;
+        public ulong f_blocks;
+        public ulong f_bfree;
+        public ulong f_bavail;
+        public ulong f_files;
+        public ulong f_ffree;
+        public ulong f_favail;
+        public ulong f_fsid;
+        public ulong f_flag;
+        public ulong f_namemax;
+    }
+
+    [DllImport("libc", SetLastError = true)]
+    private static extern int statvfs(string path, ref Statvfs buf);
 
     private static bool IsOnPath(string tool)
     {
@@ -1356,23 +2135,57 @@ public sealed class BackupService
 
     private static string? TryGetBundledRsyncPath()
     {
-        if (!OperatingSystem.IsWindows())
-            return null;
-
         try
         {
             var baseDir = AppContext.BaseDirectory;
-            var direct = Path.Combine(baseDir, "tools", "rsync", "rsync.exe");
-            if (File.Exists(direct))
-                return direct;
+            if (OperatingSystem.IsWindows())
+            {
+                var direct = Path.Combine(baseDir, "tools", "rsync", "rsync.exe");
+                if (File.Exists(direct))
+                    return direct;
 
-            var bin = Path.Combine(baseDir, "tools", "rsync", "bin", "rsync.exe");
-            return File.Exists(bin) ? bin : null;
+                var bin = Path.Combine(baseDir, "tools", "rsync", "bin", "rsync.exe");
+                return File.Exists(bin) ? bin : null;
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                var candidates = new List<string>();
+                var arch = RuntimeInformation.OSArchitecture;
+                if (arch == Architecture.Arm64)
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "rsync"));
+                }
+                else if (arch == Architecture.X64)
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "rsync"));
+                }
+                else
+                {
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                }
+
+                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "rsync"));
+                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "bin", "rsync"));
+
+                foreach (var candidate in candidates)
+                {
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+
+                return null;
+            }
         }
         catch
         {
             return null;
         }
+
+        return null;
     }
 
     private static string? TryGetPreviousBackupFolder(string projectBackupRoot, string currentBackupFolder)
@@ -1402,4 +2215,3 @@ public sealed class BackupService
         out ulong lpTotalNumberOfBytes,
         out ulong lpTotalNumberOfFreeBytes);
 }
-

@@ -3,6 +3,7 @@ namespace VaultSync.Core.Models;
 public record Backup
 {
     public int Id           { get; init; }
+    public string ExternalId { get; init; } = string.Empty;
     public int ProjectId    { get; init; }
     public int SnapshotId   { get; init; }
     public DateTime CreatedUtc { get; init; }

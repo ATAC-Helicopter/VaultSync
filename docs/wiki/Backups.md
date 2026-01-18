@@ -30,3 +30,17 @@ The UI shows stages like Preparing, Hashing, Copying, Compressing, and Uploading
 
 See `Destinations.md` and `Backup-Pipeline.md` for details.
 
+## Cross-machine history sync
+VaultSync can sync backup history (projects, snapshots, and backups) across machines
+by storing portable metadata alongside the backups.
+
+How it works:
+- A destination with `.vaultsync/meta/` is treated as a history source.
+- On discovery, VaultSync imports metadata into the local DB and merges history.
+- If a project was auto-imported, VaultSync prompts you to restore the latest backup
+  before creating new snapshots or backups.
+
+Notes:
+- This sync is metadata-only; files are restored only when you choose to restore.
+- Read-only destinations can be imported from, but VaultSync will not write updates.
+- If a destination has partial history, enable "Force full history export" on that destination and run a backup to backfill the store.

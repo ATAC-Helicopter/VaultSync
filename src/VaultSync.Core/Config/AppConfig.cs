@@ -45,6 +45,9 @@ namespace VaultSync.Core.Config
         public int    MaxSnapshotsPerProject{ get; set; } = 20;
         public List<int> AutoBackupDisabledProjects { get; set; } = new();
         public string? Location             { get; set; } = string.Empty;
+        public bool   EnableMetadataSync    { get; set; } = true;
+        public bool   AutoImportMetadata    { get; set; } = true;
+        public bool   PromptRestoreAfterImport { get; set; } = true;
         // New canonical backup root path used by UI + snapshot service
         public string? BackupRoot { get; set; } = string.Empty;
 
@@ -82,6 +85,19 @@ namespace VaultSync.Core.Config
         /// When false, snapshots may reuse hashes for unchanged files to speed up runs.
         /// </summary>
         public bool   UseFullSnapshotHash   { get; set; } = true;
+        /// <summary>
+        /// Auto-tuned archive upload buffer size for the legacy single-destination flow.
+        /// When null, VaultSync will probe before the first archive upload and cache the result.
+        /// </summary>
+        public int?   LegacyArchiveUploadBufferBytes { get; set; } = 1024 * 1024;
+        /// <summary>
+        /// When true, VaultSync probes the destination to auto-tune archive upload buffer sizes.
+        /// </summary>
+        public bool   EnableArchiveUploadAutoTune { get; set; } = false;
+        /// <summary>
+        /// When true, compressed archive uploads may use parallel writers on supported targets.
+        /// </summary>
+        public bool   EnableParallelArchiveUpload { get; set; } = true;
         public bool   VerifyAfterCreate     { get; set; } = true;
         public bool   PauseOnBattery        { get; set; } = true;
 
@@ -131,6 +147,14 @@ namespace VaultSync.Core.Config
         public bool AutoUnmount { get; set; } = false;            // unmount after backup if we mounted it
         public bool PreMounted { get; set; } = false;             // treat as already mounted/guest; skip mount/creds
         public string? Alias { get; set; } = string.Empty;        // optional display label
+        public bool EnableMetadataSync { get; set; } = true;
+        public bool AutoImportMetadata { get; set; } = true;
+        public bool ForceMetadataBackfill { get; set; } = false;
+        /// <summary>
+        /// Auto-tuned archive upload buffer size for this destination.
+        /// When null, VaultSync will probe before the first archive upload and cache the result.
+        /// </summary>
+        public int? ArchiveUploadBufferBytes { get; set; } = null;
     }
 
     // -------- Appearance --------
@@ -178,6 +202,7 @@ namespace VaultSync.Core.Config
         public bool BetaChannelEnabled { get; set; } = false;
         public string Language       { get; set; } = "en";
         public string SkippedUpdateTag { get; set; } = string.Empty;
+        public string LastWhatsNewVersion { get; set; } = string.Empty;
     }
 
     // -------- App Behavior / Background Mode --------
@@ -218,9 +243,14 @@ namespace VaultSync.Core.Config
         /// </summary>
         public bool MinimizeToTray { get; set; } = false;
 
+    /// <summary>
+    /// If true, the app will attempt to launch on login where supported.
+    /// </summary>
+    public bool LaunchOnLogin { get; set; } = true;
+
         /// <summary>
-        /// If true, the app will attempt to launch on login where supported.
+        /// If true, confirm before deleting backup data from destinations.
         /// </summary>
-        public bool LaunchOnLogin { get; set; } = false;
+        public bool ConfirmDeleteBackup { get; set; } = true;
     }
 }

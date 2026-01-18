@@ -2,6 +2,9 @@ using System;
 using System.IO;
 using Microsoft.Win32;
 using System.Runtime.Versioning;
+using System.Security;
+using System.Diagnostics;
+using System.Linq;
 
 namespace VaultSync.UI.Infrastructure
 {
@@ -74,16 +77,20 @@ namespace VaultSync.UI.Infrastructure
             {
                 if (File.Exists(plistPath))
                 {
+                    TryLaunchCtl("bootout", plistPath);
                     File.Delete(plistPath);
                 }
                 return;
             }
 
             Directory.CreateDirectory(agentDir);
-            var exe = GetExecutablePath();
-            if (string.IsNullOrWhiteSpace(exe))
+            var args = GetMacLaunchArguments();
+            if (args.Length == 0)
                 return;
 
+            var programArgs = string.Join(
+                Environment.NewLine,
+                args.Select(arg => $"      <string>{XmlEscape(arg)}</string>"));
             var plist = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <!DOCTYPE plist PUBLIC ""-//Apple//DTD PLIST 1.0//EN"" ""http://www.apple.com/DTDs/PropertyList-1.0.dtd"">
 <plist version=""1.0"">
@@ -91,12 +98,84 @@ namespace VaultSync.UI.Infrastructure
     <key>Label</key><string>com.vaultsync.autostart</string>
     <key>ProgramArguments</key>
     <array>
-      <string>{exe}</string>
+{programArgs}
     </array>
     <key>RunAtLoad</key><true/>
   </dict>
 </plist>";
             File.WriteAllText(plistPath, plist);
+            TryLaunchCtl("bootstrap", plistPath);
+        }
+
+        private static string[] GetMacLaunchArguments()
+        {
+            var exe = GetExecutablePath();
+            if (string.IsNullOrWhiteSpace(exe))
+                return Array.Empty<string>();
+
+            var baseDir = AppContext.BaseDirectory;
+            var dllPath = Path.Combine(baseDir, "VaultSync.UI.dll");
+
+            if (exe.EndsWith("dotnet", StringComparison.OrdinalIgnoreCase) && File.Exists(dllPath))
+            {
+                return new[] { exe, dllPath };
+            }
+
+            if (File.Exists(exe))
+            {
+                return new[] { exe };
+            }
+
+            if (File.Exists(dllPath))
+            {
+                return new[] { "dotnet", dllPath };
+            }
+
+            return Array.Empty<string>();
+        }
+
+        private static void TryLaunchCtl(string verb, string plistPath)
+        {
+            try
+            {
+                var uid = Environment.GetEnvironmentVariable("UID");
+                if (string.IsNullOrWhiteSpace(uid))
+                {
+                    using var id = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "id",
+                        Arguments = "-u",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    });
+                    uid = id?.StandardOutput.ReadToEnd().Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(uid))
+                    return;
+
+                using var proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "launchctl",
+                    Arguments = $"{verb} gui/{uid} \"{plistPath}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                proc?.WaitForExit(2000);
+            }
+            catch
+            {
+                // Swallow errors; LaunchAgent will still load on next login.
+            }
+        }
+
+        private static string XmlEscape(string value)
+        {
+            return SecurityElement.Escape(value) ?? string.Empty;
         }
 
         private static void SetLinuxAutoStart(bool enable)

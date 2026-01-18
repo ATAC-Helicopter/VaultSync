@@ -128,6 +128,32 @@
             </StackPanel>
           </Grid>
         </Border>
+
+        <Border Margin="0,6,0,0"
+                Padding="12"
+                CornerRadius="12"
+                Background="{DynamicResource Surface2}"
+                BorderBrush="{DynamicResource BorderSoft}"
+                BorderThickness="1"
+                IsVisible="{CompiledBinding ShowSoftCrashBanner}">
+          <Grid ColumnDefinitions="*,Auto"
+                ColumnSpacing="12">
+            <TextBlock Text="{CompiledBinding SoftCrashBannerMessage}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+              <Button Command="{CompiledBinding CopySoftCrashLogCommand}"
+                      Content="{CompiledBinding SoftCrashCopyLabel}"
+                      Background="{DynamicResource Surface1}"
+                      BorderBrush="{DynamicResource BorderSoft}"
+                      IsVisible="{CompiledBinding CanCopySoftCrashLog}" />
+              <Button Command="{CompiledBinding DismissSoftCrashBannerCommand}"
+                      Content="{CompiledBinding SoftCrashDismissLabel}"
+                      Background="{DynamicResource Surface1}"
+                      BorderBrush="{DynamicResource BorderSoft}" />
+            </StackPanel>
+          </Grid>
+        </Border>
       </StackPanel>
     </Border>
 

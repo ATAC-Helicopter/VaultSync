@@ -40,6 +40,19 @@ Each destination has:
 
 Use the **Test** button to check reachability/writability and confirm mount/login behavior.
 
+### macOS NFS note
+- NFS auto-mount is not supported on macOS (requires admin privileges).
+- Pre-mount the share with `mount_nfs`, set the destination to the local mount path, enable **Pre-mounted**, and
+  disable **Auto-mount**.
+
+## Cross-machine history sync
+- VaultSync can store portable history metadata in `.vaultsync/meta/` on destinations.
+- When a destination is discovered, history is imported into the local DB and merged.
+- Manual refresh shows a review dialog with counts of records to add/link/delete before applying.
+- If a project was auto-imported, VaultSync prompts to restore the latest backup before new snapshots/backups.
+- Read-only destinations can be imported from, but history updates are not written back.
+- Use "Force full history export" per destination in Settings to backfill a project's full history into the metadata store.
+
 ## Projects & Snapshots
 - Add a project (Projects page) with name + root path, select a preset filter.
 - Snapshots capture file state into SQLite; "Keep" prevents retention pruning.
@@ -58,3 +71,9 @@ Use the **Test** button to check reachability/writability and confirm mount/logi
 - Config: `~/.vaultsync/appsettings.json`.
 - Database: `~/Library/Application Support/VaultSync/vaultsync.db` (macOS) or `%AppData%\\VaultSync\\vaultsync.db` (Windows).
 - Local avatar/cache: `LocalApplicationData/VaultSync`.
+
+## More docs
+- Documentation overview: `DOCUMENTATION.md`
+- Roadmap: `ROADMAP.md`
+- Changelog: `CHANGELOG.md`
+- Wiki: `docs/wiki/Home.md`

@@ -45,19 +45,19 @@ namespace VaultSync.UI.ViewModels
             var path = _service.ExportBuffer();
             if (string.IsNullOrWhiteSpace(path))
             {
-                StatusMessage = "Log export failed.";
+                StatusMessage = L("LogConsole.ExportFailed", "Log export failed.");
                 GlobalNotificationCenter.Instance.Show(
                     StatusMessage,
                     NotificationSeverity.Warning,
-                    "Log export");
+                    L("LogConsole.ExportTitle", "Log export"));
                 return;
             }
 
-            StatusMessage = $"Exported to {path}";
+            StatusMessage = Lf("LogConsole.ExportedTo", "Exported to {0}", path);
             GlobalNotificationCenter.Instance.Show(
-                "Log export ready. You can share the file.",
+                L("LogConsole.ExportReady", "Log export ready. You can share the file."),
                 NotificationSeverity.Info,
-                "Log export");
+                L("LogConsole.ExportTitle", "Log export"));
         }
 
         private void OpenLogFolder()
@@ -73,11 +73,23 @@ namespace VaultSync.UI.ViewModels
                 }
                 else if (OperatingSystem.IsMacOS())
                 {
-                    Process.Start("open", folder);
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "open",
+                        UseShellExecute = false
+                    };
+                    psi.ArgumentList.Add(folder);
+                    Process.Start(psi);
                 }
                 else if (OperatingSystem.IsLinux())
                 {
-                    Process.Start("xdg-open", folder);
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "xdg-open",
+                        UseShellExecute = false
+                    };
+                    psi.ArgumentList.Add(folder);
+                    Process.Start(psi);
                 }
                 else
                 {
@@ -86,11 +98,11 @@ namespace VaultSync.UI.ViewModels
             }
             catch
             {
-                StatusMessage = "Failed to open log folder.";
+                StatusMessage = L("LogConsole.OpenFolderFailed", "Failed to open log folder.");
                 GlobalNotificationCenter.Instance.Show(
                     StatusMessage,
                     NotificationSeverity.Warning,
-                    "Log export");
+                    L("LogConsole.ExportTitle", "Log export"));
             }
         }
 
@@ -98,6 +110,17 @@ namespace VaultSync.UI.ViewModels
         {
             OnPropertyChanged(nameof(IsEnabled));
             OnPropertyChanged(nameof(IsSaving));
+        }
+
+        private static string L(string key, string fallback) =>
+            LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+        private static string Lf(string key, string fallback, params object[] args)
+        {
+            var text = L(key, fallback);
+            return args is { Length: > 0 }
+                ? string.Format(text, args)
+                : text;
         }
     }
 }

@@ -7,7 +7,7 @@ on:
         description: "Previous version for patch manifests (e.g., 1.3.0)"
         required: true
       target_version:
-        description: "Target version for patch manifests (e.g., 1.3.1)"
+        description: "Target version for patch manifests (e.g., 1.3.2)"
         required: true
 
 jobs:

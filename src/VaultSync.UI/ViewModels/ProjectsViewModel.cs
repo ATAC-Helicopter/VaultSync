@@ -168,55 +168,7 @@ public class ProjectsViewModel : ViewModelBase
         }
     }
 
-    private void SeedDesignProjects()
-    {
-        Projects.Clear();
-        _allProjects.Clear();
-
-        var vaultSync = new ProjectItemViewModel
-        {
-            Name = "VaultSync",
-            Path = "/Users/flavio/Desktop/Dev/VaultSync",
-            Health = ProjectHealthStatus.Healthy,
-            HealthTag = L("Projects.Health.Healthy", "Healthy"),
-            LastSnapshot = DateTime.Today.AddMinutes(-20),
-            SizeBytes = 1_800_000_000,
-            Preset = "unity"
-        };
-        vaultSync.SetAvatarFromNameAndStore(vaultSync.Path, null);
-        vaultSync.SetSnapshots(CreateDesignSnapshots(1.8));
-        _allProjects.Add(vaultSync);
-
-        var dumpsterFire = new ProjectItemViewModel
-        {
-            Name = "Dumpster Fire Royale",
-            Path = "/Volumes/Projects/DumpsterFireRoyale",
-            Health = ProjectHealthStatus.Warning,
-            HealthTag = L("Projects.Health.Warning", "Warning"),
-            LastSnapshot = DateTime.Today.AddDays(-1).AddHours(23),
-            SizeBytes = 46_200_000_000,
-            Preset = "unity"
-        };
-        dumpsterFire.SetAvatarFromNameAndStore(dumpsterFire.Path, null);
-        dumpsterFire.SetSnapshots(CreateDesignSnapshots(46.2));
-        _allProjects.Add(dumpsterFire);
-
-        var overSteer = new ProjectItemViewModel
-        {
-            Name = "OverSteer",
-            Path = "/Volumes/Projects/OverSteer",
-            Health = ProjectHealthStatus.OutOfDate,
-            HealthTag = L("Projects.Health.OutOfDate", "Out of date"),
-            LastSnapshot = DateTime.Today.AddDays(-3),
-            SizeBytes = 32_900_000_000,
-            Preset = "unity"
-        };
-        overSteer.SetAvatarFromNameAndStore(overSteer.Path, null);
-        overSteer.SetSnapshots(CreateDesignSnapshots(32.9));
-        _allProjects.Add(overSteer);
-
-        ApplyFilterAndSort();
-    }
+    // Removed sample project seeding; production should show empty state when no projects exist.
 
     private static ProjectSnapshotViewModel[] CreateDesignSnapshots(double baseGb)
     {
@@ -271,8 +223,7 @@ public class ProjectsViewModel : ViewModelBase
 
             if (discovered.Count == 0)
             {
-                // Design-time / fallback sample data if nothing is found yet.
-                SeedDesignProjects();
+                ApplyFilterAndSort();
             }
             else
             {
@@ -688,6 +639,11 @@ public class ProjectsViewModel : ViewModelBase
                     SelectedProject.IsRegistered = true;
                 }
                 return;
+            }
+
+            if (config.Backups.PromptRestoreAfterImport && existing.NeedsRestore)
+            {
+                ShowNotification(L("Projects.Notification.RestoreRequired", "Imported history is newer. Consider restoring before creating new snapshots."), NotificationSeverity.Warning);
             }
 
             // 4. Run snapshot via Core engine.

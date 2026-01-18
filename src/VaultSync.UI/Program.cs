@@ -62,8 +62,15 @@ internal static class Program
                 ".",
                 InstancePipeName,
                 PipeDirection.Out);
-            client.Connect(500);
-            client.WriteByte(1);
+            try
+            {
+                client.Connect(500);
+                client.WriteByte(1);
+            }
+            catch (TimeoutException)
+            {
+                // Ignore timeout: treat as no active instance.
+            }
         }
         catch
         {
@@ -102,12 +109,10 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .WithInterFont() // optional, ok to keep/remove
             .LogToTrace();
 
     private static AppBuilder BuildUpdaterApp()
         => AppBuilder.Configure<UpdaterApp>()
             .UsePlatformDetect()
-            .WithInterFont()
             .LogToTrace();
 }

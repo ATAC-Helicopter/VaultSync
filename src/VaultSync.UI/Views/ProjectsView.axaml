@@ -65,7 +65,7 @@
     <!-- Stretch across available width while keeping a generous cap. -->
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
-          RowDefinitions="Auto,*"
+          RowDefinitions="Auto,Auto"
           RowSpacing="16">
 
       <controls:NotificationCard

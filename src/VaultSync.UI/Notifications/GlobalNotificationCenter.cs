@@ -1,4 +1,5 @@
 using System;
+using System.Windows.Input;
 using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI.Notifications
@@ -21,17 +22,23 @@ namespace VaultSync.UI.Notifications
         public string? Title { get; }
         public NotificationSeverity Severity { get; }
         public TimeSpan Duration { get; }
+        public string? ActionLabel { get; }
+        public ICommand? ActionCommand { get; }
 
         public NotificationRequest(
             string message,
             NotificationSeverity severity,
             string? title,
-            TimeSpan duration)
+            TimeSpan duration,
+            string? actionLabel,
+            ICommand? actionCommand)
         {
             Message  = message ?? throw new ArgumentNullException(nameof(message));
             Severity = severity;
             Title    = title;
             Duration = duration;
+            ActionLabel = actionLabel;
+            ActionCommand = actionCommand;
         }
     }
 
@@ -65,7 +72,9 @@ namespace VaultSync.UI.Notifications
             string message,
             NotificationSeverity severity = NotificationSeverity.Info,
             string? title = null,
-            TimeSpan? duration = null)
+            TimeSpan? duration = null,
+            string? actionLabel = null,
+            ICommand? actionCommand = null)
         {
             if (SuppressNotifications)
                 return;
@@ -74,7 +83,9 @@ namespace VaultSync.UI.Notifications
                 message,
                 severity,
                 title,
-                duration ?? TimeSpan.FromSeconds(4));
+                duration ?? TimeSpan.FromSeconds(4),
+                actionLabel,
+                actionCommand);
 
             NotificationRequested?.Invoke(request);
         }
@@ -96,7 +107,9 @@ namespace VaultSync.UI.Notifications
                 message,
                 severity,
                 title,
-                duration ?? TimeSpan.FromSeconds(4));
+                duration ?? TimeSpan.FromSeconds(4),
+                actionLabel: null,
+                actionCommand: null);
 
             if (ShouldShowSystemNotification is not null && !ShouldShowSystemNotification(request))
                 return;
