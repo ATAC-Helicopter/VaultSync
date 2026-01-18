@@ -24,6 +24,9 @@
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
     <!-- Allow building the Windows TFM on non-Windows agents (e.g., macOS CI/local) -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- Default Release publishes to win-x64 self-contained to avoid missing runtime prompts -->
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">win-x64</RuntimeIdentifier>
+    <SelfContained Condition="'$(Configuration)' == 'Release'">true</SelfContained>
   </PropertyGroup>
 
   <!-- Base Avalonia + dependencies -->
