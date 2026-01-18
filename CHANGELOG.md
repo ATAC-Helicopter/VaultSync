@@ -1,11 +1,12 @@
 # Changelog
-## [1.3.1] - BETA 16.01.2026
+## [1.3.2] - 18.01.2026
 ### Added
 - Cross-machine metadata store (`.vaultsync/meta/`) with portable project/snapshot/backup records and external IDs.
 - Metadata sync controls (global + per-destination), manual refresh, and review dialog.
 - Metadata backfill options with per-destination force-export toggle.
 - macOS rsync bundling (arch-specific) plus Settings hint when rsync is missing/too old.
 - Archive upload auto-tuning per destination (small probe file).
+- Toggle to enable/disable parallel archive uploads.
 - "What's new" popup shown once per version on first launch after updating.
 - Editable `docs/WHATS_NEW.md` content for the "What's new" popup.
 ### Changed
@@ -14,10 +15,12 @@
 - Drive health probe deferred to reduce startup impact.
 - Destination probe tracks effective path/read-only status.
 - Backups page right panel now uses expandable project headers with clearer stats.
-- Removed sample “default” projects when no real projects exist. (thanks to King_Hippo for reporting)
+- Removed sample “default” projects when no real projects exist. (thanks to King_Hippo for repùrting)
 - Scroll layout now scales more reliably at higher DPI. (thanks to King_Hippo for reporting)
 - Docs updated to cover new features and macOS release flow.
 - macOS NFS auto-mount is disabled; pre-mounted paths are required instead.
+- Archive upload auto-tune now defaults to off, with a fixed buffer fallback.
+- SMB archive uploads use a smaller buffer and avoid parallel writers by default.
 ### Fixed
 - Fixed localization coverage across all languages (including backup progress/status keys).
 - Arabic UI font fallback now uses bundled Noto Sans + Noto Sans Arabic to avoid missing glyphs.
@@ -35,8 +38,13 @@
 - macOS/Linux free-space checks now use statvfs and avoid false readings on unmanaged mounts.
 - Destination tests use unique probe files to avoid repeated "file exists" warnings.
 - Archive upload auto-tune now times out quickly and can be disabled in Settings.
+- Backup storage usage card now preserves the last known usage when the target is temporarily unavailable.
+- Archive upload progress now stays responsive on slow links and uses longer stall timeouts.
+- Upload status now shows "Finalizing" after 100% instead of "Waiting for network".
+- Retention cleanup now normalizes cross-platform backup paths to avoid false "not found" logs.
 - Backup cancellation now shows a cancelling state and avoids failed notifications after cleanup.
 - macOS fullscreen now falls back to maximized to avoid a crash during the native fullscreen transition.
+- macOS SMB auto-mount now respects subfolder paths (e.g., `//host/share/Dev`) for backups and metadata import.
 
 ## [1.2.3] - 2026-01-07
 ### Added

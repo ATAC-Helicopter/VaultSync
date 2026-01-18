@@ -491,6 +491,8 @@
   "Backups.Status.Cancelling": "Cancelando...",
   "Settings.Backups.AutoTuneArchive": "Ajuste automático de cargas de archivo",
   "Settings.Backups.AutoTuneArchiveDescription": "Mide brevemente el destino para elegir un búfer de carga más rápido para copias comprimidas.",
+  "Settings.Backups.ParallelArchiveUploads": "Parallel archive uploads",
+  "Settings.Backups.ParallelArchiveUploadsDescription": "Use multiple writers when uploading compressed backups (faster on some networks, less reliable on SMB).",
   "Backups.Section.OpenFolder": "Abrir carpeta",
   "WhatsNew.Title": "What's new",
   "WhatsNew.Close": "Got it",

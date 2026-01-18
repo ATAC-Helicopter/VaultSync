@@ -495,6 +495,8 @@
   "Backups.Status.Cancelling": "Cancelling...",
   "Settings.Backups.AutoTuneArchive": "Auto-tune archive uploads",
   "Settings.Backups.AutoTuneArchiveDescription": "Measures the destination briefly to pick a faster upload buffer for compressed backups.",
+  "Settings.Backups.ParallelArchiveUploads": "Parallel archive uploads",
+  "Settings.Backups.ParallelArchiveUploadsDescription": "Use multiple writers when uploading compressed backups (faster on some networks, less reliable on SMB).",
   "Backups.Section.OpenFolder": "Open folder",
   "Common.Cancel": "Cancel",
   "Backups.Delete.Title": "Delete backup?",

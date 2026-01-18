@@ -89,11 +89,15 @@ namespace VaultSync.Core.Config
         /// Auto-tuned archive upload buffer size for the legacy single-destination flow.
         /// When null, VaultSync will probe before the first archive upload and cache the result.
         /// </summary>
-        public int?   LegacyArchiveUploadBufferBytes { get; set; } = null;
+        public int?   LegacyArchiveUploadBufferBytes { get; set; } = 1024 * 1024;
         /// <summary>
         /// When true, VaultSync probes the destination to auto-tune archive upload buffer sizes.
         /// </summary>
-        public bool   EnableArchiveUploadAutoTune { get; set; } = true;
+        public bool   EnableArchiveUploadAutoTune { get; set; } = false;
+        /// <summary>
+        /// When true, compressed archive uploads may use parallel writers on supported targets.
+        /// </summary>
+        public bool   EnableParallelArchiveUpload { get; set; } = true;
         public bool   VerifyAfterCreate     { get; set; } = true;
         public bool   PauseOnBattery        { get; set; } = true;
 

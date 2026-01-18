@@ -9,6 +9,8 @@
 - Storage totals and per‑project usage visuals now match actual data.
 - New **“Open folder”** action in backup history.
 - Cancel is clearer and cleans up properly (no leftover partials). {cleanup}
+- Archive uploads stay responsive on slow links and report progress more consistently.
+- New toggle to enable or disable parallel archive uploads.
 
 ### Project setup
 - No more sample “default” projects; empty lists stay empty until you add your own.

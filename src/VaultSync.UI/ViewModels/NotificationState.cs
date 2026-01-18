@@ -105,7 +105,7 @@ namespace VaultSync.UI.ViewModels.Notifications
             ActionCommand = actionCommand;
             IsVisible = true;
 
-            StartAutoDismiss(duration ?? TimeSpan.FromSeconds(4));
+            StartAutoDismiss(duration ?? TimeSpan.FromSeconds(9));
         }
 
         /// <summary>

@@ -37,16 +37,6 @@ public sealed class MetadataSyncService
 
         try
         {
-            store.EnsureSchema();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Import failed: store init error at '{store.DatabasePath}': {ex.Message}");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
-        }
-
-        try
-        {
             return ImportFromStoreInternal(rootPath, store, opts);
         }
         catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
@@ -82,16 +72,6 @@ public sealed class MetadataSyncService
         {
             Console.WriteLine($"[MetadataSync] Preview skipped: store not found at '{store.DatabasePath}'.");
             return MetadataSyncPreview.Failure(MetadataSyncStatus.NoStore, rootPath, store.DatabasePath, "Metadata store not found.");
-        }
-
-        try
-        {
-            store.EnsureSchema();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Preview failed: store init error at '{store.DatabasePath}': {ex.Message}");
-            return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
         }
 
         try

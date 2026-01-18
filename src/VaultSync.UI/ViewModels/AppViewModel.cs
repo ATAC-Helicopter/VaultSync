@@ -118,6 +118,7 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
         private readonly ConcurrentDictionary<int, byte> _restoreAdvisoryShown = new();
         private readonly ConcurrentDictionary<int, byte> _projectRootMissingNotified = new();
+        private readonly ConcurrentDictionary<int, DateTime> _backupProgressLogTimestamps = new();
         private int _manualBackupInFlightCount;
         private int _backupAllInProgress;
         private bool _trayInitiatedBackup;
@@ -208,6 +209,30 @@ namespace VaultSync.UI.ViewModels
                 return true;
 
             return false;
+        }
+
+        private static bool IsSmbPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            return path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)
+                   || path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase)
+                   || path.StartsWith("//", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void LogBackupProgress(int projectId, string projectName, double percent, string label, string etaText)
+        {
+            if (!_settingsViewModel.EnableVerboseLogging)
+                return;
+
+            var now = DateTime.UtcNow;
+            var last = _backupProgressLogTimestamps.GetOrAdd(projectId, DateTime.MinValue);
+            if ((now - last) < TimeSpan.FromSeconds(1))
+                return;
+
+            _backupProgressLogTimestamps[projectId] = now;
+            Console.WriteLine($"[BackupUI] '{projectName}' progress={percent:0.0} label='{label}' eta='{etaText}'");
         }
 
         private GitHubReleaseChannel CurrentUpdateChannel =>
@@ -858,6 +883,17 @@ namespace VaultSync.UI.ViewModels
                                     Interlocked.Increment(ref backupAttempts);
                                     var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
                                         || IsRemoteDestinationPath(dest.Path);
+                                    var isSmbDestination = IsSmbPath(dest.Path) || IsSmbPath(resolution.EffectivePath);
+                                    var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
+                                    var preferParallelUpload = allowParallelUpload && isRemoteDestination && !isSmbDestination;
+                                    if (isSmbDestination)
+                                    {
+                                        Console.WriteLine($"[BackupService] Parallel archive upload disabled for SMB destination '{destLabel}'.");
+                                    }
+                                    else if (!allowParallelUpload)
+                                    {
+                                        Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{destLabel}'.");
+                                    }
                                     var backupResult = await _backupService.RunBackupAsync(
                                         project,
                                         resolution.EffectivePath,
@@ -878,7 +914,7 @@ namespace VaultSync.UI.ViewModels
                                         useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
                                         archiveUploadBufferBytes: archiveUploadBufferBytes,
                                         preferRunnerProgressOnly: isRemoteDestination,
-                                        preferParallelArchiveUpload: isRemoteDestination);
+                                        preferParallelArchiveUpload: preferParallelUpload);
 
                                     if (backupResult.SkippedForNoChanges)
                                     {
@@ -1849,6 +1885,17 @@ namespace VaultSync.UI.ViewModels
                             attempts++;
                             var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
                                 || IsRemoteDestinationPath(dest.Path);
+                            var isSmbDestination = IsSmbPath(dest.Path) || IsSmbPath(resolution.EffectivePath);
+                            var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
+                            var preferParallelUpload = allowParallelUpload && isRemoteDestination && !isSmbDestination;
+                            if (isSmbDestination)
+                            {
+                                Console.WriteLine($"[BackupService] Parallel archive upload disabled for SMB destination '{labelPrefix}'.");
+                            }
+                            else if (!allowParallelUpload)
+                            {
+                                Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{labelPrefix}'.");
+                            }
                             var result = await _backupService.RunBackupAsync(
                                 project,
                                 resolution.EffectivePath,
@@ -1909,6 +1956,7 @@ namespace VaultSync.UI.ViewModels
                                         percent,
                                         label,
                                         etaText);
+                                    LogBackupProgress(project.Id, project.Name, percent, label, etaText);
 
                                     // Keep legacy aggregate fields in sync (if anything else binds to them)
                                     Dispatcher.UIThread.Post(() =>
@@ -1931,7 +1979,7 @@ namespace VaultSync.UI.ViewModels
                                 useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
                                 archiveUploadBufferBytes: archiveUploadBufferBytes,
                                 preferRunnerProgressOnly: isRemoteDestination,
-                                preferParallelArchiveUpload: isRemoteDestination
+                                preferParallelArchiveUpload: preferParallelUpload
                             );
 
                             if (!metadataWritten && result.BackupId > 0)
@@ -2446,6 +2494,17 @@ namespace VaultSync.UI.ViewModels
                         {
                             var isRemoteDestination = IsRemoteDestinationPath(effectiveBackupRoot)
                                 || IsRemoteDestinationPath(primaryDest?.Path);
+                            var isSmbDestination = IsSmbPath(primaryDest?.Path) || IsSmbPath(effectiveBackupRoot);
+                            var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
+                            var preferParallelUpload = allowParallelUpload && isRemoteDestination && !isSmbDestination;
+                            if (isSmbDestination)
+                            {
+                                Console.WriteLine($"[BackupService] Parallel archive upload disabled for SMB destination '{primaryAlias}'.");
+                            }
+                            else if (!allowParallelUpload)
+                            {
+                                Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{primaryAlias}'.");
+                            }
                             var backupResult = await _backupService.RunBackupAsync(
                                 project,
                                 effectiveBackupRoot,
@@ -2504,6 +2563,7 @@ namespace VaultSync.UI.ViewModels
                                         percent,
                                         label,
                                         etaText);
+                                    LogBackupProgress(project.Id, project.Name, percent, label, etaText);
                                 },
                                 useArchiveMode: useArchiveMode,
                                 maxSnapshotsToKeep: maxSnapshotsToKeep,
@@ -2516,7 +2576,7 @@ namespace VaultSync.UI.ViewModels
                                 useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
                                 archiveUploadBufferBytes: archiveUploadBufferBytes,
                                 preferRunnerProgressOnly: isRemoteDestination,
-                                preferParallelArchiveUpload: isRemoteDestination
+                                preferParallelArchiveUpload: preferParallelUpload
                             );
 
                             if (backupResult.SkippedForNoChanges)
@@ -4141,8 +4201,14 @@ namespace VaultSync.UI.ViewModels
             if (!useArchiveMode)
                 return null;
 
+            if (IsSmbPath(dest.Path) || IsSmbPath(effectivePath))
+                return 512 * 1024;
+
             if (!cfg.Backups.EnableArchiveUploadAutoTune)
-                return GetConfiguredArchiveUploadBufferBytes(cfg, dest);
+            {
+                var configured = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
+                return configured ?? 1024 * 1024;
+            }
 
             var existing = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
             if (existing.HasValue && existing.Value > 0)

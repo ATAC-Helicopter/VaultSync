@@ -50,6 +50,7 @@ namespace VaultSync.UI
         private bool _pauseBackupsOnBattery = true;
         private bool _useFullSnapshotHash = true;
         private bool _enableArchiveUploadAutoTune = true;
+        private bool _enableParallelArchiveUpload = true;
         private bool _enableMetadataSync = true;
         private bool _autoImportMetadata = true;
         private bool _promptRestoreAfterImport = true;
@@ -227,6 +228,7 @@ namespace VaultSync.UI
             _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
             _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
             _enableArchiveUploadAutoTune = cfg.Backups.EnableArchiveUploadAutoTune;
+            _enableParallelArchiveUpload = cfg.Backups.EnableParallelArchiveUpload;
             _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
             _autoImportMetadata        = cfg.Backups.AutoImportMetadata;
             _promptRestoreAfterImport  = cfg.Backups.PromptRestoreAfterImport;
@@ -428,6 +430,7 @@ namespace VaultSync.UI
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
             cfg.Backups.EnableArchiveUploadAutoTune = _enableArchiveUploadAutoTune;
+            cfg.Backups.EnableParallelArchiveUpload = _enableParallelArchiveUpload;
             cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
             cfg.Backups.AutoImportMetadata          = AutoImportMetadata;
             cfg.Backups.PromptRestoreAfterImport    = PromptRestoreAfterImport;
@@ -847,6 +850,12 @@ namespace VaultSync.UI
         {
             get => _enableArchiveUploadAutoTune;
             set => SetField(ref _enableArchiveUploadAutoTune, value);
+        }
+
+        public bool EnableParallelArchiveUpload
+        {
+            get => _enableParallelArchiveUpload;
+            set => SetField(ref _enableParallelArchiveUpload, value);
         }
 
         public bool EnableMetadataSync

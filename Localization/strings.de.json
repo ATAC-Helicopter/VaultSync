@@ -491,6 +491,8 @@
   "Backups.Status.Cancelling": "Wird abgebrochen...",
   "Settings.Backups.AutoTuneArchive": "Archiv-Uploads automatisch optimieren",
   "Settings.Backups.AutoTuneArchiveDescription": "Misst das Ziel kurz, um einen schnelleren Upload-Puffer für komprimierte Backups zu wählen.",
+  "Settings.Backups.ParallelArchiveUploads": "Parallel archive uploads",
+  "Settings.Backups.ParallelArchiveUploadsDescription": "Use multiple writers when uploading compressed backups (faster on some networks, less reliable on SMB).",
   "Backups.Section.OpenFolder": "Ordner öffnen",
   "WhatsNew.Title": "What's new",
   "WhatsNew.Close": "Got it",

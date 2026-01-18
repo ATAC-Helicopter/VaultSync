@@ -495,6 +495,8 @@
   "Backups.Status.Cancelling": "جارٍ الإلغاء...",
   "Settings.Backups.AutoTuneArchive": "ضبط تحميلات الأرشيف تلقائيًا",
   "Settings.Backups.AutoTuneArchiveDescription": "يقيس الوجهة لفترة وجيزة لاختيار مخزن مؤقت للتحميل بشكل أسرع للنسخ الاحتياطية المضغوطة.",
+  "Settings.Backups.ParallelArchiveUploads": "Parallel archive uploads",
+  "Settings.Backups.ParallelArchiveUploadsDescription": "Use multiple writers when uploading compressed backups (faster on some networks, less reliable on SMB).",
   "Backups.Section.OpenFolder": "افتح المجلد",
   "Common.Cancel": "يلغي",
   "Backups.Delete.Title": "هل تريد حذف النسخة الاحتياطية؟",

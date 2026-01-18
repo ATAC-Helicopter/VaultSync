@@ -921,11 +921,28 @@ namespace VaultSync.UI.ViewModels
         /// Computes backup disk usage based on the current app config.
         /// Returns a tuple that can be reused by other view models (e.g. BackupsViewModel).
         /// </summary>
-        public static (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold)
-            ComputeBackupDiskUsage(AppConfig config)
+        public enum BackupDiskUsageStatus
+        {
+            Ok,
+            NotConfigured,
+            TargetUnavailable,
+            SizeUnknown,
+            Error
+        }
+
+        /// <summary>
+        /// Computes backup disk usage with an availability status so callers can avoid
+        /// resetting UI to 0% on transient target issues.
+        /// </summary>
+        public static (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, BackupDiskUsageStatus status)
+            ComputeBackupDiskUsageDetailed(AppConfig config)
         {
             try
             {
+                var thresholdText = string.Format(
+                    L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"),
+                    config.Storage.MinFreeSpacePercent);
+
                 // Use the backup root from config; if not configured, show a hint.
                 var backupRoot = config.Backups.BackupLocation;
                 if (string.IsNullOrWhiteSpace(backupRoot))
@@ -933,8 +950,9 @@ namespace VaultSync.UI.ViewModels
                     return (
                         0d,
                         L("Dashboard.Storage.NotConfigured", "Backup root not configured"),
-                        string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
-                        false
+                        thresholdText,
+                        false,
+                        BackupDiskUsageStatus.NotConfigured
                     );
                 }
 
@@ -945,8 +963,9 @@ namespace VaultSync.UI.ViewModels
                         return (
                             0d,
                             L("Dashboard.Storage.TargetUnavailable", "Backup target not available"),
-                            string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
-                            false
+                            thresholdText,
+                            false,
+                            BackupDiskUsageStatus.TargetUnavailable
                         );
                     }
 
@@ -956,13 +975,15 @@ namespace VaultSync.UI.ViewModels
                 {
                     backupRoot = Path.GetFullPath(backupRoot);
                 }
+
                 if (!TryGetDiskSpace(backupRoot, out var total, out var free))
                 {
                     return (
                         0d,
                         L("Dashboard.Storage.TargetUnavailable", "Backup target not available"),
-                        string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
-                        false
+                        thresholdText,
+                        false,
+                        BackupDiskUsageStatus.TargetUnavailable
                     );
                 }
 
@@ -971,8 +992,9 @@ namespace VaultSync.UI.ViewModels
                     return (
                         0d,
                         L("Dashboard.Storage.SizeUnknown", "Backup target size unknown"),
-                        string.Format(L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"), config.Storage.MinFreeSpacePercent),
-                        false
+                        thresholdText,
+                        false,
+                        BackupDiskUsageStatus.SizeUnknown
                     );
                 }
 
@@ -985,23 +1007,27 @@ namespace VaultSync.UI.ViewModels
                     FormatBytes(free),
                     FormatBytes(total),
                     freePercent.ToString("0.#"));
-                var threshold = config.Storage.MinFreeSpacePercent;
-                var thresholdText = string.Format(
-                    L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"),
-                    threshold);
-                var isBelowThreshold = freePercent < threshold;
+                var isBelowThreshold = freePercent < config.Storage.MinFreeSpacePercent;
 
-                return (usedPercent, freeText, thresholdText, isBelowThreshold);
+                return (usedPercent, freeText, thresholdText, isBelowThreshold, BackupDiskUsageStatus.Ok);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return (
                     0d,
                     L("Dashboard.Storage.UsageUnavailable", "Backup storage usage unavailable"),
                     string.Empty,
-                    false
+                    false,
+                    BackupDiskUsageStatus.Error
                 );
             }
+        }
+
+        public static (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold)
+            ComputeBackupDiskUsage(AppConfig config)
+        {
+            var (usedPercent, freeText, thresholdText, isBelowThreshold, _) = ComputeBackupDiskUsageDetailed(config);
+            return (usedPercent, freeText, thresholdText, isBelowThreshold);
         }
 
         /// <summary>
@@ -1052,31 +1078,99 @@ namespace VaultSync.UI.ViewModels
             if (!OperatingSystem.IsMacOS() || string.IsNullOrWhiteSpace(originalPath))
                 return false;
 
-            if (!TryParseShare(originalPath, out var host, out var share))
+            if (!TryParseShareWithSubpath(originalPath, out var host, out var share, out var subPath))
                 return false;
 
             var mountPoint = TryGetMountedSharePath(host, share);
             if (!string.IsNullOrWhiteSpace(mountPoint))
             {
-                mountedPath = mountPoint;
+                mountedPath = AppendShareSubPath(mountPoint, subPath);
                 return true;
             }
 
             var mountRoot = GetMacMountRoot();
             if (TryFindMountByName(share, mountRoot, out var rootMatch))
             {
-                mountedPath = rootMatch;
+                mountedPath = AppendShareSubPath(rootMatch, subPath);
                 return true;
             }
 
             if (TryFindMountByName(share, "/Volumes", out var volumesMatch))
             {
-                mountedPath = volumesMatch;
+                mountedPath = AppendShareSubPath(volumesMatch, subPath);
                 return true;
             }
 
             return false;
         }
+
+        private static bool TryParseShareWithSubpath(string path, out string host, out string share, out string subPath)
+        {
+            host = string.Empty;
+            share = string.Empty;
+            subPath = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!Uri.TryCreate(path, UriKind.Absolute, out var uri))
+                    return false;
+
+                host = uri.Host;
+                var segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length == 0)
+                    return false;
+
+                share = segments[0];
+                if (segments.Length > 1)
+                    subPath = string.Join('/', segments.Skip(1));
+
+                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
+            }
+
+            if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
+            {
+                var trimmed = path.TrimStart('\\', '/').Replace('\\', FormatSeparator);
+                var parts = trimmed.Split(FormatSeparator, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2)
+                    return false;
+
+                host = parts[0];
+                share = parts[1];
+
+                if (host.Contains('@'))
+                    host = host.Split('@').Last();
+                if (host.Contains(':'))
+                    host = host.Split(':').Last();
+
+                if (parts.Length > 2)
+                    subPath = string.Join('/', parts.Skip(2));
+
+                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
+            }
+
+            return false;
+        }
+
+        private static string AppendShareSubPath(string mountPoint, string subPath)
+        {
+            if (string.IsNullOrWhiteSpace(subPath))
+                return mountPoint;
+
+            var cleaned = subPath.Trim().TrimStart('/', '\\');
+            if (string.IsNullOrWhiteSpace(cleaned))
+                return mountPoint;
+
+            var segments = cleaned.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            return segments.Length == 0
+                ? mountPoint
+                : Path.Combine(new[] { mountPoint }.Concat(segments).ToArray());
+        }
+
+        private const char FormatSeparator = '/';
 
         private static bool TryParseShare(string path, out string host, out string share)
         {

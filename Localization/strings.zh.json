@@ -491,6 +491,8 @@
   "Backups.Status.Cancelling": "正在取消...",
   "Settings.Backups.AutoTuneArchive": "自动优化归档上传",
   "Settings.Backups.AutoTuneArchiveDescription": "短暂测量目标以选择更快的压缩备份上传缓冲区。",
+  "Settings.Backups.ParallelArchiveUploads": "Parallel archive uploads",
+  "Settings.Backups.ParallelArchiveUploadsDescription": "Use multiple writers when uploading compressed backups (faster on some networks, less reliable on SMB).",
   "Backups.Section.OpenFolder": "打开文件夹",
   "WhatsNew.Title": "What's new",
   "WhatsNew.Close": "Got it",

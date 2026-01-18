@@ -299,7 +299,7 @@ public sealed class MetadataStore
     private SqliteConnection Open(bool write)
     {
         var dir = Path.GetDirectoryName(_dbPath);
-        if (!string.IsNullOrWhiteSpace(dir))
+        if (write && !string.IsNullOrWhiteSpace(dir))
             Directory.CreateDirectory(dir);
 
         var builder = new SqliteConnectionStringBuilder

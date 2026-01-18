@@ -491,6 +491,8 @@
   "Backups.Status.Cancelling": "বাতিল হচ্ছে...",
   "Settings.Backups.AutoTuneArchive": "আর্কাইভ আপলোড স্বয়ংক্রিয়ভাবে টিউন করুন",
   "Settings.Backups.AutoTuneArchiveDescription": "গন্তব্যটি সংক্ষিপ্তভাবে মেপে কমপ্রেসড ব্যাকআপের জন্য দ্রুত আপলোড বাফার বেছে নেয়।",
+  "Settings.Backups.ParallelArchiveUploads": "Parallel archive uploads",
+  "Settings.Backups.ParallelArchiveUploadsDescription": "Use multiple writers when uploading compressed backups (faster on some networks, less reliable on SMB).",
   "Backups.Section.OpenFolder": "ফোল্ডার খুলুন",
   "WhatsNew.Title": "What's new",
   "WhatsNew.Close": "Got it",

@@ -24,15 +24,15 @@
           <StackPanel Orientation="Vertical"
                       HorizontalAlignment="Right"
                       VerticalAlignment="Bottom"
-                      Margin="0,0,16,16"
-                      Spacing="8" />
+                      Margin="0,0,20,20"
+                      Spacing="12" />
         </ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
 
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:NotificationState">
           <!-- Toast wrapper: on-theme card, but with shadow and max width -->
-          <Border MaxWidth="380"
+          <Border MaxWidth="460"
                   Background="Transparent"
                   BorderThickness="0"
                   CornerRadius="12"

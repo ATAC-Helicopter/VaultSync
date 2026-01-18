@@ -160,6 +160,38 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
           ON files(snapshot_id, rel_path);
     """);
+
+    // Normalize stored backup paths to the current OS separators for retention cleanup.
+    NormalizeBackupPathSeparators(c);
+}
+
+private sealed record BackupPathRow(int Id, string Path);
+
+private void NormalizeBackupPathSeparators(SqliteConnection connection)
+{
+    var rows = connection.Query<BackupPathRow>(
+        "SELECT id, path FROM backups WHERE path LIKE '%\\\\%' OR path LIKE '%/%';").ToList();
+    if (rows.Count == 0)
+        return;
+
+    var separator = Path.DirectorySeparatorChar;
+    foreach (var row in rows)
+    {
+        if (string.IsNullOrWhiteSpace(row.Path))
+            continue;
+
+        var normalized = row.Path
+            .Replace('\\', separator)
+            .Replace('/', separator)
+            .TrimStart(separator);
+
+        if (string.Equals(normalized, row.Path, StringComparison.Ordinal))
+            continue;
+
+        connection.Execute(
+            "UPDATE backups SET path = @path WHERE id = @id;",
+            new { path = normalized, id = row.Id });
+    }
 }
 
         /// <summary>

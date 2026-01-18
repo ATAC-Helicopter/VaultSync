@@ -490,6 +490,21 @@
                                   IsChecked="{Binding EnableArchiveUploadAutoTune, Mode=TwoWay}" />
                   </Grid>
 
+                  <!-- Parallel archive uploads -->
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ParallelArchiveUploads}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ParallelArchiveUploadsDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding EnableParallelArchiveUpload, Mode=TwoWay}" />
+                  </Grid>
+
                   <!-- Verify backups -->
                   <Grid ColumnDefinitions="*,Auto"
                         Margin="0,4,0,0">

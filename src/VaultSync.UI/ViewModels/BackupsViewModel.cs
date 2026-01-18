@@ -958,8 +958,8 @@ namespace VaultSync.UI.ViewModels
                 try
                 {
                     var config = AppConfigStore.Load();
-                    var (usedPercent, freeText, thresholdText, isBelowThreshold) =
-                        DashboardViewModel.ComputeBackupDiskUsage(config);
+                    var (usedPercent, freeText, thresholdText, isBelowThreshold, status) =
+                        DashboardViewModel.ComputeBackupDiskUsageDetailed(config);
                     var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
 
                     string? healthText = null;
@@ -983,9 +983,17 @@ namespace VaultSync.UI.ViewModels
                         };
                     }
 
+                    var displayUsedPercent = usedPercent;
+                    var displayBelowThreshold = isBelowThreshold;
+                    if (status != DashboardViewModel.BackupDiskUsageStatus.Ok && BackupDiskUsedPercent > 0)
+                    {
+                        displayUsedPercent = BackupDiskUsedPercent;
+                        displayBelowThreshold = false;
+                    }
+
                     Dispatcher.UIThread.Post(() =>
                     {
-                        UpdateBackupDiskUsage(usedPercent, freeText, thresholdText, isBelowThreshold);
+                        UpdateBackupDiskUsage(displayUsedPercent, freeText, thresholdText, displayBelowThreshold);
                         BackupDiskDriveLabel = driveLabel;
                         if (includeHealthProbe && healthText is not null && healthBrush is not null)
                         {
@@ -1045,15 +1053,70 @@ namespace VaultSync.UI.ViewModels
                 // ignore and fall back
             }
 
-            // UNC paths: try to take \\server\share
-            if (path.StartsWith("\\\\") || path.StartsWith("//"))
+            // UNC/SMB paths: include the share (and optional subpath) for clarity.
+            if (path.StartsWith("\\\\") || path.StartsWith("//") || path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
             {
-                var parts = path.Trim('\\', '/').Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length >= 2)
-                    return $"\\\\{parts[0]}\\{parts[1]}";
+                if (TryParseShareWithSubpath(path, out var host, out var share, out var subPath))
+                {
+                    if (!string.IsNullOrWhiteSpace(subPath))
+                        return $"\\\\{host}\\{share}\\{subPath.Replace('/', '\\')}";
+
+                    return $"\\\\{host}\\{share}";
+                }
             }
 
             return path;
+        }
+
+        private static bool TryParseShareWithSubpath(string path, out string host, out string share, out string subPath)
+        {
+            host = string.Empty;
+            share = string.Empty;
+            subPath = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!Uri.TryCreate(path, UriKind.Absolute, out var uri))
+                    return false;
+
+                host = uri.Host;
+                var segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length == 0)
+                    return false;
+
+                share = segments[0];
+                if (segments.Length > 1)
+                    subPath = string.Join('/', segments.Skip(1));
+
+                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
+            }
+
+            if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
+            {
+                var trimmed = path.TrimStart('\\', '/').Replace('\\', '/');
+                var parts = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2)
+                    return false;
+
+                host = parts[0];
+                share = parts[1];
+
+                if (host.Contains('@'))
+                    host = host.Split('@').Last();
+                if (host.Contains(':'))
+                    host = host.Split(':').Last();
+
+                if (parts.Length > 2)
+                    subPath = string.Join('/', parts.Skip(2));
+
+                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
+            }
+
+            return false;
         }
 
         // ---------- Summary computation ----------

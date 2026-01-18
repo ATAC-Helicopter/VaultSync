@@ -491,6 +491,8 @@
   "Backups.Status.Cancelling": "रद्द हो रहा है...",
   "Settings.Backups.AutoTuneArchive": "आर्काइव अपलोड ऑटो-ट्यून करें",
   "Settings.Backups.AutoTuneArchiveDescription": "गंतव्य को संक्षेप में मापकर संकुचित बैकअप के लिए तेज़ अपलोड बफ़र चुनता है।",
+  "Settings.Backups.ParallelArchiveUploads": "Parallel archive uploads",
+  "Settings.Backups.ParallelArchiveUploadsDescription": "Use multiple writers when uploading compressed backups (faster on some networks, less reliable on SMB).",
   "Backups.Section.OpenFolder": "फ़ोल्डर खोलें",
   "WhatsNew.Title": "What's new",
   "WhatsNew.Close": "Got it",
