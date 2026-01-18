@@ -333,7 +333,9 @@ namespace VaultSync.UI.ViewModels
 
         public bool ShowPatchButton => IsPatchAvailable;
 
-        public bool ShowInstallerFallback => _patchFailed && (_pendingUpdateResult?.HasInstaller == true);
+        public bool ShowInstallerFallback =>
+            _pendingUpdateResult is not null &&
+            (!IsPatchAvailable || _patchFailed || _patchBlocked);
 
         public bool CanSkipUpdate => _pendingUpdateResult is not null;
 
@@ -1321,6 +1323,7 @@ namespace VaultSync.UI.ViewModels
         {
             OnPropertyChanged(nameof(IsPatchAvailable));
             OnPropertyChanged(nameof(ShowPatchButton));
+            OnPropertyChanged(nameof(ShowInstallerFallback));
             _installPatchCommand.RaiseCanExecuteChanged();
         }
 
