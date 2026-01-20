@@ -1,4 +1,23 @@
 # Changelog
+## [1.3.3] - Unreleased
+### Changed
+- Dashboard refresh now uses aggregated queries for counts and totals to avoid loading full history.
+- UI view refreshes no longer re-run database schema setup; initialization now happens once at startup.
+- Archive and fallback copy paths reuse the snapshot file list when available to avoid re-enumerating the full tree.
+- Backup retention now batches orphan snapshot cleanup to avoid repeated DB scans per deletion.
+- Metadata sync now preloads external ID maps to reduce per-item DB lookups during import/preview.
+- Backups history refresh now coalesces repeated filter updates to avoid redundant rebuilds.
+- Update checks reuse a short in-memory cache to avoid repeated API fetches within a session.
+- App backup flows now use targeted backup lookups instead of full-history scans.
+- Project refresh now builds discovery/preset data off the UI thread to reduce stutter on large trees.
+- Tray recent backups now uses a single batched query instead of per-project scans.
+- Backups history reload now coalesces repeated requests and avoids UI-thread blocking for open-folder resolution.
+- Snapshot cleanup now checks for remaining backups with a targeted query instead of loading full project history.
+### Fixed
+- Windows release publishes default to self-contained `win-x64` to avoid missing runtime prompts.
+- Startup crash in backup path normalization (Dapper materialization) resolved.
+- Dashboard backup storage card no longer shows a stale/translucent bar behind the usage segments.
+
 ## [1.3.2] - 18.01.2026
 ### Added
 - Cross-machine metadata store (`.vaultsync/meta/`) with portable project/snapshot/backup records and external IDs.

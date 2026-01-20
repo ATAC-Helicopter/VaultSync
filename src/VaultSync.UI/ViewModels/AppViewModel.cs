@@ -148,6 +148,8 @@ namespace VaultSync.UI.ViewModels
         private readonly RelayCommand _dismissUpdateBannerCommand;
         private readonly RelayCommand _dismissSoftCrashBannerCommand;
         private readonly RelayCommand _copySoftCrashLogCommand;
+        private int _reloadBackupsInFlight;
+        private int _reloadBackupsQueued;
         private bool _isPatchInstalling;
         private string _patchStatusMessage = string.Empty;
         private bool _showSoftCrashBanner;
@@ -667,18 +669,35 @@ namespace VaultSync.UI.ViewModels
 
         private Task ReloadBackupsVmDataAsync()
         {
+            if (Interlocked.Exchange(ref _reloadBackupsInFlight, 1) == 1)
+            {
+                Interlocked.Exchange(ref _reloadBackupsQueued, 1);
+                return Task.CompletedTask;
+            }
+
             // Fetch and materialize data off the UI thread to reduce perceived hangs,
             // then marshal the lightweight ViewModel update back to the UI thread.
             return Task.Run(() =>
             {
-                var projects = _repo.GetAllProjects().ToList();
-                var backups  = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
-                var disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
-
-                Dispatcher.UIThread.Post(() =>
+                try
                 {
-                    _backupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
-                });
+                    var projects = _repo.GetAllProjects().ToList();
+                    var backups  = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+                    var disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
+
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _backupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
+                    });
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _reloadBackupsInFlight, 0);
+                    if (Interlocked.Exchange(ref _reloadBackupsQueued, 0) == 1)
+                    {
+                        ReloadBackupsVmData();
+                    }
+                }
             });
         }
 
@@ -686,7 +705,7 @@ namespace VaultSync.UI.ViewModels
         {
             var cfg = AppConfigStore.Load();
             var destinations = GetActiveDestinations(cfg);
-            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
+            var project = _repo.GetProjectById(projectId);
             return new BackupProjectPreparation(cfg, destinations, project);
         }
 
@@ -1993,8 +2012,7 @@ namespace VaultSync.UI.ViewModels
 
                                 if (!sharedSnapshotId.HasValue && result.BackupId > 0)
                                 {
-                                    var created = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
-                                        .FirstOrDefault(b => b.Id == result.BackupId);
+                                    var created = _repo.GetBackupById(result.BackupId);
                                     sharedSnapshotId = created?.SnapshotId ?? sharedSnapshotId;
                                 }
                             }
@@ -2091,9 +2109,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     var latest = metadataBackupId.HasValue
                         ? _repo.GetBackupById(metadataBackupId.Value)
-                        : _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
-                            .OrderByDescending(b => b.CreatedUtc)
-                            .FirstOrDefault(b => b.ProjectId == project.Id);
+                        : _repo.GetLatestBackupForProject(project.Id);
 
                     if (latest != null)
                     {
@@ -2687,13 +2703,15 @@ namespace VaultSync.UI.ViewModels
 
                 // --- After all backups: optional verification / post-hash ---
                 var cfgAfterAll = AppConfigStore.Load();
-                var allLatest = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
-                                     .GroupBy(b => b.ProjectId)
-                                     .Select(g => g.OrderByDescending(b => b.CreatedUtc).First());
+                var allLatest = _repo.GetLatestBackupsPerProject();
+                var projectsById = _repo.GetAllProjects()
+                    .GroupBy(p => p.Id)
+                    .ToDictionary(g => g.Key, g => g.First());
 
                 foreach (var latest in allLatest)
                 {
-                    var proj = _repo.GetAllProjects().FirstOrDefault(p => p.Id == latest.ProjectId);
+                    if (!projectsById.TryGetValue(latest.ProjectId, out var proj))
+                        continue;
                     if (proj == null)
                         continue;
 
@@ -3157,8 +3175,7 @@ namespace VaultSync.UI.ViewModels
 
         private DeleteBackupPreparation PrepareDeleteBackup(int backupId)
         {
-            var allBackups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
-            var backup = allBackups.FirstOrDefault(b => b.Id == backupId);
+            var backup = _repo.GetBackupById(backupId);
             if (backup is null)
                 return DeleteBackupPreparation.Failure;
 
@@ -3170,7 +3187,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return DeleteBackupPreparation.Failure;
 
-            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == backup.ProjectId);
+            var project = _repo.GetProjectById(backup.ProjectId);
             var projectName = project?.Name ?? "Backup";
 
             return new DeleteBackupPreparation(true, backup, backupRoot, projectName, project?.Id ?? 0, backup.SnapshotId);
@@ -3189,8 +3206,7 @@ namespace VaultSync.UI.ViewModels
 
         private RestoreBackupPreparation PrepareRestoreBackup(int backupId)
         {
-            var allBackups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow);
-            var backup = allBackups.FirstOrDefault(b => b.Id == backupId);
+            var backup = _repo.GetBackupById(backupId);
             if (backup is null)
                 return RestoreBackupPreparation.Failure;
 
@@ -3206,7 +3222,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(backup.Path) || !Directory.Exists(backupFullPath))
                 return RestoreBackupPreparation.Failure;
 
-            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == backup.ProjectId);
+            var project = _repo.GetProjectById(backup.ProjectId);
             if (project is null)
                 return RestoreBackupPreparation.Failure;
 
@@ -3693,25 +3709,12 @@ namespace VaultSync.UI.ViewModels
             OpenBackupFolder(backupId);
         }
 
-        private void OpenBackupFolder(int backupId)
+        private async void OpenBackupFolder(int backupId)
         {
             try
             {
-                var backup = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
-                    .FirstOrDefault(b => b.Id == backupId);
-                if (backup is null)
-                    return;
-
-                var cfg = AppConfigStore.Load();
-                var destinations = GetActiveDestinations(cfg);
-                var destinationRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
-                    ? backup.DestinationPath
-                    : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
-                if (string.IsNullOrWhiteSpace(destinationRoot))
-                    return;
-
-                var fullPath = Path.GetFullPath(Path.Combine(destinationRoot, backup.Path ?? string.Empty));
-                if (!Directory.Exists(fullPath))
+                var fullPath = await Task.Run(() => ResolveBackupFullPathForOpen(backupId));
+                if (string.IsNullOrWhiteSpace(fullPath))
                     return;
 
                 if (OperatingSystem.IsWindows())
@@ -3735,6 +3738,24 @@ namespace VaultSync.UI.ViewModels
             {
                 // Swallow tray errors
             }
+        }
+
+        private string? ResolveBackupFullPathForOpen(int backupId)
+        {
+            var backup = _repo.GetBackupById(backupId);
+            if (backup is null)
+                return null;
+
+            var cfg = AppConfigStore.Load();
+            var destinations = GetActiveDestinations(cfg);
+            var destinationRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
+                ? backup.DestinationPath
+                : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
+            if (string.IsNullOrWhiteSpace(destinationRoot))
+                return null;
+
+            var fullPath = Path.GetFullPath(Path.Combine(destinationRoot, backup.Path ?? string.Empty));
+            return Directory.Exists(fullPath) ? fullPath : null;
         }
 
         public void ShowBackupInAppFromTray(int projectId)
@@ -3766,12 +3787,19 @@ namespace VaultSync.UI.ViewModels
             {
                 var projects = _repo.GetAllProjects().ToList();
                 var result   = new List<TrayProjectBackups>();
+                var projectsById = projects
+                    .GroupBy(p => p.Id)
+                    .ToDictionary(g => g.Key, g => g.First());
+                var recent = _repo.GetRecentBackupsByProject(maxPerProject);
+                var grouped = recent
+                    .GroupBy(b => b.ProjectId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
 
                 foreach (var project in projects)
                 {
-                    var backups = _repo.GetBackupsForProject(project.Id)
+                    grouped.TryGetValue(project.Id, out var projectBackups);
+                    var backups = (projectBackups ?? new List<Backup>())
                         .OrderByDescending(b => b.CreatedUtc)
-                        .Take(maxPerProject)
                         .Select(b =>
                         {
                             var ts   = b.CreatedUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
@@ -3796,8 +3824,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var backup = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
-                    .FirstOrDefault(b => b.Id == backupId);
+                var backup = _repo.GetBackupById(backupId);
                 if (backup is null)
                     return;
 
@@ -4640,12 +4667,11 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 // If any other backup references this snapshot, keep it.
-                var remaining = _repo.GetBackupsForProject(projectId)
-                    .Any(b => b.SnapshotId == snapshotId);
+                var remaining = _repo.HasBackupForSnapshot(projectId, snapshotId);
                 if (remaining)
                     return;
 
-                var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
+                var project = _repo.GetProjectById(projectId);
                 if (project is null)
                     return;
 

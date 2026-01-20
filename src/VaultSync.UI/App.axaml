@@ -2,6 +2,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:fluent="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     xmlns:local="using:VaultSync.UI"
     x:Class="VaultSync.UI.App"
     RequestedThemeVariant="Default">
@@ -25,6 +26,7 @@
             <x:Double x:Key="MetricFontSize">36</x:Double>
             <x:Double x:Key="SectionTitleFontSize">16</x:Double>
             <FontFamily x:Key="AppFontFamily">Inter, Noto Sans, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial, Tahoma</FontFamily>
+            <infra:BooleanInvertConverter x:Key="BoolInvertConverter" />
         </ResourceDictionary>
     </Application.Resources>
 

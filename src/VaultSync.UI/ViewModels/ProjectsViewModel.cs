@@ -200,138 +200,13 @@ public class ProjectsViewModel : ViewModelBase
             var config     = AppConfigStore.Load();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
-            var discovered = await _discovery.DiscoverAsync(config);
-
-            // Try to open the shared DB so we can enrich projects with real snapshot data.
-            SqliteRepository? repo = null;
-            try
-            {
-                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                    ? config.DbPath
-                    : GetDefaultDbPath();
-
-                repo = new SqliteRepository(dbPath);
-                repo.EnsureSchema();
-            }
-            catch (Exception ex)
-            {
-                ShowNotification(L("Projects.Notification.DbOpenFailed", "Could not open backup database while refreshing projects. Snapshot history may be incomplete."), NotificationSeverity.Warning);
-            }
+            var projectItems = await Task.Run(() => BuildProjectItems(config));
 
             Projects.Clear();
             _allProjects.Clear();
-
-            if (discovered.Count == 0)
+            foreach (var item in projectItems)
             {
-                ApplyFilterAndSort();
-            }
-            else
-            {
-                foreach (var p in discovered)
-                {
-                    DateTime? lastSnapshotTime  = p.LastSnapshotTime;
-                    long?     lastSnapshotBytes = p.LastSnapshotSizeBytes;
-                    List<ProjectSnapshotViewModel>? snapshotVms = null;
-                    Project? existingProject = null;
-
-                    if (repo != null)
-                    {
-                        try
-                        {
-                            // Use DB snapshot history if the project is registered.
-                            existingProject = repo.GetProjectByName(p.Name);
-                            if (existingProject != null)
-                            {
-                                var snapshots = repo.GetSnapshotsForProject(existingProject.Name)?.ToList();
-                                if (snapshots != null && snapshots.Count > 0)
-                                {
-                                    // Assume snapshots are returned newest-first.
-                                    var latest = snapshots[0];
-                                    lastSnapshotTime  = latest.CreatedUtc;
-                                    lastSnapshotBytes = latest.TotalBytes;
-
-                                    snapshotVms = snapshots
-                                        .Select(s => new ProjectSnapshotViewModel(s.CreatedUtc, s.TotalBytes))
-                                        .ToList();
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                        }
-                    }
-
-                    var vm = new ProjectItemViewModel
-                    {
-                        Name         = p.Name,
-                        Path         = p.Path,
-                        LastSnapshot = lastSnapshotTime ?? default,
-                        SizeBytes    = lastSnapshotBytes ?? 0,
-                        Preset       = existingProject?.Preset ?? string.Empty
-                    };
-                    vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path));
-
-                    var isRegistered = existingProject is not null;
-
-                    // Compute health based on how old the last snapshot is (if any).
-                    if (lastSnapshotTime.HasValue)
-                    {
-                        var age = DateTime.UtcNow - lastSnapshotTime.Value;
-
-                        if (age.TotalDays < 1)
-                        {
-                            vm.Health    = ProjectHealthStatus.Healthy;
-                            vm.HealthTag = L("Projects.Health.HealthyRecent", "Healthy (<1d)");
-                        }
-                        else if (age.TotalDays < 7)
-                        {
-                            vm.Health    = ProjectHealthStatus.Warning;
-                            vm.HealthTag = L("Projects.Health.OutOfDateShort", "Out of date (>1d)");
-                        }
-                        else
-                        {
-                            vm.Health    = ProjectHealthStatus.OutOfDate;
-                            vm.HealthTag = L("Projects.Health.Stale", "Stale (>7d)");
-                        }
-                    }
-                    else
-                    {
-                        vm.Health = ProjectHealthStatus.OutOfDate;
-                        vm.HealthTag = isRegistered
-                            ? L("Projects.Health.NoSnapshots", "No snapshots yet")
-                            : L("Projects.Health.NotAdded", "Not added");
-                    }
-
-                    // Populate snapshot history from DB if available; otherwise fall back to discovery values.
-                    if (snapshotVms != null && snapshotVms.Count > 0)
-                    {
-                        vm.SetSnapshots(snapshotVms);
-                    }
-                    else if (p.LastSnapshotTime.HasValue && p.LastSnapshotSizeBytes.HasValue)
-                    {
-                        var snapshotVm = new ProjectSnapshotViewModel(
-                            p.LastSnapshotTime.Value,
-                            p.LastSnapshotSizeBytes.Value);
-
-                        vm.SetSnapshots(new[] { snapshotVm });
-                    }
-                    else
-                    {
-                        vm.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
-                    }
-
-                    // Mark whether this project is registered in the backup DB.
-                    vm.IsRegistered = isRegistered;
-
-                    // Auto-detect preset for unregistered projects if none is set yet.
-                    if (!isRegistered && string.IsNullOrWhiteSpace(vm.Preset))
-                    {
-                        var autoPreset = DetectPreset(p.Path);
-                        vm.Preset = autoPreset ?? string.Empty;
-                    }
-
-                    _allProjects.Add(vm);
-                }
+                _allProjects.Add(item);
             }
 
             ApplyFilterAndSort();
@@ -353,6 +228,145 @@ public class ProjectsViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    private List<ProjectItemViewModel> BuildProjectItems(AppConfig config)
+    {
+        IReadOnlyList<DiscoveredProject> discovered;
+        try
+        {
+            discovered = _discovery.DiscoverAsync(config).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            discovered = Array.Empty<DiscoveredProject>();
+        }
+
+        // Try to open the shared DB so we can enrich projects with real snapshot data.
+        SqliteRepository? repo = null;
+        try
+        {
+            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                ? config.DbPath
+                : GetDefaultDbPath();
+
+            repo = new SqliteRepository(dbPath);
+        }
+        catch
+        {
+        }
+
+        if (discovered.Count == 0)
+            return new List<ProjectItemViewModel>();
+
+        var items = new List<ProjectItemViewModel>();
+        foreach (var p in discovered)
+        {
+            DateTime? lastSnapshotTime  = p.LastSnapshotTime;
+            long?     lastSnapshotBytes = p.LastSnapshotSizeBytes;
+            List<ProjectSnapshotViewModel>? snapshotVms = null;
+            Project? existingProject = null;
+
+            if (repo != null)
+            {
+                try
+                {
+                    // Use DB snapshot history if the project is registered.
+                    existingProject = repo.GetProjectByName(p.Name);
+                    if (existingProject != null)
+                    {
+                        var snapshots = repo.GetSnapshotsForProject(existingProject.Name)?.ToList();
+                        if (snapshots != null && snapshots.Count > 0)
+                        {
+                            // Assume snapshots are returned newest-first.
+                            var latest = snapshots[0];
+                            lastSnapshotTime  = latest.CreatedUtc;
+                            lastSnapshotBytes = latest.TotalBytes;
+
+                            snapshotVms = snapshots
+                                .Select(s => new ProjectSnapshotViewModel(s.CreatedUtc, s.TotalBytes))
+                                .ToList();
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            var vm = new ProjectItemViewModel
+            {
+                Name         = p.Name,
+                Path         = p.Path,
+                LastSnapshot = lastSnapshotTime ?? default,
+                SizeBytes    = lastSnapshotBytes ?? 0,
+                Preset       = existingProject?.Preset ?? string.Empty
+            };
+            vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path));
+
+            var isRegistered = existingProject is not null;
+
+            // Compute health based on how old the last snapshot is (if any).
+            if (lastSnapshotTime.HasValue)
+            {
+                var age = DateTime.UtcNow - lastSnapshotTime.Value;
+
+                if (age.TotalDays < 1)
+                {
+                    vm.Health    = ProjectHealthStatus.Healthy;
+                    vm.HealthTag = L("Projects.Health.HealthyRecent", "Healthy (<1d)");
+                }
+                else if (age.TotalDays < 7)
+                {
+                    vm.Health    = ProjectHealthStatus.Warning;
+                    vm.HealthTag = L("Projects.Health.OutOfDateShort", "Out of date (>1d)");
+                }
+                else
+                {
+                    vm.Health    = ProjectHealthStatus.OutOfDate;
+                    vm.HealthTag = L("Projects.Health.Stale", "Stale (>7d)");
+                }
+            }
+            else
+            {
+                vm.Health = ProjectHealthStatus.OutOfDate;
+                vm.HealthTag = isRegistered
+                    ? L("Projects.Health.NoSnapshots", "No snapshots yet")
+                    : L("Projects.Health.NotAdded", "Not added");
+            }
+
+            // Populate snapshot history from DB if available; otherwise fall back to discovery values.
+            if (snapshotVms != null && snapshotVms.Count > 0)
+            {
+                vm.SetSnapshots(snapshotVms);
+            }
+            else if (p.LastSnapshotTime.HasValue && p.LastSnapshotSizeBytes.HasValue)
+            {
+                var snapshotVm = new ProjectSnapshotViewModel(
+                    p.LastSnapshotTime.Value,
+                    p.LastSnapshotSizeBytes.Value);
+
+                vm.SetSnapshots(new[] { snapshotVm });
+            }
+            else
+            {
+                vm.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
+            }
+
+            // Mark whether this project is registered in the backup DB.
+            vm.IsRegistered = isRegistered;
+
+            // Auto-detect preset for unregistered projects if none is set yet.
+            if (!isRegistered && string.IsNullOrWhiteSpace(vm.Preset))
+            {
+                var autoPreset = DetectPreset(p.Path);
+                vm.Preset = autoPreset ?? string.Empty;
+            }
+
+            items.Add(vm);
+        }
+
+        return items;
     }
 
     private void SortProjects()
@@ -554,9 +568,8 @@ public class ProjectsViewModel : ViewModelBase
                 ? config.DbPath
                 : GetDefaultDbPath();
 
-            // Open repository and ensure schema exists.
+            // Open repository (schema already initialized at app startup).
             var repo = new SqliteRepository(dbPath);
-            repo.EnsureSchema();
 
             // Look up the project in the DB by name.
             var existing = repo.GetProjectByName(removedProjectName);
@@ -606,9 +619,8 @@ public class ProjectsViewModel : ViewModelBase
             var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
             var fullHash = config.Backups.UseFullSnapshotHash;
 
-            // 2. Open repository and ensure schema exists.
+            // 2. Open repository (schema already initialized at app startup).
             var repo = new SqliteRepository(dbPath);
-            repo.EnsureSchema();
 
             // 3. Check if project is already registered.
             var existing = repo.GetProjectByName(SelectedProject.Name);
@@ -786,7 +798,6 @@ public class ProjectsViewModel : ViewModelBase
                 : GetDefaultDbPath();
 
             var repo = new SqliteRepository(dbPath);
-            repo.EnsureSchema();
 
             var existing = repo.GetProjectByName(SelectedProject.Name);
             if (existing is null)

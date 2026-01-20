@@ -239,6 +239,17 @@ DELETE FROM sqlite_sequence;";
                 new { id });
         }
 
+        public IReadOnlyDictionary<string, int> GetProjectExternalIdMap()
+        {
+            using var c = Open();
+            var rows = c.Query<(int Id, string ExternalId)>(
+                "SELECT id as Id, external_id as ExternalId FROM projects WHERE external_id != '';");
+
+            return rows
+                .Where(row => !string.IsNullOrWhiteSpace(row.ExternalId))
+                .ToDictionary(row => row.ExternalId, row => row.Id, StringComparer.OrdinalIgnoreCase);
+        }
+
         public void RemoveProject(int projectId)
         {
             using var c = Open();
@@ -454,6 +465,17 @@ DELETE FROM sqlite_sequence;";
                 LIMIT 1;
                 """,
                 new { id });
+        }
+
+        public IReadOnlyDictionary<string, int> GetSnapshotExternalIdMap()
+        {
+            using var c = Open();
+            var rows = c.Query<(int Id, string ExternalId)>(
+                "SELECT id as Id, external_id as ExternalId FROM snapshots WHERE external_id != '';");
+
+            return rows
+                .Where(row => !string.IsNullOrWhiteSpace(row.ExternalId))
+                .ToDictionary(row => row.ExternalId, row => row.Id, StringComparer.OrdinalIgnoreCase);
         }
 
         public void UpdateSnapshotExternalId(int snapshotId, string externalId)
@@ -719,6 +741,17 @@ DELETE FROM sqlite_sequence;";
                 new { externalId });
         }
 
+        public IReadOnlyDictionary<string, int> GetBackupExternalIdMap()
+        {
+            using var c = Open();
+            var rows = c.Query<(int Id, string ExternalId)>(
+                "SELECT id as Id, external_id as ExternalId FROM backups WHERE external_id != '';");
+
+            return rows
+                .Where(row => !string.IsNullOrWhiteSpace(row.ExternalId))
+                .ToDictionary(row => row.ExternalId, row => row.Id, StringComparer.OrdinalIgnoreCase);
+        }
+
         public void UpdateBackupExternalId(int backupId, string externalId)
         {
             if (string.IsNullOrWhiteSpace(externalId))
@@ -755,6 +788,34 @@ DELETE FROM sqlite_sequence;";
                 new { pid = projectId });
         }
 
+        public List<Backup> GetLatestBackupsPerProject()
+        {
+            using var c = Open();
+            return c.Query<Backup>(
+                """
+                SELECT
+                  b.id,
+                  b.external_id as ExternalId,
+                  b.project_id  as ProjectId,
+                  b.snapshot_id as SnapshotId,
+                  b.created_utc as CreatedUtc,
+                  b.type,
+                  b.total_bytes as TotalBytes,
+                  b.path,
+                  b.destination_path as DestinationPath,
+                  b.destination_alias as DestinationAlias,
+                  b.is_protected as IsProtected
+                FROM backups b
+                INNER JOIN (
+                  SELECT project_id, MAX(created_utc) as created_utc
+                  FROM backups
+                  GROUP BY project_id
+                ) latest
+                ON b.project_id = latest.project_id AND b.created_utc = latest.created_utc
+                ORDER BY b.created_utc DESC;
+                """).ToList();
+        }
+
         public Backup? GetBackupById(int backupId)
         {
             using var c = Open();
@@ -779,6 +840,38 @@ DELETE FROM sqlite_sequence;";
                 new { id = backupId });
         }
 
+        public IReadOnlyList<Backup> GetRecentBackupsByProject(int limitPerProject)
+        {
+            if (limitPerProject <= 0)
+                return Array.Empty<Backup>();
+
+            using var c = Open();
+            return c.Query<Backup>(
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  is_protected as IsProtected
+                FROM (
+                  SELECT
+                    b.*,
+                    ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY created_utc DESC) as rn
+                  FROM backups b
+                )
+                WHERE rn <= @limit
+                ORDER BY project_id, created_utc DESC;
+                """,
+                new { limit = limitPerProject }).ToList();
+        }
+
         public IEnumerable<Backup> GetBackupsForProject(int projectId)
         {
             using var c = Open();
@@ -801,6 +894,15 @@ DELETE FROM sqlite_sequence;";
                 ORDER BY created_utc DESC;
                 """,
                 new { pid = projectId });
+        }
+
+        public bool HasBackupForSnapshot(int projectId, int snapshotId)
+        {
+            using var c = Open();
+            var hit = c.QueryFirstOrDefault<int?>(
+                "SELECT 1 FROM backups WHERE project_id = @pid AND snapshot_id = @sid LIMIT 1;",
+                new { pid = projectId, sid = snapshotId });
+            return hit.HasValue;
         }
 
         /// <summary>
@@ -880,11 +982,167 @@ DELETE FROM sqlite_sequence;";
             return c.ExecuteScalar<int>("SELECT COUNT(*) FROM backups;");
         }
 
+        public IReadOnlyDictionary<int, long> GetBackupTotalsByProject()
+        {
+            using var c = Open();
+            var rows = c.Query<(int ProjectId, long TotalBytes)>(
+                "SELECT project_id as ProjectId, COALESCE(SUM(total_bytes), 0) as TotalBytes FROM backups GROUP BY project_id;");
+
+            return rows.ToDictionary(row => row.ProjectId, row => row.TotalBytes);
+        }
+
+        private sealed class BackupActivityRow
+        {
+            public long ProjectId { get; init; }
+            public string CreatedUtc { get; init; } = string.Empty;
+            public string Type { get; init; } = string.Empty;
+        }
+
+        public List<(int projectId, DateTime createdUtc, string type)> GetRecentBackups(int limit)
+        {
+            using var c = Open();
+            var rows = c.Query<BackupActivityRow>(
+                """
+                SELECT project_id as ProjectId, created_utc as CreatedUtc, type as Type
+                FROM backups
+                ORDER BY created_utc DESC
+                LIMIT @limit;
+                """,
+                new { limit });
+
+            var result = new List<(int projectId, DateTime createdUtc, string type)>();
+            foreach (var row in rows)
+            {
+                if (!DateTime.TryParse(
+                        row.CreatedUtc,
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                        out var created))
+                {
+                    continue;
+                }
+
+                var projectId = row.ProjectId > int.MaxValue ? int.MaxValue : (int)row.ProjectId;
+                result.Add((projectId, created, row.Type));
+            }
+
+            return result;
+        }
+
+        private sealed class SnapshotActivityRow
+        {
+            public long ProjectId { get; init; }
+            public string CreatedUtc { get; init; } = string.Empty;
+        }
+
+        public List<(int projectId, DateTime createdUtc)> GetRecentSnapshotsWithoutBackup(int limit)
+        {
+            using var c = Open();
+            var rows = c.Query<SnapshotActivityRow>(
+                """
+                SELECT s.project_id as ProjectId, s.created_utc as CreatedUtc
+                FROM snapshots s
+                LEFT JOIN backups b ON b.snapshot_id = s.id
+                WHERE b.id IS NULL
+                ORDER BY s.created_utc DESC
+                LIMIT @limit;
+                """,
+                new { limit });
+
+            var result = new List<(int projectId, DateTime createdUtc)>();
+            foreach (var row in rows)
+            {
+                if (!DateTime.TryParse(
+                        row.CreatedUtc,
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                        out var created))
+                {
+                    continue;
+                }
+
+                var projectId = row.ProjectId > int.MaxValue ? int.MaxValue : (int)row.ProjectId;
+                result.Add((projectId, created));
+            }
+
+            return result;
+        }
+
+        private sealed class BackupCountRow
+        {
+            public string Day { get; init; } = string.Empty;
+            public long Count { get; init; }
+        }
+
+        public IReadOnlyDictionary<DateTime, int> GetBackupCountsByDay(DateTime fromUtc, DateTime toUtc)
+        {
+            using var c = Open();
+            var rows = c.Query<BackupCountRow>(
+                """
+                SELECT substr(created_utc, 1, 10) as Day, COUNT(*) as Count
+                FROM backups
+                WHERE created_utc >= @from AND created_utc <= @to
+                GROUP BY Day
+                ORDER BY Day;
+                """,
+                new
+                {
+                    from = fromUtc.ToString("u", CultureInfo.InvariantCulture),
+                    to   = toUtc.ToString("u", CultureInfo.InvariantCulture)
+                });
+
+            var result = new Dictionary<DateTime, int>();
+            foreach (var row in rows)
+            {
+                if (!DateTime.TryParseExact(
+                        row.Day,
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                        out var day))
+                {
+                    continue;
+                }
+
+                if (row.Count > int.MaxValue)
+                    result[day.Date] = int.MaxValue;
+                else
+                    result[day.Date] = (int)row.Count;
+            }
+
+            return result;
+        }
+
     public long GetTotalBackupBytes()
     {
         using var c = Open();
         return c.ExecuteScalar<long>("SELECT COALESCE(SUM(total_bytes), 0) FROM backups;");
     }
+
+        public IReadOnlyDictionary<int, DateTime> GetLatestBackupUtcByProject()
+        {
+            using var c = Open();
+            var rows = c.Query<(int ProjectId, string LatestUtc)>(
+                "SELECT project_id as ProjectId, MAX(created_utc) as LatestUtc FROM backups GROUP BY project_id;");
+
+            var result = new Dictionary<int, DateTime>();
+            foreach (var row in rows)
+            {
+                if (string.IsNullOrWhiteSpace(row.LatestUtc))
+                    continue;
+
+                if (DateTime.TryParse(
+                        row.LatestUtc,
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                        out var parsed))
+                {
+                    result[row.ProjectId] = parsed;
+                }
+            }
+
+            return result;
+        }
 
     private void EnsureColumnExists(string table, string column, string alterSql)
     {

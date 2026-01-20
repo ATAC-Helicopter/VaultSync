@@ -129,10 +129,10 @@ public sealed class MetadataSyncService
         var config = AppConfigStore.Load();
         var localProjects = _repo.GetAllProjects().ToList();
 
-        foreach (var p in localProjects)
+        var projectExternalMap = _repo.GetProjectExternalIdMap();
+        foreach (var pair in projectExternalMap)
         {
-            if (!string.IsNullOrWhiteSpace(p.ExternalId))
-                projectMap[p.ExternalId] = p.Id;
+            projectMap[pair.Key] = pair.Value;
         }
 
         IEnumerable<MetaProject> metaProjects;
@@ -199,6 +199,12 @@ public sealed class MetadataSyncService
             importedProjects++;
         }
 
+        var snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
+        foreach (var pair in snapshotExternalMap)
+        {
+            snapshotMap[pair.Key] = pair.Value;
+        }
+
         foreach (var metaSnapshot in metaSnapshots)
         {
             if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
@@ -207,12 +213,8 @@ public sealed class MetadataSyncService
             if (!projectMap.TryGetValue(metaSnapshot.ProjectExternalId, out var projectId))
                 continue;
 
-            var existing = _repo.GetSnapshotByExternalId(metaSnapshot.ExternalId);
-            if (existing != null)
-            {
-                snapshotMap[metaSnapshot.ExternalId] = existing.Id;
+            if (snapshotMap.ContainsKey(metaSnapshot.ExternalId))
                 continue;
-            }
 
             var id = _repo.CreateSnapshotFromMetadata(
                 metaSnapshot.ExternalId,
@@ -225,6 +227,7 @@ public sealed class MetadataSyncService
             importedSnapshots++;
         }
 
+        var backupExternalMap = _repo.GetBackupExternalIdMap();
         foreach (var metaBackup in metaBackups)
         {
             if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
@@ -235,19 +238,10 @@ public sealed class MetadataSyncService
 
             if (!snapshotMap.TryGetValue(metaBackup.SnapshotExternalId, out var snapshotId))
             {
-                var existingSnapshot = _repo.GetSnapshotByExternalId(metaBackup.SnapshotExternalId);
-                if (existingSnapshot != null)
-                {
-                    snapshotId = existingSnapshot.Id;
-                }
-                else
-                {
-                    continue;
-                }
+                continue;
             }
 
-            var existing = _repo.GetBackupByExternalId(metaBackup.ExternalId);
-            if (existing != null)
+            if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
                 continue;
 
             _repo.CreateBackupFromMetadata(
@@ -271,10 +265,9 @@ public sealed class MetadataSyncService
 
             if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
             {
-                var existing = _repo.GetBackupByExternalId(tombstone.EntityId);
-                if (existing != null)
+                if (backupExternalMap.TryGetValue(tombstone.EntityId, out var existingId))
                 {
-                    _repo.DeleteBackupById(existing.Id);
+                    _repo.DeleteBackupById(existingId);
                     appliedTombstones++;
                 }
             }
@@ -300,9 +293,7 @@ public sealed class MetadataSyncService
         if (projectMap.Count == 0)
             return;
 
-        var localLatestByProject = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
-            .GroupBy(b => b.ProjectId)
-            .ToDictionary(g => g.Key, g => g.Max(b => b.CreatedUtc));
+        var localLatestByProject = _repo.GetLatestBackupUtcByProject();
 
         var importedLatestByExternalId = metaBackups
             .Where(b => !string.IsNullOrWhiteSpace(b.ProjectExternalId))
@@ -353,11 +344,10 @@ public sealed class MetadataSyncService
 
         var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var localProjects = _repo.GetAllProjects().ToList();
-
-        foreach (var p in localProjects)
+        var projectExternalMap = _repo.GetProjectExternalIdMap();
+        foreach (var pair in projectExternalMap)
         {
-            if (!string.IsNullOrWhiteSpace(p.ExternalId))
-                projectMap[p.ExternalId] = p.Id;
+            projectMap[pair.Key] = pair.Value;
         }
 
         IEnumerable<MetaProject> metaProjects;
@@ -409,6 +399,7 @@ public sealed class MetadataSyncService
             projectMap[metaProject.ExternalId] = -1;
         }
 
+        var snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
         foreach (var metaSnapshot in metaSnapshots)
         {
             if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
@@ -417,13 +408,13 @@ public sealed class MetadataSyncService
             if (!projectMap.ContainsKey(metaSnapshot.ProjectExternalId))
                 continue;
 
-            var existing = _repo.GetSnapshotByExternalId(metaSnapshot.ExternalId);
-            if (existing != null)
+            if (snapshotExternalMap.ContainsKey(metaSnapshot.ExternalId))
                 continue;
 
             addSnapshots++;
         }
 
+        var backupExternalMap = _repo.GetBackupExternalIdMap();
         foreach (var metaBackup in metaBackups)
         {
             if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
@@ -432,8 +423,7 @@ public sealed class MetadataSyncService
             if (!projectMap.ContainsKey(metaBackup.ProjectExternalId))
                 continue;
 
-            var existing = _repo.GetBackupByExternalId(metaBackup.ExternalId);
-            if (existing != null)
+            if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
                 continue;
 
             addBackups++;
@@ -446,8 +436,7 @@ public sealed class MetadataSyncService
 
             if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
             {
-                var existing = _repo.GetBackupByExternalId(tombstone.EntityId);
-                if (existing != null)
+                if (backupExternalMap.ContainsKey(tombstone.EntityId))
                 {
                     deleteBackups++;
                 }

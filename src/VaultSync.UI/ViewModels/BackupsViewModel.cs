@@ -131,6 +131,9 @@ namespace VaultSync.UI.ViewModels
         public bool HasDestinationStatuses => DestinationStatuses.Count > 0;
 
         private int _diskUsageInFlight;
+        private int _refreshSnapshotsInFlight;
+        private int _refreshSnapshotsQueued;
+        private bool _refreshSnapshotsForceResetQueued;
 
         // Currently selected project in the per-project list
         private ProjectBackupItem? _selectedProject;
@@ -808,6 +811,15 @@ namespace VaultSync.UI.ViewModels
 
         private void RefreshSnapshotsView(bool forceResetCompare = false)
         {
+            if (Interlocked.Exchange(ref _refreshSnapshotsInFlight, 1) == 1)
+            {
+                _refreshSnapshotsForceResetQueued |= forceResetCompare;
+                Interlocked.Exchange(ref _refreshSnapshotsQueued, 1);
+                return;
+            }
+
+            try
+            {
             IEnumerable<BackupSnapshotItem> source = _allSnapshots;
 
             // Type filter
@@ -833,6 +845,17 @@ namespace VaultSync.UI.ViewModels
 
             ReplaceSnapshots(filteredList, forceResetCompare);
             RebuildSnapshotGroups(filteredList);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _refreshSnapshotsInFlight, 0);
+                if (Interlocked.Exchange(ref _refreshSnapshotsQueued, 0) == 1)
+                {
+                    var queuedForceReset = _refreshSnapshotsForceResetQueued;
+                    _refreshSnapshotsForceResetQueued = false;
+                    RefreshSnapshotsView(queuedForceReset);
+                }
+            }
         }
 
         private void RebuildSnapshotGroups(IReadOnlyList<BackupSnapshotItem> filtered)
@@ -1002,8 +1025,9 @@ namespace VaultSync.UI.ViewModels
                         }
                     });
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"[Backups] Disk usage refresh failed: {ex.Message}");
                     Dispatcher.UIThread.Post(() =>
                     {
                         UpdateBackupDiskUsage(

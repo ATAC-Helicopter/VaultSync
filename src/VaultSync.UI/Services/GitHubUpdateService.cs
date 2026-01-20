@@ -70,6 +70,8 @@ namespace VaultSync.UI.Services
         private static readonly object s_releaseCacheLock = new();
         private static string? s_releaseEtag;
         private static List<GitHubRelease>? s_releaseCache;
+        private static DateTimeOffset? s_releaseCacheTimestamp;
+        private static readonly TimeSpan s_releaseCacheTtl = TimeSpan.FromMinutes(5);
 
         public async Task<UpdateCheckResult?> CheckForUpdateAsync(
             string currentVersion,
@@ -204,6 +206,16 @@ namespace VaultSync.UI.Services
             var releases = new List<GitHubRelease>();
             var useCache = false;
 
+            lock (s_releaseCacheLock)
+            {
+                if (s_releaseCache is { Count: > 0 } &&
+                    s_releaseCacheTimestamp.HasValue &&
+                    (DateTimeOffset.UtcNow - s_releaseCacheTimestamp.Value) <= s_releaseCacheTtl)
+                {
+                    return new List<GitHubRelease>(s_releaseCache);
+                }
+            }
+
             for (var page = 1; page <= MaxReleasePages; page++)
             {
                 var endpoint = $"{ReleasesEndpointBase}?per_page={ReleasesPerPage}&page={page}";
@@ -257,6 +269,7 @@ namespace VaultSync.UI.Services
                     {
                         s_releaseEtag = responseEtag;
                         s_releaseCache = new List<GitHubRelease>(releases);
+                        s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
                     }
                 }
 
@@ -275,6 +288,7 @@ namespace VaultSync.UI.Services
                 lock (s_releaseCacheLock)
                 {
                     s_releaseCache = new List<GitHubRelease>(releases);
+                    s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
                 }
             }
 

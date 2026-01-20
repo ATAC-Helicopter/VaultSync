@@ -246,21 +246,18 @@ namespace VaultSync.UI.ViewModels
                         : GetDefaultDbPath();
 
                     var repo = new SqliteRepository(dbPath);
-                    repo.EnsureSchema();
 
                     var projects = repo.GetAllProjects().ToList();
-                    var allBackups = repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
-                    var allSnapshots = repo.GetAllSnapshots().ToList();
+                    var backupCount = repo.GetBackupCount();
 
-                    var weekAgoUtc = DateTime.UtcNow.AddDays(-7);
-                    var backupsThisWeek = allBackups.Where(b => b.CreatedUtc >= weekAgoUtc).ToList();
+                    var startDate = DateTime.UtcNow.Date.AddDays(-6);
+                    var endDate = DateTime.UtcNow;
+                    var backupCountsByDay = repo.GetBackupCountsByDay(startDate, endDate);
 
                     // Storage slices: total backups per project
                     long totalLatestBytes = 0;
                     var storageSlices = new List<(Project project, long bytes)>();
-                    var backupsByProject = allBackups
-                        .GroupBy(b => b.ProjectId)
-                        .ToDictionary(g => g.Key, g => g.Sum(b => b.TotalBytes));
+                    var backupsByProject = repo.GetBackupTotalsByProject();
 
                     foreach (var p in projects)
                     {
@@ -271,25 +268,6 @@ namespace VaultSync.UI.ViewModels
                         storageSlices.Add((p, projectTotal));
                     }
 
-                    // Activity list (newest first)
-                    var activities = new List<(int? ProjectId, DateTime WhenUtc, string Subtitle)>();
-                    foreach (var b in allBackups)
-                    {
-                        var subtitle = string.Equals(b.Type, "auto", StringComparison.OrdinalIgnoreCase)
-                            ? "auto"
-                            : "manual";
-                        activities.Add((b.ProjectId, b.CreatedUtc, subtitle));
-                    }
-                    var snapshotIdsWithBackup = new HashSet<int>(allBackups.Select(x => x.SnapshotId));
-                    foreach (var s in allSnapshots)
-                    {
-                        if (snapshotIdsWithBackup.Contains(s.Id))
-                            continue;
-                        activities.Add((s.ProjectId, s.CreatedUtc, "snapshot"));
-                    }
-
-                    // Backup chart data
-                    var startDate = DateTime.UtcNow.Date.AddDays(-6);
                     var dayLabels = new string[_days.Length];
                     for (var i = 0; i < dayLabels.Length; i++)
                     {
@@ -298,12 +276,28 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     var counts = new double[_snapshotCountsByDay.Length];
-                    foreach (var b in backupsThisWeek)
+                    for (var i = 0; i < counts.Length; i++)
                     {
-                        var dayIndex = (int)(b.CreatedUtc.Date - startDate).TotalDays;
-                        if (dayIndex < 0 || dayIndex >= counts.Length)
-                            continue;
-                        counts[dayIndex]++;
+                        var d = startDate.AddDays(i);
+                        if (backupCountsByDay.TryGetValue(d, out var count))
+                            counts[i] = count;
+                    }
+
+                    // Activity list (newest first)
+                    var activities = new List<(int? ProjectId, DateTime WhenUtc, string Subtitle)>();
+                    var recentBackups = repo.GetRecentBackups(12);
+                    foreach (var b in recentBackups)
+                    {
+                        var subtitle = string.Equals(b.type, "auto", StringComparison.OrdinalIgnoreCase)
+                            ? "auto"
+                            : "manual";
+                        activities.Add((b.projectId, b.createdUtc, subtitle));
+                    }
+
+                    var recentSnapshots = repo.GetRecentSnapshotsWithoutBackup(12);
+                    foreach (var s in recentSnapshots)
+                    {
+                        activities.Add((s.projectId, s.createdUtc, "snapshot"));
                     }
 
                     return new DashboardData
@@ -311,11 +305,11 @@ namespace VaultSync.UI.ViewModels
                         Config = cfg,
                         DiskUsage = diskUsage,
                         Projects = projects,
-                        Backups = allBackups,
                         Activities = activities,
                         StorageSlices = storageSlices,
                         TotalLatestBytes = totalLatestBytes,
-                        BackupsThisWeekCount = backupsThisWeek.Count,
+                        BackupCount = backupCount,
+                        BackupsThisWeekCount = (int)counts.Sum(),
                         DayLabels = dayLabels,
                         SnapshotCounts = counts
                     };
@@ -328,7 +322,7 @@ namespace VaultSync.UI.ViewModels
                 BackupDiskIsBelowThreshold = data.DiskUsage.IsBelowThreshold;
 
                 ProjectCount = data.Projects.Count;
-                SnapshotCount = data.Backups.Count;
+                SnapshotCount = data.BackupCount;
                 _backupsThisWeekCount = data.BackupsThisWeekCount;
                 SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
 
@@ -355,7 +349,7 @@ namespace VaultSync.UI.ViewModels
                     : L("Dashboard.Hint.StorageTotal", "Total across all backups");
 
                 // Activity
-                ActivityItems.Clear();
+                var activityItems = new List<ActivityItem>();
                 var projectPalette = new[]
                 {
                     Color.Parse("#4C8DFF"),
@@ -367,8 +361,7 @@ namespace VaultSync.UI.ViewModels
                 var projectDotBrushes = new Dictionary<int, IBrush>();
                 var paletteIndex = 0;
 
-                async Task<IBrush> CreateBrushAsync(Color color) =>
-                    await Dispatcher.UIThread.InvokeAsync(() => (IBrush)new SolidColorBrush(color));
+                IBrush GetBrush(Color color) => new ImmutableSolidColorBrush(color);
 
                 foreach (var a in data.Activities
                              .OrderByDescending(a => a.WhenUtc)
@@ -392,25 +385,26 @@ namespace VaultSync.UI.ViewModels
                     IBrush dotBrush;
                     if (project != null)
                     {
-                        if (projectDotBrushes.TryGetValue(project.Id, out var cached))
-                        {
-                            dotBrush = cached ?? await CreateBrushAsync(Colors.Gray);
-                        }
-                        else
+                        if (!projectDotBrushes.TryGetValue(project.Id, out dotBrush!))
                         {
                             var color = projectPalette[paletteIndex % projectPalette.Length];
-                            dotBrush = await CreateBrushAsync(color);
+                            dotBrush = GetBrush(color);
                             projectDotBrushes[project.Id] = dotBrush;
                             paletteIndex++;
                         }
                     }
                     else
                     {
-                        dotBrush = await CreateBrushAsync(Colors.Gray);
+                        dotBrush = GetBrush(Colors.Gray);
                     }
 
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                        ActivityItems.Add(new ActivityItem(title, subtitle, when, dotBrush)));
+                    activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush));
+                }
+
+                ActivityItems.Clear();
+                foreach (var item in activityItems)
+                {
+                    ActivityItems.Add(item);
                 }
 
                 // Backup chart
@@ -433,6 +427,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[Dashboard] Refresh failed: {ex.Message}");
                 BuildDemoSeriesIfNeeded();
             }
         }
@@ -442,10 +437,10 @@ namespace VaultSync.UI.ViewModels
             public AppConfig Config { get; init; } = new();
             public (double UsedPercent, string FreeText, string ThresholdText, bool IsBelowThreshold) DiskUsage;
             public List<Project> Projects { get; init; } = new();
-            public List<Backup> Backups { get; init; } = new();
             public List<(int? ProjectId, DateTime WhenUtc, string Subtitle)> Activities { get; init; } = new();
             public List<(Project project, long bytes)> StorageSlices { get; init; } = new();
             public long TotalLatestBytes { get; init; }
+            public int BackupCount { get; init; }
             public int BackupsThisWeekCount { get; init; }
             public string[] DayLabels { get; init; } = Array.Empty<string>();
             public double[] SnapshotCounts { get; init; } = Array.Empty<double>();
@@ -779,6 +774,7 @@ namespace VaultSync.UI.ViewModels
     }
     catch (Exception ex)
     {
+        Console.WriteLine($"[Dashboard] Backup usage bar failed: {ex.Message}");
 
         BackupUsageSegments = Array.Empty<BackupUsageSegment>();
         BackupUsageSeries   = Array.Empty<ISeries>();

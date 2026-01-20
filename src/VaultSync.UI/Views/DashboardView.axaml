@@ -87,16 +87,17 @@
                 <ProgressBar Minimum="0"
                              Maximum="100"
                              Value="{Binding BackupDiskUsedPercent}"
-                               Height="12"
-                               Margin="0"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Background="{DynamicResource Surface2}"/>
+                             Height="12"
+                             Margin="0"
+                             Foreground="{DynamicResource TextSecondaryBrush}"
+                             Background="{DynamicResource Surface2}"
+                             IsVisible="{Binding HasBackupUsageSegments, Converter={StaticResource BoolInvertConverter}}"/>
                 <!-- Stacked row chart overlay: breakdown of used space (Other + VaultSync projects) -->
                 <lvc:CartesianChart
                     Series="{Binding BackupUsageSeries}"
                     XAxes="{Binding BackupUsageXAxes}"
                     YAxes="{Binding BackupUsageYAxes}"
-                    Background="Transparent"
+                    Background="{DynamicResource ItemBg}"
                     IsVisible="{Binding HasBackupUsageSegments}"
                     LegendPosition="Hidden"
                     Height="12"

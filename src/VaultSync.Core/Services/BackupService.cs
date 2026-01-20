@@ -325,6 +325,14 @@ public sealed class BackupService
             filesForProgress = null;
         }
 
+        string[]? filesForBackup = null;
+        if (filesForProgress is { Count: > 0 })
+        {
+            filesForBackup = filesForProgress
+                .Select(f => Path.Combine(project.RootPath, f.RelPath))
+                .ToArray();
+        }
+
         Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
 
         string? linkDest = null;
@@ -355,6 +363,7 @@ public sealed class BackupService
                     backupFolder,
                     totalBytes,
                     totalFilesForProgress,
+                    filesForBackup,
                     progressCallback,
                     linkedToken,
                     uploadBufferBytes,
@@ -407,7 +416,7 @@ public sealed class BackupService
                 long bytes = 0;
                 try
                 {
-                    CopyDirectoryRecursive(project.RootPath, backupFolder, project.Preset, ref bytes, progressCallback, linkedToken);
+                    CopyDirectoryRecursive(project.RootPath, backupFolder, project.Preset, filesForBackup, ref bytes, progressCallback, linkedToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -951,6 +960,7 @@ public sealed class BackupService
         string destDir,
         long totalBytes,
         int totalFiles,
+        IReadOnlyList<string>? filesForBackup,
         Action<double, string, string>? progressCallback,
         CancellationToken ct,
         int uploadBufferBytes,
@@ -967,9 +977,7 @@ public sealed class BackupService
         var filter = FilterService.FromPresetAndLocal(sourceDir, project.Preset);
 
         // 2. Gather all files that will be archived.
-        var allFiles = Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories)
-            .Where(path => !filter.ShouldExclude(sourceDir, path))
-            .ToArray();
+        var allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
         var archiveTotalFiles = totalFiles > 0 ? totalFiles : allFiles.Length;
 
         // 3. Prepare destination and local temp folder.
@@ -1632,12 +1640,10 @@ public sealed class BackupService
 
         try
         {
-            foreach (var filePath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+            var allFiles = BuildFilteredFileList(sourceDir, filter, ct);
+            foreach (var filePath in allFiles)
             {
                 ct.ThrowIfCancellationRequested();
-
-                if (filter.ShouldExclude(sourceDir, filePath))
-                    continue;
 
                 try
                 {
@@ -1662,10 +1668,27 @@ public sealed class BackupService
         return total;
     }
 
+    private static string[] BuildFilteredFileList(string sourceDir, FilterService filter, CancellationToken ct)
+    {
+        var files = new List<string>();
+        foreach (var filePath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (filter.ShouldExclude(sourceDir, filePath))
+                continue;
+
+            files.Add(filePath);
+        }
+
+        return files.ToArray();
+    }
+
     private static void CopyDirectoryRecursive(
         string sourceDir,
         string destDir,
         string preset,
+        IReadOnlyList<string>? filesForBackup,
         ref long totalBytes,
         Action<double, string, string>? progressCallback,
         CancellationToken ct)
@@ -1679,9 +1702,7 @@ public sealed class BackupService
 
         // Get all files up front so we can compute a simple percent and ETA, applying
         // the same vaultsyncignore-style filtering used by SnapshotService.
-        var allFiles = Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories)
-            .Where(path => !filter.ShouldExclude(sourceDir, path))
-            .ToArray();
+        var allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
         var totalFiles     = allFiles.Length;
         var processedFiles = 0;
         var startTime      = DateTime.UtcNow;
@@ -1817,6 +1838,17 @@ public sealed class BackupService
         var unprotected = backups.Where(b => !b.IsProtected).ToList();
         var toRemove = unprotected.Skip(maxToKeep).ToList();
 
+        var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
+        var projectName = project?.Name;
+        var snapshotRefs = new Dictionary<int, int>();
+        foreach (var backup in backups)
+        {
+            if (snapshotRefs.TryGetValue(backup.SnapshotId, out var count))
+                snapshotRefs[backup.SnapshotId] = count + 1;
+            else
+                snapshotRefs[backup.SnapshotId] = 1;
+        }
+
         foreach (var backup in toRemove)
         {
             try
@@ -1853,30 +1885,18 @@ public sealed class BackupService
             {
                 BackupRetentionDeleted?.Invoke(backup);
                 _repo.DeleteBackupById(backup.Id);
-                MaybeDeleteSnapshotIfOrphan(projectId, backup.SnapshotId);
+                if (projectName != null &&
+                    snapshotRefs.TryGetValue(backup.SnapshotId, out var remaining) &&
+                    remaining <= 1)
+                {
+                    _repo.DeleteSnapshotsById(projectName, new[] { backup.SnapshotId });
+                    snapshotRefs.Remove(backup.SnapshotId);
+                }
+                else if (snapshotRefs.TryGetValue(backup.SnapshotId, out var count) && count > 1)
+                {
+                    snapshotRefs[backup.SnapshotId] = count - 1;
+                }
             }
-        }
-    }
-
-    private void MaybeDeleteSnapshotIfOrphan(int projectId, int snapshotId)
-    {
-        try
-        {
-            // If any other backup still references this snapshot, keep it.
-            var remaining = _repo.GetBackupsForProject(projectId)
-                .Any(b => b.SnapshotId == snapshotId);
-            if (remaining)
-                return;
-
-            var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
-            if (project is null)
-                return;
-
-            _repo.DeleteSnapshotsById(project.Name, new[] { snapshotId });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[BackupService] Failed to delete orphan snapshot (projectId={projectId}, snapshotId={snapshotId}): {ex.Message}");
         }
     }
 
