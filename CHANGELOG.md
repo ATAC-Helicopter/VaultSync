@@ -13,10 +13,16 @@
 - Tray recent backups now uses a single batched query instead of per-project scans.
 - Backups history reload now coalesces repeated requests and avoids UI-thread blocking for open-folder resolution.
 - Snapshot cleanup now checks for remaining backups with a targeted query instead of loading full project history.
+- Projects page detail panel refreshed with a modern preset control and tightened stat cards.
+- Projects page preset dropdown and recent snapshots list refreshed for consistency.
 ### Fixed
 - Windows release publishes default to self-contained `win-x64` to avoid missing runtime prompts.
 - Startup crash in backup path normalization (Dapper materialization) resolved.
 - Dashboard backup storage card no longer shows a stale/translucent bar behind the usage segments.
+- Projects page All Projects panel now uses a dedicated scroll region so the list reaches the end without clipping.
+- Projects page shows "Not added" for unregistered projects with no snapshots.
+- Projects page uses latest backup timestamps (including imported) to avoid stale health when snapshots lag behind.
+- Projects page date labels now use ASCII separators to avoid missing glyphs.
 
 ## [1.3.2] - 18.01.2026
 ### Added

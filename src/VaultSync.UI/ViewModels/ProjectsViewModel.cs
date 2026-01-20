@@ -276,6 +276,16 @@ public class ProjectsViewModel : ViewModelBase
                     if (existingProject != null)
                     {
                         var snapshots = repo.GetSnapshotsForProject(existingProject.Name)?.ToList();
+                        Backup? latestBackup = null;
+
+                        try
+                        {
+                            latestBackup = repo.GetLatestBackupForProject(existingProject.Id);
+                        }
+                        catch
+                        {
+                        }
+
                         if (snapshots != null && snapshots.Count > 0)
                         {
                             // Assume snapshots are returned newest-first.
@@ -286,6 +296,13 @@ public class ProjectsViewModel : ViewModelBase
                             snapshotVms = snapshots
                                 .Select(s => new ProjectSnapshotViewModel(s.CreatedUtc, s.TotalBytes))
                                 .ToList();
+                        }
+
+                        if (latestBackup != null &&
+                            (!lastSnapshotTime.HasValue || latestBackup.CreatedUtc > lastSnapshotTime.Value))
+                        {
+                            lastSnapshotTime  = latestBackup.CreatedUtc;
+                            lastSnapshotBytes = latestBackup.TotalBytes;
                         }
                     }
                 }
@@ -1221,13 +1238,17 @@ public class ProjectItemViewModel : ViewModelBase
 
     public string LastSnapshotSummary =>
         LastSnapshot == default
-            ? L("Projects.LastSnapshot.None", "No snapshots yet")
+            ? (IsRegistered
+                ? L("Projects.LastSnapshot.None", "No snapshots yet")
+                : L("Projects.Health.NotAdded", "Not added"))
             : LastSnapshot.ToString("g", CultureInfo.CurrentCulture);
 
     public string LastSnapshotShort =>
         LastSnapshot == default
-            ? L("Projects.LastSnapshot.NoneShort", "No snapshots yet")
-            : LastSnapshot.ToString("ddd · HH:mm", CultureInfo.CurrentCulture);
+            ? (IsRegistered
+                ? L("Projects.LastSnapshot.NoneShort", "No snapshots yet")
+                : L("Projects.Health.NotAdded", "Not added"))
+            : LastSnapshot.ToString("ddd - HH:mm", CultureInfo.CurrentCulture);
 
     public string DaysSinceLastSnapshotDisplay
     {
@@ -1349,7 +1370,7 @@ public sealed class ProjectSnapshotViewModel
     /// </summary>
     public string TrendColor { get; set; } = "#2F3650";
 
-    public string DateDisplay => Timestamp.ToString("dd/MM/yyyy · HH:mm");
+    public string DateDisplay => Timestamp.ToString("dd/MM/yyyy - HH:mm", CultureInfo.CurrentCulture);
 
     public string SizeDisplay => FormatSize(SizeBytes);
 

@@ -35,6 +35,33 @@
       <Setter Property="MaxDropDownHeight" Value="240" />
     </Style>
 
+    <Style Selector="ComboBox.preset-combo /template/ Popup Border">
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBox">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="Padding" Value="6" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem">
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="Margin" Value="2" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CardRaisedBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem:selected">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}" />
+    </Style>
+
     <!-- Custom container template for project list items -->
     <Style Selector="#ProjectList ListBoxItem">
       <Setter Property="Template">
@@ -58,28 +85,24 @@
     </Style>
   </UserControl.Styles>
 
-  <ScrollViewer VerticalScrollBarVisibility="Auto"
-                HorizontalScrollBarVisibility="Disabled"
-                Padding="32,24,32,24">
+  <Border Padding="32,24,32,24">
+    <Grid RowDefinitions="Auto,*"
+          RowSpacing="16"
+          MaxWidth="2200"
+          HorizontalAlignment="Stretch">
 
-    <!-- Stretch across available width while keeping a generous cap. -->
-    <Grid MaxWidth="2200"
-          HorizontalAlignment="Stretch"
-          RowDefinitions="Auto,Auto"
-          RowSpacing="16">
+    <controls:NotificationCard
+        Grid.Row="0"
+        Margin="0,0,0,12"
+        DataContext="{Binding Notification}" />
 
-      <controls:NotificationCard
-          Grid.Row="0"
-          Margin="0,0,0,12"
-          DataContext="{Binding Notification}" />
-
-      <!-- Inner content -->
-      <Grid Grid.Row="1">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="3*" />
-          <ColumnDefinition Width="32" />
-          <ColumnDefinition Width="4*" />
-        </Grid.ColumnDefinitions>
+    <!-- Inner content -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="3*" />
+        <ColumnDefinition Width="32" />
+        <ColumnDefinition Width="4*" />
+      </Grid.ColumnDefinitions>
 
       <!-- LEFT: All projects card -->
       <Border Grid.Column="0"
@@ -138,7 +161,10 @@
           </Grid>
 
           <!-- Projects list -->
-          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Grid.Row="2"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled"
+                        Padding="0,0,0,8">
             <ListBox
               x:Name="ProjectList"
               ItemsSource="{Binding Projects}"
@@ -147,9 +173,9 @@
               BorderThickness="0"
               HorizontalAlignment="Stretch">
 
-              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
                     <!-- Name + last snapshot short + size + avatar -->
                     <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                       <Grid Grid.Column="0"
@@ -228,7 +254,8 @@
       </Border>
 
       <!-- RIGHT: details + stats -->
-      <Border Grid.Column="2"
+      <Border x:Name="ProjectDetailsCard"
+              Grid.Column="2"
               Background="{DynamicResource SurfaceCardBrush}"
               CornerRadius="24"
               Padding="24"
@@ -251,16 +278,16 @@
               <TextBlock Text="{Binding AvatarInitials}"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center"
-                         FontWeight="SemiBold"
-                         FontSize="16"
+                         FontWeight="Normal"
+                         FontSize="12"
                          Foreground="White"/>
             </Grid>
 
             <StackPanel Grid.Column="1">
               <TextBlock
                 Text="{Binding Name}"
-                FontSize="22"
-                FontWeight="SemiBold"
+                FontSize="24"
+                FontWeight="Bold"
                 Foreground="{DynamicResource TextPrimaryBrush}"
                 TextWrapping="NoWrap"
                 TextTrimming="CharacterEllipsis" />
@@ -270,7 +297,7 @@
                     Foreground="{DynamicResource TextMutedBrush}"
                     TextWrapping="NoWrap"
                     TextTrimming="CharacterEllipsis">
-                    <Run Text="{infra:LocalizedString Key=Projects.Label.Location}" />
+                    <Run Text="{infra:LocalizedString Key=Projects.Label.Location}" FontWeight="SemiBold" />
                     <Run Text=" " />
                     <Run Text="{Binding Path}" />
                   </TextBlock>
@@ -313,18 +340,20 @@
             <Border CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="10">
-              <StackPanel Spacing="4">
+              <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
+                           FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap"
                            TextTrimming="None" />
                 <ComboBox
+                    Grid.Row="1"
                     Classes="preset-combo"
                     ItemsSource="{Binding DataContext.AvailablePresets, ElementName=Root}"
                     SelectedItem="{Binding Preset, Mode=TwoWay}"
                     HorizontalAlignment="Stretch" />
-              </StackPanel>
+              </Grid>
             </Border>
 
             <!-- Health -->
@@ -397,10 +426,13 @@
                   CornerRadius="18"
                   Background="{DynamicResource CardBackgroundBrush}"
                   Padding="16">
-            <StackPanel Spacing="12">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
+                  RowSpacing="12">
 
               <!-- Top metrics -->
-              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+              <Grid Grid.Row="0"
+                    ColumnDefinitions="*,*,*,*"
+                    ColumnSpacing="12">
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
                         Padding="10">
@@ -469,12 +501,14 @@
                 </Border>
               </Grid>
 
-              <Border Margin="0,6,0,0"
+              <Border Grid.Row="1"
+                      Margin="0,6,0,0"
                       Height="1"
                       Background="{DynamicResource DividerBrush}" />
 
               <!-- Snapshot size trend -->
-              <StackPanel Spacing="10">
+              <StackPanel Grid.Row="2"
+                          Spacing="10">
 
                 <TextBlock
                   Text="{infra:LocalizedString Key=Projects.Stat.SnapshotTrend}"
@@ -577,52 +611,73 @@
 
               </StackPanel>
 
-              <Border Margin="0,6,0,0"
+              <Border Grid.Row="3"
+                      Margin="0,6,0,0"
                       Height="1"
                       Background="{DynamicResource DividerBrush}" />
 
               <!-- Recent snapshots list -->
-              <StackPanel Spacing="8">
-                <TextBlock
-                  Text="{infra:LocalizedString Key=Projects.Stat.RecentSnapshots}"
-                  FontSize="13"
-                  FontWeight="SemiBold"
-                  Foreground="{DynamicResource TextPrimaryBrush}" />
+              <Border Grid.Row="4"
+                      CornerRadius="18"
+                      Background="{DynamicResource CardRaisedBackgroundBrush}"
+                      Padding="12">
+                <Grid RowDefinitions="Auto,*"
+                      RowSpacing="8">
+                  <TextBlock
+                    Grid.Row="0"
+                    Text="{infra:LocalizedString Key=Projects.Stat.RecentSnapshots}"
+                    FontSize="13"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              MaxHeight="220">
-                  <ItemsControl ItemsSource="{Binding SnapshotHistory}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,2">
-                          <TextBlock
-                            Grid.Column="0"
-                            Text="{Binding DateDisplay}"
-                            FontSize="12"
-                            Foreground="{DynamicResource TextSecondaryBrush}"
-                            TextTrimming="CharacterEllipsis"
-                            TextWrapping="NoWrap" />
-                          <TextBlock
-                            Grid.Column="1"
-                            Text="{Binding SizeDisplay}"
-                            FontSize="12"
-                            FontWeight="SemiBold"
-                            Foreground="{DynamicResource TextPrimaryBrush}"
-                            TextTrimming="CharacterEllipsis"
-                            TextWrapping="NoWrap" />
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
-              </StackPanel>
+                  <ScrollViewer Grid.Row="1"
+                                VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding SnapshotHistory}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="12"
+                                  Background="{DynamicResource CardBackgroundBrush}"
+                                  Margin="0,4,0,0"
+                                  Padding="10">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                              <Border Width="6"
+                                      CornerRadius="3"
+                                      Background="{DynamicResource AccentBrush}"
+                                      Opacity="0.6" />
+                              <TextBlock
+                                Grid.Column="1"
+                                Text="{Binding DateDisplay}"
+                                FontSize="12"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                TextTrimming="CharacterEllipsis"
+                                TextWrapping="NoWrap" />
+                              <Border Grid.Column="2"
+                                      CornerRadius="999"
+                                      Background="{DynamicResource InputBackgroundBrush}"
+                                      Padding="8,2">
+                                <TextBlock
+                                  Text="{Binding SizeDisplay}"
+                                  FontSize="12"
+                                  FontWeight="SemiBold"
+                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                  TextTrimming="CharacterEllipsis"
+                                  TextWrapping="NoWrap" />
+                              </Border>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Grid>
+              </Border>
 
-            </StackPanel>
+            </Grid>
           </Border>
 
         </Grid>
       </Border>
     </Grid>
-  </Grid>
-</ScrollViewer>
+    </Grid>
+  </Border>
 </UserControl>
