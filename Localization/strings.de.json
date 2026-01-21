@@ -385,6 +385,7 @@
   "Backups.Snapshot.Label.Manual": "Manuelles Backup",
   "Backups.Snapshot.Type.Auto": "Automatisch",
   "Backups.Snapshot.Type.Manual": "Manuell",
+  "Backups.Snapshot.Type.Imported": "Importiert",
   "Backups.Health.NotAvailable": "nicht verfügbar",
   "Backups.Health.Status.Healthy": "Zustand ({0}): OK ({1})",
   "Backups.Health.Status.Warning": "Gesundheitswarnung ({0}): {1}",

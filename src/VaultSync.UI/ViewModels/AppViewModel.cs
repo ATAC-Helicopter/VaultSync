@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
@@ -904,14 +905,9 @@ namespace VaultSync.UI.ViewModels
                                     Interlocked.Increment(ref backupAttempts);
                                     var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
                                         || IsRemoteDestinationPath(dest.Path);
-                                    var isSmbDestination = IsSmbPath(dest.Path) || IsSmbPath(resolution.EffectivePath);
                                     var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
-                                    var preferParallelUpload = allowParallelUpload && isRemoteDestination && !isSmbDestination;
-                                    if (isSmbDestination)
-                                    {
-                                        Console.WriteLine($"[BackupService] Parallel archive upload disabled for SMB destination '{destLabel}'.");
-                                    }
-                                    else if (!allowParallelUpload)
+                                    var preferParallelUpload = allowParallelUpload && isRemoteDestination;
+                                    if (!allowParallelUpload)
                                     {
                                         Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{destLabel}'.");
                                     }
@@ -1907,14 +1903,9 @@ namespace VaultSync.UI.ViewModels
                             attempts++;
                             var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
                                 || IsRemoteDestinationPath(dest.Path);
-                            var isSmbDestination = IsSmbPath(dest.Path) || IsSmbPath(resolution.EffectivePath);
                             var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
-                            var preferParallelUpload = allowParallelUpload && isRemoteDestination && !isSmbDestination;
-                            if (isSmbDestination)
-                            {
-                                Console.WriteLine($"[BackupService] Parallel archive upload disabled for SMB destination '{labelPrefix}'.");
-                            }
-                            else if (!allowParallelUpload)
+                            var preferParallelUpload = allowParallelUpload && isRemoteDestination;
+                            if (!allowParallelUpload)
                             {
                                 Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{labelPrefix}'.");
                             }
@@ -2513,14 +2504,9 @@ namespace VaultSync.UI.ViewModels
                         {
                             var isRemoteDestination = IsRemoteDestinationPath(effectiveBackupRoot)
                                 || IsRemoteDestinationPath(primaryDest?.Path);
-                            var isSmbDestination = IsSmbPath(primaryDest?.Path) || IsSmbPath(effectiveBackupRoot);
                             var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
-                            var preferParallelUpload = allowParallelUpload && isRemoteDestination && !isSmbDestination;
-                            if (isSmbDestination)
-                            {
-                                Console.WriteLine($"[BackupService] Parallel archive upload disabled for SMB destination '{primaryAlias}'.");
-                            }
-                            else if (!allowParallelUpload)
+                            var preferParallelUpload = allowParallelUpload && isRemoteDestination;
+                            if (!allowParallelUpload)
                             {
                                 Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{primaryAlias}'.");
                             }
@@ -3181,9 +3167,7 @@ namespace VaultSync.UI.ViewModels
 
             var cfg = AppConfigStore.Load();
             var destinations = GetActiveDestinations(cfg);
-            var backupRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
-                ? backup.DestinationPath
-                : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
+            var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return DeleteBackupPreparation.Failure;
 
@@ -3208,25 +3192,41 @@ namespace VaultSync.UI.ViewModels
         {
             var backup = _repo.GetBackupById(backupId);
             if (backup is null)
+            {
+                Console.WriteLine($"[Restore] Backup id {backupId} not found.");
                 return RestoreBackupPreparation.Failure;
+            }
 
             var cfg = AppConfigStore.Load();
             var destinations = GetActiveDestinations(cfg);
-            var backupRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
-                ? backup.DestinationPath
-                : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
+            var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
+            {
+                Console.WriteLine($"[Restore] No backup root found for id={backupId}, path='{backup.Path}', dest='{backup.DestinationPath}', alias='{backup.DestinationAlias}'.");
                 return RestoreBackupPreparation.Failure;
+            }
 
-            var backupFullPath = Path.Combine(backupRoot, backup.Path ?? string.Empty);
-            if (string.IsNullOrWhiteSpace(backup.Path) || !Directory.Exists(backupFullPath))
+            if (string.IsNullOrWhiteSpace(backup.Path))
+            {
+                Console.WriteLine($"[Restore] Backup path missing for id={backupId}. Root='{backupRoot}', rel='{backup.Path}'.");
                 return RestoreBackupPreparation.Failure;
+            }
+
+            var backupFullPath = Path.Combine(backupRoot, backup.Path);
+            if (!Directory.Exists(backupFullPath))
+            {
+                Console.WriteLine($"[Restore] Backup path missing for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', full='{backupFullPath}'.");
+                return RestoreBackupPreparation.Failure;
+            }
 
             var project = _repo.GetProjectById(backup.ProjectId);
             if (project is null)
+            {
+                Console.WriteLine($"[Restore] Project id {backup.ProjectId} not found for backup id {backupId}.");
                 return RestoreBackupPreparation.Failure;
+            }
 
-            var projectRoot = project.RootPath;
+            var projectRoot = ResolveRestoreTarget(project);
             if (string.IsNullOrWhiteSpace(projectRoot))
                 return RestoreBackupPreparation.Failure;
 
@@ -3240,6 +3240,33 @@ namespace VaultSync.UI.ViewModels
             string ProjectName)
         {
             public static RestoreBackupPreparation Failure => new(false, string.Empty, string.Empty, string.Empty);
+        }
+
+        private string ResolveRestoreTarget(Project project)
+        {
+            if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
+                return project.RootPath;
+
+            var cfg = AppConfigStore.Load();
+            if (!string.IsNullOrWhiteSpace(cfg.ProjectsRoot))
+            {
+                var projectsRoot = Path.Combine(cfg.ProjectsRoot, project.Name);
+                Directory.CreateDirectory(projectsRoot);
+                _repo.UpdateProjectPath(project.Name, projectsRoot, out _);
+                Console.WriteLine($"[Restore] Project root missing. Using ProjectsRoot '{projectsRoot}'.");
+                return projectsRoot;
+            }
+
+            var fallbackRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "VaultSync Restores",
+                project.Name);
+
+            Directory.CreateDirectory(fallbackRoot);
+            _repo.UpdateProjectPath(project.Name, fallbackRoot, out _);
+
+            Console.WriteLine($"[Restore] Project root missing. Using fallback restore path '{fallbackRoot}'.");
+            return fallbackRoot;
         }
 
         private AutoBackupPreparation PrepareAutoBackupRun()
@@ -3289,6 +3316,10 @@ namespace VaultSync.UI.ViewModels
             var preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
             if (!preparation.IsReady)
             {
+                _backupsViewModel.ShowNotification(
+                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    "Error");
+                Console.WriteLine($"[Restore] Restore preparation failed for backupId={backupId}.");
                 return;
             }
 
@@ -3296,17 +3327,41 @@ namespace VaultSync.UI.ViewModels
             var backupFullPath = preparation.BackupFullPath;
             _backupsViewModel.IsBusy      = true;
             _backupsViewModel.BusyMessage = $"Restoring {preparation.ProjectName}...";
+            var restoreCardId = $"restore-{backupId}";
+            _backupsViewModel.UpdateActiveBackup(
+                restoreCardId,
+                preparation.ProjectName,
+                0,
+                L("Backups.Status.Restoring", "Restoring backup..."),
+                string.Empty,
+                allowCancel: false);
 
             try
             {
                 await Task.Run(() =>
                 {
-                    RestoreDirectory(backupFullPath, projectRoot);
+                    Console.WriteLine($"[Restore] Starting restore for '{preparation.ProjectName}'.");
+                    Console.WriteLine($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
+                    RestoreDirectory(backupFullPath, projectRoot, (percent, currentFile) =>
+                    {
+                        var label = string.IsNullOrWhiteSpace(currentFile)
+                            ? L("Backups.Status.Restoring", "Restoring backup...")
+                            : currentFile;
+                        _backupsViewModel.UpdateActiveBackup(
+                            restoreCardId,
+                            preparation.ProjectName,
+                            percent,
+                            label,
+                            string.Empty,
+                            allowCancel: false);
+                    });
+                    Console.WriteLine($"[Restore] Completed restore for '{preparation.ProjectName}'.");
                 });
 
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[Restore] Restore failed for '{preparation.ProjectName}': {ex.Message}");
 
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -3324,12 +3379,13 @@ namespace VaultSync.UI.ViewModels
                 {
                     _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
                 }
+                _backupsViewModel.RemoveActiveBackup(restoreCardId);
                 _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
             }
         }
 
-        private static void RestoreDirectory(string sourceDir, string targetDir)
+        private static void RestoreDirectory(string sourceDir, string targetDir, Action<double, string>? progress)
         {
             if (string.IsNullOrWhiteSpace(sourceDir))
                 throw new ArgumentException("Source directory is required.", nameof(sourceDir));
@@ -3343,6 +3399,13 @@ namespace VaultSync.UI.ViewModels
             // Ensure target root exists
             Directory.CreateDirectory(targetDir);
 
+            var archivePath = Path.Combine(sourceDir, "data.zip");
+            if (File.Exists(archivePath))
+            {
+                ExtractArchiveWithProgress(archivePath, targetDir, progress);
+                return;
+            }
+
             // Create all directories
             foreach (var dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
             {
@@ -3352,7 +3415,10 @@ namespace VaultSync.UI.ViewModels
             }
 
             // Copy all files, overwriting existing ones but not deleting extras.
-            foreach (var filePath in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+            var files = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories);
+            var totalFiles = files.Length;
+            var processed = 0;
+            foreach (var filePath in files)
             {
                 var relative = Path.GetRelativePath(sourceDir, filePath);
                 var target   = Path.Combine(targetDir, relative);
@@ -3362,6 +3428,35 @@ namespace VaultSync.UI.ViewModels
                     Directory.CreateDirectory(parentDir);
 
                 File.Copy(filePath, target, overwrite: true);
+                processed++;
+                progress?.Invoke(totalFiles == 0 ? 100 : processed * 100d / totalFiles, relative);
+            }
+        }
+
+        private static void ExtractArchiveWithProgress(string archivePath, string targetDir, Action<double, string>? progress)
+        {
+            using var archive = ZipFile.OpenRead(archivePath);
+            var totalEntries = archive.Entries.Count;
+            var processed = 0;
+
+            foreach (var entry in archive.Entries)
+            {
+                var destinationPath = Path.Combine(targetDir, entry.FullName);
+                if (string.IsNullOrEmpty(entry.Name))
+                {
+                    Directory.CreateDirectory(destinationPath);
+                }
+                else
+                {
+                    var parent = Path.GetDirectoryName(destinationPath);
+                    if (!string.IsNullOrEmpty(parent))
+                        Directory.CreateDirectory(parent);
+
+                    entry.ExtractToFile(destinationPath, overwrite: true);
+                }
+
+                processed++;
+                progress?.Invoke(totalEntries == 0 ? 100 : processed * 100d / totalEntries, entry.FullName);
             }
         }
 
@@ -3690,6 +3785,38 @@ namespace VaultSync.UI.ViewModels
             return first?.Path ?? legacyRoot;
         }
 
+        private static string? ResolveDestinationRootForBackup(Backup backup, IReadOnlyList<BackupDestination> destinations, string? legacyRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(backup.Path))
+            {
+                foreach (var dest in destinations.Where(d => d.Active && !string.IsNullOrWhiteSpace(d.Path)))
+                {
+                    var combined = Path.GetFullPath(Path.Combine(dest.Path!, backup.Path));
+                    if (Directory.Exists(combined) || File.Exists(combined))
+                        return dest.Path;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(backup.DestinationPath) && Directory.Exists(backup.DestinationPath))
+                return backup.DestinationPath;
+
+            if (!string.IsNullOrWhiteSpace(backup.DestinationAlias))
+            {
+                var match = destinations.FirstOrDefault(d =>
+                    string.Equals(d.Alias ?? string.Empty, backup.DestinationAlias, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(d.Path ?? string.Empty, backup.DestinationAlias, StringComparison.OrdinalIgnoreCase));
+
+                if (match is not null && !string.IsNullOrWhiteSpace(match.Path))
+                {
+                    var combined = Path.GetFullPath(Path.Combine(match.Path, backup.Path ?? string.Empty));
+                    if (Directory.Exists(combined) || File.Exists(combined))
+                        return match.Path;
+                }
+            }
+
+            return TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, legacyRoot);
+        }
+
         private static bool IsNetworkPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -3748,13 +3875,14 @@ namespace VaultSync.UI.ViewModels
 
             var cfg = AppConfigStore.Load();
             var destinations = GetActiveDestinations(cfg);
-            var destinationRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
-                ? backup.DestinationPath
-                : TryResolveBackupPathForRead(backup.Path ?? string.Empty, destinations, cfg.Backups.BackupRoot);
+            var destinationRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(destinationRoot))
                 return null;
 
-            var fullPath = Path.GetFullPath(Path.Combine(destinationRoot, backup.Path ?? string.Empty));
+            if (string.IsNullOrWhiteSpace(backup.Path))
+                return null;
+
+            var fullPath = Path.GetFullPath(Path.Combine(destinationRoot, backup.Path));
             return Directory.Exists(fullPath) ? fullPath : null;
         }
 

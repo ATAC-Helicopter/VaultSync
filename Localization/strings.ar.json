@@ -426,6 +426,7 @@
   "Backups.Snapshot.Label.Manual": "النسخ الاحتياطي اليدوي",
   "Backups.Snapshot.Type.Auto": "آلي",
   "Backups.Snapshot.Type.Manual": "يدوي",
+  "Backups.Snapshot.Type.Imported": "مستورَد",
   "Backups.Health.NotAvailable": "غير متوفر",
   "Backups.Health.Status.Healthy": "الصحة ({0}): حسنًا ({1})",
   "Backups.Health.Status.Warning": "تحذير صحي ({0}): {1}",

@@ -866,23 +866,19 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             // Map project id -> name from the per-project list on the left
-            var projectNameLookup = ProjectBackups
+            var projectLookup = ProjectBackups
                 .GroupBy(p => p.Id)
-                .ToDictionary(g => g.Key, g => g.First().Name);
-            var projectColorLookup = ProjectBackups
-                .GroupBy(p => p.Id)
-                .ToDictionary(g => g.Key, g => g.First().AvatarColor);
+                .ToDictionary(g => g.Key, g => g.First());
 
             var grouped = filtered
                 .GroupBy(s => s.ProjectId ?? string.Empty)
                 .OrderBy(g =>
                 {
-                    if (!string.IsNullOrWhiteSpace(g.Key) && projectNameLookup.TryGetValue(g.Key, out var name))
-                        return name;
+                    if (!string.IsNullOrWhiteSpace(g.Key) && projectLookup.TryGetValue(g.Key, out var nameSource))
+                        return nameSource.Name;
                     return "zzzz_" + g.Key; // unknown/global go at the end
                 });
 
-            var seenProjects = new HashSet<string>();
             var latestOverall = filtered
                 .OrderByDescending(s => s.Timestamp)
                 .FirstOrDefault()
@@ -891,8 +887,6 @@ namespace VaultSync.UI.ViewModels
             foreach (var g in grouped)
             {
                 var key = g.Key ?? string.Empty;
-                if (!seenProjects.Add(key))
-                    continue; // guard against duplicate groups for the same project
 
                 var ordered = g
                     .GroupBy(s => s.Id)
@@ -907,9 +901,13 @@ namespace VaultSync.UI.ViewModels
                 {
                     projectName = L("Backups.Section.Group.Global", "Global snapshots");
                 }
-                else if (!projectNameLookup.TryGetValue(key, out projectName!))
+                else if (!projectLookup.TryGetValue(key, out var nameSource))
                 {
                     projectName = L("Backups.Section.Group.Unknown", "Unknown project");
+                }
+                else
+                {
+                    projectName = nameSource.Name;
                 }
 
                 var summaryKey = ordered.Count == 1
@@ -918,11 +916,11 @@ namespace VaultSync.UI.ViewModels
                 var summaryFallback = ordered.Count == 1 ? "{0} backup" : "{0} backups";
 
                 var accentBrush = new ImmutableSolidColorBrush(Color.Parse("#33405A"));
-                if (!string.IsNullOrWhiteSpace(key) && projectColorLookup.TryGetValue(key, out var colorValue))
+                if (!string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out var colorSource))
                 {
                     try
                     {
-                        accentBrush = new ImmutableSolidColorBrush(Color.Parse(colorValue));
+                        accentBrush = new ImmutableSolidColorBrush(Color.Parse(colorSource.AvatarColor));
                     }
                     catch
                     {
@@ -1475,16 +1473,18 @@ namespace VaultSync.UI.ViewModels
                     ? backup.DestinationPath
                     : backup.DestinationAlias;
 
-                var isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
-                var uiItem = new BackupSnapshotItem
-                {
-                    Id        = backup.Id.ToString(),
-                    Timestamp = backup.CreatedUtc.ToLocalTime(),
-                    SizeBytes = backup.TotalBytes,
-                    Type      = isAutoSnapshot ? "Auto" : "Manual",
-                    TypeLabel = isAutoSnapshot
-                        ? L("Backups.Snapshot.Type.Auto", "Auto")
-                        : L("Backups.Snapshot.Type.Manual", "Manual"),
+            var isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
+            var uiItem = new BackupSnapshotItem
+            {
+                Id        = backup.Id.ToString(),
+                Timestamp = backup.CreatedUtc.ToLocalTime(),
+                SizeBytes = backup.TotalBytes,
+                Type      = isAutoSnapshot ? "Auto" : "Manual",
+                IsImported = backup.IsImported,
+                ImportedLabel = L("Backups.Snapshot.Type.Imported", "Imported"),
+                TypeLabel = isAutoSnapshot
+                    ? L("Backups.Snapshot.Type.Auto", "Auto")
+                    : L("Backups.Snapshot.Type.Manual", "Manual"),
                     Status    = "Completed",
                     Label     = isAutoSnapshot
                         ? L("Backups.Snapshot.Label.Auto", "Auto backup")
@@ -1540,6 +1540,11 @@ namespace VaultSync.UI.ViewModels
 
         public string SizeFormatted => FormatSize(SizeBytes);
 
+        public bool IsImported { get; set; }
+
+        /// <summary>Localized label for the imported tag.</summary>
+        public string ImportedLabel { get; set; } = string.Empty;
+
         public bool IsProtected
         {
             get => _isProtected;
@@ -1566,6 +1571,10 @@ namespace VaultSync.UI.ViewModels
         private static readonly IBrush ManualBrush =
             new SolidColorBrush(Color.Parse("#334568F2"));
 
+        // Imported snapshots: teal-ish
+        private static readonly IBrush ImportedBrush =
+            new SolidColorBrush(Color.Parse("#3346C6A1"));
+
         // Failed snapshots: red-ish
         private static readonly IBrush FailedBrush =
             new SolidColorBrush(Color.Parse("#33FF4B4B"));
@@ -1586,6 +1595,8 @@ namespace VaultSync.UI.ViewModels
                 return DefaultBrush;
             }
         }
+
+        public IBrush ImportedTagBackground => ImportedBrush;
 
         internal static string FormatSize(long bytes)
         {

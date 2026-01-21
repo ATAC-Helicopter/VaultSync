@@ -29,6 +29,11 @@ public record Backup
     public bool IsProtected { get; init; }
 
     /// <summary>
+    /// When true, this backup was imported from another machine.
+    /// </summary>
+    public bool IsImported { get; init; }
+
+    /// <summary>
     /// Absolute path to the destination root that stored this backup.
     /// </summary>
     public string DestinationPath { get; init; } = string.Empty;

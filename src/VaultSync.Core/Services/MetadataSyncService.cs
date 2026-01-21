@@ -254,7 +254,8 @@ public sealed class MetadataSyncService
                 metaBackup.PathRel,
                 rootPath,
                 metaBackup.DestinationAlias,
-                metaBackup.IsProtected);
+                metaBackup.IsProtected,
+                isImported: true);
             importedBackups++;
         }
 

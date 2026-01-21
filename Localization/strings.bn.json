@@ -383,6 +383,7 @@
   "Backups.Snapshot.Label.Manual": "ম্যানুয়াল ব্যাকআপ",
   "Backups.Snapshot.Type.Auto": "স্বয়ংক্রিয়",
   "Backups.Snapshot.Type.Manual": "ম্যানুয়াল",
+  "Backups.Snapshot.Type.Imported": "আমদানি করা হয়েছে",
   "Backups.Health.NotAvailable": "উপলব্ধ নয়",
   "Backups.Health.Status.Healthy": "স্বাস্থ্য ({0}): OK ({1})",
   "Backups.Health.Status.Warning": "স্বাস্থ্য সতর্কতা ({0}): {1}",

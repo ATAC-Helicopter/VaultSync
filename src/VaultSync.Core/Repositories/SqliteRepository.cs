@@ -14,14 +14,18 @@ namespace VaultSync.Core.Repositories
         private readonly string _dbPath;
         public SqliteRepository(string dbPath) => _dbPath = dbPath;
 
-        private SqliteConnection Open()
+    private SqliteConnection Open()
+    {
+        var dir = Path.GetDirectoryName(_dbPath);
+        if (!string.IsNullOrWhiteSpace(dir))
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_dbPath)!);
-            var conn = new SqliteConnection($"Data Source={_dbPath};Pooling=True");
-            conn.Open();
-            conn.Execute("PRAGMA foreign_keys = ON;");
-            return conn;
+            Directory.CreateDirectory(dir);
         }
+        var conn = new SqliteConnection($"Data Source={_dbPath};Pooling=True");
+        conn.Open();
+        conn.Execute("PRAGMA foreign_keys = ON;");
+        return conn;
+    }
 public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnumerable<int> snapshotIds)
 {
     if (string.IsNullOrWhiteSpace(projectName))
@@ -124,6 +128,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           path TEXT NOT NULL,
           destination_path TEXT NOT NULL DEFAULT '',
           destination_alias TEXT NOT NULL DEFAULT '',
+          is_imported INTEGER NOT NULL DEFAULT 0,
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
@@ -131,6 +136,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 
     // Migrations: add missing columns
     EnsureColumnExists("backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("backups", "is_imported", "ALTER TABLE backups ADD COLUMN is_imported INTEGER NOT NULL DEFAULT 0;");
     EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
@@ -659,8 +665,8 @@ DELETE FROM sqlite_sequence;";
 
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -674,7 +680,8 @@ DELETE FROM sqlite_sequence;";
                     Path            = relativePath,
                     DestinationPath = destinationPath ?? string.Empty,
                     DestinationAlias = destinationAlias ?? string.Empty,
-                    IsProtected     = isProtected ? 1 : 0
+                    IsProtected     = isProtected ? 1 : 0,
+                    IsImported      = 0
                 });
         }
 
@@ -688,15 +695,16 @@ DELETE FROM sqlite_sequence;";
             string relativePath,
             string destinationPath,
             string destinationAlias,
-            bool isProtected)
+            bool isProtected,
+            bool isImported)
         {
             using var c = Open();
             var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
             var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -710,7 +718,8 @@ DELETE FROM sqlite_sequence;";
                     Path            = relativePath ?? string.Empty,
                     DestinationPath = destinationPath ?? string.Empty,
                     DestinationAlias = destinationAlias ?? string.Empty,
-                    IsProtected     = isProtected ? 1 : 0
+                    IsProtected     = isProtected ? 1 : 0,
+                    IsImported      = isImported ? 1 : 0
                 });
         }
 
@@ -722,19 +731,20 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.QueryFirstOrDefault<Backup>(
                 """
-                SELECT
-                  id,
-                  external_id as ExternalId,
-                  project_id  as ProjectId,
-                  snapshot_id as SnapshotId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path,
-                  destination_path as DestinationPath,
-                  destination_alias as DestinationAlias,
-                  is_protected as IsProtected
-                FROM backups
+                  SELECT
+                    id,
+                    external_id as ExternalId,
+                    project_id  as ProjectId,
+                    snapshot_id as SnapshotId,
+                    created_utc as CreatedUtc,
+                    type,
+                    total_bytes as TotalBytes,
+                    path,
+                    destination_path as DestinationPath,
+                    destination_alias as DestinationAlias,
+                    is_protected as IsProtected,
+                    is_imported as IsImported
+                  FROM backups
                 WHERE external_id = @externalId
                 LIMIT 1;
                 """,
@@ -768,19 +778,20 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.QueryFirstOrDefault<Backup>(
                 """
-                SELECT
-                  id,
-                  external_id as ExternalId,
-                  project_id  as ProjectId,
-                  snapshot_id as SnapshotId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path,
-                  destination_path as DestinationPath,
-                  destination_alias as DestinationAlias,
-                  is_protected as IsProtected
-                FROM backups
+                  SELECT
+                    id,
+                    external_id as ExternalId,
+                    project_id  as ProjectId,
+                    snapshot_id as SnapshotId,
+                    created_utc as CreatedUtc,
+                    type,
+                    total_bytes as TotalBytes,
+                    path,
+                    destination_path as DestinationPath,
+                    destination_alias as DestinationAlias,
+                    is_protected as IsProtected,
+                    is_imported as IsImported
+                  FROM backups
                 WHERE project_id = @pid
                 ORDER BY created_utc DESC
                 LIMIT 1;
@@ -793,19 +804,20 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.Query<Backup>(
                 """
-                SELECT
-                  b.id,
-                  b.external_id as ExternalId,
-                  b.project_id  as ProjectId,
-                  b.snapshot_id as SnapshotId,
-                  b.created_utc as CreatedUtc,
-                  b.type,
-                  b.total_bytes as TotalBytes,
-                  b.path,
-                  b.destination_path as DestinationPath,
-                  b.destination_alias as DestinationAlias,
-                  b.is_protected as IsProtected
-                FROM backups b
+                  SELECT
+                    b.id,
+                    b.external_id as ExternalId,
+                    b.project_id  as ProjectId,
+                    b.snapshot_id as SnapshotId,
+                    b.created_utc as CreatedUtc,
+                    b.type,
+                    b.total_bytes as TotalBytes,
+                    b.path,
+                    b.destination_path as DestinationPath,
+                    b.destination_alias as DestinationAlias,
+                    b.is_protected as IsProtected,
+                    b.is_imported as IsImported
+                  FROM backups b
                 INNER JOIN (
                   SELECT project_id, MAX(created_utc) as created_utc
                   FROM backups
@@ -821,19 +833,20 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.QueryFirstOrDefault<Backup>(
                 """
-                SELECT
-                  id,
-                  external_id as ExternalId,
-                  project_id  as ProjectId,
-                  snapshot_id as SnapshotId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path,
-                  destination_path as DestinationPath,
-                  destination_alias as DestinationAlias,
-                  is_protected as IsProtected
-                FROM backups
+                  SELECT
+                    id,
+                    external_id as ExternalId,
+                    project_id  as ProjectId,
+                    snapshot_id as SnapshotId,
+                    created_utc as CreatedUtc,
+                    type,
+                    total_bytes as TotalBytes,
+                    path,
+                    destination_path as DestinationPath,
+                    destination_alias as DestinationAlias,
+                    is_protected as IsProtected,
+                    is_imported as IsImported
+                  FROM backups
                 WHERE id = @id
                 LIMIT 1;
                 """,
@@ -848,21 +861,22 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.Query<Backup>(
                 """
-                SELECT
-                  id,
-                  external_id as ExternalId,
-                  project_id  as ProjectId,
-                  snapshot_id as SnapshotId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path,
-                  destination_path as DestinationPath,
-                  destination_alias as DestinationAlias,
-                  is_protected as IsProtected
-                FROM (
                   SELECT
-                    b.*,
+                    id,
+                    external_id as ExternalId,
+                    project_id  as ProjectId,
+                    snapshot_id as SnapshotId,
+                    created_utc as CreatedUtc,
+                    type,
+                    total_bytes as TotalBytes,
+                    path,
+                    destination_path as DestinationPath,
+                    destination_alias as DestinationAlias,
+                    is_protected as IsProtected,
+                    is_imported as IsImported
+                  FROM (
+                    SELECT
+                      b.*,
                     ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY created_utc DESC) as rn
                   FROM backups b
                 )
@@ -877,20 +891,21 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.Query<Backup>(
                 """
-                SELECT
-                  id,
-                  external_id as ExternalId,
-                  project_id  as ProjectId,
-                  snapshot_id as SnapshotId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path,
-                  destination_path as DestinationPath,
-                  destination_alias as DestinationAlias,
-                  is_protected as IsProtected
-                FROM backups
-                WHERE project_id = @pid
+                  SELECT
+                    id,
+                    external_id as ExternalId,
+                    project_id  as ProjectId,
+                    snapshot_id as SnapshotId,
+                    created_utc as CreatedUtc,
+                    type,
+                    total_bytes as TotalBytes,
+                    path,
+                    destination_path as DestinationPath,
+                    destination_alias as DestinationAlias,
+                    is_protected as IsProtected,
+                    is_imported as IsImported
+                  FROM backups
+                  WHERE project_id = @pid
                 ORDER BY created_utc DESC;
                 """,
                 new { pid = projectId });
@@ -934,7 +949,8 @@ DELETE FROM sqlite_sequence;";
                   path,
                   destination_path as DestinationPath,
                   destination_alias as DestinationAlias,
-                  is_protected as IsProtected
+                  is_protected as IsProtected,
+                  is_imported as IsImported
                 FROM backups
                 WHERE created_utc >= @from AND created_utc <= @to
                 ORDER BY created_utc DESC;
@@ -969,7 +985,10 @@ DELETE FROM sqlite_sequence;";
                   type,
                   total_bytes as TotalBytes,
                   path,
-                  is_protected as IsProtected
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  is_protected as IsProtected,
+                  is_imported as IsImported
                 FROM backups
                 ORDER BY created_utc DESC
                 LIMIT 1;

@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 ## [1.3.3] - Unreleased
 ### Changed
 - Dashboard refresh now uses aggregated queries for counts and totals to avoid loading full history.
@@ -23,6 +23,9 @@
 - Projects page shows "Not added" for unregistered projects with no snapshots.
 - Projects page uses latest backup timestamps (including imported) to avoid stale health when snapshots lag behind.
 - Projects page date labels now use ASCII separators to avoid missing glyphs.
+- Restore now extracts archived backups (`data.zip`) instead of copying the archive file.
+- Restore now resolves imported backups using destination aliases when original paths are missing.
+- Restore now uses the configured Projects root when a project path is missing on a new machine.
 
 ## [1.3.2] - 18.01.2026
 ### Added
@@ -40,7 +43,7 @@
 - Drive health probe deferred to reduce startup impact.
 - Destination probe tracks effective path/read-only status.
 - Backups page right panel now uses expandable project headers with clearer stats.
-- Removed sample “default” projects when no real projects exist. (thanks to King_Hippo for repùrting)
+- Removed sample “default” projects when no real projects exist. (thanks to King_Hippo for reporting)
 - Scroll layout now scales more reliably at higher DPI. (thanks to King_Hippo for reporting)
 - Docs updated to cover new features and macOS release flow.
 - macOS NFS auto-mount is disabled; pre-mounted paths are required instead.

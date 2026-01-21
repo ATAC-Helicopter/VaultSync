@@ -383,6 +383,7 @@
   "Backups.Snapshot.Label.Manual": "Ручное резервное копирование",
   "Backups.Snapshot.Type.Auto": "Авто",
   "Backups.Snapshot.Type.Manual": "Ручное",
+  "Backups.Snapshot.Type.Imported": "Импортировано",
   "Backups.Health.NotAvailable": "недоступно",
   "Backups.Health.Status.Healthy": "Состояние ({0}): OK ({1})",
   "Backups.Health.Status.Warning": "Предупреждение о состоянии ({0}): {1}",

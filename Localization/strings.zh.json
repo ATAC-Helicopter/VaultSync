@@ -383,6 +383,7 @@
   "Backups.Snapshot.Label.Manual": "手动备份",
   "Backups.Snapshot.Type.Auto": "自动",
   "Backups.Snapshot.Type.Manual": "手动",
+  "Backups.Snapshot.Type.Imported": "已导入",
   "Backups.Health.NotAvailable": "不可用",
   "Backups.Health.Status.Healthy": "健康 ({0})：正常 ({1})",
   "Backups.Health.Status.Warning": "健康警告 ({0})：{1}",

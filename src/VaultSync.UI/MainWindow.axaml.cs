@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia;
 using Avalonia.Threading;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
 using VaultSync.UI.ViewModels;
@@ -17,6 +19,7 @@ public partial class MainWindow : Window
     private readonly AppViewModel _appVm;
     private bool _fullscreenSuppressed;
     private bool _macFullscreenDisabled;
+    private bool _ignoreNextPointerPress;
 
     /// <summary>
     /// Indicates whether the main window is currently active (in the foreground).
@@ -45,7 +48,11 @@ public partial class MainWindow : Window
         };
 
         // Activated = user focused the window again.
-        Activated += (_, _) => IsForeground = true;
+        Activated += (_, _) =>
+        {
+            IsForeground = true;
+            _ignoreNextPointerPress = true;
+        };
 
         // Deactivated = window lost focus (background).
         Deactivated += (_, _) => IsForeground = false;
@@ -56,6 +63,8 @@ public partial class MainWindow : Window
         // Intercept closing to optionally run in background instead of quitting.
         Closing += OnMainWindowClosing;
         // ------------------------------------------------------
+
+        AddHandler(PointerPressedEvent, OnWindowPointerPressed, RoutingStrategies.Tunnel);
 
         PropertyChanged += (_, e) =>
         {
@@ -77,6 +86,15 @@ public partial class MainWindow : Window
                 });
             }
         };
+    }
+
+    private void OnWindowPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!_ignoreNextPointerPress)
+            return;
+
+        _ignoreNextPointerPress = false;
+        e.Handled = true;
     }
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)

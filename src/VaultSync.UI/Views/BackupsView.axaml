@@ -29,21 +29,6 @@
     </Style>
 
 
-    <Style Selector="#HistoryList ListBoxItem">
-      <Setter Property="Template">
-        <ControlTemplate TargetType="ListBoxItem">
-          <Border x:Name="CardBorder"
-                  Margin="0,4,0,4"
-                  Background="Transparent"
-                  Padding="0">
-            <ContentPresenter
-              Content="{TemplateBinding Content}"
-              ContentTemplate="{TemplateBinding ContentTemplate}" />
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-
     <Style Selector="Border.backup-tag">
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="6,2" />
@@ -751,24 +736,21 @@
                 <Border Height="1"
                         Background="{DynamicResource DividerBrush}" />
 
-                <ListBox x:Name="HistoryList"
-                         ItemsSource="{Binding SnapshotGroups}"
-                         BorderThickness="0"
-                         Background="Transparent"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         MaxHeight="520"
-                         Margin="0,2,0,0">
-                  <ListBox.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <VirtualizingStackPanel/>
-                    </ItemsPanelTemplate>
-                  </ListBox.ItemsPanel>
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <Border Classes="card project-card"
-                              CornerRadius="12"
-                              Padding="0"
-                              Margin="0,4,0,4">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                MaxHeight="520"
+                                Margin="0,2,0,0">
+                    <ItemsControl ItemsSource="{Binding SnapshotGroups}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <StackPanel />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Classes="card project-card"
+                                CornerRadius="12"
+                                Padding="0"
+                                Margin="0,4,0,4">
                         <Expander Classes="backup-group"
                                   IsExpanded="{Binding IsExpanded}"
                                   HorizontalAlignment="Stretch">
@@ -828,87 +810,119 @@
                                   Padding="10"
                                   BorderBrush="{DynamicResource CardBorderBrush}"
                                   BorderThickness="0,1,0,0">
-                            <ItemsControl ItemsSource="{Binding Snapshots}">
-                              <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                  <Grid ColumnDefinitions="*,Auto"
-                                        RowDefinitions="Auto,Auto"
-                                        ColumnSpacing="12"
-                                        RowSpacing="4"
-                                        Margin="0,2,0,6">
-
-                                    <StackPanel Grid.Row="0"
+                              <ItemsControl ItemsSource="{Binding Snapshots}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate>
+                                    <Border Background="{DynamicResource Surface1}"
+                                            BorderBrush="{DynamicResource BorderSoft}"
+                                            BorderThickness="1"
+                                            CornerRadius="14"
+                                            Padding="12"
+                                            Margin="0,4,0,10">
+                                      <Grid ColumnDefinitions="6,*,Auto"
+                                            ColumnSpacing="12"
+                                            RowDefinitions="Auto,Auto,Auto"
+                                            RowSpacing="8">
+                                        <Border Grid.RowSpan="3"
                                                 Grid.Column="0"
-                                                Orientation="Horizontal"
-                                                Spacing="6">
-                                      <TextBlock Text="{Binding Label}"
-                                                 FontSize="13"
-                                                 FontWeight="SemiBold"
-                                                 TextTrimming="CharacterEllipsis" />
-                                      <Border Classes="backup-tag"
-                                              Background="{Binding TagBackground}">
-                                        <TextBlock Text="{Binding TypeLabel}"
-                                                   FontSize="11" />
-                                      </Border>
-                                    </StackPanel>
+                                                Background="{Binding TagBackground}"
+                                                CornerRadius="3"
+                                                Opacity="0.9" />
 
-                                    <TextBlock Grid.Row="0"
-                                               Grid.Column="1"
-                                               Text="{Binding SizeFormatted}"
-                                               FontSize="12"
-                                               FontWeight="SemiBold"
-                                               HorizontalAlignment="Right" />
+                                        <StackPanel Grid.Row="0"
+                                                    Grid.Column="1"
+                                                    Orientation="Horizontal"
+                                                    Spacing="8">
+                                          <TextBlock Text="{Binding Label}"
+                                                     FontSize="13"
+                                                     FontWeight="SemiBold"
+                                                     TextTrimming="CharacterEllipsis" />
+                                          <Border Classes="backup-tag"
+                                                  Background="{Binding TagBackground}">
+                                            <TextBlock Text="{Binding TypeLabel}"
+                                                       FontSize="11" />
+                                          </Border>
+                                          <Border Classes="backup-tag"
+                                                  Background="{Binding ImportedTagBackground}"
+                                                  IsVisible="{Binding IsImported}">
+                                            <TextBlock Text="{Binding ImportedLabel}"
+                                                       FontSize="11" />
+                                          </Border>
+                                        </StackPanel>
 
-                                    <StackPanel Grid.Row="1"
-                                                Grid.Column="0"
-                                                Spacing="2">
-                                      <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
-                                                 FontSize="11"
-                                                 Foreground="{DynamicResource TextSecondaryBrush}" />
-                                      <TextBlock Text="{Binding DestinationDisplay}"
-                                                 FontSize="11"
-                                                 Foreground="{DynamicResource TextSecondaryBrush}"
-                                                 TextTrimming="CharacterEllipsis"
-                                                 TextWrapping="Wrap" />
-                                    </StackPanel>
+                                        <Border Grid.Row="0"
+                                                Grid.Column="2"
+                                                CornerRadius="999"
+                                                Padding="8,2"
+                                                Background="{DynamicResource Surface3}">
+                                          <TextBlock Text="{Binding SizeFormatted}"
+                                                     FontSize="11"
+                                                     FontWeight="SemiBold" />
+                                        </Border>
 
-                                    <StackPanel Grid.Row="1"
-                                                Grid.Column="1"
-                                                Orientation="Horizontal"
-                                                HorizontalAlignment="Right"
-                                                Spacing="6">
-                                      <CheckBox Content="{infra:LocalizedString Key=Backups.Section.Keep}"
-                                                VerticalAlignment="Center"
-                                                IsChecked="{Binding IsProtected, Mode=TwoWay}"
-                                                Command="{Binding DataContext.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}"
-                                                FontSize="11"/>
-                                      <Button Content="{infra:LocalizedString Key=Backups.Section.OpenFolder}"
-                                              Classes="small-button"
-                                              Command="{Binding DataContext.OpenBackupFolderCommand,
-                                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                              CommandParameter="{Binding}" />
-                                      <Button Content="{infra:LocalizedString Key=Backups.Section.Restore}"
-                                              Classes="small-button"
-                                              Command="{Binding DataContext.RestoreBackupCommand,
-                                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                              CommandParameter="{Binding}" />
-                                      <Button Content="{infra:LocalizedString Key=Backups.Section.Delete}"
-                                              Classes="small-button"
-                                              Command="{Binding DataContext.DeleteBackupCommand,
-                                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                              CommandParameter="{Binding}" />
-                                    </StackPanel>
-                                  </Grid>
-                                </DataTemplate>
-                              </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                        <WrapPanel Grid.Row="1"
+                                                   Grid.Column="1"
+                                                   ItemSpacing="6">
+                                          <Border CornerRadius="999"
+                                                  Padding="8,2"
+                                                  Background="{DynamicResource Surface3}"
+                                                  BorderBrush="{DynamicResource BorderSoft}"
+                                                  BorderThickness="1">
+                                            <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                                          </Border>
+                                          <Border CornerRadius="999"
+                                                  Padding="8,2"
+                                                  Background="{DynamicResource Surface2}"
+                                                  BorderBrush="{Binding TagBackground}"
+                                                  BorderThickness="1">
+                                            <TextBlock Text="{Binding DestinationDisplay}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       TextWrapping="NoWrap" />
+                                          </Border>
+                                        </WrapPanel>
+
+                                        <WrapPanel Grid.Row="2"
+                                                   Grid.Column="1"
+                                                   Grid.ColumnSpan="2"
+                                                   ItemSpacing="8">
+                                          <CheckBox Content="{infra:LocalizedString Key=Backups.Section.Keep}"
+                                                    VerticalAlignment="Center"
+                                                    IsChecked="{Binding IsProtected, Mode=TwoWay}"
+                                                    Command="{Binding DataContext.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    FontSize="11"/>
+                                          <Button Content="{infra:LocalizedString Key=Backups.Section.OpenFolder}"
+                                                  Classes="small-button"
+                                                  Command="{Binding DataContext.OpenBackupFolderCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  CommandParameter="{Binding}" />
+                                          <Button Content="{infra:LocalizedString Key=Backups.Section.Restore}"
+                                                  Classes="small-button"
+                                                  Command="{Binding DataContext.RestoreBackupCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  CommandParameter="{Binding}" />
+                                          <Button Content="{infra:LocalizedString Key=Backups.Section.Delete}"
+                                                  Classes="small-button"
+                                                  Command="{Binding DataContext.DeleteBackupCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  CommandParameter="{Binding}" />
+                                        </WrapPanel>
+                                      </Grid>
+                                    </Border>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
                           </Border>
                         </Expander>
-                      </Border>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
+                        </Border>
+                      </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
 
               </StackPanel>
             </Border>
