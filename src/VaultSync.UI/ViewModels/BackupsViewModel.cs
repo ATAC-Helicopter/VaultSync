@@ -51,6 +51,11 @@ namespace VaultSync.UI.ViewModels
 
         // Internal full list for summary + filtering
         private readonly List<BackupSnapshotItem> _allSnapshots = new();
+        private readonly List<BackupSnapshotItem> _filteredSnapshots = new();
+
+        private int _snapshotRevision;
+        private int _lastFilterRevision = -1;
+        private SnapshotFilterState _lastFilterState = SnapshotFilterState.Empty;
 
         private BackupSnapshotItem? _selectedSnapshotA;
         public BackupSnapshotItem? SelectedSnapshotA
@@ -134,6 +139,46 @@ namespace VaultSync.UI.ViewModels
         private int _refreshSnapshotsInFlight;
         private int _refreshSnapshotsQueued;
         private bool _refreshSnapshotsForceResetQueued;
+
+        private readonly struct SnapshotFilterState : IEquatable<SnapshotFilterState>
+        {
+            public static readonly SnapshotFilterState Empty = new("All", null, false, false);
+
+            public readonly string TypeFilter;
+            public readonly string? ProjectId;
+            public readonly bool OnlyErrors;
+            public readonly bool OnlyManual;
+
+            public SnapshotFilterState(string typeFilter, string? projectId, bool onlyErrors, bool onlyManual)
+            {
+                TypeFilter = typeFilter ?? "All";
+                ProjectId = projectId;
+                OnlyErrors = onlyErrors;
+                OnlyManual = onlyManual;
+            }
+
+            public bool Equals(SnapshotFilterState other)
+            {
+                return string.Equals(TypeFilter, other.TypeFilter, StringComparison.Ordinal) &&
+                    string.Equals(ProjectId, other.ProjectId, StringComparison.Ordinal) &&
+                    OnlyErrors == other.OnlyErrors &&
+                    OnlyManual == other.OnlyManual;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is SnapshotFilterState other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(
+                    TypeFilter,
+                    ProjectId ?? string.Empty,
+                    OnlyErrors,
+                    OnlyManual);
+            }
+        }
 
         // Currently selected project in the per-project list
         private ProjectBackupItem? _selectedProject;
@@ -740,6 +785,7 @@ namespace VaultSync.UI.ViewModels
         private void AddSnapshot(BackupSnapshotItem snapshot)
         {
             _allSnapshots.Add(snapshot);
+            Interlocked.Increment(ref _snapshotRevision);
             RefreshSnapshotsView(false);
             RecalculateSummary();
         }
@@ -820,31 +866,52 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-            IEnumerable<BackupSnapshotItem> source = _allSnapshots;
+                var filterState = new SnapshotFilterState(
+                    _currentTypeFilter,
+                    _currentProjectIdFilter,
+                    OnlyErrorsFilter,
+                    OnlyManualFilter);
 
-            // Type filter
-            if (_currentTypeFilter == "Auto")
-                source = source.Where(s => s.Type == "Auto");
-            else if (_currentTypeFilter == "Manual")
-                source = source.Where(s => s.Type == "Manual");
+                if (!forceResetCompare &&
+                    _lastFilterRevision == _snapshotRevision &&
+                    filterState.Equals(_lastFilterState))
+                {
+                    return;
+                }
 
-            if (OnlyManualFilter)
-                source = source.Where(s => s.Type == "Manual");
+                _filteredSnapshots.Clear();
+                var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
-            if (OnlyErrorsFilter)
-                source = source.Where(s => string.Equals(s.Status, "Failed", StringComparison.OrdinalIgnoreCase));
+                foreach (var snapshot in _allSnapshots)
+                {
+                    if (_currentTypeFilter == "Auto" && !string.Equals(snapshot.Type, "Auto", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    if (_currentTypeFilter == "Manual" && !string.Equals(snapshot.Type, "Manual", StringComparison.OrdinalIgnoreCase))
+                        continue;
 
-            // Project filter
-            if (!string.IsNullOrWhiteSpace(_currentProjectIdFilter))
-                source = source.Where(s => s.ProjectId == _currentProjectIdFilter);
+                    if (OnlyManualFilter && !string.Equals(snapshot.Type, "Manual", StringComparison.OrdinalIgnoreCase))
+                        continue;
 
-            var filteredList = source
-                .GroupBy(s => s.Id)
-                .Select(g => g.First())
-                .ToList();
+                    if (OnlyErrorsFilter && !string.Equals(snapshot.Status, "Failed", StringComparison.OrdinalIgnoreCase))
+                        continue;
 
-            ReplaceSnapshots(filteredList, forceResetCompare);
-            RebuildSnapshotGroups(filteredList);
+                    if (!string.IsNullOrWhiteSpace(_currentProjectIdFilter) &&
+                        !string.Equals(snapshot.ProjectId, _currentProjectIdFilter, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(snapshot.Id) && !seenIds.Add(snapshot.Id))
+                        continue;
+
+                    _filteredSnapshots.Add(snapshot);
+                }
+
+                _lastFilterState = filterState;
+                _lastFilterRevision = _snapshotRevision;
+
+                ReplaceSnapshots(_filteredSnapshots, forceResetCompare);
+                RebuildSnapshotGroups(_filteredSnapshots);
             }
             finally
             {
@@ -1231,6 +1298,7 @@ namespace VaultSync.UI.ViewModels
 
             // Keep the original label ("Auto snapshot"/"Manual snapshot"), only mark status as failed.
             snapshot.Status = "Failed";
+            Interlocked.Increment(ref _snapshotRevision);
 
             // Rebuild filtered views + summary so UI picks up the new status/tag color.
             RefreshSnapshotsView(false);
@@ -1291,7 +1359,9 @@ namespace VaultSync.UI.ViewModels
                 LastBackupRelative = "-";
             }
 
-            long totalBytes = _allSnapshots.Sum(s => s.SizeBytes);
+            long totalBytes = _allSnapshots
+                .Where(s => !s.IsImported)
+                .Sum(s => s.SizeBytes);
             TotalBackupSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes);
 
             RebuildSnapshotActivity(now);
@@ -1425,35 +1495,45 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(ShowProjectAvatars));
 
             var projectList = projects.ToList();
-            var backupList  = backups
-                .GroupBy(b => b.Id)
-                .Select(g => g.First())
-                .ToList();
+            var dedupBackups = new Dictionary<int, Backup>();
+            foreach (var backup in backups)
+            {
+                if (!dedupBackups.ContainsKey(backup.Id))
+                {
+                    dedupBackups[backup.Id] = backup;
+                }
+            }
+            var backupList = dedupBackups.Values.ToList();
 
             ProjectBackups.Clear();
             _allSnapshots.Clear();
 
-            // Map per-project aggregates
-            var backupsByProject = backupList
-                .GroupBy(b => b.ProjectId)
-                .ToDictionary(g => g.Key, g => g.ToList());
+            // Map per-project aggregates in a single pass.
+            var projectStats = new Dictionary<int, (int Count, long TotalBytes, DateTime? LastBackupTime)>();
+            foreach (var backup in backupList)
+            {
+                if (!projectStats.TryGetValue(backup.ProjectId, out var stats))
+                    stats = (0, 0L, null);
+
+                stats.Count++;
+                stats.TotalBytes += backup.TotalBytes;
+                if (!stats.LastBackupTime.HasValue || backup.CreatedUtc > stats.LastBackupTime.Value)
+                    stats.LastBackupTime = backup.CreatedUtc;
+
+                projectStats[backup.ProjectId] = stats;
+            }
 
             foreach (var project in projectList)
             {
-                backupsByProject.TryGetValue(project.Id, out var projectBackups);
-                projectBackups ??= new List<Backup>();
-
-                var lastBackup = projectBackups
-                    .OrderByDescending(b => b.CreatedUtc)
-                    .FirstOrDefault();
+                projectStats.TryGetValue(project.Id, out var stats);
 
                 var projectItem = new ProjectBackupItem
                 {
                     Id                = project.Id.ToString(),
                     Name              = project.Name,
-                    LastBackupTime    = lastBackup?.CreatedUtc,
-                    SnapshotCount     = projectBackups.Count,
-                    TotalSizeBytes    = projectBackups.Sum(b => b.TotalBytes),
+                    LastBackupTime    = stats.LastBackupTime,
+                    SnapshotCount     = stats.Count,
+                    TotalSizeBytes    = stats.TotalBytes,
                     AutoBackupEnabled = autoBackupDisabledProjects is null || !autoBackupDisabledProjects.Contains(project.Id),
                     AutoBackupChanged = OnAutoBackupChanged
                 };
@@ -1496,6 +1576,8 @@ namespace VaultSync.UI.ViewModels
 
                 _allSnapshots.Add(uiItem);
             }
+
+            Interlocked.Increment(ref _snapshotRevision);
 
             // Rebuild the filtered history view + summary + mini-chart.
             RefreshSnapshotsView(true);

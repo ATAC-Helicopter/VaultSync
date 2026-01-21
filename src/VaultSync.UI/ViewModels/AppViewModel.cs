@@ -119,6 +119,8 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
         private readonly ConcurrentDictionary<int, byte> _restoreAdvisoryShown = new();
         private readonly ConcurrentDictionary<int, byte> _projectRootMissingNotified = new();
+        private int _metadataUiRefreshInFlight;
+        private int _metadataUiRefreshQueued;
         private readonly ConcurrentDictionary<int, DateTime> _backupProgressLogTimestamps = new();
         private int _manualBackupInFlightCount;
         private int _backupAllInProgress;
@@ -192,6 +194,9 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(path))
                 return false;
 
+            if (IsNetworkDrivePath(path))
+                return true;
+
             if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase)
@@ -219,9 +224,32 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(path))
                 return false;
 
+            if (IsNetworkDrivePath(path))
+                return true;
+
             return path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)
                    || path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase)
                    || path.StartsWith("//", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsNetworkDrivePath(string path)
+        {
+            if (!OperatingSystem.IsWindows())
+                return false;
+
+            try
+            {
+                var root = Path.GetPathRoot(path);
+                if (string.IsNullOrWhiteSpace(root))
+                    return false;
+
+                var drive = new DriveInfo(root);
+                return drive.DriveType == DriveType.Network;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void LogBackupProgress(int projectId, string projectName, double percent, string label, string etaText)
@@ -4359,13 +4387,16 @@ namespace VaultSync.UI.ViewModels
             if (!useArchiveMode)
                 return null;
 
-            if (IsSmbPath(dest.Path) || IsSmbPath(effectivePath))
-                return 512 * 1024;
-
             if (!cfg.Backups.EnableArchiveUploadAutoTune)
             {
                 var configured = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
-                return configured ?? 1024 * 1024;
+                if (configured.HasValue && configured.Value > 0)
+                    return configured.Value;
+
+                if (IsSmbPath(dest.Path) || IsSmbPath(effectivePath))
+                    return 1024 * 1024;
+
+                return 1024 * 1024;
             }
 
             var existing = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
@@ -4378,7 +4409,8 @@ namespace VaultSync.UI.ViewModels
                 Console.WriteLine($"[DestinationProbe] Auto-tuning archive upload buffer for '{display}'.");
 
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeoutCts.CancelAfter(TimeSpan.FromSeconds(3));
+                var timeoutSeconds = IsSmbPath(dest.Path) || IsSmbPath(effectivePath) ? 8 : 3;
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
                 var result = await Task.Run(() => ProbeArchiveUploadBufferBytes(effectivePath, timeoutCts.Token), timeoutCts.Token);
                 SaveArchiveUploadBufferBytes(cfg, dest, result.BufferBytes);
 
@@ -4432,8 +4464,8 @@ namespace VaultSync.UI.ViewModels
 
         private static (int BufferBytes, double Mbps) ProbeArchiveUploadBufferBytes(string effectivePath, CancellationToken ct)
         {
-            const int probeSizeBytes = 8 * 1024 * 1024;
-            const int chunkSizeBytes = 1024 * 1024;
+            const int probeSizeBytes = 64 * 1024 * 1024;
+            const int chunkSizeBytes = 4 * 1024 * 1024;
             const int fallbackBytes  = 4 * 1024 * 1024;
 
             var probeDir  = Path.Combine(effectivePath, ".vaultsync");
@@ -4515,13 +4547,17 @@ namespace VaultSync.UI.ViewModels
         private static int SelectArchiveUploadBufferBytes(double mbps)
         {
             if (mbps < 5)
-                return 16 * 1024 * 1024;
+                return 2 * 1024 * 1024;
             if (mbps < 15)
-                return 8 * 1024 * 1024;
-            if (mbps < 50)
                 return 4 * 1024 * 1024;
+            if (mbps < 50)
+                return 8 * 1024 * 1024;
+            if (mbps < 150)
+                return 16 * 1024 * 1024;
+            if (mbps < 400)
+                return 32 * 1024 * 1024;
 
-            return 2 * 1024 * 1024;
+            return 64 * 1024 * 1024;
         }
 
         private bool IsMetadataSyncEnabled(AppConfig cfg, BackupDestination dest)
@@ -4641,14 +4677,36 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            Dispatcher.UIThread.Post(() => _ = RefreshUiAfterMetadataImportAsync());
+            Dispatcher.UIThread.Post(RefreshUiAfterMetadataImport);
+        }
+
+        private void RefreshUiAfterMetadataImport()
+        {
+            _ = RefreshUiAfterMetadataImportAsync();
         }
 
         private async Task RefreshUiAfterMetadataImportAsync()
         {
-            ReloadBackupsVmData();
-            await _dashboardViewModel.RefreshAsync();
-            await _projectsViewModel.RefreshAsync();
+            if (Interlocked.Exchange(ref _metadataUiRefreshInFlight, 1) == 1)
+            {
+                Interlocked.Exchange(ref _metadataUiRefreshQueued, 1);
+                return;
+            }
+
+            try
+            {
+                ReloadBackupsVmData();
+                await _dashboardViewModel.RefreshAsync();
+                await _projectsViewModel.RefreshAsync();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _metadataUiRefreshInFlight, 0);
+                if (Interlocked.Exchange(ref _metadataUiRefreshQueued, 0) == 1)
+                {
+                    RefreshUiAfterMetadataImport();
+                }
+            }
         }
 
         private void TryExportMetadataForBackup(AppConfig cfg, BackupDestination dest, string effectivePath, int backupId)

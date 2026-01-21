@@ -520,6 +520,39 @@ DELETE FROM sqlite_sequence;";
                 new { pid = projectId });
         }
 
+        public IReadOnlyDictionary<int, (DateTime CreatedUtc, long TotalBytes)> GetLatestSnapshotInfoByProject()
+        {
+            using var c = Open();
+            var rows = c.Query<(int ProjectId, string CreatedUtc, long TotalBytes)>(
+                """
+                SELECT
+                  project_id as ProjectId,
+                  created_utc as CreatedUtc,
+                  total_bytes as TotalBytes
+                FROM (
+                  SELECT
+                    project_id,
+                    created_utc,
+                    total_bytes,
+                    ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY created_utc DESC, id DESC) as rn
+                  FROM snapshots
+                )
+                WHERE rn = 1;
+                """);
+
+            var styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
+            var map = new Dictionary<int, (DateTime CreatedUtc, long TotalBytes)>();
+            foreach (var row in rows)
+            {
+                if (!DateTime.TryParse(row.CreatedUtc, CultureInfo.InvariantCulture, styles, out var created))
+                    created = DateTime.SpecifyKind(DateTime.Parse(row.CreatedUtc), DateTimeKind.Utc);
+
+                map[row.ProjectId] = (created, row.TotalBytes);
+            }
+
+            return map;
+        }
+
         /// <summary>
         /// Returns all snapshots across all projects, newest first. Used by the UI dashboard.
         /// </summary>
@@ -563,7 +596,7 @@ DELETE FROM sqlite_sequence;";
                   total_bytes as TotalBytes
                 FROM snapshots
                 WHERE project_id = (SELECT id FROM projects WHERE name=@name)
-                ORDER BY id DESC
+                ORDER BY created_utc DESC, id DESC
                 """,
                 new { name = projectName });
         }
@@ -1001,11 +1034,14 @@ DELETE FROM sqlite_sequence;";
             return c.ExecuteScalar<int>("SELECT COUNT(*) FROM backups;");
         }
 
-        public IReadOnlyDictionary<int, long> GetBackupTotalsByProject()
+        public IReadOnlyDictionary<int, long> GetBackupTotalsByProject(bool includeImported = false)
         {
             using var c = Open();
-            var rows = c.Query<(int ProjectId, long TotalBytes)>(
-                "SELECT project_id as ProjectId, COALESCE(SUM(total_bytes), 0) as TotalBytes FROM backups GROUP BY project_id;");
+            var rows = includeImported
+                ? c.Query<(int ProjectId, long TotalBytes)>(
+                    "SELECT project_id as ProjectId, COALESCE(SUM(total_bytes), 0) as TotalBytes FROM backups GROUP BY project_id;")
+                : c.Query<(int ProjectId, long TotalBytes)>(
+                    "SELECT project_id as ProjectId, COALESCE(SUM(total_bytes), 0) as TotalBytes FROM backups WHERE is_imported = 0 GROUP BY project_id;");
 
             return rows.ToDictionary(row => row.ProjectId, row => row.TotalBytes);
         }

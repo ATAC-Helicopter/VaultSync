@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.3.3] - Unreleased
+## [1.3.3] - 21.01.2026
 ### Changed
 - Dashboard refresh now uses aggregated queries for counts and totals to avoid loading full history.
 - UI view refreshes no longer re-run database schema setup; initialization now happens once at startup.
@@ -13,8 +13,17 @@
 - Tray recent backups now uses a single batched query instead of per-project scans.
 - Backups history reload now coalesces repeated requests and avoids UI-thread blocking for open-folder resolution.
 - Snapshot cleanup now checks for remaining backups with a targeted query instead of loading full project history.
+- Archive upload auto-tune now scales buffer sizes up on faster links and honors per-destination overrides for SMB.
+- Archive upload auto-tune now runs on SMB destinations with a longer probe timeout to avoid 0 MB/s results.
+- Network drive destinations now count as remote so parallel archive uploads can kick in on SMB-mapped paths.
+- Archive upload auto-tune probe now uses a larger test file and allows higher buffer ceilings on fast links.
+- Dashboard and backups totals now exclude imported-only backups unless they were created locally.
+- Parallel archive upload now exits cleanly after completion instead of stalling on the heartbeat task.
 - Projects page detail panel refreshed with a modern preset control and tightened stat cards.
 - Projects page preset dropdown and recent snapshots list refreshed for consistency.
+- Projects page registration checks now run off the UI thread to avoid selection stalls.
+- Metadata import UI refresh now coalesces repeated updates to avoid redundant reloads.
+- Archive compression now uses larger stream buffers and sequential scan hints for better throughput.
 ### Fixed
 - Windows release publishes default to self-contained `win-x64` to avoid missing runtime prompts.
 - Startup crash in backup path normalization (Dapper materialization) resolved.
@@ -23,6 +32,9 @@
 - Projects page shows "Not added" for unregistered projects with no snapshots.
 - Projects page uses latest backup timestamps (including imported) to avoid stale health when snapshots lag behind.
 - Projects page date labels now use ASCII separators to avoid missing glyphs.
+- Snapshot history now orders by timestamp to avoid stale "latest" entries.
+- Metadata import now uses temp copies when WAL files are present to stabilize manual refresh previews.
+- Metadata import preview/import now ignores backups that are tombstoned in the store to prevent flip-flopping adds/deletes.
 - Restore now extracts archived backups (`data.zip`) instead of copying the archive file.
 - Restore now resolves imported backups using destination aliases when original paths are missing.
 - Restore now uses the configured Projects root when a project path is missing on a new machine.

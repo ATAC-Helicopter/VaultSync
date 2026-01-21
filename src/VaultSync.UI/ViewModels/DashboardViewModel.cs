@@ -257,7 +257,7 @@ namespace VaultSync.UI.ViewModels
                     // Storage slices: total backups per project
                     long totalLatestBytes = 0;
                     var storageSlices = new List<(Project project, long bytes)>();
-                    var backupsByProject = repo.GetBackupTotalsByProject();
+                    var backupsByProject = repo.GetBackupTotalsByProject(includeImported: false);
 
                     foreach (var p in projects)
                     {

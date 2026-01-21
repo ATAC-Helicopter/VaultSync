@@ -941,7 +941,7 @@ public sealed class BackupService
     {
         const int defaultBytes = 4 * 1024 * 1024;
         const int minBytes     = 256 * 1024;
-        const int maxBytes     = 16 * 1024 * 1024;
+        const int maxBytes     = 64 * 1024 * 1024;
 
         if (requestedBytes is null || requestedBytes.Value <= 0)
             return defaultBytes;
@@ -954,6 +954,9 @@ public sealed class BackupService
 
         return value;
     }
+
+    private const int ArchiveCopyBufferBytes = 1024 * 1024;
+    private const int ArchiveFileStreamBufferBytes = 1024 * 1024;
 
     private static async Task RunArchiveBackupAsync(
         Project project,
@@ -993,7 +996,13 @@ public sealed class BackupService
             // 4. If nothing to back up, create a valid empty ZIP and copy it.
             if (allFiles.Length == 0)
             {
-                using (var fs = new FileStream(localArchive, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var fs = new FileStream(
+                    localArchive,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    ArchiveFileStreamBufferBytes,
+                    FileOptions.SequentialScan))
                 using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
                 {
                     // no entries
@@ -1016,7 +1025,13 @@ public sealed class BackupService
             var  lastUiUpdate   = startTime;
             var  minUiInterval  = TimeSpan.FromMilliseconds(100);
 
-            using (var fs = new FileStream(localArchive, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var fs = new FileStream(
+                localArchive,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                ArchiveFileStreamBufferBytes,
+                FileOptions.SequentialScan))
             using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
             {
                 foreach (var filePath in allFiles)
@@ -1029,9 +1044,15 @@ public sealed class BackupService
                     try
                     {
                         using (var entryStream = entry.Open())
-                        using (var input = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (var input = new FileStream(
+                            filePath,
+                            FileMode.Open,
+                            FileAccess.Read,
+                            FileShare.Read,
+                            ArchiveFileStreamBufferBytes,
+                            FileOptions.SequentialScan))
                         {
-                            await input.CopyToAsync(entryStream, 128 * 1024, ct);
+                            await input.CopyToAsync(entryStream, ArchiveCopyBufferBytes, ct);
                             processedBytes += input.Length;
                         }
                     }
@@ -1569,7 +1590,16 @@ public sealed class BackupService
 
         try
         {
-            await Task.WhenAll(tasks.Concat(new[] { monitor, heartbeat }));
+            await Task.WhenAll(tasks);
+            cts.Cancel();
+            try
+            {
+                await Task.WhenAll(monitor, heartbeat);
+            }
+            catch (OperationCanceledException)
+            {
+                // expected once we cancel the monitor/heartbeat
+            }
         }
         catch
         {

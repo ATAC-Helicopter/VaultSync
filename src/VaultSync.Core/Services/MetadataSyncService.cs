@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Collections.Concurrent;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -12,6 +13,8 @@ namespace VaultSync.Core.Services;
 public sealed class MetadataSyncService
 {
     private readonly SqliteRepository _repo;
+    private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public MetadataSyncService(SqliteRepository repo)
     {
@@ -33,6 +36,19 @@ public sealed class MetadataSyncService
         {
             Console.WriteLine($"[MetadataSync] Import skipped: store not found at '{store.DatabasePath}'.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.NoStore, "Metadata store not found.");
+        }
+
+        if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out var walTempRoot))
+        {
+            Console.WriteLine($"[MetadataSync] Import using temp copy (wal detected): '{walTempRoot}'.");
+            try
+            {
+                return ImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot), opts);
+            }
+            finally
+            {
+                TryDeleteTempStore(walTempRoot);
+            }
         }
 
         try
@@ -72,6 +88,19 @@ public sealed class MetadataSyncService
         {
             Console.WriteLine($"[MetadataSync] Preview skipped: store not found at '{store.DatabasePath}'.");
             return MetadataSyncPreview.Failure(MetadataSyncStatus.NoStore, rootPath, store.DatabasePath, "Metadata store not found.");
+        }
+
+        if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out var walTempRoot))
+        {
+            Console.WriteLine($"[MetadataSync] Preview using temp copy (wal detected): '{walTempRoot}'.");
+            try
+            {
+                return PreviewImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot), opts);
+            }
+            finally
+            {
+                TryDeleteTempStore(walTempRoot);
+            }
         }
 
         try
@@ -228,9 +257,18 @@ public sealed class MetadataSyncService
         }
 
         var backupExternalMap = _repo.GetBackupExternalIdMap();
+        var tombstonedBackupIds = metaTombstones
+            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.EntityId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (var metaBackup in metaBackups)
         {
             if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
+                continue;
+
+            if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
 
             if (!projectMap.TryGetValue(metaBackup.ProjectExternalId, out var projectId))
@@ -283,7 +321,9 @@ public sealed class MetadataSyncService
             string.Empty);
         if (opts.MarkNeedsRestoreOnImport)
         {
-            UpdateNeedsRestoreFlags(projectMap, metaBackups);
+            var liveBackups = metaBackups
+                .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
+            UpdateNeedsRestoreFlags(projectMap, liveBackups);
         }
         Console.WriteLine($"[MetadataSync] Import complete from '{rootPath}': projects={importedProjects}, snapshots={importedSnapshots}, backups={importedBackups}, tombstones={appliedTombstones}.");
         return result;
@@ -335,6 +375,13 @@ public sealed class MetadataSyncService
                 rootPath,
                 store.DatabasePath,
                 $"Metadata schema {metaInfo.SchemaVersion} is newer than supported {MetadataStore.CurrentSchemaVersion}.");
+        }
+
+        if (metaInfo != null &&
+            _previewCache.TryGetValue(rootPath, out var cached) &&
+            cached.LastWriteUtc == metaInfo.LastWriteUtc)
+        {
+            return cached.Preview;
         }
 
         var addProjects = 0;
@@ -416,9 +463,18 @@ public sealed class MetadataSyncService
         }
 
         var backupExternalMap = _repo.GetBackupExternalIdMap();
+        var tombstonedBackupIds = metaTombstones
+            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.EntityId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (var metaBackup in metaBackups)
         {
             if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
+                continue;
+
+            if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
 
             if (!projectMap.ContainsKey(metaBackup.ProjectExternalId))
@@ -444,7 +500,7 @@ public sealed class MetadataSyncService
             }
         }
 
-        return new MetadataSyncPreview(
+        var preview = new MetadataSyncPreview(
             MetadataSyncStatus.Success,
             rootPath,
             store.DatabasePath,
@@ -454,6 +510,13 @@ public sealed class MetadataSyncService
             addBackups,
             deleteBackups,
             string.Empty);
+
+        if (metaInfo != null)
+        {
+            _previewCache[rootPath] = (metaInfo.LastWriteUtc, preview);
+        }
+
+        return preview;
     }
 
     private static bool IsCannotOpenOrLocked(SqliteException ex)
@@ -511,6 +574,11 @@ public sealed class MetadataSyncService
         {
             Console.WriteLine($"[MetadataSync] Temp copy missing sidecar '{suffix}': {ex.Message}");
         }
+    }
+
+    private static bool ShouldUseTempCopy(string databasePath)
+    {
+        return File.Exists(databasePath + "-wal") || File.Exists(databasePath + "-shm");
     }
 
     public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill = false)
