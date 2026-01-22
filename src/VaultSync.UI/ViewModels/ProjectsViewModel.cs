@@ -29,6 +29,10 @@ namespace VaultSync.UI.ViewModels;
 public class ProjectsViewModel : ViewModelBase
 {
     private readonly IProjectDiscoveryService _discovery = new ProjectDiscoveryService();
+    private IReadOnlyList<DiscoveredProject> _cachedDiscovery = Array.Empty<DiscoveredProject>();
+    private string? _cachedDiscoveryRoot;
+    private DateTime _cachedDiscoveryUtc;
+    private static readonly TimeSpan DiscoveryCacheTtl = TimeSpan.FromSeconds(10);
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
 
@@ -50,6 +54,8 @@ public class ProjectsViewModel : ViewModelBase
     private ProjectItemViewModel? _selectedProject;
     private int _selectedProjectRefreshToken;
     private int _selectedProjectHistoryToken;
+    private int _refreshInFlight;
+    private int _refreshQueued;
     public ProjectItemViewModel? SelectedProject
     {
         get => _selectedProject;
@@ -192,13 +198,16 @@ public class ProjectsViewModel : ViewModelBase
 
     private void Refresh()
     {
-        _ = RefreshAsync();
+        _ = RefreshAsync(forceDiscovery: true);
     }
 
-    public async Task RefreshAsync()
+    public async Task RefreshAsync(bool forceDiscovery = false)
     {
-        if (IsLoading)
+        if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
+        {
+            Interlocked.Exchange(ref _refreshQueued, 1);
             return;
+        }
 
         try
         {
@@ -207,7 +216,11 @@ public class ProjectsViewModel : ViewModelBase
             var config     = AppConfigStore.Load();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
-            var projectItems = await Task.Run(() => BuildProjectItems(config));
+            var projectItems = await Task.Run(() =>
+            {
+                var discovered = GetDiscoveredProjects(config, forceDiscovery);
+                return BuildProjectItems(config, discovered);
+            });
 
             Projects.Clear();
             _allProjects.Clear();
@@ -234,11 +247,24 @@ public class ProjectsViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+            Interlocked.Exchange(ref _refreshInFlight, 0);
+            if (Interlocked.Exchange(ref _refreshQueued, 0) == 1)
+            {
+                await RefreshAsync(forceDiscovery: forceDiscovery);
+            }
         }
     }
 
-    private List<ProjectItemViewModel> BuildProjectItems(AppConfig config)
+    private IReadOnlyList<DiscoveredProject> GetDiscoveredProjects(AppConfig config, bool forceDiscovery)
     {
+        var root = ResolveDiscoveryRoot(config);
+        var cacheFresh = !forceDiscovery
+            && string.Equals(_cachedDiscoveryRoot, root, StringComparison.OrdinalIgnoreCase)
+            && (DateTime.UtcNow - _cachedDiscoveryUtc) < DiscoveryCacheTtl;
+
+        if (cacheFresh)
+            return _cachedDiscovery;
+
         IReadOnlyList<DiscoveredProject> discovered;
         try
         {
@@ -249,6 +275,28 @@ public class ProjectsViewModel : ViewModelBase
             discovered = Array.Empty<DiscoveredProject>();
         }
 
+        _cachedDiscovery = discovered;
+        _cachedDiscoveryRoot = root;
+        _cachedDiscoveryUtc = DateTime.UtcNow;
+        return discovered;
+    }
+
+    private static string ResolveDiscoveryRoot(AppConfig config)
+    {
+        if (!string.IsNullOrWhiteSpace(config.ProjectsRoot))
+            return config.ProjectsRoot;
+
+#if WINDOWS
+        var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        return Path.Combine(docs, "Projects");
+#else
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+        return Path.Combine(home, "Projects");
+#endif
+    }
+
+    private List<ProjectItemViewModel> BuildProjectItems(AppConfig config, IReadOnlyList<DiscoveredProject> discovered)
+    {
         // Try to open the shared DB so we can enrich projects with real snapshot data.
         SqliteRepository? repo = null;
         Dictionary<string, Project>? projectsByName = null;

@@ -196,6 +196,7 @@ public class MetadataSyncTests
                 "project-tombstone/2025-01-01_00-00-00",
                 CreateTempDir(),
                 "Primary",
+                false,
                 false);
 
             Assert.NotNull(repo.GetBackupByExternalId("backup-ts"));

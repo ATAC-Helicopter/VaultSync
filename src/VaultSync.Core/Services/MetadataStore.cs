@@ -235,6 +235,18 @@ public sealed class MetadataStore
             """);
     }
 
+    public IEnumerable<MetaProjectRef> ListProjectRefs()
+    {
+        using var c = Open(write: false);
+        return c.Query<MetaProjectRef>(
+            """
+            SELECT
+              external_id as ExternalId,
+              name as Name
+            FROM projects;
+            """);
+    }
+
     public bool HasProject(string externalId)
     {
         if (string.IsNullOrWhiteSpace(externalId))
@@ -261,6 +273,18 @@ public sealed class MetadataStore
             """);
     }
 
+    public IEnumerable<MetaSnapshotRef> ListSnapshotRefs()
+    {
+        using var c = Open(write: false);
+        return c.Query<MetaSnapshotRef>(
+            """
+            SELECT
+              external_id as ExternalId,
+              project_external_id as ProjectExternalId
+            FROM snapshots;
+            """);
+    }
+
     public IEnumerable<MetaBackup> ListBackups()
     {
         using var c = Open(write: false);
@@ -282,6 +306,18 @@ public sealed class MetadataStore
             """);
     }
 
+    public IEnumerable<MetaBackupRef> ListBackupRefs()
+    {
+        using var c = Open(write: false);
+        return c.Query<MetaBackupRef>(
+            """
+            SELECT
+              external_id as ExternalId,
+              project_external_id as ProjectExternalId
+            FROM backups;
+            """);
+    }
+
     public IEnumerable<MetaTombstone> ListTombstones()
     {
         using var c = Open(write: false);
@@ -292,6 +328,18 @@ public sealed class MetadataStore
               entity_id as EntityId,
               deleted_utc as DeletedUtc,
               origin_machine_id as OriginMachineId
+            FROM tombstones;
+            """);
+    }
+
+    public IEnumerable<MetaTombstoneRef> ListTombstoneRefs()
+    {
+        using var c = Open(write: false);
+        return c.Query<MetaTombstoneRef>(
+            """
+            SELECT
+              entity_type as EntityType,
+              entity_id as EntityId
             FROM tombstones;
             """);
     }
@@ -368,4 +416,28 @@ public sealed class MetaTombstone
     public string EntityId { get; set; } = string.Empty;
     public DateTime DeletedUtc { get; set; }
     public string OriginMachineId { get; set; } = string.Empty;
+}
+
+public sealed class MetaProjectRef
+{
+    public string ExternalId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}
+
+public sealed class MetaSnapshotRef
+{
+    public string ExternalId { get; set; } = string.Empty;
+    public string ProjectExternalId { get; set; } = string.Empty;
+}
+
+public sealed class MetaBackupRef
+{
+    public string ExternalId { get; set; } = string.Empty;
+    public string ProjectExternalId { get; set; } = string.Empty;
+}
+
+public sealed class MetaTombstoneRef
+{
+    public string EntityType { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
 }

@@ -19,11 +19,21 @@
 - Archive upload auto-tune probe now uses a larger test file and allows higher buffer ceilings on fast links.
 - Dashboard and backups totals now exclude imported-only backups unless they were created locally.
 - Parallel archive upload now exits cleanly after completion instead of stalling on the heartbeat task.
+- Dashboard refresh now coalesces concurrent requests to avoid redundant refresh work.
+- Backups view reload now reuses cached data when off-page to avoid redundant DB reads.
+- Projects refresh now reuses cached discovery results unless a manual refresh is requested.
+- Projects refresh now coalesces concurrent requests to avoid redundant refresh work.
+- Auto backup now resolves destinations once per run to avoid repeated mount checks per project.
+- Navigation now skips redundant reloads when switching to the current view and throttles dashboard refreshes.
+- Metadata sync preview now uses lightweight store queries to reduce load time on large metadata stores.
+- Startup now defers destination probes, metadata auto-import, and update checks briefly to reduce launch stutter.
 - Projects page detail panel refreshed with a modern preset control and tightened stat cards.
 - Projects page preset dropdown and recent snapshots list refreshed for consistency.
 - Projects page registration checks now run off the UI thread to avoid selection stalls.
 - Metadata import UI refresh now coalesces repeated updates to avoid redundant reloads.
 - Archive compression now uses larger stream buffers and sequential scan hints for better throughput.
+- Dashboard KPI typography now uses heavier weights to reduce the thin look.
+- Dashboard weekly backups panel layout refreshed with a compact stat column and framed chart.
 ### Fixed
 - Windows release publishes default to self-contained `win-x64` to avoid missing runtime prompts.
 - Startup crash in backup path normalization (Dapper materialization) resolved.
@@ -35,9 +45,11 @@
 - Snapshot history now orders by timestamp to avoid stale "latest" entries.
 - Metadata import now uses temp copies when WAL files are present to stabilize manual refresh previews.
 - Metadata import preview/import now ignores backups that are tombstoned in the store to prevent flip-flopping adds/deletes.
+- Dashboard now refreshes on initial load so the first view shows live data.
 - Restore now extracts archived backups (`data.zip`) instead of copying the archive file.
 - Restore now resolves imported backups using destination aliases when original paths are missing.
 - Restore now uses the configured Projects root when a project path is missing on a new machine.
+- Backup progress now switches to a dedicated finalizing stage and disables cancel once uploads complete.
 
 ## [1.3.2] - 18.01.2026
 ### Added

@@ -5,6 +5,7 @@ using System.Linq;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
@@ -185,6 +186,8 @@ namespace VaultSync.UI.ViewModels
         private readonly double[] _snapshotCountsByDay = new double[7];
         private int _backupsThisWeekCount;
         private int _activeProjectsCount;
+        private int _refreshInFlight;
+        private int _refreshQueued;
 
         public DashboardViewModel()
         {
@@ -234,6 +237,12 @@ namespace VaultSync.UI.ViewModels
         /// </summary>
         public async System.Threading.Tasks.Task RefreshAsync()
         {
+            if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
+            {
+                Interlocked.Exchange(ref _refreshQueued, 1);
+                return;
+            }
+
             try
             {
                 var data = await Task.Run(() =>
@@ -429,6 +438,14 @@ namespace VaultSync.UI.ViewModels
             {
                 Console.WriteLine($"[Dashboard] Refresh failed: {ex.Message}");
                 BuildDemoSeriesIfNeeded();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _refreshInFlight, 0);
+                if (Interlocked.Exchange(ref _refreshQueued, 0) == 1)
+                {
+                    await RefreshAsync();
+                }
             }
         }
 

@@ -175,7 +175,7 @@
         <!-- Typography -->
         <Style Selector="TextBlock.metric">
             <Setter Property="FontSize" Value="{DynamicResource MetricFontSize}" />
-            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
             <Setter Property="Margin" Value="{DynamicResource MetricMargin}" />
         </Style>
@@ -193,6 +193,7 @@
         <Style Selector="TextBlock.kicker">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
             <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
     </Application.Styles>
