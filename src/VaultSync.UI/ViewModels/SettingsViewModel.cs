@@ -1755,7 +1755,7 @@ namespace VaultSync.UI
                     if (OperatingSystem.IsMacOS())
                         Process.Start("open", path);
                     else if (OperatingSystem.IsWindows())
-                        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
+                        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
                     else
                         Process.Start("xdg-open", path);
                 }

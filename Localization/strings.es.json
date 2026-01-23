@@ -519,5 +519,7 @@
   "Errors.SoftCrash.CopyLogPath": "Copiar ruta del registro",
   "Backups.Delete.DontShowAgain": "No volver a mostrar",
   "Settings.Backups.ConfirmDelete": "Confirmar antes de eliminar copias",
-  "Settings.Backups.ConfirmDeleteDescription": "Muestra una advertencia antes de eliminar datos de respaldo en el destino."
+  "Settings.Backups.ConfirmDeleteDescription": "Muestra una advertencia antes de eliminar datos de respaldo en el destino.",
+  "Backups.Destinations.Pending": "Pending",
+  "Backups.Destinations.Inactive": "Inactive"
 }

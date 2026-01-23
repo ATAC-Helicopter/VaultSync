@@ -519,5 +519,7 @@
   "Errors.SoftCrash.CopyLogPath": "Копировать путь к логу",
   "Backups.Delete.DontShowAgain": "Больше не показывать",
   "Settings.Backups.ConfirmDelete": "Подтверждать удаление резервных копий",
-  "Settings.Backups.ConfirmDeleteDescription": "Показывает предупреждение перед удалением данных на назначении."
+  "Settings.Backups.ConfirmDeleteDescription": "Показывает предупреждение перед удалением данных на назначении.",
+  "Backups.Destinations.Pending": "Pending",
+  "Backups.Destinations.Inactive": "Inactive"
 }

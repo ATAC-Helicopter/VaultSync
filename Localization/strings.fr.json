@@ -519,5 +519,7 @@
   "Errors.SoftCrash.CopyLogPath": "Copier le chemin du journal",
   "Backups.Delete.DontShowAgain": "Ne plus afficher",
   "Settings.Backups.ConfirmDelete": "Confirmer avant de supprimer les sauvegardes",
-  "Settings.Backups.ConfirmDeleteDescription": "Affiche un avertissement avant de supprimer les données de sauvegarde sur la destination."
+  "Settings.Backups.ConfirmDeleteDescription": "Affiche un avertissement avant de supprimer les données de sauvegarde sur la destination.",
+  "Backups.Destinations.Pending": "Pending",
+  "Backups.Destinations.Inactive": "Inactive"
 }

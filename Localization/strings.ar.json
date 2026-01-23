@@ -519,5 +519,7 @@
   "Errors.SoftCrash.CopyLogPath": "نسخ مسار السجل",
   "Backups.Delete.DontShowAgain": "لا تظهر مرة أخرى",
   "Settings.Backups.ConfirmDelete": "قم بالتأكيد قبل حذف النسخ الاحتياطية",
-  "Settings.Backups.ConfirmDeleteDescription": "يظهر تحذيرًا قبل إزالة بيانات النسخ الاحتياطي على الوجهة."
+  "Settings.Backups.ConfirmDeleteDescription": "يظهر تحذيرًا قبل إزالة بيانات النسخ الاحتياطي على الوجهة.",
+  "Backups.Destinations.Pending": "Pending",
+  "Backups.Destinations.Inactive": "Inactive"
 }

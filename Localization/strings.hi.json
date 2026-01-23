@@ -519,5 +519,7 @@
   "Errors.SoftCrash.CopyLogPath": "लॉग पथ कॉपी करें",
   "Backups.Delete.DontShowAgain": "दोबारा न दिखाएँ",
   "Settings.Backups.ConfirmDelete": "बैकअप हटाने से पहले पुष्टि",
-  "Settings.Backups.ConfirmDeleteDescription": "गंतव्य से बैकअप डेटा हटाने से पहले चेतावनी दिखाता है।"
+  "Settings.Backups.ConfirmDeleteDescription": "गंतव्य से बैकअप डेटा हटाने से पहले चेतावनी दिखाता है।",
+  "Backups.Destinations.Pending": "Pending",
+  "Backups.Destinations.Inactive": "Inactive"
 }

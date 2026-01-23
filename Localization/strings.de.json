@@ -519,5 +519,7 @@
   "Errors.SoftCrash.CopyLogPath": "Log-Pfad kopieren",
   "Backups.Delete.DontShowAgain": "Nicht mehr anzeigen",
   "Settings.Backups.ConfirmDelete": "Vor dem Löschen von Backups bestätigen",
-  "Settings.Backups.ConfirmDeleteDescription": "Zeigt eine Warnung, bevor Backup-Daten am Ziel gelöscht werden."
+  "Settings.Backups.ConfirmDeleteDescription": "Zeigt eine Warnung, bevor Backup-Daten am Ziel gelöscht werden.",
+  "Backups.Destinations.Pending": "Pending",
+  "Backups.Destinations.Inactive": "Inactive"
 }

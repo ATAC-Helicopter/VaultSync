@@ -519,5 +519,7 @@
   "Errors.SoftCrash.CopyLogPath": "复制日志路径",
   "Backups.Delete.DontShowAgain": "不再显示",
   "Settings.Backups.ConfirmDelete": "删除备份前确认",
-  "Settings.Backups.ConfirmDeleteDescription": "在目标上删除备份数据前显示警告。"
+  "Settings.Backups.ConfirmDeleteDescription": "在目标上删除备份数据前显示警告。",
+  "Backups.Destinations.Pending": "Pending",
+  "Backups.Destinations.Inactive": "Inactive"
 }
