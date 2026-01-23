@@ -121,6 +121,7 @@ namespace VaultSync.UI.ViewModels
             new ObservableCollection<ProjectBackupItem>();
 
         public event Action<int, bool>? AutoBackupPreferenceChanged;
+        public event Action<DestinationStatusItem, bool>? DestinationActiveChanged;
 
         // Appearance
         public bool ShowProjectAvatars { get; private set; } = true;
@@ -134,11 +135,13 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<DestinationStatusItem> DestinationStatuses { get; } =
             new ObservableCollection<DestinationStatusItem>();
         public bool HasDestinationStatuses => DestinationStatuses.Count > 0;
+        public bool CanToggleDestinations => !_isBusy;
 
         private int _diskUsageInFlight;
         private int _refreshSnapshotsInFlight;
         private int _refreshSnapshotsQueued;
         private bool _refreshSnapshotsForceResetQueued;
+        private string? _preferredExpandedProjectId;
 
         private readonly struct SnapshotFilterState : IEquatable<SnapshotFilterState>
         {
@@ -369,6 +372,7 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _isBusy, value))
                 {
                     OnPropertyChanged(nameof(IsBusy));
+                    OnPropertyChanged(nameof(CanToggleDestinations));
                 }
             }
         }
@@ -595,6 +599,7 @@ namespace VaultSync.UI.ViewModels
                 _currentProjectIdFilter   = null;
                 HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
                 OnPropertyChanged(nameof(HistoryFilterProjectLabel));
+                _preferredExpandedProjectId = null;
                 RefreshSnapshotsView(true);
                 return;
             }
@@ -602,7 +607,13 @@ namespace VaultSync.UI.ViewModels
             _currentProjectIdFilter   = project.Id;
             HistoryFilterProjectLabel = project.Name;
             OnPropertyChanged(nameof(HistoryFilterProjectLabel));
+            _preferredExpandedProjectId = project.Id;
             RefreshSnapshotsView(true);
+        }
+
+        public void PinExpandedProject(string? projectId)
+        {
+            _preferredExpandedProjectId = string.IsNullOrWhiteSpace(projectId) ? null : projectId;
         }
 
         // ---------- Active backup progress (per project) ----------
@@ -696,29 +707,62 @@ namespace VaultSync.UI.ViewModels
             ActiveBackups.Clear();
         }
 
-        public void ResetDestinationStatuses(IEnumerable<BackupDestination> destinations)
+        public void ResetDestinationStatuses(IEnumerable<BackupDestination> destinations, bool allowToggle)
         {
             var list = destinations.ToList();
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                Dispatcher.UIThread.Post(() => ResetDestinationStatuses(list));
+                Dispatcher.UIThread.Post(() => ResetDestinationStatuses(list, allowToggle));
                 return;
             }
 
+            foreach (var item in DestinationStatuses)
+            {
+                item.PropertyChanged -= OnDestinationItemPropertyChanged;
+            }
             DestinationStatuses.Clear();
             foreach (var dest in list)
             {
-                DestinationStatuses.Add(new DestinationStatusItem
+                var status = GetDestinationStatusText(dest.Active);
+                var severity = dest.Active ? "Warning" : "Info";
+                var item = new DestinationStatusItem
                 {
                     Id     = DestinationStatusItem.GetId(dest),
                     Alias  = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path,
                     Path   = dest.Path,
-                    Status = dest.Active ? "Pending" : "Inactive",
-                    Severity = "Info",
-                    LastCheckedUtc = null
-                });
+                    Status = status,
+                    Severity = severity,
+                    DotBrush = GetDestinationDotBrush(status, severity),
+                    LastCheckedUtc = null,
+                    IsActive = dest.Active,
+                    IsConfigurable = allowToggle
+                };
+                item.PropertyChanged += OnDestinationItemPropertyChanged;
+                DestinationStatuses.Add(item);
             }
             OnPropertyChanged(nameof(HasDestinationStatuses));
+        }
+
+        private void OnDestinationItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not DestinationStatusItem item)
+                return;
+
+            if (e.PropertyName == nameof(DestinationStatusItem.IsActive))
+            {
+                if (item.IsConfigurable)
+                {
+                    var status = GetDestinationStatusText(item.IsActive);
+                    if (!string.Equals(item.Status, status, StringComparison.OrdinalIgnoreCase))
+                    {
+                        item.Status = status;
+                        item.Severity = "Info";
+                        item.DotBrush = GetDestinationDotBrush(status, "Info");
+                    }
+
+                    DestinationActiveChanged?.Invoke(item, item.IsActive);
+                }
+            }
         }
 
         public void UpdateDestinationStatus(string id, string status, string severity = "Info")
@@ -733,8 +777,66 @@ namespace VaultSync.UI.ViewModels
             if (item is null)
                 return;
 
-            item.Status   = status;
-            item.Severity = severity;
+            var normalizedStatus = status ?? string.Empty;
+            var reachableLabel = LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable";
+            var unavailableLabel = LocalizationProvider.Service?.GetString("Destinations.Test.Unavailable") ?? "Unavailable";
+            var readOnlyLabel = LocalizationProvider.Service?.GetString("Destinations.Test.ReadOnly") ?? "Read-only";
+
+            if (!string.IsNullOrWhiteSpace(normalizedStatus))
+            {
+                if (normalizedStatus.Contains("Using pre-mounted", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedStatus = reachableLabel;
+                }
+                else if (normalizedStatus.Contains("Reachable", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedStatus = reachableLabel;
+                }
+                else if (normalizedStatus.Contains("Completed", StringComparison.OrdinalIgnoreCase) ||
+                         normalizedStatus.Contains("No changes", StringComparison.OrdinalIgnoreCase) ||
+                         normalizedStatus.Contains("No backup", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedStatus = reachableLabel;
+                }
+                else if (normalizedStatus.Contains("Read-only", StringComparison.OrdinalIgnoreCase) ||
+                         normalizedStatus.Contains("Read only", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedStatus = readOnlyLabel;
+                }
+                else if (normalizedStatus.Contains("Unavailable", StringComparison.OrdinalIgnoreCase) ||
+                         normalizedStatus.Contains("Unreachable", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedStatus = unavailableLabel;
+                }
+            }
+
+            var severityToUse = severity;
+            if (string.Equals(severity, "Info", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.IsNullOrWhiteSpace(normalizedStatus) &&
+                    string.Equals(normalizedStatus, reachableLabel, StringComparison.OrdinalIgnoreCase))
+                {
+                    severityToUse = "Success";
+                }
+                else if (!string.IsNullOrWhiteSpace(normalizedStatus) &&
+                         string.Equals(normalizedStatus, unavailableLabel, StringComparison.OrdinalIgnoreCase))
+                {
+                    severityToUse = "Error";
+                }
+                else if (!string.IsNullOrWhiteSpace(normalizedStatus) &&
+                         string.Equals(normalizedStatus, readOnlyLabel, StringComparison.OrdinalIgnoreCase))
+                {
+                    severityToUse = "Warning";
+                }
+                else if (!string.Equals(item.Severity, "Info", StringComparison.OrdinalIgnoreCase))
+                {
+                    severityToUse = item.Severity;
+                }
+            }
+
+            item.Status   = normalizedStatus;
+            item.Severity = severityToUse;
+            item.DotBrush = GetDestinationDotBrush(normalizedStatus, severityToUse);
             item.LastCheckedUtc = DateTime.UtcNow;
         }
 
@@ -742,6 +844,32 @@ namespace VaultSync.UI.ViewModels
         {
             UpdateDestinationStatus(id, status, success ? "Success" : "Error");
         }
+
+        private static string GetDestinationStatusText(bool isActive)
+        {
+            if (isActive)
+            {
+                return LocalizationProvider.Service?.GetString("Backups.Destinations.Pending")
+                       ?? "Pending";
+            }
+
+            return LocalizationProvider.Service?.GetString("Backups.Destinations.Inactive")
+                   ?? "Inactive";
+        }
+
+        private static IBrush GetDestinationDotBrush(string status, string severity)
+        {
+            return severity switch
+            {
+                "Success" => AccentBrush("#22CC88"),
+                "Warning" => AccentBrush("#FFB84C"),
+                "Error"   => AccentBrush("#FF6B6B"),
+                _         => AccentBrush("#8E9BAF")
+            };
+        }
+
+        private static IBrush AccentBrush(string hex) =>
+            new ImmutableSolidColorBrush(Color.Parse(hex));
 
         /// <summary>
         /// Shows a non-cancellable transient operation (e.g., deleting a backup) in the active list.
@@ -995,9 +1123,11 @@ namespace VaultSync.UI.ViewModels
                     }
                 }
 
-                var isExpanded = !string.IsNullOrWhiteSpace(_currentProjectIdFilter)
-                    ? string.Equals(_currentProjectIdFilter, key, StringComparison.OrdinalIgnoreCase)
-                    : latest == latestOverall;
+                var isExpanded = !string.IsNullOrWhiteSpace(_preferredExpandedProjectId)
+                    ? string.Equals(_preferredExpandedProjectId, key, StringComparison.OrdinalIgnoreCase)
+                    : !string.IsNullOrWhiteSpace(_currentProjectIdFilter)
+                        ? string.Equals(_currentProjectIdFilter, key, StringComparison.OrdinalIgnoreCase)
+                        : latest == latestOverall;
 
                 var groupVm = new SnapshotProjectGroup
                 {
@@ -1789,14 +1919,65 @@ namespace VaultSync.UI.ViewModels
                     return;
                 _status = value ?? string.Empty;
                 OnPropertyChanged(nameof(Status));
+                OnPropertyChanged(nameof(IsChecking));
             }
+        }
+
+        public bool IsChecking =>
+            !string.Equals(Severity, "Info", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(Status, LocalizationProvider.Service?.GetString("Backups.Destinations.Pending") ?? "Pending", StringComparison.OrdinalIgnoreCase) ||
+            Status.Contains("checking", StringComparison.OrdinalIgnoreCase) ||
+            Status.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
+            Status.Contains("probing", StringComparison.OrdinalIgnoreCase) ||
+            Status.Contains("using pre-mounted", StringComparison.OrdinalIgnoreCase) ||
+            Status.Contains("reachable", StringComparison.OrdinalIgnoreCase);
+
+        private bool _isActive = true;
+        public bool IsActive
+        {
+            get => _isActive;
+            set => SetField(ref _isActive, value);
+        }
+
+        private bool _isConfigurable = true;
+        public bool IsConfigurable
+        {
+            get => _isConfigurable;
+            set => SetField(ref _isConfigurable, value);
         }
 
         private string _severity = "Info";
         public string Severity
         {
             get => _severity;
-            set => SetField(ref _severity, value);
+            set
+            {
+                if (SetField(ref _severity, value))
+                {
+                    OnPropertyChanged(nameof(ReachabilityBrush));
+                }
+            }
+        }
+
+        private IBrush _dotBrush = new ImmutableSolidColorBrush(Color.Parse("#8E9BAF"));
+        public IBrush DotBrush
+        {
+            get => _dotBrush;
+            set => SetField(ref _dotBrush, value);
+        }
+
+        public IBrush ReachabilityBrush
+        {
+            get
+            {
+                return Severity switch
+                {
+                    "Success" => new ImmutableSolidColorBrush(Color.Parse("#22CC88")),
+                    "Warning" => new ImmutableSolidColorBrush(Color.Parse("#FFB84C")),
+                    "Error" => new ImmutableSolidColorBrush(Color.Parse("#FF6B6B")),
+                    _ => new ImmutableSolidColorBrush(Color.Parse("#8E9BAF"))
+                };
+            }
         }
 
         private DateTime? _lastCheckedUtc;
@@ -2005,6 +2186,8 @@ namespace VaultSync.UI.ViewModels
         public string StageDisplay
             => IsCompleted ? StageLabel : $"{StageLabel} - {FormatElapsed(_stageStartUtc)}";
 
+        public IBrush StageBrush => GetStageBrush();
+
         private bool IsProgressReliable
         {
             get
@@ -2137,6 +2320,7 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(ShowEta));
             OnPropertyChanged(nameof(StageLabel));
             OnPropertyChanged(nameof(StageDisplay));
+            OnPropertyChanged(nameof(StageBrush));
             OnPropertyChanged(nameof(EtaDisplay));
             OnPropertyChanged(nameof(HasEtaDisplay));
         }
@@ -2247,6 +2431,27 @@ namespace VaultSync.UI.ViewModels
         }
 
         private bool IsCopyingStage => string.Equals(GetStageKey(), "Copying", StringComparison.OrdinalIgnoreCase);
+
+        private IBrush GetStageBrush()
+        {
+            var stageKey = GetStageKey();
+            return stageKey switch
+            {
+                "Completed"   => AccentBrush("#22CC88"),
+                "Cancelling"  => AccentBrush("#FF6B6B"),
+                "Deleting"    => AccentBrush("#FF6B6B"),
+                "Compressing" => AccentBrush("#FFB84C"),
+                "Uploading"   => AccentBrush("#22CCFF"),
+                "Hashing"     => AccentBrush("#9B6BFF"),
+                "Copying"     => AccentBrush("#4C8DFF"),
+                "BackingUp"   => AccentBrush("#3A7AFE"),
+                "Preparing"   => AccentBrush("#8E9BAF"),
+                _             => AccentBrush("#8E9BAF")
+            };
+        }
+
+        private static IBrush AccentBrush(string hex) =>
+            new ImmutableSolidColorBrush(Color.Parse(hex));
     }
 
     public class SnapshotActivityPoint

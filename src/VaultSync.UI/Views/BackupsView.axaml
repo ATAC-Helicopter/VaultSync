@@ -7,6 +7,10 @@
              x:DataType="vm:BackupsViewModel"
              x:CompileBindings="False">
 
+  <UserControl.Resources>
+    <controls:StatusToBrushConverter x:Key="StatusToBrushConverter" />
+  </UserControl.Resources>
+
   <UserControl.Styles>
     <Style Selector="ListBox > ListBoxItem:selected">
       <Setter Property="Background" Value="Transparent" />
@@ -44,6 +48,31 @@
       <Setter Property="HorizontalAlignment" Value="Center" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
+
+    <Style Selector="Border.pulse-ring">
+      <Setter Property="Opacity" Value="0.6" />
+      <Setter Property="Width" Value="10" />
+      <Setter Property="Height" Value="10" />
+      <Style.Animations>
+        <Animation Duration="0:0:1.4" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+          </KeyFrame>
+          <KeyFrame Cue="70%">
+            <Setter Property="Opacity" Value="0.15" />
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
     </Style>
 
     <Style Selector="Expander.backup-group">
@@ -395,7 +424,7 @@
                                   Grid.Column="0"
                                   Width="4"
                                   CornerRadius="2"
-                                  Background="{DynamicResource AccentBrush}"
+                                  Background="{Binding StageBrush}"
                                   Opacity="0.8" />
                           <StackPanel Grid.Row="0"
                                       Grid.Column="1"
@@ -409,7 +438,7 @@
                                        TextAlignment="Left" />
                             <TextBlock Text="{Binding StageDisplay}"
                                        FontSize="11"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Foreground="{Binding StageBrush}"
                                        TextTrimming="CharacterEllipsis"
                                        HorizontalAlignment="Left"
                                        TextAlignment="Left" />
@@ -437,6 +466,7 @@
                                        Maximum="100"
                                        Value="{Binding DisplayProgress}"
                                        IsIndeterminate="{Binding IsIndeterminate}"
+                                       Foreground="{Binding StageBrush}"
                                        Height="6"
                                        CornerRadius="3" />
                           <StackPanel Grid.Row="2"
@@ -465,35 +495,6 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <ItemsControl ItemsSource="{Binding DestinationStatuses}"
-                            IsVisible="{Binding HasDestinationStatuses}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Border Margin="0,2,0,0"
-                            Padding="8"
-                            CornerRadius="8"
-                            Background="{DynamicResource CardBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}"
-                            BorderThickness="1">
-                      <Grid ColumnDefinitions="Auto,*"
-                            ColumnSpacing="10">
-                        <TextBlock Text="{Binding Alias}"
-                                   FontWeight="SemiBold" />
-                        <StackPanel Grid.Column="1"
-                                    Spacing="2">
-                          <TextBlock Text="{Binding Status}"
-                                     Foreground="{DynamicResource TextSecondaryBrush}"
-                                     TextTrimming="CharacterEllipsis"
-                                     MaxWidth="320" />
-                          <TextBlock Text="{Binding LastCheckedDisplay}"
-                                     Foreground="{DynamicResource TextSecondaryBrush}"
-                                     FontSize="11" />
-                        </StackPanel>
-                      </Grid>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
               <TextBlock Text="{infra:LocalizedString Key=Backups.Section.WaitMessage}"
                        FontSize="11"
                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -514,10 +515,12 @@
                   MinWidth="360"
                   Grid.Column="0">
 
-            <StackPanel Spacing="8">
+            <Grid RowDefinitions="Auto,*"
+                  RowSpacing="8">
 
               <!-- Section header -->
-              <StackPanel Orientation="Horizontal"
+              <StackPanel Grid.Row="0"
+                          Orientation="Horizontal"
                           HorizontalAlignment="Stretch">
                 <StackPanel>
                   <TextBlock Text="{infra:LocalizedString Key=Backups.Section.PerProjectTitle}"
@@ -531,31 +534,34 @@
 
               <!-- Per-project list -->
               <ListBox x:Name="PerProjectList"
+                       Grid.Row="1"
                        ItemsSource="{Binding ProjectBackups}"
                        SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
                        SelectionMode="Single"
                        BorderThickness="0"
-                       Margin="0,4,0,0">
-                              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <Border Classes="card project-card"
-                          CornerRadius="14"
-                          Padding="12"
-                          Margin="0,6,0,6"
-                          Background="{DynamicResource Surface2}"
-                          BorderBrush="{DynamicResource BorderSoft}"
-                          BorderThickness="1">
-                    <Grid ColumnDefinitions="4,Auto,*,Auto"
-                          RowDefinitions="Auto,Auto,Auto"
-                          ColumnSpacing="12"
-                          RowSpacing="4">
+                       VerticalAlignment="Stretch">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="card project-card"
+                            CornerRadius="14"
+                            Padding="8"
+                            Margin="0,3,0,3"
+                            Background="{DynamicResource Surface2}"
+                            BorderBrush="{DynamicResource BorderSoft}"
+                            BorderThickness="1">
+                      <Grid ColumnDefinitions="4,Auto,*,Auto"
+                            RowDefinitions="Auto,Auto,Auto"
+                            ColumnSpacing="10"
+                            RowSpacing="3">
 
                       <Border Grid.RowSpan="3"
                               Grid.Column="0"
                               Width="4"
                               Background="{Binding AvatarColor}"
                               CornerRadius="2"
-                              Opacity="0.85" />
+                              Opacity="0.85"
+                              VerticalAlignment="Stretch"
+                              Margin="0,4,0,4" />
 
                       <!-- Avatar -->
                       <Grid Grid.RowSpan="3"
@@ -563,7 +569,7 @@
                             Width="36"
                             Height="36"
                             IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                        <Border CornerRadius="16"
+                        <Border CornerRadius="18"
                                 Background="{Binding AvatarColor}" />
                         <Image Source="{Binding AvatarImagePath}"
                                Stretch="UniformToFill"
@@ -584,7 +590,7 @@
                                   Grid.Column="2"
                                   Spacing="2">
                         <TextBlock Text="{Binding Name}"
-                                   FontSize="16"
+                                   FontSize="14"
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" />
                       </StackPanel>
@@ -595,10 +601,10 @@
                                   Orientation="Horizontal"
                                   Spacing="6">
                         <TextBlock Text="{infra:LocalizedString Key=Backups.Section.LastBackupLabel}"
-                                   FontSize="12"
+                                   FontSize="11"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                         <TextBlock Text="{Binding LastBackupDisplay}"
-                                   FontSize="12"
+                                   FontSize="11"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                       </StackPanel>
 
@@ -606,41 +612,41 @@
                       <StackPanel Grid.Row="2"
                                   Grid.Column="2"
                                   Orientation="Horizontal"
-                                  Spacing="8">
+                                  Spacing="6">
                         <Border CornerRadius="999"
-                                Padding="10,3"
+                                Padding="6,2"
                                 Background="{DynamicResource Surface2}">
                           <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="{Binding SnapshotCount}"
-                                       FontSize="12"
+                                       FontSize="11"
                                        FontWeight="SemiBold" />
                             <TextBlock Text="{infra:LocalizedString Key=Backups.Section.BackupsLabel}"
-                                       FontSize="12"
+                                       FontSize="11"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                           </StackPanel>
                         </Border>
                         <Border CornerRadius="999"
-                                Padding="10,3"
+                                Padding="6,2"
                                 Background="{DynamicResource Surface2}">
                           <TextBlock Text="{Binding TotalSizeFormatted}"
-                                     FontSize="12"
+                                     FontSize="11"
                                      FontWeight="SemiBold" />
                         </Border>
                       </StackPanel>
 
                       <!-- Auto backup toggle -->
-                      <StackPanel Grid.Row="1"
+                      <StackPanel Grid.Row="0"
                                   Grid.Column="3"
-                                  Spacing="6"
+                                  Spacing="4"
                                   HorizontalAlignment="Right">
                         <TextBlock Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}"
-                                   FontSize="12"
+                                   FontSize="11"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                         <ToggleSwitch IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
                                       OffContent=""
                                       OnContent=""
-                                      FontSize="12"
+                                      FontSize="11"
                                       VerticalAlignment="Center"
                                       MinWidth="0"
                                       HorizontalAlignment="Right"
@@ -649,36 +655,140 @@
 
                       <!-- Primary action -->
                       <Button Grid.Row="2"
-                              Grid.Column="2"
-                              Grid.ColumnSpan="2"
+                              Grid.Column="3"
                               Content="{infra:LocalizedString Key=Backups.Section.PerProjectAction}"
                               Classes="action-primary"
                               HorizontalAlignment="Right"
                               VerticalAlignment="Center"
-                              Margin="0,6,0,0"
+                              Margin="0,4,0,0"
                               Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                               CommandParameter="{Binding}" />
 
                     </Grid>
-                  </Border>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
               </ListBox>
 
-            </StackPanel>
+            </Grid>
           </Border>
 
-          <!-- RIGHT PANEL: history + activity -->
+          <!-- RIGHT PANEL: destinations + history + activity -->
           <Grid Grid.Column="1"
-                RowDefinitions="Auto,Auto"
+                RowDefinitions="Auto,Auto,Auto"
                 RowSpacing="12">
+
+            <!-- DESTINATIONS -->
+            <Border Classes="card"
+                    CornerRadius="18"
+                    Padding="14"
+                    Grid.Row="0">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Title}"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.None}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           IsVisible="{Binding HasDestinationStatuses, Converter={StaticResource BoolInvertConverter}}" />
+                <ItemsControl ItemsSource="{Binding DestinationStatuses}"
+                              IsVisible="{Binding HasDestinationStatuses}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel Orientation="Horizontal"
+                                 ItemWidth="260"
+                                 ItemHeight="64"
+                                 HorizontalAlignment="Stretch"
+                                 ItemSpacing="10" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Margin="0,2,0,0"
+                              Padding="8"
+                              CornerRadius="12"
+                              Background="{DynamicResource Surface2}"
+                              BorderBrush="{DynamicResource BorderSoft}"
+                              BorderThickness="1">
+                        <Grid ColumnDefinitions="4,*,Auto"
+                              RowDefinitions="Auto,Auto"
+                              ColumnSpacing="10"
+                              RowSpacing="4">
+                          <Border Grid.RowSpan="2"
+                                  Grid.Column="0"
+                                  CornerRadius="2"
+                                  Background="{Binding ReachabilityBrush}"
+                                  Opacity="0.9"
+                                  VerticalAlignment="Center"
+                                  Margin="0,6,0,6" />
+                          <StackPanel Grid.Column="1"
+                                      Spacing="2">
+                            <TextBlock Text="{Binding Alias}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Path}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <Grid Grid.Column="2"
+                                RowDefinitions="Auto,Auto"
+                                RowSpacing="4"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                            <StackPanel Grid.Row="0"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center">
+                              <TextBlock Text="{Binding Status}"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                         TextTrimming="CharacterEllipsis"
+                                         VerticalAlignment="Center" />
+                              <Grid Width="20"
+                                    Height="20"
+                                    ClipToBounds="False"
+                                    ToolTip.Tip="{Binding Status}">
+                                <Border Classes="pulse-ring"
+                                        CornerRadius="5"
+                                        Background="{Binding ReachabilityBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        IsVisible="{Binding IsChecking}" />
+                                <Border Width="8"
+                                        Height="8"
+                                        CornerRadius="4"
+                                        Background="{Binding ReachabilityBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" />
+                              </Grid>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Row="1"
+                                          IsChecked="{Binding IsActive, Mode=TwoWay}"
+                                          IsEnabled="{Binding DataContext.CanToggleDestinations, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          IsVisible="{Binding IsConfigurable}"
+                                          VerticalAlignment="Center"
+                                          Content="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}"
+                                          OnContent=""
+                                          OffContent="" />
+                          </Grid>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
 
             <!-- HISTORY -->
             <Border Classes="card"
                     CornerRadius="18"
                     Padding="18"
                     MinWidth="360"
-                    Grid.Row="0">
+                    Grid.Row="1">
 
               <StackPanel Spacing="12">
 
@@ -932,7 +1042,7 @@
                     CornerRadius="18"
                     Padding="14"
                     MinWidth="360"
-                    Grid.Row="1">
+                    Grid.Row="2">
               <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                   <TextBlock Text="{infra:LocalizedString Key=Backups.Section.SnapshotsActivity}"

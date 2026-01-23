@@ -9,6 +9,33 @@
     Width="1200" Height="800"
     Title="{infra:LocalizedString Key=Shell.Title}">
 
+  <Window.Styles>
+    <Style Selector="Border.pulse-ring">
+      <Setter Property="Opacity" Value="0.6" />
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Style.Animations>
+        <Animation Duration="0:0:1.4" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+          </KeyFrame>
+          <KeyFrame Cue="70%">
+            <Setter Property="Opacity" Value="0.15" />
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="14" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </Window.Styles>
+
   <Grid RowDefinitions="Auto,*" ColumnDefinitions="260,*">
 
     <Border Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
@@ -45,6 +72,84 @@
                        Foreground="{StaticResource TextSecondary}"
                        FontSize="12"
                        TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom"
+                Margin="0,8,0,4"
+                Padding="6"
+                CornerRadius="12"
+                Background="{DynamicResource Surface2}"
+                BorderBrush="{DynamicResource BorderSoft}"
+                BorderThickness="1">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.Title}"
+                       Foreground="{StaticResource TextSecondary}"
+                       FontSize="10"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.None}"
+                       Foreground="{StaticResource TextSecondary}"
+                       FontSize="9"
+                       IsVisible="{Binding BackupsViewModel.HasDestinationStatuses, Converter={StaticResource BoolInvertConverter}}" />
+            <ItemsControl ItemsSource="{CompiledBinding BackupsViewModel.DestinationStatuses}"
+                          IsVisible="{CompiledBinding BackupsViewModel.HasDestinationStatuses}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Margin="0,2,0,0"
+                          Padding="6,4"
+                          CornerRadius="7"
+                          Background="{DynamicResource Surface3}"
+                          BorderBrush="{DynamicResource BorderSoft}"
+                          BorderThickness="1">
+                    <Grid ColumnDefinitions="4,*,Auto,Auto"
+                          RowDefinitions="Auto"
+                          ColumnSpacing="8"
+                          RowSpacing="0"
+                          VerticalAlignment="Center">
+                      <Border Grid.RowSpan="2"
+                              Grid.Column="0"
+                              CornerRadius="2"
+                              Background="{Binding ReachabilityBrush}"
+                              Opacity="0.9"
+                              VerticalAlignment="Center"
+                              Margin="0,3,0,3" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding Alias}"
+                                 FontWeight="SemiBold"
+                                 FontSize="9"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{Binding Path}"
+                                 VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2"
+                                 Text="{Binding Status}"
+                                 FontSize="8.5"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" />
+                      <Grid Grid.Column="3"
+                            Width="18"
+                            Height="18"
+                            ClipToBounds="False"
+                            ToolTip.Tip="{Binding Status}">
+                        <Border Classes="pulse-ring"
+                                CornerRadius="5"
+                                Background="{Binding ReachabilityBrush}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsChecking}" />
+                        <Border Width="6"
+                                Height="6"
+                                CornerRadius="3"
+                                Background="{Binding ReachabilityBrush}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                      </Grid>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </StackPanel>
         </Border>
 

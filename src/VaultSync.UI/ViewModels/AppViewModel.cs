@@ -311,6 +311,56 @@ namespace VaultSync.UI.ViewModels
             return new List<BackupDestination>();
         }
 
+        private List<BackupDestination> GetAllDestinations(AppConfig cfg)
+        {
+            if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
+            {
+                return cfg.Backups.Destinations.ToList();
+            }
+
+            var backupRoot = cfg.Backups.BackupLocation;
+            if (!string.IsNullOrWhiteSpace(backupRoot))
+            {
+                return new List<BackupDestination>
+                {
+                    new BackupDestination
+                    {
+                        Alias       = "Primary",
+                        Path        = backupRoot,
+                        Active      = true,
+                        PreMounted  = true,
+                        AutoMount   = false,
+                        AutoUnmount = false
+                    }
+                };
+            }
+
+            return new List<BackupDestination>();
+        }
+
+        private void RefreshDestinationStatusOverview()
+        {
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                var destinations = GetAllDestinations(cfg);
+                var allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
+                _backupsViewModel.ResetDestinationStatuses(destinations, allowToggle);
+
+                var summaries = GetDestinationProbeSummaries();
+                foreach (var summary in summaries)
+                {
+                    var severity = summary.Reachable ? "Success" : "Error";
+                    _backupsViewModel.UpdateDestinationStatus(summary.Id, summary.Message, severity);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Destinations] Failed to refresh overview: {ex.Message}");
+            }
+        }
+
         public object? CurrentView
         {
             get => _currentView;
@@ -490,6 +540,7 @@ namespace VaultSync.UI.ViewModels
             _settingsViewModel.UpdateCheckRequested += OnUpdateCheckRequested;
             _settingsViewModel.RefreshHistoryRequested += OnRefreshHistoryRequested;
             _settingsViewModel.UpdateUpdateCheckStatus(null, null);
+            _settingsViewModel.Destinations.CollectionChanged += (_, _) => RefreshDestinationStatusOverview();
 
             _logConsoleService = new LogConsoleService();
             _logConsoleService.InstallCapture();
@@ -508,9 +559,11 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.CancelActiveBackupRequested += OnCancelActiveBackupRequested;
             _backupsViewModel.AutoBackupPreferenceChanged += OnAutoBackupPreferenceChanged;
             _backupsViewModel.BackupProtectionChanged += OnBackupProtectionChanged;
+            _backupsViewModel.DestinationActiveChanged += OnDestinationActiveChanged;
 
             // 4) Initial load of backup data
             ReloadBackupsVmData();
+            RefreshDestinationStatusOverview();
 
             // 5) Default route
             // Default route (may be overridden by resume-last-session)
@@ -741,6 +794,7 @@ namespace VaultSync.UI.ViewModels
                         if (IsOnBackupsPage || force)
                         {
                             _backupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
+                            _backupsViewModel.RefreshBackupDriveHealth();
                         }
                     });
                 }
@@ -1123,6 +1177,51 @@ namespace VaultSync.UI.ViewModels
             ConfigureAutoBackupTimer();
         }
 
+        private void OnDestinationActiveChanged(DestinationStatusItem item, bool isActive)
+        {
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                if (!cfg.Backups.UseAdvancedDestinations ||
+                    cfg.Backups.Destinations is null ||
+                    cfg.Backups.Destinations.Count == 0)
+                {
+                    return;
+                }
+
+                var target = new BackupDestination
+                {
+                    Path = item.Path,
+                    Alias = item.Alias
+                };
+                var destEntry = cfg.Backups.Destinations
+                    .FirstOrDefault(d => DestinationsMatch(d.Path, d.Alias, target));
+                if (destEntry is null || destEntry.Active == isActive)
+                    return;
+
+                destEntry.Active = isActive;
+                AppConfigStore.Save(cfg);
+                _config = cfg;
+
+                if (_settingsViewModel is not null)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        var vmDest = _settingsViewModel.Destinations
+                            .FirstOrDefault(d => DestinationsMatch(d.Path, d.Alias, destEntry));
+                        if (vmDest != null)
+                        {
+                            vmDest.Active = isActive;
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Destinations] Failed to update active flag: {ex.Message}");
+            }
+        }
+
         private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
         {
             // Keep the cached config in sync with persisted settings to avoid overwriting newer values.
@@ -1155,6 +1254,8 @@ namespace VaultSync.UI.ViewModels
             {
                 UpdateLogConsoleSettings();
             }
+
+            RefreshDestinationStatusOverview();
         }
 
         private void UpdateLogConsoleSettings()
@@ -1939,7 +2040,9 @@ namespace VaultSync.UI.ViewModels
                 string.Empty);
             if (isFirstManual)
             {
-                _backupsViewModel.ResetDestinationStatuses(destinations);
+                var allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
+                var overviewDestinations = GetAllDestinations(cfg);
+                _backupsViewModel.ResetDestinationStatuses(overviewDestinations, allowToggle);
             }
 
             _backupsViewModel.IsBusy      = true;
@@ -1968,10 +2071,10 @@ namespace VaultSync.UI.ViewModels
                 {
                     var destId     = DestinationStatusItem.GetId(dest);
                     var resolution = await PrepareDestinationAsync(dest, cfg);
-                    _backupsViewModel.UpdateDestinationStatus(
-                        destId,
-                        resolution.Message,
-                        resolution.IsSuccess ? "Info" : "Error");
+                    if (!resolution.IsSuccess)
+                    {
+                        _backupsViewModel.UpdateDestinationStatus(destId, resolution.Message, "Error");
+                    }
 
                     if (!resolution.IsSuccess)
                     {
@@ -2121,7 +2224,6 @@ namespace VaultSync.UI.ViewModels
 
                         if (backupResult.SkippedForNoChanges)
                         {
-                            _backupsViewModel.MarkDestinationComplete(destId, true, L("Backups.Status.NoChanges", "No changes detected"));
                             Telemetry.Log("backup_single_skipped", b => b
                                 .WithCode("reason", "no_changes")
                                 .WithHashedString("project", project.Name)
@@ -2139,7 +2241,6 @@ namespace VaultSync.UI.ViewModels
                                 L("Backups.Status.Cancelled", "Cancelled"),
                                 string.Empty,
                                 allowCancel: false);
-                            _backupsViewModel.MarkDestinationComplete(destId, false, L("Backups.Status.Cancelled", "Cancelled"));
                             Telemetry.Log("backup_single_cancelled", b => b
                                 .WithHashedString("project", project.Name)
                                 .WithHashedString("destinationPath", dest.Path ?? string.Empty)
@@ -2155,19 +2256,16 @@ namespace VaultSync.UI.ViewModels
                                 100,
                                 L("Backups.Status.Completed", "Completed"),
                                 string.Empty);
-                            _backupsViewModel.MarkDestinationComplete(destId, true, L("Backups.Status.Completed", "Completed"));
                             succeeded++;
                             TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.BackupId);
                         }
                         else
                         {
-                            _backupsViewModel.MarkDestinationComplete(destId, false, L("Backups.Status.NoBackupCreated", "No backup created"));
                             failed++;
                         }
                     }
                     catch (OperationCanceledException)
                     {
-                        _backupsViewModel.MarkDestinationComplete(destId, false, L("Backups.Status.Cancelled", "Cancelled"));
                         Telemetry.Log("backup_single_cancelled", b => b
                             .WithHashedString("project", project.Name)
                             .WithHashedString("destinationPath", dest.Path)
@@ -2184,7 +2282,6 @@ namespace VaultSync.UI.ViewModels
                             .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
                             .WithFlag("useArchiveMode", useArchiveMode)
                             .WithException(ex));
-                        _backupsViewModel.MarkDestinationComplete(destId, false, ex.Message);
                     }
                     finally
                     {
@@ -3033,6 +3130,8 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
+            _backupsViewModel.PinExpandedProject(snapshot.ProjectId);
+
             _backupsViewModel.ShowTransientOperation(cardId, projectName, L("Backups.Status.Deleting", "Deleting backup files..."));
 
             _backupsViewModel.IsBusy      = true;
@@ -3274,7 +3373,7 @@ namespace VaultSync.UI.ViewModels
                 return DeleteBackupPreparation.Failure;
 
             var cfg = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
+            var destinations = GetAllDestinations(cfg);
             var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return DeleteBackupPreparation.Failure;
@@ -4213,17 +4312,27 @@ namespace VaultSync.UI.ViewModels
         {
             var id = DestinationStatusItem.GetId(dest);
             var alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias ?? dest.Path ?? string.Empty;
+            var message = string.IsNullOrWhiteSpace(result.Message)
+                ? (result.Reachable
+                    ? LStatic("Destinations.Test.Reachable", "Reachable")
+                    : LStatic("Destinations.Test.Unavailable", "Unavailable"))
+                : result.Message;
+
+            var severity = result.Reachable
+                ? (message.Contains(LStatic("Destinations.Test.ReadOnly", "Read-only"), StringComparison.OrdinalIgnoreCase)
+                    ? "Warning"
+                    : "Success")
+                : "Error";
+
             _destinationProbeSummaries[id] = new DestinationProbeSummary(
                 id,
                 alias,
                 dest.Path ?? string.Empty,
                 result.Reachable,
-                string.IsNullOrWhiteSpace(result.Message)
-                    ? (result.Reachable
-                        ? LStatic("Destinations.Test.Reachable", "Reachable")
-                        : LStatic("Destinations.Test.Unavailable", "Unavailable"))
-                    : result.Message,
+                message,
                 DateTime.UtcNow);
+
+            _backupsViewModel.UpdateDestinationStatus(id, message, severity);
         }
 
         private async void OnRefreshHistoryRequested()

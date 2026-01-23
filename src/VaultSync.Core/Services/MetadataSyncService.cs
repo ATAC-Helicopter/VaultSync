@@ -234,9 +234,39 @@ public sealed class MetadataSyncService
             snapshotMap[pair.Key] = pair.Value;
         }
 
+        var tombstonedBackupIds = metaTombstones
+            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.EntityId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var tombstonedSnapshotIds = metaTombstones
+            .Where(t => string.Equals(t.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.EntityId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var liveSnapshotExternalIds = new HashSet<string>(
+            metaBackups
+                .Where(b => !string.IsNullOrWhiteSpace(b.SnapshotExternalId))
+                .Where(b => !tombstonedBackupIds.Contains(b.ExternalId))
+                .Select(b => b.SnapshotExternalId),
+            StringComparer.OrdinalIgnoreCase);
+        var missingSnapshotExternalIds = metaSnapshots
+            .Where(s => !string.IsNullOrWhiteSpace(s.ExternalId))
+            .Where(s => !liveSnapshotExternalIds.Contains(s.ExternalId))
+            .Select(s => s.ExternalId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var missingSnapshotId in missingSnapshotExternalIds)
+        {
+            tombstonedSnapshotIds.Add(missingSnapshotId);
+        }
+
         foreach (var metaSnapshot in metaSnapshots)
         {
             if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
+                continue;
+
+            if (tombstonedSnapshotIds.Contains(metaSnapshot.ExternalId))
                 continue;
 
             if (!projectMap.TryGetValue(metaSnapshot.ProjectExternalId, out var projectId))
@@ -257,11 +287,7 @@ public sealed class MetadataSyncService
         }
 
         var backupExternalMap = _repo.GetBackupExternalIdMap();
-        var tombstonedBackupIds = metaTombstones
-            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
-            .Select(t => t.EntityId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missingBackupExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var metaBackup in metaBackups)
         {
@@ -270,6 +296,13 @@ public sealed class MetadataSyncService
 
             if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
+
+            if (!BackupPathExists(rootPath, metaBackup.PathRel))
+            {
+                missingBackupExternalIds.Add(metaBackup.ExternalId);
+                tombstonedBackupIds.Add(metaBackup.ExternalId);
+                continue;
+            }
 
             if (!projectMap.TryGetValue(metaBackup.ProjectExternalId, out var projectId))
                 continue;
@@ -312,6 +345,46 @@ public sealed class MetadataSyncService
             }
         }
 
+        if (missingBackupExternalIds.Count > 0)
+        {
+            foreach (var missingExternalId in missingBackupExternalIds)
+            {
+                if (backupExternalMap.TryGetValue(missingExternalId, out var existingId))
+                {
+                    _repo.DeleteBackupById(existingId);
+                    appliedTombstones++;
+                }
+            }
+
+            TryExportMissingBackupTombstones(rootPath, missingBackupExternalIds);
+        }
+
+        if (missingSnapshotExternalIds.Count > 0)
+        {
+            var removedSnapshots = 0;
+            foreach (var missingExternalId in missingSnapshotExternalIds)
+            {
+                var snapshot = _repo.GetSnapshotByExternalId(missingExternalId);
+                if (snapshot == null)
+                    continue;
+
+                if (_repo.HasBackupForSnapshot(snapshot.ProjectId, snapshot.Id))
+                    continue;
+
+                var project = _repo.GetProjectById(snapshot.ProjectId);
+                if (project == null)
+                    continue;
+
+                var deleted = _repo.DeleteSnapshotsById(project.Name, new[] { snapshot.Id });
+                removedSnapshots += deleted.Snapshots;
+            }
+
+            if (removedSnapshots > 0)
+            {
+                TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
+            }
+        }
+
         var result = new MetadataSyncResult(
             MetadataSyncStatus.Success,
             importedProjects,
@@ -321,8 +394,8 @@ public sealed class MetadataSyncService
             string.Empty);
         if (opts.MarkNeedsRestoreOnImport)
         {
-            var liveBackups = metaBackups
-                .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
+        var liveBackups = metaBackups
+            .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
             UpdateNeedsRestoreFlags(projectMap, liveBackups);
         }
         Console.WriteLine($"[MetadataSync] Import complete from '{rootPath}': projects={importedProjects}, snapshots={importedSnapshots}, backups={importedBackups}, tombstones={appliedTombstones}.");
@@ -448,9 +521,39 @@ public sealed class MetadataSyncService
         }
 
         var snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
+        var tombstonedBackupIds = metaTombstones
+            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.EntityId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var tombstonedSnapshotIds = metaTombstones
+            .Where(t => string.Equals(t.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.EntityId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var liveSnapshotExternalIds = new HashSet<string>(
+            metaBackups
+                .Where(b => !string.IsNullOrWhiteSpace(b.SnapshotExternalId))
+                .Where(b => !tombstonedBackupIds.Contains(b.ExternalId))
+                .Select(b => b.SnapshotExternalId),
+            StringComparer.OrdinalIgnoreCase);
+        var missingSnapshotExternalIds = metaSnapshots
+            .Where(s => !string.IsNullOrWhiteSpace(s.ExternalId))
+            .Where(s => !liveSnapshotExternalIds.Contains(s.ExternalId))
+            .Select(s => s.ExternalId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var missingSnapshotId in missingSnapshotExternalIds)
+        {
+            tombstonedSnapshotIds.Add(missingSnapshotId);
+        }
+
         foreach (var metaSnapshot in metaSnapshots)
         {
             if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
+                continue;
+
+            if (tombstonedSnapshotIds.Contains(metaSnapshot.ExternalId))
                 continue;
 
             if (!projectMap.ContainsKey(metaSnapshot.ProjectExternalId))
@@ -463,11 +566,7 @@ public sealed class MetadataSyncService
         }
 
         var backupExternalMap = _repo.GetBackupExternalIdMap();
-        var tombstonedBackupIds = metaTombstones
-            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
-            .Select(t => t.EntityId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missingBackupExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var metaBackup in metaBackups)
         {
@@ -476,6 +575,13 @@ public sealed class MetadataSyncService
 
             if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
+
+            if (!BackupPathExists(rootPath, metaBackup.PathRel))
+            {
+                missingBackupExternalIds.Add(metaBackup.ExternalId);
+                tombstonedBackupIds.Add(metaBackup.ExternalId);
+                continue;
+            }
 
             if (!projectMap.ContainsKey(metaBackup.ProjectExternalId))
                 continue;
@@ -494,6 +600,17 @@ public sealed class MetadataSyncService
             if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
             {
                 if (backupExternalMap.ContainsKey(tombstone.EntityId))
+                {
+                    deleteBackups++;
+                }
+            }
+        }
+
+        if (missingBackupExternalIds.Count > 0)
+        {
+            foreach (var missingExternalId in missingBackupExternalIds)
+            {
+                if (backupExternalMap.ContainsKey(missingExternalId))
                 {
                     deleteBackups++;
                 }
@@ -579,6 +696,134 @@ public sealed class MetadataSyncService
     private static bool ShouldUseTempCopy(string databasePath)
     {
         return File.Exists(databasePath + "-wal") || File.Exists(databasePath + "-shm");
+    }
+
+    private static bool BackupPathExists(string rootPath, string pathRel)
+    {
+        if (string.IsNullOrWhiteSpace(pathRel))
+            return false;
+
+        var fullPath = Path.IsPathRooted(pathRel)
+            ? pathRel
+            : Path.Combine(rootPath, pathRel);
+
+        return Directory.Exists(fullPath) || File.Exists(fullPath);
+    }
+
+    private static void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
+    {
+        if (missingExternalIds.Count == 0)
+            return;
+
+        var store = new MetadataStore(rootPath);
+        try
+        {
+            store.EnsureSchema();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Missing backup tombstone export failed: store init error at '{rootPath}': {ex.Message}");
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var metaInfo = store.GetMetaInfo();
+        if (metaInfo == null)
+        {
+            metaInfo = new MetaInfo
+            {
+                SchemaVersion = MetadataStore.CurrentSchemaVersion,
+                CreatedUtc = now,
+                LastWriteUtc = now,
+                WriterAppVersion = "unknown",
+                WriterMachineId = Environment.MachineName
+            };
+        }
+        else
+        {
+            metaInfo.LastWriteUtc = now;
+            metaInfo.WriterMachineId = Environment.MachineName;
+        }
+
+        try
+        {
+            store.UpsertMetaInfo(metaInfo);
+            foreach (var externalId in missingExternalIds)
+            {
+                if (string.IsNullOrWhiteSpace(externalId))
+                    continue;
+
+                store.AddTombstone(new MetaTombstone
+                {
+                    EntityType = "backup",
+                    EntityId = externalId,
+                    DeletedUtc = now,
+                    OriginMachineId = Environment.MachineName
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Missing backup tombstone export failed writing store '{rootPath}': {ex.Message}");
+        }
+    }
+
+    private static void TryExportMissingSnapshotTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
+    {
+        if (missingExternalIds.Count == 0)
+            return;
+
+        var store = new MetadataStore(rootPath);
+        try
+        {
+            store.EnsureSchema();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Missing snapshot tombstone export failed: store init error at '{rootPath}': {ex.Message}");
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var metaInfo = store.GetMetaInfo();
+        if (metaInfo == null)
+        {
+            metaInfo = new MetaInfo
+            {
+                SchemaVersion = MetadataStore.CurrentSchemaVersion,
+                CreatedUtc = now,
+                LastWriteUtc = now,
+                WriterAppVersion = "unknown",
+                WriterMachineId = Environment.MachineName
+            };
+        }
+        else
+        {
+            metaInfo.LastWriteUtc = now;
+            metaInfo.WriterMachineId = Environment.MachineName;
+        }
+
+        try
+        {
+            store.UpsertMetaInfo(metaInfo);
+            foreach (var externalId in missingExternalIds)
+            {
+                if (string.IsNullOrWhiteSpace(externalId))
+                    continue;
+
+                store.AddTombstone(new MetaTombstone
+                {
+                    EntityType = "snapshot",
+                    EntityId = externalId,
+                    DeletedUtc = now,
+                    OriginMachineId = Environment.MachineName
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Missing snapshot tombstone export failed writing store '{rootPath}': {ex.Message}");
+        }
     }
 
     public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill = false)

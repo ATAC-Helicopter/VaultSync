@@ -1,4 +1,28 @@
 ﻿# Changelog
+## [1.3.4] - Unreleased
+### Added
+- Sidebar now shows a compact destination status overview for quick reachability checks.
+- Backup destinations can now be toggled active/inactive directly from the Backups page.
+- Backups page now includes a dedicated destinations card showing reachability status.
+### Changed
+- Backup destination status row refreshed for clearer hierarchy and status clarity.
+- Destination status indicator now pulses while checks are in progress.
+- Active backup stage labels now use color coding per phase.
+- Backups page destinations card now sits alongside history for easier scanning.
+- Per-project backup cards now align more closely with history card spacing and typography.
+- Destination cards now use tighter spacing for a more compact layout.
+### Fixed
+- Deleting a backup no longer collapses the active project group in history.
+- Backup deletion now resolves destinations even if they are inactive.
+- Destination status labels now reflect reachability instead of backup activity stages.
+- Backup destination help now opens reliably from Settings.
+- SMART/drive health status now refreshes alongside Backups page data.
+- Metadata import now tombstones missing backups on disk to prevent reappearing entries after manual deletions.
+- Metadata import now cleans orphan snapshots when their backups are missing on disk.
+- Destination status accents now center correctly in the cards.
+- Project avatars now render as perfect circles in the backups list.
+- Destination reachability labels no longer get replaced by backup completion states.
+
 ## [1.3.3] - 21.01.2026
 ### Changed
 - Dashboard refresh now uses aggregated queries for counts and totals to avoid loading full history.
