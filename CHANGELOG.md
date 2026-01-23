@@ -1,14 +1,14 @@
 ﻿# Changelog
-## [1.3.4] - Unreleased
+## [1.3.4] - 23.01.2026
 ### Added
 - Sidebar now shows a compact destination status overview for quick reachability checks.
 - Backups page now includes a dedicated destinations card showing reachability status.
 ### Changed
 - Backup destination status row refreshed for clearer hierarchy and status clarity.
-- Destination status indicator now pulses while checks are in progress.
+- Destination status indicator now pulses only during reachability checks.
 - Active backup stage labels now use color coding per phase.
 - Backups page destinations card now sits alongside history for easier scanning.
-- Per-project backup cards now align more closely with history card spacing and typography.
+- Per-project backup cards now use tighter spacing and centered accent pills/avatars.
 - Destination cards now use tighter spacing for a more compact layout.
 - Destination status cards now share a single layout to keep sidebar and backups styling aligned.
 - Backups destinations card now links to Settings for destination management.
@@ -29,7 +29,7 @@
 - Tray popover now opens on the left side to avoid edge clipping.
 - Tray popover destinations restore the vertical status pill indicator.
 - Backups destinations cards now show the vertical status pill indicator again.
-- Destination status accents now center correctly in the cards.
+- Destination status labels and dots now align correctly within the cards.
 - Project avatars now render as perfect circles in the backups list.
 - Destination reachability labels no longer get replaced by backup completion states.
 

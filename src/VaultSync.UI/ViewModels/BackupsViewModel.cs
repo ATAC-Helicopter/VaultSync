@@ -746,7 +746,7 @@ namespace VaultSync.UI.ViewModels
             foreach (var dest in list)
             {
                 var status = GetDestinationStatusText(dest.Active);
-                var severity = dest.Active ? "Warning" : "Info";
+                var severity = "Info";
                 var item = new DestinationStatusItem
                 {
                     Id     = DestinationStatusItem.GetId(dest),
@@ -830,6 +830,16 @@ namespace VaultSync.UI.ViewModels
                 {
                     normalizedStatus = unavailableLabel;
                 }
+            }
+            else
+            {
+                normalizedStatus = severity switch
+                {
+                    "Success" => reachableLabel,
+                    "Warning" => readOnlyLabel,
+                    "Error" => unavailableLabel,
+                    _ => normalizedStatus
+                };
             }
 
             var severityToUse = severity;
@@ -1942,22 +1952,36 @@ namespace VaultSync.UI.ViewModels
             get => _status;
             set
             {
-                if (_status == value)
+                var normalized = NormalizeDestinationStatus(value);
+                if (_status == normalized)
                     return;
-                _status = value ?? string.Empty;
+                _status = normalized;
                 OnPropertyChanged(nameof(Status));
                 OnPropertyChanged(nameof(IsChecking));
             }
         }
 
+        private static string NormalizeDestinationStatus(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return string.Empty;
+
+            var reachableLabel = LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable";
+            if (status.Contains("Completed", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("No changes", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("No backup", StringComparison.OrdinalIgnoreCase))
+            {
+                return reachableLabel;
+            }
+
+            return status;
+        }
+
         public bool IsChecking =>
-            !string.Equals(Severity, "Info", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(Status, LocalizationProvider.Service?.GetString("Backups.Destinations.Pending") ?? "Pending", StringComparison.OrdinalIgnoreCase) ||
             Status.Contains("checking", StringComparison.OrdinalIgnoreCase) ||
             Status.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
-            Status.Contains("probing", StringComparison.OrdinalIgnoreCase) ||
-            Status.Contains("using pre-mounted", StringComparison.OrdinalIgnoreCase) ||
-            Status.Contains("reachable", StringComparison.OrdinalIgnoreCase);
+            Status.Contains("probing", StringComparison.OrdinalIgnoreCase);
 
         private bool _isActive = true;
         public bool IsActive

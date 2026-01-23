@@ -22,7 +22,7 @@
       <Setter Property="Template">
         <ControlTemplate TargetType="ListBoxItem">
           <Border x:Name="CardBorder"
-                  Margin="0,4,0,4"
+                  Margin="0,3,0,3"
                   Background="Transparent"
                   Padding="0">
             <ContentPresenter
@@ -540,20 +540,22 @@
                        SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
                        SelectionMode="Single"
                        BorderThickness="0"
+                       AutoScrollToSelectedItem="False"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
                        VerticalAlignment="Stretch">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Border Classes="card project-card"
                             CornerRadius="14"
-                            Padding="8"
-                            Margin="0,3,0,3"
+                            Padding="6"
+                            Margin="0,2,0,2"
                             Background="{DynamicResource Surface2}"
                             BorderBrush="{DynamicResource BorderSoft}"
                             BorderThickness="1">
                       <Grid ColumnDefinitions="4,Auto,*,Auto"
                             RowDefinitions="Auto,Auto,Auto"
                             ColumnSpacing="10"
-                            RowSpacing="3">
+                            RowSpacing="2">
 
                       <Border Grid.RowSpan="3"
                               Grid.Column="0"
@@ -561,8 +563,9 @@
                               Background="{Binding AvatarColor}"
                               CornerRadius="2"
                               Opacity="0.85"
-                              VerticalAlignment="Stretch"
-                              Margin="0,4,0,4" />
+                              VerticalAlignment="Center"
+                              Height="44"
+                              Margin="0" />
 
                       <!-- Avatar -->
                       <Grid Grid.RowSpan="3"
@@ -570,7 +573,9 @@
                             Width="36"
                             Height="36"
                             IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                        <Border CornerRadius="18"
+                        <Border Width="36"
+                                Height="36"
+                                CornerRadius="999"
                                 Background="{Binding AvatarColor}" />
                         <Image Source="{Binding AvatarImagePath}"
                                Stretch="UniformToFill"
