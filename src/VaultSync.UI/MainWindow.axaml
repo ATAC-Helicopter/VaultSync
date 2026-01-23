@@ -95,58 +95,7 @@
                           IsVisible="{CompiledBinding BackupsViewModel.HasDestinationStatuses}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Margin="0,2,0,0"
-                          Padding="6,4"
-                          CornerRadius="7"
-                          Background="{DynamicResource Surface3}"
-                          BorderBrush="{DynamicResource BorderSoft}"
-                          BorderThickness="1">
-                    <Grid ColumnDefinitions="4,*,Auto,Auto"
-                          RowDefinitions="Auto"
-                          ColumnSpacing="8"
-                          RowSpacing="0"
-                          VerticalAlignment="Center">
-                      <Border Grid.RowSpan="2"
-                              Grid.Column="0"
-                              CornerRadius="2"
-                              Background="{Binding ReachabilityBrush}"
-                              Opacity="0.9"
-                              VerticalAlignment="Center"
-                              Margin="0,3,0,3" />
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding Alias}"
-                                 FontWeight="SemiBold"
-                                 FontSize="9"
-                                 TextTrimming="CharacterEllipsis"
-                                 ToolTip.Tip="{Binding Path}"
-                                 VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="2"
-                                 Text="{Binding Status}"
-                                 FontSize="8.5"
-                                 Foreground="{StaticResource TextSecondary}"
-                                 HorizontalAlignment="Right"
-                                 VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis" />
-                      <Grid Grid.Column="3"
-                            Width="18"
-                            Height="18"
-                            ClipToBounds="False"
-                            ToolTip.Tip="{Binding Status}">
-                        <Border Classes="pulse-ring"
-                                CornerRadius="5"
-                                Background="{Binding ReachabilityBrush}"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding IsChecking}" />
-                        <Border Width="6"
-                                Height="6"
-                                CornerRadius="3"
-                                Background="{Binding ReachabilityBrush}"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center" />
-                      </Grid>
-                    </Grid>
-                  </Border>
+                  <viewsControls:DestinationStatusCard Classes="compact" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

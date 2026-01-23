@@ -31,6 +31,11 @@ namespace VaultSync.UI.ViewModels
                 ? fmt
                 : string.Format(CultureInfo.CurrentCulture, fmt, args);
         }
+
+        private static readonly IBrush HealthOkBrush = new ImmutableSolidColorBrush(Colors.LimeGreen);
+        private static readonly IBrush HealthWarningBrush = new ImmutableSolidColorBrush(Colors.Orange);
+        private static readonly IBrush HealthFailingBrush = new ImmutableSolidColorBrush(Colors.Tomato);
+        private static readonly IBrush HealthUnknownBrush = new ImmutableSolidColorBrush(Colors.Gray);
         // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
         protected bool SetProperty<T>(ref T storage, T value)
@@ -136,6 +141,18 @@ namespace VaultSync.UI.ViewModels
             new ObservableCollection<DestinationStatusItem>();
         public bool HasDestinationStatuses => DestinationStatuses.Count > 0;
         public bool CanToggleDestinations => !_isBusy;
+        private bool _showDestinationToggles;
+        public bool ShowDestinationToggles
+        {
+            get => _showDestinationToggles;
+            private set
+            {
+                if (SetProperty(ref _showDestinationToggles, value))
+                {
+                    OnPropertyChanged(nameof(ShowDestinationToggles));
+                }
+            }
+        }
 
         private int _diskUsageInFlight;
         private int _refreshSnapshotsInFlight;
@@ -435,6 +452,7 @@ namespace VaultSync.UI.ViewModels
         public event Action<BackupSnapshotItem?>? OpenBackupFolderRequested;
         public event Action<BackupProgressItem?>? CancelActiveBackupRequested;
         public event Action<int, bool>? BackupProtectionChanged;
+        public event Action? OpenSettingsRequested;
 
         // Commands
         public ICommand CreateBackupCommand { get; }
@@ -448,6 +466,7 @@ namespace VaultSync.UI.ViewModels
         public ICommand FilterSnapshotsCommand { get; }
         public ICommand CloseVerificationPopupCommand { get; }
         public ICommand DeleteFailedBackupCommand { get; }
+        public ICommand OpenSettingsCommand { get; }
 
         public BackupsViewModel()
         {
@@ -468,6 +487,7 @@ namespace VaultSync.UI.ViewModels
             FilterSnapshotsCommand        = new RelayCommand(p => ApplyTypeFilter(p as string));
             CloseVerificationPopupCommand = new RelayCommand(_ => CloseVerificationPopup());
             DeleteFailedBackupCommand     = new RelayCommand(_ => DeleteFailedBackup());
+            OpenSettingsCommand           = new RelayCommand(_ => OpenSettingsRequested?.Invoke());
 
             DestinationStatuses.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDestinationStatuses));
             ActiveBackups.CollectionChanged += (_, _) => UpdateActiveBackupTimer();
@@ -715,6 +735,8 @@ namespace VaultSync.UI.ViewModels
                 Dispatcher.UIThread.Post(() => ResetDestinationStatuses(list, allowToggle));
                 return;
             }
+
+            ShowDestinationToggles = allowToggle;
 
             foreach (var item in DestinationStatuses)
             {
@@ -1194,10 +1216,10 @@ namespace VaultSync.UI.ViewModels
                             : health.Message!;
                         (healthText, healthBrush) = health.Status switch
                         {
-                            DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.LimeGreen)),
-                            DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Orange)),
-                            DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), (IBrush)new SolidColorBrush(Colors.Tomato)),
-                            _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, fallbackMessage), (IBrush)new SolidColorBrush(Colors.Gray))
+                            DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, health.Message ?? fallbackMessage), HealthOkBrush),
+                            DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthWarningBrush),
+                            DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthFailingBrush),
+                            _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, fallbackMessage), HealthUnknownBrush)
                         };
                     }
 
@@ -1234,7 +1256,7 @@ namespace VaultSync.UI.ViewModels
                         var driveUnknown = L("DriveHealth.UnknownDrive", "drive");
                         BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", driveUnknown);
                         BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, L("Backups.Health.NotAvailable", "not available"));
-                        BackupDiskHealthBrush = new SolidColorBrush(Colors.Gray);
+                        BackupDiskHealthBrush = HealthUnknownBrush;
                     });
                 }
                 finally
@@ -1773,23 +1795,23 @@ namespace VaultSync.UI.ViewModels
         // ---------- Tag pill background color ----------
 
         private static readonly IBrush DefaultBrush =
-            new SolidColorBrush(Color.Parse("#22FFFFFF"));
+            new ImmutableSolidColorBrush(Color.Parse("#22FFFFFF"));
 
         // Auto snapshots: blue-ish
         private static readonly IBrush AutoBrush =
-            new SolidColorBrush(Color.Parse("#333A7AFE"));
+            new ImmutableSolidColorBrush(Color.Parse("#333A7AFE"));
 
         // Manual snapshots: purple-ish
         private static readonly IBrush ManualBrush =
-            new SolidColorBrush(Color.Parse("#334568F2"));
+            new ImmutableSolidColorBrush(Color.Parse("#334568F2"));
 
         // Imported snapshots: teal-ish
         private static readonly IBrush ImportedBrush =
-            new SolidColorBrush(Color.Parse("#3346C6A1"));
+            new ImmutableSolidColorBrush(Color.Parse("#3346C6A1"));
 
         // Failed snapshots: red-ish
         private static readonly IBrush FailedBrush =
-            new SolidColorBrush(Color.Parse("#33FF4B4B"));
+            new ImmutableSolidColorBrush(Color.Parse("#33FF4B4B"));
 
         public IBrush TagBackground
         {
@@ -1905,6 +1927,11 @@ namespace VaultSync.UI.ViewModels
 
     public class DestinationStatusItem : ViewModelBase
     {
+        private static readonly IBrush SuccessBrush = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
+        private static readonly IBrush WarningBrush = new ImmutableSolidColorBrush(Color.Parse("#FFB84C"));
+        private static readonly IBrush ErrorBrush = new ImmutableSolidColorBrush(Color.Parse("#FF6B6B"));
+        private static readonly IBrush InfoBrush = new ImmutableSolidColorBrush(Color.Parse("#8E9BAF"));
+
         public string Id { get; set; } = string.Empty;
         public string Alias { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
@@ -1959,7 +1986,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private IBrush _dotBrush = new ImmutableSolidColorBrush(Color.Parse("#8E9BAF"));
+        private IBrush _dotBrush = InfoBrush;
         public IBrush DotBrush
         {
             get => _dotBrush;
@@ -1972,10 +1999,10 @@ namespace VaultSync.UI.ViewModels
             {
                 return Severity switch
                 {
-                    "Success" => new ImmutableSolidColorBrush(Color.Parse("#22CC88")),
-                    "Warning" => new ImmutableSolidColorBrush(Color.Parse("#FFB84C")),
-                    "Error" => new ImmutableSolidColorBrush(Color.Parse("#FF6B6B")),
-                    _ => new ImmutableSolidColorBrush(Color.Parse("#8E9BAF"))
+                    "Success" => SuccessBrush,
+                    "Warning" => WarningBrush,
+                    "Error" => ErrorBrush,
+                    _ => InfoBrush
                 };
             }
         }
@@ -2432,30 +2459,39 @@ namespace VaultSync.UI.ViewModels
 
         private bool IsCopyingStage => string.Equals(GetStageKey(), "Copying", StringComparison.OrdinalIgnoreCase);
 
+        private static readonly IBrush StageCompletedBrush = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
+        private static readonly IBrush StageCancelBrush = new ImmutableSolidColorBrush(Color.Parse("#FF6B6B"));
+        private static readonly IBrush StageCompressBrush = new ImmutableSolidColorBrush(Color.Parse("#FFB84C"));
+        private static readonly IBrush StageUploadBrush = new ImmutableSolidColorBrush(Color.Parse("#22CCFF"));
+        private static readonly IBrush StageHashBrush = new ImmutableSolidColorBrush(Color.Parse("#9B6BFF"));
+        private static readonly IBrush StageCopyBrush = new ImmutableSolidColorBrush(Color.Parse("#4C8DFF"));
+        private static readonly IBrush StageBackupBrush = new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
+        private static readonly IBrush StagePrepareBrush = new ImmutableSolidColorBrush(Color.Parse("#8E9BAF"));
+
         private IBrush GetStageBrush()
         {
             var stageKey = GetStageKey();
             return stageKey switch
             {
-                "Completed"   => AccentBrush("#22CC88"),
-                "Cancelling"  => AccentBrush("#FF6B6B"),
-                "Deleting"    => AccentBrush("#FF6B6B"),
-                "Compressing" => AccentBrush("#FFB84C"),
-                "Uploading"   => AccentBrush("#22CCFF"),
-                "Hashing"     => AccentBrush("#9B6BFF"),
-                "Copying"     => AccentBrush("#4C8DFF"),
-                "BackingUp"   => AccentBrush("#3A7AFE"),
-                "Preparing"   => AccentBrush("#8E9BAF"),
-                _             => AccentBrush("#8E9BAF")
+                "Completed"   => StageCompletedBrush,
+                "Cancelling"  => StageCancelBrush,
+                "Deleting"    => StageCancelBrush,
+                "Compressing" => StageCompressBrush,
+                "Uploading"   => StageUploadBrush,
+                "Hashing"     => StageHashBrush,
+                "Copying"     => StageCopyBrush,
+                "BackingUp"   => StageBackupBrush,
+                "Preparing"   => StagePrepareBrush,
+                _             => StagePrepareBrush
             };
         }
-
-        private static IBrush AccentBrush(string hex) =>
-            new ImmutableSolidColorBrush(Color.Parse(hex));
     }
 
     public class SnapshotActivityPoint
     {
+        private static readonly IBrush SnapshotAutoBrush = new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
+        private static readonly IBrush SnapshotManualBrush = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
+        private static readonly IBrush SnapshotEmptyBrush = new ImmutableSolidColorBrush(Color.Parse("#22FFFFFF"));
         public string DayLabel { get; set; } = string.Empty;
         public bool ShowLabel { get; set; } = true;
         public int AutoCount { get; set; }
@@ -2467,14 +2503,14 @@ namespace VaultSync.UI.ViewModels
         public double EmptyHeight => IsEmpty ? 6 : 0;
         public bool HasAuto => AutoCount > 0;
         public bool HasManual => ManualCount > 0;
-        public IBrush AutoBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
-        public IBrush ManualBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
-        public IBrush EmptyBrush { get; set; } = new ImmutableSolidColorBrush(Color.Parse("#22FFFFFF"));
+        public IBrush AutoBrush { get; set; } = SnapshotAutoBrush;
+        public IBrush ManualBrush { get; set; } = SnapshotManualBrush;
+        public IBrush EmptyBrush { get; set; } = SnapshotEmptyBrush;
         public string TooltipText { get; set; } = string.Empty;
     }
 
     /// <summary>
-    /// Minimal ICommand implementation so we don’t depend on any toolkit.
+    /// Minimal ICommand implementation so we don't depend on any toolkit.
     /// </summary>
     internal sealed class ActionCommand : ICommand
     {

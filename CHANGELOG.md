@@ -2,7 +2,6 @@
 ## [1.3.4] - Unreleased
 ### Added
 - Sidebar now shows a compact destination status overview for quick reachability checks.
-- Backup destinations can now be toggled active/inactive directly from the Backups page.
 - Backups page now includes a dedicated destinations card showing reachability status.
 ### Changed
 - Backup destination status row refreshed for clearer hierarchy and status clarity.
@@ -11,14 +10,25 @@
 - Backups page destinations card now sits alongside history for easier scanning.
 - Per-project backup cards now align more closely with history card spacing and typography.
 - Destination cards now use tighter spacing for a more compact layout.
+- Destination status cards now share a single layout to keep sidebar and backups styling aligned.
+- Backups destinations card now links to Settings for destination management.
+- UI status and stage brushes now reuse cached instances to reduce allocations.
 ### Fixed
 - Deleting a backup no longer collapses the active project group in history.
 - Backup deletion now resolves destinations even if they are inactive.
 - Destination status labels now reflect reachability instead of backup activity stages.
 - Backup destination help now opens reliably from Settings.
 - SMART/drive health status now refreshes alongside Backups page data.
+- Metadata import now normalizes backup paths so cross-machine imports do not skip existing backups.
 - Metadata import now tombstones missing backups on disk to prevent reappearing entries after manual deletions.
 - Metadata import now cleans orphan snapshots when their backups are missing on disk.
+- Archive upload auto-tune timeouts no longer cancel backups; fallback buffer is used instead.
+- Destination status no longer resets to Pending during manual backups when probe data is already available.
+- Tray menu layout now prioritizes quick actions, status summary, and clean per-backup actions.
+- Tray icon now opens a modern popover panel with destinations, quick actions, and recent backups.
+- Tray popover now opens on the left side to avoid edge clipping.
+- Tray popover destinations restore the vertical status pill indicator.
+- Backups destinations cards now show the vertical status pill indicator again.
 - Destination status accents now center correctly in the cards.
 - Project avatars now render as perfect circles in the backups list.
 - Destination reachability labels no longer get replaced by backup completion states.

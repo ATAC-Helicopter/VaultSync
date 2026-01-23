@@ -560,6 +560,7 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.AutoBackupPreferenceChanged += OnAutoBackupPreferenceChanged;
             _backupsViewModel.BackupProtectionChanged += OnBackupProtectionChanged;
             _backupsViewModel.DestinationActiveChanged += OnDestinationActiveChanged;
+            _backupsViewModel.OpenSettingsRequested += OnOpenSettingsRequested;
 
             // 4) Initial load of backup data
             ReloadBackupsVmData();
@@ -816,6 +817,8 @@ namespace VaultSync.UI.ViewModels
             var project = _repo.GetProjectById(projectId);
             return new BackupProjectPreparation(cfg, destinations, project);
         }
+
+        public AppConfig GetConfigSnapshot() => _config;
 
         private sealed record BackupProjectPreparation(
             AppConfig Config,
@@ -2043,6 +2046,7 @@ namespace VaultSync.UI.ViewModels
                 var allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
                 var overviewDestinations = GetAllDestinations(cfg);
                 _backupsViewModel.ResetDestinationStatuses(overviewDestinations, allowToggle);
+                RefreshDestinationStatusOverview();
             }
 
             _backupsViewModel.IsBusy      = true;
@@ -3192,6 +3196,11 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             OpenBackupFolder(backupId);
+        }
+
+        private void OnOpenSettingsRequested()
+        {
+            NavigateSettings?.Execute(null);
         }
 
         private async Task<bool> ConfirmDeleteBackupAsync(string projectName, DateTime timestamp)
@@ -4610,7 +4619,11 @@ namespace VaultSync.UI.ViewModels
             }
             catch (OperationCanceledException)
             {
-                throw;
+                if (ct.IsCancellationRequested)
+                    throw;
+
+                Console.WriteLine($"[DestinationProbe] Auto-tune timed out for '{dest.Path}'. Falling back to default buffer.");
+                return null;
             }
             catch (Exception ex)
             {

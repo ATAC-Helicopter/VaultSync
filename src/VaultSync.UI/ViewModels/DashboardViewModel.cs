@@ -1471,6 +1471,11 @@ namespace VaultSync.UI.ViewModels
 
         public class ActivityItem
         {
+            private static readonly IBrush DotGreenBrush = new ImmutableSolidColorBrush(Color.Parse("#2ECC71"));
+            private static readonly IBrush DotBlueBrush = new ImmutableSolidColorBrush(Color.Parse("#1ABCFE"));
+            private static readonly IBrush DotPurpleBrush = new ImmutableSolidColorBrush(Color.Parse("#8E77FF"));
+            private static readonly IBrush DotGrayBrush = new ImmutableSolidColorBrush(Colors.Gray);
+
             // New constructor: allow passing an explicit brush (used when we want per-project colors).
             public ActivityItem(string title, string subtitle, string when, IBrush dotBrush)
             {
@@ -1485,11 +1490,11 @@ namespace VaultSync.UI.ViewModels
                 : this(title, subtitle, when,
                     dot switch
                     {
-                        Dot.Green  => new ImmutableSolidColorBrush(Color.Parse("#2ECC71")),
-                        Dot.Blue   => new ImmutableSolidColorBrush(Color.Parse("#1ABCFE")),
-                        Dot.Purple => new ImmutableSolidColorBrush(Color.Parse("#8E77FF")),
-                        Dot.Gray   => new ImmutableSolidColorBrush(Colors.Gray),
-                        _          => new ImmutableSolidColorBrush(Colors.Gray)
+                        Dot.Green  => DotGreenBrush,
+                        Dot.Blue   => DotBlueBrush,
+                        Dot.Purple => DotPurpleBrush,
+                        Dot.Gray   => DotGrayBrush,
+                        _          => DotGrayBrush
                     })
             {
             }

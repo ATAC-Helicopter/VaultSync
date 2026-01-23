@@ -36,6 +36,7 @@ public partial class App : Application
     // Keep a reference to the tray/menu-bar icon so it stays alive.
     private TrayIcon? _trayIcon;
     private NativeMenu? _trayMenu;
+    private TrayPanelService? _trayPanelService;
     private static App? _instance;
     private static bool _trayRecentLatestOnly = true;
     private const string DefaultDriveHealthLabel = "Storage health: tap Recheck";
@@ -143,7 +144,11 @@ public partial class App : Application
                 AppViewModelInstance.BackupsViewModel,
                 () => BringMainWindowToFront(desktop));
             AppViewModelInstance.AttachBackupWidgetService(backupWidgetService);
-            AppViewModelInstance.TrayMenuRefreshRequested += RefreshTrayMenu;
+            AppViewModelInstance.TrayMenuRefreshRequested += () =>
+            {
+                RefreshTrayMenu();
+                _trayPanelService?.Refresh();
+            };
             AppViewModelInstance.SettingsViewModel.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(SettingsViewModel.ShowTrayIcon))
@@ -280,7 +285,10 @@ public partial class App : Application
         _trayMenu = new NativeMenu();
         PopulateTrayMenu(_trayMenu, desktop);
 
-        _trayIcon.Menu = _trayMenu;
+        // Keep native menu for fallback, but default to the custom tray panel.
+        _trayIcon.Menu = null;
+        _trayPanelService ??= new TrayPanelService(desktop, () => AppViewModelInstance);
+        _trayIcon.Clicked += (_, _) => _trayPanelService?.Toggle();
         _trayIcon.IsVisible = true;
     }
 
@@ -405,6 +413,9 @@ public partial class App : Application
             return;
 
         _trayIcon.IsVisible = false;
+        _trayPanelService?.Hide();
+        _trayPanelService?.Dispose();
+        _trayPanelService = null;
         _trayIcon.Dispose();
         _trayIcon = null;
         _trayMenu = null;
@@ -447,6 +458,53 @@ public partial class App : Application
             headerText = $"{headerText} {versionLabel}";
         }
         menu.Items.Add(new NativeMenuItem(headerText) { IsEnabled = false });
+
+        var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
+            ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
+
+        var cfg = AppConfigStore.Load();
+        var configuredDestinations = new List<BackupDestination>();
+
+        if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
+        {
+            configuredDestinations = cfg.Backups.Destinations
+                .Where(d => d.Active)
+                .ToList();
+        }
+        else if (!string.IsNullOrWhiteSpace(cfg.Backups.BackupLocation))
+        {
+            configuredDestinations.Add(new BackupDestination
+            {
+                Alias       = "Primary",
+                Path        = cfg.Backups.BackupLocation,
+                Active      = true,
+                PreMounted  = true,
+                AutoMount   = false,
+                AutoUnmount = false
+            });
+        }
+
+        var destinationsTitle = L("Tray.Destinations.Title", "Destinations");
+        var destinationsStatus = string.Empty;
+        if (destinationSummaries.Any())
+        {
+            var reachableCount = destinationSummaries.Count(d => d.Reachable);
+            destinationsStatus = reachableCount == destinationSummaries.Count
+                ? L("Tray.Destinations.Ready", "Ready")
+                : L("Tray.Destinations.Unreachable", "Unreachable");
+        }
+        else if (configuredDestinations.Any())
+        {
+            destinationsStatus = L("Tray.Destinations.Ready", "Ready");
+        }
+        else
+        {
+            destinationsStatus = L("Tray.Destinations.None", "No destinations configured");
+        }
+
+        menu.Items.Add(new NativeMenuItem($"{destinationsTitle} - {destinationsStatus}") { IsEnabled = false });
+        var separator0 = new NativeMenuItemSeparator();
+        menu.Items.Add(separator0);
         // Open main window
         var openItem = new NativeMenuItem(L("Tray.Open", "Open VaultSync"));
         openItem.Click += (_, _) =>
@@ -470,9 +528,7 @@ public partial class App : Application
         var healthItem = BuildDriveHealthItem(desktop);
 
         // ---------- Destinations submenu ----------
-        var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
-            ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
-        var destinationRootItem = new NativeMenuItem(L("Tray.Destinations.Title", "Destinations"));
+        var destinationRootItem = new NativeMenuItem(destinationsTitle);
         var destinationMenu = new NativeMenu();
 
         if (destinationSummaries.Any())
@@ -483,8 +539,8 @@ public partial class App : Application
                     ? L("Tray.Destinations.Ready", "Ready")
                     : L("Tray.Destinations.Unreachable", "Unreachable");
                 var text = string.IsNullOrWhiteSpace(dest.Alias)
-                    ? $"{dest.Path} ({status})"
-                    : $"{dest.Alias} ({status})";
+                    ? $"{dest.Path} - {status}"
+                    : $"{dest.Alias} - {status}";
 
                 var detail = new NativeMenuItem(text) { IsEnabled = false };
                 destinationMenu.Items.Add(detail);
@@ -492,31 +548,9 @@ public partial class App : Application
         }
         else
         {
-            var cfg = AppConfigStore.Load();
-            var configured = new List<BackupDestination>();
-
-            if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
+            if (configuredDestinations.Any())
             {
-                configured = cfg.Backups.Destinations
-                    .Where(d => d.Active)
-                    .ToList();
-            }
-            else if (!string.IsNullOrWhiteSpace(cfg.Backups.BackupLocation))
-            {
-                configured.Add(new BackupDestination
-                {
-                    Alias       = "Primary",
-                    Path        = cfg.Backups.BackupLocation,
-                    Active      = true,
-                    PreMounted  = true,
-                    AutoMount   = false,
-                    AutoUnmount = false
-                });
-            }
-
-            if (configured.Any())
-            {
-                foreach (var dest in configured)
+                foreach (var dest in configuredDestinations)
                 {
                     var label = string.IsNullOrWhiteSpace(dest.Alias)
                         ? dest.Path ?? string.Empty
@@ -541,6 +575,15 @@ public partial class App : Application
 
         if (backupProjects.Any())
         {
+            var backupAllItem = new NativeMenuItem(L("Tray.Backup.All", "Backup all projects"));
+            backupAllItem.Click += (_, _) =>
+            {
+                BringWindowToFrontIfUserWants(desktop);
+                AppViewModelInstance?.RequestBackupAllFromTray();
+            };
+            backupMenu.Items.Add(backupAllItem);
+            backupMenu.Items.Add(new NativeMenuItemSeparator());
+
             foreach (var project in backupProjects)
             {
                 var projectId = project.Id;
@@ -555,16 +598,6 @@ public partial class App : Application
 
                 backupMenu.Items.Add(projectBackupItem);
             }
-
-            backupMenu.Items.Add(new NativeMenuItemSeparator());
-
-            var backupAllItem = new NativeMenuItem(L("Tray.Backup.All", "Backup all projects"));
-            backupAllItem.Click += (_, _) =>
-            {
-                BringWindowToFrontIfUserWants(desktop);
-                AppViewModelInstance?.RequestBackupAllFromTray();
-            };
-            backupMenu.Items.Add(backupAllItem);
         }
         else
         {
@@ -582,6 +615,19 @@ public partial class App : Application
 
         if (snapshotProjects.Any())
         {
+            var snapshotAllItem = new NativeMenuItem(L("Tray.Snapshot.All", "Snapshot all projects"));
+            snapshotAllItem.Click += async (_, _) =>
+            {
+                BringWindowToFrontIfUserWants(desktop);
+
+                if (AppViewModelInstance is not null)
+                {
+                    await AppViewModelInstance.TakeSnapshotAllFromTrayAsync();
+                }
+            };
+            snapshotMenu.Items.Add(snapshotAllItem);
+            snapshotMenu.Items.Add(new NativeMenuItemSeparator());
+
             foreach (var project in snapshotProjects)
             {
                 var projectName = project.Name;
@@ -599,20 +645,6 @@ public partial class App : Application
 
                 snapshotMenu.Items.Add(projectSnapshotItem);
             }
-
-            snapshotMenu.Items.Add(new NativeMenuItemSeparator());
-
-            var snapshotAllItem = new NativeMenuItem(L("Tray.Snapshot.All", "Snapshot all projects"));
-            snapshotAllItem.Click += async (_, _) =>
-            {
-                BringWindowToFrontIfUserWants(desktop);
-
-                if (AppViewModelInstance is not null)
-                {
-                    await AppViewModelInstance.TakeSnapshotAllFromTrayAsync();
-                }
-            };
-            snapshotMenu.Items.Add(snapshotAllItem);
         }
         else
         {
@@ -649,8 +681,8 @@ public partial class App : Application
 
             anyBackups = true;
 
-            // Project header (disabled) to avoid deep nesting.
-            manageBackupsMenu.Items.Add(new NativeMenuItem(project.ProjectName) { IsEnabled = false });
+            var projectMenuItem = new NativeMenuItem(project.ProjectName);
+            var projectMenu = new NativeMenu();
 
             var backupsToShow = _trayRecentLatestOnly
                 ? project.Backups.Take(1)
@@ -658,39 +690,42 @@ public partial class App : Application
 
             foreach (var backup in backupsToShow)
             {
-                // Restore the older compact format: timestamp label + indented actions.
-                manageBackupsMenu.Items.Add(new NativeMenuItem(backup.Label) { IsEnabled = false });
-
+                var backupItem = new NativeMenuItem(backup.Label);
+                var recentBackupMenu = new NativeMenu();
                 var keepLabel = backup.IsProtected ? L("Tray.Recent.Unkeep", "Unkeep") : L("Tray.Recent.Keep", "Keep");
-                var keepItem = new NativeMenuItem(Lf("Tray.Recent.ActionFormat", "   * {0}", keepLabel));
+                var keepItem = new NativeMenuItem(keepLabel);
                 keepItem.Click += (_, _) => AppViewModelInstance?.ToggleBackupProtectionFromTray(backup.Id);
 
-                var deleteItem = new NativeMenuItem(Lf("Tray.Recent.ActionFormat", "   * {0}", L("Tray.Recent.Delete", "Delete")));
+                var deleteItem = new NativeMenuItem(L("Tray.Recent.Delete", "Delete"));
                 deleteItem.Click += (_, _) => AppViewModelInstance?.DeleteBackupFromTray(backup.Id);
 
-                var openFolderItem = new NativeMenuItem(Lf("Tray.Recent.ActionFormat", "   * {0}", L("Tray.Recent.OpenFolder", "Open folder")));
+                var openFolderItem = new NativeMenuItem(L("Tray.Recent.OpenFolder", "Open folder"));
                 openFolderItem.Click += (_, _) => AppViewModelInstance?.OpenBackupFolderFromTray(backup.Id);
 
-                var viewInAppItem = new NativeMenuItem(Lf("Tray.Recent.ActionFormat", "   * {0}", L("Tray.Recent.ViewInApp", "View in VaultSync")));
+                var viewInAppItem = new NativeMenuItem(L("Tray.Recent.ViewInApp", "View in VaultSync"));
                 viewInAppItem.Click += (_, _) => AppViewModelInstance?.ShowBackupInAppFromTray(backup.ProjectId);
 
-                manageBackupsMenu.Items.Add(keepItem);
-                manageBackupsMenu.Items.Add(deleteItem);
-                manageBackupsMenu.Items.Add(openFolderItem);
-                manageBackupsMenu.Items.Add(viewInAppItem);
-                manageBackupsMenu.Items.Add(new NativeMenuItemSeparator());
+                recentBackupMenu.Items.Add(openFolderItem);
+                recentBackupMenu.Items.Add(viewInAppItem);
+                recentBackupMenu.Items.Add(new NativeMenuItemSeparator());
+                recentBackupMenu.Items.Add(keepItem);
+                recentBackupMenu.Items.Add(deleteItem);
+
+                backupItem.Menu = recentBackupMenu;
+                projectMenu.Items.Add(backupItem);
             }
 
-            // Trim trailing separator after the last backup for this project.
-            if (manageBackupsMenu.Items.LastOrDefault() is NativeMenuItemSeparator)
-                manageBackupsMenu.Items.RemoveAt(manageBackupsMenu.Items.Count - 1);
+            projectMenuItem.Menu = projectMenu;
+            manageBackupsMenu.Items.Add(projectMenuItem);
+            manageBackupsMenu.Items.Add(new NativeMenuItemSeparator());
         }
 
         if (anyBackups)
         {
-            // Ensure we have exactly one separator before the footer link.
-            if (manageBackupsMenu.Items.LastOrDefault() is not NativeMenuItemSeparator)
-                manageBackupsMenu.Items.Add(new NativeMenuItemSeparator());
+            // Trim trailing separator after the last project.
+            if (manageBackupsMenu.Items.LastOrDefault() is NativeMenuItemSeparator)
+                manageBackupsMenu.Items.RemoveAt(manageBackupsMenu.Items.Count - 1);
+            manageBackupsMenu.Items.Add(new NativeMenuItemSeparator());
 
             var openBackups = new NativeMenuItem(L("Tray.Recent.OpenInApp", "Open in VaultSync"));
             openBackups.Click += (_, _) =>
@@ -709,7 +744,6 @@ public partial class App : Application
 
         var separator1 = new NativeMenuItemSeparator();
         var separator2 = new NativeMenuItemSeparator();
-        var separator3 = new NativeMenuItemSeparator();
 
         var quitItem = new NativeMenuItem(L("Tray.Quit", "Quit VaultSync"));
         quitItem.Click += (_, _) =>
@@ -720,17 +754,23 @@ public partial class App : Application
         };
 
         menu.Items.Add(openItem);
+        menu.Items.Add(backupRootItem);
+        menu.Items.Add(snapshotRootItem);
+        menu.Items.Add(manageBackupsRoot);
         menu.Items.Add(separator1);
+        menu.Items.Add(destinationRootItem);
         if (healthItem is not null)
         {
             menu.Items.Add(healthItem);
         }
-        menu.Items.Add(destinationRootItem);
-        menu.Items.Add(manageBackupsRoot);
+        var settingsItem = new NativeMenuItem(L("Nav.Settings", "Settings"));
+        settingsItem.Click += (_, _) =>
+        {
+            BringMainWindowToFront(desktop);
+            AppViewModelInstance?.NavigateSettings?.Execute(null);
+        };
+        menu.Items.Add(settingsItem);
         menu.Items.Add(separator2);
-        menu.Items.Add(backupRootItem);
-        menu.Items.Add(snapshotRootItem);
-        menu.Items.Add(separator3);
         menu.Items.Add(quitItem);
 
     }
@@ -878,7 +918,10 @@ public partial class App : Application
                 }
 
                 PopulateTrayMenu(_trayMenu, desktop, recent);
-                _trayIcon.Menu = _trayMenu;
+                if (_trayIcon.Menu is not null)
+                {
+                    _trayIcon.Menu = _trayMenu;
+                }
             }
             catch (Exception ex)
             {

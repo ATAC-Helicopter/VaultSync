@@ -297,7 +297,8 @@ public sealed class MetadataSyncService
             if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
 
-            if (!BackupPathExists(rootPath, metaBackup.PathRel))
+            var normalizedPathRel = NormalizeBackupPathRel(metaBackup.PathRel);
+            if (!BackupPathExists(rootPath, normalizedPathRel))
             {
                 missingBackupExternalIds.Add(metaBackup.ExternalId);
                 tombstonedBackupIds.Add(metaBackup.ExternalId);
@@ -322,7 +323,7 @@ public sealed class MetadataSyncService
                 metaBackup.CreatedUtc,
                 metaBackup.Type,
                 metaBackup.TotalBytes,
-                metaBackup.PathRel,
+                normalizedPathRel,
                 rootPath,
                 metaBackup.DestinationAlias,
                 metaBackup.IsProtected,
@@ -576,7 +577,8 @@ public sealed class MetadataSyncService
             if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
 
-            if (!BackupPathExists(rootPath, metaBackup.PathRel))
+            var normalizedPathRel = NormalizeBackupPathRel(metaBackup.PathRel);
+            if (!BackupPathExists(rootPath, normalizedPathRel))
             {
                 missingBackupExternalIds.Add(metaBackup.ExternalId);
                 tombstonedBackupIds.Add(metaBackup.ExternalId);
@@ -703,11 +705,40 @@ public sealed class MetadataSyncService
         if (string.IsNullOrWhiteSpace(pathRel))
             return false;
 
-        var fullPath = Path.IsPathRooted(pathRel)
+        var fullPath = IsRootedPath(pathRel)
             ? pathRel
             : Path.Combine(rootPath, pathRel);
 
         return Directory.Exists(fullPath) || File.Exists(fullPath);
+    }
+
+    private static string NormalizeBackupPathRel(string pathRel)
+    {
+        if (string.IsNullOrWhiteSpace(pathRel))
+            return string.Empty;
+
+        var normalized = pathRel
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
+
+        return IsRootedPath(normalized)
+            ? normalized
+            : normalized.TrimStart(Path.DirectorySeparatorChar);
+    }
+
+    private static bool IsRootedPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        if (Path.IsPathRooted(path))
+            return true;
+
+        if (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':')
+            return true;
+
+        return path.StartsWith("\\\\", StringComparison.Ordinal) ||
+               path.StartsWith("//", StringComparison.Ordinal);
     }
 
     private static void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
