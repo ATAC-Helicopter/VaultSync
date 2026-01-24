@@ -4,10 +4,7 @@ VaultSync follows the Contributor Covenant Code of Conduct.
 
 ## Our pledge
 We pledge to make participation in this project a harassment-free experience for
-everyone, regardless of age, body size, disability, ethnicity, gender identity
-and expression, level of experience, education, socioeconomic status,
-nationality, personal appearance, race, religion, or sexual identity and
-orientation.
+everyone. 
 
 ## Our standards
 Examples of behavior that contributes to a positive environment include:
