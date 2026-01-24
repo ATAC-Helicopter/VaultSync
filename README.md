@@ -27,6 +27,12 @@
   Stable track shows the latest non-prerelease, Beta track shows the newest prerelease (falls back to stable when none exist).
 </p>
 
+<p align="center">
+  <a href="https://github.com/ATAC-Helicopter/VaultSync">
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=ATAC-Helicopter&repo=VaultSync&theme=transparent" alt="VaultSync repo stats" />
+  </a>
+</p>
+
 <div style="background:#070b14;border-radius:10px;padding:14px 18px;margin:20px 0;border-left:4px solid #f2c94c;color:#f1f5f9;box-shadow:0 6px 16px rgba(0,0,0,0.4);font-size:15px;line-height:1.5;border:1px solid rgba(255,255,255,0.06);">
   <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
     <span style="font-size:18px;color:#f2c94c;margin-top:2px;">⚠️</span>
@@ -51,6 +57,9 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 - Roadmap: [ROADMAP.md](ROADMAP.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Updater details: [docs/UPDATER.md](docs/UPDATER.md)
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Security: [SECURITY.md](SECURITY.md)
+- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ## Features
 

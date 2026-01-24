@@ -24,6 +24,10 @@ optional post-backup verification.
 The UI shows stages like Preparing, Hashing, Copying, Compressing, and Uploading
 (when applicable), along with file counts, speed, and ETA.
 
+## Delete and permissions
+- If a delete fails due to permissions, VaultSync can prompt for credentials to retry.
+- Read-only destinations can be imported from, but writes and deletes require permission.
+
 ## Where backups are stored
 - Simple mode: under the single backup root path.
 - Advanced mode: under each configured destination.
@@ -43,4 +47,5 @@ How it works:
 Notes:
 - This sync is metadata-only; files are restored only when you choose to restore.
 - Read-only destinations can be imported from, but VaultSync will not write updates.
+- Destination scans can import untracked backups into history when enabled.
 - If a destination has partial history, enable "Force full history export" on that destination and run a backup to backfill the store.

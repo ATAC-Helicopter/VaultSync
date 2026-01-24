@@ -2,6 +2,12 @@
 
 VaultSync supports patch updates and full installer updates for macOS, Windows, and Linux.
 
+## 1.3.4 highlights
+- Destination status cards now appear in the sidebar and Backups page.
+- Backup delete can prompt for credentials when NAS permissions block removal.
+- Metadata import now cleans up missing backups and orphan snapshots.
+- Snapshot trend labels collapse by day for cleaner timelines.
+
 ## Patch updates
 - Smaller and faster when available.
 - If a patch fails, the installer fallback is offered.

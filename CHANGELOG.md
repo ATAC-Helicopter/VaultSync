@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.3.4] - 23.01.2026
+## [1.3.4] - 24.01.2026
 ### Added
 - Sidebar now shows a compact destination status overview for quick reachability checks.
 - Backups page now includes a dedicated destinations card showing reachability status.
@@ -7,17 +7,36 @@
 ### Changed
 - Backup destination status row refreshed for clearer hierarchy and status clarity.
 - Destination status indicator now pulses only during reachability checks.
+- Destination probes now skip redundant checks within a short window and only notify on state changes.
 - Active backup stage labels now use color coding per phase.
 - Backups page destinations card now sits alongside history for easier scanning.
+- Backups per day chart moved to the summary row for better visibility.
 - Per-project backup cards now use tighter spacing and centered accent pills/avatars.
 - Destination cards now use tighter spacing for a more compact layout.
 - Destination status cards now share a single layout to keep sidebar and backups styling aligned.
 - Backups destinations card now links to Settings for destination management.
 - UI status and stage brushes now reuse cached instances to reduce allocations.
+- Log console now batches UI updates to reduce UI thread churn during verbose logging.
+- Log console now buffers file writes and snapshots to reduce I/O and avoid UI-thread blocking during exports.
+- Backups history grouping now reuses cached accent brushes to reduce allocations on refresh.
 - Keep toggles now record a marker file so protected backups can be rediscovered by scans.
+- Projects snapshot trend labels now show only when the day changes for cleaner timelines.
+- Project snapshot history now loads via async repository calls.
+- Snapshot trend bars now enforce a minimum height for readability.
+- Backups view stat pills now reuse a shared style for cleaner layout.
+- Log console file capture now flushes buffered output when disabled.
+- Clear local cache now removes temporary patch staging data.
 ### Fixed
 - Deleting a backup no longer collapses the active project group in history.
 - Backup deletion now resolves destinations even if they are inactive.
+- Backup deletion now keeps entries when the destination cannot be removed and reports permission failures.
+- Backup deletion now mounts destinations with credentials before removing files to avoid NAS permission errors.
+- Backup delete now retries with destination credentials after a permission error on NAS shares.
+- Backup delete now allows entering one-time credentials after a permission error when no profile is set.
+- Backup delete now prompts for credentials when a permission error prevents removing protected backups.
+- Backup delete now resolves UNC paths for mapped drives when retrying with credentials.
+- Backup delete now mounts UNC share roots (not subfolders) when retrying with credentials.
+- Backups no longer write completion markers on network destinations to avoid ownership/permission locks.
 - Destination status labels now reflect reachability instead of backup activity stages.
 - Backup destination help now opens reliably from Settings.
 - SMART/drive health status now refreshes alongside Backups page data.
@@ -35,6 +54,7 @@
 - Project avatars now render as perfect circles in the backups list.
 - Destination reachability labels no longer get replaced by backup completion states.
 - Destination scans now treat read-only backup folders as protected so they can be unprotected in-app.
+- Per-project backup list no longer stretches when expanding history entries.
 
 ## [1.3.3] - 21.01.2026
 ### Changed

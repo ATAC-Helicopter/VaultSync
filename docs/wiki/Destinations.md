@@ -31,6 +31,7 @@ VaultSync supports two modes:
 ## Health checks
 - The tray menu shows storage health and destination reachability.
 - Use "Recheck now" to refresh the status.
+- The app shows compact destination status cards in the sidebar and Backups page.
 
 ## Tips
 - Keep at least 10 percent free space on the target drive.

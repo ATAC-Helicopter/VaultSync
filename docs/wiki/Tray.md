@@ -4,7 +4,7 @@ The tray menu mirrors key actions and status from the app.
 
 ## Sections
 - Storage health: shows the current backup drive status and lets you recheck.
-- Destinations: lists configured destinations and reachability.
+- Destinations: lists configured destinations and reachability, with a status pill.
 - Recent backups: quick access to recent backups with keep/delete/open actions.
 - Backup/Snapshot: start backup or snapshot jobs without opening the app.
 

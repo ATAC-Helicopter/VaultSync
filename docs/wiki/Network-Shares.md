@@ -22,4 +22,6 @@ authentication, and reliability tips.
 - Verify the share is reachable in File Explorer.
 - Check credentials and permissions.
 - Use the destination test action in Settings.
+- If a delete fails due to permissions, VaultSync can prompt for credentials to retry.
+- On Windows SMB, disconnect existing connections that use different credentials before retrying.
 - If NFS shows read-only on macOS, confirm server-side export permissions and share ownership.
