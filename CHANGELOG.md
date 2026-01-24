@@ -3,6 +3,7 @@
 ### Added
 - Sidebar now shows a compact destination status overview for quick reachability checks.
 - Backups page now includes a dedicated destinations card showing reachability status.
+- Destination scan now imports untracked backups from destinations into history.
 ### Changed
 - Backup destination status row refreshed for clearer hierarchy and status clarity.
 - Destination status indicator now pulses only during reachability checks.
@@ -13,6 +14,7 @@
 - Destination status cards now share a single layout to keep sidebar and backups styling aligned.
 - Backups destinations card now links to Settings for destination management.
 - UI status and stage brushes now reuse cached instances to reduce allocations.
+- Keep toggles now record a marker file so protected backups can be rediscovered by scans.
 ### Fixed
 - Deleting a backup no longer collapses the active project group in history.
 - Backup deletion now resolves destinations even if they are inactive.
@@ -32,6 +34,7 @@
 - Destination status labels and dots now align correctly within the cards.
 - Project avatars now render as perfect circles in the backups list.
 - Destination reachability labels no longer get replaced by backup completion states.
+- Destination scans now treat read-only backup folders as protected so they can be unprotected in-app.
 
 ## [1.3.3] - 21.01.2026
 ### Changed

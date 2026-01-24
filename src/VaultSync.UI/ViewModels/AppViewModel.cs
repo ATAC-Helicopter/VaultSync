@@ -114,6 +114,10 @@ namespace VaultSync.UI.ViewModels
         private readonly LogConsoleService _logConsoleService;
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
+        private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
+        private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
+        private DateTime _lastDestinationScanUtc = DateTime.MinValue;
+        private int _destinationScanInFlight;
         private readonly ConcurrentDictionary<string, DateTime> _metadataImportAttempts = new();
         private readonly ConcurrentDictionary<int, byte> _manualBackupInFlight = new();
         private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
@@ -783,6 +787,15 @@ namespace VaultSync.UI.ViewModels
 
                     var projects = _repo.GetAllProjects().ToList();
                     var backups  = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+
+                    if (IsOnBackupsPage || force)
+                    {
+                        var scanAdded = ScanDestinationsForUntrackedBackups(projects, backups);
+                        if (scanAdded > 0)
+                        {
+                            backups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+                        }
+                    }
                     var disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
 
                     _backupsCacheProjects = projects;
@@ -816,6 +829,215 @@ namespace VaultSync.UI.ViewModels
             var destinations = GetActiveDestinations(cfg);
             var project = _repo.GetProjectById(projectId);
             return new BackupProjectPreparation(cfg, destinations, project);
+        }
+
+        private int ScanDestinationsForUntrackedBackups(List<Project> projects, List<Backup> backups)
+        {
+            if (Interlocked.Exchange(ref _destinationScanInFlight, 1) == 1)
+                return 0;
+
+            try
+            {
+                var now = DateTime.UtcNow;
+                if ((now - _lastDestinationScanUtc) < DestinationScanInterval)
+                    return 0;
+
+                _lastDestinationScanUtc = now;
+
+                var cfg = AppConfigStore.Load();
+                var destinations = GetActiveDestinations(cfg);
+                if (destinations.Count == 0)
+                    return 0;
+
+                var projectBySlug = projects.ToDictionary(
+                    p => BackupService.GetProjectBackupFolderName(p.Name),
+                    p => p,
+                    StringComparer.OrdinalIgnoreCase);
+
+                var existingKeys = BuildExistingBackupKeys(backups);
+                var added = 0;
+
+                foreach (var dest in destinations)
+                {
+                    var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+                        ? null
+                        : cfg.Network.Credentials.FirstOrDefault(c =>
+                            c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+
+                    var resolution = _networkMountService.PrepareDestination(dest, profile);
+                    if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                        continue;
+
+                    var destRoot = resolution.EffectivePath;
+
+                    foreach (var projectEntry in projectBySlug)
+                    {
+                        var projectFolder = Path.Combine(destRoot, projectEntry.Key);
+                        if (!Directory.Exists(projectFolder))
+                            continue;
+
+                        foreach (var backupFolder in SafeEnumerateDirectories(projectFolder))
+                        {
+                            var folderName = Path.GetFileName(backupFolder);
+                            if (!TryParseBackupTimestamp(folderName, out var createdUtc))
+                                continue;
+
+                            if (!IsBackupFolderComplete(backupFolder))
+                                continue;
+
+                            var relativePath = Path.GetRelativePath(destRoot, backupFolder);
+                            var key = BuildBackupKey(dest, relativePath);
+                            if (existingKeys.Contains(key))
+                                continue;
+
+                            var sizeBytes = TryGetArchiveSize(backupFolder);
+                            var snapshotId = _repo.CreateSnapshotFromMetadata(
+                                string.Empty,
+                                projectEntry.Value.Id,
+                                createdUtc,
+                                0,
+                                sizeBytes);
+
+                            var isProtected = IsBackupProtectedOnDisk(backupFolder);
+                            _repo.CreateBackupFromMetadata(
+                                string.Empty,
+                                projectEntry.Value.Id,
+                                snapshotId,
+                                createdUtc,
+                                "manual",
+                                sizeBytes,
+                                relativePath,
+                                dest.Path ?? destRoot,
+                                dest.Alias ?? string.Empty,
+                                isProtected,
+                                isImported: true);
+
+                            existingKeys.Add(key);
+                            added++;
+                        }
+                    }
+
+                    _networkMountService.Cleanup(resolution);
+                }
+
+                if (added > 0)
+                {
+                    Console.WriteLine($"[Backups] Imported {added} untracked backup(s) from destinations.");
+                }
+
+                return added;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Backups] Destination scan failed: {ex.Message}");
+                return 0;
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _destinationScanInFlight, 0);
+            }
+        }
+
+        private static HashSet<string> BuildExistingBackupKeys(IEnumerable<Backup> backups)
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var backup in backups)
+            {
+                if (string.IsNullOrWhiteSpace(backup.Path))
+                    continue;
+
+                if (!string.IsNullOrWhiteSpace(backup.DestinationAlias))
+                {
+                    keys.Add($"{backup.DestinationAlias}|{backup.Path}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(backup.DestinationPath))
+                {
+                    keys.Add($"{backup.DestinationPath}|{backup.Path}");
+                }
+            }
+
+            return keys;
+        }
+
+        private static string BuildBackupKey(BackupDestination dest, string relativePath)
+        {
+            var key = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias;
+            return $"{key}|{relativePath}";
+        }
+
+        private static IEnumerable<string> SafeEnumerateDirectories(string root)
+        {
+            try
+            {
+                return Directory.EnumerateDirectories(root);
+            }
+            catch
+            {
+                return Array.Empty<string>();
+            }
+        }
+
+        private static bool IsBackupFolderComplete(string backupFolder)
+        {
+            var inProgress = Path.Combine(backupFolder, ".vaultsync_inprogress");
+            if (File.Exists(inProgress))
+                return false;
+
+            var completed = Path.Combine(backupFolder, ".vaultsync_complete");
+            var archive = Path.Combine(backupFolder, "data.zip");
+            return File.Exists(completed) || File.Exists(archive);
+        }
+
+        private static long TryGetArchiveSize(string backupFolder)
+        {
+            try
+            {
+                var archive = Path.Combine(backupFolder, "data.zip");
+                if (File.Exists(archive))
+                {
+                    return new FileInfo(archive).Length;
+                }
+            }
+            catch
+            {
+                // ignore size probe failures
+            }
+
+            return 0;
+        }
+
+        private static bool IsBackupProtectedOnDisk(string backupFolder)
+        {
+            try
+            {
+                var marker = Path.Combine(backupFolder, BackupProtectionMarkerFileName);
+                if (File.Exists(marker))
+                    return true;
+            }
+            catch
+            {
+                return true;
+            }
+
+            return !TryWriteProbeFile(backupFolder);
+        }
+
+        private static bool TryParseBackupTimestamp(string? folderName, out DateTime createdUtc)
+        {
+            if (string.IsNullOrWhiteSpace(folderName))
+            {
+                createdUtc = DateTime.UtcNow;
+                return false;
+            }
+
+            return DateTime.TryParseExact(
+                folderName,
+                "yyyy-MM-dd_HH-mm-ss",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out createdUtc);
         }
 
         public AppConfig GetConfigSnapshot() => _config;
@@ -4102,6 +4324,30 @@ namespace VaultSync.UI.ViewModels
             return Directory.Exists(fullPath) ? fullPath : null;
         }
 
+        private void UpdateBackupProtectionMarker(int backupId, bool isProtected)
+        {
+            try
+            {
+                var fullPath = ResolveBackupFullPathForOpen(backupId);
+                if (string.IsNullOrWhiteSpace(fullPath))
+                    return;
+
+                var markerPath = Path.Combine(fullPath, BackupProtectionMarkerFileName);
+                if (isProtected)
+                {
+                    File.WriteAllText(markerPath, $"keep:{DateTime.UtcNow:O}");
+                }
+                else if (File.Exists(markerPath))
+                {
+                    File.Delete(markerPath);
+                }
+            }
+            catch
+            {
+                // best-effort marker update
+            }
+        }
+
         public void ShowBackupInAppFromTray(int projectId)
         {
             try
@@ -4174,6 +4420,7 @@ namespace VaultSync.UI.ViewModels
 
                 var newValue = !backup.IsProtected;
                 _repo.SetBackupProtection(backupId, newValue);
+                UpdateBackupProtectionMarker(backupId, newValue);
                 _backupsViewModel.MarkBackupProtection(backupId, newValue);
                 TrayMenuRefreshRequested?.Invoke();
             }
@@ -5076,6 +5323,7 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 _repo.SetBackupProtection(backupId, isProtected);
+                UpdateBackupProtectionMarker(backupId, isProtected);
             }
             catch
             {
