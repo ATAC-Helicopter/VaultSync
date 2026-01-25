@@ -3,6 +3,7 @@
   <img src="https://img.shields.io/badge/platform-macOS%20|%20Windows%20|%20Linux-green" />
   <img src="https://img.shields.io/badge/.NET-8.0-blueviolet" />
 </p>
+
 <p align="center" style="margin-top:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
   <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">
     <img src="https://img.shields.io/github/v/release/ATAC-Helicopter/VaultSync?style=for-the-badge" alt="Latest release" />
@@ -10,40 +11,65 @@
   <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">
     <img src="https://img.shields.io/github/v/release/ATAC-Helicopter/VaultSync?label=Stable&style=for-the-badge" alt="Stable release" />
   </a>
-<a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
-  <img src="https://img.shields.io/github/v/tag/ATAC-Helicopter/VaultSync?include_prereleases&label=Beta&style=for-the-badge" alt="Beta release" />
-</a>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
+    <img src="https://img.shields.io/github/v/tag/ATAC-Helicopter/VaultSync?include_prereleases&label=Beta&style=for-the-badge" alt="Beta release" />
+  </a>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
+    <img src="https://img.shields.io/github/downloads/ATAC-Helicopter/VaultSync/total?style=for-the-badge" alt="Total downloads" />
+  </a>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/issues">
+    <img src="https://img.shields.io/github/issues/ATAC-Helicopter/VaultSync?style=for-the-badge" alt="Open issues" />
+  </a>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/pulls">
+    <img src="https://img.shields.io/github/issues-pr/ATAC-Helicopter/VaultSync?style=for-the-badge" alt="Open pull requests" />
+  </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/discussions">
     <img src="https://img.shields.io/badge/Join%20the%20Discussion-24292f?style=for-the-badge&logo=github&logoColor=white" alt="Join the Discussion" />
   </a>
   <a href="https://www.reddit.com/r/VaultSync/">
     <img src="https://img.shields.io/badge/Reddit-Join%20the%20subreddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="VaultSync subreddit" />
   </a>
-<a href="DOCUMENTATION.md">
+  <a href="DOCUMENTATION.md">
     <img src="https://img.shields.io/badge/Documentation-%20-%23686868?style=for-the-badge&logo=bookstack" alt="Documentation" />
   </a>
 </p>
-<p style="text-align:center;margin:4px 0 12px;font-size:12px;color:#94a3b8;">
-  Stable track shows the latest non-prerelease, Beta track shows the newest prerelease (falls back to stable when none exist).
-</p>
+
+> [!WARNING]
+> VaultSync is currently **unsigned**.
+>
+> **Windows**
+> - SmartScreen will flag the installer  
+> - Click **More info → Run anyway**
+>
+> **macOS**
+> 1. Open the downloaded `.dmg`
+> 2. **Drag the VaultSync app into the Applications folder**
+> 3. Close the disk image
+> 4. Open **Applications**
+> 5. Right-click VaultSync → **Open**
+>
+> If Gatekeeper still blocks it, clear quarantine manually:
+>
+> **Apple Silicon (ARM64):**
+> ```sh
+> xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app
+> ```
+>
+> **Intel (x64):**
+> ```sh
+> xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app
+> ```
+
+> [!NOTE]
+> **Stable** shows the latest non-prerelease version.  
+> **Beta** shows the newest prerelease and falls back to Stable when none exist.
 
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=ATAC-Helicopter&show_icons=true&include_all_commits=true&theme=github_dark&hide_border=true" alt="GitHub stats" />
-  <img src="https://github-readme-streak-stats.herokuapp.com/?user=ATAC-Helicopter&theme=github-dark-blue&hide_border=true" alt="GitHub streak" />
-  <a href="https://github.com/ATAC-Helicopter/VaultSync">
-    <img src="https://github-readme-stats.vercel.app/api/pin/?username=ATAC-Helicopter&repo=VaultSync&theme=github_dark&hide_border=true" alt="VaultSync repo stats" />
-  </a>
+
+![Repobeats analytics image](https://repobeats.axiom.co/api/embed/97908bbb972d09cdcaa6193062073b21dc8c55fa.svg)
+
 </p>
 
-<div style="background:#070b14;border-radius:10px;padding:14px 18px;margin:20px 0;border-left:4px solid #f2c94c;color:#f1f5f9;box-shadow:0 6px 16px rgba(0,0,0,0.4);font-size:15px;line-height:1.5;border:1px solid rgba(255,255,255,0.06);">
-  <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
-    <span style="font-size:18px;color:#f2c94c;margin-top:2px;">⚠️</span>
-    <strong style="color:#f2c94c;font-size:16px;">Warning</strong>
-  </div>
-  <p style="margin:0;font-size:14px;color:#dfe8ff;max-width:720px;">
-    VaultSync is currently unsigned: Windows SmartScreen will flag the installer/program (click <strong>More info</strong> → <strong>Run anyway</strong>), and macOS Gatekeeper will block the first launch. On macOS (both Apple Silicon and Intel), download <code>VaultSync-&lt;version&gt;-macos-apple-silicon.dmg</code> or <code>VaultSync-&lt;version&gt;-macos-intel.dmg</code>, open it, drag <code>VaultSync-macos-arm64.app</code> or <code>VaultSync-macos-x64.app</code> into <strong>Applications</strong>, then right-click → Open. If Gatekeeper still blocks it, run <code>xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app</code> or <code>xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app</code>.
-  </p>
-</div>
 
 # VaultSync  
 ### Snapshot | Backup | Sync | Verify - for Projects & Workspaces
@@ -73,6 +99,7 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 - JSON output for scripting  
 - Customizable preset rules per project  
 - Works headless for servers or automation scripts  
+
 
 ### Desktop UI   
 - One-click snapshots and backups (auto + manual)  
