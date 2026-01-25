@@ -164,6 +164,12 @@
       <Setter Property="CornerRadius" Value="16" />
     </Style>
 
+    <Style Selector="Border.stat-pill">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+    </Style>
+
     <!-- Active backup cards -->
     <Style Selector="Border.active-backup-card">
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
@@ -249,70 +255,149 @@
         <controls:NotificationCard DataContext="{Binding Notification}" />
 
 
-        <!-- SUMMARY CARDS -->
-        <Grid ColumnDefinitions="*,*,*"
+        <!-- SUMMARY + ACTIVITY -->
+        <Grid ColumnDefinitions="*,360"
               ColumnSpacing="12">
+          <Grid Grid.Column="0"
+                ColumnDefinitions="*,*,*"
+                ColumnSpacing="12">
 
-          <!-- Total snapshots -->
-          <Border Classes="card"
-                  Padding="16">
-            <Grid RowDefinitions="Auto,*,Auto">
-              <TextBlock Grid.Row="0"
-                         Text="{infra:LocalizedString Key=Backups.Summary.Total}"
-                         FontSize="12"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Grid.Row="1"
-                         Text="{Binding TotalSnapshots}"
-                         FontSize="24"
-                         FontWeight="SemiBold"
-                         Margin="0,4,0,4" />
-              <TextBlock Grid.Row="2"
-                         Text="{Binding SnapshotsSummaryLine}"
-                         FontSize="11"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-            </Grid>
-          </Border>
+            <!-- Total snapshots -->
+            <Border Classes="card"
+                    Padding="16">
+              <Grid RowDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Row="0"
+                           Text="{infra:LocalizedString Key=Backups.Summary.Total}"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Row="1"
+                           Text="{Binding TotalSnapshots}"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           Margin="0,4,0,4" />
+                <TextBlock Grid.Row="2"
+                           Text="{Binding SnapshotsSummaryLine}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+              </Grid>
+            </Border>
 
-          <!-- Last backup -->
+            <!-- Last backup -->
+            <Border Classes="card"
+                    Padding="16"
+                    Grid.Column="1">
+              <Grid RowDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Row="0"
+                           Text="{infra:LocalizedString Key=Backups.Summary.Last}"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Row="1"
+                           Text="{Binding LastBackupDisplay}"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Margin="0,4,0,2" />
+                <TextBlock Grid.Row="2"
+                           Text="{Binding LastBackupRelative}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+              </Grid>
+            </Border>
+
+            <!-- Total backup size -->
+            <Border Classes="card"
+                    Padding="16"
+                    Grid.Column="2">
+              <Grid RowDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Row="0"
+                           Text="{infra:LocalizedString Key=Backups.Summary.TotalStored}"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Row="1"
+                           Text="{Binding TotalBackupSizeFormatted}"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Margin="0,4,0,2" />
+                <TextBlock Grid.Row="2"
+                           Text="{Binding SnapshotActivitySummary}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+              </Grid>
+            </Border>
+          </Grid>
+
+          <!-- ACTIVITY -->
           <Border Classes="card"
+                  CornerRadius="18"
                   Padding="16"
                   Grid.Column="1">
-            <Grid RowDefinitions="Auto,*,Auto">
-              <TextBlock Grid.Row="0"
-                         Text="{infra:LocalizedString Key=Backups.Summary.Last}"
-                         FontSize="12"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Grid.Row="1"
-                         Text="{Binding LastBackupDisplay}"
-                         FontSize="20"
-                         FontWeight="SemiBold"
-                         Margin="0,4,0,2" />
-              <TextBlock Grid.Row="2"
-                         Text="{Binding LastBackupRelative}"
-                         FontSize="11"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-            </Grid>
-          </Border>
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                <TextBlock Text="{infra:LocalizedString Key=Backups.Section.SnapshotsActivity}"
+                           FontSize="12"
+                           FontWeight="SemiBold" />
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="8" Height="8" CornerRadius="4" Background="#3A7AFE" />
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="8" Height="8" CornerRadius="4" Background="#22CC88" />
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterManual}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                  </StackPanel>
+                </StackPanel>
+              </Grid>
 
-          <!-- Total backup size -->
-          <Border Classes="card"
-                  Padding="16"
-                  Grid.Column="2">
-            <Grid RowDefinitions="Auto,*,Auto">
-              <TextBlock Grid.Row="0"
-                         Text="{infra:LocalizedString Key=Backups.Summary.TotalStored}"
-                         FontSize="12"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Grid.Row="1"
-                         Text="{Binding TotalBackupSizeFormatted}"
-                         FontSize="20"
-                         FontWeight="SemiBold"
-                         Margin="0,4,0,2" />
-              <TextBlock Grid.Row="2"
-                         Text="{Binding SnapshotActivitySummary}"
-                         FontSize="11"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-            </Grid>
+            <Border Height="96"
+                    Background="{DynamicResource Surface1}"
+                    CornerRadius="12"
+                    Padding="8">
+              <ItemsControl ItemsSource="{Binding SnapshotActivity}"
+                            HorizontalAlignment="Stretch">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="7" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
+                                Spacing="4">
+                      <Border Width="18"
+                              ToolTip.Tip="{Binding TooltipText}">
+                        <StackPanel VerticalAlignment="Bottom" Spacing="2">
+                          <Border Height="{Binding ManualHeight}"
+                                  Background="{Binding ManualBrush}"
+                                  CornerRadius="4"
+                                  IsVisible="{Binding HasManual}" />
+                          <Border Height="{Binding AutoHeight}"
+                                  Background="{Binding AutoBrush}"
+                                  CornerRadius="4"
+                                  IsVisible="{Binding HasAuto}" />
+                          <Border Height="{Binding EmptyHeight}"
+                                  Background="{Binding EmptyBrush}"
+                                  CornerRadius="4"
+                                  IsVisible="{Binding IsEmpty}" />
+                        </StackPanel>
+                      </Border>
+                      <TextBlock Text="{Binding DayLabel}"
+                                 IsVisible="{Binding ShowLabel}"
+                                 FontSize="10"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
+            </StackPanel>
           </Border>
         </Grid>
 
@@ -514,7 +599,8 @@
                   CornerRadius="18"
                   Padding="14"
                   MinWidth="360"
-                  Grid.Column="0">
+                  Grid.Column="0"
+                  VerticalAlignment="Top">
 
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="8">
@@ -542,7 +628,8 @@
                        BorderThickness="0"
                        AutoScrollToSelectedItem="False"
                        ScrollViewer.VerticalScrollBarVisibility="Auto"
-                       VerticalAlignment="Stretch">
+                       VerticalAlignment="Top"
+                       MaxHeight="640">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Border Classes="card project-card"
@@ -619,9 +706,7 @@
                                   Grid.Column="2"
                                   Orientation="Horizontal"
                                   Spacing="6">
-                        <Border CornerRadius="999"
-                                Padding="6,2"
-                                Background="{DynamicResource Surface2}">
+                        <Border Classes="stat-pill">
                           <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="{Binding SnapshotCount}"
                                        FontSize="11"
@@ -631,9 +716,7 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                           </StackPanel>
                         </Border>
-                        <Border CornerRadius="999"
-                                Padding="6,2"
-                                Background="{DynamicResource Surface2}">
+                        <Border Classes="stat-pill">
                           <TextBlock Text="{Binding TotalSizeFormatted}"
                                      FontSize="11"
                                      FontWeight="SemiBold" />
@@ -841,16 +924,14 @@
                                           Grid.Column="1"
                                           Orientation="Horizontal"
                                           Spacing="6">
-                                <Border CornerRadius="999"
-                                        Padding="8,2"
-                                        Background="{DynamicResource Surface2}">
+                                <Border Classes="stat-pill"
+                                        Padding="8,2">
                                   <TextBlock Text="{Binding Summary}"
                                              FontSize="11"
                                              FontWeight="SemiBold" />
                                 </Border>
-                                <Border CornerRadius="999"
-                                        Padding="8,2"
-                                        Background="{DynamicResource Surface2}">
+                                <Border Classes="stat-pill"
+                                        Padding="8,2">
                                   <TextBlock Text="{Binding TotalSizeFormatted}"
                                              FontSize="11"
                                              FontWeight="SemiBold" />
@@ -916,7 +997,7 @@
                                         <WrapPanel Grid.Row="1"
                                                    Grid.Column="1"
                                                    ItemSpacing="6">
-                                          <Border CornerRadius="999"
+                                          <Border Classes="stat-pill"
                                                   Padding="8,2"
                                                   Background="{DynamicResource Surface3}"
                                                   BorderBrush="{DynamicResource BorderSoft}"
@@ -925,7 +1006,7 @@
                                                        FontSize="11"
                                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                                           </Border>
-                                          <Border CornerRadius="999"
+                                          <Border Classes="stat-pill"
                                                   Padding="8,2"
                                                   Background="{DynamicResource Surface2}"
                                                   BorderBrush="{Binding TagBackground}"
@@ -977,76 +1058,6 @@
                     </ItemsControl>
                   </ScrollViewer>
 
-              </StackPanel>
-            </Border>
-
-            <!-- ACTIVITY -->
-            <Border Classes="card"
-                    CornerRadius="18"
-                    Padding="14"
-                    MinWidth="360"
-                    Grid.Row="2">
-              <StackPanel Spacing="8">
-                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.SnapshotsActivity}"
-                             FontSize="11"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <StackPanel Grid.Column="1"
-                              Orientation="Horizontal"
-                              Spacing="10"
-                              VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                      <Border Width="8" Height="8" CornerRadius="4" Background="#3A7AFE" />
-                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
-                                 FontSize="10"
-                                 Foreground="{DynamicResource TextSecondaryBrush}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                      <Border Width="8" Height="8" CornerRadius="4" Background="#22CC88" />
-                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterManual}"
-                                 FontSize="10"
-                                 Foreground="{DynamicResource TextSecondaryBrush}" />
-                    </StackPanel>
-                  </StackPanel>
-                </Grid>
-
-                <ItemsControl ItemsSource="{Binding SnapshotActivity}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <StackPanel Orientation="Horizontal" Spacing="6" />
-                    </ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <StackPanel HorizontalAlignment="Center"
-                                  VerticalAlignment="Bottom"
-                                  Spacing="2">
-                        <Border Width="12"
-                                ToolTip.Tip="{Binding TooltipText}">
-                          <StackPanel VerticalAlignment="Bottom" Spacing="1">
-                            <Border Height="{Binding ManualHeight}"
-                                    Background="{Binding ManualBrush}"
-                                    CornerRadius="3"
-                                    IsVisible="{Binding HasManual}" />
-                            <Border Height="{Binding AutoHeight}"
-                                    Background="{Binding AutoBrush}"
-                                    CornerRadius="3"
-                                    IsVisible="{Binding HasAuto}" />
-                            <Border Height="{Binding EmptyHeight}"
-                                    Background="{Binding EmptyBrush}"
-                                    CornerRadius="3"
-                                    IsVisible="{Binding IsEmpty}" />
-                          </StackPanel>
-                        </Border>
-                        <TextBlock Text="{Binding DayLabel}"
-                                   IsVisible="{Binding ShowLabel}"
-                                   FontSize="10"
-                                   HorizontalAlignment="Center"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                      </StackPanel>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
               </StackPanel>
             </Border>
 

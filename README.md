@@ -28,8 +28,10 @@
 </p>
 
 <p align="center">
+  <img src="https://github-readme-stats.vercel.app/api?username=ATAC-Helicopter&show_icons=true&include_all_commits=true&theme=github_dark&hide_border=true" alt="GitHub stats" />
+  <img src="https://github-readme-streak-stats.herokuapp.com/?user=ATAC-Helicopter&theme=github-dark-blue&hide_border=true" alt="GitHub streak" />
   <a href="https://github.com/ATAC-Helicopter/VaultSync">
-    <img src="https://github-readme-stats.vercel.app/api/pin/?username=ATAC-Helicopter&repo=VaultSync&theme=transparent" alt="VaultSync repo stats" />
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=ATAC-Helicopter&repo=VaultSync&theme=github_dark&hide_border=true" alt="VaultSync repo stats" />
   </a>
 </p>
 

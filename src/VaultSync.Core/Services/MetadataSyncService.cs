@@ -479,10 +479,10 @@ public sealed class MetadataSyncService
 
         try
         {
-            metaProjects = store.ListProjects().ToList();
-            metaSnapshots = store.ListSnapshots().ToList();
-            metaBackups = store.ListBackups().ToList();
-            metaTombstones = store.ListTombstones().ToList();
+            metaProjects = store.ListProjects();
+            metaSnapshots = store.ListSnapshots();
+            metaBackups = store.ListBackups();
+            metaTombstones = store.ListTombstones();
         }
         catch (Exception ex)
         {
@@ -522,37 +522,70 @@ public sealed class MetadataSyncService
         }
 
         var snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
-        var tombstonedBackupIds = metaTombstones
-            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
-            .Select(t => t.EntityId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var tombstonedSnapshotIds = metaTombstones
-            .Where(t => string.Equals(t.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
-            .Select(t => t.EntityId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var liveSnapshotExternalIds = new HashSet<string>(
-            metaBackups
-                .Where(b => !string.IsNullOrWhiteSpace(b.SnapshotExternalId))
-                .Where(b => !tombstonedBackupIds.Contains(b.ExternalId))
-                .Select(b => b.SnapshotExternalId),
-            StringComparer.OrdinalIgnoreCase);
-        var missingSnapshotExternalIds = metaSnapshots
-            .Where(s => !string.IsNullOrWhiteSpace(s.ExternalId))
-            .Where(s => !liveSnapshotExternalIds.Contains(s.ExternalId))
-            .Select(s => s.ExternalId)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var backupExternalMap = _repo.GetBackupExternalIdMap();
+        var tombstonedBackupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var tombstonedSnapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var liveSnapshotExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var missingSnapshotId in missingSnapshotExternalIds)
+        foreach (var tombstone in metaTombstones)
         {
-            tombstonedSnapshotIds.Add(missingSnapshotId);
+            if (string.IsNullOrWhiteSpace(tombstone.EntityId))
+                continue;
+
+            if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            {
+                tombstonedBackupIds.Add(tombstone.EntityId);
+                if (backupExternalMap.ContainsKey(tombstone.EntityId))
+                    deleteBackups++;
+            }
+            else if (string.Equals(tombstone.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
+            {
+                tombstonedSnapshotIds.Add(tombstone.EntityId);
+            }
+        }
+
+        foreach (var metaBackup in metaBackups)
+        {
+            if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
+                continue;
+
+            if (!string.IsNullOrWhiteSpace(metaBackup.SnapshotExternalId) &&
+                !tombstonedBackupIds.Contains(metaBackup.ExternalId))
+            {
+                liveSnapshotExternalIds.Add(metaBackup.SnapshotExternalId);
+            }
+
+            if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
+                continue;
+
+            var normalizedPathRel = NormalizeBackupPathRel(metaBackup.PathRel);
+            if (!BackupPathExists(rootPath, normalizedPathRel))
+            {
+                tombstonedBackupIds.Add(metaBackup.ExternalId);
+                if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
+                    deleteBackups++;
+                continue;
+            }
+
+            if (!projectMap.ContainsKey(metaBackup.ProjectExternalId))
+                continue;
+
+            if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
+                continue;
+
+            addBackups++;
         }
 
         foreach (var metaSnapshot in metaSnapshots)
         {
             if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
                 continue;
+
+            if (!liveSnapshotExternalIds.Contains(metaSnapshot.ExternalId))
+            {
+                tombstonedSnapshotIds.Add(metaSnapshot.ExternalId);
+                continue;
+            }
 
             if (tombstonedSnapshotIds.Contains(metaSnapshot.ExternalId))
                 continue;
@@ -566,58 +599,6 @@ public sealed class MetadataSyncService
             addSnapshots++;
         }
 
-        var backupExternalMap = _repo.GetBackupExternalIdMap();
-        var missingBackupExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var metaBackup in metaBackups)
-        {
-            if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
-                continue;
-
-            if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
-                continue;
-
-            var normalizedPathRel = NormalizeBackupPathRel(metaBackup.PathRel);
-            if (!BackupPathExists(rootPath, normalizedPathRel))
-            {
-                missingBackupExternalIds.Add(metaBackup.ExternalId);
-                tombstonedBackupIds.Add(metaBackup.ExternalId);
-                continue;
-            }
-
-            if (!projectMap.ContainsKey(metaBackup.ProjectExternalId))
-                continue;
-
-            if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
-                continue;
-
-            addBackups++;
-        }
-
-        foreach (var tombstone in metaTombstones)
-        {
-            if (string.IsNullOrWhiteSpace(tombstone.EntityId))
-                continue;
-
-            if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
-            {
-                if (backupExternalMap.ContainsKey(tombstone.EntityId))
-                {
-                    deleteBackups++;
-                }
-            }
-        }
-
-        if (missingBackupExternalIds.Count > 0)
-        {
-            foreach (var missingExternalId in missingBackupExternalIds)
-            {
-                if (backupExternalMap.ContainsKey(missingExternalId))
-                {
-                    deleteBackups++;
-                }
-            }
-        }
 
         var preview = new MetadataSyncPreview(
             MetadataSyncStatus.Success,

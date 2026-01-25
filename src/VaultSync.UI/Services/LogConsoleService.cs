@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Avalonia.Threading;
 
 namespace VaultSync.UI.Services
@@ -18,10 +20,19 @@ namespace VaultSync.UI.Services
     {
         private readonly ObservableCollection<LogLine> _lines = new();
         private readonly ReadOnlyObservableCollection<LogLine> _readOnlyLines;
+        private readonly object _snapshotGate = new();
+        private readonly List<LogLine> _snapshotLines = new();
+        private readonly ConcurrentQueue<LogLine> _pending = new();
         private readonly object _fileGate = new();
+        private readonly StringBuilder _fileBuffer = new();
         private bool _captureInstalled;
         private TextWriter? _originalOut;
         private TextWriter? _originalErr;
+        private int _flushScheduled;
+        private const int MaxFlushBatch = 200;
+        private Timer? _fileFlushTimer;
+        private const int FileFlushIntervalMs = 2000;
+        private const int MaxFileBufferChars = 32 * 1024;
 
         public LogConsoleService()
         {
@@ -55,6 +66,10 @@ namespace VaultSync.UI.Services
                 if (_saveToFile == value)
                     return;
                 _saveToFile = value;
+                if (!_saveToFile)
+                {
+                    StopFileCapture();
+                }
                 StateChanged?.Invoke();
             }
         }
@@ -78,6 +93,10 @@ namespace VaultSync.UI.Services
         public void Clear()
         {
             Dispatcher.UIThread.Post(() => _lines.Clear());
+            lock (_snapshotGate)
+            {
+                _snapshotLines.Clear();
+            }
         }
 
         public string? ExportBuffer()
@@ -89,15 +108,9 @@ namespace VaultSync.UI.Services
 
                 var path = Path.Combine(exportsDir, $"vaultsync-ui-log-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.txt");
                 List<LogLine> snapshot;
-                if (Dispatcher.UIThread.CheckAccess())
+                lock (_snapshotGate)
                 {
-                    snapshot = _lines.ToList();
-                }
-                else
-                {
-                    snapshot = Dispatcher.UIThread.InvokeAsync(() => _lines.ToList())
-                        .GetAwaiter()
-                        .GetResult();
+                    snapshot = _snapshotLines.ToList();
                 }
 
                 var sb = new StringBuilder();
@@ -123,15 +136,9 @@ namespace VaultSync.UI.Services
                     return null;
 
                 List<LogLine> snapshot;
-                if (Dispatcher.UIThread.CheckAccess())
+                lock (_snapshotGate)
                 {
-                    snapshot = _lines.ToList();
-                }
-                else
-                {
-                    snapshot = Dispatcher.UIThread.InvokeAsync(() => _lines.ToList())
-                        .GetAwaiter()
-                        .GetResult();
+                    snapshot = _snapshotLines.ToList();
                 }
 
                 if (snapshot.Count == 0)
@@ -172,12 +179,18 @@ namespace VaultSync.UI.Services
                     continue;
 
                 var entry = new LogLine(DateTimeOffset.Now, source, line);
-
-                Dispatcher.UIThread.Post(() =>
+                lock (_snapshotGate)
                 {
-                    _lines.Add(entry);
-                    TrimIfNeeded();
-                });
+                    _snapshotLines.Add(entry);
+                    if (_snapshotLines.Count > MaxLines)
+                    {
+                        var toRemove = _snapshotLines.Count - MaxLines;
+                        _snapshotLines.RemoveRange(0, toRemove);
+                    }
+                }
+
+                _pending.Enqueue(entry);
+                ScheduleFlush();
 
                 if (SaveToFile)
                 {
@@ -202,9 +215,37 @@ namespace VaultSync.UI.Services
 
             var toRemove = _lines.Count - MaxLines;
             for (var i = 0; i < toRemove; i++)
-            {
                 _lines.RemoveAt(0);
+        }
+
+        private void ScheduleFlush()
+        {
+            if (Interlocked.Exchange(ref _flushScheduled, 1) == 1)
+                return;
+
+            Dispatcher.UIThread.Post(FlushPending);
+        }
+
+        private void FlushPending()
+        {
+            Interlocked.Exchange(ref _flushScheduled, 0);
+
+            if (_pending.IsEmpty)
+                return;
+
+            var batch = new List<LogLine>(MaxFlushBatch);
+            while (batch.Count < MaxFlushBatch && _pending.TryDequeue(out var entry))
+            {
+                batch.Add(entry);
             }
+
+            foreach (var entry in batch)
+                _lines.Add(entry);
+
+            TrimIfNeeded();
+
+            if (!_pending.IsEmpty)
+                ScheduleFlush();
         }
 
         private void AppendToFile(LogLine entry)
@@ -212,16 +253,60 @@ namespace VaultSync.UI.Services
             try
             {
                 var path = GetDailyLogPath();
-                var line = $"[{entry.Timestamp:O}] {entry.Source}: {entry.Message}{Environment.NewLine}";
                 lock (_fileGate)
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                    File.AppendAllText(path, line);
+                    _fileBuffer.Append('[')
+                        .Append(entry.Timestamp.ToString("O"))
+                        .Append("] ")
+                        .Append(entry.Source)
+                        .Append(": ")
+                        .Append(entry.Message)
+                        .Append(Environment.NewLine);
+
+                    if (_fileBuffer.Length >= MaxFileBufferChars)
+                    {
+                        FlushFileBuffer(path);
+                    }
+                    else if (_fileFlushTimer is null)
+                    {
+                        _fileFlushTimer = new Timer(_ => FlushFileBuffer(path), null, FileFlushIntervalMs, FileFlushIntervalMs);
+                    }
                 }
             }
             catch
             {
                 // Never throw from logger.
+            }
+        }
+
+        private void StopFileCapture()
+        {
+            try
+            {
+                var path = GetDailyLogPath();
+                lock (_fileGate)
+                {
+                    _fileFlushTimer?.Dispose();
+                    _fileFlushTimer = null;
+                    FlushFileBuffer(path);
+                }
+            }
+            catch
+            {
+                // Never throw from logger.
+            }
+        }
+
+        private void FlushFileBuffer(string path)
+        {
+            lock (_fileGate)
+            {
+                if (_fileBuffer.Length == 0)
+                    return;
+
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.AppendAllText(path, _fileBuffer.ToString());
+                _fileBuffer.Clear();
             }
         }
 

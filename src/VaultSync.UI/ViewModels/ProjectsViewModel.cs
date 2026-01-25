@@ -89,11 +89,9 @@ public class ProjectsViewModel : ViewModelBase
     public NotificationState Notification { get; } = new NotificationState();
 
     public ICommand RefreshCommand { get; }
-    public ICommand NewProjectCommand { get; }
     public ICommand OpenFolderCommand { get; }
     public ICommand RemoveProjectCommand { get; }
     public ICommand SnapshotCommand { get; }
-    public ICommand SyncCommand { get; }
     public ICommand TakeSnapshotCommand => SnapshotCommand;
     public ICommand ToggleSortCommand { get; }
     public string SearchText
@@ -138,13 +136,11 @@ public class ProjectsViewModel : ViewModelBase
 
     public ProjectsViewModel()
     {
-        RefreshCommand       = new RelayCommand(_ => Refresh());
-        NewProjectCommand    = new RelayCommand(_ => NewProject());
-        OpenFolderCommand    = new RelayCommand(_ => OpenFolder(),    _ => SelectedProject is not null);
+        RefreshCommand = new RelayCommand(_ => Refresh());
+        OpenFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
         RemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
-        SnapshotCommand      = new RelayCommand(_ => TakeSnapshot());
-        SyncCommand          = new RelayCommand(_ => SyncProject(),   _ => SelectedProject is not null);
-        ToggleSortCommand    = new RelayCommand(_ => ToggleSortMode());
+        SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
+        ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());
 
         LoadAvailablePresets();
 
@@ -168,7 +164,7 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         var severity = success ? NotificationSeverity.Info : NotificationSeverity.Error;
-        var title    = success
+        var title = success
             ? L("Snapshots.Notification.SuccessTitle", "Snapshot completed")
             : L("Snapshots.Notification.FailureTitle", "Snapshot failed");
 
@@ -213,7 +209,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             IsLoading = true;
 
-            var config     = AppConfigStore.Load();
+            var config = AppConfigStore.Load();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             var projectItems = await Task.Run(() =>
@@ -327,8 +323,8 @@ public class ProjectsViewModel : ViewModelBase
         var items = new List<ProjectItemViewModel>();
         foreach (var p in discovered)
         {
-            DateTime? lastSnapshotTime  = p.LastSnapshotTime;
-            long?     lastSnapshotBytes = p.LastSnapshotSizeBytes;
+            DateTime? lastSnapshotTime = p.LastSnapshotTime;
+            long? lastSnapshotBytes = p.LastSnapshotSizeBytes;
             List<ProjectSnapshotViewModel>? snapshotVms = null;
             Project? existingProject = null;
 
@@ -347,7 +343,7 @@ public class ProjectsViewModel : ViewModelBase
                         if (latestSnapshotsByProject != null &&
                             latestSnapshotsByProject.TryGetValue(existingProject.Id, out var latestSnapshot))
                         {
-                            lastSnapshotTime  = latestSnapshot.CreatedUtc;
+                            lastSnapshotTime = latestSnapshot.CreatedUtc;
                             lastSnapshotBytes = latestSnapshot.TotalBytes;
                         }
 
@@ -356,7 +352,7 @@ public class ProjectsViewModel : ViewModelBase
                         {
                             if (!lastSnapshotTime.HasValue || latestBackup.CreatedUtc > lastSnapshotTime.Value)
                             {
-                                lastSnapshotTime  = latestBackup.CreatedUtc;
+                                lastSnapshotTime = latestBackup.CreatedUtc;
                                 lastSnapshotBytes = latestBackup.TotalBytes;
                             }
                         }
@@ -369,11 +365,11 @@ public class ProjectsViewModel : ViewModelBase
 
             var vm = new ProjectItemViewModel
             {
-                Name         = p.Name,
-                Path         = p.Path,
+                Name = p.Name,
+                Path = p.Path,
                 LastSnapshot = lastSnapshotTime ?? default,
-                SizeBytes    = lastSnapshotBytes ?? 0,
-                Preset       = existingProject?.Preset ?? string.Empty
+                SizeBytes = lastSnapshotBytes ?? 0,
+                Preset = existingProject?.Preset ?? string.Empty
             };
             vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path));
 
@@ -551,10 +547,6 @@ public class ProjectsViewModel : ViewModelBase
             : null;
     }
 
-    private void NewProject()
-    {
-        // TODO: open "Add project" flow.
-    }
 
     private void OpenFolder()
     {
@@ -642,9 +634,9 @@ public class ProjectsViewModel : ViewModelBase
         if (SelectedProject != null && SelectedProject.Name == removedProjectName)
         {
             SelectedProject.LastSnapshot = default;
-            SelectedProject.SizeBytes    = 0;
+            SelectedProject.SizeBytes = 0;
             SelectedProject.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
-            SelectedProject.Health    = ProjectHealthStatus.OutOfDate;
+            SelectedProject.Health = ProjectHealthStatus.OutOfDate;
             SelectedProject.HealthTag = L("Projects.Health.NotBackedUp", "Not backed up");
             SelectedProject.IsRegistered = false;
         }
@@ -685,9 +677,9 @@ public class ProjectsViewModel : ViewModelBase
                 // Register project instead of snapshot.
                 var project = new Project
                 {
-                    Name       = SelectedProject.Name,
-                    RootPath   = SelectedProject.Path,
-                    Preset     = SelectedProject.Preset,
+                    Name = SelectedProject.Name,
+                    RootPath = SelectedProject.Path,
+                    Preset = SelectedProject.Preset,
                     CreatedUtc = DateTime.UtcNow
                 };
 
@@ -709,14 +701,14 @@ public class ProjectsViewModel : ViewModelBase
             }
 
             // 4. Run snapshot via Core engine.
-            var hashService     = new HashService();
+            var hashService = new HashService();
             var snapshotService = new SnapshotService(repo, hashService);
 
             var snapshotId = await snapshotService.CreateSnapshotAsync(
                 existing,
                 fullHash: fullHash,
                 maxSnapshotsToKeep: maxSnapshotsToKeep);
-            var outcome    = SnapshotService.LastOutcome;
+            var outcome = SnapshotService.LastOutcome;
 
             // Update the selected project's stats in the UI immediately, based on the DB state
             // after snapshot creation and retention have run.
@@ -732,7 +724,7 @@ public class ProjectsViewModel : ViewModelBase
                         // Assume snapshots are returned newest-first, consistent with RefreshAsync.
                         var latest = snapshotsFromDb[0];
                         SelectedProject.LastSnapshot = latest.CreatedUtc;
-                        SelectedProject.SizeBytes    = latest.TotalBytes;
+                        SelectedProject.SizeBytes = latest.TotalBytes;
 
                         var history = snapshotsFromDb
                             .Take(10)
@@ -744,11 +736,11 @@ public class ProjectsViewModel : ViewModelBase
                     {
                         // No snapshots remaining (should be rare, but handle it).
                         SelectedProject.LastSnapshot = default;
-                        SelectedProject.SizeBytes    = 0;
+                        SelectedProject.SizeBytes = 0;
                         SelectedProject.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
                     }
 
-                    SelectedProject.Health    = ProjectHealthStatus.Healthy;
+                    SelectedProject.Health = ProjectHealthStatus.Healthy;
                     SelectedProject.HealthTag = L("Projects.Health.Healthy", "Healthy");
                 }
                 catch (Exception ex)
@@ -773,7 +765,7 @@ public class ProjectsViewModel : ViewModelBase
         RefreshSelectedProjectRegistration();
     }
 
-        /// <summary>
+    /// <summary>
     /// Tray helper: create a snapshot for a specific project by name,
     /// reusing the existing TakeSnapshot() pipeline.
     /// </summary>
@@ -824,12 +816,6 @@ public class ProjectsViewModel : ViewModelBase
         }
 
         return Task.CompletedTask;
-    }
-
-    private void SyncProject()
-    {
-        if (SelectedProject is null) return;
-        // TODO: trigger sync pipeline for SelectedProject.
     }
 
     private void RefreshSelectedProjectRegistration()
@@ -900,7 +886,7 @@ public class ProjectsViewModel : ViewModelBase
         var refreshToken = Interlocked.Increment(ref _selectedProjectHistoryToken);
         var projectName = SelectedProject.Name;
 
-        _ = Task.Run(() =>
+        _ = Task.Run(async () =>
         {
             try
             {
@@ -910,8 +896,7 @@ public class ProjectsViewModel : ViewModelBase
                     : GetDefaultDbPath();
 
                 var repo = new SqliteRepository(dbPath);
-                var snapshots = repo.GetSnapshotsForProject(projectName)?.ToList()
-                               ?? new List<Snapshot>();
+                var snapshots = await repo.GetSnapshotsForProjectAsync(projectName);
                 return snapshots
                     .Select(s => new ProjectSnapshotViewModel(s.CreatedUtc, s.TotalBytes))
                     .ToList();
@@ -961,17 +946,17 @@ public class ProjectsViewModel : ViewModelBase
 
             if (age.TotalDays < 1)
             {
-                vm.Health    = ProjectHealthStatus.Healthy;
+                vm.Health = ProjectHealthStatus.Healthy;
                 vm.HealthTag = L("Projects.Health.HealthyRecent", "Healthy (<1d)");
             }
             else if (age.TotalDays < 7)
             {
-                vm.Health    = ProjectHealthStatus.Warning;
+                vm.Health = ProjectHealthStatus.Warning;
                 vm.HealthTag = L("Projects.Health.OutOfDateShort", "Out of date (>1d)");
             }
             else
             {
-                vm.Health    = ProjectHealthStatus.OutOfDate;
+                vm.Health = ProjectHealthStatus.OutOfDate;
                 vm.HealthTag = L("Projects.Health.Stale", "Stale (>7d)");
             }
 
@@ -1063,7 +1048,7 @@ public class ProjectsViewModel : ViewModelBase
     private static IEnumerable<string> GetPresetNames()
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var dir   = ResolvePresetsDirForUi();
+        var dir = ResolvePresetsDirForUi();
 
         if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
         {
@@ -1072,7 +1057,7 @@ public class ProjectsViewModel : ViewModelBase
                 var indexPath = Path.Combine(dir, "presets.index.json");
                 if (File.Exists(indexPath))
                 {
-                    var json  = File.ReadAllText(indexPath);
+                    var json = File.ReadAllText(indexPath);
                     var index = JsonSerializer.Deserialize<PresetIndex>(json);
 
                     if (index?.Presets != null)
@@ -1159,7 +1144,7 @@ public class ProjectsViewModel : ViewModelBase
         // Fallback DB location when AppConfig.DbPath is not set.
         // Later this will be fully unified with the CLI DB resolution logic.
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var dir     = Path.Combine(appData, "VaultSync");
+        var dir = Path.Combine(appData, "VaultSync");
         Directory.CreateDirectory(dir);
         return Path.Combine(dir, "vaultsync.db");
     }
@@ -1367,6 +1352,31 @@ public class ProjectItemViewModel : ViewModelBase
                     s.TrendColor = "#2F3650";
                 }
             }
+
+            if (i == 0)
+            {
+                s.ShowDayLabel = true;
+            }
+            else
+            {
+                var prevDate = SnapshotHistory[i - 1].Timestamp.Date;
+                s.ShowDayLabel = s.Timestamp.Date != prevDate;
+            }
+
+            if (s.ShowDayLabel)
+            {
+                s.DayLabel = s.Timestamp.ToString("dd/MM", CultureInfo.CurrentCulture);
+            }
+        }
+
+        if (SnapshotHistory.Count > 0)
+        {
+            var last = SnapshotHistory[^1];
+            if (!last.ShowDayLabel)
+            {
+                last.ShowDayLabel = true;
+                last.DayLabel = last.Timestamp.ToString("dd/MM", CultureInfo.CurrentCulture);
+            }
         }
 
         // Notify that aggregate snapshot stats have changed.
@@ -1430,10 +1440,10 @@ public class ProjectItemViewModel : ViewModelBase
     public string HealthBackground =>
         Health switch
         {
-            ProjectHealthStatus.Healthy   => "#1C4730",
-            ProjectHealthStatus.Warning   => "#473F1C",
+            ProjectHealthStatus.Healthy => "#1C4730",
+            ProjectHealthStatus.Warning => "#473F1C",
             ProjectHealthStatus.OutOfDate => "#471C1C",
-            _                             => "#181B23"
+            _ => "#181B23"
         };
 
     public void SetCustomAvatar(string path)
@@ -1453,7 +1463,7 @@ public class ProjectItemViewModel : ViewModelBase
     public void SetAvatarFromNameAndStore(string projectPath, string? customPath)
     {
         AvatarInitials = ComputeInitials(Name);
-        AvatarColor    = AvatarColorProvider.GetColor(Name, projectPath);
+        AvatarColor = AvatarColorProvider.GetColor(Name, projectPath);
         AvatarImagePath = customPath;
         OnPropertyChanged(nameof(AvatarInitials));
         OnPropertyChanged(nameof(AvatarColor));
@@ -1507,10 +1517,16 @@ public sealed class ProjectSnapshotViewModel
     /// </summary>
     public double RelativeBarHeight => 24 + RelativeSize * 56;
 
+    public double RelativeBarHeightCapped => Math.Max(16, RelativeBarHeight);
+
     /// <summary>
     /// Color used for the bar: neutral, up (red), down (green).
     /// </summary>
     public string TrendColor { get; set; } = "#2F3650";
+
+    public bool ShowDayLabel { get; set; }
+
+    public string DayLabel { get; set; } = string.Empty;
 
     public string DateDisplay => Timestamp.ToString("dd/MM/yyyy - HH:mm", CultureInfo.CurrentCulture);
 

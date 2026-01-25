@@ -543,7 +543,7 @@
                             Width="22"
                             CornerRadius="6"
                             Background="{Binding TrendColor}"
-                            Height="{Binding RelativeBarHeight}"
+                            Height="{Binding RelativeBarHeightCapped}"
                             VerticalAlignment="Bottom"
                             Cursor="Hand"
                             ToolTip.Tip="{Binding TooltipText}" />
@@ -562,10 +562,11 @@
                       </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
 
-                    <ItemsControl.ItemTemplate>
+                  <ItemsControl.ItemTemplate>
                       <DataTemplate>
                         <TextBlock
-                          Text="{Binding Timestamp, StringFormat='{}{0:dd/MM}'}"
+                          Text="{Binding DayLabel}"
+                          IsVisible="{Binding ShowDayLabel}"
                           FontSize="10"
                           Foreground="{DynamicResource TextMutedBrush}"
                           HorizontalAlignment="Center"

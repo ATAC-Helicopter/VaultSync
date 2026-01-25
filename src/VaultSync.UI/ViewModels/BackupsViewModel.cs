@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -36,6 +37,7 @@ namespace VaultSync.UI.ViewModels
         private static readonly IBrush HealthWarningBrush = new ImmutableSolidColorBrush(Colors.Orange);
         private static readonly IBrush HealthFailingBrush = new ImmutableSolidColorBrush(Colors.Tomato);
         private static readonly IBrush HealthUnknownBrush = new ImmutableSolidColorBrush(Colors.Gray);
+        private static readonly ConcurrentDictionary<string, ImmutableSolidColorBrush> AccentBrushCache = new(StringComparer.OrdinalIgnoreCase);
         // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
         protected bool SetProperty<T>(ref T storage, T value)
@@ -59,6 +61,9 @@ namespace VaultSync.UI.ViewModels
         private readonly List<BackupSnapshotItem> _filteredSnapshots = new();
 
         private int _snapshotRevision;
+        private int _lastProjectSignature;
+        private int _lastBackupSignature;
+        private int _lastAutoBackupSignature;
         private int _lastFilterRevision = -1;
         private SnapshotFilterState _lastFilterState = SnapshotFilterState.Empty;
 
@@ -1142,17 +1147,10 @@ namespace VaultSync.UI.ViewModels
                     : "Backups.Section.SnapshotCount.Plural";
                 var summaryFallback = ordered.Count == 1 ? "{0} backup" : "{0} backups";
 
-                var accentBrush = new ImmutableSolidColorBrush(Color.Parse("#33405A"));
+                var accentBrush = GetAccentBrush("#33405A");
                 if (!string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out var colorSource))
                 {
-                    try
-                    {
-                        accentBrush = new ImmutableSolidColorBrush(Color.Parse(colorSource.AvatarColor));
-                    }
-                    catch
-                    {
-                        accentBrush = new ImmutableSolidColorBrush(Color.Parse("#33405A"));
-                    }
+                    accentBrush = GetAccentBrush(colorSource.AvatarColor);
                 }
 
                 var isExpanded = !string.IsNullOrWhiteSpace(_preferredExpandedProjectId)
@@ -1178,6 +1176,24 @@ namespace VaultSync.UI.ViewModels
                 SnapshotGroups.Add(groupVm);
             }
 
+        }
+
+        private static ImmutableSolidColorBrush GetAccentBrush(string? hexColor)
+        {
+            var normalized = string.IsNullOrWhiteSpace(hexColor) ? "#33405A" : hexColor;
+            if (AccentBrushCache.TryGetValue(normalized, out var cached))
+                return cached;
+
+            try
+            {
+                var brush = new ImmutableSolidColorBrush(Color.Parse(normalized));
+                AccentBrushCache[normalized] = brush;
+                return brush;
+            }
+            catch
+            {
+                return AccentBrushCache.GetOrAdd("#33405A", _ => new ImmutableSolidColorBrush(Color.Parse("#33405A")));
+            }
         }
 
         /// <summary>
@@ -1666,6 +1682,21 @@ namespace VaultSync.UI.ViewModels
                 }
             }
             var backupList = dedupBackups.Values.ToList();
+            var projectSignature = ComputeProjectSignature(projectList);
+            var backupSignature = ComputeBackupSignature(backupList);
+            var autoSignature = ComputeAutoBackupSignature(autoBackupDisabledProjects);
+
+            var dataChanged = projectSignature != _lastProjectSignature || backupSignature != _lastBackupSignature;
+            var autoChanged = autoSignature != _lastAutoBackupSignature;
+            if (!dataChanged && autoChanged)
+            {
+                UpdateAutoBackupFlags(autoBackupDisabledProjects);
+                _lastAutoBackupSignature = autoSignature;
+                return;
+            }
+
+            if (!dataChanged && !autoChanged)
+                return;
 
             ProjectBackups.Clear();
             _allSnapshots.Clear();
@@ -1745,11 +1776,73 @@ namespace VaultSync.UI.ViewModels
             RefreshSnapshotsView(true);
             RecalculateSummary();
             RefreshBackupDiskUsage();
+
+            _lastProjectSignature = projectSignature;
+            _lastBackupSignature = backupSignature;
+            _lastAutoBackupSignature = autoSignature;
         }
 
         public void RefreshBackupDriveHealth()
         {
             RefreshBackupDiskUsage(includeHealthProbe: true);
+        }
+
+        private static int ComputeProjectSignature(IReadOnlyList<Project> projects)
+        {
+            unchecked
+            {
+                var hash = projects.Count;
+                foreach (var project in projects)
+                {
+                    hash = (hash * 397) ^ project.Id;
+                    hash = (hash * 397) ^ (project.Name?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.RootPath?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                }
+                return hash;
+            }
+        }
+
+        private static int ComputeBackupSignature(IReadOnlyList<Backup> backups)
+        {
+            unchecked
+            {
+                var hash = backups.Count;
+                foreach (var backup in backups)
+                {
+                    hash = (hash * 397) ^ backup.Id;
+                    hash = (hash * 397) ^ backup.ProjectId;
+                    hash = (hash * 397) ^ backup.CreatedUtc.GetHashCode();
+                    hash = (hash * 397) ^ backup.TotalBytes.GetHashCode();
+                    hash = (hash * 397) ^ (backup.IsImported ? 1 : 0);
+                }
+                return hash;
+            }
+        }
+
+        private static int ComputeAutoBackupSignature(ISet<int>? disabledProjects)
+        {
+            if (disabledProjects is null || disabledProjects.Count == 0)
+                return 0;
+
+            unchecked
+            {
+                var hash = disabledProjects.Count;
+                foreach (var id in disabledProjects.OrderBy(id => id))
+                {
+                    hash = (hash * 397) ^ id;
+                }
+                return hash;
+            }
+        }
+
+        private void UpdateAutoBackupFlags(ISet<int>? disabledProjects)
+        {
+            var disabled = disabledProjects ?? new HashSet<int>();
+            foreach (var item in ProjectBackups)
+            {
+                var parsed = int.TryParse(item.Id, out var projectId) ? projectId : -1;
+                item.AutoBackupEnabled = parsed > 0 && !disabled.Contains(parsed);
+            }
         }
     }
 

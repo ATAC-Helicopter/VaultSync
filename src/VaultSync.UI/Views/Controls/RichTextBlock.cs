@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Input;
 using Avalonia.Media;
 
 namespace VaultSync.UI.Views.Controls;
@@ -53,14 +55,33 @@ public class RichTextBlock : TextBlock
                 continue;
             }
 
-            if (IsAt(text, i, "[") && TryReadLink(text, i, out var linkText, out var nextLink))
+            if (IsAt(text, i, "[") && TryReadLink(text, i, out var linkText, out var linkUrl, out var nextLink))
             {
-                var run = new Run(linkText)
+                if (TryCreateUri(linkUrl, out var uri))
                 {
-                    Foreground = GetAccentBrush() ?? Foreground,
-                    TextDecorations = CreateUnderline()
-                };
-                Inlines?.Add(run);
+                    var linkBlock = new TextBlock
+                    {
+                        Text = linkText,
+                        Foreground = GetAccentBrush() ?? Foreground,
+                        TextDecorations = CreateUnderline(),
+                        Cursor = new Cursor(StandardCursorType.Hand)
+                    };
+                    linkBlock.PointerPressed += (_, e) =>
+                    {
+                        if (e.GetCurrentPoint(linkBlock).Properties.IsLeftButtonPressed)
+                            OpenUrl(uri);
+                    };
+                    Inlines?.Add(new InlineUIContainer { Child = linkBlock });
+                }
+                else
+                {
+                    var run = new Run(linkText)
+                    {
+                        Foreground = GetAccentBrush() ?? Foreground,
+                        TextDecorations = CreateUnderline()
+                    };
+                    Inlines?.Add(run);
+                }
                 i = nextLink;
                 continue;
             }
@@ -164,9 +185,10 @@ public class RichTextBlock : TextBlock
         return next;
     }
 
-    private static bool TryReadLink(string value, int start, out string text, out int nextIndex)
+    private static bool TryReadLink(string value, int start, out string text, out string url, out int nextIndex)
     {
         text = string.Empty;
+        url = string.Empty;
         nextIndex = start;
 
         var closeBracket = value.IndexOf(']', start + 1);
@@ -179,9 +201,9 @@ public class RichTextBlock : TextBlock
             return false;
 
         var label = value.Substring(start + 1, closeBracket - start - 1);
-        text = string.IsNullOrWhiteSpace(label)
-            ? value.Substring(closeBracket + 2, closeParen - closeBracket - 2)
-            : label;
+        var link = value.Substring(closeBracket + 2, closeParen - closeBracket - 2);
+        text = string.IsNullOrWhiteSpace(label) ? link : label;
+        url = link;
         nextIndex = closeParen + 1;
         return true;
     }
@@ -202,4 +224,32 @@ public class RichTextBlock : TextBlock
 
     private static TextDecorationCollection CreateStrikethrough()
         => new() { new TextDecoration { Location = TextDecorationLocation.Strikethrough } };
+
+    private static bool TryCreateUri(string raw, out Uri uri)
+    {
+        uri = default!;
+        if (string.IsNullOrWhiteSpace(raw))
+            return false;
+
+        if (Uri.TryCreate(raw, UriKind.Absolute, out uri))
+            return true;
+
+        return Uri.TryCreate($"https://{raw}", UriKind.Absolute, out uri);
+    }
+
+    private static void OpenUrl(Uri uri)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = uri.ToString(),
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Best effort: ignore failures to open browser.
+        }
+    }
 }

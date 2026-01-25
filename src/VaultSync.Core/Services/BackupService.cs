@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
-using VaultSync.Core.Repositories; 
+using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 
 namespace VaultSync.Core.Services;
@@ -74,6 +74,40 @@ public sealed class BackupService
         {
             Console.WriteLine($"[BackupService] Failed to remove marker '{fileName}' in '{backupFolder}': {ex.Message}");
         }
+    }
+
+    private static bool IsNetworkPathOrDrive(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        try
+        {
+            var root = Path.GetPathRoot(path);
+            if (string.IsNullOrWhiteSpace(root))
+                return false;
+
+            var drive = new DriveInfo(root);
+            if (OperatingSystem.IsWindows() && drive.DriveType == DriveType.Network)
+                return true;
+
+            if (OperatingSystem.IsMacOS() && root.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
     }
 
     public int CleanupIncompleteBackups(string backupRoot, IEnumerable<string>? projectFolderNames = null)
@@ -271,7 +305,7 @@ public sealed class BackupService
         var backupFolder = Path.Combine(projectBackupRoot, folderName);
         Directory.CreateDirectory(backupFolder);
         WriteMarkerFile(backupFolder, InProgressMarkerFileName, $"started:{DateTime.UtcNow:O}");
-        var backupRootUsed   = backupRoot;
+        var backupRootUsed = backupRoot;
         var backupFolderUsed = backupFolder;
 
         long totalBytes = 0;
@@ -313,16 +347,38 @@ public sealed class BackupService
             }
         }
 
-        try
+        var snapshot = _repo.GetSnapshotById(snapshotId);
+        if (snapshot is not null)
         {
-            filesForProgress = _repo.GetFilesForSnapshot(snapshotId).ToList();
-            totalFilesForProgress = filesForProgress.Count;
-            totalBytes = filesForProgress.Sum(f => f.Size);
+            totalFilesForProgress = Convert.ToInt32(snapshot.FileCount);
+            totalBytes = snapshot.TotalBytes;
         }
-        catch
+
+        var needFileList = useArchiveMode || (progressCallback is not null && !preferRunnerProgressOnly);
+        if (needFileList)
         {
-            totalFilesForProgress = 0;
-            filesForProgress = null;
+            try
+            {
+                filesForProgress = _repo.GetFilesForSnapshot(snapshotId).ToList();
+                if (snapshot is null)
+                {
+                    totalFilesForProgress = filesForProgress.Count;
+                    totalBytes = filesForProgress.Sum(f => f.Size);
+                }
+                else if (totalFilesForProgress <= 0)
+                {
+                    totalFilesForProgress = filesForProgress.Count;
+                }
+            }
+            catch
+            {
+                totalFilesForProgress = 0;
+                filesForProgress = null;
+                if (snapshot is null)
+                {
+                    totalBytes = 0;
+                }
+            }
         }
 
         string[]? filesForBackup = null;
@@ -446,7 +502,7 @@ public sealed class BackupService
                         Directory.Delete(destFolder, recursive: true);
 
                     Directory.Move(backupFolder, destFolder);
-                    backupRootUsed   = preferredFinalBackupRoot;
+                    backupRootUsed = preferredFinalBackupRoot;
                     backupFolderUsed = destFolder;
 
                     // Clean up empty temp project root if applicable
@@ -474,7 +530,7 @@ public sealed class BackupService
 
         // Store relative path so if backupRoot moves, paths are still valid.
         var relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
-        var backupType   = isAuto ? "auto" : "manual";
+        var backupType = isAuto ? "auto" : "manual";
 
         Console.WriteLine($"[BackupService] Backup data written for '{project.Name}', creating backup metadata in database...");
 
@@ -491,11 +547,11 @@ public sealed class BackupService
                 : string.Empty;
 
             backupId = _repo.CreateBackup(
-                projectId:       project.Id,
-                snapshotId:      snapshotId,
-                type:            backupType,
-                totalBytes:      totalBytes,
-                relativePath:    relativePath,
+                projectId: project.Id,
+                snapshotId: snapshotId,
+                type: backupType,
+                totalBytes: totalBytes,
+                relativePath: relativePath,
                 destinationPath: metadataRoot,
                 destinationAlias: metadataAlias);
 
@@ -513,7 +569,14 @@ public sealed class BackupService
         }
 
         RemoveMarkerFile(backupFolderUsed, InProgressMarkerFileName);
-        WriteMarkerFile(backupFolderUsed, CompletedMarkerFileName, $"completed:{DateTime.UtcNow:O}");
+        if (!IsNetworkPathOrDrive(backupFolderUsed))
+        {
+            WriteMarkerFile(backupFolderUsed, CompletedMarkerFileName, $"completed:{DateTime.UtcNow:O}");
+        }
+        else
+        {
+            Console.WriteLine($"[BackupService] Skipping completion marker on network destination '{backupFolderUsed}'.");
+        }
 
         progressCallback?.Invoke(100, string.Empty, useArchiveMode ? "Backup completed (archive)." : "Backup completed.");
 
@@ -584,8 +647,8 @@ public sealed class BackupService
         }
         else
         {
-            var startTime     = DateTime.UtcNow;
-            var lastUiUpdate  = startTime;
+            var startTime = DateTime.UtcNow;
+            var lastUiUpdate = startTime;
             var minUiInterval = TimeSpan.FromMilliseconds(100);
 
             callbackForRunner = (percent, currentFile, _) =>
@@ -606,13 +669,13 @@ public sealed class BackupService
                 if (percent > 0 && percent < 100)
                 {
                     var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                    var doneBytes      = totalBytes * (percent / 100.0);
-                    var speedBytesSec  = doneBytes / elapsedSeconds;
-                    var speedMbSec     = speedBytesSec / (1024 * 1024);
+                    var doneBytes = totalBytes * (percent / 100.0);
+                    var speedBytesSec = doneBytes / elapsedSeconds;
+                    var speedMbSec = speedBytesSec / (1024 * 1024);
 
                     var remainingFraction = (100.0 - percent) / percent;
-                    var remainingSeconds  = elapsedSeconds * remainingFraction;
-                    var eta               = TimeSpan.FromSeconds(remainingSeconds);
+                    var remainingSeconds = elapsedSeconds * remainingFraction;
+                    var eta = TimeSpan.FromSeconds(remainingSeconds);
 
                     if (totalFiles > 0)
                     {
@@ -627,8 +690,8 @@ public sealed class BackupService
                 else if (percent >= 100 && elapsed.TotalSeconds > 0)
                 {
                     var elapsedSeconds = elapsed.TotalSeconds;
-                    var speedBytesSec  = totalBytes / elapsedSeconds;
-                    var speedMbSec     = speedBytesSec / (1024 * 1024);
+                    var speedBytesSec = totalBytes / elapsedSeconds;
+                    var speedMbSec = speedBytesSec / (1024 * 1024);
 
                     if (totalFiles > 0)
                     {
@@ -669,7 +732,7 @@ public sealed class BackupService
                     Console.WriteLine($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}).");
                     Console.WriteLine($"[BackupService] Using rsync on Windows ({source}).");
                     var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta, rsyncPath: rsyncPath);
-                    exitCode   = await runner.SyncAsync(
+                    exitCode = await runner.SyncAsync(
                         project,
                         destDir,
                         dryRun: false,
@@ -688,7 +751,7 @@ public sealed class BackupService
 
                     Console.WriteLine($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}).");
                     var runner = new RobocopyRunner(isNetworkDestination);
-                    exitCode   = await runner.SyncAsync(
+                    exitCode = await runner.SyncAsync(
                         project,
                         destDir,
                         dryRun: false,
@@ -704,7 +767,7 @@ public sealed class BackupService
                 // rsync-based backup (fast, incremental on macOS/Linux)
                 Console.WriteLine($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}).");
                 var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta);
-                exitCode   = await runner.SyncAsync(
+                exitCode = await runner.SyncAsync(
                     project,
                     destDir,
                     dryRun: false,
@@ -768,19 +831,19 @@ public sealed class BackupService
         CancellationToken ct,
         RunnerProgressState? runnerState)
     {
-        var startTime     = DateTime.UtcNow;
-        var lastSample    = startTime;
-        long lastBytes    = 0;
-        var totalEntries  = filesForProgress.Count;
+        var startTime = DateTime.UtcNow;
+        var lastSample = startTime;
+        long lastBytes = 0;
+        var totalEntries = filesForProgress.Count;
         if (totalEntries == 0)
             return;
 
         Console.WriteLine($"[BackupService] Progress monitor started for '{destDir}' (entries={totalEntries}).");
 
         var observedSizes = new long[totalEntries];
-        var completed     = new bool[totalEntries];
+        var completed = new bool[totalEntries];
         var completedFiles = 0;
-        long copiedBytes   = 0;
+        long copiedBytes = 0;
 
         var minInterval = totalEntries > 4000
             ? TimeSpan.FromMilliseconds(1000)
@@ -866,7 +929,7 @@ public sealed class BackupService
             if (deltaBytes < 0)
                 deltaBytes = 0;
 
-            lastBytes  = copiedBytes;
+            lastBytes = copiedBytes;
             lastSample = now;
 
             double percent = totalBytes > 0
@@ -940,8 +1003,8 @@ public sealed class BackupService
     private static int NormalizeArchiveUploadBufferBytes(int? requestedBytes)
     {
         const int defaultBytes = 4 * 1024 * 1024;
-        const int minBytes     = 256 * 1024;
-        const int maxBytes     = 64 * 1024 * 1024;
+        const int minBytes = 256 * 1024;
+        const int maxBytes = 64 * 1024 * 1024;
 
         if (requestedBytes is null || requestedBytes.Value <= 0)
             return defaultBytes;
@@ -970,7 +1033,7 @@ public sealed class BackupService
         bool preferParallelUpload)
     {
         var sourceDir = project.RootPath;
-        var srcInfo   = new DirectoryInfo(sourceDir);
+        var srcInfo = new DirectoryInfo(sourceDir);
         if (!srcInfo.Exists)
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
 
@@ -987,9 +1050,9 @@ public sealed class BackupService
         Directory.CreateDirectory(destDir);
         var finalArchivePath = Path.Combine(destDir, "data.zip");
 
-        var localTempRoot  = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
+        var localTempRoot = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(localTempRoot);
-        var localArchive   = Path.Combine(localTempRoot, "data.zip");
+        var localArchive = Path.Combine(localTempRoot, "data.zip");
 
         try
         {
@@ -1021,9 +1084,9 @@ public sealed class BackupService
             // --------------------
             long processedBytes = 0;
             var processedFiles = 0;
-            var  startTime      = DateTime.UtcNow;
-            var  lastUiUpdate   = startTime;
-            var  minUiInterval  = TimeSpan.FromMilliseconds(100);
+            var startTime = DateTime.UtcNow;
+            var lastUiUpdate = startTime;
+            var minUiInterval = TimeSpan.FromMilliseconds(100);
 
             using (var fs = new FileStream(
                 localArchive,
@@ -1039,7 +1102,7 @@ public sealed class BackupService
                     ct.ThrowIfCancellationRequested();
 
                     var relative = Path.GetRelativePath(sourceDir, filePath);
-                    var entry    = zip.CreateEntry(relative, CompressionLevel.Fastest);
+                    var entry = zip.CreateEntry(relative, CompressionLevel.Fastest);
 
                     try
                     {
@@ -1079,17 +1142,17 @@ public sealed class BackupService
 
                         lastUiUpdate = now;
 
-                        var elapsed        = now - startTime;
+                        var elapsed = now - startTime;
                         var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                        var speedBytesSec  = processedBytes / elapsedSeconds;
-                        var speedMbSec     = speedBytesSec / (1024 * 1024);
+                        var speedBytesSec = processedBytes / elapsedSeconds;
+                        var speedMbSec = speedBytesSec / (1024 * 1024);
 
                         string etaText;
                         if (overallPercent > 0 && overallPercent < 90)
                         {
                             var remainingFraction = (90d - overallPercent) / overallPercent;
-                            var remainingSeconds  = elapsedSeconds * remainingFraction;
-                            var eta               = TimeSpan.FromSeconds(remainingSeconds);
+                            var remainingSeconds = elapsedSeconds * remainingFraction;
+                            var eta = TimeSpan.FromSeconds(remainingSeconds);
                             if (archiveTotalFiles > 0)
                             {
                                 etaText = $"Compressing {processedFiles}/{archiveTotalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
@@ -1125,8 +1188,8 @@ public sealed class BackupService
             // --------------------
             ct.ThrowIfCancellationRequested();
 
-            var zipInfo   = new FileInfo(localArchive);
-            var zipSize   = zipInfo.Length;
+            var zipInfo = new FileInfo(localArchive);
+            var zipSize = zipInfo.Length;
             var bufferSize = uploadBufferBytes;
             var stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
 
@@ -1199,20 +1262,20 @@ public sealed class BackupService
 
                         if (progressCallback is not null && zipSize > 0)
                         {
-                            var uploadPercent   = Math.Min(100d, (uploaded * 100d / zipSize));
-                            var overallPercent  = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
+                            var uploadPercent = Math.Min(100d, (uploaded * 100d / zipSize));
+                            var overallPercent = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
                             if (overallPercent > 100d) overallPercent = 100d;
 
-                            var now            = DateTime.UtcNow;
+                            var now = DateTime.UtcNow;
                             var intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
-                            var intervalBytes   = Math.Max(0, uploaded - lastUiBytes);
-                            var speedBytesSec   = intervalBytes / intervalSeconds;
-                            var speedMbSec      = speedBytesSec / (1024 * 1024);
-                            lastUiUpdate        = now;
-                            lastUiBytes         = uploaded;
+                            var intervalBytes = Math.Max(0, uploaded - lastUiBytes);
+                            var speedBytesSec = intervalBytes / intervalSeconds;
+                            var speedMbSec = speedBytesSec / (1024 * 1024);
+                            lastUiUpdate = now;
+                            lastUiBytes = uploaded;
 
                             var uploadedMb = uploaded / (1024d * 1024d);
-                            var totalMb    = zipSize / (1024d * 1024d);
+                            var totalMb = zipSize / (1024d * 1024d);
 
                             string etaText;
                             if (uploadPercent >= 100)
@@ -1225,10 +1288,10 @@ public sealed class BackupService
                             }
                             else
                             {
-                                var remainingBytes   = Math.Max(0, zipSize - uploaded);
+                                var remainingBytes = Math.Max(0, zipSize - uploaded);
                                 var remainingSeconds = remainingBytes / speedBytesSec;
-                                var eta              = TimeSpan.FromSeconds(remainingSeconds);
-                                etaText              = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
+                                var eta = TimeSpan.FromSeconds(remainingSeconds);
+                                etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
                             }
 
                             progressCallback(overallPercent, Path.GetFileName(finalArchivePath), etaText);
@@ -1548,7 +1611,7 @@ public sealed class BackupService
                         var speedBytesSec = intervalBytes / intervalSeconds;
                         var speedMbSec = speedBytesSec / (1024 * 1024);
                         var uploadedMb = totalUploaded / (1024d * 1024d);
-                        var totalMb    = zipSize / (1024d * 1024d);
+                        var totalMb = zipSize / (1024d * 1024d);
 
                         string etaText;
                         if (uploadPercent >= 100)
@@ -1561,10 +1624,10 @@ public sealed class BackupService
                         }
                         else
                         {
-                            var remainingBytes   = Math.Max(0, zipSize - totalUploaded);
+                            var remainingBytes = Math.Max(0, zipSize - totalUploaded);
                             var remainingSeconds = remainingBytes / speedBytesSec;
-                            var eta              = TimeSpan.FromSeconds(remainingSeconds);
-                            etaText              = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
+                            var eta = TimeSpan.FromSeconds(remainingSeconds);
+                            etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
                         }
 
                         progressCallback(overallPercent, fileName, etaText);
@@ -1733,10 +1796,10 @@ public sealed class BackupService
         // Get all files up front so we can compute a simple percent and ETA, applying
         // the same vaultsyncignore-style filtering used by SnapshotService.
         var allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
-        var totalFiles     = allFiles.Length;
+        var totalFiles = allFiles.Length;
         var processedFiles = 0;
-        var startTime      = DateTime.UtcNow;
-        long copiedBytes   = 0;
+        var startTime = DateTime.UtcNow;
+        long copiedBytes = 0;
 
         foreach (var filePath in allFiles)
         {
@@ -1744,10 +1807,10 @@ public sealed class BackupService
             if (ct.IsCancellationRequested)
                 throw new OperationCanceledException(ct);
 
-            var fileInfo   = new FileInfo(filePath);
-            var relative   = Path.GetRelativePath(sourceDir, filePath);
+            var fileInfo = new FileInfo(filePath);
+            var relative = Path.GetRelativePath(sourceDir, filePath);
             var targetPath = Path.Combine(destDir, relative);
-            var targetDir  = Path.GetDirectoryName(targetPath);
+            var targetDir = Path.GetDirectoryName(targetPath);
             if (!string.IsNullOrEmpty(targetDir))
                 Directory.CreateDirectory(targetDir);
 
@@ -1782,22 +1845,22 @@ public sealed class BackupService
                             {
                                 // Combine completed files with partial progress on the current file.
                                 var filesCompletedPortion = processedFiles * 100d / totalFiles;
-                                var currentFilePortion    = (double)copiedForThisFile / Math.Max(1L, fileInfo.Length) * (100d / totalFiles);
+                                var currentFilePortion = (double)copiedForThisFile / Math.Max(1L, fileInfo.Length) * (100d / totalFiles);
                                 percent = filesCompletedPortion + currentFilePortion;
                                 if (percent > 100d) percent = 100d;
                             }
 
-                            var elapsed        = DateTime.UtcNow - startTime;
+                            var elapsed = DateTime.UtcNow - startTime;
                             var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                            string etaText     = string.Empty;
+                            string etaText = string.Empty;
 
                             if (percent > 0d && percent < 100d)
                             {
                                 var remainingFraction = (100d - percent) / percent;
-                                var remainingSeconds  = elapsedSeconds * remainingFraction;
-                                var eta               = TimeSpan.FromSeconds(remainingSeconds);
-                                var speedBytesSec     = copiedBytes / elapsedSeconds;
-                                var speedMbSec        = speedBytesSec / (1024 * 1024);
+                                var remainingSeconds = elapsedSeconds * remainingFraction;
+                                var eta = TimeSpan.FromSeconds(remainingSeconds);
+                                var speedBytesSec = copiedBytes / elapsedSeconds;
+                                var speedMbSec = speedBytesSec / (1024 * 1024);
                                 etaText = $"Copying {processedFiles + 1}/{totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
                             }
 

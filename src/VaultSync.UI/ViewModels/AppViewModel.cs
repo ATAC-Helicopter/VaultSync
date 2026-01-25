@@ -9,6 +9,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -114,6 +115,7 @@ namespace VaultSync.UI.ViewModels
         private readonly LogConsoleService _logConsoleService;
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
+        private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
         private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
         private DateTime _lastDestinationScanUtc = DateTime.MinValue;
@@ -135,8 +137,12 @@ namespace VaultSync.UI.ViewModels
         private List<Backup>? _backupsCacheBackups;
         private HashSet<int>? _backupsCacheDisabledAuto;
         private DateTime _backupsCacheUpdatedUtc;
+        private bool _backupsCachePartial;
         private static readonly TimeSpan BackupsCacheTtl = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan DashboardRefreshTtl = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.FromMilliseconds(350);
+        private int _dashboardWarmLoadQueued;
+        private int _backupsWarmLoadQueued;
         private readonly GitHubUpdateService _updateService = new();
         private readonly PatchUpdateService _patchService = new();
         private readonly LocalizationService _localizationService = new();
@@ -566,17 +572,12 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.DestinationActiveChanged += OnDestinationActiveChanged;
             _backupsViewModel.OpenSettingsRequested += OnOpenSettingsRequested;
 
-            // 4) Initial load of backup data
-            ReloadBackupsVmData();
+            // 4) Initial load is deferred until views are shown to reduce startup impact.
             RefreshDestinationStatusOverview();
 
             // 5) Default route
             // Default route (may be overridden by resume-last-session)
-            CurrentView  = _dashboardViewModel;
-            HeaderTitle  = L("Nav.Dashboard", "Dashboard");
-            HeaderKicker = L("Main.HeaderOverview", "Overview");
-            _lastDashboardRefreshUtc = DateTime.UtcNow;
-            _ = _dashboardViewModel.RefreshAsync();
+            SetCurrentView("Dashboard", remember: false);
 
             if (_config.ResumeLastSession)
             {
@@ -786,7 +787,10 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     var projects = _repo.GetAllProjects().ToList();
-                    var backups  = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+                    var useLightweight = !force && !IsOnBackupsPage;
+                    var backups = useLightweight
+                        ? _repo.GetRecentBackupsByProject(limitPerProject: 5).ToList()
+                        : _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
 
                     if (IsOnBackupsPage || force)
                     {
@@ -794,6 +798,7 @@ namespace VaultSync.UI.ViewModels
                         if (scanAdded > 0)
                         {
                             backups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+                            useLightweight = false;
                         }
                     }
                     var disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
@@ -802,6 +807,7 @@ namespace VaultSync.UI.ViewModels
                     _backupsCacheBackups = backups;
                     _backupsCacheDisabledAuto = disabledAuto;
                     _backupsCacheUpdatedUtc = DateTime.UtcNow;
+                    _backupsCachePartial = useLightweight;
 
                     Dispatcher.UIThread.Post(() =>
                     {
@@ -987,7 +993,22 @@ namespace VaultSync.UI.ViewModels
 
             var completed = Path.Combine(backupFolder, ".vaultsync_complete");
             var archive = Path.Combine(backupFolder, "data.zip");
-            return File.Exists(completed) || File.Exists(archive);
+            if (File.Exists(completed) || File.Exists(archive))
+                return true;
+
+            try
+            {
+                return Directory.EnumerateFileSystemEntries(backupFolder)
+                    .Any(entry =>
+                    {
+                        var name = Path.GetFileName(entry);
+                        return !name.StartsWith(".vaultsync_", StringComparison.OrdinalIgnoreCase);
+                    });
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static long TryGetArchiveSize(string backupFolder)
@@ -1068,9 +1089,13 @@ namespace VaultSync.UI.ViewModels
                             _backupsCacheDisabledAuto ?? new HashSet<int>());
                     }
                     var cacheFresh = (DateTime.UtcNow - _backupsCacheUpdatedUtc) < BackupsCacheTtl;
-                    if (!cacheFresh)
+                    if (!cacheFresh || _backupsCachePartial)
                     {
-                        ReloadBackupsVmDataAsync(force: true);
+                        _ = ReloadBackupsVmDataAsync(force: true);
+                    }
+                    else
+                    {
+                        EnsureBackupsWarmLoad();
                     }
                     CurrentView  = _backupsViewModel;
                     HeaderTitle  = L("Nav.Backups", "Backups");
@@ -1086,7 +1111,7 @@ namespace VaultSync.UI.ViewModels
                     if ((DateTime.UtcNow - _lastDashboardRefreshUtc) > DashboardRefreshTtl)
                     {
                         _lastDashboardRefreshUtc = DateTime.UtcNow;
-                        _ = _dashboardViewModel.RefreshAsync();
+                        EnsureDashboardWarmLoad();
                     }
                     CurrentView  = _dashboardViewModel;
                     HeaderTitle  = L("Nav.Dashboard", "Dashboard");
@@ -1104,6 +1129,42 @@ namespace VaultSync.UI.ViewModels
                 _config.LastView = viewKey;
                 AppConfigStore.Save(cfg);
             }
+        }
+
+        private void EnsureDashboardWarmLoad()
+        {
+            if (Interlocked.Exchange(ref _dashboardWarmLoadQueued, 1) == 1)
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(InitialDataLoadDelay).ConfigureAwait(false);
+                Dispatcher.UIThread.Post(async () =>
+                {
+                    try
+                    {
+                        _lastDashboardRefreshUtc = DateTime.UtcNow;
+                        await _dashboardViewModel.RefreshAsync();
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _dashboardWarmLoadQueued, 0);
+                    }
+                });
+            });
+        }
+
+        private void EnsureBackupsWarmLoad()
+        {
+            if (Interlocked.Exchange(ref _backupsWarmLoadQueued, 1) == 1)
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(InitialDataLoadDelay).ConfigureAwait(false);
+                _ = ReloadBackupsVmDataAsync(force: true);
+                Interlocked.Exchange(ref _backupsWarmLoadQueued, 0);
+            });
         }
 
         private void ApplyLastSessionView()
@@ -3350,8 +3411,15 @@ namespace VaultSync.UI.ViewModels
             var backupRoot  = preparation.BackupRoot;
             var projectName = preparation.ProjectName;
             var cardId = $"delete-{backupId}";
+            DestinationResolution? deleteResolution = null;
 
-            if (!await ConfirmDeleteBackupAsync(projectName, snapshot.Timestamp))
+            var cfg = AppConfigStore.Load();
+            var destinations = GetAllDestinations(cfg);
+            var matchedDestination = FindDestinationForBackup(backup, destinations, backupRoot);
+            var hasCredentialProfile = HasCredentialProfile(cfg, matchedDestination);
+
+            var confirm = await ConfirmDeleteBackupAsync(projectName, snapshot.Timestamp);
+            if (!confirm)
             {
                 return;
             }
@@ -3363,49 +3431,202 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.IsBusy      = true;
             _backupsViewModel.BusyMessage = L("Backups.Status.Deleting", L("Backups.Status.Deleting", "Deleting backup files..."));
 
+            var deleteSucceeded = false;
+            var deleteError = string.Empty;
+            var permissionDenied = false;
+            NetworkCredentialProfile? tempProfile = null;
+
             try
             {
-                var relativePath = backup.Path ?? string.Empty;
-                var fullPath     = Path.GetFullPath(Path.Combine(backupRoot, relativePath));
-
-                await Task.Run(() =>
+                async Task TryDeleteAsync(bool forceCredentials, NetworkCredentialProfile? overrideProfile = null)
                 {
-                    try
+                    if (matchedDestination is not null)
                     {
-                        if (Directory.Exists(fullPath))
+                        var destToUse = matchedDestination;
+                        var rootSubPath = string.Empty;
+                        if (forceCredentials)
                         {
-                            DeleteDirectoryRobust(fullPath);
-                        }
-                        else if (File.Exists(fullPath))
-                        {
-                            File.Delete(fullPath);
+                            var pathToUse = matchedDestination.Path;
+                            if (OperatingSystem.IsWindows() && TryResolveUncPath(pathToUse, out var uncPath))
+                            {
+                                pathToUse = uncPath;
+                            }
+                            if (OperatingSystem.IsWindows() && TrySplitUncPath(pathToUse, out var uncRoot, out var uncSubPath))
+                            {
+                                pathToUse = uncRoot;
+                                rootSubPath = uncSubPath;
+                            }
+
+                            destToUse = new BackupDestination
+                            {
+                                Path = pathToUse,
+                                CredentialName = matchedDestination.CredentialName,
+                                Active = true,
+                                AutoMount = true,
+                                AutoUnmount = true,
+                                PreMounted = false,
+                                Alias = matchedDestination.Alias,
+                                EnableMetadataSync = matchedDestination.EnableMetadataSync,
+                                AutoImportMetadata = matchedDestination.AutoImportMetadata,
+                                ForceMetadataBackfill = matchedDestination.ForceMetadataBackfill,
+                                ArchiveUploadBufferBytes = matchedDestination.ArchiveUploadBufferBytes
+                            };
                         }
 
-                    }
-                    catch (IOException)
-                    {
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    finally
-                    {
-                        _repo.DeleteBackupById(backupId);
-                        TryDeleteSnapshotIfOrphan(projectId, snapshotId);
-                    }
-                });
+                        var profile = overrideProfile;
+                        if (profile is null)
+                        {
+                            profile = string.IsNullOrWhiteSpace(destToUse.CredentialName)
+                                ? null
+                                : cfg.Network.Credentials.FirstOrDefault(c =>
+                                    c.Name.Equals(destToUse.CredentialName, StringComparison.OrdinalIgnoreCase));
+                        }
 
-                ReloadBackupsVmData();
-                await _dashboardViewModel.RefreshAsync();
+                        var resolution = _networkMountService.PrepareDestination(destToUse, profile);
+                        if (!resolution.IsSuccess)
+                        {
+                            deleteError = resolution.Message;
+                            deleteSucceeded = false;
+                            permissionDenied = IsMountPermissionFailure(resolution.Message);
+                            return;
+                        }
+
+                        if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                        {
+                            deleteResolution = resolution;
+                            backupRoot = string.IsNullOrWhiteSpace(rootSubPath)
+                                ? resolution.EffectivePath
+                                : Path.Combine(resolution.EffectivePath, rootSubPath);
+                        }
+                    }
+
+                    var relativePath = backup.Path ?? string.Empty;
+                    var fullPath     = Path.GetFullPath(Path.Combine(backupRoot, relativePath));
+
+                    await Task.Run(() =>
+                    {
+                        try
+                        {
+                            if (Directory.Exists(fullPath))
+                            {
+                                DeleteDirectoryRobust(fullPath);
+                                deleteSucceeded = !Directory.Exists(fullPath);
+                            }
+                            else if (File.Exists(fullPath))
+                            {
+                                File.Delete(fullPath);
+                                deleteSucceeded = !File.Exists(fullPath);
+                            }
+                            else
+                            {
+                                deleteSucceeded = true;
+                            }
+                        }
+                        catch (UnauthorizedAccessException ex)
+                        {
+                            deleteError = ex.Message;
+                            deleteSucceeded = false;
+                            permissionDenied = true;
+                        }
+                        catch (IOException ex)
+                        {
+                            deleteError = ex.Message;
+                            deleteSucceeded = false;
+                            permissionDenied = IsAccessDenied(ex);
+                        }
+                        catch (Exception ex)
+                        {
+                            deleteError = ex.Message;
+                            deleteSucceeded = false;
+                        }
+                        finally
+                        {
+                            if (deleteSucceeded)
+                            {
+                                _repo.DeleteBackupById(backupId);
+                                TryDeleteSnapshotIfOrphan(projectId, snapshotId);
+                            }
+                        }
+                    });
+                }
+
+                await TryDeleteAsync(forceCredentials: false);
+
+                if (!deleteSucceeded && permissionDenied && matchedDestination is not null && hasCredentialProfile)
+                {
+                    var retry = await ConfirmDeleteWithCredentialsAsync();
+                    if (retry)
+                    {
+                        permissionDenied = false;
+                        deleteError = string.Empty;
+                        await TryDeleteAsync(forceCredentials: true);
+                    }
+                }
+
+                if (!deleteSucceeded && permissionDenied && matchedDestination is not null && !hasCredentialProfile)
+                {
+                    var retry = await ConfirmDeleteWithTemporaryCredentialsAsync();
+                    if (retry.Confirmed)
+                    {
+                        tempProfile = new NetworkCredentialProfile
+                        {
+                            Name = "DeleteOnce",
+                            Username = retry.Username,
+                            Password = retry.Password,
+                            UseKeychain = false,
+                            KeyRef = string.Empty
+                        };
+                        permissionDenied = false;
+                        deleteError = string.Empty;
+                        await TryDeleteAsync(forceCredentials: true, overrideProfile: tempProfile);
+                    }
+                    else
+                    {
+                        var title = L("Backups.Delete.ForceCredentialsTitle", "Credentials required");
+                        var msg = L("Backups.Delete.ForceCredentialsMissing",
+                            "Assign a credential profile to this destination in Settings. If your usual user cannot delete backups, the NAS root/admin user may be required.");
+                        _backupsViewModel.ShowNotification(msg, "Error");
+                        if (!IsOnBackupsPage)
+                        {
+                            GlobalNotificationCenter.Instance.Show(msg, NotificationSeverity.Error, title);
+                        }
+                    }
+                }
+
+                if (deleteSucceeded)
+                {
+                    ReloadBackupsVmData();
+                    await _dashboardViewModel.RefreshAsync();
+                }
+                else
+                {
+                    var title = L("Backups.Delete.FailedTitle", "Backup delete failed");
+                    var msg = Lf("Backups.Delete.FailedMessage", "Could not delete backup '{0}'.", projectName);
+                    if (!string.IsNullOrWhiteSpace(deleteError))
+                    {
+                        msg = $"{msg} {deleteError}";
+                    }
+
+                    _backupsViewModel.ShowNotification(msg, "Error");
+                    if (!IsOnBackupsPage)
+                    {
+                        GlobalNotificationCenter.Instance.Show(msg, NotificationSeverity.Error, title);
+                    }
+                }
             }
             finally
             {
-                _backupsViewModel.CompleteTransientOperation(cardId, L("Backups.Status.Deleted", "Deleted"));
+                var finalLabel = deleteSucceeded
+                    ? L("Backups.Status.Deleted", "Deleted")
+                    : L("Backups.Status.FailedSuffix", "Failed");
+                _backupsViewModel.CompleteTransientOperation(cardId, finalLabel);
                 _backupsViewModel.IsBusy      = false;
                 _backupsViewModel.BusyMessage = string.Empty;
+
+                if (deleteResolution is not null)
+                {
+                    _networkMountService.Cleanup(deleteResolution);
+                }
             }
         }
 
@@ -3564,6 +3785,250 @@ namespace VaultSync.UI.ViewModels
             return null;
         }
 
+        private async Task<bool> ConfirmDeleteWithCredentialsAsync()
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var question = new TextBlock
+                {
+                    Text = L("Backups.Delete.ForceCredentialsPrompt",
+                        "Use destination credentials to force delete this backup?"),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var hint = new TextBlock
+                {
+                    Text = L("Backups.Delete.ForceCredentialsHint",
+                        "Recommended for NAS shares when delete is denied."),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                if (GetBrush("TextSecondary") is { } hintBrush)
+                {
+                    hint.Foreground = hintBrush;
+                }
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var forceButton = new Button
+                {
+                    Content = L("Backups.Delete.ForceCredentialsConfirm", "Use credentials"),
+                    MinWidth = 160
+                };
+                forceButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                cancelButton.Click += (_, _) => window?.Close();
+                forceButton.Click += (_, _) =>
+                {
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(forceButton);
+
+                var content = new StackPanel { Spacing = 12 };
+                content.Children.Add(title);
+                content.Children.Add(question);
+                content.Children.Add(hint);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 540,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return confirmed;
+            });
+        }
+
+        private async Task<(bool Confirmed, string Username, string Password)> ConfirmDeleteWithTemporaryCredentialsAsync()
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var question = new TextBlock
+                {
+                    Text = L("Backups.Delete.CredentialsPrompt",
+                        "Enter destination credentials to force delete this backup. These credentials are used once and not saved."),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var usernameLabel = new TextBlock
+                {
+                    Text = L("Backups.Delete.CredentialsUsername", "Username"),
+                    FontWeight = FontWeight.SemiBold
+                };
+                var usernameBox = new TextBox
+                {
+                    Width = 320
+                };
+
+                var passwordLabel = new TextBlock
+                {
+                    Text = L("Backups.Delete.CredentialsPassword", "Password"),
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+                var passwordBox = new TextBox
+                {
+                    Width = 320,
+                    PasswordChar = '●'
+                };
+
+                var hint = new TextBlock
+                {
+                    Text = L("Backups.Delete.ForceCredentialsMissing",
+                        "Assign a credential profile to this destination in Settings. If your usual user cannot delete backups, the NAS root/admin user may be required."),
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 8, 0, 0)
+                };
+                if (GetBrush("TextSecondary") is { } hintBrush)
+                {
+                    hint.Foreground = hintBrush;
+                }
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var forceButton = new Button
+                {
+                    Content = L("Backups.Delete.ForceCredentialsConfirm", "Use credentials"),
+                    MinWidth = 160
+                };
+                forceButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                cancelButton.Click += (_, _) => window?.Close();
+                forceButton.Click += (_, _) =>
+                {
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(forceButton);
+
+                var content = new StackPanel { Spacing = 10 };
+                content.Children.Add(title);
+                content.Children.Add(question);
+                content.Children.Add(usernameLabel);
+                content.Children.Add(usernameBox);
+                content.Children.Add(passwordLabel);
+                content.Children.Add(passwordBox);
+                content.Children.Add(hint);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 540,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                var username = usernameBox.Text?.Trim() ?? string.Empty;
+                var password = passwordBox.Text ?? string.Empty;
+                if (confirmed && (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password)))
+                    return (false, string.Empty, string.Empty);
+
+                return (confirmed, username, password);
+            });
+        }
+
         /// <summary>
         /// Deletes a directory tree, clearing read-only attributes to avoid UnauthorizedAccess on Windows.
         /// </summary>
@@ -3597,6 +4062,108 @@ namespace VaultSync.UI.ViewModels
             Directory.Delete(path, recursive: true);
         }
 
+        private static bool IsAccessDenied(Exception ex)
+        {
+            const int accessDenied = unchecked((int)0x80070005);
+            return ex.HResult == accessDenied ||
+                   ex is UnauthorizedAccessException;
+        }
+
+        private static bool IsMountPermissionFailure(string? message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return false;
+
+            return message.Contains("credential", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("access", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("denied", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool TrySplitUncPath(string? path, out string root, out string subPath)
+        {
+            root = string.Empty;
+            subPath = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            if (!path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) &&
+                !path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var trimmed = path.TrimStart('\\', '/');
+            var parts = trimmed.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2)
+                return false;
+
+            root = $@"\\{parts[0]}\{parts[1]}";
+            if (parts.Length > 2)
+            {
+                subPath = Path.Combine(parts.Skip(2).ToArray());
+            }
+
+            return !string.IsNullOrWhiteSpace(subPath);
+        }
+
+        private const int UniversalNameInfoLevel = 0x00000001;
+        private const int ErrorMoreData = 234;
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct UniversalNameInfo
+        {
+            public string? lpUniversalName;
+        }
+
+        [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
+        private static extern int WNetGetUniversalName(string localPath, int infoLevel, IntPtr buffer, ref int bufferSize);
+
+        private static bool TryResolveUncPath(string? path, out string? uncPath)
+        {
+            uncPath = null;
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
+            {
+                uncPath = path;
+                return true;
+            }
+
+            if (!OperatingSystem.IsWindows())
+                return false;
+
+            if (path.Length < 2 || path[1] != ':')
+                return false;
+
+            var bufferSize = 0;
+            var result = WNetGetUniversalName(path, UniversalNameInfoLevel, IntPtr.Zero, ref bufferSize);
+            if (result != ErrorMoreData || bufferSize <= 0)
+                return false;
+
+            var buffer = Marshal.AllocHGlobal(bufferSize);
+            try
+            {
+                result = WNetGetUniversalName(path, UniversalNameInfoLevel, buffer, ref bufferSize);
+                if (result != 0)
+                    return false;
+
+                var info = Marshal.PtrToStructure<UniversalNameInfo>(buffer);
+                if (string.IsNullOrWhiteSpace(info.lpUniversalName))
+                    return false;
+
+                uncPath = info.lpUniversalName;
+                return true;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+
         private DeleteBackupPreparation PrepareDeleteBackup(int backupId)
         {
             var backup = _repo.GetBackupById(backupId);
@@ -3613,6 +4180,52 @@ namespace VaultSync.UI.ViewModels
             var projectName = project?.Name ?? "Backup";
 
             return new DeleteBackupPreparation(true, backup, backupRoot, projectName, project?.Id ?? 0, backup.SnapshotId);
+        }
+
+        private static BackupDestination? FindDestinationForBackup(
+            Backup backup,
+            IReadOnlyList<BackupDestination> destinations,
+            string backupRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(backup.DestinationAlias))
+            {
+                var aliasMatch = destinations.FirstOrDefault(d =>
+                    string.Equals(d.Alias ?? string.Empty, backup.DestinationAlias, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(d.Path ?? string.Empty, backup.DestinationAlias, StringComparison.OrdinalIgnoreCase));
+                if (aliasMatch is not null)
+                    return aliasMatch;
+            }
+
+            if (!string.IsNullOrWhiteSpace(backup.DestinationPath))
+            {
+                var pathMatch = destinations.FirstOrDefault(d =>
+                    string.Equals(d.Path ?? string.Empty, backup.DestinationPath, StringComparison.OrdinalIgnoreCase));
+                if (pathMatch is not null)
+                    return pathMatch;
+            }
+
+            var rootMatch = destinations.FirstOrDefault(d =>
+                string.Equals(d.Path ?? string.Empty, backupRoot, StringComparison.OrdinalIgnoreCase));
+            if (rootMatch is not null)
+                return rootMatch;
+
+            var prefixMatch = destinations.FirstOrDefault(d =>
+                !string.IsNullOrWhiteSpace(d.Path) &&
+                !string.IsNullOrWhiteSpace(backupRoot) &&
+                backupRoot.StartsWith(d.Path!, StringComparison.OrdinalIgnoreCase));
+            if (prefixMatch is not null)
+                return prefixMatch;
+
+            return rootMatch;
+        }
+
+        private static bool HasCredentialProfile(AppConfig cfg, BackupDestination? dest)
+        {
+            if (dest is null || string.IsNullOrWhiteSpace(dest.CredentialName))
+                return false;
+
+            return cfg.Network.Credentials.Any(c =>
+                c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
         }
 
         private sealed record DeleteBackupPreparation(
@@ -4526,6 +5139,7 @@ namespace VaultSync.UI.ViewModels
                 var cfg = AppConfigStore.Load();
                 var destinations = GetActiveDestinations(cfg);
 
+                var now = DateTime.UtcNow;
                 foreach (var dest in destinations)
                 {
                     if (!dest.Active)
@@ -4533,6 +5147,9 @@ namespace VaultSync.UI.ViewModels
 
                     var id = DestinationStatusItem.GetId(dest);
                     _destinationProbeSummaries.TryGetValue(id, out var previous);
+                    if (previous is not null && (now - previous.LastChecked) < DestinationProbeMinInterval)
+                        continue;
+
                     var result = await Task.Run(() => TryTestDestination(dest, cfg));
                     UpdateDestinationProbeSummary(dest, result);
 
@@ -4541,7 +5158,7 @@ namespace VaultSync.UI.ViewModels
                         TryImportMetadataForDestination(cfg, dest, result.EffectivePath);
                     }
 
-                    if (!result.Reachable)
+                    if (!result.Reachable && (previous is null || previous.Reachable))
                     {
                         var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
                         var message = string.IsNullOrWhiteSpace(result.Message)

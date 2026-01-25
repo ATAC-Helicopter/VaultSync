@@ -23,12 +23,26 @@ public class VerifyService
         if (files.Count == 0) return new VerifyResult(0, 0, new());
 
         // choose sample
-        IEnumerable<FileEntry> sample = files;
+        List<FileEntry> sample = files;
         if (!full && percent < 100)
         {
             var take = Math.Max(1, (int)Math.Round(files.Count * (percent / 100.0)));
             var rnd = new Random(42); // deterministic sample
-            sample = files.OrderBy(_ => rnd.Next()).Take(take).ToList();
+            sample = new List<FileEntry>(take);
+            for (var i = 0; i < files.Count; i++)
+            {
+                if (i < take)
+                {
+                    sample.Add(files[i]);
+                    continue;
+                }
+
+                var j = rnd.Next(i + 1);
+                if (j < take)
+                {
+                    sample[j] = files[i];
+                }
+            }
         }
 
         var checkedCount = 0;
@@ -58,7 +72,7 @@ public class VerifyService
             checkedCount++;
         }
 
-        return new VerifyResult(sample.Count(), checkedCount - mismatches.Count, mismatches);
+        return new VerifyResult(sample.Count, checkedCount - mismatches.Count, mismatches);
     }
 }
 

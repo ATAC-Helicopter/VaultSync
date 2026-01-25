@@ -1,9 +1,10 @@
 ﻿# Changelog
-## [1.3.4] - 24.01.2026
+## [1.3.4] - 25.01.2026
 ### Added
 - Sidebar now shows a compact destination status overview for quick reachability checks.
 - Backups page now includes a dedicated destinations card showing reachability status.
 - Destination scan now imports untracked backups from destinations into history.
+- New tray menu
 ### Changed
 - Backup destination status row refreshed for clearer hierarchy and status clarity.
 - Destination status indicator now pulses only during reachability checks.
@@ -55,6 +56,7 @@
 - Destination reachability labels no longer get replaced by backup completion states.
 - Destination scans now treat read-only backup folders as protected so they can be unprotected in-app.
 - Per-project backup list no longer stretches when expanding history entries.
+- "What's new" links now open in the browser instead of rendering as plain text.
 
 ## [1.3.3] - 21.01.2026
 ### Changed

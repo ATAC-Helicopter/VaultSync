@@ -1456,7 +1456,64 @@ namespace VaultSync.UI
 
         private void ClearLocalCache()
         {
-            // TODO
+            var removed = 0;
+            var failed = 0;
+
+            void TryDeleteDir(string path)
+            {
+                if (!Directory.Exists(path))
+                    return;
+
+                try
+                {
+                    Directory.Delete(path, recursive: true);
+                    removed++;
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            void TryDeleteFile(string path)
+            {
+                if (!File.Exists(path))
+                    return;
+
+                try
+                {
+                    File.Delete(path);
+                    removed++;
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            var localRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "VaultSync");
+
+            TryDeleteDir(Path.Combine(localRoot, "logs"));
+            TryDeleteDir(Path.Combine(localRoot, "crash"));
+            TryDeleteFile(Path.Combine(localRoot, "avatars.json"));
+            TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json"));
+
+            var tempRoot = Path.GetTempPath();
+            TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import"));
+            TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export"));
+            TryDeleteDir(Path.Combine(tempRoot, "VaultSync"));
+
+            if (removed == 0 && failed == 0)
+            {
+                SaveStatus = "No local cache data to clear.";
+                return;
+            }
+
+            SaveStatus = failed == 0
+                ? $"Local cache cleared ({removed} item(s))."
+                : $"Cache cleared with {failed} error(s).";
         }
 
         private void TestBackupLocation()

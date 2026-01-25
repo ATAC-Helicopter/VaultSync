@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
 namespace VaultSync.Core.Services;
@@ -5,6 +6,10 @@ namespace VaultSync.Core.Services;
 public class FilterService
 {
     private readonly List<string> _patterns;
+    private readonly List<Regex> _compiledPatterns;
+    private static readonly ConcurrentDictionary<string, CachedLines> s_linesCache = new();
+
+    private sealed record CachedLines(DateTime LastWriteUtc, IReadOnlyList<string> Lines);
 
     /// <summary>
     /// True when this filter has at least one ignore rule.
@@ -16,7 +21,12 @@ public class FilterService
     /// slashes and have directory rules normalized (trailing '/' turned into '/*').
     /// </summary>
     public IReadOnlyList<string> RawPatterns => _patterns;
-    public FilterService(IEnumerable<string> patterns) => _patterns = patterns.Select(Normalize).ToList();
+
+    public FilterService(IEnumerable<string> patterns)
+    {
+        _patterns = patterns.Select(Normalize).ToList();
+        _compiledPatterns = _patterns.Select(CompilePattern).ToList();
+    }
 
     public static FilterService FromPresetAndLocal(string projectRoot, string presetName, string? presetsDir = null)
     {
@@ -35,7 +45,7 @@ public class FilterService
 
             if (File.Exists(presetFile))
             {
-                var presetLines = ReadLines(presetFile).ToList();
+                var presetLines = ReadLinesCached(presetFile);
                 Console.WriteLine($"[FilterService] Loaded {presetLines.Count} rules from preset file.");
                 patterns.AddRange(presetLines);
             }
@@ -49,7 +59,7 @@ public class FilterService
         var localIgnore = Path.Combine(projectRoot, ".vaultsyncignore");
         if (File.Exists(localIgnore))
         {
-            var localLines = ReadLines(localIgnore).ToList();
+            var localLines = ReadLinesCached(localIgnore);
             Console.WriteLine($"[FilterService] Loaded {localLines.Count} rules from local .vaultsyncignore.");
             patterns.AddRange(localLines);
         }
@@ -97,8 +107,8 @@ public class FilterService
     public bool ShouldExclude(string root, string fullPath)
     {
         var rel = Path.GetRelativePath(root, fullPath).Replace('\\', '/');
-        foreach (var p in _patterns)
-            if (GlobMatch(rel, p)) return true;
+        foreach (var rx in _compiledPatterns)
+            if (rx.IsMatch(rel)) return true;
         return false;
     }
 
@@ -106,6 +116,17 @@ public class FilterService
         File.ReadAllLines(file)
             .Select(l => l.Trim())
             .Where(l => l.Length > 0 && !l.StartsWith("#"));
+
+    private static IReadOnlyList<string> ReadLinesCached(string file)
+    {
+        var lastWrite = File.GetLastWriteTimeUtc(file);
+        if (s_linesCache.TryGetValue(file, out var cached) && cached.LastWriteUtc == lastWrite)
+            return cached.Lines;
+
+        var lines = ReadLines(file).ToList();
+        s_linesCache[file] = new CachedLines(lastWrite, lines);
+        return lines;
+    }
 
     private static string Normalize(string s)
     {
@@ -120,12 +141,12 @@ public class FilterService
         return s;
     }
 
-    private static bool GlobMatch(string text, string pattern)
+    private static Regex CompilePattern(string pattern)
     {
         var rx = "^" + Regex.Escape(pattern)
             .Replace(@"\*\*", ".*")
             .Replace(@"\*", "[^/]*")
             .Replace(@"\?", ".") + "$";
-        return Regex.IsMatch(text, rx, RegexOptions.IgnoreCase);
+        return new Regex(rx, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 }

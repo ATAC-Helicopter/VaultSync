@@ -1,23 +1,24 @@
 # What's New
 
 ### Performance and polish
-- Faster dashboard and history refreshes with fewer redundant database reads.
-- Smoother projects list refresh with cached discovery results.
-- Startup tasks now stagger to keep launch responsive. {performance}
+- Faster startup with deferred dashboard and backups refresh until views are shown.
+- Backups view now reuses cached data and skips rebuilds when nothing changed.
+- Filters and snapshot/verify sampling are lighter on allocations.
 
-### Backup and upload reliability
-- Archive uploads now auto-tune buffer sizes based on link speed.
-- Parallel archive uploads can kick in for SMB-mapped destinations.
-- Finalizing stage is clearer and cancel is disabled once uploads are done. {stability}
+### Backup and destination reliability
+- New destination status cards show reachability in the sidebar and Backups page.
+- Backup delete can prompt for credentials when NAS permissions block removal.
+- Backups no longer write completion markers on network shares to avoid locks.
 
 ### Metadata sync
-- Import previews are faster with lightweight store queries.
-- Tombstoned backups no longer flip-flop between add/delete on repeated imports. {sync}
+- Import preview streams store entries and cleans orphan snapshots for missing backups.
+- Missing backups now tombstone cleanly so they do not reappear after manual deletes.
 
 ### UI refresh
-- Projects detail panel and preset dropdown feel more modern and consistent.
-- Backup storage card and totals reflect actual stored data.
-- Dashboard KPIs use heavier weights for better readability.
+- Backups per day chart moved up for better visibility.
+- Snapshot trend labels collapse by day for cleaner timelines.
+- New tray menu groups quick actions, status, and recent backups in a compact panel.
+- Status pills, avatars, and destination cards are tighter and more consistent.
 
 ### Updates
 - Release notes are available in the app. [Release notes](https://github.com/ATAC-Helicopter/VaultSync/releases)
