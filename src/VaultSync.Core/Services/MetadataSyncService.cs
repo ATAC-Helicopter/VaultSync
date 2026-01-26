@@ -153,6 +153,7 @@ public sealed class MetadataSyncService
         var importedSnapshots = 0;
         var importedBackups = 0;
         var appliedTombstones = 0;
+        var affectedProjectIds = new HashSet<int>();
         var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var snapshotMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -330,6 +331,7 @@ public sealed class MetadataSyncService
                 metaBackup.IsProtected,
                 isImported: true);
             importedBackups++;
+            affectedProjectIds.Add(projectId);
         }
 
         foreach (var tombstone in metaTombstones)
@@ -393,7 +395,10 @@ public sealed class MetadataSyncService
             importedSnapshots,
             importedBackups,
             appliedTombstones,
-            string.Empty);
+            string.Empty)
+        {
+            AffectedProjectIds = affectedProjectIds.ToArray()
+        };
         if (opts.MarkNeedsRestoreOnImport)
         {
         var liveBackups = metaBackups
@@ -1249,6 +1254,8 @@ public sealed record MetadataSyncResult(
     int AppliedTombstones,
     string Message)
 {
+    public IReadOnlyCollection<int> AffectedProjectIds { get; init; } = Array.Empty<int>();
+
     public static MetadataSyncResult Failure(MetadataSyncStatus status, string message) =>
         new(status, 0, 0, 0, 0, message);
 }

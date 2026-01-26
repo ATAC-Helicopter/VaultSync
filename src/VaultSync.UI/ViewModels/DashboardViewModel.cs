@@ -166,6 +166,7 @@ namespace VaultSync.UI.ViewModels
         public ISeries[] SnapshotSeries { get; private set; } = Array.Empty<ISeries>();
         public Axis[] SnapshotXAxes { get; private set; } = Array.Empty<Axis>();
         public Axis[] SnapshotYAxes { get; private set; } = Array.Empty<Axis>();
+        public ObservableCollection<SnapshotActivityPoint> WeeklySnapshotActivity { get; } = new();
         public string TotalSnapshotsWeek => _snapshotCountsByDay.Sum().ToString();
         public string TotalSnapshotsWeekLabel => string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), TotalSnapshotsWeek);
 
@@ -173,17 +174,15 @@ namespace VaultSync.UI.ViewModels
         public ISeries[] StorageSeries { get; private set; } = Array.Empty<ISeries>();
         public IEnumerable<LegendItem> StorageLegend { get; private set; } = Array.Empty<LegendItem>();
 
-        // Activity (for now, keep simple demo items)
-        public ObservableCollection<ActivityItem> ActivityItems { get; } = new()
-        {
-            new ActivityItem("Daily backup", "Completed", "Just now", Dot.Green),
-            new ActivityItem("Manual backup", "Finished successfully", "Earlier today", Dot.Blue),
-            new ActivityItem("Backup validation", "No issues found", "This week", Dot.Purple)
-        };
+        // Activity items, populated from real data.
+        public ObservableCollection<ActivityItem> ActivityItems { get; } = new();
 
         // Internal data for chart aggregation
         private string[] _days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
         private readonly double[] _snapshotCountsByDay = new double[7];
+        private readonly int[] _autoCountsByDay = new int[7];
+        private readonly int[] _manualCountsByDay = new int[7];
+        private readonly int[] _importedCountsByDay = new int[7];
         private int _backupsThisWeekCount;
         private int _activeProjectsCount;
         private int _refreshInFlight;
@@ -261,7 +260,7 @@ namespace VaultSync.UI.ViewModels
 
                     var startDate = DateTime.UtcNow.Date.AddDays(-6);
                     var endDate = DateTime.UtcNow;
-                    var backupCountsByDay = repo.GetBackupCountsByDay(startDate, endDate);
+                    var backupCountsByDay = repo.GetBackupCountsByDayBreakdown(startDate, endDate);
 
                     // Storage slices: total backups per project
                     long totalLatestBytes = 0;
@@ -285,11 +284,19 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     var counts = new double[_snapshotCountsByDay.Length];
+                    var autoCounts = new int[_snapshotCountsByDay.Length];
+                    var manualCounts = new int[_snapshotCountsByDay.Length];
+                    var importedCounts = new int[_snapshotCountsByDay.Length];
                     for (var i = 0; i < counts.Length; i++)
                     {
                         var d = startDate.AddDays(i);
-                        if (backupCountsByDay.TryGetValue(d, out var count))
-                            counts[i] = count;
+                        if (backupCountsByDay.TryGetValue(d, out var breakdown))
+                        {
+                            autoCounts[i] = breakdown.AutoCount;
+                            manualCounts[i] = breakdown.ManualCount;
+                            importedCounts[i] = breakdown.ImportedCount;
+                            counts[i] = breakdown.AutoCount + breakdown.ManualCount + breakdown.ImportedCount;
+                        }
                     }
 
                     // Activity list (newest first)
@@ -320,7 +327,10 @@ namespace VaultSync.UI.ViewModels
                         BackupCount = backupCount,
                         BackupsThisWeekCount = (int)counts.Sum(),
                         DayLabels = dayLabels,
-                        SnapshotCounts = counts
+                        SnapshotCounts = counts,
+                        AutoCounts = autoCounts,
+                        ManualCounts = manualCounts,
+                        ImportedCounts = importedCounts
                     };
                 });
 
@@ -426,8 +436,24 @@ namespace VaultSync.UI.ViewModels
                 {
                     _snapshotCountsByDay[i] = data.SnapshotCounts[i];
                 }
+                Array.Clear(_autoCountsByDay, 0, _autoCountsByDay.Length);
+                Array.Clear(_manualCountsByDay, 0, _manualCountsByDay.Length);
+                Array.Clear(_importedCountsByDay, 0, _importedCountsByDay.Length);
+                for (var i = 0; i < _autoCountsByDay.Length && i < data.AutoCounts.Length; i++)
+                {
+                    _autoCountsByDay[i] = data.AutoCounts[i];
+                }
+                for (var i = 0; i < _manualCountsByDay.Length && i < data.ManualCounts.Length; i++)
+                {
+                    _manualCountsByDay[i] = data.ManualCounts[i];
+                }
+                for (var i = 0; i < _importedCountsByDay.Length && i < data.ImportedCounts.Length; i++)
+                {
+                    _importedCountsByDay[i] = data.ImportedCounts[i];
+                }
 
                 BuildSnapshotSeries();
+                BuildWeeklyActivity();
                 BuildStorageDonut(data.StorageSlices);
                 BuildBackupUsageBar(data.Config, data.StorageSlices);
 
@@ -461,6 +487,9 @@ namespace VaultSync.UI.ViewModels
             public int BackupsThisWeekCount { get; init; }
             public string[] DayLabels { get; init; } = Array.Empty<string>();
             public double[] SnapshotCounts { get; init; } = Array.Empty<double>();
+            public int[] AutoCounts { get; init; } = Array.Empty<int>();
+            public int[] ManualCounts { get; init; } = Array.Empty<int>();
+            public int[] ImportedCounts { get; init; } = Array.Empty<int>();
         }
 
         private void BuildSnapshotSeries()
@@ -479,6 +508,65 @@ namespace VaultSync.UI.ViewModels
 
             SnapshotSeries = new ISeries[] { dailyBackups };
             OnPropertyChanged(nameof(SnapshotSeries));
+        }
+
+        private void BuildWeeklyActivity()
+        {
+            WeeklySnapshotActivity.Clear();
+
+            var max = _snapshotCountsByDay.DefaultIfEmpty(0d).Max();
+            if (max < 1)
+            {
+                max = 1;
+            }
+
+            for (var i = 0; i < _snapshotCountsByDay.Length && i < _days.Length; i++)
+            {
+                var autoCount = _autoCountsByDay[i];
+                var manualCount = _manualCountsByDay[i];
+                var importedCount = _importedCountsByDay[i];
+                var count = autoCount + manualCount + importedCount;
+                var normalized = count / max;
+                var totalHeight = count == 0 ? 0 : 16 + normalized * 120;
+                var dayLabel = _days[i];
+
+                var tooltip = count == 0
+                    ? Lf("Dashboard.Chart.TooltipNone", "{0}: No backups", dayLabel)
+                    : Lf("Dashboard.Chart.TooltipBreakdown", "{0}: {1} auto, {2} manual, {3} imported", dayLabel, autoCount, manualCount, importedCount);
+
+                var autoHeight = 0d;
+                var manualHeight = 0d;
+                var importedHeight = 0d;
+                if (count > 0)
+                {
+                    autoHeight = autoCount == 0 ? 0 : Math.Max(6, totalHeight * autoCount / count);
+                    manualHeight = manualCount == 0 ? 0 : Math.Max(6, totalHeight * manualCount / count);
+                    importedHeight = importedCount == 0 ? 0 : Math.Max(6, totalHeight * importedCount / count);
+
+                    var combined = autoHeight + manualHeight + importedHeight;
+                    if (combined > totalHeight && combined > 0)
+                    {
+                        var scale = totalHeight / combined;
+                        autoHeight *= scale;
+                        manualHeight *= scale;
+                        importedHeight *= scale;
+                    }
+                }
+
+                WeeklySnapshotActivity.Add(new SnapshotActivityPoint
+                {
+                    DayLabel     = dayLabel,
+                    ShowLabel    = true,
+                    AutoCount    = autoCount,
+                    ManualCount  = manualCount,
+                    ImportedCount = importedCount,
+                    TotalBytes   = 0,
+                    AutoHeight   = autoHeight,
+                    ManualHeight = manualHeight,
+                    ImportedHeight = importedHeight,
+                    TooltipText  = tooltip
+                });
+            }
         }
 
         private void BuildStorageDonut(IReadOnlyList<(Project project, long bytes)> perProject)
@@ -553,9 +641,14 @@ namespace VaultSync.UI.ViewModels
             if (SnapshotSeries is { Length: > 0 } && StorageSeries is { Length: > 0 })
                 return;
 
-            // Fallback demo data if DB is empty or unavailable.
-            for (int i = 0; i < _snapshotCountsByDay.Length; i++)
-                _snapshotCountsByDay[i] = new[] { 1d, 3d, 2d, 5d, 4d, 6d, 2d }[i];
+            // No demo data when the DB is empty or unavailable.
+            Array.Clear(_snapshotCountsByDay, 0, _snapshotCountsByDay.Length);
+            Array.Clear(_autoCountsByDay, 0, _autoCountsByDay.Length);
+            Array.Clear(_manualCountsByDay, 0, _manualCountsByDay.Length);
+            Array.Clear(_importedCountsByDay, 0, _importedCountsByDay.Length);
+            WeeklySnapshotActivity.Clear();
+            SnapshotSeries = Array.Empty<ISeries>();
+            OnPropertyChanged(nameof(SnapshotSeries));
 
             ProjectCount   = 0;
             ProjectsHint   = L("Dashboard.Hint.NoProjects", "No projects yet");
@@ -564,7 +657,6 @@ namespace VaultSync.UI.ViewModels
             StorageUsed    = "0 B";
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
 
-            BuildSnapshotSeries();
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
             BuildBackupUsageBar(AppConfigStore.Load(), Array.Empty<(Project project, long bytes)>());
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
@@ -1416,6 +1508,11 @@ namespace VaultSync.UI.ViewModels
             var loc = LocalizationProvider.Service;
             var value = loc?.GetString(key);
             return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+
+        private static string Lf(string key, string fallback, params object[] args)
+        {
+            return string.Format(L(key, fallback), args);
         }
 
         public void ReapplyLocalization()

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
@@ -66,6 +67,10 @@ namespace VaultSync.UI.ViewModels
         private int _lastAutoBackupSignature;
         private int _lastFilterRevision = -1;
         private SnapshotFilterState _lastFilterState = SnapshotFilterState.Empty;
+        private bool _showSummaryCharts = true;
+        private bool _showActivityPanel = true;
+        private GridLength _activityColumnWidth = new GridLength(360);
+        private double _summaryColumnSpacing = 12;
 
         private BackupSnapshotItem? _selectedSnapshotA;
         public BackupSnapshotItem? SelectedSnapshotA
@@ -228,19 +233,74 @@ namespace VaultSync.UI.ViewModels
         public int TotalSnapshots { get; private set; }
         public int SnapshotsThisWeek { get; private set; }
         public int SnapshotsToday { get; private set; }
+        public int SnapshotsYesterday { get; private set; }
 
         public int AutoSnapshotsThisWeek { get; private set; }
         public int ManualSnapshotsThisWeek { get; private set; }
 
         public string SnapshotsSummaryLine { get; private set; } =
-            Lf("Backups.Summary.TodayWeek", "{0} backups today · {1} this week", 0, 0);
+            Lf("Backups.Summary.TodayWeek", "{0} backups today - {1} this week", 0, 0);
+        public string TotalSnapshotsSecondaryLine { get; private set; } =
+            Lf("Backups.Summary.YesterdayAverage", "{0} yesterday - avg {1}", 0, "0 B");
         public string SnapshotActivitySummary { get; private set; } =
             L("Backups.Summary.NoActivity", "No backups in the last 7 days");
+
+        public bool ShowSummaryCharts
+        {
+            get => _showSummaryCharts;
+            private set
+            {
+                if (SetProperty(ref _showSummaryCharts, value))
+                {
+                    OnPropertyChanged(nameof(ShowSummaryCharts));
+                }
+            }
+        }
+
+        public bool ShowActivityPanel
+        {
+            get => _showActivityPanel;
+            private set
+            {
+                if (SetProperty(ref _showActivityPanel, value))
+                {
+                    OnPropertyChanged(nameof(ShowActivityPanel));
+                }
+            }
+        }
+
+        public GridLength ActivityColumnWidth
+        {
+            get => _activityColumnWidth;
+            private set
+            {
+                if (SetProperty(ref _activityColumnWidth, value))
+                {
+                    OnPropertyChanged(nameof(ActivityColumnWidth));
+                }
+            }
+        }
+
+        public double SummaryColumnSpacing
+        {
+            get => _summaryColumnSpacing;
+            private set
+            {
+                if (SetProperty(ref _summaryColumnSpacing, value))
+                {
+                    OnPropertyChanged(nameof(SummaryColumnSpacing));
+                }
+            }
+        }
 
         public string LastBackupDisplay { get; private set; } =
             L("Backups.Summary.NoBackups", "No backups yet");
         public string LastBackupRelative { get; private set; } = "-";
+        public string LastBackupSecondaryLine { get; private set; } =
+            L("Backups.Summary.LastBackupSize", "Size -");
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
+        public string TotalStoredSecondaryLine { get; private set; } =
+            Lf("Backups.Summary.ImportedAverage", "{0} imported - avg {1}", 0, "0 B");
 
         // Mini backup storage card (for Backups page)
         private double _backupDiskUsedPercent;
@@ -596,9 +656,12 @@ namespace VaultSync.UI.ViewModels
 
         private void InitializeLocalizationDefaults()
         {
-            SnapshotsSummaryLine = Lf("Backups.Summary.TodayWeek", "{0} backups today · {1} this week", 0, 0);
+            SnapshotsSummaryLine = Lf("Backups.Summary.TodayWeek", "{0} backups today - {1} this week", 0, 0);
+            TotalSnapshotsSecondaryLine = Lf("Backups.Summary.YesterdayAverage", "{0} yesterday - avg {1}", 0, "0 B");
             SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
             LastBackupDisplay = L("Backups.Summary.NoBackups", "No backups yet");
+            LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
+            TotalStoredSecondaryLine = Lf("Backups.Summary.ImportedAverage", "{0} imported - avg {1}", 0, "0 B");
             HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
 
             var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", L("DriveHealth.UnknownDrive", "drive"));
@@ -606,8 +669,11 @@ namespace VaultSync.UI.ViewModels
             BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, L("Backups.Health.NotAvailable", "not available"));
 
             OnPropertyChanged(nameof(SnapshotsSummaryLine));
+            OnPropertyChanged(nameof(TotalSnapshotsSecondaryLine));
             OnPropertyChanged(nameof(SnapshotActivitySummary));
             OnPropertyChanged(nameof(LastBackupDisplay));
+            OnPropertyChanged(nameof(LastBackupSecondaryLine));
+            OnPropertyChanged(nameof(TotalStoredSecondaryLine));
             OnPropertyChanged(nameof(HistoryFilterProjectLabel));
             OnPropertyChanged(nameof(BackupDiskDriveLabel));
             OnPropertyChanged(nameof(BackupDiskHealthText));
@@ -1196,6 +1262,102 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private static string EnsureUniqueColor(string? baseHex, string seed, HashSet<string> used)
+        {
+            var normalized = string.IsNullOrWhiteSpace(baseHex) ? "#33405A" : baseHex;
+            if (used.Add(normalized))
+                return normalized;
+
+            var baseColor = Color.Parse(normalized);
+            var (h, s, l) = ToHsl(baseColor);
+            var seedOffset = Math.Abs(HashSeed(seed)) % 360;
+
+            for (var i = 1; i <= 24; i++)
+            {
+                var hue = (h + seedOffset + i * 37) % 360;
+                var candidate = FromHsl(hue, Math.Clamp(s, 0.45, 0.8), Math.Clamp(l, 0.45, 0.7));
+                var hex = ToHex(candidate);
+                if (used.Add(hex))
+                    return hex;
+            }
+
+            var fallback = ToHex(baseColor);
+            used.Add(fallback);
+            return fallback;
+        }
+
+        private static int HashSeed(string value)
+        {
+            unchecked
+            {
+                var hash = 17;
+                foreach (var ch in value)
+                    hash = hash * 31 + ch;
+                return hash;
+            }
+        }
+
+        private static (double H, double S, double L) ToHsl(Color color)
+        {
+            var r = color.R / 255d;
+            var g = color.G / 255d;
+            var b = color.B / 255d;
+
+            var max = Math.Max(r, Math.Max(g, b));
+            var min = Math.Min(r, Math.Min(g, b));
+            var l = (max + min) / 2d;
+
+            if (Math.Abs(max - min) < 0.0001)
+                return (0d, 0d, l);
+
+            var d = max - min;
+            var s = l > 0.5 ? d / (2d - max - min) : d / (max + min);
+
+            double h;
+            if (Math.Abs(max - r) < 0.0001)
+                h = (g - b) / d + (g < b ? 6d : 0d);
+            else if (Math.Abs(max - g) < 0.0001)
+                h = (b - r) / d + 2d;
+            else
+                h = (r - g) / d + 4d;
+
+            h *= 60d;
+            return (h, s, l);
+        }
+
+        private static Color FromHsl(double h, double s, double l)
+        {
+            if (s <= 0.0001)
+            {
+                var v = (byte)Math.Round(l * 255);
+                return Color.FromRgb(v, v, v);
+            }
+
+            var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            var p = 2 * l - q;
+
+            var r = HueToRgb(p, q, h + 120);
+            var g = HueToRgb(p, q, h);
+            var b = HueToRgb(p, q, h - 120);
+
+            return Color.FromRgb(
+                (byte)Math.Round(r * 255),
+                (byte)Math.Round(g * 255),
+                (byte)Math.Round(b * 255));
+        }
+
+        private static double HueToRgb(double p, double q, double t)
+        {
+            t = (t % 360 + 360) % 360;
+            if (t < 60) return p + (q - p) * t / 60;
+            if (t < 180) return q;
+            if (t < 240) return p + (q - p) * (240 - t) / 60;
+            return p;
+        }
+
+        private static string ToHex(Color color) =>
+            $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+
         /// <summary>
         /// Updates the mini backup storage card values for the Backups page.
         /// Intended to be called from AppViewModel after computing disk usage
@@ -1491,6 +1653,7 @@ namespace VaultSync.UI.ViewModels
             TotalSnapshots = _allSnapshots.Count;
 
             SnapshotsToday = _allSnapshots.Count(s => s.Timestamp.Date == now.Date);
+            SnapshotsYesterday = _allSnapshots.Count(s => s.Timestamp.Date == now.Date.AddDays(-1));
             SnapshotsThisWeek = _allSnapshots.Count(s =>
                 s.Timestamp.Date >= weekStart);
 
@@ -1504,7 +1667,7 @@ namespace VaultSync.UI.ViewModels
 
             SnapshotsSummaryLine = Lf(
                 "Backups.Summary.TodayWeek",
-                "{0} backups today · {1} this week",
+                "{0} backups today - {1} this week",
                 SnapshotsToday,
                 SnapshotsThisWeek);
 
@@ -1516,7 +1679,7 @@ namespace VaultSync.UI.ViewModels
             {
                 SnapshotActivitySummary = Lf(
                     "Backups.Summary.ActivityTotals",
-                    "{0} backups total · {1} auto · {2} manual",
+                    "{0} backups total - {1} auto - {2} manual",
                     SnapshotsThisWeek,
                     AutoSnapshotsThisWeek,
                     ManualSnapshotsThisWeek);
@@ -1530,17 +1693,35 @@ namespace VaultSync.UI.ViewModels
 
                 LastBackupDisplay  = last.Timestamp.ToString("yyyy-MM-dd HH:mm");
                 LastBackupRelative = FormatRelative(now - last.Timestamp);
+                LastBackupSecondaryLine = Lf(
+                    "Backups.Summary.LastBackupSize",
+                    "Size {0}",
+                    BackupSnapshotItem.FormatSize(last.SizeBytes));
             }
             else
             {
                 LastBackupDisplay  = L("Backups.Summary.NoBackups", "No backups yet");
                 LastBackupRelative = "-";
+                LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
             }
 
-            long totalBytes = _allSnapshots
-                .Where(s => !s.IsImported)
-                .Sum(s => s.SizeBytes);
+            var nonImported = _allSnapshots.Where(s => !s.IsImported).ToList();
+            var totalBytes = nonImported.Sum(s => s.SizeBytes);
             TotalBackupSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes);
+            var avgSize = nonImported.Count > 0
+                ? BackupSnapshotItem.FormatSize(totalBytes / nonImported.Count)
+                : "0 B";
+            TotalSnapshotsSecondaryLine = Lf(
+                "Backups.Summary.YesterdayAverage",
+                "{0} yesterday - avg {1}",
+                SnapshotsYesterday,
+                avgSize);
+            var importedCount = _allSnapshots.Count(s => s.IsImported);
+            TotalStoredSecondaryLine = Lf(
+                "Backups.Summary.ImportedAverage",
+                "{0} imported - avg {1}",
+                importedCount,
+                avgSize);
 
             RebuildSnapshotActivity(now);
 
@@ -1548,13 +1729,31 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(TotalSnapshots));
             OnPropertyChanged(nameof(SnapshotsThisWeek));
             OnPropertyChanged(nameof(SnapshotsToday));
+            OnPropertyChanged(nameof(SnapshotsYesterday));
             OnPropertyChanged(nameof(AutoSnapshotsThisWeek));
             OnPropertyChanged(nameof(ManualSnapshotsThisWeek));
             OnPropertyChanged(nameof(SnapshotsSummaryLine));
+            OnPropertyChanged(nameof(TotalSnapshotsSecondaryLine));
             OnPropertyChanged(nameof(SnapshotActivitySummary));
             OnPropertyChanged(nameof(LastBackupDisplay));
             OnPropertyChanged(nameof(LastBackupRelative));
+            OnPropertyChanged(nameof(LastBackupSecondaryLine));
             OnPropertyChanged(nameof(TotalBackupSizeFormatted));
+            OnPropertyChanged(nameof(TotalStoredSecondaryLine));
+        }
+
+        public void UpdateSummaryLayout(double width)
+        {
+            const double chartThreshold = 1180;
+            const double activityThreshold = 1400;
+
+            var showCharts = width >= chartThreshold;
+            var showActivity = width >= activityThreshold;
+
+            ShowSummaryCharts = showCharts;
+            ShowActivityPanel = showActivity;
+            ActivityColumnWidth = showActivity ? new GridLength(360) : new GridLength(0);
+            SummaryColumnSpacing = showActivity ? 12 : 0;
         }
 
         private static string FormatRelative(TimeSpan span)
@@ -1590,6 +1789,10 @@ namespace VaultSync.UI.ViewModels
                 .Where(s => string.Equals(s.Type, "Manual", StringComparison.OrdinalIgnoreCase))
                 .GroupBy(s => s.Timestamp.Date)
                 .ToDictionary(g => g.Key, g => g.Count());
+            var importedByDate = _allSnapshots
+                .Where(s => s.IsImported)
+                .GroupBy(s => s.Timestamp.Date)
+                .ToDictionary(g => g.Key, g => g.Count());
             var bytesByDate = _allSnapshots
                 .GroupBy(s => s.Timestamp.Date)
                 .ToDictionary(g => g.Key, g => g.Sum(x => x.SizeBytes));
@@ -1599,7 +1802,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     autoByDate.TryGetValue(d, out var autoCount);
                     manualByDate.TryGetValue(d, out var manualCount);
-                    return autoCount + manualCount;
+                    importedByDate.TryGetValue(d, out var importedCount);
+                    return autoCount + manualCount + importedCount;
                 })
                 .ToList();
 
@@ -1615,9 +1819,10 @@ namespace VaultSync.UI.ViewModels
             {
                 autoByDate.TryGetValue(day, out var autoCount);
                 manualByDate.TryGetValue(day, out var manualCount);
+                importedByDate.TryGetValue(day, out var importedCount);
                 bytesByDate.TryGetValue(day, out var totalBytes);
 
-                var totalCount = autoCount + manualCount;
+                var totalCount = autoCount + manualCount + importedCount;
                 var normalized = totalBytes > 0
                     ? totalBytes / (double)maxBytes
                     : totalCount / (double)maxTotal;
@@ -1626,24 +1831,27 @@ namespace VaultSync.UI.ViewModels
 
                 var autoHeight = 0d;
                 var manualHeight = 0d;
+                var importedHeight = 0d;
                 if (totalCount > 0)
                 {
                     autoHeight = autoCount == 0 ? 0 : Math.Max(3, totalHeight * autoCount / totalCount);
                     manualHeight = manualCount == 0 ? 0 : Math.Max(3, totalHeight * manualCount / totalCount);
+                    importedHeight = importedCount == 0 ? 0 : Math.Max(3, totalHeight * importedCount / totalCount);
 
-                    var combined = autoHeight + manualHeight;
+                    var combined = autoHeight + manualHeight + importedHeight;
                     if (combined > totalHeight && combined > 0)
                     {
                         var scale = totalHeight / combined;
                         autoHeight *= scale;
                         manualHeight *= scale;
+                        importedHeight *= scale;
                     }
                 }
 
                 var dayLabel = day.ToString("ddd");
                 var tooltip = totalCount == 0
                     ? Lf("Backups.Activity.TooltipNone", "{0}: No backups", dayLabel)
-                    : Lf("Backups.Activity.Tooltip", "{0}: {1} backups · {2}", dayLabel, totalCount, BackupSnapshotItem.FormatSize(totalBytes));
+                    : Lf("Backups.Activity.Tooltip", "{0}: {1} backups - {2}", dayLabel, totalCount, BackupSnapshotItem.FormatSize(totalBytes));
 
                 SnapshotActivity.Add(new SnapshotActivityPoint
                 {
@@ -1651,9 +1859,11 @@ namespace VaultSync.UI.ViewModels
                     ShowLabel    = true,
                     AutoCount    = autoCount,
                     ManualCount  = manualCount,
+                    ImportedCount = importedCount,
                     TotalBytes   = totalBytes,
                     AutoHeight   = autoHeight,
                     ManualHeight = manualHeight,
+                    ImportedHeight = importedHeight,
                     TooltipText  = tooltip
                 });
             }
@@ -1716,6 +1926,8 @@ namespace VaultSync.UI.ViewModels
                 projectStats[backup.ProjectId] = stats;
             }
 
+            var usedColors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var project in projectList)
             {
                 projectStats.TryGetValue(project.Id, out var stats);
@@ -1731,7 +1943,8 @@ namespace VaultSync.UI.ViewModels
                     AutoBackupChanged = OnAutoBackupChanged
                 };
                 projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath);
-
+                var uniqueColor = EnsureUniqueColor(projectItem.AvatarColor, $"{project.Name}|{project.RootPath}", usedColors);
+                projectItem.ApplyAvatarColor(uniqueColor);
                 ProjectBackups.Add(projectItem);
             }
 
@@ -2001,6 +2214,14 @@ namespace VaultSync.UI.ViewModels
             AvatarInitials  = ComputeInitials(name);
             AvatarColor     = AvatarColorProvider.GetColor(name, projectPath);
             AvatarImagePath = AvatarStore.GetAvatarForProject(projectPath);
+        }
+
+        public void ApplyAvatarColor(string hexColor)
+        {
+            if (string.IsNullOrWhiteSpace(hexColor))
+                return;
+
+            AvatarColor = hexColor;
         }
 
         private static string ComputeInitials(string name)
@@ -2608,20 +2829,25 @@ namespace VaultSync.UI.ViewModels
     {
         private static readonly IBrush SnapshotAutoBrush = new ImmutableSolidColorBrush(Color.Parse("#3A7AFE"));
         private static readonly IBrush SnapshotManualBrush = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
+        private static readonly IBrush SnapshotImportedBrush = new ImmutableSolidColorBrush(Color.Parse("#FFB84C"));
         private static readonly IBrush SnapshotEmptyBrush = new ImmutableSolidColorBrush(Color.Parse("#22FFFFFF"));
         public string DayLabel { get; set; } = string.Empty;
         public bool ShowLabel { get; set; } = true;
         public int AutoCount { get; set; }
         public int ManualCount { get; set; }
+        public int ImportedCount { get; set; }
         public long TotalBytes { get; set; }
         public double AutoHeight { get; set; }
         public double ManualHeight { get; set; }
-        public bool IsEmpty => AutoCount + ManualCount == 0;
+        public double ImportedHeight { get; set; }
+        public bool IsEmpty => AutoCount + ManualCount + ImportedCount == 0;
         public double EmptyHeight => IsEmpty ? 6 : 0;
         public bool HasAuto => AutoCount > 0;
         public bool HasManual => ManualCount > 0;
+        public bool HasImported => ImportedCount > 0;
         public IBrush AutoBrush { get; set; } = SnapshotAutoBrush;
         public IBrush ManualBrush { get; set; } = SnapshotManualBrush;
+        public IBrush ImportedBrush { get; set; } = SnapshotImportedBrush;
         public IBrush EmptyBrush { get; set; } = SnapshotEmptyBrush;
         public string TooltipText { get; set; } = string.Empty;
     }
@@ -2648,3 +2874,5 @@ namespace VaultSync.UI.ViewModels
             CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 }
+
+

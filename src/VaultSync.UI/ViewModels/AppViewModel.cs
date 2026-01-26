@@ -792,15 +792,6 @@ namespace VaultSync.UI.ViewModels
                         ? _repo.GetRecentBackupsByProject(limitPerProject: 5).ToList()
                         : _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
 
-                    if (IsOnBackupsPage || force)
-                    {
-                        var scanAdded = ScanDestinationsForUntrackedBackups(projects, backups);
-                        if (scanAdded > 0)
-                        {
-                            backups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
-                            useLightweight = false;
-                        }
-                    }
                     var disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
 
                     _backupsCacheProjects = projects;
@@ -817,6 +808,28 @@ namespace VaultSync.UI.ViewModels
                             _backupsViewModel.RefreshBackupDriveHealth();
                         }
                     });
+
+                    if (IsOnBackupsPage || force)
+                    {
+                        var scanAdded = ScanDestinationsForUntrackedBackups(projects, backups);
+                        if (scanAdded > 0)
+                        {
+                            backups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow).ToList();
+                            useLightweight = false;
+                            _backupsCacheBackups = backups;
+                            _backupsCachePartial = useLightweight;
+                            _backupsCacheUpdatedUtc = DateTime.UtcNow;
+
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                if (IsOnBackupsPage || force)
+                                {
+                                    _backupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
+                                    _backupsViewModel.RefreshBackupDriveHealth();
+                                }
+                            });
+                        }
+                    }
                 }
                 finally
                 {
@@ -5239,14 +5252,15 @@ namespace VaultSync.UI.ViewModels
                     MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport);
                 var preview = await Task.Run(() => _metadataSyncService.PreviewImportFromStore(cfg.ProjectsRoot, options));
                 var label = L("MetadataSync.Review.SourceProjectsRoot", "Projects root");
-                if (await ConfirmMetadataImportAsync(preview, label))
-                {
-                    var result = await Task.Run(() => _metadataSyncService.ImportFromStore(cfg.ProjectsRoot, options));
-                    Console.WriteLine($"[MetadataSync] Manual refresh (projects root) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
-                    refreshNeeded |= result.Status == MetadataSyncStatus.Success &&
-                                     (result.ImportedProjects > 0 ||
-                                      result.ImportedSnapshots > 0 ||
-                                      result.ImportedBackups > 0 ||
+                    if (await ConfirmMetadataImportAsync(preview, label))
+                    {
+                        var result = await Task.Run(() => _metadataSyncService.ImportFromStore(cfg.ProjectsRoot, options));
+                        Console.WriteLine($"[MetadataSync] Manual refresh (projects root) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
+                        _ = Task.Run(() => ApplyRetentionAfterMetadataImport(cfg.ProjectsRoot, result));
+                        refreshNeeded |= result.Status == MetadataSyncStatus.Success &&
+                                         (result.ImportedProjects > 0 ||
+                                          result.ImportedSnapshots > 0 ||
+                                          result.ImportedBackups > 0 ||
                                       result.AppliedTombstones > 0);
                 }
             }
@@ -5278,6 +5292,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         var result = await Task.Run(() => _metadataSyncService.ImportFromStore(resolution.EffectivePath, options));
                         Console.WriteLine($"[MetadataSync] Manual refresh ({name}) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
+                        _ = Task.Run(() => ApplyRetentionAfterMetadataImport(resolution.EffectivePath, result));
                         refreshNeeded |= result.Status == MetadataSyncStatus.Success &&
                                          (result.ImportedProjects > 0 ||
                                           result.ImportedSnapshots > 0 ||
@@ -5678,6 +5693,7 @@ namespace VaultSync.UI.ViewModels
                     Console.WriteLine($"[MetadataSync] Auto import started for '{name}'.");
                     var result = _metadataSyncService.ImportFromStore(effectivePath, options);
                     Console.WriteLine($"[MetadataSync] Auto import ({name}) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
+                    ApplyRetentionAfterMetadataImport(effectivePath, result);
                     MaybeRefreshAfterImport(result);
                 }
                 catch (Exception ex)
@@ -5713,6 +5729,7 @@ namespace VaultSync.UI.ViewModels
                 Console.WriteLine("[MetadataSync] Auto import started for projects root.");
                 var result = _metadataSyncService.ImportFromStore(rootPath, options);
                 Console.WriteLine($"[MetadataSync] Auto import (projects root) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
+                ApplyRetentionAfterMetadataImport(rootPath, result);
                 MaybeRefreshAfterImport(result);
             }
             catch (Exception ex)
@@ -5744,6 +5761,36 @@ namespace VaultSync.UI.ViewModels
             }
 
             Dispatcher.UIThread.Post(RefreshUiAfterMetadataImport);
+        }
+
+        private void ApplyRetentionAfterMetadataImport(string rootPath, MetadataSyncResult result)
+        {
+            if (result.Status != MetadataSyncStatus.Success || result.ImportedBackups <= 0)
+                return;
+
+            if (string.IsNullOrWhiteSpace(rootPath))
+                return;
+
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
+                if (maxSnapshotsToKeep <= 0)
+                    return;
+
+                var projects = result.AffectedProjectIds.Count > 0
+                    ? result.AffectedProjectIds
+                    : _repo.GetAllProjects().Select(p => p.Id).ToArray();
+
+                foreach (var projectId in projects)
+                {
+                    _backupService.EnforceRetentionForProject(projectId, rootPath, maxSnapshotsToKeep);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MetadataSync] Retention after import failed: {ex.Message}");
+            }
         }
 
         private void RefreshUiAfterMetadataImport()

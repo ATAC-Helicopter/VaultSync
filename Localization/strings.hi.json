@@ -532,5 +532,8 @@
   "Settings.Backups.ConfirmDelete": "बैकअप हटाने से पहले पुष्टि",
   "Settings.Backups.ConfirmDeleteDescription": "गंतव्य से बैकअप डेटा हटाने से पहले चेतावनी दिखाता है।",
   "Backups.Destinations.Pending": "Pending",
-  "Backups.Destinations.Inactive": "Inactive"
+  "Backups.Destinations.Inactive": "Inactive",
+  "Dashboard.Chart.Tooltip": "{0}: {1} backups",
+  "Dashboard.Chart.TooltipNone": "{0}: No backups",
+  "Dashboard.Chart.TooltipBreakdown": "{0}: {1} auto, {2} manual, {3} imported"
 }

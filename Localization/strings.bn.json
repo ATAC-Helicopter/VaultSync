@@ -532,5 +532,8 @@
   "Settings.Backups.ConfirmDelete": "ব্যাকআপ মুছে ফেলার আগে নিশ্চিত করুন",
   "Settings.Backups.ConfirmDeleteDescription": "গন্তব্য থেকে ব্যাকআপ ডেটা মুছে ফেলার আগে সতর্ক করে।",
   "Backups.Destinations.Pending": "Pending",
-  "Backups.Destinations.Inactive": "Inactive"
+  "Backups.Destinations.Inactive": "Inactive",
+  "Dashboard.Chart.Tooltip": "{0}: {1} backups",
+  "Dashboard.Chart.TooltipNone": "{0}: No backups",
+  "Dashboard.Chart.TooltipBreakdown": "{0}: {1} auto, {2} manual, {3} imported"
 }

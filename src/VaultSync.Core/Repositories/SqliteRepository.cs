@@ -1129,6 +1129,14 @@ DELETE FROM sqlite_sequence;";
             public long Count { get; init; }
         }
 
+        private sealed class BackupCountByTypeRow
+        {
+            public string Day { get; init; } = string.Empty;
+            public string Type { get; init; } = string.Empty;
+            public long IsImported { get; init; }
+            public long Count { get; init; }
+        }
+
         public IReadOnlyDictionary<DateTime, int> GetBackupCountsByDay(DateTime fromUtc, DateTime toUtc)
         {
             using var c = Open();
@@ -1163,6 +1171,64 @@ DELETE FROM sqlite_sequence;";
                     result[day.Date] = int.MaxValue;
                 else
                     result[day.Date] = (int)row.Count;
+            }
+
+            return result;
+        }
+
+        public IReadOnlyDictionary<DateTime, (int AutoCount, int ManualCount, int ImportedCount)> GetBackupCountsByDayBreakdown(DateTime fromUtc, DateTime toUtc)
+        {
+            using var c = Open();
+            var rows = c.Query<BackupCountByTypeRow>(
+                """
+                SELECT substr(created_utc, 1, 10) as Day,
+                       lower(type) as Type,
+                       is_imported as IsImported,
+                       COUNT(*) as Count
+                FROM backups
+                WHERE created_utc >= @from AND created_utc <= @to
+                GROUP BY Day, Type, IsImported
+                ORDER BY Day;
+                """,
+                new
+                {
+                    from = fromUtc.ToString("u", CultureInfo.InvariantCulture),
+                    to   = toUtc.ToString("u", CultureInfo.InvariantCulture)
+                });
+
+            var result = new Dictionary<DateTime, (int AutoCount, int ManualCount, int ImportedCount)>();
+            foreach (var row in rows)
+            {
+                if (!DateTime.TryParseExact(
+                        row.Day,
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                        out var day))
+                {
+                    continue;
+                }
+
+                result.TryGetValue(day.Date, out var current);
+                var autoCount = current.AutoCount;
+                var manualCount = current.ManualCount;
+                var importedCount = current.ImportedCount;
+
+                var count = row.Count > int.MaxValue ? int.MaxValue : (int)row.Count;
+                if (row.IsImported != 0)
+                {
+                    importedCount = Math.Min(int.MaxValue, importedCount + count);
+                }
+                else if (string.Equals(row.Type, "auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    autoCount = Math.Min(int.MaxValue, autoCount + count);
+                }
+                else
+                {
+                    manualCount = Math.Min(int.MaxValue, manualCount + count);
+                }
+
+                result[day.Date] = (autoCount, manualCount, importedCount);
             }
 
             return result;

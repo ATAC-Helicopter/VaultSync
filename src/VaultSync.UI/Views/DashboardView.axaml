@@ -142,7 +142,7 @@
         <Grid Grid.Row="4" ColumnDefinitions="*,Auto" ColumnSpacing="16" Margin="4,12,4,0">
           <!-- Trend -->
           <Border Classes="card" Padding="14" Grid.Column="0">
-            <Grid RowDefinitions="Auto,*">
+            <Grid RowDefinitions="Auto,Auto,*">
               <Grid Grid.Row="0">
                 <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupsThisWeek}" Classes="section-title"/>
                 <Border HorizontalAlignment="Right" VerticalAlignment="Center" CornerRadius="8" Padding="8,4"
@@ -150,15 +150,74 @@
                   <TextBlock Text="{Binding TotalSnapshotsWeekLabel}" FontWeight="SemiBold"/>
                 </Border>
               </Grid>
-              <lvc:CartesianChart Grid.Row="1"
-                                  Series="{Binding SnapshotSeries}"
-                                  XAxes="{Binding SnapshotXAxes}"
-                                  YAxes="{Binding SnapshotYAxes}"
-                                  Background="{Binding $parent[Border].Background}"
-                                  LegendPosition="Hidden"
-                                  Height="360"
-                                  HorizontalAlignment="Stretch"
-                                  VerticalAlignment="Stretch"/>
+              <StackPanel Grid.Row="1"
+                          Orientation="Horizontal"
+                          Spacing="12"
+                          Margin="0,10,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Border Width="8" Height="8" CornerRadius="4" Background="#3A7AFE" />
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Border Width="8" Height="8" CornerRadius="4" Background="#22CC88" />
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterManual}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Border Width="8" Height="8" CornerRadius="4" Background="#FFB84C" />
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Snapshot.Type.Imported}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+              </StackPanel>
+              <Border Grid.Row="2"
+                      Background="{DynamicResource Surface1}"
+                      CornerRadius="12"
+                      Padding="16">
+                <ItemsControl ItemsSource="{Binding WeeklySnapshotActivity}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Columns="7" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel HorizontalAlignment="Center"
+                                  VerticalAlignment="Bottom"
+                                  Spacing="10">
+                        <Border Width="22"
+                                ToolTip.Tip="{Binding TooltipText}">
+                          <StackPanel VerticalAlignment="Bottom" Spacing="4">
+                            <Border Height="{Binding ManualHeight}"
+                                    Background="{Binding ManualBrush}"
+                                    CornerRadius="5"
+                                    IsVisible="{Binding HasManual}" />
+                            <Border Height="{Binding AutoHeight}"
+                                    Background="{Binding AutoBrush}"
+                                    CornerRadius="5"
+                                    IsVisible="{Binding HasAuto}" />
+                            <Border Height="{Binding ImportedHeight}"
+                                    Background="{Binding ImportedBrush}"
+                                    CornerRadius="5"
+                                    IsVisible="{Binding HasImported}" />
+                            <Border Height="{Binding EmptyHeight}"
+                                    MinHeight="10"
+                                    Background="{Binding EmptyBrush}"
+                                    CornerRadius="5"
+                                    IsVisible="{Binding IsEmpty}" />
+                          </StackPanel>
+                        </Border>
+                        <TextBlock Text="{Binding DayLabel}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
             </Grid>
           </Border>
 

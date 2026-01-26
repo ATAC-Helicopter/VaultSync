@@ -532,5 +532,8 @@
   "Settings.Backups.ConfirmDelete": "删除备份前确认",
   "Settings.Backups.ConfirmDeleteDescription": "在目标上删除备份数据前显示警告。",
   "Backups.Destinations.Pending": "Pending",
-  "Backups.Destinations.Inactive": "Inactive"
+  "Backups.Destinations.Inactive": "Inactive",
+  "Dashboard.Chart.Tooltip": "{0}: {1} backups",
+  "Dashboard.Chart.TooltipNone": "{0}: No backups",
+  "Dashboard.Chart.TooltipBreakdown": "{0}: {1} auto, {2} manual, {3} imported"
 }

@@ -532,5 +532,8 @@
   "Settings.Backups.ConfirmDelete": "قم بالتأكيد قبل حذف النسخ الاحتياطية",
   "Settings.Backups.ConfirmDeleteDescription": "يظهر تحذيرًا قبل إزالة بيانات النسخ الاحتياطي على الوجهة.",
   "Backups.Destinations.Pending": "Pending",
-  "Backups.Destinations.Inactive": "Inactive"
+  "Backups.Destinations.Inactive": "Inactive",
+  "Dashboard.Chart.Tooltip": "{0}: {1} backups",
+  "Dashboard.Chart.TooltipNone": "{0}: No backups",
+  "Dashboard.Chart.TooltipBreakdown": "{0}: {1} auto, {2} manual, {3} imported"
 }

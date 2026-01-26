@@ -1,4 +1,22 @@
 ﻿# Changelog
+## [1.3.5] - Unreleased
+### Added
+- Backups summary cards now show mini activity sparklines and extra stats.
+- Dashboard weekly chart now labels auto/manual/imported backups.
+### Changed
+- Patch manifest downloads now reuse cached results to reduce repeated update checks.
+- Backups per-project cards now enforce unique accent colors.
+- Backups summary sparklines and activity chart now scale up to use more space.
+- Dashboard backups-this-week chart now uses the same compact bar style as the Backups page.
+- Dashboard now avoids demo backup data when the database is empty.
+### Fixed
+- Imported backups now trigger retention cleanup for their destination path.
+- Tray menu on MacOS now opens
+- Hardened metadata sync locks to prevenet write fials on MacoOS
+- Backups page now renders cached results before destination scanning to avoid empty startup screens.
+- Backups summary charts now collapse in narrow windows to keep the text readable.
+- Backups activity legend no longer overlaps the section title in tight layouts.
+
 ## [1.3.4] - 25.01.2026
 ### Added
 - Sidebar now shows a compact destination status overview for quick reachability checks.

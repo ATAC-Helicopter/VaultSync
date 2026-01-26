@@ -71,6 +71,13 @@
   "Backups.Summary.Last": "Last backup",
   "Backups.Summary.Total": "Backups",
   "Backups.Summary.TotalStored": "Total stored",
+  "Backups.Summary.TodayWeek": "{0} backups today - {1} this week",
+  "Backups.Summary.ActivityTotals": "{0} backups total - {1} auto - {2} manual",
+  "Backups.Summary.NoActivity": "No backups in the last 7 days",
+  "Backups.Summary.NoBackups": "No backups yet",
+  "Backups.Summary.YesterdayAverage": "{0} yesterday - avg {1}",
+  "Backups.Summary.LastBackupSize": "Size {0}",
+  "Backups.Summary.ImportedAverage": "{0} imported - avg {1}",
   "Backups.Verification.Delete": "Delete backup",
   "Backups.Verification.FailureMessage": "Verification failed for '{0}'. The backup may be corrupted or incomplete.",
   "Backups.Verification.Keep": "Keep backup",
@@ -532,5 +539,8 @@
   "Settings.Backups.ConfirmDelete": "Confirm before deleting backups",
   "Settings.Backups.ConfirmDeleteDescription": "Shows a warning before removing backup data on the destination.",
   "Backups.Destinations.Pending": "Pending",
-  "Backups.Destinations.Inactive": "Inactive"
+  "Backups.Destinations.Inactive": "Inactive",
+  "Dashboard.Chart.Tooltip": "{0}: {1} backups",
+  "Dashboard.Chart.TooltipNone": "{0}: No backups",
+  "Dashboard.Chart.TooltipBreakdown": "{0}: {1} auto, {2} manual, {3} imported"
 }

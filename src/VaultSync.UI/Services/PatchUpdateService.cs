@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -58,6 +59,9 @@ namespace VaultSync.UI.Services
     public sealed class PatchUpdateService
     {
         private static readonly HttpClient s_httpClient = CreateHttpClient();
+        private static readonly TimeSpan s_manifestCacheWindow = TimeSpan.FromMinutes(30);
+        private static readonly ConcurrentDictionary<string, (PatchManifest Manifest, DateTimeOffset FetchedAt)> s_manifestCache =
+            new(StringComparer.OrdinalIgnoreCase);
 
         public async Task<PatchPlan?> PreparePatchAsync(
             UpdateCheckResult updateResult,
@@ -67,9 +71,7 @@ namespace VaultSync.UI.Services
             if (!updateResult.HasPatch || string.IsNullOrWhiteSpace(updateResult.PatchManifestUrl) || updateResult.PatchArchiveUrl is null)
                 return null;
 
-            var manifest = await s_httpClient.GetFromJsonAsync<PatchManifest>(
-                updateResult.PatchManifestUrl,
-                cancellationToken);
+            var manifest = await GetManifestAsync(updateResult.PatchManifestUrl, cancellationToken);
 
             if (manifest is null)
                 return null;
@@ -193,6 +195,24 @@ namespace VaultSync.UI.Services
             }
 
             return client;
+        }
+
+        private static async Task<PatchManifest?> GetManifestAsync(string manifestUrl, CancellationToken cancellationToken)
+        {
+            if (s_manifestCache.TryGetValue(manifestUrl, out var cached))
+            {
+                if (DateTimeOffset.UtcNow - cached.FetchedAt < s_manifestCacheWindow)
+                {
+                    return cached.Manifest;
+                }
+            }
+
+            var manifest = await s_httpClient.GetFromJsonAsync<PatchManifest>(manifestUrl, cancellationToken);
+            if (manifest is null)
+                return null;
+
+            s_manifestCache[manifestUrl] = (manifest, DateTimeOffset.UtcNow);
+            return manifest;
         }
 
     }
