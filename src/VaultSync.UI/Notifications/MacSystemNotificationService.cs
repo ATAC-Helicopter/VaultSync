@@ -23,7 +23,7 @@ namespace VaultSync.UI.Notifications
                 var escapedMessage = EscapeAppleScriptString(message);
 
                 var script =
-                    $"tell application id \"com.vaultsync.app\" to display notification \"{escapedMessage}\" with title \"{escapedTitle}\"";
+                    $"display notification \"{escapedMessage}\" with title \"{escapedTitle}\"";
 
                 var psi = new ProcessStartInfo
                 {

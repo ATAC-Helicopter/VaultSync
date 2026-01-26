@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
+using System.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -840,6 +841,38 @@ public sealed class MetadataSyncService
 
     public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill = false)
     {
+        var retryDelays = new[]
+        {
+            TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(500),
+            TimeSpan.FromMilliseconds(1000)
+        };
+
+        for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
+        {
+            try
+            {
+                return ExportBackupToStoreInternal(rootPath, backupId, appVersion, machineId, forceBackfill);
+            }
+            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+            {
+                if (attempt >= retryDelays.Length)
+                {
+                    Console.WriteLine($"[MetadataSync] Export failed after retries: {ex.Message}");
+                    return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+                }
+
+                var delay = retryDelays[attempt];
+                Console.WriteLine($"[MetadataSync] Export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                Thread.Sleep(delay);
+            }
+        }
+
+        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Export failed after retries.");
+    }
+
+    private MetadataSyncResult ExportBackupToStoreInternal(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill)
+    {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             Console.WriteLine("[MetadataSync] Export failed: root path is empty.");
@@ -854,6 +887,8 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
             Console.WriteLine($"[MetadataSync] Export failed: store init error at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
@@ -958,6 +993,8 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
             Console.WriteLine($"[MetadataSync] Export failed writing store '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
@@ -981,6 +1018,37 @@ public sealed class MetadataSyncService
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
             return;
 
+        var retryDelays = new[]
+        {
+            TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(500),
+            TimeSpan.FromMilliseconds(1000)
+        };
+
+        for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
+        {
+            try
+            {
+                ExportBackupTombstoneInternal(rootPath, backupExternalId, appVersion, machineId);
+                return;
+            }
+            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+            {
+                if (attempt >= retryDelays.Length)
+                {
+                    Console.WriteLine($"[MetadataSync] Tombstone export failed after retries: {ex.Message}");
+                    return;
+                }
+
+                var delay = retryDelays[attempt];
+                Console.WriteLine($"[MetadataSync] Tombstone store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                Thread.Sleep(delay);
+            }
+        }
+    }
+
+    private void ExportBackupTombstoneInternal(string rootPath, string backupExternalId, string appVersion, string machineId)
+    {
         var store = new MetadataStore(rootPath);
         try
         {
@@ -988,6 +1056,8 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
             Console.WriteLine($"[MetadataSync] Tombstone export failed: store init error at '{rootPath}': {ex.Message}");
             return;
         }
@@ -1025,6 +1095,8 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
             Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{rootPath}': {ex.Message}");
         }
     }

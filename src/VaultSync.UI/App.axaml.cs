@@ -285,10 +285,18 @@ public partial class App : Application
         _trayMenu = new NativeMenu();
         PopulateTrayMenu(_trayMenu, desktop);
 
-        // Keep native menu for fallback, but default to the custom tray panel.
-        _trayIcon.Menu = null;
-        _trayPanelService ??= new TrayPanelService(desktop, () => AppViewModelInstance);
-        _trayIcon.Clicked += (_, _) => _trayPanelService?.Toggle();
+        // macOS prefers the native menu; custom tray panels can fail to open.
+        if (OperatingSystem.IsMacOS())
+        {
+            _trayIcon.Menu = _trayMenu;
+        }
+        else
+        {
+            // Keep native menu for fallback, but default to the custom tray panel.
+            _trayIcon.Menu = null;
+            _trayPanelService ??= new TrayPanelService(desktop, () => AppViewModelInstance);
+            _trayIcon.Clicked += (_, _) => _trayPanelService?.Toggle();
+        }
         _trayIcon.IsVisible = true;
     }
 

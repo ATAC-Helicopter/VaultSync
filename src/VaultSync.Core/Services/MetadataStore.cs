@@ -354,11 +354,20 @@ public sealed class MetadataStore
         {
             DataSource = _dbPath,
             Mode = write ? SqliteOpenMode.ReadWriteCreate : SqliteOpenMode.ReadOnly,
-            Pooling = true
+            Pooling = false,
+            DefaultTimeout = 10
         };
 
         var conn = new SqliteConnection(builder.ConnectionString);
         conn.Open();
+        try
+        {
+            conn.Execute("PRAGMA busy_timeout = 5000;");
+        }
+        catch
+        {
+            // Best-effort; ignore pragma failures.
+        }
         return conn;
     }
 
