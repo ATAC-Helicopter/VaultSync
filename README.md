@@ -210,11 +210,6 @@ vaultsync watch Game --dest /Backups/Game --sync --verify --debounce-ms 2500
 Licensed under the MIT License.  
 See the full license here: [LICENSE](LICENSE).
 
-<img width="1280" height="709" alt="VaultSync_MM1" src="https://github.com/user-attachments/assets/57368d4d-6cd5-4743-ba15-054de5034f7c" />
-<img width="1280" height="709" alt="VaultSync_MM2" src="https://github.com/user-attachments/assets/32e4d684-9a46-4e9d-a90f-d13dfb644c21" />
-<img width="1280" height="709" alt="VaultSync_MM3" src="https://github.com/user-attachments/assets/dca44d74-62f1-4ba4-a334-4b9166630756" />
-
-
 ## Credits
 
 Created by **Flavio Giacchetti**
