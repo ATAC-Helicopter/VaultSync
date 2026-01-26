@@ -167,6 +167,9 @@ namespace VaultSync.UI.ViewModels
         public Axis[] SnapshotXAxes { get; private set; } = Array.Empty<Axis>();
         public Axis[] SnapshotYAxes { get; private set; } = Array.Empty<Axis>();
         public ObservableCollection<SnapshotActivityPoint> WeeklySnapshotActivity { get; } = new();
+        public double WeeklyChartHeight { get; private set; } = 180;
+        public double WeeklyAverageLineOffset { get; private set; }
+        public string WeeklyAverageLabel { get; private set; } = string.Empty;
         public string TotalSnapshotsWeek => _snapshotCountsByDay.Sum().ToString();
         public string TotalSnapshotsWeekLabel => string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), TotalSnapshotsWeek);
 
@@ -514,11 +517,23 @@ namespace VaultSync.UI.ViewModels
         {
             WeeklySnapshotActivity.Clear();
 
+            const double chartHeight = 180;
+            const double barBase = 20;
+            const double barRange = chartHeight - 36;
+            WeeklyChartHeight = chartHeight;
+
             var max = _snapshotCountsByDay.DefaultIfEmpty(0d).Max();
             if (max < 1)
             {
                 max = 1;
             }
+
+            var avg = _snapshotCountsByDay.Length == 0 ? 0d : _snapshotCountsByDay.Average();
+            var avgNormalized = avg / max;
+            var avgHeight = avg <= 0 ? 0 : barBase + avgNormalized * barRange;
+            const double labelOffset = 12;
+            WeeklyAverageLineOffset = labelOffset + avgHeight;
+            WeeklyAverageLabel = Lf("Dashboard.Chart.AvgLabel", "Avg {0:0.0}", avg);
 
             for (var i = 0; i < _snapshotCountsByDay.Length && i < _days.Length; i++)
             {
@@ -527,7 +542,7 @@ namespace VaultSync.UI.ViewModels
                 var importedCount = _importedCountsByDay[i];
                 var count = autoCount + manualCount + importedCount;
                 var normalized = count / max;
-                var totalHeight = count == 0 ? 0 : 16 + normalized * 120;
+                var totalHeight = count == 0 ? 0 : barBase + normalized * barRange;
                 var dayLabel = _days[i];
 
                 var tooltip = count == 0
@@ -567,6 +582,10 @@ namespace VaultSync.UI.ViewModels
                     TooltipText  = tooltip
                 });
             }
+
+            OnPropertyChanged(nameof(WeeklyAverageLineOffset));
+            OnPropertyChanged(nameof(WeeklyAverageLabel));
+            OnPropertyChanged(nameof(WeeklyChartHeight));
         }
 
         private void BuildStorageDonut(IReadOnlyList<(Project project, long bytes)> perProject)

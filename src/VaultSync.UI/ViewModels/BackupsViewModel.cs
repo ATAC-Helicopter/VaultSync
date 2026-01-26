@@ -228,6 +228,7 @@ namespace VaultSync.UI.ViewModels
         // Weekly mini-chart data
         public ObservableCollection<SnapshotActivityPoint> SnapshotActivity { get; } =
             new ObservableCollection<SnapshotActivityPoint>();
+        public double SnapshotActivityChartHeight { get; private set; } = 160;
 
         // Summary properties (bound in the top cards)
         public int TotalSnapshots { get; private set; }
@@ -301,6 +302,7 @@ namespace VaultSync.UI.ViewModels
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
         public string TotalStoredSecondaryLine { get; private set; } =
             Lf("Backups.Summary.ImportedAverage", "{0} imported - avg {1}", 0, "0 B");
+        public int ImportedSnapshotsCount { get; private set; }
 
         // Mini backup storage card (for Backups page)
         private double _backupDiskUsedPercent;
@@ -1717,6 +1719,7 @@ namespace VaultSync.UI.ViewModels
                 SnapshotsYesterday,
                 avgSize);
             var importedCount = _allSnapshots.Count(s => s.IsImported);
+            ImportedSnapshotsCount = importedCount;
             TotalStoredSecondaryLine = Lf(
                 "Backups.Summary.ImportedAverage",
                 "{0} imported - avg {1}",
@@ -1740,6 +1743,7 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(LastBackupSecondaryLine));
             OnPropertyChanged(nameof(TotalBackupSizeFormatted));
             OnPropertyChanged(nameof(TotalStoredSecondaryLine));
+            OnPropertyChanged(nameof(ImportedSnapshotsCount));
         }
 
         public void UpdateSummaryLayout(double width)
@@ -1775,6 +1779,10 @@ namespace VaultSync.UI.ViewModels
         private void RebuildSnapshotActivity(DateTime now)
         {
             SnapshotActivity.Clear();
+            const double chartHeight = 160;
+            const double barBase = 16;
+            const double barRange = chartHeight - 32;
+            SnapshotActivityChartHeight = chartHeight;
 
             // Last 7 days, oldest -> newest
             var days = Enumerable.Range(0, 7)
@@ -1826,8 +1834,7 @@ namespace VaultSync.UI.ViewModels
                 var normalized = totalBytes > 0
                     ? totalBytes / (double)maxBytes
                     : totalCount / (double)maxTotal;
-                // base height 6-10px plus up to ~42px for busy days
-                var totalHeight = totalCount == 0 ? 6 : 10 + normalized * 42;
+                var totalHeight = totalCount == 0 ? 0 : barBase + normalized * barRange;
 
                 var autoHeight = 0d;
                 var manualHeight = 0d;
@@ -1867,6 +1874,8 @@ namespace VaultSync.UI.ViewModels
                     TooltipText  = tooltip
                 });
             }
+
+            OnPropertyChanged(nameof(SnapshotActivityChartHeight));
         }
 
         /// <summary>
@@ -2841,7 +2850,7 @@ namespace VaultSync.UI.ViewModels
         public double ManualHeight { get; set; }
         public double ImportedHeight { get; set; }
         public bool IsEmpty => AutoCount + ManualCount + ImportedCount == 0;
-        public double EmptyHeight => IsEmpty ? 6 : 0;
+        public double EmptyHeight => IsEmpty ? 8 : 0;
         public bool HasAuto => AutoCount > 0;
         public bool HasManual => ManualCount > 0;
         public bool HasImported => ImportedCount > 0;

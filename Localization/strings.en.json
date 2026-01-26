@@ -542,5 +542,6 @@
   "Backups.Destinations.Inactive": "Inactive",
   "Dashboard.Chart.Tooltip": "{0}: {1} backups",
   "Dashboard.Chart.TooltipNone": "{0}: No backups",
-  "Dashboard.Chart.TooltipBreakdown": "{0}: {1} auto, {2} manual, {3} imported"
+  "Dashboard.Chart.TooltipBreakdown": "{0}: {1} auto, {2} manual, {3} imported",
+  "Dashboard.Chart.AvgLabel": "Avg {0:0.0}"
 }

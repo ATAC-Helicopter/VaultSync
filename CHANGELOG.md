@@ -30,6 +30,8 @@
 - Active backup stage labels now use color coding per phase.
 - Backups page destinations card now sits alongside history for easier scanning.
 - Backups per day chart moved to the summary row for better visibility.
+- Backups page weekly chart now focuses on the stacked bars only (average guide removed).
+- Backups weekly charts now use thicker bars and a dynamic average guide line to better fill the card space.
 - Per-project backup cards now use tighter spacing and centered accent pills/avatars.
 - Destination cards now use tighter spacing for a more compact layout.
 - Destination status cards now share a single layout to keep sidebar and backups styling aligned.
@@ -75,6 +77,7 @@
 - Destination scans now treat read-only backup folders as protected so they can be unprotected in-app.
 - Per-project backup list no longer stretches when expanding history entries.
 - "What's new" links now open in the browser instead of rendering as plain text.
+- Dashboard legend dots now align with their labels.
 
 ## [1.3.3] - 21.01.2026
 ### Changed
