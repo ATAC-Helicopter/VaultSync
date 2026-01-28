@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Avalonia.Media;
 
 namespace VaultSync.UI.Infrastructure;
 
@@ -58,11 +59,52 @@ public static class AvatarColorProvider
         if (!string.IsNullOrWhiteSpace(free))
             return free!;
 
-        // If all colors are taken, fall back to deterministic hash so assignments are stable.
+        // If all colors are taken, generate a distinct hue and avoid collisions.
         var seed = $"{name ?? string.Empty}|{projectPath ?? string.Empty}";
         var hash = seed.Aggregate(17, (acc, c) => unchecked(acc * 31 + c));
-        var idx  = Math.Abs(hash % Palette.Length);
-        return Palette[idx];
+        var hue = Math.Abs(hash % 360);
+
+        for (var i = 0; i < 36; i++)
+        {
+            var candidate = ToHex(FromHsl((hue + i * 37) % 360, 0.6, 0.55));
+            if (!used.Contains(candidate))
+                return candidate;
+        }
+
+        return Palette[0];
+    }
+
+    private static string ToHex(Color color) =>
+        $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+
+    private static Color FromHsl(double h, double s, double l)
+    {
+        if (s <= 0.0001)
+        {
+            var v = (byte)Math.Round(l * 255);
+            return Color.FromRgb(v, v, v);
+        }
+
+        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        var p = 2 * l - q;
+
+        var r = HueToRgb(p, q, h + 120);
+        var g = HueToRgb(p, q, h);
+        var b = HueToRgb(p, q, h - 120);
+
+        return Color.FromRgb(
+            (byte)Math.Round(r * 255),
+            (byte)Math.Round(g * 255),
+            (byte)Math.Round(b * 255));
+    }
+
+    private static double HueToRgb(double p, double q, double t)
+    {
+        t = (t % 360 + 360) % 360;
+        if (t < 60) return p + (q - p) * t / 60;
+        if (t < 180) return q;
+        if (t < 240) return p + (q - p) * (240 - t) / 60;
+        return p;
     }
 
     private static Dictionary<string, string> Load()

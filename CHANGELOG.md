@@ -1,4 +1,36 @@
 ﻿# Changelog
+## [1.3.5] - Unreleased
+### Added
+- Backups summary cards now show mini activity sparklines and extra stats.
+- Dashboard weekly chart now labels auto/manual/imported backups.
+### Changed
+- Backups weekly chart now uses a taller plot area and extra padding so bars/labels don't feel clipped.
+- Patch manifest downloads now reuse cached results to reduce repeated update checks.
+- Backups per-project cards now enforce unique accent colors.
+- Backups summary sparklines and activity chart now scale up to use more space.
+- Dashboard backups-this-week chart now uses the same compact bar style as the Backups page.
+- Dashboard now avoids demo backup data when the database is empty.
+- Total stored cards now show both local and imported totals.
+- Backups summary cards now use a more compact, left-aligned layout with integrated mini charts.
+- Backups summary cards now use distinct metric stacks instead of repeated mini charts.
+- Backups summary cards now reduce repeated stats and emphasize primary values.
+- Backups summary cards now use full-width stat grids for better fullscreen use.
+- Backups summary cards now use presentable stat tiles for clearer scanning.
+- Backups per day chart moved to the summary row for better visibility.
+- Backups page weekly chart now focuses on the stacked bars only (average guide removed).
+- Backups weekly charts now use thicker bars and a dynamic average guide line to better fill the card space.
+- Restore advisories are suppressed when local project changes are newer than imported history.
+### Fixed
+- Imported backups now trigger retention cleanup for their destination path.
+- Tray menu on MacOS now opens
+- Hardened metadata sync locks to prevenet write fials on MacoOS
+- Backups page now renders cached results before destination scanning to avoid empty startup screens.
+- Backups summary charts now collapse in narrow windows to keep the text readable.
+- Backups activity legend no longer overlaps the section title in tight layouts.
+- Total stored values now include imported backups for consistent totals across machines.
+- Dashboard legend dots now align with their labels.
+- Filled missing localization keys for backup summary labels across all languages.
+
 ## [1.3.4] - 25.01.2026
 ### Added
 - Sidebar now shows a compact destination status overview for quick reachability checks.
@@ -11,7 +43,6 @@
 - Destination probes now skip redundant checks within a short window and only notify on state changes.
 - Active backup stage labels now use color coding per phase.
 - Backups page destinations card now sits alongside history for easier scanning.
-- Backups per day chart moved to the summary row for better visibility.
 - Per-project backup cards now use tighter spacing and centered accent pills/avatars.
 - Destination cards now use tighter spacing for a more compact layout.
 - Destination status cards now share a single layout to keep sidebar and backups styling aligned.

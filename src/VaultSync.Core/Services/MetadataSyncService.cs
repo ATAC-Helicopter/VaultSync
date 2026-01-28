@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
+using System.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -152,6 +153,7 @@ public sealed class MetadataSyncService
         var importedSnapshots = 0;
         var importedBackups = 0;
         var appliedTombstones = 0;
+        var affectedProjectIds = new HashSet<int>();
         var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var snapshotMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -329,6 +331,7 @@ public sealed class MetadataSyncService
                 metaBackup.IsProtected,
                 isImported: true);
             importedBackups++;
+            affectedProjectIds.Add(projectId);
         }
 
         foreach (var tombstone in metaTombstones)
@@ -392,7 +395,10 @@ public sealed class MetadataSyncService
             importedSnapshots,
             importedBackups,
             appliedTombstones,
-            string.Empty);
+            string.Empty)
+        {
+            AffectedProjectIds = affectedProjectIds.ToArray()
+        };
         if (opts.MarkNeedsRestoreOnImport)
         {
         var liveBackups = metaBackups
@@ -422,8 +428,91 @@ public sealed class MetadataSyncService
 
             localLatestByProject.TryGetValue(projectId, out var localLatest);
             var needsRestore = importedLatest > localLatest;
+            if (needsRestore)
+            {
+                var project = _repo.GetProjectById(projectId);
+                if (!string.IsNullOrWhiteSpace(project?.RootPath) &&
+                    Directory.Exists(project.RootPath) &&
+                    HasLocalChangesNewerThan(project.RootPath, importedLatest))
+                {
+                    needsRestore = false;
+                }
+            }
             _repo.UpdateProjectNeedsRestore(projectId, needsRestore);
         }
+    }
+
+    private static bool HasLocalChangesNewerThan(string rootPath, DateTime importedLatestUtc)
+    {
+        try
+        {
+            var stack = new Stack<string>();
+            stack.Push(rootPath);
+
+            while (stack.Count > 0)
+            {
+                var current = stack.Pop();
+
+                IEnumerable<string> dirs;
+                try
+                {
+                    dirs = Directory.EnumerateDirectories(current);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var dir in dirs)
+                {
+                    var name = Path.GetFileName(dir);
+                    if (string.Equals(name, ".vaultsync", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    try
+                    {
+                        var di = new DirectoryInfo(dir);
+                        if (di.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                            continue;
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    stack.Push(dir);
+                }
+
+                IEnumerable<string> files;
+                try
+                {
+                    files = Directory.EnumerateFiles(current);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        if (File.GetLastWriteTimeUtc(file) > importedLatestUtc)
+                            return true;
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
     }
 
     private MetadataSyncPreview PreviewImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
@@ -840,6 +929,38 @@ public sealed class MetadataSyncService
 
     public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill = false)
     {
+        var retryDelays = new[]
+        {
+            TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(500),
+            TimeSpan.FromMilliseconds(1000)
+        };
+
+        for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
+        {
+            try
+            {
+                return ExportBackupToStoreInternal(rootPath, backupId, appVersion, machineId, forceBackfill);
+            }
+            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+            {
+                if (attempt >= retryDelays.Length)
+                {
+                    Console.WriteLine($"[MetadataSync] Export failed after retries: {ex.Message}");
+                    return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+                }
+
+                var delay = retryDelays[attempt];
+                Console.WriteLine($"[MetadataSync] Export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                Thread.Sleep(delay);
+            }
+        }
+
+        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Export failed after retries.");
+    }
+
+    private MetadataSyncResult ExportBackupToStoreInternal(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill)
+    {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             Console.WriteLine("[MetadataSync] Export failed: root path is empty.");
@@ -854,6 +975,8 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
             Console.WriteLine($"[MetadataSync] Export failed: store init error at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
@@ -958,6 +1081,8 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
             Console.WriteLine($"[MetadataSync] Export failed writing store '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
@@ -981,6 +1106,37 @@ public sealed class MetadataSyncService
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
             return;
 
+        var retryDelays = new[]
+        {
+            TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(500),
+            TimeSpan.FromMilliseconds(1000)
+        };
+
+        for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
+        {
+            try
+            {
+                ExportBackupTombstoneInternal(rootPath, backupExternalId, appVersion, machineId);
+                return;
+            }
+            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+            {
+                if (attempt >= retryDelays.Length)
+                {
+                    Console.WriteLine($"[MetadataSync] Tombstone export failed after retries: {ex.Message}");
+                    return;
+                }
+
+                var delay = retryDelays[attempt];
+                Console.WriteLine($"[MetadataSync] Tombstone store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                Thread.Sleep(delay);
+            }
+        }
+    }
+
+    private void ExportBackupTombstoneInternal(string rootPath, string backupExternalId, string appVersion, string machineId)
+    {
         var store = new MetadataStore(rootPath);
         try
         {
@@ -988,6 +1144,8 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
             Console.WriteLine($"[MetadataSync] Tombstone export failed: store init error at '{rootPath}': {ex.Message}");
             return;
         }
@@ -1025,6 +1183,8 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
             Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{rootPath}': {ex.Message}");
         }
     }
@@ -1177,6 +1337,8 @@ public sealed record MetadataSyncResult(
     int AppliedTombstones,
     string Message)
 {
+    public IReadOnlyCollection<int> AffectedProjectIds { get; init; } = Array.Empty<int>();
+
     public static MetadataSyncResult Failure(MetadataSyncStatus status, string message) =>
         new(status, 0, 0, 0, 0, message);
 }
