@@ -299,9 +299,15 @@ namespace VaultSync.UI.ViewModels
         public string LastBackupRelative { get; private set; } = "-";
         public string LastBackupSecondaryLine { get; private set; } =
             L("Backups.Summary.LastBackupSize", "Size -");
+        public string LastBackupSizeValueFormatted { get; private set; } = "0 B";
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
-        public string TotalStoredSecondaryLine { get; private set; } =
-            Lf("Backups.Summary.ImportedAverage", "{0} imported - avg {1}", 0, "0 B");
+        public int LocalSnapshotsCount { get; private set; }
+        public string TotalStoredLocalLine { get; private set; } =
+            Lf("Backups.Summary.LocalTotal", "Local total: {0}", "0 B");
+        public string TotalStoredLocalValueFormatted { get; private set; } = "0 B";
+        public string TotalStoredImportedLine { get; private set; } =
+            Lf("Backups.Summary.ImportedTotal", "Imported total: {0}", "0 B");
+        public string TotalStoredImportedValueFormatted { get; private set; } = "0 B";
         public int ImportedSnapshotsCount { get; private set; }
 
         // Mini backup storage card (for Backups page)
@@ -663,7 +669,11 @@ namespace VaultSync.UI.ViewModels
             SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
             LastBackupDisplay = L("Backups.Summary.NoBackups", "No backups yet");
             LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
-            TotalStoredSecondaryLine = Lf("Backups.Summary.ImportedAverage", "{0} imported - avg {1}", 0, "0 B");
+            LastBackupSizeValueFormatted = "0 B";
+            TotalStoredLocalLine = Lf("Backups.Summary.LocalTotal", "Local total: {0}", "0 B");
+            TotalStoredLocalValueFormatted = "0 B";
+            TotalStoredImportedLine = Lf("Backups.Summary.ImportedTotal", "Imported total: {0}", "0 B");
+            TotalStoredImportedValueFormatted = "0 B";
             HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
 
             var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", L("DriveHealth.UnknownDrive", "drive"));
@@ -675,7 +685,8 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(SnapshotActivitySummary));
             OnPropertyChanged(nameof(LastBackupDisplay));
             OnPropertyChanged(nameof(LastBackupSecondaryLine));
-            OnPropertyChanged(nameof(TotalStoredSecondaryLine));
+            OnPropertyChanged(nameof(TotalStoredLocalLine));
+            OnPropertyChanged(nameof(TotalStoredImportedLine));
             OnPropertyChanged(nameof(HistoryFilterProjectLabel));
             OnPropertyChanged(nameof(BackupDiskDriveLabel));
             OnPropertyChanged(nameof(BackupDiskHealthText));
@@ -1699,32 +1710,43 @@ namespace VaultSync.UI.ViewModels
                     "Backups.Summary.LastBackupSize",
                     "Size {0}",
                     BackupSnapshotItem.FormatSize(last.SizeBytes));
+                LastBackupSizeValueFormatted = BackupSnapshotItem.FormatSize(last.SizeBytes);
             }
             else
             {
                 LastBackupDisplay  = L("Backups.Summary.NoBackups", "No backups yet");
                 LastBackupRelative = "-";
                 LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
+                LastBackupSizeValueFormatted = "0 B";
             }
 
-            var nonImported = _allSnapshots.Where(s => !s.IsImported).ToList();
-            var totalBytes = nonImported.Sum(s => s.SizeBytes);
+            var totalBytes = _allSnapshots.Sum(s => s.SizeBytes);
             TotalBackupSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes);
-            var avgSize = nonImported.Count > 0
-                ? BackupSnapshotItem.FormatSize(totalBytes / nonImported.Count)
+            var avgSize = _allSnapshots.Count > 0
+                ? BackupSnapshotItem.FormatSize(totalBytes / _allSnapshots.Count)
                 : "0 B";
             TotalSnapshotsSecondaryLine = Lf(
                 "Backups.Summary.YesterdayAverage",
                 "{0} yesterday - avg {1}",
                 SnapshotsYesterday,
                 avgSize);
-            var importedCount = _allSnapshots.Count(s => s.IsImported);
+            var localBytes = _allSnapshots.Where(s => !s.IsImported).Sum(s => s.SizeBytes);
+            TotalStoredLocalLine = Lf(
+                "Backups.Summary.LocalTotal",
+                "Local total: {0}",
+                BackupSnapshotItem.FormatSize(localBytes));
+            TotalStoredLocalValueFormatted = BackupSnapshotItem.FormatSize(localBytes);
+
+            var importedItems = _allSnapshots.Where(s => s.IsImported).ToList();
+            var importedCount = importedItems.Count;
             ImportedSnapshotsCount = importedCount;
-            TotalStoredSecondaryLine = Lf(
-                "Backups.Summary.ImportedAverage",
-                "{0} imported - avg {1}",
-                importedCount,
-                avgSize);
+            LocalSnapshotsCount = Math.Max(0, _allSnapshots.Count - importedCount);
+            var importedBytes = importedItems.Sum(s => s.SizeBytes);
+            TotalStoredImportedLine = Lf(
+                "Backups.Summary.ImportedTotal",
+                "Imported total: {0}",
+                BackupSnapshotItem.FormatSize(importedBytes));
+            TotalStoredImportedValueFormatted = BackupSnapshotItem.FormatSize(importedBytes);
 
             RebuildSnapshotActivity(now);
 
@@ -1741,8 +1763,13 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(LastBackupDisplay));
             OnPropertyChanged(nameof(LastBackupRelative));
             OnPropertyChanged(nameof(LastBackupSecondaryLine));
+            OnPropertyChanged(nameof(LastBackupSizeValueFormatted));
             OnPropertyChanged(nameof(TotalBackupSizeFormatted));
-            OnPropertyChanged(nameof(TotalStoredSecondaryLine));
+            OnPropertyChanged(nameof(LocalSnapshotsCount));
+            OnPropertyChanged(nameof(TotalStoredLocalLine));
+            OnPropertyChanged(nameof(TotalStoredLocalValueFormatted));
+            OnPropertyChanged(nameof(TotalStoredImportedLine));
+            OnPropertyChanged(nameof(TotalStoredImportedValueFormatted));
             OnPropertyChanged(nameof(ImportedSnapshotsCount));
         }
 

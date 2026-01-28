@@ -30,6 +30,7 @@ namespace VaultSync.UI.ViewModels
         private int _snapshotCount;
         private string _snapshotsHint = string.Empty;
         private string _storageUsed = "0 B";
+        private string _storageUsedLocal = "0 B";
         private string _storageHint = string.Empty;
         // Backup disk usage card fields
         private double _backupDiskUsedPercent;
@@ -98,6 +99,17 @@ namespace VaultSync.UI.ViewModels
             {
                 if (_storageUsed == value) return;
                 _storageUsed = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string StorageUsedLocal
+        {
+            get => _storageUsedLocal;
+            private set
+            {
+                if (_storageUsedLocal == value) return;
+                _storageUsedLocal = value;
                 OnPropertyChanged();
             }
         }
@@ -265,10 +277,12 @@ namespace VaultSync.UI.ViewModels
                     var endDate = DateTime.UtcNow;
                     var backupCountsByDay = repo.GetBackupCountsByDayBreakdown(startDate, endDate);
 
-                    // Storage slices: total backups per project
+                    // Storage slices: total backups per project (incl. imported)
                     long totalLatestBytes = 0;
+                    long totalLocalBytes = 0;
                     var storageSlices = new List<(Project project, long bytes)>();
-                    var backupsByProject = repo.GetBackupTotalsByProject(includeImported: false);
+                    var backupsByProject = repo.GetBackupTotalsByProject(includeImported: true);
+                    var localBackupsByProject = repo.GetBackupTotalsByProject(includeImported: false);
 
                     foreach (var p in projects)
                     {
@@ -277,6 +291,11 @@ namespace VaultSync.UI.ViewModels
 
                         totalLatestBytes += projectTotal;
                         storageSlices.Add((p, projectTotal));
+
+                        if (localBackupsByProject.TryGetValue(p.Id, out var localTotal))
+                        {
+                            totalLocalBytes += localTotal;
+                        }
                     }
 
                     var dayLabels = new string[_days.Length];
@@ -327,6 +346,7 @@ namespace VaultSync.UI.ViewModels
                         Activities = activities,
                         StorageSlices = storageSlices,
                         TotalLatestBytes = totalLatestBytes,
+                        TotalLocalBytes = totalLocalBytes,
                         BackupCount = backupCount,
                         BackupsThisWeekCount = (int)counts.Sum(),
                         DayLabels = dayLabels,
@@ -350,6 +370,7 @@ namespace VaultSync.UI.ViewModels
 
                 _activeProjectsCount = data.StorageSlices.Count;
                 StorageUsed = FormatBytes(data.TotalLatestBytes);
+                StorageUsedLocal = Lf("Dashboard.Kpi.StorageLocal", "Local: {0}", FormatBytes(data.TotalLocalBytes));
 
                 if (data.Projects.Count == 0)
                 {
@@ -486,6 +507,7 @@ namespace VaultSync.UI.ViewModels
             public List<(int? ProjectId, DateTime WhenUtc, string Subtitle)> Activities { get; init; } = new();
             public List<(Project project, long bytes)> StorageSlices { get; init; } = new();
             public long TotalLatestBytes { get; init; }
+            public long TotalLocalBytes { get; init; }
             public int BackupCount { get; init; }
             public int BackupsThisWeekCount { get; init; }
             public string[] DayLabels { get; init; } = Array.Empty<string>();
@@ -674,6 +696,7 @@ namespace VaultSync.UI.ViewModels
             SnapshotCount  = 0;
             SnapshotsHint  = L("Dashboard.Hint.NoSnapshots", "No snapshots yet");
             StorageUsed    = "0 B";
+            StorageUsedLocal = Lf("Dashboard.Kpi.StorageLocal", "Local: {0}", "0 B");
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
 
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());

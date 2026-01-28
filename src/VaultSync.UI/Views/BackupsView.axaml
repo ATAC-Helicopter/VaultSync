@@ -171,6 +171,14 @@
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
     </Style>
 
+    <Style Selector="Border.summary-stat">
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10,8" />
+    </Style>
+
     <!-- Active backup cards -->
     <Style Selector="Border.active-backup-card">
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
@@ -268,137 +276,212 @@
 
             <!-- Total snapshots -->
             <Border Classes="card"
-                    Padding="12">
-              <Grid RowDefinitions="Auto,Auto"
-                    VerticalAlignment="Center">
-                <TextBlock Grid.Row="0"
-                           Text="{infra:LocalizedString Key=Backups.Summary.Total}"
-                           FontSize="13"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
+                    Padding="16">
+              <StackPanel Spacing="10">
+                <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.Total}"
+                           FontSize="12"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                <StackPanel Grid.Row="1"
-                            Spacing="10"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center">
-                  <TextBlock Text="{Binding TotalSnapshots}"
-                             FontSize="26"
-                             FontWeight="SemiBold"
-                             HorizontalAlignment="Center"
-                             TextAlignment="Center" />
-                  <WrapPanel ItemSpacing="6"
-                             Margin="0,2,0,0"
-                             HorizontalAlignment="Center">
-                    <Border Classes="stat-pill">
-                      <TextBlock Text="{Binding SnapshotsSummaryLine}"
-                                 FontSize="13"
-                                 TextTrimming="CharacterEllipsis"
-                                 MaxWidth="240"
-                                 TextAlignment="Center" />
-                    </Border>
-                    <Border Classes="stat-pill">
-                      <TextBlock Text="{Binding TotalSnapshotsSecondaryLine}"
-                                 FontSize="13"
-                                 TextTrimming="CharacterEllipsis"
-                                 MaxWidth="240"
-                                 TextAlignment="Center" />
-                    </Border>
-                  </WrapPanel>
-                </StackPanel>
-              </Grid>
+                <TextBlock Text="{Binding TotalSnapshots}"
+                           FontSize="24"
+                           FontWeight="SemiBold" />
+                <Grid ColumnDefinitions="*,*"
+                      RowDefinitions="Auto,Auto,Auto"
+                      ColumnSpacing="12"
+                      RowSpacing="10">
+                  <Border Classes="summary-stat" Grid.Row="0" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.TodayLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding SnapshotsToday}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="0" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.ThisWeekLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding SnapshotsThisWeek}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="1" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.YesterdayLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding SnapshotsYesterday}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="1" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding AutoSnapshotsThisWeek}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="2" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterManual}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding ManualSnapshotsThisWeek}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="2" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Snapshot.Type.Imported}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding ImportedSnapshotsCount}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                </Grid>
+              </StackPanel>
             </Border>
 
             <!-- Last backup -->
             <Border Classes="card"
-                    Padding="14"
+                    Padding="16"
                     Grid.Column="1">
-              <Grid RowDefinitions="Auto,Auto"
-                    VerticalAlignment="Center">
-                <TextBlock Grid.Row="0"
-                           Text="{infra:LocalizedString Key=Backups.Summary.Last}"
-                           FontSize="13"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
+              <StackPanel Spacing="10">
+                <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.Last}"
+                           FontSize="12"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                <StackPanel Grid.Row="1"
-                            Spacing="10"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center">
-                  <TextBlock Text="{Binding LastBackupDisplay}"
-                             FontSize="22"
-                             FontWeight="SemiBold"
-                             HorizontalAlignment="Center"
-                             TextAlignment="Center" />
-                  <WrapPanel ItemSpacing="6"
-                             Margin="0,2,0,0"
-                             HorizontalAlignment="Center">
-                    <Border Classes="stat-pill">
-                      <TextBlock Text="{Binding LastBackupRelative}"
-                                 FontSize="13"
-                                 TextTrimming="CharacterEllipsis"
-                                 MaxWidth="240"
-                                 TextAlignment="Center" />
-                    </Border>
-                    <Border Classes="stat-pill">
-                      <TextBlock Text="{Binding LastBackupSecondaryLine}"
-                                 FontSize="13"
-                                 TextTrimming="CharacterEllipsis"
-                                 MaxWidth="240"
-                                 TextAlignment="Center" />
-                    </Border>
-                    <Border Classes="stat-pill">
-                      <TextBlock Text="{Binding SnapshotActivitySummary}"
-                                 FontSize="13"
-                                 TextTrimming="CharacterEllipsis"
-                                 MaxWidth="240"
-                                 TextAlignment="Center" />
-                    </Border>
-                  </WrapPanel>
-                </StackPanel>
-              </Grid>
+                <TextBlock Text="{Binding LastBackupDisplay}"
+                           FontSize="20"
+                           FontWeight="SemiBold" />
+                <Grid ColumnDefinitions="*,*"
+                      RowDefinitions="Auto,Auto"
+                      ColumnSpacing="12"
+                      RowSpacing="10">
+                  <Border Classes="summary-stat" Grid.Row="0" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.AgeLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding LastBackupRelative}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="0" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.SizeLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding LastBackupSizeValueFormatted}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="1" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.TotalLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding TotalSnapshots}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="1" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.ThisWeekLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding SnapshotsThisWeek}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                </Grid>
+              </StackPanel>
             </Border>
 
             <!-- Total backup size -->
             <Border Classes="card"
-                    Padding="14"
+                    Padding="16"
                     Grid.Column="2">
-              <Grid RowDefinitions="Auto,Auto"
-                    VerticalAlignment="Center">
-                <TextBlock Grid.Row="0"
-                           Text="{infra:LocalizedString Key=Backups.Summary.TotalStored}"
-                           FontSize="13"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
+              <StackPanel Spacing="10">
+                <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.TotalStored}"
+                           FontSize="12"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                <StackPanel Grid.Row="1"
-                            Spacing="10"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center">
-                  <TextBlock Text="{Binding TotalBackupSizeFormatted}"
-                             FontSize="22"
-                             FontWeight="SemiBold"
-                             HorizontalAlignment="Center"
-                             TextAlignment="Center" />
-                  <WrapPanel ItemSpacing="6"
-                             Margin="0,2,0,0"
-                             HorizontalAlignment="Center">
-                    <Border Classes="stat-pill">
-                      <TextBlock Text="{Binding SnapshotActivitySummary}"
-                                 FontSize="13"
-                                 TextTrimming="CharacterEllipsis"
-                                 MaxWidth="240"
-                                 TextAlignment="Center" />
-                    </Border>
-                    <Border Classes="stat-pill">
-                      <TextBlock Text="{Binding TotalStoredSecondaryLine}"
-                                 FontSize="13"
-                                 TextTrimming="CharacterEllipsis"
-                                 MaxWidth="240"
-                                 TextAlignment="Center" />
-                    </Border>
-                  </WrapPanel>
-                </StackPanel>
-              </Grid>
+                <TextBlock Text="{Binding TotalBackupSizeFormatted}"
+                           FontSize="22"
+                           FontWeight="SemiBold" />
+                <Grid ColumnDefinitions="*,*"
+                      RowDefinitions="Auto,Auto"
+                      ColumnSpacing="12"
+                      RowSpacing="10">
+                  <Border Classes="summary-stat" Grid.Row="0" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.LocalLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding TotalStoredLocalValueFormatted}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="0" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.ImportedLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding TotalStoredImportedValueFormatted}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="1" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.LocalBackupsLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding LocalSnapshotsCount}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="1" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.ImportedBackupsLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding ImportedSnapshotsCount}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                </Grid>
+              </StackPanel>
             </Border>
           </Grid>
 

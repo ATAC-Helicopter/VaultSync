@@ -66,6 +66,10 @@
                            TextTrimming="CharacterEllipsis"
                            TextWrapping="NoWrap"
                            MaxWidth="200"/>
+                <TextBlock Text="{Binding StorageUsedLocal}"
+                           Classes="metric-hint"
+                           TextWrapping="Wrap"
+                           TextTrimming="CharacterEllipsis"/>
                 <TextBlock Text="{Binding StorageHint}"
                            Classes="metric-hint"
                            TextWrapping="Wrap"

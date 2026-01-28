@@ -9,6 +9,12 @@
 - Backups summary sparklines and activity chart now scale up to use more space.
 - Dashboard backups-this-week chart now uses the same compact bar style as the Backups page.
 - Dashboard now avoids demo backup data when the database is empty.
+- Total stored cards now show both local and imported totals.
+- Backups summary cards now use a more compact, left-aligned layout with integrated mini charts.
+- Backups summary cards now use distinct metric stacks instead of repeated mini charts.
+- Backups summary cards now reduce repeated stats and emphasize primary values.
+- Backups summary cards now use full-width stat grids for better fullscreen use.
+- Backups summary cards now use presentable stat tiles for clearer scanning.
 - Backups per day chart moved to the summary row for better visibility.
 - Backups page weekly chart now focuses on the stacked bars only (average guide removed).
 - Backups weekly charts now use thicker bars and a dynamic average guide line to better fill the card space.
@@ -19,6 +25,7 @@
 - Backups page now renders cached results before destination scanning to avoid empty startup screens.
 - Backups summary charts now collapse in narrow windows to keep the text readable.
 - Backups activity legend no longer overlaps the section title in tight layouts.
+- Total stored values now include imported backups for consistent totals across machines.
 - Dashboard legend dots now align with their labels.
 
 ## [1.3.4] - 25.01.2026
