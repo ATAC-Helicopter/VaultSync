@@ -5,11 +5,14 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Interactivity;
 
 namespace VaultSync.UI.Views.Controls;
 
 public class RichTextBlock : TextBlock
 {
+    private Uri? _primaryLinkUri;
+
     public static readonly StyledProperty<string?> RichTextProperty =
         AvaloniaProperty.Register<RichTextBlock, string?>(nameof(RichText));
 
@@ -17,6 +20,11 @@ public class RichTextBlock : TextBlock
     {
         get => GetValue(RichTextProperty);
         set => SetValue(RichTextProperty, value);
+    }
+
+    public RichTextBlock()
+    {
+        AddHandler(PointerPressedEvent, OnPointerPressed, RoutingStrategies.Tunnel);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -31,6 +39,8 @@ public class RichTextBlock : TextBlock
     private void UpdateInlines(string? text)
     {
         Inlines?.Clear();
+        _primaryLinkUri = null;
+        Cursor = null;
         if (string.IsNullOrEmpty(text))
             return;
 
@@ -59,19 +69,14 @@ public class RichTextBlock : TextBlock
             {
                 if (TryCreateUri(linkUrl, out var uri))
                 {
-                    var linkBlock = new TextBlock
+                    _primaryLinkUri ??= uri;
+                    Cursor = new Cursor(StandardCursorType.Hand);
+                    var run = new Run(linkText)
                     {
-                        Text = linkText,
                         Foreground = GetAccentBrush() ?? Foreground,
-                        TextDecorations = CreateUnderline(),
-                        Cursor = new Cursor(StandardCursorType.Hand)
+                        TextDecorations = CreateUnderline()
                     };
-                    linkBlock.PointerPressed += (_, e) =>
-                    {
-                        if (e.GetCurrentPoint(linkBlock).Properties.IsLeftButtonPressed)
-                            OpenUrl(uri);
-                    };
-                    Inlines?.Add(new InlineUIContainer { Child = linkBlock });
+                    Inlines?.Add(run);
                 }
                 else
                 {
@@ -134,6 +139,18 @@ public class RichTextBlock : TextBlock
             }
             i = next;
         }
+    }
+
+    private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_primaryLinkUri is null)
+            return;
+
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        OpenUrl(_primaryLinkUri);
+        e.Handled = true;
     }
 
     private static bool IsAt(string value, int index, string token)
