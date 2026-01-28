@@ -530,15 +530,16 @@
             <Border Height="{Binding SnapshotActivityChartHeight}"
                     Background="{DynamicResource Surface1}"
                     CornerRadius="12"
-                    Padding="8">
-              <Grid RowDefinitions="*,Auto" RowSpacing="6">
+                    Padding="14,12,14,12">
+              <Grid RowDefinitions="*,Auto" RowSpacing="8">
                 <Grid Grid.Row="0">
                   <Border Height="1"
                           VerticalAlignment="Bottom"
                           Background="{DynamicResource DividerBrush}"
                           Opacity="0.2"/>
                   <ItemsControl ItemsSource="{Binding SnapshotActivity}"
-                                HorizontalAlignment="Stretch">
+                                HorizontalAlignment="Stretch"
+                                Margin="4,0,4,0">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
                         <UniformGrid Columns="7" />
@@ -546,7 +547,7 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border Width="34"
+                        <Border Width="36"
                                 HorizontalAlignment="Center"
                                 ToolTip.Tip="{Binding TooltipText}">
                           <StackPanel VerticalAlignment="Bottom" Spacing="4">

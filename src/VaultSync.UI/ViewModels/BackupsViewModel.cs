@@ -1806,9 +1806,9 @@ namespace VaultSync.UI.ViewModels
         private void RebuildSnapshotActivity(DateTime now)
         {
             SnapshotActivity.Clear();
-            const double chartHeight = 160;
-            const double barBase = 16;
-            const double barRange = chartHeight - 32;
+            const double chartHeight = 220;
+            const double barBase = 14;
+            const double barRange = chartHeight - 48;
             SnapshotActivityChartHeight = chartHeight;
 
             // Last 7 days, oldest -> newest

@@ -428,8 +428,91 @@ public sealed class MetadataSyncService
 
             localLatestByProject.TryGetValue(projectId, out var localLatest);
             var needsRestore = importedLatest > localLatest;
+            if (needsRestore)
+            {
+                var project = _repo.GetProjectById(projectId);
+                if (!string.IsNullOrWhiteSpace(project?.RootPath) &&
+                    Directory.Exists(project.RootPath) &&
+                    HasLocalChangesNewerThan(project.RootPath, importedLatest))
+                {
+                    needsRestore = false;
+                }
+            }
             _repo.UpdateProjectNeedsRestore(projectId, needsRestore);
         }
+    }
+
+    private static bool HasLocalChangesNewerThan(string rootPath, DateTime importedLatestUtc)
+    {
+        try
+        {
+            var stack = new Stack<string>();
+            stack.Push(rootPath);
+
+            while (stack.Count > 0)
+            {
+                var current = stack.Pop();
+
+                IEnumerable<string> dirs;
+                try
+                {
+                    dirs = Directory.EnumerateDirectories(current);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var dir in dirs)
+                {
+                    var name = Path.GetFileName(dir);
+                    if (string.Equals(name, ".vaultsync", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    try
+                    {
+                        var di = new DirectoryInfo(dir);
+                        if (di.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                            continue;
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    stack.Push(dir);
+                }
+
+                IEnumerable<string> files;
+                try
+                {
+                    files = Directory.EnumerateFiles(current);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        if (File.GetLastWriteTimeUtc(file) > importedLatestUtc)
+                            return true;
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
     }
 
     private MetadataSyncPreview PreviewImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
