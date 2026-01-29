@@ -34,6 +34,13 @@
   </a>
 </p>
 
+<p align="center">
+<!-- Launch Badge - Embed this badge and get a dofollow backlink! -->
+<a href="https://trylaunch.ai/launch/vaultsync" target="_blank" rel="dofollow" style="display: inline-block; padding: 8px 12px; background: #1A1A1A; border: 1px solid #333333; border-radius: 8px; text-decoration: none; transition: all 0.2s; ">
+  <img src="https://trylaunch.ai/badges/badge-white.svg" alt="Launch" height="36" style="display: block; height: 36px; width: auto;" />
+</a>
+</p>
+
 > [!WARNING]
 > VaultSync is currently **unsigned**.
 >
