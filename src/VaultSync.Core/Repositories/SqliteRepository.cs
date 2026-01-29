@@ -88,6 +88,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           external_id TEXT NOT NULL DEFAULT '',
           needs_restore INTEGER NOT NULL DEFAULT 0,
+          preferred_destination_id TEXT,
           name TEXT NOT NULL UNIQUE,
           root_path TEXT NOT NULL,
           preset TEXT NOT NULL,
@@ -141,6 +142,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
     EnsureColumnExists("snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
 
@@ -233,7 +235,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
                 new { name });
         }
 
@@ -241,7 +243,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
                 new { id });
         }
 
@@ -271,7 +273,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.Query<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
         }
 
         /// <summary>
@@ -300,14 +302,15 @@ DELETE FROM sqlite_sequence;";
                 : p.ExternalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO projects(external_id, needs_restore, name, root_path, preset, created_utc)
-                VALUES(@ExternalId, @NeedsRestore, @Name, @RootPath, @Preset, @CreatedUtc);
+                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, name, root_path, preset, created_utc)
+                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @Name, @RootPath, @Preset, @CreatedUtc);
                 SELECT last_insert_rowid();
                 """,
                 new
                 {
                     ExternalId = externalId,
                     NeedsRestore = p.NeedsRestore ? 1 : 0,
+                    PreferredDestinationId = string.IsNullOrWhiteSpace(p.PreferredDestinationId) ? null : p.PreferredDestinationId,
                     p.Name,
                     p.RootPath,
                     p.Preset,
@@ -323,6 +326,18 @@ DELETE FROM sqlite_sequence;";
                 new { needs = needsRestore ? 1 : 0, id = projectId });
         }
 
+        public void UpdateProjectPreferredDestination(int projectId, string? preferredDestinationId)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET preferred_destination_id = @preferred WHERE id = @id;",
+                new
+                {
+                    preferred = string.IsNullOrWhiteSpace(preferredDestinationId) ? null : preferredDestinationId,
+                    id = projectId
+                });
+        }
+
         public Project? GetProjectByExternalId(string externalId)
         {
             if (string.IsNullOrWhiteSpace(externalId))
@@ -331,7 +346,7 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
                 """
-                SELECT id, external_id as ExternalId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
+                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
                 FROM projects
                 WHERE external_id = @externalId
                 LIMIT 1;

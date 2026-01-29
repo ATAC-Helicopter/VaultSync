@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 
@@ -27,7 +28,9 @@ public class SnapshotService
         bool hashNow,
         int? maxSnapshotsToKeep,
         CancellationToken ct,
-        Action<double, string, string>? progressCallback)
+        Action<double, string, string>? progressCallback,
+        bool useScanCache = false,
+        bool aggressiveScanCache = false)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -61,30 +64,44 @@ public class SnapshotService
             // Build filter from preset + local overrides
             var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
 
-            // Enumerate all current files first (can be expensive on large trees)
-            var allPaths = Directory
-                .EnumerateFiles(project.RootPath, "*", SearchOption.AllDirectories)
-                .ToList();
+            // Build current file list (with optional scan cache)
+            var filterHash = ComputeFilterHash(filter);
+            var cache = useScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
+            var forceFullScan = cache is null || !useScanCache;
+            var fullScanInterval = aggressiveScanCache ? 10 : 5;
+            var fullScanMaxAge = aggressiveScanCache ? TimeSpan.FromDays(2) : TimeSpan.FromDays(7);
+            if (cache is not null && cache.RunsSinceFullScan >= fullScanInterval)
+            {
+                forceFullScan = true;
+            }
+            if (cache is not null &&
+                cache.LastFullScanUtc != DateTime.MinValue &&
+                DateTime.UtcNow - cache.LastFullScanUtc > fullScanMaxAge)
+            {
+                forceFullScan = true;
+            }
 
-            Console.WriteLine($"[SnapshotService] Enumerated {allPaths.Count} files under root before filtering.");
+            var dirMtimeCache = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            var currentEntries = BuildCurrentEntries(
+                project,
+                filter,
+                prevFiles.Values,
+                cache,
+                forceFullScan,
+                dirMtimeCache,
+                out var skippedDirs,
+                ct);
 
-            ct.ThrowIfCancellationRequested();
-
-            // Apply filter
-            var currentPaths = allPaths
-                .Where(p => !filter.ShouldExclude(project.RootPath, p))
-                .ToList();
-
-            Console.WriteLine($"[SnapshotService] {currentPaths.Count} files remain after filtering.");
+            Console.WriteLine($"[SnapshotService] Scan cache used={useScanCache && cache is not null}, skippedDirs={skippedDirs}, files={currentEntries.Count}.");
 
             ct.ThrowIfCancellationRequested();
 
             // Map rel path -> file system info
-            var currMeta = currentPaths.Select(p => new
+            var currMeta = currentEntries.Select(entry => new
             {
-                Full = p,
-                Rel  = Path.GetRelativePath(project.RootPath, p).Replace('\\', '/'),
-                Info = new FileInfo(p)
+                Full = Path.Combine(project.RootPath, entry.RelPath.Replace('/', Path.DirectorySeparatorChar)),
+                Rel  = entry.RelPath,
+                Entry = entry
             }).ToList();
 
             // Index by relative path for faster lookups
@@ -109,8 +126,8 @@ public class SnapshotService
                 }
 
                 // consider unchanged if size and mtime are identical (UTC)
-                var sameSize = old.Size == f.Info.Length;
-                var sameTime = Math.Abs((old.MTimeUtc - f.Info.LastWriteTimeUtc).TotalSeconds) < 1.0; // tolerate FS granularity
+                var sameSize = old.Size == f.Entry.Size;
+                var sameTime = Math.Abs((old.MTimeUtc - f.Entry.MTimeUtc).TotalSeconds) < 1.0; // tolerate FS granularity
 
                 if (!sameSize || !sameTime)
                     modified.Add(rel);
@@ -121,6 +138,8 @@ public class SnapshotService
             var deleted = prevFiles.Keys
                 .Except(currMetaByRel.Keys, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+
+            UpdateScanCache(project, filterHash, cache, forceFullScan, dirMtimeCache);
 
             if (!hashNow)
             {
@@ -139,8 +158,8 @@ public class SnapshotService
                         hash = prevEntry.HashSha256;
                     }
 
-                    snapshotEntries.Add(new FileEntry(meta.Rel, meta.Info.Length, meta.Info.LastWriteTimeUtc, hash));
-                    snapshotTotalBytes += meta.Info.Length;
+                    snapshotEntries.Add(new FileEntry(meta.Rel, meta.Entry.Size, meta.Entry.MTimeUtc, hash));
+                    snapshotTotalBytes += meta.Entry.Size;
                 }
 
                 var snapshotId = _repo.CreateSnapshot(project.Id, snapshotEntries.Count, snapshotTotalBytes);
@@ -198,7 +217,7 @@ public class SnapshotService
                     if (!prevFiles.TryGetValue(rel, out var prevEntry))
                         continue;
 
-                    AddEntry(rel, meta.Info.Length, meta.Info.LastWriteTimeUtc, prevEntry.HashSha256);
+                    AddEntry(rel, meta.Entry.Size, meta.Entry.MTimeUtc, prevEntry.HashSha256);
                 }
             }
 
@@ -210,7 +229,7 @@ public class SnapshotService
             Console.WriteLine($"[SnapshotService] toHash = {toHash.Count}, fullHash={fullHash}, added={added.Count}, modified={modified.Count}, unchanged={unchanged.Count}, deleted={deleted.Count}");
 
             var totalToHash = toHash.Count;
-            var totalHashBytes = toHash.Sum(m => m.Info.Length);
+            var totalHashBytes = toHash.Sum(m => m.Entry.Size);
             var hashedCount = 0;
             long hashedBytes = 0;
             var hashStart = DateTime.UtcNow;
@@ -275,9 +294,9 @@ public class SnapshotService
                 async (m, token) =>
                 {
                     var h = await _hash.Sha256Async(m.Full, token);
-                    AddEntry(m.Rel, m.Info.Length, m.Info.LastWriteTimeUtc, h);
+                    AddEntry(m.Rel, m.Entry.Size, m.Entry.MTimeUtc, h);
 
-                    Interlocked.Add(ref hashedBytes, m.Info.Length);
+                    Interlocked.Add(ref hashedBytes, m.Entry.Size);
                     var currentCount = Interlocked.Increment(ref hashedCount);
                     ReportHashProgress(m.Rel, currentCount >= totalToHash);
                 });
@@ -319,6 +338,171 @@ public class SnapshotService
 
             return snapId;
         }, ct);
+    }
+
+    private static string ComputeFilterHash(FilterService filter)
+    {
+        var joined = string.Join('\n', filter.RawPatterns ?? Array.Empty<string>());
+        var bytes = System.Text.Encoding.UTF8.GetBytes(joined);
+        var hash = SHA256.HashData(bytes);
+        return Convert.ToHexString(hash);
+    }
+
+    private static List<FileEntry> BuildCurrentEntries(
+        Project project,
+        FilterService filter,
+        IEnumerable<FileEntry> prevEntries,
+        ScanCacheState? cache,
+        bool forceFullScan,
+        Dictionary<string, long> dirMtimeCache,
+        out int skippedDirs,
+        CancellationToken ct)
+    {
+        var results = new List<FileEntry>();
+        var prevByDir = BuildPrevByDir(prevEntries);
+        var root = project.RootPath;
+        var skippedDirsLocal = 0;
+
+        void ScanDir(string fullDir, string relDir)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            DirectoryInfo? info = null;
+            try
+            {
+                info = new DirectoryInfo(fullDir);
+                if (!info.Exists)
+                    return;
+            }
+            catch
+            {
+                return;
+            }
+
+            var dirKey = relDir;
+            var mtimeTicks = info.LastWriteTimeUtc.Ticks;
+            dirMtimeCache[dirKey] = mtimeTicks;
+
+            if (!forceFullScan &&
+                cache is not null &&
+                cache.DirectoryMtimeUtcTicks.TryGetValue(dirKey, out var cachedTicks) &&
+                cachedTicks == mtimeTicks &&
+                prevByDir.TryGetValue(dirKey, out var cachedEntries))
+            {
+                results.AddRange(cachedEntries);
+                skippedDirsLocal++;
+                return;
+            }
+
+            IEnumerable<string> dirs;
+            try
+            {
+                dirs = Directory.EnumerateDirectories(fullDir);
+            }
+            catch
+            {
+                return;
+            }
+
+            foreach (var sub in dirs)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (filter.ShouldExclude(root, sub))
+                    continue;
+
+                var rel = Path.GetRelativePath(root, sub).Replace('\\', '/');
+                ScanDir(sub, rel);
+            }
+
+            IEnumerable<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(fullDir);
+            }
+            catch
+            {
+                return;
+            }
+
+            foreach (var file in files)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (filter.ShouldExclude(root, file))
+                    continue;
+
+                try
+                {
+                    var fi = new FileInfo(file);
+                    var rel = Path.GetRelativePath(root, file).Replace('\\', '/');
+                    results.Add(new FileEntry(rel, fi.Length, fi.LastWriteTimeUtc, string.Empty));
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        ScanDir(root, string.Empty);
+        skippedDirs = skippedDirsLocal;
+        return results;
+    }
+
+    private static Dictionary<string, List<FileEntry>> BuildPrevByDir(IEnumerable<FileEntry> entries)
+    {
+        var map = new Dictionary<string, List<FileEntry>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in entries)
+        {
+            var rel = entry.RelPath.Replace('\\', '/');
+            var dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? string.Empty;
+            var current = dir;
+            while (true)
+            {
+                if (!map.TryGetValue(current, out var list))
+                {
+                    list = new List<FileEntry>();
+                    map[current] = list;
+                }
+                list.Add(entry);
+
+                if (string.IsNullOrEmpty(current))
+                    break;
+
+                var idx = current.LastIndexOf('/');
+                current = idx >= 0 ? current[..idx] : string.Empty;
+            }
+        }
+        return map;
+    }
+
+    private static void UpdateScanCache(
+        Project project,
+        string filterHash,
+        ScanCacheState? cache,
+        bool forceFullScan,
+        Dictionary<string, long> dirMtimeCache)
+    {
+        if (cache is null)
+        {
+            cache = new ScanCacheState
+            {
+                RootPath = project.RootPath,
+                FilterHash = filterHash
+            };
+        }
+
+        cache.DirectoryMtimeUtcTicks = dirMtimeCache;
+
+        if (forceFullScan)
+        {
+            cache.RunsSinceFullScan = 0;
+            cache.LastFullScanUtc = DateTime.UtcNow;
+        }
+        else
+        {
+            cache.RunsSinceFullScan = Math.Min(cache.RunsSinceFullScan + 1, 1000);
+        }
+
+        ScanCacheStore.Save(project, cache);
     }
 
     // simple store for most recent outcome in-process

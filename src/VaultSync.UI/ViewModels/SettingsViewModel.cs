@@ -49,6 +49,8 @@ namespace VaultSync.UI
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
         private bool _useFullSnapshotHash = true;
+        private bool _enableScanCache = true;
+        private bool _aggressiveScanCache = false;
         private bool _enableArchiveUploadAutoTune = true;
         private bool _enableParallelArchiveUpload = true;
         private bool _enableMetadataSync = true;
@@ -227,6 +229,8 @@ namespace VaultSync.UI
             _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
             _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
             _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
+            _enableScanCache           = cfg.Backups.EnableScanCache;
+            _aggressiveScanCache       = cfg.Backups.AggressiveScanCache;
             _enableArchiveUploadAutoTune = cfg.Backups.EnableArchiveUploadAutoTune;
             _enableParallelArchiveUpload = cfg.Backups.EnableParallelArchiveUpload;
             _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
@@ -429,6 +433,8 @@ namespace VaultSync.UI
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
+            cfg.Backups.EnableScanCache             = _enableScanCache;
+            cfg.Backups.AggressiveScanCache         = _aggressiveScanCache;
             cfg.Backups.EnableArchiveUploadAutoTune = _enableArchiveUploadAutoTune;
             cfg.Backups.EnableParallelArchiveUpload = _enableParallelArchiveUpload;
             cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
@@ -844,6 +850,18 @@ namespace VaultSync.UI
         {
             get => _useFullSnapshotHash;
             set => SetField(ref _useFullSnapshotHash, value);
+        }
+
+        public bool EnableScanCache
+        {
+            get => _enableScanCache;
+            set => SetField(ref _enableScanCache, value);
+        }
+
+        public bool AggressiveScanCache
+        {
+            get => _aggressiveScanCache;
+            set => SetField(ref _aggressiveScanCache, value);
         }
 
         public bool EnableArchiveUploadAutoTune

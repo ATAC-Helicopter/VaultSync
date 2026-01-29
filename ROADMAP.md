@@ -41,23 +41,79 @@
     - Tests: missing metadata, stale refresh, merge conflicts, partial backup sets.
 
 ## Near term
-- [ ] [1.4.0] Per-project destination selection when multiple destinations are configured.
-  - Integration plan:
-    - Data: `PreferredDestinationId` (nullable) to Project; migration default null.
-    - UI: project settings -> destination dropdown (All/Auto/Specific); show in project card.
-    - Backup flow: resolve destination list per project; if set, route only to that destination (fallback to active if missing).
-    - Status: show destination label in active backup card + console lines.
-    - Validation: warn if selected destination is inactive/unreachable; allow override.
-- [ ] [1.4.0] Faster snapshot scanning on large projects (skip unchanged folders, cache heuristics).
-  - Integration plan:
-    - Cache: store per-project scan cache (path, mtime, size, file count).
-    - Heuristics: skip folders with unchanged mtime/size; fall back on deep scan when uncertain.
-    - Safety: periodic full scan (e.g., every N runs) to avoid drift.
-    - Telemetry: record scan time and skipped counts; surface in logs.
-    - Settings: optional "Aggressive scan cache" toggle for power users.
-    - Tests: cache hit/miss, rename/move detection, safety full scan cadence.
-- [ ] [1.4.0] Dry-run backups (estimate size/time before starting).
-  - Plan: preflight scan to estimate bytes/files; show ETA + destination fit; allow cancel.
+- [x] [1.4.0] Per-project destination selection (multi-destination setups)
+  - Goals:
+    - Let each project target All, Auto, or a Specific destination.
+    - Make selection visible in project cards and active backup status.
+    - Keep safe fallback when a selected destination is unavailable.
+  - Implementation:
+    - Data: add `PreferredDestinationId` (nullable) on Project; migrate to null.
+    - DB: add column to `projects` table; migration + query/update helpers.
+    - Config/Model: expose destination preference on `Project` and map in repo.
+    - Resolver: map project -> destination list; honor Specific if reachable, otherwise fall back to active.
+    - UI: project settings dropdown (All/Auto/Specific + destinations).
+    - Status: show destination label in backup card + log lines.
+  - Validation:
+    - Warn when selected destination is inactive/unreachable.
+    - Allow one-time override to use active destination.
+  - Tests:
+    - Migration defaults to null.
+    - Resolver honors All/Auto/Specific.
+    - Backup routes only to selected destination.
+    - Restore/delete/metadata flows still resolve destination correctly.
+
+  - Current status (as of 2026-01-29):
+    - Done: Project model + DB migration + repo mapping for `PreferredDestinationId`.
+    - Done: project UI dropdown + list label for destination selection.
+    - Done: backups page per-project destination selector + history label.
+    - Done: per-project destination resolution in manual/auto/backup-all flows with warnings + telemetry.
+    - Done: validate restore/delete/metadata flows with mixed destination modes.
+
+- [x] [1.4.0] Faster snapshot scanning on large projects
+  - Goals:
+    - Skip unchanged folders safely.
+    - Reduce scan times without missing changes.
+  - Implementation:
+    - Cache: per-project scan cache (path, mtime, size, file count).
+    - Heuristics: skip when unchanged; deep-scan when uncertain.
+    - Safety: periodic full scan (every N runs) to prevent drift.
+    - Telemetry: log scan duration, skipped counts, and cache hits.
+    - Settings: optional "Aggressive scan cache" toggle.
+    - Hook: integrate cache-aware scanner into SnapshotService (currently full tree scan).
+    - Storage: decide DB vs sidecar JSON cache + versioning/invalidation rules.
+  - Tests:
+    - Cache hit/miss coverage.
+    - Rename/move detection.
+    - Full-scan cadence enforced.
+    - Filter changes invalidate cache correctly.
+
+  - Current status (as of 2026-01-29):
+    - Done: scan cache store + cache-aware SnapshotService path.
+    - Done: config + settings flags (EnableScanCache/AggressiveScanCache) wired into backup/snapshot flows.
+    - Done: settings UI toggles + localization for scan cache.
+    - Done: cache invalidation + full-scan cadence enforced (run count + age).
+
+- [x] [1.4.0] Dry-run backups (size/time estimates)
+  - Goals:
+    - Preview size/time before starting.
+    - Validate destination capacity early.
+  - Implementation:
+    - Preflight scan to estimate bytes/files.
+    - UI: show ETA + capacity warning; allow cancel.
+    - Cache preflight results briefly to avoid repeat scans.
+    - Wire: add preflight API in BackupService (no backup writes).
+    - Calibrate: use recent throughput to estimate ETA; fall back if missing.
+    - Strings: add localization keys for dry-run UI/labels/errors.
+  - Tests:
+    - Dry-run does not create backups.
+    - Estimates are recorded and shown.
+    - Capacity warning logic.
+
+  - Current status (as of 2026-01-29):
+    - Done: preflight API for file/size estimates + short-lived caching.
+    - Done: backup throughput sampling stored for ETA calibration.
+    - Done: UI shows estimates + capacity warnings before backups.
+    - Existing related parts: CLI has rsync dry-run flag (not the UI estimate flow).
 - [ ] [1.5.0] Backup encryption and password-protected backups.
   - Integration plan:
     - Data: add encryption settings (per-project + global defaults), store in config; no plaintext keys.

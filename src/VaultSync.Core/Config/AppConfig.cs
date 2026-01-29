@@ -86,6 +86,14 @@ namespace VaultSync.Core.Config
         /// </summary>
         public bool   UseFullSnapshotHash   { get; set; } = true;
         /// <summary>
+        /// When true, snapshot scans can reuse cached directory metadata to skip unchanged folders.
+        /// </summary>
+        public bool   EnableScanCache       { get; set; } = true;
+        /// <summary>
+        /// When true, scan cache is more aggressive about skipping unchanged folders.
+        /// </summary>
+        public bool   AggressiveScanCache   { get; set; } = false;
+        /// <summary>
         /// Auto-tuned archive upload buffer size for the legacy single-destination flow.
         /// When null, VaultSync will probe before the first archive upload and cache the result.
         /// </summary>
@@ -98,6 +106,18 @@ namespace VaultSync.Core.Config
         /// When true, compressed archive uploads may use parallel writers on supported targets.
         /// </summary>
         public bool   EnableParallelArchiveUpload { get; set; } = true;
+        /// <summary>
+        /// Rolling estimate of recent backup throughput (MB/s) for ETA calculations.
+        /// </summary>
+        public double LastBackupThroughputMbSec { get; set; } = 0;
+        /// <summary>
+        /// Rolling estimate of recent archive backup throughput (MB/s).
+        /// </summary>
+        public double LastBackupThroughputArchiveMbSec { get; set; } = 0;
+        /// <summary>
+        /// Rolling estimate of recent file copy throughput (MB/s).
+        /// </summary>
+        public double LastBackupThroughputCopyMbSec { get; set; } = 0;
         public bool   VerifyAfterCreate     { get; set; } = true;
         public bool   PauseOnBattery        { get; set; } = true;
 

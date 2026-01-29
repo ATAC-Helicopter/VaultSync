@@ -533,6 +533,34 @@
                                 IsChecked="{Binding UseFullSnapshotHash, Mode=TwoWay}" />
                 </Grid>
 
+                <!-- Scan cache -->
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ScanCache}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ScanCacheDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding EnableScanCache, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AggressiveScanCache}" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AggressiveScanCacheDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding AggressiveScanCache, Mode=TwoWay}"
+                                IsEnabled="{Binding EnableScanCache}" />
+                </Grid>
+
                 <!-- Pause on battery -->
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">

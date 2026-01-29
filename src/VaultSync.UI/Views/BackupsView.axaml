@@ -34,6 +34,47 @@
       </Setter>
     </Style>
 
+    <!-- Preset dropdown: pill style (match Projects view) -->
+    <Style Selector="ComboBox.preset-combo">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="MaxDropDownHeight" Value="240" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup Border">
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBox">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="Padding" Value="6" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem">
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="Margin" Value="2" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CardRaisedBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem:selected">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}" />
+    </Style>
+
 
     <Style Selector="Border.backup-tag">
       <Setter Property="CornerRadius" Value="999" />
@@ -762,14 +803,24 @@
                                        TextWrapping="NoWrap"
                                        HorizontalAlignment="Left"
                                        TextAlignment="Left" />
-                            <TextBlock Text="{Binding EtaDisplay}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       IsVisible="{Binding HasEtaDisplay}"
-                                       TextTrimming="CharacterEllipsis"
-                                       TextWrapping="NoWrap"
-                                       HorizontalAlignment="Left"
-                                       TextAlignment="Left" />
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6"
+                                        IsVisible="{Binding HasEtaDisplay}">
+                              <Border Classes="stat-pill"
+                                      IsVisible="{Binding IsEstimate}">
+                                <TextBlock Text="{Binding EstimateLabel}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                              </Border>
+                              <TextBlock Text="{Binding EtaDisplay}"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                         TextTrimming="CharacterEllipsis"
+                                         TextWrapping="NoWrap"
+                                         HorizontalAlignment="Left"
+                                         TextAlignment="Left" />
+                            </StackPanel>
                           </StackPanel>
                         </Grid>
                       </Border>
@@ -835,7 +886,7 @@
                             BorderBrush="{DynamicResource BorderSoft}"
                             BorderThickness="1">
                       <Grid ColumnDefinitions="4,Auto,*,Auto"
-                            RowDefinitions="Auto,Auto,Auto"
+                            RowDefinitions="Auto,Auto,Auto,Auto"
                             ColumnSpacing="10"
                             RowSpacing="2">
 
@@ -896,8 +947,28 @@
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                       </StackPanel>
 
-                      <!-- Stats pills -->
+                      <!-- Destination -->
                       <StackPanel Grid.Row="2"
+                                  Grid.Column="2"
+                                  Spacing="4">
+                        <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <ComboBox
+                            Classes="preset-combo"
+                            ItemsSource="{Binding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
+                            HorizontalAlignment="Stretch">
+                          <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                              <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                          </ComboBox.ItemTemplate>
+                        </ComboBox>
+                      </StackPanel>
+
+                      <!-- Stats pills -->
+                      <StackPanel Grid.Row="3"
                                   Grid.Column="2"
                                   Orientation="Horizontal"
                                   Spacing="6">
@@ -938,7 +1009,7 @@
                       </StackPanel>
 
                       <!-- Primary action -->
-                      <Button Grid.Row="2"
+                      <Button Grid.Row="3"
                               Grid.Column="3"
                               Content="{infra:LocalizedString Key=Backups.Section.PerProjectAction}"
                               Classes="action-primary"

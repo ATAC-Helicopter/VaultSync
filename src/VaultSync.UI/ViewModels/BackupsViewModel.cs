@@ -134,9 +134,12 @@ namespace VaultSync.UI.ViewModels
         // Per-project backup status
         public ObservableCollection<ProjectBackupItem> ProjectBackups { get; } =
             new ObservableCollection<ProjectBackupItem>();
+        public ObservableCollection<DestinationOption> DestinationOptions { get; } =
+            new ObservableCollection<DestinationOption>();
 
         public event Action<int, bool>? AutoBackupPreferenceChanged;
         public event Action<DestinationStatusItem, bool>? DestinationActiveChanged;
+        public event Action<int, string>? PreferredDestinationChanged;
 
         // Appearance
         public bool ShowProjectAvatars { get; private set; } = true;
@@ -1917,6 +1920,7 @@ namespace VaultSync.UI.ViewModels
             var config = AppConfigStore.Load();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
+            RefreshDestinationOptions(config);
 
             var projectList = projects.ToList();
             var dedupBackups = new Dictionary<int, Backup>();
@@ -1976,11 +1980,14 @@ namespace VaultSync.UI.ViewModels
                     SnapshotCount     = stats.Count,
                     TotalSizeBytes    = stats.TotalBytes,
                     AutoBackupEnabled = autoBackupDisabledProjects is null || !autoBackupDisabledProjects.Contains(project.Id),
-                    AutoBackupChanged = OnAutoBackupChanged
+                    AutoBackupChanged = OnAutoBackupChanged,
+                    PreferredDestinationId = project.PreferredDestinationId ?? string.Empty,
+                    PreferredDestinationChanged = OnPreferredDestinationChanged
                 };
                 projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath);
                 var uniqueColor = EnsureUniqueColor(projectItem.AvatarColor, $"{project.Name}|{project.RootPath}", usedColors);
                 projectItem.ApplyAvatarColor(uniqueColor);
+                UpdateProjectDestinationDisplay(projectItem, config);
                 ProjectBackups.Add(projectItem);
             }
 
@@ -2092,6 +2099,79 @@ namespace VaultSync.UI.ViewModels
                 var parsed = int.TryParse(item.Id, out var projectId) ? projectId : -1;
                 item.AutoBackupEnabled = parsed > 0 && !disabled.Contains(parsed);
             }
+        }
+
+        private void RefreshDestinationOptions(AppConfig config)
+        {
+            DestinationOptions.Clear();
+            DestinationOptions.Add(new DestinationOption(
+                string.Empty,
+                L("Projects.Destination.Auto", "Auto (active destinations)")));
+            DestinationOptions.Add(new DestinationOption(
+                Project.DestinationAllId,
+                L("Projects.Destination.All", "All destinations")));
+
+            if (config.Backups.UseAdvancedDestinations && config.Backups.Destinations is { Count: > 0 })
+            {
+                foreach (var dest in config.Backups.Destinations)
+                {
+                    var label = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
+                    if (!dest.Active)
+                    {
+                        var suffix = L("Projects.Destination.InactiveSuffix", " (inactive)");
+                        label = $"{label}{suffix}";
+                    }
+
+                    var id = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
+                    DestinationOptions.Add(new DestinationOption(id, label));
+                }
+            }
+        }
+
+        private void UpdateProjectDestinationDisplay(ProjectBackupItem item, AppConfig config)
+        {
+            var id = item.PreferredDestinationId ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                item.PreferredDestinationDisplay = L("Projects.Destination.Auto", "Auto (active destinations)");
+                item.SetPreferredDestinationOption(DestinationOptions.FirstOrDefault(o => string.IsNullOrWhiteSpace(o.Id)));
+                return;
+            }
+
+            if (string.Equals(id, Project.DestinationAllId, StringComparison.OrdinalIgnoreCase))
+            {
+                item.PreferredDestinationDisplay = L("Projects.Destination.All", "All destinations");
+                item.SetPreferredDestinationOption(DestinationOptions.FirstOrDefault(o =>
+                    string.Equals(o.Id, Project.DestinationAllId, StringComparison.OrdinalIgnoreCase)));
+                return;
+            }
+
+            var match = config.Backups.Destinations.FirstOrDefault(d =>
+                string.Equals(d.Alias ?? string.Empty, id, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(d.Path ?? string.Empty, id, StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+            {
+                item.PreferredDestinationDisplay = string.IsNullOrWhiteSpace(match.Alias) ? match.Path : match.Alias;
+            }
+            else
+            {
+                item.PreferredDestinationDisplay = id;
+            }
+
+            var optionMatch = DestinationOptions.FirstOrDefault(o =>
+                string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase));
+            item.SetPreferredDestinationOption(optionMatch);
+        }
+
+        private void OnPreferredDestinationChanged(ProjectBackupItem item)
+        {
+            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+                return;
+
+            var config = AppConfigStore.Load();
+            UpdateProjectDestinationDisplay(item, config);
+            PreferredDestinationChanged?.Invoke(projectId, item.PreferredDestinationId ?? string.Empty);
         }
     }
 
@@ -2215,8 +2295,22 @@ namespace VaultSync.UI.ViewModels
             new ObservableCollection<BackupSnapshotItem>();
     }
 
-    public class ProjectBackupItem
+    public class ProjectBackupItem : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private bool SetField<T>(ref T field, T value, string propertyName)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value))
+                return false;
+            field = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            return true;
+        }
+
+        private void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
 
@@ -2229,15 +2323,52 @@ namespace VaultSync.UI.ViewModels
             get => _autoBackupEnabled;
             set
             {
-                if (_autoBackupEnabled == value)
+                if (!SetField(ref _autoBackupEnabled, value, nameof(AutoBackupEnabled)))
                     return;
-                _autoBackupEnabled = value;
                 AutoBackupChanged?.Invoke(this);
             }
         }
 
         private bool _autoBackupEnabled = true;
         public Action<ProjectBackupItem>? AutoBackupChanged { get; set; }
+        public Action<ProjectBackupItem>? PreferredDestinationChanged { get; set; }
+
+        private string _preferredDestinationId = string.Empty;
+        public string PreferredDestinationId
+        {
+            get => _preferredDestinationId;
+            set => SetField(ref _preferredDestinationId, value ?? string.Empty, nameof(PreferredDestinationId));
+        }
+
+        private DestinationOption? _preferredDestinationOption;
+        public DestinationOption? PreferredDestinationOption
+        {
+            get => _preferredDestinationOption;
+            set
+            {
+                if (!SetField(ref _preferredDestinationOption, value, nameof(PreferredDestinationOption)))
+                    return;
+
+                PreferredDestinationId = value?.Id ?? string.Empty;
+                PreferredDestinationChanged?.Invoke(this);
+            }
+        }
+
+        private string _preferredDestinationDisplay = string.Empty;
+        public string PreferredDestinationDisplay
+        {
+            get => _preferredDestinationDisplay;
+            set => SetField(ref _preferredDestinationDisplay, value ?? string.Empty, nameof(PreferredDestinationDisplay));
+        }
+
+        public void SetPreferredDestinationOption(DestinationOption? option)
+        {
+            if (Equals(_preferredDestinationOption, option))
+                return;
+
+            _preferredDestinationOption = option;
+            OnPropertyChanged(nameof(PreferredDestinationOption));
+        }
 
         // Avatar
         public string AvatarInitials { get; private set; } = string.Empty;
@@ -2466,6 +2597,7 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(Progress));
                 OnPropertyChanged(nameof(IsCompleted));
                 OnPropertyChanged(nameof(CanCancel));
+                OnPropertyChanged(nameof(IsEstimate));
                 NotifyProgressPresentationChanged();
             }
         }
@@ -2491,6 +2623,7 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(CurrentFileDisplay));
                 OnPropertyChanged(nameof(HasCurrentFileDisplay));
                 OnPropertyChanged(nameof(StageLabel));
+                OnPropertyChanged(nameof(IsEstimate));
                 UpdateDisplayProgress();
                 NotifyProgressPresentationChanged();
             }
@@ -2513,6 +2646,7 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(HasEtaText));
                 OnPropertyChanged(nameof(EtaDisplay));
                 OnPropertyChanged(nameof(HasEtaDisplay));
+                OnPropertyChanged(nameof(IsEstimate));
                 var detail = ExtractProgressDetail(EtaDisplay);
                 if (!string.IsNullOrWhiteSpace(detail))
                 {
@@ -2531,6 +2665,13 @@ namespace VaultSync.UI.ViewModels
         public string EtaDisplay => NormalizeEtaText(_etaText);
 
         public bool HasEtaDisplay => !string.IsNullOrWhiteSpace(EtaDisplay);
+
+        public bool IsEstimate =>
+            !HasRawProgress &&
+            ContainsToken(_currentFile, L("Backups.Progress.Estimating", "Estimating...")) &&
+            HasEtaText;
+
+        public string EstimateLabel => L("Backups.Preflight.Title", "Backup estimate");
 
         public string CurrentFileDisplay
         {
