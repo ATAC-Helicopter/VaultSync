@@ -58,19 +58,19 @@
   <ScrollViewer x:Name="SettingsScrollViewer"
                 VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
-                Padding="12">
+                Padding="{DynamicResource PagePadding}">
 
     <!-- Allow the form to stretch across the viewport while capping width for readability. -->
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
           RowDefinitions="Auto,Auto"
-          RowSpacing="12">
+          RowSpacing="{DynamicResource PageRowSpacing}">
 
         <!-- Header -->
         <Border Grid.Row="0"
                 Classes="card"
                 CornerRadius="18"
-                Padding="18"
+                Padding="{DynamicResource CardPaddingLarge}"
                 Margin="0,0,0,4">
           <StackPanel Spacing="4">
             <TextBlock Classes="section-title"
@@ -83,11 +83,11 @@
         <!-- Content -->
         <Grid Grid.Row="1"
               ColumnDefinitions="*,*"
-              ColumnSpacing="16">
+              ColumnSpacing="{DynamicResource PageRowSpacing}">
 
           <!-- LEFT COLUMN -->
           <StackPanel Grid.Column="0"
-                      Spacing="12">
+                      Spacing="{DynamicResource PageRowSpacing}">
 
             <!-- General -->
             <Border Classes="card"

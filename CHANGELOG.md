@@ -8,6 +8,7 @@
 - Per-project destination selection (including an "All destinations" option).
 - Scan cache support to speed up snapshot file scanning (with aggressive mode).
 - Preferred destination tracking on projects.
+- New localization keys for destination selection, update status, and drive health messaging.
 ### Changed
 - Preflight runs asynchronously so backups start immediately.
 - Preflight now reuses latest snapshot stats to avoid extra scans.
@@ -19,11 +20,15 @@
 - Backup, snapshot, and verification flows now resolve destinations per project instead of relying on the global backup root.
 - Snapshot creation can reuse cached scan results when enabled.
 - Projects list now shows the resolved destination label for each project.
+- Drive health status messages now respect the active localization.
+- Compact mode now drives page padding, card density, and list spacing across Projects and Backups.
+- Compact mode now tightens card padding and typography across Dashboard, Settings, Notification, Log Console, and updater views.
 ### Fixed
 - Restore/delete/open now resolve backups across inactive destinations when possible.
 - Destination selector no longer renders as 'View not found'.
 - Backup-all telemetry now uses per-project destination data.
 - Removed stale backup-all variables that caused compile errors.
+- Missing localization keys for destination selector, update status, and drive health strings across all languages.
 
 ## [1.3.5] - 28.01.2026
 ### Added

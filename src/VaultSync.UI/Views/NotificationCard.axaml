@@ -12,7 +12,7 @@
     <!-- Card look -->
     <Style Selector="Border.notification-card">
       <Setter Property="CornerRadius" Value="16" />
-      <Setter Property="Padding" Value="16" />
+      <Setter Property="Padding" Value="{DynamicResource CardPaddingMedium}" />
       <!-- Use app card background to stay on-theme -->
       <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
@@ -22,7 +22,7 @@
     <!-- Severity pill -->
     <Style Selector="Border.notification-pill">
       <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="Padding" Value="{DynamicResource StatPillPadding}" />
       <Setter Property="Margin" Value="0,0,8,0" />
       <!-- Subtle, on-theme pill instead of custom dark/blue -->
       <Setter Property="Background" Value="{DynamicResource CardBorderBrush}" />
@@ -40,7 +40,7 @@
 
     <!-- Optional action button -->
     <Style Selector="Button.notification-action">
-      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="Padding" Value="{DynamicResource ButtonTightPadding}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Background" Value="{DynamicResource Surface1}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />

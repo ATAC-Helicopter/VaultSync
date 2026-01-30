@@ -24,7 +24,7 @@
     <!-- Preset dropdown: pill style -->
     <Style Selector="ComboBox.preset-combo">
       <Setter Property="MinHeight" Value="32" />
-      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="Padding" Value="{DynamicResource ButtonTightPadding}" />
       <Setter Property="CornerRadius" Value="10" />
       <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
@@ -48,7 +48,7 @@
     </Style>
 
     <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem">
-      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="Padding" Value="{DynamicResource ButtonTightPadding}" />
       <Setter Property="Margin" Value="2" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
@@ -67,10 +67,10 @@
       <Setter Property="Template">
         <ControlTemplate TargetType="ListBoxItem">
           <Border x:Name="CardBorder"
-                  Margin="0,8,0,0"
+                  Margin="{DynamicResource ListItemMargin}"
                   CornerRadius="18"
                   Background="{DynamicResource CardBackgroundBrush}"
-                  Padding="16">
+                  Padding="{DynamicResource ListItemPadding}">
             <ContentPresenter
               Content="{TemplateBinding Content}"
               ContentTemplate="{TemplateBinding ContentTemplate}" />
@@ -85,15 +85,15 @@
     </Style>
   </UserControl.Styles>
 
-  <Border Padding="32,24,32,24">
+  <Border Padding="{DynamicResource PagePadding}">
     <Grid RowDefinitions="Auto,*"
-          RowSpacing="16"
+          RowSpacing="{DynamicResource PageRowSpacing}"
           MaxWidth="2200"
           HorizontalAlignment="Stretch">
 
     <controls:NotificationCard
         Grid.Row="0"
-        Margin="0,0,0,12"
+        Margin="{DynamicResource SectionMarginBottom}"
         DataContext="{Binding Notification}" />
 
     <!-- Inner content -->
@@ -108,17 +108,17 @@
       <Border Grid.Column="0"
               Background="{DynamicResource SurfaceCardBrush}"
               CornerRadius="24"
-              Padding="24">
-        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
+              Padding="{DynamicResource CardPaddingLarge}">
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource PageRowSpacing}">
 
           <!-- Title + sort -->
           <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
             <TextBlock Text="{infra:LocalizedString Key=Projects.Page.Title}"
-                       FontSize="22"
+                       FontSize="{DynamicResource PageTitleFontSize}"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
             <Button Grid.Column="1"
-                    Padding="10,6"
+                    Padding="{DynamicResource ButtonTightPadding}"
                     CornerRadius="10"
                     Background="{DynamicResource Surface2}"
                     Foreground="{DynamicResource TextPrimaryBrush}"
@@ -140,7 +140,7 @@
                 <TextBox
                   x:Name="ProjectSearch"
                   Margin="0"
-                  Padding="10,8"
+                  Padding="{DynamicResource InputPadding}"
                   Watermark="{infra:LocalizedString Key=Projects.Page.SearchWatermark}"
                   BorderThickness="0"
                   Background="Transparent"
@@ -151,7 +151,7 @@
             </Border>
 
             <Button Grid.Column="1"
-                    Padding="12,6"
+                    Padding="{DynamicResource ButtonTightPadding}"
                     CornerRadius="10"
                     Background="{DynamicResource AccentBrush}"
                     Foreground="{DynamicResource ButtonForegroundBrush}"
@@ -175,7 +175,7 @@
 
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
                     <!-- Name + last snapshot short + size + avatar -->
                     <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                       <Grid Grid.Column="0"
@@ -197,10 +197,10 @@
                                    FontWeight="SemiBold"
                                    Foreground="White"/>
                       </Grid>
-                      <TextBlock
+                <TextBlock
                         Grid.Column="1"
                         Text="{Binding Name}"
-                        FontSize="18"
+                        FontSize="{DynamicResource SectionHeaderFontSize}"
                         FontWeight="Bold"
                         Foreground="{DynamicResource TextPrimaryBrush}"
                         TextWrapping="NoWrap"
@@ -208,12 +208,12 @@
                       <TextBlock
                         Grid.Column="2"
                         Text="{Binding LastSnapshotShort}"
-                        FontSize="13"
+                        FontSize="{DynamicResource PageSubtitleFontSize}"
                         Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBlock
                         Grid.Column="3"
                         Text="{Binding SizeDisplay}"
-                        FontSize="13"
+                        FontSize="{DynamicResource PageSubtitleFontSize}"
                         FontWeight="SemiBold"
                         Foreground="{DynamicResource TextPrimaryBrush}" />
                     </Grid>
@@ -225,7 +225,7 @@
                       Margin="0,6,0,0"
                       Text="{Binding Path}"
                       Foreground="{DynamicResource TextMutedBrush}"
-                      FontSize="13"
+                      FontSize="{DynamicResource PageSubtitleFontSize}"
                       TextWrapping="NoWrap"
                       TextTrimming="CharacterEllipsis" />
 
@@ -235,7 +235,7 @@
                       Grid.ColumnSpan="2"
                       Margin="0,2,0,0"
                       Foreground="{DynamicResource TextMutedBrush}"
-                      FontSize="12"
+                      FontSize="{DynamicResource PageSubtitleFontSize}"
                       TextWrapping="NoWrap"
                       TextTrimming="CharacterEllipsis">
                       <Run Text="{infra:LocalizedString Key=Projects.List.DestinationPrefix}" />
@@ -299,7 +299,7 @@
             <StackPanel Grid.Column="1">
               <TextBlock
                 Text="{Binding Name}"
-                FontSize="24"
+                FontSize="{DynamicResource PageTitleFontSize}"
                 FontWeight="Bold"
                 Foreground="{DynamicResource TextPrimaryBrush}"
                 TextWrapping="NoWrap"
@@ -323,20 +323,20 @@
                       Orientation="Horizontal"
                       HorizontalAlignment="Left"
                       Spacing="8">
-            <Button Padding="10,4"
+            <Button Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
                     Background="{DynamicResource InputBackgroundBrush}"
                     Foreground="{DynamicResource TextPrimaryBrush}"
                     Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}">
               <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.OpenFolder}" />
             </Button>
-            <Button Padding="10,4"
+            <Button Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
                     Background="{DynamicResource AccentBrush}"
                     Foreground="{DynamicResource ButtonForegroundBrush}"
                     Command="{Binding DataContext.TakeSnapshotCommand, ElementName=Root}"
                     Content="{Binding DataContext.SnapshotActionLabel, ElementName=Root}" />
-            <Button Padding="10,4"
+            <Button Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
                     Background="{DynamicResource InputBackgroundBrush}"
                     Foreground="{DynamicResource TextPrimaryBrush}"
@@ -352,7 +352,7 @@
             <!-- Preset -->
             <Border CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="10">
+                    Padding="{DynamicResource CardPaddingSmall}">
               <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
@@ -373,7 +373,7 @@
             <Border Grid.Column="2"
                     CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="10">
+                    Padding="{DynamicResource CardPaddingSmall}">
               <StackPanel Spacing="4">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectHealth}"
                            FontSize="11"
@@ -382,7 +382,7 @@
                            TextTrimming="None" />
                 <Border CornerRadius="999"
                         Background="{Binding HealthBackground}"
-                        Padding="6,2">
+                        Padding="{DynamicResource StatPillPadding}">
                   <TextBlock Text="{Binding HealthTag}"
                              FontSize="12"
                              FontWeight="SemiBold"
@@ -398,7 +398,7 @@
             <Border Grid.Column="3"
                     CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="10">
+                    Padding="{DynamicResource CardPaddingSmall}">
               <StackPanel Spacing="2">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.LastSnapshotLabel}"
                            FontSize="11"
@@ -418,7 +418,7 @@
             <Border Grid.Column="4"
                     CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="10">
+                    Padding="{DynamicResource CardPaddingSmall}">
               <StackPanel Spacing="2">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectSize}"
                            FontSize="11"
@@ -436,7 +436,7 @@
             <Border Grid.Column="1"
                     CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="10">
+                    Padding="{DynamicResource CardPaddingSmall}">
               <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
                            FontSize="11"
@@ -465,7 +465,7 @@
                   Margin="0,4,0,0"
                   CornerRadius="18"
                   Background="{DynamicResource CardBackgroundBrush}"
-                  Padding="16">
+                  Padding="{DynamicResource CardPaddingMedium}">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
                   RowSpacing="12">
 
@@ -475,7 +475,7 @@
                     ColumnSpacing="12">
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
-                        Padding="10">
+                        Padding="{DynamicResource CardPaddingSmall}">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TotalSnapshots}"
                                FontSize="11"
@@ -491,7 +491,7 @@
 
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
-                        Padding="10"
+                        Padding="{DynamicResource CardPaddingSmall}"
                         Grid.Column="1">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotStorage}"
@@ -508,7 +508,7 @@
 
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
-                        Padding="10"
+                        Padding="{DynamicResource CardPaddingSmall}"
                         Grid.Column="2">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.AverageSnapshot}"
@@ -525,7 +525,7 @@
 
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
-                        Padding="10"
+                        Padding="{DynamicResource CardPaddingSmall}"
                         Grid.Column="3">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TimeSinceLast}"
@@ -575,7 +575,7 @@
 
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <StackPanel Margin="6,0"
+                        <StackPanel Margin="{DynamicResource ChartItemMargin}"
                                     VerticalAlignment="Bottom"
                                     HorizontalAlignment="Center">
                           <Border
@@ -610,7 +610,7 @@
                           FontSize="10"
                           Foreground="{DynamicResource TextMutedBrush}"
                           HorizontalAlignment="Center"
-                          Margin="10,4,10,0"/>
+                          Margin="{DynamicResource ChartLabelMargin}"/>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -661,7 +661,7 @@
               <Border Grid.Row="4"
                       CornerRadius="18"
                       Background="{DynamicResource CardRaisedBackgroundBrush}"
-                      Padding="12">
+                      Padding="{DynamicResource CardPaddingSmall}">
                 <Grid RowDefinitions="Auto,*"
                       RowSpacing="8">
                   <TextBlock
@@ -679,7 +679,7 @@
                           <Border CornerRadius="12"
                                   Background="{DynamicResource CardBackgroundBrush}"
                                   Margin="0,4,0,0"
-                                  Padding="10">
+                                  Padding="{DynamicResource CardPaddingSmall}">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                               <Border Width="6"
                                       CornerRadius="3"
@@ -695,7 +695,7 @@
                               <Border Grid.Column="2"
                                       CornerRadius="999"
                                       Background="{DynamicResource InputBackgroundBrush}"
-                                      Padding="8,2">
+                                      Padding="{DynamicResource StatPillPadding}">
                                 <TextBlock
                                   Text="{Binding SizeDisplay}"
                                   FontSize="12"
