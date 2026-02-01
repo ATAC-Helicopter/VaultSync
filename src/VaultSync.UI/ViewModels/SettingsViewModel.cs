@@ -154,7 +154,7 @@ namespace VaultSync.UI
             BrowseProjectsRootCommand    = new RelayCommand(_ => BrowseProjectsRoot());
             BrowseBackupLocationCommand  = new RelayCommand(_ => BrowseBackupLocation());
             ResetToDefaultsCommand       = new RelayCommand(_ => ResetToDefaults());
-            ApplySettingsCommand         = new RelayCommand(async _ => await SaveToConfigAsync());
+            ApplySettingsCommand         = new RelayCommand(async _ => await SaveToConfigAsync(notifyOnValidationError: true));
             ClearLocalCacheCommand       = new RelayCommand(_ => ClearLocalCache());
             ForgetAllProjectsCommand     = new RelayCommand(_ => ForgetAllProjects());
             TestBackupLocationCommand    = new RelayCommand(_ => TestBackupLocation(), _ => !string.IsNullOrWhiteSpace(BackupLocationPath));
@@ -351,11 +351,11 @@ namespace VaultSync.UI
             OnPropertyChanged(null);
         }
 
-        private async Task SaveToConfigAsync()
+        private async Task SaveToConfigAsync(bool notifyOnValidationError = true)
         {
             // Start from the latest persisted config so we don't clobber fields the Settings view doesn't edit
             // (e.g., LastView, DbPath, tray settings).
-            if (!ValidateDestinations())
+            if (!ValidateDestinations(notifyOnValidationError))
             {
                 return;
             }
@@ -531,7 +531,7 @@ namespace VaultSync.UI
                 : $"Saved at {DateTime.Now:HH:mm:ss}";
         }
 
-        private bool ValidateDestinations()
+        private bool ValidateDestinations(bool notifyOnError)
         {
             var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -539,21 +539,27 @@ namespace VaultSync.UI
             {
                 if (string.IsNullOrWhiteSpace(dest.Path))
                 {
-                    SaveStatus = "Destination path is required.";
-                    GlobalNotificationCenter.Instance.Show(
-                        SaveStatus,
-                        NotificationSeverity.Error,
-                        "Destination validation");
+                    if (notifyOnError)
+                    {
+                        SaveStatus = "Destination path is required.";
+                        GlobalNotificationCenter.Instance.Show(
+                            SaveStatus,
+                            NotificationSeverity.Error,
+                            "Destination validation");
+                    }
                     return false;
                 }
 
                 if (!string.IsNullOrWhiteSpace(dest.Alias) && !aliases.Add(dest.Alias))
                 {
-                    SaveStatus = $"Duplicate destination alias '{dest.Alias}'.";
-                    GlobalNotificationCenter.Instance.Show(
-                        SaveStatus,
-                        NotificationSeverity.Error,
-                        "Destination validation");
+                    if (notifyOnError)
+                    {
+                        SaveStatus = $"Duplicate destination alias '{dest.Alias}'.";
+                        GlobalNotificationCenter.Instance.Show(
+                            SaveStatus,
+                            NotificationSeverity.Error,
+                            "Destination validation");
+                    }
                     return false;
                 }
 
@@ -637,7 +643,7 @@ namespace VaultSync.UI
             try
             {
                 _isSaving = true;
-                await SaveToConfigAsync();
+            await SaveToConfigAsync(notifyOnValidationError: false);
             }
             catch (Exception ex)
             {

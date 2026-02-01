@@ -215,7 +215,7 @@ public class ProjectsViewModel : ViewModelBase
             var config = AppConfigStore.Load();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
-            RefreshDestinationOptions(config);
+            RefreshDestinationOptionsInternal(config);
             var projectItems = await Task.Run(() =>
             {
                 var discovered = GetDiscoveredProjects(config, forceDiscovery);
@@ -371,12 +371,13 @@ public class ProjectsViewModel : ViewModelBase
             {
                 Name = p.Name,
                 Path = p.Path,
+                ExternalId = existingProject?.ExternalId ?? string.Empty,
                 LastSnapshot = lastSnapshotTime ?? default,
                 SizeBytes = lastSnapshotBytes ?? 0,
                 Preset = existingProject?.Preset ?? string.Empty,
                 PreferredDestinationId = existingProject?.PreferredDestinationId ?? string.Empty
             };
-            vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path));
+            vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path), vm.ExternalId);
             UpdateProjectDestinationDisplay(vm, config);
             vm.PropertyChanged += OnProjectItemPropertyChanged;
 
@@ -422,7 +423,7 @@ public class ProjectsViewModel : ViewModelBase
         return items;
     }
 
-    private void RefreshDestinationOptions(AppConfig config)
+    private void RefreshDestinationOptionsInternal(AppConfig config)
     {
         DestinationOptions.Clear();
 
@@ -448,6 +449,15 @@ public class ProjectsViewModel : ViewModelBase
                 var id = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
                 DestinationOptions.Add(new DestinationOption(id, label));
             }
+        }
+    }
+
+    public void RefreshDestinationOptions(AppConfig config)
+    {
+        RefreshDestinationOptionsInternal(config);
+        foreach (var project in Projects)
+        {
+            UpdateProjectDestinationDisplay(project, config);
         }
     }
 
@@ -486,6 +496,18 @@ public class ProjectsViewModel : ViewModelBase
 
         var optionMatch = DestinationOptions.FirstOrDefault(o =>
             string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase));
+        if (optionMatch is null)
+        {
+            var fallback = DestinationOptions.FirstOrDefault(o => string.IsNullOrWhiteSpace(o.Id))
+                           ?? DestinationOptions.FirstOrDefault();
+            if (fallback != null)
+            {
+                vm.PreferredDestinationDisplay = fallback.Label;
+                vm.SetPreferredDestinationOption(fallback);
+                return;
+            }
+        }
+
         vm.SetPreferredDestinationOption(optionMatch);
     }
 
@@ -1088,7 +1110,7 @@ public class ProjectsViewModel : ViewModelBase
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
         var config = AppConfigStore.Load();
-        RefreshDestinationOptions(config);
+        RefreshDestinationOptionsInternal(config);
         foreach (var project in _allProjects)
         {
             UpdateProjectDestinationDisplay(project, config);
@@ -1327,6 +1349,13 @@ public class ProjectItemViewModel : ViewModelBase
     {
         get => _path;
         set => SetProperty(ref _path, value);
+    }
+
+    private string _externalId = string.Empty;
+    public string ExternalId
+    {
+        get => _externalId;
+        set => SetProperty(ref _externalId, value ?? string.Empty);
     }
 
     private ProjectHealthStatus _health;
@@ -1614,10 +1643,10 @@ public class ProjectItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasCustomAvatar));
     }
 
-    public void SetAvatarFromNameAndStore(string projectPath, string? customPath)
+    public void SetAvatarFromNameAndStore(string projectPath, string? customPath, string? externalId)
     {
         AvatarInitials = ComputeInitials(Name);
-        AvatarColor = AvatarColorProvider.GetColor(Name, projectPath);
+        AvatarColor = AvatarColorProvider.GetColor(Name, projectPath, externalId);
         AvatarImagePath = customPath;
         OnPropertyChanged(nameof(AvatarInitials));
         OnPropertyChanged(nameof(AvatarColor));

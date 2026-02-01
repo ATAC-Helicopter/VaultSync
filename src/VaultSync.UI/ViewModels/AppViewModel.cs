@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -112,6 +113,7 @@ namespace VaultSync.UI.ViewModels
         private readonly INotificationService _notificationService;
         private readonly IPowerStatusProvider _powerStatusProvider;
         private readonly IDriveHealthService _driveHealthService;
+        private readonly HashSet<BackupDestinationViewModel> _observedDestinations = new();
         private readonly LogConsoleService _logConsoleService;
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
@@ -131,7 +133,7 @@ namespace VaultSync.UI.ViewModels
         private int _manualBackupInFlightCount;
         private int _backupAllInProgress;
         private bool _trayInitiatedBackup;
-        private string _currentViewKey = string.Empty;
+        private string _currentViewKey = "Dashboard";
         private DateTime _lastDashboardRefreshUtc;
         private List<Project>? _backupsCacheProjects;
         private List<Backup>? _backupsCacheBackups;
@@ -404,6 +406,9 @@ namespace VaultSync.UI.ViewModels
                 var allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
                 _backupsViewModel.ResetDestinationStatuses(destinations, allowToggle);
 
+                EnsureDestinationProbeStarted();
+                _ = Task.Run(ProbeDestinationsAsync);
+
                 var summaries = GetDestinationProbeSummaries();
                 foreach (var summary in summaries)
                 {
@@ -427,6 +432,19 @@ namespace VaultSync.UI.ViewModels
                 {
                     _currentView = value;
                     OnPropertyChanged(nameof(CurrentView));
+                }
+            }
+        }
+
+        public string CurrentViewKey
+        {
+            get => _currentViewKey;
+            private set
+            {
+                if (_currentViewKey != value)
+                {
+                    _currentViewKey = value;
+                    OnPropertyChanged(nameof(CurrentViewKey));
                 }
             }
         }
@@ -543,6 +561,10 @@ namespace VaultSync.UI.ViewModels
         public ICommand NavigateProjects  { get; }
         public ICommand NavigateBackups   { get; }
         public ICommand NavigateSettings  { get; }
+
+        public OnboardingTourViewModel OnboardingTour { get; }
+
+        public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
         public ICommand SkipUpdateCommand => _skipUpdateCommand;
@@ -581,6 +603,10 @@ namespace VaultSync.UI.ViewModels
             _backupService       = new BackupService(_repo);
             _backupService.BackupRetentionDeleted += OnBackupRetentionDeleted;
             _metadataSyncService = new MetadataSyncService(_repo);
+            MetadataSyncService.ProjectColorResolver = project =>
+                AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
+            MetadataSyncService.ProjectColorApplier = (externalId, color) =>
+                AvatarColorProvider.SetColorForExternalId(externalId, color);
             _networkMountService = new NetworkMountService();
             _credentialVault     = CredentialVault.Instance;
             _notificationService = new NotificationService();
@@ -597,7 +623,11 @@ namespace VaultSync.UI.ViewModels
             _settingsViewModel.UpdateCheckRequested += OnUpdateCheckRequested;
             _settingsViewModel.RefreshHistoryRequested += OnRefreshHistoryRequested;
             _settingsViewModel.UpdateUpdateCheckStatus(null, null);
-            _settingsViewModel.Destinations.CollectionChanged += (_, _) => RefreshDestinationStatusOverview();
+            _settingsViewModel.Destinations.CollectionChanged += OnDestinationsCollectionChanged;
+            foreach (var dest in _settingsViewModel.Destinations)
+            {
+                TrackDestinationViewModel(dest);
+            }
 
             _logConsoleService = new LogConsoleService();
             _logConsoleService.InstallCapture();
@@ -641,6 +671,8 @@ namespace VaultSync.UI.ViewModels
             NavigateProjects  = new RelayCommand(_ => SetCurrentView("Projects"));
             NavigateBackups   = new RelayCommand(_ => SetCurrentView("Backups"));
             NavigateSettings  = new RelayCommand(_ => SetCurrentView("Settings"));
+
+            OnboardingTour = new OnboardingTourViewModel(this);
             _openReleaseCommand = new RelayCommand(_ => _ = OpenUpdateReleaseAsync(), _ => IsReleaseActionEnabled);
             _installPatchCommand = new RelayCommand(
                 _ => _ = StartPatchInstallAsync(),
@@ -1185,7 +1217,7 @@ namespace VaultSync.UI.ViewModels
                     break;
             }
 
-            _currentViewKey = viewKey;
+            CurrentViewKey = viewKey;
 
             if (remember)
             {
@@ -1641,7 +1673,78 @@ namespace VaultSync.UI.ViewModels
                 UpdateLogConsoleSettings();
             }
 
+            if (e.PropertyName is nameof(SettingsViewModel.UseAdvancedDestinations))
+            {
+                RefreshDestinationOptionSources();
+            }
+
             RefreshDestinationStatusOverview();
+        }
+
+        private void OnDestinationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems is not null)
+            {
+                foreach (BackupDestinationViewModel dest in e.NewItems)
+                {
+                    TrackDestinationViewModel(dest);
+                }
+            }
+
+            if (e.OldItems is not null)
+            {
+                foreach (BackupDestinationViewModel dest in e.OldItems)
+                {
+                    UntrackDestinationViewModel(dest);
+                }
+            }
+
+            RefreshDestinationOptionSources();
+            RefreshDestinationStatusOverview();
+        }
+
+        private void TrackDestinationViewModel(BackupDestinationViewModel dest)
+        {
+            if (_observedDestinations.Add(dest))
+            {
+                dest.PropertyChanged += OnDestinationViewModelPropertyChanged;
+            }
+        }
+
+        private void UntrackDestinationViewModel(BackupDestinationViewModel dest)
+        {
+            if (_observedDestinations.Remove(dest))
+            {
+                dest.PropertyChanged -= OnDestinationViewModelPropertyChanged;
+            }
+        }
+
+        private void OnDestinationViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not BackupDestinationViewModel)
+                return;
+
+            if (e.PropertyName is nameof(BackupDestinationViewModel.Alias)
+                or nameof(BackupDestinationViewModel.Path)
+                or nameof(BackupDestinationViewModel.Active))
+            {
+                RefreshDestinationOptionSources();
+                RefreshDestinationStatusOverview();
+            }
+        }
+
+        private void RefreshDestinationOptionSources()
+        {
+            try
+            {
+                var config = AppConfigStore.Load();
+                _projectsViewModel.RefreshDestinationOptions(config);
+                _backupsViewModel.RefreshDestinationOptions(config);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Destinations] Failed to refresh destination options: {ex.Message}");
+            }
         }
 
         private void UpdateLogConsoleSettings()
@@ -2576,7 +2679,8 @@ namespace VaultSync.UI.ViewModels
                                         percent,
                                         label,
                                         etaText,
-                                        allowCancel: !isFinalizing);
+                                        allowCancel: !isFinalizing,
+                                        destinationLabel: labelPrefix);
                                     LogBackupProgress(project.Id, project.Name, percent, label, etaText);
 
                                     // Keep legacy aggregate fields in sync (if anything else binds to them)
@@ -6424,9 +6528,11 @@ namespace VaultSync.UI.ViewModels
             if (!_restoreAdvisoryShown.TryAdd(project.Id, 0))
                 return;
 
-            ShowBackupSkipNotification(
-                _localizationService["Backups.Notification.RestoreRequired"],
-                NotificationSeverity.Warning);
+            var message = Lf(
+                "Backups.Notification.RestoreRequiredForProject",
+                "Imported history is newer for '{0}'. Consider restoring before creating new backups.",
+                project.Name);
+            ShowBackupSkipNotification(message, NotificationSeverity.Warning);
         }
 
         private bool TryResolveProjectRoot(Project project, AppConfig cfg, out Project resolvedProject, out string errorMessage)

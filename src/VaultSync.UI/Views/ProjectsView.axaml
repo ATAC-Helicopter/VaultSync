@@ -330,7 +330,8 @@
                     Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}">
               <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.OpenFolder}" />
             </Button>
-            <Button Padding="{DynamicResource ButtonPillPadding}"
+            <Button x:Name="ProjectSnapshotButton"
+                    Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
                     Background="{DynamicResource AccentBrush}"
                     Foreground="{DynamicResource ButtonForegroundBrush}"
@@ -346,34 +347,63 @@
           </StackPanel>
 
           <!-- Stat badges row -->
-          <Grid Grid.Row="2"
-                ColumnDefinitions="*,*,*,*,*"
-                ColumnSpacing="12">
+          <WrapPanel Grid.Row="2"
+                     Orientation="Horizontal"
+                     ItemWidth="220"
+                     ItemHeight="78">
             <!-- Preset -->
             <Border CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}">
+                    Padding="{DynamicResource CardPaddingSmall}"
+                    Margin="0,0,12,12">
               <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           TextTrimming="None" />
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" />
+                <ComboBox x:Name="ProjectPresetCombo"
+                          Grid.Row="1"
+                          Classes="preset-combo"
+                          ItemsSource="{Binding DataContext.AvailablePresets, ElementName=Root}"
+                          SelectedItem="{Binding Preset, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch" />
+              </Grid>
+            </Border>
+
+            <!-- Destination -->
+            <Border CornerRadius="14"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    Padding="{DynamicResource CardPaddingSmall}"
+                    Margin="0,0,12,12">
+              <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" />
                 <ComboBox
                     Grid.Row="1"
                     Classes="preset-combo"
-                    ItemsSource="{Binding DataContext.AvailablePresets, ElementName=Root}"
-                    SelectedItem="{Binding Preset, Mode=TwoWay}"
-                    HorizontalAlignment="Stretch" />
+                    ItemsSource="{Binding DataContext.DestinationOptions, ElementName=Root}"
+                    SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
+                    HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
               </Grid>
             </Border>
 
             <!-- Health -->
-            <Border Grid.Column="2"
-                    CornerRadius="14"
+            <Border CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}">
+                    Padding="{DynamicResource CardPaddingSmall}"
+                    Margin="0,0,12,12">
               <StackPanel Spacing="4">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectHealth}"
                            FontSize="11"
@@ -395,10 +425,10 @@
             </Border>
 
             <!-- Last snapshot -->
-            <Border Grid.Column="3"
-                    CornerRadius="14"
+            <Border CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}">
+                    Padding="{DynamicResource CardPaddingSmall}"
+                    Margin="0,0,12,12">
               <StackPanel Spacing="2">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.LastSnapshotLabel}"
                            FontSize="11"
@@ -415,10 +445,10 @@
             </Border>
 
             <!-- Size -->
-            <Border Grid.Column="4"
-                    CornerRadius="14"
+            <Border CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}">
+                    Padding="{DynamicResource CardPaddingSmall}"
+                    Margin="0,0,12,12">
               <StackPanel Spacing="2">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectSize}"
                            FontSize="11"
@@ -431,34 +461,7 @@
                            Foreground="{DynamicResource TextPrimaryBrush}" />
               </StackPanel>
             </Border>
-
-            <!-- Destination -->
-            <Border Grid.Column="1"
-                    CornerRadius="14"
-                    Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}">
-              <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
-                           FontSize="11"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           TextTrimming="None" />
-                <ComboBox
-                    Grid.Row="1"
-                    Classes="preset-combo"
-                    ItemsSource="{Binding DataContext.DestinationOptions, ElementName=Root}"
-                    SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
-                    HorizontalAlignment="Stretch">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding Label}" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </Grid>
-            </Border>
-          </Grid>
+          </WrapPanel>
 
           <!-- Stats card -->
           <Border Grid.Row="3"

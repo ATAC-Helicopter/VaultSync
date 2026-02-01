@@ -1,4 +1,4 @@
-﻿﻿{
+﻿{
   "Backups.Action.BackupAll": "عمل نسخة احتياطية لجميع المشاريع",
   "Backups.Busy.All": "عمل نسخة احتياطية لجميع المشاريع...",
   "Backups.Busy.Single": "النسخ الاحتياطي {0}...",
@@ -581,5 +581,28 @@
   "DriveHealth.Healthy.SmartNotAvailableReachable": "SMART غير متاح؛ محرك الأقراص قابل للوصول.",
   "DriveHealth.Warning.DriveNotReady": "محرك الأقراص غير جاهز.",
   "DriveHealth.Failing.SmartFailing": "تقارير SMART تشير إلى فشل.",
-  "DriveHealth.Failing.SmartFailingDrive": "تقارير SMART تشير إلى أن هذا المحرك يفشل."
+  "DriveHealth.Failing.SmartFailingDrive": "تقارير SMART تشير إلى أن هذا المحرك يفشل.",
+  "Backups.Notification.RestoreRequiredForProject": "السجل المستورد أحدث لـ \"{0}\". يُنصح بالاستعادة قبل إنشاء نسخ احتياطية جديدة.",
+  "Onboarding.Title": "Getting started",
+  "Onboarding.Subtitle": "A quick setup path to your first backup.",
+  "Onboarding.Step1": "Add your projects root and register a project.",
+  "Onboarding.Step2": "Pick a preset (auto-selected) or choose No preset.",
+  "Onboarding.Step3": "Run your first snapshot or backup.",
+  "Onboarding.OpenProjects": "Open projects",
+  "Onboarding.Close": "Close",
+  "Onboarding.Skip": "Skip",
+  "Onboarding.Next": "Next",
+  "Onboarding.Finish": "Finish",
+  "Onboarding.GoSettings": "Open Settings",
+  "Onboarding.GoProjects": "Open Projects",
+  "Onboarding.GoBackups": "Open Backups",
+  "Onboarding.StepCounter": "Step {0} of {1}",
+  "Onboarding.Tour.Step1.Title": "Set your projects root",
+  "Onboarding.Tour.Step1.Body": "Choose the folder where your projects live so VaultSync can find them.",
+  "Onboarding.Tour.Step2.Title": "Add a project",
+  "Onboarding.Tour.Step2.Body": "Select a project and add it to VaultSync to start tracking snapshots.",
+  "Onboarding.Tour.Step3.Title": "Pick a preset",
+  "Onboarding.Tour.Step3.Body": "Use a preset to filter temp files. You can keep the auto-selected one.",
+  "Onboarding.Tour.Step4.Title": "Run your first backup",
+  "Onboarding.Tour.Step4.Body": "Start a backup to lock in your first snapshot on your chosen destination."
 }

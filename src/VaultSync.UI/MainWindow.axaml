@@ -90,9 +90,9 @@
             <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.None}"
                        Foreground="{StaticResource TextSecondary}"
                        FontSize="9"
-                       IsVisible="{Binding BackupsViewModel.HasDestinationStatuses, Converter={StaticResource BoolInvertConverter}}" />
-            <ItemsControl ItemsSource="{CompiledBinding BackupsViewModel.DestinationStatuses}"
-                          IsVisible="{CompiledBinding BackupsViewModel.HasDestinationStatuses}">
+                       IsVisible="{Binding BackupsViewModel.HasActiveDestinationStatuses, Converter={StaticResource BoolInvertConverter}}" />
+            <ItemsControl ItemsSource="{CompiledBinding BackupsViewModel.ActiveDestinationStatuses}"
+                          IsVisible="{CompiledBinding BackupsViewModel.HasActiveDestinationStatuses}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <viewsControls:DestinationStatusCard Classes="compact" />
@@ -103,19 +103,19 @@
         </Border>
 
         <StackPanel Spacing="4" Margin="0,0,0,10">
-          <Button Classes="nav" Command="{CompiledBinding NavigateDashboard}">
+          <Button x:Name="NavDashboardButton" Classes="nav" Command="{CompiledBinding NavigateDashboard}">
             <TextBlock Text="{infra:LocalizedString Key=Nav.Dashboard}"/>
           </Button>
 
-          <Button Classes="nav" Command="{CompiledBinding NavigateProjects}">
+          <Button x:Name="NavProjectsButton" Classes="nav" Command="{CompiledBinding NavigateProjects}">
             <TextBlock Text="{infra:LocalizedString Key=Nav.Projects}"/>
           </Button>
 
-          <Button Classes="nav" Command="{CompiledBinding NavigateBackups}">
+          <Button x:Name="NavBackupsButton" Classes="nav" Command="{CompiledBinding NavigateBackups}">
             <TextBlock Text="{infra:LocalizedString Key=Nav.Backups}"/>
           </Button>
 
-          <Button Classes="nav" Command="{CompiledBinding NavigateSettings}">
+          <Button x:Name="NavSettingsButton" Classes="nav" Command="{CompiledBinding NavigateSettings}">
             <TextBlock Text="{infra:LocalizedString Key=Nav.Settings}"/>
           </Button>
         </StackPanel>
@@ -217,6 +217,10 @@
 
     <!-- Global bottom-right toast notifications covering the whole window -->
     <viewsControls:ToastHost Grid.RowSpan="2" Grid.ColumnSpan="2" />
+
+    <viewsControls:OnboardingTourOverlay Grid.RowSpan="2"
+                                         Grid.ColumnSpan="2"
+                                         DataContext="{CompiledBinding OnboardingTour}" />
 
   </Grid>
 </Window>

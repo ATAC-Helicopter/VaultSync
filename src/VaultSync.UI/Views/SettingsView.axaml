@@ -117,7 +117,8 @@
                                FontSize="11" />
                   </StackPanel>
 
-                  <TextBox Grid.Row="1"
+                  <TextBox x:Name="ProjectsRootInput"
+                           Grid.Row="1"
                            Grid.Column="0"
                            Margin="0,2,0,0"
                            Text="{Binding ProjectsRootPath, Mode=TwoWay}"

@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 ## [1.4.0] - Unreleased
 ### Added
 - Backup estimate UI now shows size/time previews and capacity warnings.
@@ -9,6 +9,7 @@
 - Scan cache support to speed up snapshot file scanning (with aggressive mode).
 - Preferred destination tracking on projects.
 - New localization keys for destination selection, update status, and drive health messaging.
+- Guided onboarding tour now spotlights first-time setup steps.
 ### Changed
 - Preflight runs asynchronously so backups start immediately.
 - Preflight now reuses latest snapshot stats to avoid extra scans.
@@ -23,12 +24,24 @@
 - Drive health status messages now respect the active localization.
 - Compact mode now drives page padding, card density, and list spacing across Projects and Backups.
 - Compact mode now tightens card padding and typography across Dashboard, Settings, Notification, Log Console, and updater views.
+- Sidebar destination overview now lists only active destinations when multiple are configured.
+- Imported backup tags now include the source machine name when available from metadata sync.
+- Project avatar colors now use external IDs when available for consistent colors across views and metadata sync.
+- Active backup cards now show the destination label while running.
+- Tray menu now opens on left click (popover) and right click (native menu) for faster access.
 ### Fixed
 - Restore/delete/open now resolve backups across inactive destinations when possible.
 - Destination selector no longer renders as 'View not found'.
+- Destination dropdowns now refresh immediately when destinations are added, renamed, or toggled.
+- Destination dropdowns now default to Auto instead of rendering blank when a saved target is missing.
 - Backup-all telemetry now uses per-project destination data.
 - Removed stale backup-all variables that caused compile errors.
+- macOS auto-start now reloads LaunchAgent entries reliably when toggled on/off.
+- Imported backup badge no longer clips in history when the window is narrow.
 - Missing localization keys for destination selector, update status, and drive health strings across all languages.
+- Destination status overview now probes immediately so active destinations don't stay in Pending.
+- Destination validation errors no longer spam while editing; they show on explicit save/test instead.
+- Backup pause notification now includes the project name when imported history is newer.
 
 ## [1.3.5] - 28.01.2026
 ### Added

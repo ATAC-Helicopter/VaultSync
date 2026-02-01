@@ -632,16 +632,6 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            // Simple color palette that looks good in dark mode.
-            var palette = new[]
-            {
-                SKColor.Parse("#4C8DFF"),
-                SKColor.Parse("#22CC88"),
-                SKColor.Parse("#FFB84C"),
-                SKColor.Parse("#FF6B6B"),
-                SKColor.Parse("#9B6BFF")
-            };
-
             var series = new List<ISeries>();
                 var legend = new List<LegendItem>();
 
@@ -650,7 +640,8 @@ namespace VaultSync.UI.ViewModels
                 var (project, bytes) = perProject[i];
                 if (bytes <= 0) continue;
 
-                var color = palette[i % palette.Length];
+                var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
+                var color = SKColor.Parse(colorHex);
                 var projectName = project.Name;
                 var sliceBytes = bytes;
 
@@ -774,16 +765,6 @@ namespace VaultSync.UI.ViewModels
 
         var segments = new List<BackupUsageSegment>();
 
-        // Palette for project colors.
-        var projectPalette = new[]
-        {
-            Color.Parse("#4C8DFF"),
-            Color.Parse("#FFB84C"),
-            Color.Parse("#22CC88"),
-            Color.Parse("#FF6B6B"),
-            Color.Parse("#9B6BFF")
-        };
-
         // 1) Other segment (non-VaultSync usage on the backup drive).
         // This is both in the legend and in the overlay bar.
         if (otherPercent > 0)
@@ -797,14 +778,13 @@ namespace VaultSync.UI.ViewModels
         // 2) One segment per project for its latest snapshot size, as percent of total disk.
         if (perProject != null)
         {
-            var index = 0;
             foreach (var (project, bytes) in perProject)
             {
                 var projectPercent = bytes * 100d / totalBytes;
                 if (projectPercent <= 0) continue;
 
-                var color = projectPalette[index % projectPalette.Length];
-                index++;
+                var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
+                var color = Color.Parse(colorHex);
 
                 segments.Add(new BackupUsageSegment(
                     project.Name,

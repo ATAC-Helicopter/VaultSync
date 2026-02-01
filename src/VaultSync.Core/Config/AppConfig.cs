@@ -223,6 +223,7 @@ namespace VaultSync.Core.Config
         public string Language       { get; set; } = "en";
         public string SkippedUpdateTag { get; set; } = string.Empty;
         public string LastWhatsNewVersion { get; set; } = string.Empty;
+        public bool HasSeenOnboarding { get; set; } = false;
     }
 
     // -------- App Behavior / Background Mode --------

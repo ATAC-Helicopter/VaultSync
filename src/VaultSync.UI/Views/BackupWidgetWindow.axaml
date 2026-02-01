@@ -117,6 +117,12 @@
                                  HorizontalAlignment="Right" />
                     </Grid>
 
+                    <TextBlock Text="{Binding DestinationDisplay}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding HasDestinationDisplay}" />
+
         <ProgressBar Height="5"
                      CornerRadius="3"
                      Minimum="0"

@@ -153,6 +153,9 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<DestinationStatusItem> DestinationStatuses { get; } =
             new ObservableCollection<DestinationStatusItem>();
         public bool HasDestinationStatuses => DestinationStatuses.Count > 0;
+        public ObservableCollection<DestinationStatusItem> ActiveDestinationStatuses { get; } =
+            new ObservableCollection<DestinationStatusItem>();
+        public bool HasActiveDestinationStatuses => ActiveDestinationStatuses.Count > 0;
         public bool CanToggleDestinations => !_isBusy;
         private bool _showDestinationToggles;
         public bool ShowDestinationToggles
@@ -235,6 +238,7 @@ namespace VaultSync.UI.ViewModels
 
         // Summary properties (bound in the top cards)
         public int TotalSnapshots { get; private set; }
+        public bool HasAnyBackups { get; private set; }
         public int SnapshotsThisWeek { get; private set; }
         public int SnapshotsToday { get; private set; }
         public int SnapshotsYesterday { get; private set; }
@@ -565,7 +569,12 @@ namespace VaultSync.UI.ViewModels
             DeleteFailedBackupCommand     = new RelayCommand(_ => DeleteFailedBackup());
             OpenSettingsCommand           = new RelayCommand(_ => OpenSettingsRequested?.Invoke());
 
-            DestinationStatuses.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDestinationStatuses));
+            DestinationStatuses.CollectionChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(HasDestinationStatuses));
+                RebuildActiveDestinationStatuses();
+            };
+            ActiveDestinationStatuses.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasActiveDestinationStatuses));
             ActiveBackups.CollectionChanged += (_, _) => UpdateActiveBackupTimer();
             _activeBackupTimer.Tick += (_, _) => TickActiveBackupDurations();
 
@@ -732,7 +741,7 @@ namespace VaultSync.UI.ViewModels
         /// changes safe and avoid UI-thread violations when progress is raised from
         /// background threads.
         /// </summary>
-        public void UpdateActiveBackup(string projectId, string projectName, double progress, string currentFile, string etaText, bool allowCancel = true)
+        public void UpdateActiveBackup(string projectId, string projectName, double progress, string currentFile, string etaText, bool allowCancel = true, string? destinationLabel = null)
         {
             if (string.IsNullOrWhiteSpace(projectId))
                 return;
@@ -759,6 +768,11 @@ namespace VaultSync.UI.ViewModels
             else if (!string.IsNullOrWhiteSpace(projectName))
             {
                 item.ProjectName = projectName;
+            }
+
+            if (destinationLabel != null)
+            {
+                item.DestinationLabel = destinationLabel;
             }
 
             item.AllowCancel = allowCancel;
@@ -849,6 +863,7 @@ namespace VaultSync.UI.ViewModels
                 item.PropertyChanged += OnDestinationItemPropertyChanged;
                 DestinationStatuses.Add(item);
             }
+            RebuildActiveDestinationStatuses();
             OnPropertyChanged(nameof(HasDestinationStatuses));
         }
 
@@ -870,8 +885,28 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     DestinationActiveChanged?.Invoke(item, item.IsActive);
+                    RebuildActiveDestinationStatuses();
                 }
             }
+        }
+
+        private void RebuildActiveDestinationStatuses()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(RebuildActiveDestinationStatuses);
+                return;
+            }
+
+            ActiveDestinationStatuses.Clear();
+            foreach (var item in DestinationStatuses)
+            {
+                if (item.IsActive)
+                {
+                    ActiveDestinationStatuses.Add(item);
+                }
+            }
+            OnPropertyChanged(nameof(HasActiveDestinationStatuses));
         }
 
         public void UpdateDestinationStatus(string id, string status, string severity = "Info")
@@ -1278,102 +1313,6 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private static string EnsureUniqueColor(string? baseHex, string seed, HashSet<string> used)
-        {
-            var normalized = string.IsNullOrWhiteSpace(baseHex) ? "#33405A" : baseHex;
-            if (used.Add(normalized))
-                return normalized;
-
-            var baseColor = Color.Parse(normalized);
-            var (h, s, l) = ToHsl(baseColor);
-            var seedOffset = Math.Abs(HashSeed(seed)) % 360;
-
-            for (var i = 1; i <= 24; i++)
-            {
-                var hue = (h + seedOffset + i * 37) % 360;
-                var candidate = FromHsl(hue, Math.Clamp(s, 0.45, 0.8), Math.Clamp(l, 0.45, 0.7));
-                var hex = ToHex(candidate);
-                if (used.Add(hex))
-                    return hex;
-            }
-
-            var fallback = ToHex(baseColor);
-            used.Add(fallback);
-            return fallback;
-        }
-
-        private static int HashSeed(string value)
-        {
-            unchecked
-            {
-                var hash = 17;
-                foreach (var ch in value)
-                    hash = hash * 31 + ch;
-                return hash;
-            }
-        }
-
-        private static (double H, double S, double L) ToHsl(Color color)
-        {
-            var r = color.R / 255d;
-            var g = color.G / 255d;
-            var b = color.B / 255d;
-
-            var max = Math.Max(r, Math.Max(g, b));
-            var min = Math.Min(r, Math.Min(g, b));
-            var l = (max + min) / 2d;
-
-            if (Math.Abs(max - min) < 0.0001)
-                return (0d, 0d, l);
-
-            var d = max - min;
-            var s = l > 0.5 ? d / (2d - max - min) : d / (max + min);
-
-            double h;
-            if (Math.Abs(max - r) < 0.0001)
-                h = (g - b) / d + (g < b ? 6d : 0d);
-            else if (Math.Abs(max - g) < 0.0001)
-                h = (b - r) / d + 2d;
-            else
-                h = (r - g) / d + 4d;
-
-            h *= 60d;
-            return (h, s, l);
-        }
-
-        private static Color FromHsl(double h, double s, double l)
-        {
-            if (s <= 0.0001)
-            {
-                var v = (byte)Math.Round(l * 255);
-                return Color.FromRgb(v, v, v);
-            }
-
-            var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-            var p = 2 * l - q;
-
-            var r = HueToRgb(p, q, h + 120);
-            var g = HueToRgb(p, q, h);
-            var b = HueToRgb(p, q, h - 120);
-
-            return Color.FromRgb(
-                (byte)Math.Round(r * 255),
-                (byte)Math.Round(g * 255),
-                (byte)Math.Round(b * 255));
-        }
-
-        private static double HueToRgb(double p, double q, double t)
-        {
-            t = (t % 360 + 360) % 360;
-            if (t < 60) return p + (q - p) * t / 60;
-            if (t < 180) return q;
-            if (t < 240) return p + (q - p) * (240 - t) / 60;
-            return p;
-        }
-
-        private static string ToHex(Color color) =>
-            $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-
         /// <summary>
         /// Updates the mini backup storage card values for the Backups page.
         /// Intended to be called from AppViewModel after computing disk usage
@@ -1667,6 +1606,7 @@ namespace VaultSync.UI.ViewModels
             var weekStart = now.Date.AddDays(-6);
 
             TotalSnapshots = _allSnapshots.Count;
+            HasAnyBackups = TotalSnapshots > 0;
 
             SnapshotsToday = _allSnapshots.Count(s => s.Timestamp.Date == now.Date);
             SnapshotsYesterday = _allSnapshots.Count(s => s.Timestamp.Date == now.Date.AddDays(-1));
@@ -1680,6 +1620,8 @@ namespace VaultSync.UI.ViewModels
             ManualSnapshotsThisWeek = _allSnapshots.Count(s =>
                 s.Timestamp.Date >= weekStart &&
                 string.Equals(s.Type, "Manual", StringComparison.OrdinalIgnoreCase));
+
+            OnPropertyChanged(nameof(HasAnyBackups));
 
             SnapshotsSummaryLine = Lf(
                 "Backups.Summary.TodayWeek",
@@ -1920,7 +1862,7 @@ namespace VaultSync.UI.ViewModels
             var config = AppConfigStore.Load();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
-            RefreshDestinationOptions(config);
+            RefreshDestinationOptionsInternal(config);
 
             var projectList = projects.ToList();
             var dedupBackups = new Dictionary<int, Backup>();
@@ -1966,8 +1908,6 @@ namespace VaultSync.UI.ViewModels
                 projectStats[backup.ProjectId] = stats;
             }
 
-            var usedColors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
             foreach (var project in projectList)
             {
                 projectStats.TryGetValue(project.Id, out var stats);
@@ -1976,6 +1916,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     Id                = project.Id.ToString(),
                     Name              = project.Name,
+                    ExternalId        = project.ExternalId ?? string.Empty,
                     LastBackupTime    = stats.LastBackupTime,
                     SnapshotCount     = stats.Count,
                     TotalSizeBytes    = stats.TotalBytes,
@@ -1984,9 +1925,7 @@ namespace VaultSync.UI.ViewModels
                     PreferredDestinationId = project.PreferredDestinationId ?? string.Empty,
                     PreferredDestinationChanged = OnPreferredDestinationChanged
                 };
-                projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath);
-                var uniqueColor = EnsureUniqueColor(projectItem.AvatarColor, $"{project.Name}|{project.RootPath}", usedColors);
-                projectItem.ApplyAvatarColor(uniqueColor);
+                projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath, project.ExternalId);
                 UpdateProjectDestinationDisplay(projectItem, config);
                 ProjectBackups.Add(projectItem);
             }
@@ -2003,6 +1942,11 @@ namespace VaultSync.UI.ViewModels
                     : backup.DestinationAlias;
 
             var isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
+            var importedLabel = L("Backups.Snapshot.Type.Imported", "Imported");
+            if (backup.IsImported && !string.IsNullOrWhiteSpace(backup.OriginMachineName))
+            {
+                importedLabel = $"{importedLabel} \u00b7 {backup.OriginMachineName}";
+            }
             var uiItem = new BackupSnapshotItem
             {
                 Id        = backup.Id.ToString(),
@@ -2010,7 +1954,8 @@ namespace VaultSync.UI.ViewModels
                 SizeBytes = backup.TotalBytes,
                 Type      = isAutoSnapshot ? "Auto" : "Manual",
                 IsImported = backup.IsImported,
-                ImportedLabel = L("Backups.Snapshot.Type.Imported", "Imported"),
+                OriginMachineName = backup.OriginMachineName,
+                ImportedLabel = importedLabel,
                 TypeLabel = isAutoSnapshot
                     ? L("Backups.Snapshot.Type.Auto", "Auto")
                     : L("Backups.Snapshot.Type.Manual", "Manual"),
@@ -2101,9 +2046,9 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void RefreshDestinationOptions(AppConfig config)
-        {
-            DestinationOptions.Clear();
+    private void RefreshDestinationOptionsInternal(AppConfig config)
+    {
+        DestinationOptions.Clear();
             DestinationOptions.Add(new DestinationOption(
                 string.Empty,
                 L("Projects.Destination.Auto", "Auto (active destinations)")));
@@ -2161,6 +2106,18 @@ namespace VaultSync.UI.ViewModels
 
             var optionMatch = DestinationOptions.FirstOrDefault(o =>
                 string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (optionMatch is null)
+            {
+                var fallback = DestinationOptions.FirstOrDefault(o => string.IsNullOrWhiteSpace(o.Id))
+                               ?? DestinationOptions.FirstOrDefault();
+                if (fallback != null)
+                {
+                    item.PreferredDestinationDisplay = fallback.Label;
+                    item.SetPreferredDestinationOption(fallback);
+                    return;
+                }
+            }
+
             item.SetPreferredDestinationOption(optionMatch);
         }
 
@@ -2173,13 +2130,22 @@ namespace VaultSync.UI.ViewModels
             UpdateProjectDestinationDisplay(item, config);
             PreferredDestinationChanged?.Invoke(projectId, item.PreferredDestinationId ?? string.Empty);
         }
+
+        public void RefreshDestinationOptions(AppConfig config)
+        {
+            RefreshDestinationOptionsInternal(config);
+            foreach (var project in ProjectBackups)
+            {
+                UpdateProjectDestinationDisplay(project, config);
+            }
+        }
     }
 
     // ---------- Models ----------
 
-    public class BackupSnapshotItem : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler? PropertyChanged;
+        public class BackupSnapshotItem : INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler? PropertyChanged;
 
         public string Id { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
@@ -2210,6 +2176,7 @@ namespace VaultSync.UI.ViewModels
 
         /// <summary>Localized label for the imported tag.</summary>
         public string ImportedLabel { get; set; } = string.Empty;
+        public string OriginMachineName { get; set; } = string.Empty;
 
         public bool IsProtected
         {
@@ -2313,6 +2280,7 @@ namespace VaultSync.UI.ViewModels
 
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string ExternalId { get; set; } = string.Empty;
 
         public DateTime? LastBackupTime { get; set; }
         public int       SnapshotCount  { get; set; }
@@ -2376,19 +2344,11 @@ namespace VaultSync.UI.ViewModels
         public string? AvatarImagePath { get; private set; }
         public bool HasCustomAvatar => !string.IsNullOrWhiteSpace(AvatarImagePath);
 
-        public void SetAvatarFromNameAndStore(string name, string projectPath)
+        public void SetAvatarFromNameAndStore(string name, string projectPath, string? externalId)
         {
             AvatarInitials  = ComputeInitials(name);
-            AvatarColor     = AvatarColorProvider.GetColor(name, projectPath);
+            AvatarColor     = AvatarColorProvider.GetColor(name, projectPath, externalId);
             AvatarImagePath = AvatarStore.GetAvatarForProject(projectPath);
-        }
-
-        public void ApplyAvatarColor(string hexColor)
-        {
-            if (string.IsNullOrWhiteSpace(hexColor))
-                return;
-
-            AvatarColor = hexColor;
         }
 
         private static string ComputeInitials(string name)
@@ -2579,6 +2539,36 @@ namespace VaultSync.UI.ViewModels
         {
             CancelCommand = new RelayCommand(_ => CancelRequested?.Invoke(this));
         }
+
+        private string _destinationLabel = string.Empty;
+        public string DestinationLabel
+        {
+            get => _destinationLabel;
+            set
+            {
+                if (_destinationLabel == value)
+                    return;
+
+                _destinationLabel = value ?? string.Empty;
+                OnPropertyChanged(nameof(DestinationLabel));
+                OnPropertyChanged(nameof(DestinationDisplay));
+                OnPropertyChanged(nameof(HasDestinationDisplay));
+            }
+        }
+
+        public string DestinationDisplay
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(_destinationLabel))
+                    return string.Empty;
+
+                var prefix = L("Projects.List.DestinationPrefix", "Destination: ");
+                return $"{prefix}{_destinationLabel}";
+            }
+        }
+
+        public bool HasDestinationDisplay => !string.IsNullOrWhiteSpace(DestinationDisplay);
 
         private double _progress;
         private double _displayProgress;
