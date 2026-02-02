@@ -15,17 +15,33 @@ public sealed class OnboardingTourStep
 {
     public string Title { get; }
     public string Body { get; }
-    public string TargetName { get; }
+    public string TargetName => _targetNameProvider();
     public string RequiredView { get; }
     public Func<bool> IsComplete { get; }
+    public bool AutoAdvance { get; }
+    public Func<bool> IsApplicable { get; }
+    private readonly Func<string> _targetNameProvider;
 
-    public OnboardingTourStep(string title, string body, string targetName, string requiredView, Func<bool> isComplete)
+    public OnboardingTourStep(string title, string body, string targetName, string requiredView, Func<bool> isComplete, bool autoAdvance = true, Func<bool>? isApplicable = null)
     {
         Title = title;
         Body = body;
-        TargetName = targetName;
+        _targetNameProvider = () => targetName;
         RequiredView = requiredView;
         IsComplete = isComplete;
+        AutoAdvance = autoAdvance;
+        IsApplicable = isApplicable ?? (() => true);
+    }
+
+    public OnboardingTourStep(string title, string body, Func<string> targetNameProvider, string requiredView, Func<bool> isComplete, bool autoAdvance = true, Func<bool>? isApplicable = null)
+    {
+        Title = title;
+        Body = body;
+        _targetNameProvider = targetNameProvider;
+        RequiredView = requiredView;
+        IsComplete = isComplete;
+        AutoAdvance = autoAdvance;
+        IsApplicable = isApplicable ?? (() => true);
     }
 }
 
@@ -38,6 +54,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private bool _isActive;
     private bool _isStepComplete;
     private int _advanceQueued;
+    private DateTime _lastNavigateAt;
 
     public event Action? TourCompleted;
 
@@ -47,7 +64,21 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         private set => SetField(ref _isActive, value);
     }
 
-    public string StepCounter => Lf("Onboarding.StepCounter", "Step {0} of {1}", _index + 1, _steps.Count);
+    public string StepCounter
+    {
+        get
+        {
+            var applicable = _steps.Where(s => s.IsApplicable()).ToList();
+            var total = applicable.Count;
+            var current = CurrentStep;
+            var index = current is null ? -1 : applicable.IndexOf(current);
+            if (index < 0)
+            {
+                index = Math.Clamp(_index, 0, Math.Max(total - 1, 0));
+            }
+            return Lf("Onboarding.StepCounter", "Step {0} of {1}", index + 1, total);
+        }
+    }
     public string Title => CurrentStep?.Title ?? string.Empty;
     public string Body => CurrentStep?.Body ?? string.Empty;
     public string TargetName => CurrentStep?.TargetName ?? string.Empty;
@@ -127,7 +158,9 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         _index = 0;
         Interlocked.Exchange(ref _advanceQueued, 0);
         IsActive = true;
+        EnsureApplicableStep();
         UpdateState();
+        NavigateToRequiredView();
         _pollTimer.Start();
     }
 
@@ -173,8 +206,19 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         _steps.Clear();
 
         _steps.Add(new OnboardingTourStep(
-            L("Onboarding.Tour.Step1.Title", "Set your projects root"),
-            L("Onboarding.Tour.Step1.Body", "Choose the folder where your projects live so VaultSync can find them."),
+            L("Onboarding.Tour.Step1.Title", "Choose your language"),
+            L("Onboarding.Tour.Step1.Body", "Pick the language for VaultSync. We default to your system language when available."),
+            "LanguageSelectCombo",
+            "Settings",
+            () =>
+            {
+                var cfg = AppConfigStore.Load();
+                return !string.IsNullOrWhiteSpace(cfg.Advanced.Language);
+            }));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step2.Title", "Set your projects root"),
+            L("Onboarding.Tour.Step2.Body", "Choose the folder where your projects live so VaultSync can discover them."),
             "ProjectsRootInput",
             "Settings",
             () =>
@@ -184,29 +228,172 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             }));
 
         _steps.Add(new OnboardingTourStep(
-            L("Onboarding.Tour.Step2.Title", "Add a project"),
-            L("Onboarding.Tour.Step2.Body", "Select a project and add it to VaultSync to start tracking snapshots."),
+            L("Onboarding.Tour.Step3.Title", "Choose your destination mode"),
+            L("Onboarding.Tour.Step3.Body", "Use simple mode for a single backup location, or enable advanced destinations to manage multiple paths and credentials."),
+            "DestinationsModeToggle",
+            "Settings",
+            () => true,
+            autoAdvance: false));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step4.Title", "Add a destination"),
+            L("Onboarding.Tour.Step4.Body", "Add at least one destination where backups should be stored."),
+            "AddDestinationButton",
+            "Settings",
+            () =>
+            {
+                var cfg = AppConfigStore.Load();
+                if (!cfg.Backups.UseAdvancedDestinations)
+                    return true;
+                return cfg.Backups.Destinations.Any(d => !string.IsNullOrWhiteSpace(d.Path));
+            },
+            isApplicable: () => AppConfigStore.Load().Backups.UseAdvancedDestinations));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step5.Title", "Destination basics"),
+            L("Onboarding.Tour.Step5.Body", "Set a label and enable/disable the destination so VaultSync knows where to write."),
+            "DestinationBasicsRow",
+            "Settings",
+            () => true,
+            autoAdvance: false,
+            isApplicable: () => AppConfigStore.Load().Backups.UseAdvancedDestinations));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step6.Title", "Destination path"),
+            L("Onboarding.Tour.Step6.Body", "Choose the path where backups are stored for this destination."),
+            "DestinationPathRow",
+            "Settings",
+            () => true,
+            autoAdvance: false,
+            isApplicable: () => AppConfigStore.Load().Backups.UseAdvancedDestinations));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step7.Title", "Destination credentials"),
+            L("Onboarding.Tour.Step7.Body", "Attach a credential profile for NAS/SMB destinations and test connectivity."),
+            "DestinationCredentialRow",
+            "Settings",
+            () => true,
+            autoAdvance: false,
+            isApplicable: () => AppConfigStore.Load().Backups.UseAdvancedDestinations));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step8.Title", "Mount behavior"),
+            L("Onboarding.Tour.Step8.Body", "Control whether VaultSync mounts the destination automatically and how it handles pre-mounted paths."),
+            "DestinationMountOptionsRow",
+            "Settings",
+            () => true,
+            autoAdvance: false,
+            isApplicable: () => AppConfigStore.Load().Backups.UseAdvancedDestinations));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step9.Title", "History sync"),
+            L("Onboarding.Tour.Step9.Body", "Enable history sync and import options to keep backups consistent across devices."),
+            "DestinationHistoryOptionsRow",
+            "Settings",
+            () => true,
+            autoAdvance: false,
+            isApplicable: () => AppConfigStore.Load().Backups.UseAdvancedDestinations));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step10.Title", "Credential profiles"),
+            L("Onboarding.Tour.Step10.Body", "Create credential profiles for network destinations so VaultSync can connect securely."),
+            "CredentialProfilesSection",
+            "Settings",
+            () => true,
+            autoAdvance: false,
+            isApplicable: () => AppConfigStore.Load().Backups.UseAdvancedDestinations));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step11.Title", "Select a backup destination"),
+            L("Onboarding.Tour.Step11.Body", "Choose the folder where your backups will be stored in simple mode."),
+            () =>
+            {
+                var cfg = AppConfigStore.Load();
+                return cfg.Backups.UseAdvancedDestinations ? string.Empty : "BackupLocationInput";
+            },
+            "Settings",
+            () =>
+            {
+                var cfg = AppConfigStore.Load();
+                if (cfg.Backups.UseAdvancedDestinations)
+                    return true;
+                return HasDestinationConfigured(cfg);
+            },
+            isApplicable: () => !AppConfigStore.Load().Backups.UseAdvancedDestinations));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step12.Title", "Backup settings"),
+            L("Onboarding.Tour.Step12.Body", "Review auto backup settings, retention, and history sync for your projects."),
+            "SettingsBackupsCard",
+            "Settings",
+            () => true,
+            autoAdvance: false));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step13.Title", "Appearance settings"),
+            L("Onboarding.Tour.Step13.Body", "Control theme, compact layout, and project avatars."),
+            "SettingsAppearanceCard",
+            "Settings",
+            () => true,
+            autoAdvance: false));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step14.Title", "Notification settings"),
+            L("Onboarding.Tour.Step14.Body", "Choose when VaultSync notifies you about backups and warnings."),
+            "SettingsNotificationsCard",
+            "Settings",
+            () => true,
+            autoAdvance: false));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step15.Title", "Advanced settings"),
+            L("Onboarding.Tour.Step15.Body", "Configure logging, update checks, and beta channel options."),
+            "SettingsAdvancedCard",
+            "Settings",
+            () => true,
+            autoAdvance: false));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step16.Title", "Danger zone"),
+            L("Onboarding.Tour.Step16.Body", "Use these actions to clear cache or forget projects when troubleshooting."),
+            "SettingsDangerCard",
+            "Settings",
+            () => true,
+            autoAdvance: false));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Tour.Step17.Title", "Add a project"),
+            L("Onboarding.Tour.Step17.Body", "Select a project and add it to VaultSync to start tracking snapshots."),
             "ProjectSnapshotButton",
             "Projects",
             () => _app.ProjectsViewModel.Projects.Any(p => p.IsRegistered)));
 
         _steps.Add(new OnboardingTourStep(
-            L("Onboarding.Tour.Step3.Title", "Pick a preset"),
-            L("Onboarding.Tour.Step3.Body", "Use a preset to filter temp files. You can keep the auto-selected one."),
-            "ProjectPresetCombo",
-            "Projects",
-            () =>
-            {
-                var selected = _app.ProjectsViewModel.SelectedProject;
-                return selected is not null && !string.IsNullOrWhiteSpace(selected.Preset);
-            }));
+            L("Onboarding.Tour.Step18.Title", "Enable auto backups"),
+            L("Onboarding.Tour.Step18.Body", "Turn on auto backups for a project to keep snapshots up to date."),
+            "AutoBackupToggle",
+            "Backups",
+            () => true,
+            autoAdvance: false));
 
         _steps.Add(new OnboardingTourStep(
-            L("Onboarding.Tour.Step4.Title", "Run your first backup"),
-            L("Onboarding.Tour.Step4.Body", "Start a backup to lock in your first snapshot on your chosen destination."),
-            "BackupAllButton",
+            L("Onboarding.Tour.Step19.Title", "Run your first backup"),
+            L("Onboarding.Tour.Step19.Body", "Start a backup for a project to create the first snapshot."),
+            "PerProjectBackupButton",
             "Backups",
             () => _app.BackupsViewModel.HasAnyBackups));
+    }
+
+    private static bool HasDestinationConfigured(AppConfig cfg)
+    {
+        if (cfg.Backups.UseAdvancedDestinations)
+        {
+            return cfg.Backups.Destinations.Any(d =>
+                d.Active && !string.IsNullOrWhiteSpace(d.Path));
+        }
+
+        var root = cfg.Backups.BackupRoot ?? cfg.Backups.BackupLocation ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(root);
     }
 
     private void Poll()
@@ -216,14 +403,19 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
         UpdateState();
 
+        if (!IsOnRequiredView && ShouldNavigate())
+        {
+            NavigateToRequiredView();
+        }
+
         if (IsStepComplete && IsOnRequiredView)
         {
-            if (Interlocked.Exchange(ref _advanceQueued, 1) == 0)
+            if ((CurrentStep?.AutoAdvance ?? true) && Interlocked.Exchange(ref _advanceQueued, 1) == 0)
             {
                 Dispatcher.UIThread.Post(async () =>
                 {
                     await Task.Delay(650);
-                    if (IsStepComplete && IsOnRequiredView)
+                    if (IsStepComplete && IsOnRequiredView && (CurrentStep?.AutoAdvance ?? true))
                     {
                         Advance();
                     }
@@ -235,6 +427,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
     private void UpdateState()
     {
+        EnsureApplicableStep();
         IsStepComplete = CurrentStep?.IsComplete() ?? false;
         OnPropertyChanged(nameof(StepCounter));
         OnPropertyChanged(nameof(Title));
@@ -254,7 +447,31 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
         _index = Math.Min(_index + 1, _steps.Count - 1);
         Interlocked.Exchange(ref _advanceQueued, 0);
+        EnsureApplicableStep();
         UpdateState();
+        NavigateToRequiredView();
+    }
+
+    private void EnsureApplicableStep()
+    {
+        var safety = _steps.Count + 1;
+        while (safety-- > 0 && CurrentStep is not null && !CurrentStep.IsApplicable())
+        {
+            if (IsLastStep)
+                break;
+
+            _index = Math.Min(_index + 1, _steps.Count - 1);
+        }
+    }
+
+    private bool ShouldNavigate()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastNavigateAt).TotalMilliseconds < 900)
+            return false;
+
+        _lastNavigateAt = now;
+        return true;
     }
 
     private static string L(string key, string fallback) =>

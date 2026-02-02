@@ -1006,18 +1006,20 @@
                                    FontSize="11"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <ToggleSwitch IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
-                                      OffContent=""
-                                      OnContent=""
-                                      FontSize="11"
-                                      VerticalAlignment="Center"
-                                      MinWidth="0"
+                      <ToggleSwitch x:Name="AutoBackupToggle"
+                                    IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
+                                    OffContent=""
+                                    OnContent=""
+                                    FontSize="11"
+                                    VerticalAlignment="Center"
+                                    MinWidth="0"
                                       HorizontalAlignment="Right"
                                       ToolTip.Tip="{infra:LocalizedString Key=Backups.Section.AutoBackupsTooltip}" />
                       </StackPanel>
 
                       <!-- Primary action -->
-                      <Button Grid.Row="3"
+                      <Button x:Name="PerProjectBackupButton"
+                              Grid.Row="3"
                               Grid.Column="3"
                               Content="{infra:LocalizedString Key=Backups.Section.PerProjectAction}"
                               Classes="action-primary"

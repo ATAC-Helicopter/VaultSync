@@ -90,7 +90,8 @@
                       Spacing="{DynamicResource PageRowSpacing}">
 
             <!-- General -->
-            <Border Classes="card"
+            <Border x:Name="SettingsGeneralCard"
+                    Classes="card"
                     CornerRadius="18"
                     Padding="16">
               <StackPanel Spacing="10">
@@ -215,7 +216,8 @@
             </Border>
 
             <!-- Backups -->
-            <Border Classes="card"
+            <Border x:Name="SettingsBackupsCard"
+                    Classes="card"
                     CornerRadius="18"
                     Padding="16">
               <StackPanel Spacing="10">
@@ -397,7 +399,8 @@
                   </StackPanel>
                 </Grid>
 
-                <Border Classes="card"
+                <Border x:Name="DestinationsModeCard"
+                        Classes="card"
                         Margin="0,6,0,0"
                         Padding="12"
                         Background="{DynamicResource Surface2}"
@@ -414,7 +417,8 @@
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                     </StackPanel>
-                    <ToggleSwitch Grid.Column="1"
+                    <ToggleSwitch x:Name="DestinationsModeToggle"
+                                  Grid.Column="1"
                                   VerticalAlignment="Center"
                                   IsChecked="{Binding UseAdvancedDestinations, Mode=TwoWay}"
                                   ToolTip.Tip="{infra:LocalizedString Key=Settings.DestinationsMode.Tooltip}" />
@@ -580,7 +584,8 @@
             </Border>
 
             <!-- Storage -->
-            <Border Classes="card"
+            <Border x:Name="SettingsAppearanceCard"
+                    Classes="card"
                     CornerRadius="18"
                     Padding="16">
               <StackPanel Spacing="10">
@@ -633,7 +638,8 @@
                 </Grid>
 
                 <!-- Backup destinations + credentials -->
-                <Border Margin="0,10,0,0"
+                <Border x:Name="DestinationsSection"
+                        Margin="0,10,0,0"
                         Padding="12"
                         CornerRadius="10"
                         Background="{DynamicResource VsCardHighlightBrush}"
@@ -660,10 +666,11 @@
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
                             <Grid ColumnDefinitions="Auto,*,Auto"
-                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="10"
                                   RowSpacing="6">
-                              <WrapPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" VerticalAlignment="Center">
+                              <WrapPanel x:Name="DestinationBasicsRow"
+                                         Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" VerticalAlignment="Center">
                                 <TextBox Width="140"
                                          MaxWidth="200"
                                          HorizontalAlignment="Left"
@@ -683,7 +690,8 @@
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
                               </Button>
 
-                              <TextBox Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1"
+                              <TextBox x:Name="DestinationPathRow"
+                                       Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1"
                                        Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
                                        Text="{Binding Path, Mode=TwoWay}" />
                               <Button Grid.Column="2" Grid.Row="1"
@@ -695,7 +703,8 @@
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
                               </Button>
 
-                              <ComboBox Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2"
+                              <ComboBox x:Name="DestinationCredentialRow"
+                                        Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2"
                                         MinWidth="160"
                                         HorizontalAlignment="Stretch"
                                         ItemsSource="{Binding DataContext.CredentialNames, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -717,7 +726,8 @@
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
                               </Button>
 
-                              <WrapPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="3">
+                              <WrapPanel x:Name="DestinationMountOptionsRow"
+                                         Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="3">
                                 <CheckBox Margin="0,0,12,6"
                                           Content="{infra:LocalizedString Key=Settings.Destinations.PreMounted}"
                                           ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.PreMountedTooltip}"
@@ -730,6 +740,10 @@
                                           Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
                                           ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
                                           IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
+                              </WrapPanel>
+
+                              <WrapPanel x:Name="DestinationHistoryOptionsRow"
+                                         Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="4">
                                 <CheckBox Margin="0,0,12,6"
                                           Content="{infra:LocalizedString Key=Settings.Destinations.SyncHistory}"
                                           IsChecked="{Binding EnableMetadataSync, Mode=TwoWay}" />
@@ -744,7 +758,7 @@
                                           IsEnabled="{Binding EnableMetadataSync}" />
                               </WrapPanel>
 
-                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="4" Orientation="Vertical" Spacing="4" Margin="0,6,0,0">
+                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="5" Orientation="Vertical" Spacing="4" Margin="0,6,0,0">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.CredentialWarning}"
                                            Foreground="{DynamicResource WarningTextBrush}"
                                            FontSize="11"
@@ -763,14 +777,16 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Button Classes="settings-ghost"
+                    <Button x:Name="AddDestinationButton"
+                            Classes="settings-ghost"
                             Command="{Binding AddDestinationCommand}">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.AddDestination}" />
                     </Button>
 
                     <Separator />
 
-                    <StackPanel Spacing="2">
+                    <StackPanel x:Name="CredentialProfilesSection"
+                                Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.Title}" FontWeight="SemiBold" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.Description}"
                                  Foreground="{StaticResource TextSecondary}"
@@ -850,7 +866,8 @@
                       Spacing="12">
 
             <!-- Appearance -->
-            <Border Classes="card"
+            <Border x:Name="SettingsNotificationsCard"
+                    Classes="card"
                     CornerRadius="18"
                     Padding="16">
               <StackPanel Spacing="10">
@@ -906,7 +923,8 @@
             </Border>
 
             <!-- Notifications -->
-            <Border Classes="card"
+            <Border x:Name="SettingsAdvancedCard"
+                    Classes="card"
                     CornerRadius="18"
                     Padding="16">
               <StackPanel Spacing="10">
@@ -976,7 +994,8 @@
             </Border>
 
             <!-- Advanced -->
-            <Border Classes="card"
+            <Border x:Name="SettingsDangerCard"
+                    Classes="card"
                     CornerRadius="18"
                     Padding="16">
               <StackPanel Spacing="10">

@@ -8,14 +8,20 @@
     IsVisible="{CompiledBinding IsActive}">
 
   <Grid IsHitTestVisible="False">
-    <Border Background="#A0000000" />
-
     <Canvas x:Name="OverlayCanvas">
+      <Border x:Name="OverlayTop"
+              Background="#A0000000" />
+      <Border x:Name="OverlayLeft"
+              Background="#A0000000" />
+      <Border x:Name="OverlayRight"
+              Background="#A0000000" />
+      <Border x:Name="OverlayBottom"
+              Background="#A0000000" />
       <Border x:Name="HighlightBorder"
               BorderBrush="{DynamicResource AccentBrush}"
-              BorderThickness="2"
+              BorderThickness="3"
               CornerRadius="14"
-              Background="#1AFFFFFF"
+              Background="#22FFFFFF"
               Width="10"
               Height="10"
               IsHitTestVisible="False" />
@@ -24,7 +30,7 @@
 
     <Popup x:Name="CalloutPopup"
            IsOpen="{CompiledBinding IsActive}"
-           PlacementMode="Top"
+           Placement="Top"
            IsLightDismissEnabled="False">
       <Border x:Name="CalloutCard"
               Background="{DynamicResource Surface1}"

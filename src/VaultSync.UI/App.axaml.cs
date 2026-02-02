@@ -115,10 +115,14 @@ public partial class App : Application
                 };
             }
 
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
                 DataContext = AppViewModelInstance
             };
+            mainWindow.WindowState = OperatingSystem.IsMacOS()
+                ? WindowState.Maximized
+                : WindowState.FullScreen;
+            desktop.MainWindow = mainWindow;
             ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
             if (desktop.Windows is INotifyCollectionChanged windowsChanged)
             {
