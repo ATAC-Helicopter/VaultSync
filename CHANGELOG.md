@@ -29,6 +29,9 @@
 - Project avatar colors now use external IDs when available for consistent colors across views and metadata sync.
 - Active backup cards now show the destination label while running.
 - Tray menu now opens on left click (popover) and right click (native menu) for faster access.
+- Onboarding now defaults to the system UI language on first run (fallback to English).
+- Onboarding tour now auto-navigates between pages and centers highlighted sections with smoother scrolls.
+- App startup now opens in a maximized window instead of fullscreen.
 ### Fixed
 - Restore/delete/open now resolve backups across inactive destinations when possible.
 - Destination selector no longer renders as 'View not found'.
@@ -42,6 +45,9 @@
 - Destination status overview now probes immediately so active destinations don't stay in Pending.
 - Destination validation errors no longer spam while editing; they show on explicit save/test instead.
 - Backup pause notification now includes the project name when imported history is newer.
+- Onboarding now respects "first run" and no longer appears on every start.
+- Settings view no longer fails to load due to duplicate control names.
+- Onboarding highlights now stay aligned with their intended settings sections.
 
 ## [1.3.5] - 28.01.2026
 ### Added

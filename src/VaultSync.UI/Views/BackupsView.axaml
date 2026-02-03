@@ -776,10 +776,13 @@
                           <StackPanel Grid.Row="0"
                                       Grid.Column="2"
                                       Spacing="4"
-                                      HorizontalAlignment="Right">
+                                      HorizontalAlignment="Right"
+                                      MaxWidth="140">
                             <TextBlock Text="{Binding ProgressLabel}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap"
                                        HorizontalAlignment="Right" />
                             <Button Content="{infra:LocalizedString Key=Backups.Section.Cancel}"
                                     Command="{Binding CancelCommand}"
@@ -811,24 +814,26 @@
                                        TextWrapping="NoWrap"
                                        HorizontalAlignment="Left"
                                        TextAlignment="Left" />
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="6"
-                                        IsVisible="{Binding HasEtaDisplay}">
-                              <Border Classes="stat-pill"
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="6"
+                                  IsVisible="{Binding HasEtaDisplay}">
+                              <Border Grid.Column="0"
+                                      Classes="stat-pill"
                                       IsVisible="{Binding IsEstimate}">
                                 <TextBlock Text="{Binding EstimateLabel}"
                                            FontSize="10"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextSecondaryBrush}" />
                               </Border>
-                              <TextBlock Text="{Binding EtaDisplay}"
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding EtaDisplay}"
                                          FontSize="11"
                                          Foreground="{DynamicResource TextSecondaryBrush}"
                                          TextTrimming="CharacterEllipsis"
                                          TextWrapping="NoWrap"
                                          HorizontalAlignment="Left"
                                          TextAlignment="Left" />
-                            </StackPanel>
+                            </Grid>
                           </StackPanel>
                         </Grid>
                       </Border>

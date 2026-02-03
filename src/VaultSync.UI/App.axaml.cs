@@ -119,9 +119,7 @@ public partial class App : Application
             {
                 DataContext = AppViewModelInstance
             };
-            mainWindow.WindowState = OperatingSystem.IsMacOS()
-                ? WindowState.Maximized
-                : WindowState.FullScreen;
+            mainWindow.WindowState = WindowState.Maximized;
             desktop.MainWindow = mainWindow;
             ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
             if (desktop.Windows is INotifyCollectionChanged windowsChanged)
@@ -357,7 +355,8 @@ public partial class App : Application
             return false;
 
         var cfg = AppConfigStore.Load();
-        // Show onboarding at startup while the guided tour is being iterated.
+        if (cfg.Advanced.HasSeenOnboarding)
+            return false;
 
         void Finish()
         {

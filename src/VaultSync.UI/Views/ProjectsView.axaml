@@ -273,7 +273,9 @@
               CornerRadius="24"
               Padding="24"
               DataContext="{Binding SelectedItem, ElementName=ProjectList}">
-        <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="16">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="16">
           <!-- Header: avatar + name + path -->
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <Grid Width="48"
@@ -719,7 +721,8 @@
             </Grid>
           </Border>
 
-        </Grid>
+          </Grid>
+        </ScrollViewer>
       </Border>
     </Grid>
     </Grid>

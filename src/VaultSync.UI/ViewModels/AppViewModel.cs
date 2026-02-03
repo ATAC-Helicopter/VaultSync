@@ -590,6 +590,13 @@ namespace VaultSync.UI.ViewModels
 
             // 1) Config + DB + services
             _config = AppConfigStore.Load();
+            if (string.IsNullOrWhiteSpace(_config.Advanced.Language))
+            {
+                var systemLang = ResolveSystemLanguageCode(_localizationService);
+                _config.Advanced.Language = systemLang;
+                AppConfigStore.Save(_config);
+            }
+
             var targetLang = string.IsNullOrWhiteSpace(_config.Advanced.Language)
                 ? _localizationService.CurrentLanguage
                 : _config.Advanced.Language;
@@ -6484,6 +6491,18 @@ namespace VaultSync.UI.ViewModels
 
         private static string LStatic(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+        private static string ResolveSystemLanguageCode(LocalizationService localizationService)
+        {
+            var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            if (localizationService.SupportedLanguages.Any(l =>
+                    string.Equals(l.Code, uiLang, StringComparison.OrdinalIgnoreCase)))
+            {
+                return uiLang;
+            }
+
+            return "en";
+        }
 
         private void ShowBackupSkipNotification(string message, NotificationSeverity severity)
         {

@@ -65,18 +65,24 @@ public partial class OnboardingTourOverlay : UserControl
         }
 
         var root = (Visual?)TopLevel.GetTopLevel(this) ?? this;
-        _contentHost ??= root.GetVisualDescendants()
+        _contentHost = root.GetVisualDescendants()
             .OfType<Control>()
             .FirstOrDefault(c => string.Equals(c.Name, "MainContent", StringComparison.Ordinal));
 
-        var searchRoot = _contentHost?.GetVisualChildren().OfType<Visual>().FirstOrDefault() ?? _contentHost ?? root;
-        _target = searchRoot.GetVisualDescendants()
-            .OfType<Control>()
-            .FirstOrDefault(c =>
-                !this.IsVisualAncestorOf(c) &&
-                string.Equals(c.Name, name, StringComparison.Ordinal));
-
-        if (_target is null)
+        _target = null;
+        if (_contentHost is not null)
+        {
+            _target = _contentHost.FindControl<Control>(name);
+            if (_target is null)
+            {
+                _target = _contentHost.GetVisualDescendants()
+                    .OfType<Control>()
+                    .FirstOrDefault(c =>
+                        !this.IsVisualAncestorOf(c) &&
+                        string.Equals(c.Name, name, StringComparison.Ordinal));
+            }
+        }
+        else
         {
             _target = root.GetVisualDescendants()
                 .OfType<Control>()
@@ -217,11 +223,15 @@ public partial class OnboardingTourOverlay : UserControl
         if (origin is null)
             return;
 
-        var targetRect = new Rect(origin.Value, _target.Bounds.Size);
+        var targetRect = new Rect(origin.Value, _target.Bounds.Size).Inflate(12);
         var viewport = new Rect(0, 0, scrollViewer.Bounds.Width, scrollViewer.Bounds.Height);
-        var viewportSafe = viewport.Deflate(20);
+        var viewportSafe = viewport.Deflate(24);
 
-        if (viewportSafe.Contains(targetRect))
+        var targetCenter = targetRect.Top + (targetRect.Height / 2);
+        var viewportCenter = viewport.Top + (viewport.Height / 2);
+        var centerDelta = Math.Abs(targetCenter - viewportCenter);
+
+        if (viewportSafe.Contains(targetRect) && centerDelta < 24)
         {
             _hasScrolledForTarget = true;
             return;
@@ -230,7 +240,7 @@ public partial class OnboardingTourOverlay : UserControl
         if (_hasScrolledForTarget && (now - _lastScrollAt).TotalMilliseconds < 2000)
             return;
 
-        var desiredY = targetRect.Top + (targetRect.Height / 2) - (scrollViewer.Bounds.Height / 2);
+        var desiredY = ComputeTargetScrollY(scrollViewer, targetRect);
         var maxY = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
         var targetY = Math.Clamp(desiredY, 0, maxY);
 
@@ -263,6 +273,23 @@ public partial class OnboardingTourOverlay : UserControl
         _scrollCts?.Cancel();
         _scrollCts = new CancellationTokenSource();
         _ = AnimateScrollAsync(scrollViewer, targetY, _scrollCts.Token);
+    }
+
+    private static double ComputeTargetScrollY(ScrollViewer scrollViewer, Rect targetRect)
+    {
+        var viewportHeight = scrollViewer.Bounds.Height;
+        if (viewportHeight <= 0)
+            return scrollViewer.Offset.Y;
+
+        var safeMargin = 40;
+        var safeHeight = Math.Max(0, viewportHeight - (safeMargin * 2));
+
+        if (targetRect.Height >= safeHeight && safeHeight > 0)
+        {
+            return targetRect.Top - safeMargin;
+        }
+
+        return targetRect.Top + (targetRect.Height / 2) - (viewportHeight / 2);
     }
 
     private async Task AnimateScrollAsync(ScrollViewer scrollViewer, double targetY, CancellationToken token)

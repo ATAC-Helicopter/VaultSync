@@ -375,7 +375,8 @@
                     </Border>
                   </StackPanel>
 
-                  <TextBox Grid.Row="1"
+                  <TextBox x:Name="BackupLocationInput"
+                           Grid.Row="1"
                            Grid.Column="0"
                            VerticalAlignment="Center"
                            Text="{Binding BackupLocationPath, Mode=TwoWay}"
@@ -584,7 +585,7 @@
             </Border>
 
             <!-- Storage -->
-            <Border x:Name="SettingsAppearanceCard"
+            <Border x:Name="SettingsStorageCard"
                     Classes="card"
                     CornerRadius="18"
                     Padding="16">
@@ -866,7 +867,7 @@
                       Spacing="12">
 
             <!-- Appearance -->
-            <Border x:Name="SettingsNotificationsCard"
+            <Border x:Name="SettingsAppearanceCard"
                     Classes="card"
                     CornerRadius="18"
                     Padding="16">
@@ -923,7 +924,7 @@
             </Border>
 
             <!-- Notifications -->
-            <Border x:Name="SettingsAdvancedCard"
+            <Border x:Name="SettingsNotificationsCard"
                     Classes="card"
                     CornerRadius="18"
                     Padding="16">
@@ -994,7 +995,7 @@
             </Border>
 
             <!-- Advanced -->
-            <Border x:Name="SettingsDangerCard"
+            <Border x:Name="SettingsAdvancedCard"
                     Classes="card"
                     CornerRadius="18"
                     Padding="16">
@@ -1137,7 +1138,8 @@
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
-                  <ComboBox Grid.Column="1"
+                  <ComboBox x:Name="LanguageSelectCombo"
+                            Grid.Column="1"
                             VerticalAlignment="Center"
                             Width="160"
                             ItemsSource="{Binding LanguageOptions}"
@@ -1164,7 +1166,8 @@
             </Border>
 
             <!-- Danger zone -->
-            <Border Classes="card"
+            <Border x:Name="SettingsDangerCard"
+                    Classes="card"
                     CornerRadius="18"
                     Padding="16">
               <StackPanel Spacing="10">
