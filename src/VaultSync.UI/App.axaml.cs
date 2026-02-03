@@ -115,10 +115,12 @@ public partial class App : Application
                 };
             }
 
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
                 DataContext = AppViewModelInstance
             };
+            mainWindow.WindowState = WindowState.Maximized;
+            desktop.MainWindow = mainWindow;
             ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
             if (desktop.Windows is INotifyCollectionChanged windowsChanged)
             {
@@ -136,7 +138,13 @@ public partial class App : Application
                 };
             }
 
-            Dispatcher.UIThread.Post(() => TryShowWhatsNew(desktop));
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!TryShowOnboarding(desktop))
+                {
+                    TryShowWhatsNew(desktop);
+                }
+            });
 
             // Small always-on-top widget that lights up for tray-started backups.
             var backupWidgetService = new BackupWidgetService(
@@ -292,8 +300,8 @@ public partial class App : Application
         }
         else
         {
-            // Keep native menu for fallback, but default to the custom tray panel.
-            _trayIcon.Menu = null;
+            // Allow right-click native menu while left-click opens the custom tray panel.
+            _trayIcon.Menu = _trayMenu;
             _trayPanelService ??= new TrayPanelService(desktop, () => AppViewModelInstance);
             _trayIcon.Clicked += (_, _) => _trayPanelService?.Toggle();
         }
@@ -339,6 +347,28 @@ public partial class App : Application
         };
 
         window.ShowDialog(desktop.MainWindow);
+    }
+
+    private bool TryShowOnboarding(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        if (AppViewModelInstance is null)
+            return false;
+
+        var cfg = AppConfigStore.Load();
+        if (cfg.Advanced.HasSeenOnboarding)
+            return false;
+
+        void Finish()
+        {
+            AppViewModelInstance.OnboardingTour.TourCompleted -= Finish;
+            cfg.Advanced.HasSeenOnboarding = true;
+            AppConfigStore.Save(cfg);
+            TryShowWhatsNew(desktop);
+        }
+
+        AppViewModelInstance.OnboardingTour.TourCompleted += Finish;
+        AppViewModelInstance.OnboardingTour.Start();
+        return true;
     }
 
     private static List<WhatsNewSection> LoadWhatsNewSections(string currentVersion)

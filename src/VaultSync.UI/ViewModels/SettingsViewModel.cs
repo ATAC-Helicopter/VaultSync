@@ -49,6 +49,8 @@ namespace VaultSync.UI
         private bool _verifyBackupsAfterCreate = true;
         private bool _pauseBackupsOnBattery = true;
         private bool _useFullSnapshotHash = true;
+        private bool _enableScanCache = true;
+        private bool _aggressiveScanCache = false;
         private bool _enableArchiveUploadAutoTune = true;
         private bool _enableParallelArchiveUpload = true;
         private bool _enableMetadataSync = true;
@@ -152,7 +154,7 @@ namespace VaultSync.UI
             BrowseProjectsRootCommand    = new RelayCommand(_ => BrowseProjectsRoot());
             BrowseBackupLocationCommand  = new RelayCommand(_ => BrowseBackupLocation());
             ResetToDefaultsCommand       = new RelayCommand(_ => ResetToDefaults());
-            ApplySettingsCommand         = new RelayCommand(async _ => await SaveToConfigAsync());
+            ApplySettingsCommand         = new RelayCommand(async _ => await SaveToConfigAsync(notifyOnValidationError: true));
             ClearLocalCacheCommand       = new RelayCommand(_ => ClearLocalCache());
             ForgetAllProjectsCommand     = new RelayCommand(_ => ForgetAllProjects());
             TestBackupLocationCommand    = new RelayCommand(_ => TestBackupLocation(), _ => !string.IsNullOrWhiteSpace(BackupLocationPath));
@@ -227,6 +229,8 @@ namespace VaultSync.UI
             _verifyBackupsAfterCreate  = cfg.Backups.VerifyAfterCreate;
             _pauseBackupsOnBattery     = cfg.Backups.PauseOnBattery;
             _useFullSnapshotHash       = cfg.Backups.UseFullSnapshotHash;
+            _enableScanCache           = cfg.Backups.EnableScanCache;
+            _aggressiveScanCache       = cfg.Backups.AggressiveScanCache;
             _enableArchiveUploadAutoTune = cfg.Backups.EnableArchiveUploadAutoTune;
             _enableParallelArchiveUpload = cfg.Backups.EnableParallelArchiveUpload;
             _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
@@ -347,11 +351,11 @@ namespace VaultSync.UI
             OnPropertyChanged(null);
         }
 
-        private async Task SaveToConfigAsync()
+        private async Task SaveToConfigAsync(bool notifyOnValidationError = true)
         {
             // Start from the latest persisted config so we don't clobber fields the Settings view doesn't edit
             // (e.g., LastView, DbPath, tray settings).
-            if (!ValidateDestinations())
+            if (!ValidateDestinations(notifyOnValidationError))
             {
                 return;
             }
@@ -429,6 +433,8 @@ namespace VaultSync.UI
             cfg.Backups.VerifyAfterCreate           = VerifyBackupsAfterCreate;
             cfg.Backups.PauseOnBattery              = PauseBackupsOnBattery;
             cfg.Backups.UseFullSnapshotHash         = _useFullSnapshotHash;
+            cfg.Backups.EnableScanCache             = _enableScanCache;
+            cfg.Backups.AggressiveScanCache         = _aggressiveScanCache;
             cfg.Backups.EnableArchiveUploadAutoTune = _enableArchiveUploadAutoTune;
             cfg.Backups.EnableParallelArchiveUpload = _enableParallelArchiveUpload;
             cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
@@ -525,7 +531,7 @@ namespace VaultSync.UI
                 : $"Saved at {DateTime.Now:HH:mm:ss}";
         }
 
-        private bool ValidateDestinations()
+        private bool ValidateDestinations(bool notifyOnError)
         {
             var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -533,21 +539,27 @@ namespace VaultSync.UI
             {
                 if (string.IsNullOrWhiteSpace(dest.Path))
                 {
-                    SaveStatus = "Destination path is required.";
-                    GlobalNotificationCenter.Instance.Show(
-                        SaveStatus,
-                        NotificationSeverity.Error,
-                        "Destination validation");
+                    if (notifyOnError)
+                    {
+                        SaveStatus = "Destination path is required.";
+                        GlobalNotificationCenter.Instance.Show(
+                            SaveStatus,
+                            NotificationSeverity.Error,
+                            "Destination validation");
+                    }
                     return false;
                 }
 
                 if (!string.IsNullOrWhiteSpace(dest.Alias) && !aliases.Add(dest.Alias))
                 {
-                    SaveStatus = $"Duplicate destination alias '{dest.Alias}'.";
-                    GlobalNotificationCenter.Instance.Show(
-                        SaveStatus,
-                        NotificationSeverity.Error,
-                        "Destination validation");
+                    if (notifyOnError)
+                    {
+                        SaveStatus = $"Duplicate destination alias '{dest.Alias}'.";
+                        GlobalNotificationCenter.Instance.Show(
+                            SaveStatus,
+                            NotificationSeverity.Error,
+                            "Destination validation");
+                    }
                     return false;
                 }
 
@@ -631,7 +643,7 @@ namespace VaultSync.UI
             try
             {
                 _isSaving = true;
-                await SaveToConfigAsync();
+            await SaveToConfigAsync(notifyOnValidationError: false);
             }
             catch (Exception ex)
             {
@@ -844,6 +856,18 @@ namespace VaultSync.UI
         {
             get => _useFullSnapshotHash;
             set => SetField(ref _useFullSnapshotHash, value);
+        }
+
+        public bool EnableScanCache
+        {
+            get => _enableScanCache;
+            set => SetField(ref _enableScanCache, value);
+        }
+
+        public bool AggressiveScanCache
+        {
+            get => _aggressiveScanCache;
+            set => SetField(ref _aggressiveScanCache, value);
         }
 
         public bool EnableArchiveUploadAutoTune

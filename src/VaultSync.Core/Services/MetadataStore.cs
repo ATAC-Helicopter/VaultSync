@@ -62,6 +62,7 @@ public sealed class MetadataStore
               total_bytes INTEGER NOT NULL,
               path_rel TEXT NOT NULL,
               destination_alias TEXT NOT NULL,
+              origin_machine_name TEXT NOT NULL DEFAULT '',
               is_protected INTEGER NOT NULL DEFAULT 0,
               enc_flag INTEGER NOT NULL DEFAULT 0,
               kdf_params_json TEXT NOT NULL
@@ -79,6 +80,15 @@ public sealed class MetadataStore
             CREATE INDEX IF NOT EXISTS idx_snapshots_project ON snapshots(project_external_id);
             CREATE INDEX IF NOT EXISTS idx_backups_project ON backups(project_external_id);
         """);
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
     }
 
     public MetaInfo? GetMetaInfo()
@@ -170,8 +180,8 @@ public sealed class MetadataStore
         using var c = Open(write: true);
         c.Execute(
             """
-            INSERT INTO backups(external_id, project_external_id, snapshot_external_id, created_utc, type, total_bytes, path_rel, destination_alias, is_protected, enc_flag, kdf_params_json)
-            VALUES(@ExternalId, @ProjectExternalId, @SnapshotExternalId, @CreatedUtc, @Type, @TotalBytes, @PathRel, @DestinationAlias, @IsProtected, @EncFlag, @KdfParamsJson)
+            INSERT INTO backups(external_id, project_external_id, snapshot_external_id, created_utc, type, total_bytes, path_rel, destination_alias, origin_machine_name, is_protected, enc_flag, kdf_params_json)
+            VALUES(@ExternalId, @ProjectExternalId, @SnapshotExternalId, @CreatedUtc, @Type, @TotalBytes, @PathRel, @DestinationAlias, @OriginMachineName, @IsProtected, @EncFlag, @KdfParamsJson)
             ON CONFLICT(external_id) DO UPDATE SET
               project_external_id = excluded.project_external_id,
               snapshot_external_id = excluded.snapshot_external_id,
@@ -180,6 +190,7 @@ public sealed class MetadataStore
               total_bytes = excluded.total_bytes,
               path_rel = excluded.path_rel,
               destination_alias = excluded.destination_alias,
+              origin_machine_name = excluded.origin_machine_name,
               is_protected = excluded.is_protected,
               enc_flag = excluded.enc_flag,
               kdf_params_json = excluded.kdf_params_json;
@@ -194,6 +205,7 @@ public sealed class MetadataStore
                 backup.TotalBytes,
                 backup.PathRel,
                 backup.DestinationAlias,
+                backup.OriginMachineName,
                 IsProtected = backup.IsProtected ? 1 : 0,
                 EncFlag = backup.IsEncrypted ? 1 : 0,
                 backup.KdfParamsJson
@@ -288,22 +300,45 @@ public sealed class MetadataStore
     public IEnumerable<MetaBackup> ListBackups()
     {
         using var c = Open(write: false);
-        return c.Query<MetaBackup>(
-            """
-            SELECT
-              external_id as ExternalId,
-              project_external_id as ProjectExternalId,
-              snapshot_external_id as SnapshotExternalId,
-              created_utc as CreatedUtc,
-              type,
-              total_bytes as TotalBytes,
-              path_rel as PathRel,
-              destination_alias as DestinationAlias,
-              is_protected as IsProtected,
-              enc_flag as IsEncrypted,
-              kdf_params_json as KdfParamsJson
-            FROM backups;
-            """);
+        try
+        {
+            return c.Query<MetaBackup>(
+                """
+                SELECT
+                  external_id as ExternalId,
+                  project_external_id as ProjectExternalId,
+                  snapshot_external_id as SnapshotExternalId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path_rel as PathRel,
+                  destination_alias as DestinationAlias,
+                  origin_machine_name as OriginMachineName,
+                  is_protected as IsProtected,
+                  enc_flag as IsEncrypted,
+                  kdf_params_json as KdfParamsJson
+                FROM backups;
+                """);
+        }
+        catch
+        {
+            return c.Query<MetaBackup>(
+                """
+                SELECT
+                  external_id as ExternalId,
+                  project_external_id as ProjectExternalId,
+                  snapshot_external_id as SnapshotExternalId,
+                  created_utc as CreatedUtc,
+                  type,
+                  total_bytes as TotalBytes,
+                  path_rel as PathRel,
+                  destination_alias as DestinationAlias,
+                  is_protected as IsProtected,
+                  enc_flag as IsEncrypted,
+                  kdf_params_json as KdfParamsJson
+                FROM backups;
+                """);
+        }
     }
 
     public IEnumerable<MetaBackupRef> ListBackupRefs()
@@ -414,6 +449,7 @@ public sealed class MetaBackup
     public long TotalBytes { get; set; }
     public string PathRel { get; set; } = string.Empty;
     public string DestinationAlias { get; set; } = string.Empty;
+    public string OriginMachineName { get; set; } = string.Empty;
     public bool IsProtected { get; set; }
     public bool IsEncrypted { get; set; }
     public string KdfParamsJson { get; set; } = string.Empty;

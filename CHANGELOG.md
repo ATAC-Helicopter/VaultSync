@@ -1,5 +1,55 @@
 ﻿# Changelog
-## [1.3.5] - Unreleased
+## [1.4.0] - Unreleased
+### Added
+- Backup estimate UI now shows size/time previews and capacity warnings.
+- Backup preflight API for size/time estimates.
+- Backups page now lets you pick a destination per project.
+- Settings toggles for scan cache and aggressive mode.
+- Per-project destination selection (including an "All destinations" option).
+- Scan cache support to speed up snapshot file scanning (with aggressive mode).
+- Preferred destination tracking on projects.
+- New localization keys for destination selection, update status, and drive health messaging.
+- Guided onboarding tour now spotlights first-time setup steps.
+### Changed
+- Preflight runs asynchronously so backups start immediately.
+- Preflight now reuses latest snapshot stats to avoid extra scans.
+- Preflight capacity checks include a small archive overhead.
+- ETA calibration now tracks separate archive/copy throughput.
+- Preflight caching now trims stale entries and reuses project scan stats.
+- Backup throughput sampling now feeds ETA calibration.
+- Scan cache cadence now enforces periodic full scans by run count and age.
+- Backup, snapshot, and verification flows now resolve destinations per project instead of relying on the global backup root.
+- Snapshot creation can reuse cached scan results when enabled.
+- Projects list now shows the resolved destination label for each project.
+- Drive health status messages now respect the active localization.
+- Compact mode now drives page padding, card density, and list spacing across Projects and Backups.
+- Compact mode now tightens card padding and typography across Dashboard, Settings, Notification, Log Console, and updater views.
+- Sidebar destination overview now lists only active destinations when multiple are configured.
+- Imported backup tags now include the source machine name when available from metadata sync.
+- Project avatar colors now use external IDs when available for consistent colors across views and metadata sync.
+- Active backup cards now show the destination label while running.
+- Tray menu now opens on left click (popover) and right click (native menu) for faster access.
+- Onboarding now defaults to the system UI language on first run (fallback to English).
+- Onboarding tour now auto-navigates between pages and centers highlighted sections with smoother scrolls.
+- App startup now opens in a maximized window instead of fullscreen.
+### Fixed
+- Restore/delete/open now resolve backups across inactive destinations when possible.
+- Destination selector no longer renders as 'View not found'.
+- Destination dropdowns now refresh immediately when destinations are added, renamed, or toggled.
+- Destination dropdowns now default to Auto instead of rendering blank when a saved target is missing.
+- Backup-all telemetry now uses per-project destination data.
+- Removed stale backup-all variables that caused compile errors.
+- macOS auto-start now reloads LaunchAgent entries reliably when toggled on/off.
+- Imported backup badge no longer clips in history when the window is narrow.
+- Missing localization keys for destination selector, update status, and drive health strings across all languages.
+- Destination status overview now probes immediately so active destinations don't stay in Pending.
+- Destination validation errors no longer spam while editing; they show on explicit save/test instead.
+- Backup pause notification now includes the project name when imported history is newer.
+- Onboarding now respects "first run" and no longer appears on every start.
+- Settings view no longer fails to load due to duplicate control names.
+- Onboarding highlights now stay aligned with their intended settings sections.
+
+## [1.3.5] - 28.01.2026
 ### Added
 - Backups summary cards now show mini activity sparklines and extra stats.
 - Dashboard weekly chart now labels auto/manual/imported backups.
@@ -157,7 +207,7 @@
 - Drive health probe deferred to reduce startup impact.
 - Destination probe tracks effective path/read-only status.
 - Backups page right panel now uses expandable project headers with clearer stats.
-- Removed sample “default” projects when no real projects exist. (thanks to King_Hippo for reporting)
+- Removed sample ?default? projects when no real projects exist. (thanks to King_Hippo for reporting)
 - Scroll layout now scales more reliably at higher DPI. (thanks to King_Hippo for reporting)
 - Docs updated to cover new features and macOS release flow.
 - macOS NFS auto-mount is disabled; pre-mounted paths are required instead.
@@ -231,7 +281,7 @@
 - Log console filters noisy Avalonia trace spam for layout/input/render-loop glitches.
 - Manual update checks now log their progress and outcomes for troubleshooting.
 - Cleaned mojibake in localized strings so non-ASCII languages render correctly.
-- Replaced broken localization glyphs (bullet, separator, dismiss) to avoid � placeholders.
+- Replaced broken localization glyphs (bullet, separator, dismiss) to avoid ? placeholders.
 - Fixed garbled update language strings across non-English translations.
 - Settings view no longer jumps to the top when switching language.
 - Settings descriptions now wrap cleanly instead of clipping in narrow windows.
@@ -424,4 +474,4 @@
 
 ---
 
-? 2025 VaultSync Project. MIT Licensed.
+? 2026 VaultSync Project. MIT Licensed.

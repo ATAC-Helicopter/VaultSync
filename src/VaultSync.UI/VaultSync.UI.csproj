@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>1.3.5</Version>
+    <Version>1.4.0</Version>
     <Product>VaultSync</Product>
     <Company>Flavio Giacchetti</Company>
     <ApplicationIcon>Assets\vaultsync.ico</ApplicationIcon>

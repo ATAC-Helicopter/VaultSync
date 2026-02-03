@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -21,6 +22,21 @@ public sealed class BackupService
     public event Action<Backup>? BackupRetentionDeleted;
 
     public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
+    public sealed record BackupPreflightResult(
+        long TotalBytes,
+        int TotalFiles,
+        long? VolumeTotalBytes,
+        long? VolumeFreeBytes,
+        bool HasEnoughSpace,
+        double? EstimatedSeconds,
+        double EstimatedThroughputMbSec,
+        string? WarningMessage,
+        bool UsedCache);
+
+    private static readonly ConcurrentDictionary<string, (DateTime TimestampUtc, BackupPreflightResult Result)> PreflightCache = new();
+    private static readonly ConcurrentDictionary<string, (DateTime TimestampUtc, int TotalFiles, long TotalBytes)> StatsCache = new();
+    private const int PreflightCacheLimit = 128;
+    private const int StatsCacheLimit = 128;
 
     public BackupService(SqliteRepository repo)
     {
@@ -108,6 +124,157 @@ public sealed class BackupService
         }
 
         return false;
+    }
+
+    public async Task<BackupPreflightResult> PreflightBackupAsync(
+        Project project,
+        string backupRoot,
+        CancellationToken ct = default,
+        double? throughputMbSec = null,
+        bool useArchiveMode = false,
+        TimeSpan? cacheTtl = null)
+    {
+        if (project is null) throw new ArgumentNullException(nameof(project));
+        if (string.IsNullOrWhiteSpace(project.RootPath))
+            throw new InvalidOperationException("Project.RootPath is not set.");
+        if (string.IsNullOrWhiteSpace(backupRoot))
+            throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
+
+        backupRoot = Path.GetFullPath(backupRoot);
+        if (!Directory.Exists(backupRoot))
+        {
+            throw new InvalidOperationException(
+                $"Backup root '{backupRoot}' does not exist or is not accessible. " +
+                "Make sure the path exists and any network share is mounted.");
+        }
+
+        var ttl = cacheTtl ?? TimeSpan.FromSeconds(30);
+        var cacheKey = $"{project.Id}|{backupRoot}|{project.Preset}|{useArchiveMode}";
+        if (TryGetCachedPreflight(cacheKey, ttl, out var cached))
+        {
+            return cached with { UsedCache = true };
+        }
+
+        var stats = await Task.Run(() => GetBackupStats(project, ttl, ct), ct);
+        var space = TryGetDiskSpace(backupRoot);
+        var volumeTotal = space?.totalBytes;
+        var volumeFree = space?.freeBytes;
+        var requiredBytes = stats.totalBytes;
+        if (useArchiveMode && requiredBytes > 0)
+        {
+            requiredBytes = (long)Math.Ceiling(requiredBytes * 1.05d);
+        }
+        var hasEnoughSpace = !volumeFree.HasValue || volumeFree.Value >= requiredBytes;
+        var warning = hasEnoughSpace
+            ? null
+            : $"Backup may not fit on the target. Required={requiredBytes} bytes, Free={volumeFree ?? 0} bytes.";
+
+        var fallbackThroughput = GetFallbackThroughputMbSec(backupRoot, useArchiveMode);
+        var usedThroughput = throughputMbSec.HasValue && throughputMbSec.Value > 0
+            ? throughputMbSec.Value
+            : fallbackThroughput;
+
+        double? estimatedSeconds = stats.totalBytes > 0 && usedThroughput > 0
+            ? stats.totalBytes / (usedThroughput * 1024d * 1024d)
+            : (double?)null;
+
+        var result = new BackupPreflightResult(
+            stats.totalBytes,
+            stats.totalFiles,
+            volumeTotal,
+            volumeFree,
+            hasEnoughSpace,
+            estimatedSeconds,
+            usedThroughput,
+            warning,
+            UsedCache: false);
+
+        PreflightCache[cacheKey] = (DateTime.UtcNow, result);
+        TrimPreflightCache();
+        return result;
+    }
+
+    private static bool TryGetCachedPreflight(
+        string cacheKey,
+        TimeSpan ttl,
+        out BackupPreflightResult result)
+    {
+        if (PreflightCache.TryGetValue(cacheKey, out var cached))
+        {
+            if ((DateTime.UtcNow - cached.TimestampUtc) <= ttl)
+            {
+                result = cached.Result;
+                return true;
+            }
+        }
+
+        result = default!;
+        return false;
+    }
+
+    private (int totalFiles, long totalBytes) GetBackupStats(
+        Project project,
+        TimeSpan ttl,
+        CancellationToken ct)
+    {
+        var snapshot = _repo.GetLatestSnapshot(project.Id);
+        if (snapshot is not null)
+        {
+            var fileCount = Convert.ToInt32(snapshot.FileCount);
+            var totalBytes = snapshot.TotalBytes;
+            return (fileCount, totalBytes);
+        }
+
+        var statsKey = $"{project.RootPath}|{project.Preset}";
+        if (StatsCache.TryGetValue(statsKey, out var cached))
+        {
+            if ((DateTime.UtcNow - cached.TimestampUtc) <= ttl)
+            {
+                return (cached.TotalFiles, cached.TotalBytes);
+            }
+        }
+
+        var computed = ComputeBackupStats(project.RootPath, project.Preset, ct);
+        StatsCache[statsKey] = (DateTime.UtcNow, computed.totalFiles, computed.totalBytes);
+        TrimStatsCache();
+        return computed;
+    }
+
+    private static void TrimPreflightCache()
+    {
+        if (PreflightCache.Count <= PreflightCacheLimit)
+            return;
+
+        foreach (var entry in PreflightCache
+                     .OrderBy(kvp => kvp.Value.TimestampUtc)
+                     .Take(Math.Max(1, PreflightCache.Count - PreflightCacheLimit)))
+        {
+            PreflightCache.TryRemove(entry.Key, out _);
+        }
+    }
+
+    private static void TrimStatsCache()
+    {
+        if (StatsCache.Count <= StatsCacheLimit)
+            return;
+
+        foreach (var entry in StatsCache
+                     .OrderBy(kvp => kvp.Value.TimestampUtc)
+                     .Take(Math.Max(1, StatsCache.Count - StatsCacheLimit)))
+        {
+            StatsCache.TryRemove(entry.Key, out _);
+        }
+    }
+
+    private static double GetFallbackThroughputMbSec(string backupRoot, bool useArchiveMode)
+    {
+        var isNetwork = IsNetworkPathOrDrive(backupRoot);
+        if (useArchiveMode)
+        {
+            return isNetwork ? 18d : 60d;
+        }
+
+        return isNetwork ? 25d : 80d;
     }
 
     public int CleanupIncompleteBackups(string backupRoot, IEnumerable<string>? projectFolderNames = null)
@@ -236,7 +403,9 @@ public sealed class BackupService
         bool useIncrementalBackups = false,
         int? archiveUploadBufferBytes = null,
         bool preferRunnerProgressOnly = false,
-        bool preferParallelArchiveUpload = false)
+        bool preferParallelArchiveUpload = false,
+        bool useScanCache = false,
+        bool aggressiveScanCache = false)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -332,7 +501,9 @@ public sealed class BackupService
                 (percent, currentFile, etaText) =>
                 {
                     progressCallback?.Invoke(percent, currentFile, etaText);
-                });
+                },
+                useScanCache,
+                aggressiveScanCache);
 
             var outcome = SnapshotService.LastOutcome;
             if (skipIfNoChanges &&
@@ -1723,13 +1894,17 @@ public sealed class BackupService
     /// filtering rules as SnapshotService.
     /// </summary>
     private static long ComputeBackupSize(string sourceDir, string preset, CancellationToken ct)
+        => ComputeBackupStats(sourceDir, preset, ct).totalBytes;
+
+    private static (int totalFiles, long totalBytes) ComputeBackupStats(string sourceDir, string preset, CancellationToken ct)
     {
         var dirInfo = new DirectoryInfo(sourceDir);
         if (!dirInfo.Exists)
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
 
         var filter = FilterService.FromPresetAndLocal(sourceDir, preset);
-        long total = 0;
+        long totalBytes = 0;
+        var totalFiles = 0;
 
         try
         {
@@ -1741,24 +1916,23 @@ public sealed class BackupService
                 try
                 {
                     var fi = new FileInfo(filePath);
-                    total += fi.Length;
+                    totalBytes += fi.Length;
+                    totalFiles++;
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    // Skip files that cannot be accessed but do not abort the entire backup size computation.
                     Console.WriteLine($"[BackupService] Skipping file while computing size '{filePath}': {ex.Message}");
                 }
             }
         }
         catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
         {
-            // Log and rethrow so callers can decide whether to fall back or abort.
             Console.WriteLine($"[BackupService] Failed to enumerate files for size computation in '{sourceDir}': {ex.Message}");
             throw;
         }
 
-        Console.WriteLine($"[BackupService] Computed backup size for '{sourceDir}': {total} bytes.");
-        return total;
+        Console.WriteLine($"[BackupService] Computed backup size for '{sourceDir}': {totalBytes} bytes across {totalFiles} files.");
+        return (totalFiles, totalBytes);
     }
 
     private static string[] BuildFilteredFileList(string sourceDir, FilterService filter, CancellationToken ct)

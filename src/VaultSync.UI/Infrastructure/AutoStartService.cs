@@ -72,12 +72,17 @@ namespace VaultSync.UI.Infrastructure
             var home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
             var agentDir = Path.Combine(home, "Library", "LaunchAgents");
             var plistPath = Path.Combine(agentDir, "com.vaultsync.autostart.plist");
+            var uid = GetMacUid();
 
             if (!enable)
             {
                 if (File.Exists(plistPath))
                 {
-                    TryLaunchCtl("bootout", plistPath);
+                    if (!string.IsNullOrWhiteSpace(uid))
+                    {
+                        TryLaunchCtl($"bootout gui/{uid} \"{plistPath}\"");
+                        TryLaunchCtl($"disable gui/{uid}/com.vaultsync.autostart");
+                    }
                     File.Delete(plistPath);
                 }
                 return;
@@ -104,7 +109,14 @@ namespace VaultSync.UI.Infrastructure
   </dict>
 </plist>";
             File.WriteAllText(plistPath, plist);
-            TryLaunchCtl("bootstrap", plistPath);
+            if (string.IsNullOrWhiteSpace(uid))
+                return;
+
+            // Ensure any previous instance is unloaded before reloading the updated plist.
+            TryLaunchCtl($"bootout gui/{uid} \"{plistPath}\"");
+            TryLaunchCtl($"bootstrap gui/{uid} \"{plistPath}\"");
+            TryLaunchCtl($"enable gui/{uid}/com.vaultsync.autostart");
+            TryLaunchCtl($"kickstart -k gui/{uid}/com.vaultsync.autostart");
         }
 
         private static string[] GetMacLaunchArguments()
@@ -134,7 +146,7 @@ namespace VaultSync.UI.Infrastructure
             return Array.Empty<string>();
         }
 
-        private static void TryLaunchCtl(string verb, string plistPath)
+        private static string? GetMacUid()
         {
             try
             {
@@ -154,18 +166,31 @@ namespace VaultSync.UI.Infrastructure
                 }
 
                 if (string.IsNullOrWhiteSpace(uid))
-                    return;
+                    return null;
 
+                return uid;
+            }
+            catch
+            {
+                // Swallow errors; LaunchAgent will still load on next login.
+                return null;
+            }
+        }
+
+        private static void TryLaunchCtl(string arguments)
+        {
+            try
+            {
                 using var proc = Process.Start(new ProcessStartInfo
                 {
                     FileName = "launchctl",
-                    Arguments = $"{verb} gui/{uid} \"{plistPath}\"",
+                    Arguments = arguments,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 });
-                proc?.WaitForExit(2000);
+                proc?.WaitForExit(3000);
             }
             catch
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -112,6 +113,7 @@ namespace VaultSync.UI.ViewModels
         private readonly INotificationService _notificationService;
         private readonly IPowerStatusProvider _powerStatusProvider;
         private readonly IDriveHealthService _driveHealthService;
+        private readonly HashSet<BackupDestinationViewModel> _observedDestinations = new();
         private readonly LogConsoleService _logConsoleService;
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
@@ -131,7 +133,7 @@ namespace VaultSync.UI.ViewModels
         private int _manualBackupInFlightCount;
         private int _backupAllInProgress;
         private bool _trayInitiatedBackup;
-        private string _currentViewKey = string.Empty;
+        private string _currentViewKey = "Dashboard";
         private DateTime _lastDashboardRefreshUtc;
         private List<Project>? _backupsCacheProjects;
         private List<Backup>? _backupsCacheBackups;
@@ -348,6 +350,53 @@ namespace VaultSync.UI.ViewModels
             return new List<BackupDestination>();
         }
 
+        private sealed record ProjectDestinationSelection(
+            List<BackupDestination> Destinations,
+            string? WarningMessage,
+            string? WarningCode);
+
+        private ProjectDestinationSelection ResolveDestinationsForProject(Project project, AppConfig cfg)
+        {
+            var activeDestinations = GetActiveDestinations(cfg);
+            var allDestinations = GetAllDestinations(cfg);
+            var preferredId = project.PreferredDestinationId ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(preferredId))
+            {
+                return new ProjectDestinationSelection(activeDestinations, null, null);
+            }
+
+            if (string.Equals(preferredId, Project.DestinationAllId, StringComparison.OrdinalIgnoreCase))
+            {
+                return new ProjectDestinationSelection(allDestinations, null, null);
+            }
+
+            var match = allDestinations.FirstOrDefault(d =>
+                string.Equals(d.Alias ?? string.Empty, preferredId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(d.Path ?? string.Empty, preferredId, StringComparison.OrdinalIgnoreCase));
+
+            if (match is null)
+            {
+                var message = Lf(
+                    "Backups.Notification.PreferredDestinationMissing",
+                    "Preferred destination '{0}' not found. Using active destinations.",
+                    preferredId);
+                return new ProjectDestinationSelection(activeDestinations, message, "preferred_missing");
+            }
+
+            if (!match.Active)
+            {
+                var label = string.IsNullOrWhiteSpace(match.Alias) ? match.Path : match.Alias;
+                var message = Lf(
+                    "Backups.Notification.PreferredDestinationInactive",
+                    "Preferred destination '{0}' is inactive. Using active destinations.",
+                    label);
+                return new ProjectDestinationSelection(activeDestinations, message, "preferred_inactive");
+            }
+
+            return new ProjectDestinationSelection(new List<BackupDestination> { match }, null, null);
+        }
+
         private void RefreshDestinationStatusOverview()
         {
             try
@@ -356,6 +405,9 @@ namespace VaultSync.UI.ViewModels
                 var destinations = GetAllDestinations(cfg);
                 var allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
                 _backupsViewModel.ResetDestinationStatuses(destinations, allowToggle);
+
+                EnsureDestinationProbeStarted();
+                _ = Task.Run(ProbeDestinationsAsync);
 
                 var summaries = GetDestinationProbeSummaries();
                 foreach (var summary in summaries)
@@ -380,6 +432,19 @@ namespace VaultSync.UI.ViewModels
                 {
                     _currentView = value;
                     OnPropertyChanged(nameof(CurrentView));
+                }
+            }
+        }
+
+        public string CurrentViewKey
+        {
+            get => _currentViewKey;
+            private set
+            {
+                if (_currentViewKey != value)
+                {
+                    _currentViewKey = value;
+                    OnPropertyChanged(nameof(CurrentViewKey));
                 }
             }
         }
@@ -496,6 +561,10 @@ namespace VaultSync.UI.ViewModels
         public ICommand NavigateProjects  { get; }
         public ICommand NavigateBackups   { get; }
         public ICommand NavigateSettings  { get; }
+
+        public OnboardingTourViewModel OnboardingTour { get; }
+
+        public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
         public ICommand SkipUpdateCommand => _skipUpdateCommand;
@@ -521,6 +590,13 @@ namespace VaultSync.UI.ViewModels
 
             // 1) Config + DB + services
             _config = AppConfigStore.Load();
+            if (string.IsNullOrWhiteSpace(_config.Advanced.Language))
+            {
+                var systemLang = ResolveSystemLanguageCode(_localizationService);
+                _config.Advanced.Language = systemLang;
+                AppConfigStore.Save(_config);
+            }
+
             var targetLang = string.IsNullOrWhiteSpace(_config.Advanced.Language)
                 ? _localizationService.CurrentLanguage
                 : _config.Advanced.Language;
@@ -534,6 +610,10 @@ namespace VaultSync.UI.ViewModels
             _backupService       = new BackupService(_repo);
             _backupService.BackupRetentionDeleted += OnBackupRetentionDeleted;
             _metadataSyncService = new MetadataSyncService(_repo);
+            MetadataSyncService.ProjectColorResolver = project =>
+                AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
+            MetadataSyncService.ProjectColorApplier = (externalId, color) =>
+                AvatarColorProvider.SetColorForExternalId(externalId, color);
             _networkMountService = new NetworkMountService();
             _credentialVault     = CredentialVault.Instance;
             _notificationService = new NotificationService();
@@ -550,7 +630,11 @@ namespace VaultSync.UI.ViewModels
             _settingsViewModel.UpdateCheckRequested += OnUpdateCheckRequested;
             _settingsViewModel.RefreshHistoryRequested += OnRefreshHistoryRequested;
             _settingsViewModel.UpdateUpdateCheckStatus(null, null);
-            _settingsViewModel.Destinations.CollectionChanged += (_, _) => RefreshDestinationStatusOverview();
+            _settingsViewModel.Destinations.CollectionChanged += OnDestinationsCollectionChanged;
+            foreach (var dest in _settingsViewModel.Destinations)
+            {
+                TrackDestinationViewModel(dest);
+            }
 
             _logConsoleService = new LogConsoleService();
             _logConsoleService.InstallCapture();
@@ -570,6 +654,7 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel.AutoBackupPreferenceChanged += OnAutoBackupPreferenceChanged;
             _backupsViewModel.BackupProtectionChanged += OnBackupProtectionChanged;
             _backupsViewModel.DestinationActiveChanged += OnDestinationActiveChanged;
+            _backupsViewModel.PreferredDestinationChanged += OnPreferredDestinationChanged;
             _backupsViewModel.OpenSettingsRequested += OnOpenSettingsRequested;
 
             // 4) Initial load is deferred until views are shown to reduce startup impact.
@@ -593,6 +678,8 @@ namespace VaultSync.UI.ViewModels
             NavigateProjects  = new RelayCommand(_ => SetCurrentView("Projects"));
             NavigateBackups   = new RelayCommand(_ => SetCurrentView("Backups"));
             NavigateSettings  = new RelayCommand(_ => SetCurrentView("Settings"));
+
+            OnboardingTour = new OnboardingTourViewModel(this);
             _openReleaseCommand = new RelayCommand(_ => _ = OpenUpdateReleaseAsync(), _ => IsReleaseActionEnabled);
             _installPatchCommand = new RelayCommand(
                 _ => _ = StartPatchInstallAsync(),
@@ -845,9 +932,11 @@ namespace VaultSync.UI.ViewModels
         private BackupProjectPreparation CreateManualBackupPreparation(int projectId)
         {
             var cfg = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
             var project = _repo.GetProjectById(projectId);
-            return new BackupProjectPreparation(cfg, destinations, project);
+            var selection = project is null
+                ? new ProjectDestinationSelection(GetActiveDestinations(cfg), null, null)
+                : ResolveDestinationsForProject(project, cfg);
+            return new BackupProjectPreparation(cfg, selection.Destinations, project, selection.WarningMessage, selection.WarningCode);
         }
 
         private int ScanDestinationsForUntrackedBackups(List<Project> projects, List<Backup> backups)
@@ -1079,7 +1168,9 @@ namespace VaultSync.UI.ViewModels
         private sealed record BackupProjectPreparation(
             AppConfig Config,
             List<BackupDestination> Destinations,
-            Project? Project);
+            Project? Project,
+            string? DestinationWarning,
+            string? DestinationWarningCode);
 
         private void SetCurrentView(string viewKey, bool remember = true)
         {
@@ -1133,7 +1224,7 @@ namespace VaultSync.UI.ViewModels
                     break;
             }
 
-            _currentViewKey = viewKey;
+            CurrentViewKey = viewKey;
 
             if (remember)
             {
@@ -1258,7 +1349,6 @@ namespace VaultSync.UI.ViewModels
                 var cfg = preparation.Config;
                 var disabled = preparation.DisabledProjects;
                 var projects = preparation.Projects;
-                var destinations = preparation.Destinations;
 
                 var useArchiveMode = _settingsViewModel.UseBackupCompression;
                 var backupAttempts = 0;
@@ -1269,34 +1359,29 @@ namespace VaultSync.UI.ViewModels
                 var maxParallel = Math.Max(1, Environment.ProcessorCount);
                 using var throttler = new SemaphoreSlim(maxParallel);
 
-                var destinationResolutions = new List<(BackupDestination Dest, DestinationResolution Resolution)>();
-                foreach (var dest in destinations)
-                {
-                    var resolution = PrepareDestination(dest, cfg);
-                    if (!resolution.IsSuccess)
-                    {
-                        Interlocked.Increment(ref destinationUnreachable);
-                        continue;
-                    }
-
-                    destinationResolutions.Add((dest, resolution));
-                }
-
-                if (destinationResolutions.Count == 0)
-                {
-                    Telemetry.Log("auto_backup_skipped", b => b.WithCode("reason", "no_destination"));
-                    return;
-                }
-
-                try
-                {
-                    var tasks = projects
+                var tasks = projects
                         .Where(p => !disabled.Contains(p.Id))
                         .Select(async project =>
                         {
                             await throttler.WaitAsync();
                             try
                             {
+                                var selection = ResolveDestinationsForProject(project, cfg);
+                                if (!string.IsNullOrWhiteSpace(selection.WarningMessage))
+                                {
+                                    Telemetry.Log("auto_backup_destination_fallback", b => b
+                                        .WithCode("reason", selection.WarningCode ?? "preferred_destination_fallback")
+                                        .WithHashedString("project", project.Name));
+                                }
+
+                                if (selection.Destinations.Count == 0)
+                                {
+                                    Telemetry.Log("auto_backup_skipped", b => b
+                                        .WithCode("reason", "no_destination")
+                                        .WithHashedString("project", project.Name));
+                                    return;
+                                }
+
                                 if (cfg.Backups.PromptRestoreAfterImport && project.NeedsRestore)
                                 {
                                     MaybeNotifyRestoreRecommended(project);
@@ -1319,95 +1404,131 @@ namespace VaultSync.UI.ViewModels
                                 int? sharedSnapshotId = null;
                                 bool metadataWritten = false;
 
-                                foreach (var (dest, resolution) in destinationResolutions)
+                                var destinationResolutions = new List<(BackupDestination Dest, DestinationResolution Resolution)>();
+                                foreach (var dest in selection.Destinations)
                                 {
-                                    var driveDecision = await EvaluateDriveHealthAsync(project.RootPath, resolution.EffectivePath);
-                                    if (!string.IsNullOrWhiteSpace(driveDecision.Message))
+                                    var resolution = PrepareDestination(dest, cfg);
+                                    if (!resolution.IsSuccess)
                                     {
-                                        ShowDriveHealthNotification(driveDecision.Message, driveDecision.Severity);
-                                    }
-                                    if (driveDecision.Block)
-                                    {
+                                        Interlocked.Increment(ref destinationUnreachable);
                                         continue;
                                     }
 
-                                    var destLabel = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
+                                    destinationResolutions.Add((dest, resolution));
+                                }
 
-                                    try
+                                if (destinationResolutions.Count == 0)
+                                {
+                                    Telemetry.Log("auto_backup_skipped", b => b
+                                        .WithCode("reason", "no_destination")
+                                        .WithHashedString("project", project.Name));
+                                    return;
+                                }
+
+                                try
+                                {
+                                    foreach (var (dest, resolution) in destinationResolutions)
                                     {
-                                        var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
-                                            dest,
-                                            cfg,
-                                            resolution.EffectivePath,
-                                            useArchiveMode,
-                                            CancellationToken.None);
-                                        Interlocked.Increment(ref backupAttempts);
-                                        var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
-                                            || IsRemoteDestinationPath(dest.Path);
-                                        var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
-                                        var preferParallelUpload = allowParallelUpload && isRemoteDestination;
-                                        if (!allowParallelUpload)
+                                        var driveDecision = await EvaluateDriveHealthAsync(project.RootPath, resolution.EffectivePath);
+                                        if (!string.IsNullOrWhiteSpace(driveDecision.Message))
                                         {
-                                            Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{destLabel}'.");
+                                            ShowDriveHealthNotification(driveDecision.Message, driveDecision.Severity);
                                         }
-                                        var backupResult = await _backupService.RunBackupAsync(
-                                            project,
-                                            resolution.EffectivePath,
-                                            isAuto: true,
-                                            progressCallback: null,
-                                            CancellationToken.None,
-                                            useArchiveMode: useArchiveMode,
-                                            fullSnapshotHash: _settingsViewModel.UseFullSnapshotHash,
-                                            maxSnapshotsToKeep: cfg.Backups.MaxSnapshotsPerProject,
-                                            minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
-                                            preferredFinalBackupRoot: null,
-                                            reuseSnapshotId: metadataWritten ? sharedSnapshotId : null,
-                                            writeMetadata: !metadataWritten,
-                                            destinationPath: resolution.EffectivePath,
-                                            destinationAlias: destLabel,
-                                            skipIfNoChanges: true,
-                                            useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
-                                            useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
-                                            archiveUploadBufferBytes: archiveUploadBufferBytes,
-                                            preferRunnerProgressOnly: isRemoteDestination,
-                                            preferParallelArchiveUpload: preferParallelUpload);
-
-                                        if (backupResult.SkippedForNoChanges)
+                                        if (driveDecision.Block)
                                         {
-                                            Telemetry.Log("auto_backup_skipped", b => b
-                                                .WithCode("reason", "no_changes")
-                                                .WithHashedString("project", project.Name)
-                                                .WithHashedString("destinationPath", dest.Path ?? string.Empty));
-                                            // Skip the remaining destinations for this project to avoid redundant work.
-                                            break;
+                                            continue;
                                         }
 
-                                        if (!metadataWritten && backupResult.BackupId > 0)
+                                        var destLabel = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
+
+                                        try
                                         {
-                                            metadataWritten = true;
-                                            if (!sharedSnapshotId.HasValue)
+                                            var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
+                                                dest,
+                                                cfg,
+                                                resolution.EffectivePath,
+                                                useArchiveMode,
+                                                CancellationToken.None);
+                                            Interlocked.Increment(ref backupAttempts);
+                                            var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
+                                                || IsRemoteDestinationPath(dest.Path);
+                                            var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
+                                            var preferParallelUpload = allowParallelUpload && isRemoteDestination;
+                                            if (!allowParallelUpload)
                                             {
-                                                var created = _repo.GetBackupById(backupResult.BackupId);
-                                                sharedSnapshotId = created?.SnapshotId ?? sharedSnapshotId;
+                                                Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{destLabel}'.");
+                                            }
+                                            var sw = Stopwatch.StartNew();
+                                            var backupResult = await _backupService.RunBackupAsync(
+                                                project,
+                                                resolution.EffectivePath,
+                                                isAuto: true,
+                                                progressCallback: null,
+                                                CancellationToken.None,
+                                                useArchiveMode: useArchiveMode,
+                                                fullSnapshotHash: _settingsViewModel.UseFullSnapshotHash,
+                                                maxSnapshotsToKeep: cfg.Backups.MaxSnapshotsPerProject,
+                                                minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
+                                                preferredFinalBackupRoot: null,
+                                                reuseSnapshotId: metadataWritten ? sharedSnapshotId : null,
+                                                writeMetadata: !metadataWritten,
+                                                destinationPath: resolution.EffectivePath,
+                                                destinationAlias: destLabel,
+                                                skipIfNoChanges: true,
+                                                useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
+                                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
+                                                archiveUploadBufferBytes: archiveUploadBufferBytes,
+                                                preferRunnerProgressOnly: isRemoteDestination,
+                                                preferParallelArchiveUpload: preferParallelUpload,
+                                                useScanCache: _settingsViewModel.EnableScanCache,
+                                                aggressiveScanCache: _settingsViewModel.AggressiveScanCache);
+                                            sw.Stop();
+
+                                            if (backupResult.SkippedForNoChanges)
+                                            {
+                                                Telemetry.Log("auto_backup_skipped", b => b
+                                                    .WithCode("reason", "no_changes")
+                                                    .WithHashedString("project", project.Name)
+                                                    .WithHashedString("destinationPath", dest.Path ?? string.Empty));
+                                                // Skip the remaining destinations for this project to avoid redundant work.
+                                                break;
+                                            }
+
+                                            if (!metadataWritten && backupResult.BackupId > 0)
+                                            {
+                                                metadataWritten = true;
+                                                if (!sharedSnapshotId.HasValue)
+                                                {
+                                                    var created = _repo.GetBackupById(backupResult.BackupId);
+                                                    sharedSnapshotId = created?.SnapshotId ?? sharedSnapshotId;
+                                                }
+                                            }
+
+                                            if (backupResult.BackupId > 0)
+                                            {
+                                                Interlocked.Increment(ref backupSucceeded);
+                                                RecordBackupThroughput(backupResult.BackupId, sw.Elapsed, useArchiveMode);
+                                                TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.BackupId);
                                             }
                                         }
-
-                                        if (backupResult.BackupId > 0)
+                                        catch (Exception ex)
                                         {
-                                            Interlocked.Increment(ref backupSucceeded);
-                                            TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.BackupId);
+                                            Interlocked.Increment(ref backupFailed);
+                                            Telemetry.Log("auto_backup_failure", b => b
+                                                .WithHashedString("project", project.Name)
+                                                .WithHashedString("projectRoot", project.RootPath)
+                                                .WithHashedString("destinationPath", dest.Path)
+                                                .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
+                                                .WithFlag("useArchiveMode", useArchiveMode)
+                                                .WithException(ex));
                                         }
                                     }
-                                    catch (Exception ex)
+                                }
+                                finally
+                                {
+                                    foreach (var (_, resolution) in destinationResolutions)
                                     {
-                                        Interlocked.Increment(ref backupFailed);
-                                        Telemetry.Log("auto_backup_failure", b => b
-                                            .WithHashedString("project", project.Name)
-                                            .WithHashedString("projectRoot", project.RootPath)
-                                            .WithHashedString("destinationPath", dest.Path)
-                                            .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
-                                            .WithFlag("useArchiveMode", useArchiveMode)
-                                            .WithException(ex));
+                                        _networkMountService.Cleanup(resolution);
                                     }
                                 }
 
@@ -1423,15 +1544,7 @@ namespace VaultSync.UI.ViewModels
                         })
                         .ToList();
 
-                    await Task.WhenAll(tasks);
-                }
-                finally
-                {
-                    foreach (var (_, resolution) in destinationResolutions)
-                    {
-                        _networkMountService.Cleanup(resolution);
-                    }
-                }
+                await Task.WhenAll(tasks);
 
                 // Marshal UI collection updates back to the UI thread to avoid cross-thread crashes.
                 await Dispatcher.UIThread.InvokeAsync(() =>
@@ -1442,7 +1555,7 @@ namespace VaultSync.UI.ViewModels
 
                 Telemetry.Log("auto_backup_tick", b => b
                     .WithCount("projects", projects.Count)
-                    .WithCount("destinations", destinations.Count)
+                    .WithCount("destinations", GetAllDestinations(cfg).Count)
                     .WithCount("attempts", backupAttempts)
                     .WithCount("succeeded", backupSucceeded)
                     .WithCount("failed", backupFailed)
@@ -1474,6 +1587,19 @@ namespace VaultSync.UI.ViewModels
             AppConfigStore.Save(cfg);
             _config.Backups.AutoBackupDisabledProjects = list;
             ConfigureAutoBackupTimer();
+        }
+
+        private async void OnPreferredDestinationChanged(int projectId, string preferredDestinationId)
+        {
+            try
+            {
+                _repo.UpdateProjectPreferredDestination(projectId, preferredDestinationId ?? string.Empty);
+                await _projectsViewModel.RefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Projects] Failed to update preferred destination for project {projectId}: {ex.Message}");
+            }
         }
 
         private void OnDestinationActiveChanged(DestinationStatusItem item, bool isActive)
@@ -1554,7 +1680,78 @@ namespace VaultSync.UI.ViewModels
                 UpdateLogConsoleSettings();
             }
 
+            if (e.PropertyName is nameof(SettingsViewModel.UseAdvancedDestinations))
+            {
+                RefreshDestinationOptionSources();
+            }
+
             RefreshDestinationStatusOverview();
+        }
+
+        private void OnDestinationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems is not null)
+            {
+                foreach (BackupDestinationViewModel dest in e.NewItems)
+                {
+                    TrackDestinationViewModel(dest);
+                }
+            }
+
+            if (e.OldItems is not null)
+            {
+                foreach (BackupDestinationViewModel dest in e.OldItems)
+                {
+                    UntrackDestinationViewModel(dest);
+                }
+            }
+
+            RefreshDestinationOptionSources();
+            RefreshDestinationStatusOverview();
+        }
+
+        private void TrackDestinationViewModel(BackupDestinationViewModel dest)
+        {
+            if (_observedDestinations.Add(dest))
+            {
+                dest.PropertyChanged += OnDestinationViewModelPropertyChanged;
+            }
+        }
+
+        private void UntrackDestinationViewModel(BackupDestinationViewModel dest)
+        {
+            if (_observedDestinations.Remove(dest))
+            {
+                dest.PropertyChanged -= OnDestinationViewModelPropertyChanged;
+            }
+        }
+
+        private void OnDestinationViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not BackupDestinationViewModel)
+                return;
+
+            if (e.PropertyName is nameof(BackupDestinationViewModel.Alias)
+                or nameof(BackupDestinationViewModel.Path)
+                or nameof(BackupDestinationViewModel.Active))
+            {
+                RefreshDestinationOptionSources();
+                RefreshDestinationStatusOverview();
+            }
+        }
+
+        private void RefreshDestinationOptionSources()
+        {
+            try
+            {
+                var config = AppConfigStore.Load();
+                _projectsViewModel.RefreshDestinationOptions(config);
+                _backupsViewModel.RefreshDestinationOptions(config);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Destinations] Failed to refresh destination options: {ex.Message}");
+            }
         }
 
         private void UpdateLogConsoleSettings()
@@ -2282,6 +2479,13 @@ namespace VaultSync.UI.ViewModels
             var cfg              = preparation.Config;
             var destinations     = preparation.Destinations;
             var project          = preparation.Project;
+            if (!string.IsNullOrWhiteSpace(preparation.DestinationWarning))
+            {
+                _backupsViewModel.ShowNotification(preparation.DestinationWarning, "Warning");
+                Telemetry.Log("backup_single_destination_fallback", b => b
+                    .WithCode("reason", preparation.DestinationWarningCode ?? "preferred_destination_fallback")
+                    .WithHashedString("project", project.Name));
+            }
             if (!TryResolveProjectRoot(project, cfg, out var resolvedProject, out var rootError))
             {
                 MaybeNotifyProjectRootMissing(project, rootError);
@@ -2409,6 +2613,8 @@ namespace VaultSync.UI.ViewModels
 
                     try
                     {
+                        _ = TryShowPreflightEstimateAsync(project, resolution.EffectivePath, labelPrefix, useArchiveMode, cfg);
+
                         var backupResult = await Task.Run(async () =>
                         {
                             attempts++;
@@ -2420,6 +2626,7 @@ namespace VaultSync.UI.ViewModels
                             {
                                 Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{labelPrefix}'.");
                             }
+                            var sw = Stopwatch.StartNew();
                             var result = await _backupService.RunBackupAsync(
                                 project,
                                 resolution.EffectivePath,
@@ -2479,7 +2686,8 @@ namespace VaultSync.UI.ViewModels
                                         percent,
                                         label,
                                         etaText,
-                                        allowCancel: !isFinalizing);
+                                        allowCancel: !isFinalizing,
+                                        destinationLabel: labelPrefix);
                                     LogBackupProgress(project.Id, project.Name, percent, label, etaText);
 
                                     // Keep legacy aggregate fields in sync (if anything else binds to them)
@@ -2503,8 +2711,11 @@ namespace VaultSync.UI.ViewModels
                                 useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
                                 archiveUploadBufferBytes: archiveUploadBufferBytes,
                                 preferRunnerProgressOnly: isRemoteDestination,
-                                preferParallelArchiveUpload: preferParallelUpload
+                                preferParallelArchiveUpload: preferParallelUpload,
+                                useScanCache: _settingsViewModel.EnableScanCache,
+                                aggressiveScanCache: _settingsViewModel.AggressiveScanCache
                             );
+                            sw.Stop();
 
                             if (!metadataWritten && result.BackupId > 0)
                             {
@@ -2519,10 +2730,10 @@ namespace VaultSync.UI.ViewModels
                                 }
                             }
 
-                            return result;
+                            return (Result: result, Elapsed: sw.Elapsed);
                         });
 
-                        if (backupResult.SkippedForNoChanges)
+                        if (backupResult.Result.SkippedForNoChanges)
                         {
                             Telemetry.Log("backup_single_skipped", b => b
                                 .WithCode("reason", "no_changes")
@@ -2531,7 +2742,7 @@ namespace VaultSync.UI.ViewModels
                             break;
                         }
 
-                        if (backupResult.Cancelled)
+                        if (backupResult.Result.Cancelled)
                         {
                             cancelled = true;
                             _backupsViewModel.UpdateActiveBackup(
@@ -2548,7 +2759,7 @@ namespace VaultSync.UI.ViewModels
                             break;
                         }
 
-                        if (backupResult.BackupId > 0)
+                        if (backupResult.Result.BackupId > 0)
                         {
                             _backupsViewModel.UpdateActiveBackup(
                                 project.Id.ToString(),
@@ -2557,7 +2768,8 @@ namespace VaultSync.UI.ViewModels
                                 L("Backups.Status.Completed", "Completed"),
                                 string.Empty);
                             succeeded++;
-                            TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.BackupId);
+                            RecordBackupThroughput(backupResult.Result.BackupId, backupResult.Elapsed, useArchiveMode);
+                            TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.Result.BackupId);
                         }
                         else
                         {
@@ -2852,26 +3064,11 @@ namespace VaultSync.UI.ViewModels
             if (Interlocked.CompareExchange(ref _backupAllInProgress, 1, 0) == 1)
                 return;
 
-            var cfg             = preparation.Config!;
-            var destinations    = preparation.Destinations!;
-            var primaryDest     = preparation.PrimaryDestination!;
-            var preparedPrimary = preparation.PrimaryResolution!;
-
-            var backupRoot = preparedPrimary.EffectivePath;
-            var primaryAlias = string.IsNullOrWhiteSpace(primaryDest.Alias) ? primaryDest.Path : primaryDest.Alias ?? primaryDest.Path;
-
+            var cfg = preparation.Config!;
             var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
-
             var useArchiveMode = _settingsViewModel.UseBackupCompression;
-            var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
-                primaryDest,
-                cfg,
-                backupRoot,
-                useArchiveMode,
-                CancellationToken.None);
             Telemetry.Log("backup_all_start", b => b
-                .WithHashedString("destinationPath", primaryDest.Path)
-                .WithHashedString("destinationAlias", primaryDest.Alias ?? string.Empty)
+                .WithCount("destinationsConfigured", GetAllDestinations(cfg).Count)
                 .WithFlag("useArchiveMode", useArchiveMode));
 
             _backupsViewModel.BackupProgress    = 0;
@@ -2955,6 +3152,65 @@ namespace VaultSync.UI.ViewModels
                     var tasks = projects.Select(project => Task.Run(async () =>
                     {
                         var projectId = project.Id;
+                        var selection = ResolveDestinationsForProject(project, cfg);
+                        if (!string.IsNullOrWhiteSpace(selection.WarningMessage))
+                        {
+                            _backupsViewModel.ShowNotification(selection.WarningMessage, "Warning");
+                            Telemetry.Log("backup_all_destination_fallback", b => b
+                                .WithCode("reason", selection.WarningCode ?? "preferred_destination_fallback")
+                                .WithHashedString("project", project.Name));
+                        }
+
+                        if (selection.Destinations.Count == 0)
+                        {
+                            var message = L("Backups.Notification.NoDestination", "Backup could not start: no active destination configured.");
+                            results.Add((project.Name, project.RootPath, false));
+                            Telemetry.Log("backup_all_project_skipped", b => b
+                                .WithHashedString("project", project.Name)
+                                .WithHashedString("projectRoot", project.RootPath)
+                                .WithCode("reason", "no_destination"));
+                            progressPerProject[project.Id] = 100;
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _backupsViewModel.UpdateActiveBackup(
+                                    project.Id.ToString(),
+                                    project.Name,
+                                    100,
+                                    message,
+                                    string.Empty);
+                            });
+                            UpdateAggregateProgress(message, string.Empty);
+                            return;
+                        }
+
+                        var primaryDest = selection.Destinations[0];
+                        var preparedPrimary = PrepareDestination(primaryDest, cfg);
+                        if (!preparedPrimary.IsSuccess || string.IsNullOrWhiteSpace(preparedPrimary.EffectivePath))
+                        {
+                            var message = preparedPrimary.Message;
+                            results.Add((project.Name, project.RootPath, false));
+                            Telemetry.Log("backup_all_project_skipped", b => b
+                                .WithHashedString("project", project.Name)
+                                .WithHashedString("projectRoot", project.RootPath)
+                                .WithCode("reason", "destination_unreachable"));
+                            progressPerProject[project.Id] = 100;
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _backupsViewModel.UpdateActiveBackup(
+                                    project.Id.ToString(),
+                                    project.Name,
+                                    100,
+                                    message,
+                                    string.Empty);
+                            });
+                            UpdateAggregateProgress(message, string.Empty);
+                            return;
+                        }
+
+                        var backupRoot = preparedPrimary.EffectivePath;
+                        var primaryAlias = string.IsNullOrWhiteSpace(primaryDest.Alias)
+                            ? primaryDest.Path
+                            : primaryDest.Alias ?? primaryDest.Path;
                         var effectiveBackupRoot = backupRoot;
                         if (!TryResolveProjectRoot(project, cfg, out var resolvedProject, out var rootError))
                         {
@@ -3007,14 +3263,23 @@ namespace VaultSync.UI.ViewModels
 
                         try
                         {
+                            _ = TryShowPreflightEstimateAsync(project, effectiveBackupRoot, primaryAlias, useArchiveMode, cfg);
+
+                            var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
+                                primaryDest,
+                                cfg,
+                                effectiveBackupRoot,
+                                useArchiveMode,
+                                CancellationToken.None);
                             var isRemoteDestination = IsRemoteDestinationPath(effectiveBackupRoot)
-                                || IsRemoteDestinationPath(primaryDest?.Path);
+                                || IsRemoteDestinationPath(primaryDest.Path);
                             var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
                             var preferParallelUpload = allowParallelUpload && isRemoteDestination;
                             if (!allowParallelUpload)
                             {
                                 Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{primaryAlias}'.");
                             }
+                            var sw = Stopwatch.StartNew();
                             var backupResult = await _backupService.RunBackupAsync(
                                 project,
                                 effectiveBackupRoot,
@@ -3086,8 +3351,11 @@ namespace VaultSync.UI.ViewModels
                                 useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
                                 archiveUploadBufferBytes: archiveUploadBufferBytes,
                                 preferRunnerProgressOnly: isRemoteDestination,
-                                preferParallelArchiveUpload: preferParallelUpload
+                                preferParallelArchiveUpload: preferParallelUpload,
+                                useScanCache: _settingsViewModel.EnableScanCache,
+                                aggressiveScanCache: _settingsViewModel.AggressiveScanCache
                             );
+                            sw.Stop();
 
                             if (backupResult.SkippedForNoChanges)
                             {
@@ -3136,6 +3404,7 @@ namespace VaultSync.UI.ViewModels
                               results.Add((project.Name, project.RootPath, backupResult.BackupId > 0));
                               if (backupResult.BackupId > 0)
                               {
+                                  RecordBackupThroughput(backupResult.BackupId, sw.Elapsed, useArchiveMode);
                                   TryExportMetadataForBackup(cfg, primaryDest, effectiveBackupRoot, backupResult.BackupId);
                               }
                             Telemetry.Log("backup_all_project_success", b => b
@@ -3182,8 +3451,6 @@ namespace VaultSync.UI.ViewModels
                         .WithCount("projects", projects.Count)
                         .WithCount("succeeded", results.Count(r => r.success))
                         .WithCount("failed", results.Count(r => !r.success))
-                        .WithHashedString("destinationPath", backupRoot)
-                        .WithHashedString("destinationAlias", primaryAlias)
                         .WithFlag("useArchiveMode", useArchiveMode)
                         .WithNumber("durationSeconds", (DateTime.UtcNow - start).TotalSeconds));
                 });
@@ -3194,6 +3461,7 @@ namespace VaultSync.UI.ViewModels
 
                 // --- After all backups: optional verification / post-hash ---
                 var cfgAfterAll = AppConfigStore.Load();
+                var allDestinations = GetAllDestinations(cfgAfterAll);
                 var allLatest = _repo.GetLatestBackupsPerProject();
                 var projectsById = _repo.GetAllProjects()
                     .GroupBy(p => p.Id)
@@ -3208,7 +3476,11 @@ namespace VaultSync.UI.ViewModels
 
                     if (cfgAfterAll.Backups.VerifyAfterCreate)
                     {
-                        StartVerificationAsync(proj, latest, backupRoot, "backup_all_verify_failed");
+                        var destinationRoot = ResolveDestinationRootForBackup(
+                            latest,
+                            allDestinations,
+                            cfgAfterAll.Backups.BackupRoot);
+                        StartVerificationAsync(proj, latest, destinationRoot ?? string.Empty, "backup_all_verify_failed");
                     }
                     else
                     {
@@ -3259,8 +3531,6 @@ namespace VaultSync.UI.ViewModels
 
                 Telemetry.Log("backup_all_failure", b => b
                     .WithException(ex)
-                    .WithHashedString("destinationPath", backupRoot)
-                    .WithHashedString("destinationAlias", primaryAlias)
                     .WithFlag("useArchiveMode", useArchiveMode)
                     .WithNumber("durationSeconds", (DateTime.UtcNow - start).TotalSeconds));
 
@@ -3317,12 +3587,105 @@ namespace VaultSync.UI.ViewModels
 
                 TrayMenuRefreshRequested?.Invoke();
 
-                if (preparedPrimary.MountedByUs && primaryDest.AutoUnmount)
-                {
-                    _networkMountService.Cleanup(preparedPrimary);
-                }
                 Interlocked.Exchange(ref _backupAllInProgress, 0);
             }
+        }
+
+        private async Task TryShowPreflightEstimateAsync(Project project, string backupRoot, string? labelPrefix, bool useArchiveMode, AppConfig cfg)
+        {
+            try
+            {
+                var throughput = useArchiveMode
+                    ? cfg.Backups.LastBackupThroughputArchiveMbSec
+                    : cfg.Backups.LastBackupThroughputCopyMbSec;
+                if (throughput <= 0)
+                {
+                    throughput = cfg.Backups.LastBackupThroughputMbSec;
+                }
+                var preflight = await _backupService.PreflightBackupAsync(
+                    project,
+                    backupRoot,
+                    CancellationToken.None,
+                    throughputMbSec: throughput,
+                    useArchiveMode: useArchiveMode,
+                    cacheTtl: TimeSpan.FromSeconds(45));
+
+                var sizeLabel = BackupSnapshotItem.FormatSize(preflight.TotalBytes);
+                var estimateLabel = string.Empty;
+                var etaText = FormatEta(preflight.EstimatedSeconds);
+                if (!string.IsNullOrWhiteSpace(etaText))
+                {
+                    estimateLabel = Lf(
+                        "Backups.Preflight.Message",
+                        "Estimated {0} files, {1} total, ETA {2}.",
+                        preflight.TotalFiles,
+                        sizeLabel,
+                        etaText);
+                }
+                else
+                {
+                    estimateLabel = Lf(
+                        "Backups.Preflight.MessageNoEta",
+                        "Estimated {0} files, {1} total.",
+                        preflight.TotalFiles,
+                        sizeLabel);
+                }
+
+                if (!string.IsNullOrWhiteSpace(labelPrefix))
+                {
+                    estimateLabel = $"[{labelPrefix}] {estimateLabel}";
+                }
+
+                var projectId = project.Id.ToString();
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    var active = _backupsViewModel.ActiveBackups.FirstOrDefault(p => p.ProjectId == projectId);
+                    if (active is null || active.Progress <= 0.1d)
+                    {
+                        _backupsViewModel.UpdateActiveBackup(
+                            projectId,
+                            project.Name,
+                            0,
+                            L("Backups.Progress.Estimating", "Estimating..."),
+                            estimateLabel,
+                            allowCancel: true);
+                    }
+
+                    if (!preflight.HasEnoughSpace && preflight.VolumeFreeBytes.HasValue)
+                    {
+                        var freeLabel = BackupSnapshotItem.FormatSize(preflight.VolumeFreeBytes.Value);
+                        var warning = Lf(
+                            "Backups.Preflight.LowDisk",
+                            "Backup may not fit on the destination. Free space: {0}.",
+                            freeLabel);
+
+                        _backupsViewModel.ShowNotification(warning, "Warning");
+                        if (!IsOnBackupsPage)
+                        {
+                            GlobalNotificationCenter.Instance.Show(
+                                warning,
+                                NotificationSeverity.Warning,
+                                L("Backups.Preflight.Title", "Backup estimate"));
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Backup] Preflight estimate failed: {ex.Message}");
+            }
+        }
+
+        private static string FormatEta(double? seconds)
+        {
+            if (!seconds.HasValue || seconds.Value <= 0)
+                return string.Empty;
+
+            var eta = TimeSpan.FromSeconds(seconds.Value);
+            if (eta.TotalHours >= 1)
+                return $"{(int)eta.TotalHours}h {eta.Minutes}m";
+
+            return eta.ToString(@"mm\:ss");
         }
 
         private void StartPostBackupHashingAsync(Project project, int snapshotId)
@@ -3347,6 +3710,50 @@ namespace VaultSync.UI.ViewModels
                     Console.WriteLine($"[Backup] Post-hash failed: project='{project.Name}', error={ex.Message}");
                 }
             });
+        }
+
+        private void RecordBackupThroughput(int backupId, TimeSpan elapsed, bool useArchiveMode)
+        {
+            try
+            {
+                if (backupId <= 0)
+                    return;
+
+                if (elapsed.TotalSeconds <= 1)
+                    return;
+
+                var backup = _repo.GetBackupById(backupId);
+                if (backup is null || backup.TotalBytes <= 0)
+                    return;
+
+                var mbSec = backup.TotalBytes / (1024d * 1024d) / elapsed.TotalSeconds;
+                if (double.IsNaN(mbSec) || double.IsInfinity(mbSec) || mbSec <= 0)
+                    return;
+
+                var cfg = AppConfigStore.Load();
+                var existing = useArchiveMode
+                    ? cfg.Backups.LastBackupThroughputArchiveMbSec
+                    : cfg.Backups.LastBackupThroughputCopyMbSec;
+                var blended = existing > 0 ? (existing * 0.7 + mbSec * 0.3) : mbSec;
+                var rounded = Math.Round(blended, 2);
+                if (useArchiveMode)
+                {
+                    cfg.Backups.LastBackupThroughputArchiveMbSec = rounded;
+                }
+                else
+                {
+                    cfg.Backups.LastBackupThroughputCopyMbSec = rounded;
+                }
+                cfg.Backups.LastBackupThroughputMbSec = rounded;
+                AppConfigStore.Save(cfg);
+                _config.Backups.LastBackupThroughputArchiveMbSec = cfg.Backups.LastBackupThroughputArchiveMbSec;
+                _config.Backups.LastBackupThroughputCopyMbSec = cfg.Backups.LastBackupThroughputCopyMbSec;
+                _config.Backups.LastBackupThroughputMbSec = cfg.Backups.LastBackupThroughputMbSec;
+            }
+            catch
+            {
+                // best-effort only; ignore throughput persistence errors
+            }
         }
 
         private void StartVerificationAsync(Project project, Backup latest, string backupRoot, string telemetryEvent)
@@ -4262,7 +4669,7 @@ namespace VaultSync.UI.ViewModels
             }
 
             var cfg = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
+            var destinations = GetAllDestinations(cfg);
             var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
             {
@@ -4339,14 +4746,14 @@ namespace VaultSync.UI.ViewModels
             if (!cfg.Backups.EnableAutoBackups)
                 return AutoBackupPreparation.Failure("disabled");
 
-            var destinations = GetActiveDestinations(cfg);
+            var destinations = GetAllDestinations(cfg);
             if (destinations.Count == 0)
                 return AutoBackupPreparation.Failure("no_destination");
 
             var projects = _repo.GetAllProjects().ToList();
             var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
 
-            return AutoBackupPreparation.Success(cfg, projects, destinations, disabled);
+            return AutoBackupPreparation.Success(cfg, projects, disabled);
         }
 
         private sealed record AutoBackupPreparation(
@@ -4354,18 +4761,16 @@ namespace VaultSync.UI.ViewModels
             string? FailureCode,
             AppConfig? Config,
             List<Project>? Projects,
-            List<BackupDestination>? Destinations,
             ISet<int>? DisabledProjects)
         {
             public static AutoBackupPreparation Failure(string reason) =>
-                new(false, reason, null, null, null, null);
+                new(false, reason, null, null, null);
 
             public static AutoBackupPreparation Success(
                 AppConfig cfg,
                 List<Project> projects,
-                List<BackupDestination> destinations,
                 ISet<int> disabled) =>
-                new(true, null, cfg, projects, destinations, disabled);
+                new(true, null, cfg, projects, disabled);
         }
 
         private async void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
@@ -4723,39 +5128,25 @@ namespace VaultSync.UI.ViewModels
         private BackupAllPreparationResult PrepareBackupAll()
         {
             var cfg = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
+            var destinations = GetAllDestinations(cfg);
             if (destinations.Count == 0)
             {
                 return BackupAllPreparationResult.Failure("no_destination");
             }
 
-            var primaryDest = destinations[0];
-            var preparedPrimary = PrepareDestination(primaryDest, cfg);
-            if (!preparedPrimary.IsSuccess)
-            {
-                return BackupAllPreparationResult.Failure("destination_unreachable");
-            }
-
-            return BackupAllPreparationResult.Success(cfg, destinations, primaryDest, preparedPrimary);
+            return BackupAllPreparationResult.Success(cfg);
         }
 
         private sealed record BackupAllPreparationResult(
             bool IsReady,
             string? FailureCode,
-            AppConfig? Config,
-            List<BackupDestination>? Destinations,
-            BackupDestination? PrimaryDestination,
-            DestinationResolution? PrimaryResolution)
+            AppConfig? Config)
         {
             public static BackupAllPreparationResult Failure(string reason) =>
-                new(false, reason, null, null, null, null);
+                new(false, reason, null);
 
-            public static BackupAllPreparationResult Success(
-                AppConfig cfg,
-                List<BackupDestination> destinations,
-                BackupDestination primaryDestination,
-                DestinationResolution primaryResolution) =>
-                new(true, null, cfg, destinations, primaryDestination, primaryResolution);
+            public static BackupAllPreparationResult Success(AppConfig cfg) =>
+                new(true, null, cfg);
         }
 
         private void ResolveBackupRoots(
@@ -4827,7 +5218,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string? TryResolveBackupPathForRead(string relativePath, IReadOnlyList<BackupDestination> destinations, string? legacyRoot)
         {
-            foreach (var dest in destinations.Where(d => d.Active))
+            foreach (var dest in destinations.OrderByDescending(d => d.Active))
             {
                 if (string.IsNullOrWhiteSpace(dest.Path))
                     continue;
@@ -4853,7 +5244,7 @@ namespace VaultSync.UI.ViewModels
         {
             if (!string.IsNullOrWhiteSpace(backup.Path))
             {
-                foreach (var dest in destinations.Where(d => d.Active && !string.IsNullOrWhiteSpace(d.Path)))
+                foreach (var dest in destinations.Where(d => !string.IsNullOrWhiteSpace(d.Path)))
                 {
                     var combined = Path.GetFullPath(Path.Combine(dest.Path!, backup.Path));
                     if (Directory.Exists(combined) || File.Exists(combined))
@@ -4861,7 +5252,7 @@ namespace VaultSync.UI.ViewModels
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(backup.DestinationPath) && Directory.Exists(backup.DestinationPath))
+            if (!string.IsNullOrWhiteSpace(backup.DestinationPath))
                 return backup.DestinationPath;
 
             if (!string.IsNullOrWhiteSpace(backup.DestinationAlias))
@@ -4938,7 +5329,7 @@ namespace VaultSync.UI.ViewModels
                 return null;
 
             var cfg = AppConfigStore.Load();
-            var destinations = GetActiveDestinations(cfg);
+            var destinations = GetAllDestinations(cfg);
             var destinationRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(destinationRoot))
                 return null;
@@ -6101,6 +6492,18 @@ namespace VaultSync.UI.ViewModels
         private static string LStatic(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
 
+        private static string ResolveSystemLanguageCode(LocalizationService localizationService)
+        {
+            var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            if (localizationService.SupportedLanguages.Any(l =>
+                    string.Equals(l.Code, uiLang, StringComparison.OrdinalIgnoreCase)))
+            {
+                return uiLang;
+            }
+
+            return "en";
+        }
+
         private void ShowBackupSkipNotification(string message, NotificationSeverity severity)
         {
             if (string.IsNullOrWhiteSpace(message))
@@ -6144,9 +6547,11 @@ namespace VaultSync.UI.ViewModels
             if (!_restoreAdvisoryShown.TryAdd(project.Id, 0))
                 return;
 
-            ShowBackupSkipNotification(
-                _localizationService["Backups.Notification.RestoreRequired"],
-                NotificationSeverity.Warning);
+            var message = Lf(
+                "Backups.Notification.RestoreRequiredForProject",
+                "Imported history is newer for '{0}'. Consider restoring before creating new backups.",
+                project.Name);
+            ShowBackupSkipNotification(message, NotificationSeverity.Warning);
         }
 
         private bool TryResolveProjectRoot(Project project, AppConfig cfg, out Project resolvedProject, out string errorMessage)

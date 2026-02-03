@@ -35,18 +35,21 @@ namespace VaultSync.UI.Services
         public DriveHealthResult CheckPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
-                return Unknown("Path not provided");
+                return Unknown(L("DriveHealth.Unknown.PathNotProvided", "Path not provided"));
 
             try
             {
                 var full = Path.GetFullPath(path);
                 var root = Path.GetPathRoot(full);
                 if (string.IsNullOrWhiteSpace(root))
-                    return Unknown("Could not resolve drive");
+                    return Unknown(L("DriveHealth.Unknown.CouldNotResolveDrive", "Could not resolve drive"));
 
                 // UNC / network shares: SMART usually not accessible; report unknown.
                 if (root.StartsWith(@"\\") || root.StartsWith("//"))
-                    return Unknown("Network path; drive health not available", driveId: root, path: full);
+                    return Unknown(
+                        L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                        driveId: root,
+                        path: full);
 
                 // Prefer smartctl when available (all platforms).
                 if (TrySmartCtl(root, full, out var smartResult))
@@ -66,7 +69,7 @@ namespace VaultSync.UI.Services
                 // ignore and return unknown below
             }
 
-            return Unknown("Drive health unavailable");
+            return Unknown(L("DriveHealth.Unknown.Unavailable", "Drive health unavailable"));
         }
 
         private static DriveHealthResult CheckWindows(string root, string fullPath)
@@ -96,7 +99,7 @@ namespace VaultSync.UI.Services
                     {
                         return new DriveHealthResult(
                             DriveHealthStatus.Failing,
-                            "SMART reports this drive is failing.",
+                            L("DriveHealth.Failing.SmartFailingDrive", "SMART reports this drive is failing."),
                             DriveId: trimmed,
                             Path: fullPath);
                     }
@@ -105,7 +108,11 @@ namespace VaultSync.UI.Services
 
                 if (sawOk)
                 {
-                    return new DriveHealthResult(DriveHealthStatus.Healthy, "SMART reports OK.", DriveId: root, Path: fullPath);
+                    return new DriveHealthResult(
+                        DriveHealthStatus.Healthy,
+                        L("DriveHealth.Healthy.SmartOk", "SMART reports OK."),
+                        DriveId: root,
+                        Path: fullPath);
                 }
             }
 
@@ -117,7 +124,7 @@ namespace VaultSync.UI.Services
                 {
                     return new DriveHealthResult(
                         DriveHealthStatus.Warning,
-                        "Drive is not ready.",
+                        L("DriveHealth.Warning.DriveNotReady", "Drive is not ready."),
                         DriveId: root,
                         Path: fullPath);
                 }
@@ -129,15 +136,19 @@ namespace VaultSync.UI.Services
                 {
                     return new DriveHealthResult(
                         DriveHealthStatus.Healthy,
-                        "SMART not available; drive is reachable.",
+                        L("DriveHealth.Healthy.SmartNotAvailableReachable", "SMART not available; drive is reachable."),
                         DriveId: root,
                         Path: fullPath);
                 }
 
-                return Unknown("Could not read drive info", driveId: root, path: fullPath);
+                return Unknown(L("DriveHealth.Unknown.CouldNotReadDriveInfo", "Could not read drive info"), driveId: root, path: fullPath);
             }
 
-            return new DriveHealthResult(DriveHealthStatus.Healthy, "SMART reports OK.", DriveId: root, Path: fullPath);
+            return new DriveHealthResult(
+                DriveHealthStatus.Healthy,
+                L("DriveHealth.Healthy.SmartOk", "SMART reports OK."),
+                DriveId: root,
+                Path: fullPath);
         }
 
         private static DriveHealthResult CheckMac(string fullPath)
@@ -146,7 +157,7 @@ namespace VaultSync.UI.Services
             var dfOutput = RunProcess("/bin/df", $"-P \"{fullPath}\"", 4000);
             var device = ParseDeviceFromDf(dfOutput);
             if (string.IsNullOrWhiteSpace(device))
-                return Unknown("Could not resolve device", path: fullPath);
+                return Unknown(L("DriveHealth.Unknown.CouldNotResolveDevice", "Could not resolve device"), path: fullPath);
 
             // Prefer smartctl if available on macOS (brew install smartmontools).
             if (TrySmartCtl(device, fullPath, out var smartResult))
@@ -154,18 +165,26 @@ namespace VaultSync.UI.Services
 
             var infoOutput = RunProcess("/usr/sbin/diskutil", $"info {device}", 4000);
             if (string.IsNullOrWhiteSpace(infoOutput))
-                return Unknown("diskutil did not return data", driveId: device, path: fullPath);
+                return Unknown(L("DriveHealth.Unknown.DiskutilNoData", "diskutil did not return data"), driveId: device, path: fullPath);
 
             if (infoOutput.IndexOf("SMART Status: Verified", StringComparison.OrdinalIgnoreCase) >= 0)
-                return new DriveHealthResult(DriveHealthStatus.Healthy, "SMART verified", DriveId: device, Path: fullPath);
+                return new DriveHealthResult(
+                    DriveHealthStatus.Healthy,
+                    L("DriveHealth.Healthy.SmartVerified", "SMART verified"),
+                    DriveId: device,
+                    Path: fullPath);
 
             if (infoOutput.IndexOf("SMART Status: Failing", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 infoOutput.IndexOf("SMART Status: Failed", StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                return new DriveHealthResult(DriveHealthStatus.Failing, "SMART reports failing.", DriveId: device, Path: fullPath);
+                return new DriveHealthResult(
+                    DriveHealthStatus.Failing,
+                    L("DriveHealth.Failing.SmartFailing", "SMART reports failing."),
+                    DriveId: device,
+                    Path: fullPath);
             }
 
-            return Unknown("SMART not supported or unknown", driveId: device, path: fullPath);
+            return Unknown(L("DriveHealth.Unknown.SmartNotSupported", "SMART not supported or unknown"), driveId: device, path: fullPath);
         }
 
         private static DriveHealthResult CheckLinux(string fullPath)
@@ -174,13 +193,13 @@ namespace VaultSync.UI.Services
             var dfOutput = RunProcess("/bin/df", $"-P \"{fullPath}\"", 4000);
             var device = ParseDeviceFromDf(dfOutput);
             if (string.IsNullOrWhiteSpace(device))
-                return Unknown("Could not resolve device", path: fullPath);
+                return Unknown(L("DriveHealth.Unknown.CouldNotResolveDevice", "Could not resolve device"), path: fullPath);
 
             // Try smartctl -H <device> if available.
             if (TrySmartCtl(device, fullPath, out var smartResult))
                 return smartResult;
 
-            return Unknown("SMART not available", driveId: device, path: fullPath);
+            return Unknown(L("DriveHealth.Unknown.SmartNotAvailable", "SMART not available"), driveId: device, path: fullPath);
         }
 
         private static bool TrySmartCtl(string target, string fullPath, out DriveHealthResult result)
@@ -201,7 +220,7 @@ namespace VaultSync.UI.Services
             {
                 result = new DriveHealthResult(
                     DriveHealthStatus.Healthy,
-                    "SMART reports OK.",
+                    L("DriveHealth.Healthy.SmartOk", "SMART reports OK."),
                     DriveId: device,
                     Path: fullPath);
                 return true;
@@ -213,7 +232,7 @@ namespace VaultSync.UI.Services
             {
                 result = new DriveHealthResult(
                     DriveHealthStatus.Failing,
-                    "SMART reports failing.",
+                    L("DriveHealth.Failing.SmartFailing", "SMART reports failing."),
                     DriveId: device,
                     Path: fullPath);
                 return true;
@@ -274,5 +293,8 @@ namespace VaultSync.UI.Services
 
         private static DriveHealthResult Unknown(string message, string? driveId = null, string? path = null) =>
             new DriveHealthResult(DriveHealthStatus.Unknown, message, driveId, path);
+
+        private static string L(string key, string fallback) =>
+            LocalizationProvider.Service?.GetString(key) ?? fallback;
     }
 }

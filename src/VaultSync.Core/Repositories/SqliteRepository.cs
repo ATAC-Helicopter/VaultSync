@@ -88,6 +88,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           external_id TEXT NOT NULL DEFAULT '',
           needs_restore INTEGER NOT NULL DEFAULT 0,
+          preferred_destination_id TEXT,
           name TEXT NOT NULL UNIQUE,
           root_path TEXT NOT NULL,
           preset TEXT NOT NULL,
@@ -128,6 +129,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           path TEXT NOT NULL,
           destination_path TEXT NOT NULL DEFAULT '',
           destination_alias TEXT NOT NULL DEFAULT '',
+          origin_machine_name TEXT NOT NULL DEFAULT '',
           is_imported INTEGER NOT NULL DEFAULT 0,
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
@@ -139,8 +141,10 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     EnsureColumnExists("backups", "is_imported", "ALTER TABLE backups ADD COLUMN is_imported INTEGER NOT NULL DEFAULT 0;");
     EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
     EnsureColumnExists("snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
 
@@ -233,7 +237,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
                 new { name });
         }
 
@@ -241,7 +245,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
                 new { id });
         }
 
@@ -271,7 +275,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.Query<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
         }
 
         /// <summary>
@@ -300,14 +304,15 @@ DELETE FROM sqlite_sequence;";
                 : p.ExternalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO projects(external_id, needs_restore, name, root_path, preset, created_utc)
-                VALUES(@ExternalId, @NeedsRestore, @Name, @RootPath, @Preset, @CreatedUtc);
+                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, name, root_path, preset, created_utc)
+                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @Name, @RootPath, @Preset, @CreatedUtc);
                 SELECT last_insert_rowid();
                 """,
                 new
                 {
                     ExternalId = externalId,
                     NeedsRestore = p.NeedsRestore ? 1 : 0,
+                    PreferredDestinationId = string.IsNullOrWhiteSpace(p.PreferredDestinationId) ? null : p.PreferredDestinationId,
                     p.Name,
                     p.RootPath,
                     p.Preset,
@@ -323,6 +328,18 @@ DELETE FROM sqlite_sequence;";
                 new { needs = needsRestore ? 1 : 0, id = projectId });
         }
 
+        public void UpdateProjectPreferredDestination(int projectId, string? preferredDestinationId)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET preferred_destination_id = @preferred WHERE id = @id;",
+                new
+                {
+                    preferred = string.IsNullOrWhiteSpace(preferredDestinationId) ? null : preferredDestinationId,
+                    id = projectId
+                });
+        }
+
         public Project? GetProjectByExternalId(string externalId)
         {
             if (string.IsNullOrWhiteSpace(externalId))
@@ -331,7 +348,7 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
                 """
-                SELECT id, external_id as ExternalId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
+                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
                 FROM projects
                 WHERE external_id = @externalId
                 LIMIT 1;
@@ -695,11 +712,12 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
             var externalId = NewExternalId();
+            var originMachineName = Environment.MachineName;
 
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected, is_imported)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected, @IsImported);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -713,6 +731,7 @@ DELETE FROM sqlite_sequence;";
                     Path            = relativePath,
                     DestinationPath = destinationPath ?? string.Empty,
                     DestinationAlias = destinationAlias ?? string.Empty,
+                    OriginMachineName = originMachineName,
                     IsProtected     = isProtected ? 1 : 0,
                     IsImported      = 0
                 });
@@ -729,15 +748,16 @@ DELETE FROM sqlite_sequence;";
             string destinationPath,
             string destinationAlias,
             bool isProtected,
-            bool isImported)
+            bool isImported,
+            string originMachineName = "")
         {
             using var c = Open();
             var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
             var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, is_protected, is_imported)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @IsProtected, @IsImported);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -751,6 +771,7 @@ DELETE FROM sqlite_sequence;";
                     Path            = relativePath ?? string.Empty,
                     DestinationPath = destinationPath ?? string.Empty,
                     DestinationAlias = destinationAlias ?? string.Empty,
+                    OriginMachineName = originMachineName ?? string.Empty,
                     IsProtected     = isProtected ? 1 : 0,
                     IsImported      = isImported ? 1 : 0
                 });
@@ -775,6 +796,7 @@ DELETE FROM sqlite_sequence;";
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
+                    origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
                     is_imported as IsImported
                   FROM backups
@@ -822,6 +844,7 @@ DELETE FROM sqlite_sequence;";
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
+                    origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
                     is_imported as IsImported
                   FROM backups
@@ -848,6 +871,7 @@ DELETE FROM sqlite_sequence;";
                     b.path,
                     b.destination_path as DestinationPath,
                     b.destination_alias as DestinationAlias,
+                    b.origin_machine_name as OriginMachineName,
                     b.is_protected as IsProtected,
                     b.is_imported as IsImported
                   FROM backups b
@@ -877,6 +901,7 @@ DELETE FROM sqlite_sequence;";
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
+                    origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
                     is_imported as IsImported
                   FROM backups
@@ -905,6 +930,7 @@ DELETE FROM sqlite_sequence;";
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
+                    origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
                     is_imported as IsImported
                   FROM (
@@ -935,6 +961,7 @@ DELETE FROM sqlite_sequence;";
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
+                    origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
                     is_imported as IsImported
                   FROM backups
@@ -982,6 +1009,7 @@ DELETE FROM sqlite_sequence;";
                   path,
                   destination_path as DestinationPath,
                   destination_alias as DestinationAlias,
+                  origin_machine_name as OriginMachineName,
                   is_protected as IsProtected,
                   is_imported as IsImported
                 FROM backups
@@ -1020,6 +1048,7 @@ DELETE FROM sqlite_sequence;";
                   path,
                   destination_path as DestinationPath,
                   destination_alias as DestinationAlias,
+                  origin_machine_name as OriginMachineName,
                   is_protected as IsProtected,
                   is_imported as IsImported
                 FROM backups

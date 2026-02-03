@@ -1,0 +1,78 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+    x:Class="VaultSync.UI.Views.Controls.OnboardingTourOverlay"
+    x:DataType="vm:OnboardingTourViewModel"
+    IsVisible="{CompiledBinding IsActive}">
+
+  <Grid IsHitTestVisible="False">
+    <Canvas x:Name="OverlayCanvas">
+      <Border x:Name="OverlayTop"
+              Background="#A0000000" />
+      <Border x:Name="OverlayLeft"
+              Background="#A0000000" />
+      <Border x:Name="OverlayRight"
+              Background="#A0000000" />
+      <Border x:Name="OverlayBottom"
+              Background="#A0000000" />
+      <Border x:Name="HighlightBorder"
+              BorderBrush="{DynamicResource AccentBrush}"
+              BorderThickness="3"
+              CornerRadius="14"
+              Background="#22FFFFFF"
+              Width="10"
+              Height="10"
+              IsHitTestVisible="False" />
+
+    </Canvas>
+
+    <Popup x:Name="CalloutPopup"
+           IsOpen="{CompiledBinding IsActive}"
+           Placement="Top"
+           IsLightDismissEnabled="False">
+      <Border x:Name="CalloutCard"
+              Background="{DynamicResource Surface1}"
+              BorderBrush="{DynamicResource BorderSoft}"
+              BorderThickness="1"
+              CornerRadius="16"
+              Padding="16"
+              Width="320">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{CompiledBinding StepCounter}"
+                     FontSize="11"
+                     Foreground="{DynamicResource TextSecondary}"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="{CompiledBinding Title}"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="{CompiledBinding Body}"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextSecondary}"
+                     TextWrapping="Wrap"
+                     LineHeight="20" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="{CompiledBinding SkipLabel}"
+                    Command="{CompiledBinding SkipCommand}"
+                    Background="{DynamicResource Surface2}"
+                    BorderBrush="{DynamicResource BorderSoft}"
+                    Foreground="{DynamicResource TextPrimary}"
+                    CornerRadius="10"
+                    Padding="10,6" />
+            <Button Content="{CompiledBinding PrimaryLabel}"
+                    Command="{CompiledBinding PrimaryCommand}"
+                    IsEnabled="{CompiledBinding IsPrimaryEnabled}"
+                    Background="{DynamicResource AccentBrush}"
+                    Foreground="{DynamicResource TextOnPillBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}"
+                    CornerRadius="10"
+                    Padding="10,6" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Popup>
+  </Grid>
+</UserControl>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -48,6 +49,8 @@ public class ProjectsViewModel : ViewModelBase
     /// </summary>
     public ObservableCollection<string> AvailablePresets { get; } =
         new ObservableCollection<string>();
+    public ObservableCollection<DestinationOption> DestinationOptions { get; } =
+        new ObservableCollection<DestinationOption>();
     public ObservableCollection<ProjectItemViewModel> Projects { get; } =
         new ObservableCollection<ProjectItemViewModel>();
 
@@ -212,6 +215,7 @@ public class ProjectsViewModel : ViewModelBase
             var config = AppConfigStore.Load();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
+            RefreshDestinationOptionsInternal(config);
             var projectItems = await Task.Run(() =>
             {
                 var discovered = GetDiscoveredProjects(config, forceDiscovery);
@@ -367,11 +371,15 @@ public class ProjectsViewModel : ViewModelBase
             {
                 Name = p.Name,
                 Path = p.Path,
+                ExternalId = existingProject?.ExternalId ?? string.Empty,
                 LastSnapshot = lastSnapshotTime ?? default,
                 SizeBytes = lastSnapshotBytes ?? 0,
-                Preset = existingProject?.Preset ?? string.Empty
+                Preset = existingProject?.Preset ?? string.Empty,
+                PreferredDestinationId = existingProject?.PreferredDestinationId ?? string.Empty
             };
-            vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path));
+            vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path), vm.ExternalId);
+            UpdateProjectDestinationDisplay(vm, config);
+            vm.PropertyChanged += OnProjectItemPropertyChanged;
 
             // Populate snapshot history from DB if available; otherwise fall back to discovery values.
             if (snapshotVms != null && snapshotVms.Count > 0)
@@ -413,6 +421,94 @@ public class ProjectsViewModel : ViewModelBase
         }
 
         return items;
+    }
+
+    private void RefreshDestinationOptionsInternal(AppConfig config)
+    {
+        DestinationOptions.Clear();
+
+        DestinationOptions.Add(new DestinationOption(
+            string.Empty,
+            L("Projects.Destination.Auto", "Auto (active destinations)")));
+
+        DestinationOptions.Add(new DestinationOption(
+            Project.DestinationAllId,
+            L("Projects.Destination.All", "All destinations")));
+
+        if (config.Backups.UseAdvancedDestinations && config.Backups.Destinations is { Count: > 0 })
+        {
+            foreach (var dest in config.Backups.Destinations)
+            {
+                var label = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
+                if (!dest.Active)
+                {
+                    var suffix = L("Projects.Destination.InactiveSuffix", " (inactive)");
+                    label = $"{label}{suffix}";
+                }
+
+                var id = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
+                DestinationOptions.Add(new DestinationOption(id, label));
+            }
+        }
+    }
+
+    public void RefreshDestinationOptions(AppConfig config)
+    {
+        RefreshDestinationOptionsInternal(config);
+        foreach (var project in Projects)
+        {
+            UpdateProjectDestinationDisplay(project, config);
+        }
+    }
+
+    private void UpdateProjectDestinationDisplay(ProjectItemViewModel vm, AppConfig config)
+    {
+        var id = vm.PreferredDestinationId ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            vm.PreferredDestinationDisplay = L("Projects.Destination.Auto", "Auto (active destinations)");
+            vm.SetPreferredDestinationOption(DestinationOptions.FirstOrDefault(o => string.IsNullOrWhiteSpace(o.Id)));
+            return;
+        }
+
+        if (string.Equals(id, Project.DestinationAllId, StringComparison.OrdinalIgnoreCase))
+        {
+            vm.PreferredDestinationDisplay = L("Projects.Destination.All", "All destinations");
+            vm.SetPreferredDestinationOption(DestinationOptions.FirstOrDefault(o =>
+                string.Equals(o.Id, Project.DestinationAllId, StringComparison.OrdinalIgnoreCase)));
+            return;
+        }
+
+        var match = config.Backups.Destinations.FirstOrDefault(d =>
+            string.Equals(d.Alias ?? string.Empty, id, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(d.Path ?? string.Empty, id, StringComparison.OrdinalIgnoreCase));
+
+        if (match != null)
+        {
+            vm.PreferredDestinationDisplay = string.IsNullOrWhiteSpace(match.Alias)
+                ? match.Path
+                : match.Alias;
+        }
+        else
+        {
+            vm.PreferredDestinationDisplay = id;
+        }
+
+        var optionMatch = DestinationOptions.FirstOrDefault(o =>
+            string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase));
+        if (optionMatch is null)
+        {
+            var fallback = DestinationOptions.FirstOrDefault(o => string.IsNullOrWhiteSpace(o.Id))
+                           ?? DestinationOptions.FirstOrDefault();
+            if (fallback != null)
+            {
+                vm.PreferredDestinationDisplay = fallback.Label;
+                vm.SetPreferredDestinationOption(fallback);
+                return;
+            }
+        }
+
+        vm.SetPreferredDestinationOption(optionMatch);
     }
 
     private void SortProjects()
@@ -660,6 +756,8 @@ public class ProjectsViewModel : ViewModelBase
                 : GetDefaultDbPath();
             var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
             var fullHash = config.Backups.UseFullSnapshotHash;
+            var enableScanCache = config.Backups.EnableScanCache;
+            var aggressiveScanCache = config.Backups.AggressiveScanCache;
 
             // 2. Open repository (schema already initialized at app startup).
             var repo = new SqliteRepository(dbPath);
@@ -680,7 +778,8 @@ public class ProjectsViewModel : ViewModelBase
                     Name = SelectedProject.Name,
                     RootPath = SelectedProject.Path,
                     Preset = SelectedProject.Preset,
-                    CreatedUtc = DateTime.UtcNow
+                    CreatedUtc = DateTime.UtcNow,
+                    PreferredDestinationId = SelectedProject.PreferredDestinationId
                 };
 
                 var id = repo.AddProject(project);
@@ -707,7 +806,12 @@ public class ProjectsViewModel : ViewModelBase
             var snapshotId = await snapshotService.CreateSnapshotAsync(
                 existing,
                 fullHash: fullHash,
-                maxSnapshotsToKeep: maxSnapshotsToKeep);
+                hashNow: true,
+                maxSnapshotsToKeep: maxSnapshotsToKeep,
+                ct: CancellationToken.None,
+                progressCallback: null,
+                useScanCache: enableScanCache,
+                aggressiveScanCache: aggressiveScanCache);
             var outcome = SnapshotService.LastOutcome;
 
             // Update the selected project's stats in the UI immediately, based on the DB state
@@ -840,11 +944,11 @@ public class ProjectsViewModel : ViewModelBase
 
                 var repo = new SqliteRepository(dbPath);
                 var existing = repo.GetProjectByName(projectName);
-                return (existing is null, existing?.Preset ?? string.Empty);
+                return (existing is null, existing?.Preset ?? string.Empty, existing?.PreferredDestinationId ?? string.Empty);
             }
             catch
             {
-                return (true, string.Empty);
+                return (true, string.Empty, string.Empty);
             }
         }).ContinueWith(t =>
         {
@@ -857,7 +961,7 @@ public class ProjectsViewModel : ViewModelBase
                     !string.Equals(SelectedProject.Name, projectName, StringComparison.OrdinalIgnoreCase))
                     return;
 
-                var (missing, preset) = t.Result;
+                var (missing, preset, preferredDestinationId) = t.Result;
                 if (missing)
                 {
                     SnapshotActionLabel = L("Snapshots.Action.AddProject", "Add project");
@@ -873,9 +977,39 @@ public class ProjectsViewModel : ViewModelBase
                     SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
                     SelectedProject.IsRegistered = true;
                     SelectedProject.Preset = preset;
+                    SelectedProject.PreferredDestinationId = preferredDestinationId;
+                    UpdateProjectDestinationDisplay(SelectedProject, AppConfigStore.Load());
                 }
             });
         });
+    }
+
+    private void OnProjectItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not ProjectItemViewModel vm)
+            return;
+
+        if (!string.Equals(e.PropertyName, nameof(ProjectItemViewModel.PreferredDestinationId), StringComparison.Ordinal))
+            return;
+
+        try
+        {
+            var config = AppConfigStore.Load();
+            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                ? config.DbPath
+                : GetDefaultDbPath();
+
+            var repo = new SqliteRepository(dbPath);
+            var project = repo.GetProjectByName(vm.Name);
+            if (project is null)
+                return;
+
+            repo.UpdateProjectPreferredDestination(project.Id, vm.PreferredDestinationId);
+            UpdateProjectDestinationDisplay(vm, config);
+        }
+        catch
+        {
+        }
     }
 
     private void LoadSnapshotHistoryForSelectedProject()
@@ -975,6 +1109,12 @@ public class ProjectsViewModel : ViewModelBase
             ? L("Snapshots.Action.Default", "Snapshot now")
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
+        var config = AppConfigStore.Load();
+        RefreshDestinationOptionsInternal(config);
+        foreach (var project in _allProjects)
+        {
+            UpdateProjectDestinationDisplay(project, config);
+        }
         RefreshHealthTags();
         RefreshSnapshotText();
     }
@@ -1211,6 +1351,13 @@ public class ProjectItemViewModel : ViewModelBase
         set => SetProperty(ref _path, value);
     }
 
+    private string _externalId = string.Empty;
+    public string ExternalId
+    {
+        get => _externalId;
+        set => SetProperty(ref _externalId, value ?? string.Empty);
+    }
+
     private ProjectHealthStatus _health;
     public ProjectHealthStatus Health
     {
@@ -1264,6 +1411,42 @@ public class ProjectItemViewModel : ViewModelBase
     {
         get => _preset;
         set => SetProperty(ref _preset, value);
+    }
+
+    private string _preferredDestinationId = string.Empty;
+    public string PreferredDestinationId
+    {
+        get => _preferredDestinationId;
+        set => SetProperty(ref _preferredDestinationId, value ?? string.Empty);
+    }
+
+    private DestinationOption? _preferredDestinationOption;
+    public DestinationOption? PreferredDestinationOption
+    {
+        get => _preferredDestinationOption;
+        set
+        {
+            if (SetProperty(ref _preferredDestinationOption, value))
+            {
+                PreferredDestinationId = value?.Id ?? string.Empty;
+            }
+        }
+    }
+
+    private string _preferredDestinationDisplay = string.Empty;
+    public string PreferredDestinationDisplay
+    {
+        get => _preferredDestinationDisplay;
+        set => SetProperty(ref _preferredDestinationDisplay, value ?? string.Empty);
+    }
+
+    public void SetPreferredDestinationOption(DestinationOption? option)
+    {
+        if (Equals(_preferredDestinationOption, option))
+            return;
+
+        _preferredDestinationOption = option;
+        OnPropertyChanged(nameof(PreferredDestinationOption));
     }
 
     private bool _isRegistered;
@@ -1460,10 +1643,10 @@ public class ProjectItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasCustomAvatar));
     }
 
-    public void SetAvatarFromNameAndStore(string projectPath, string? customPath)
+    public void SetAvatarFromNameAndStore(string projectPath, string? customPath, string? externalId)
     {
         AvatarInitials = ComputeInitials(Name);
-        AvatarColor = AvatarColorProvider.GetColor(Name, projectPath);
+        AvatarColor = AvatarColorProvider.GetColor(Name, projectPath, externalId);
         AvatarImagePath = customPath;
         OnPropertyChanged(nameof(AvatarInitials));
         OnPropertyChanged(nameof(AvatarColor));
@@ -1496,6 +1679,20 @@ public class ProjectItemViewModel : ViewModelBase
         OnPropertyChanged(propertyName);
         return true;
     }
+}
+
+public sealed class DestinationOption
+{
+    public string Id { get; }
+    public string Label { get; }
+
+    public DestinationOption(string id, string label)
+    {
+        Id = id ?? string.Empty;
+        Label = label ?? string.Empty;
+    }
+
+    public override string ToString() => Label;
 }
 
 public sealed class ProjectSnapshotViewModel

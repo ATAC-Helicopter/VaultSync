@@ -13,10 +13,10 @@
     Closing="OnWindowClosing"
     Opened="OnWindowOpened">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="16">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="{DynamicResource PagePadding}">
         <Border Classes="card" Grid.Row="0">
             <StackPanel>
-                <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Title}" FontSize="{DynamicResource PageTitleFontSize}" FontWeight="SemiBold" />
                 <TextBlock
                     Text="{Binding Status}"
                     Foreground="{DynamicResource TextSecondary}"

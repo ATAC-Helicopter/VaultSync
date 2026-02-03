@@ -34,21 +34,82 @@ public static class AvatarColorProvider
     /// <summary>
     /// Returns a stable color for the given project, allocating a new color if none is stored yet.
     /// </summary>
-    public static string GetColor(string? name, string? projectPath)
+    public static string GetColor(string? name, string? projectPath) =>
+        GetColor(name, projectPath, null);
+
+    /// <summary>
+    /// Returns a stable color for the given project, preferring externalId when available for cross-machine consistency.
+    /// </summary>
+    public static string GetColor(string? name, string? projectPath, string? externalId)
     {
-        if (string.IsNullOrWhiteSpace(projectPath))
+        var key = GetKey(projectPath, externalId);
+        if (string.IsNullOrWhiteSpace(key))
             return Palette[0];
 
         lock (Sync)
         {
-            if (_cache.TryGetValue(projectPath, out var existing) && !string.IsNullOrWhiteSpace(existing))
+            if (_cache.TryGetValue(key, out var existing) && !string.IsNullOrWhiteSpace(existing))
                 return existing;
 
-            var color = AllocateColor(name, projectPath);
-            _cache[projectPath] = color;
+            if (!string.IsNullOrWhiteSpace(externalId) &&
+                !string.IsNullOrWhiteSpace(projectPath) &&
+                _cache.TryGetValue(projectPath, out var legacy) &&
+                !string.IsNullOrWhiteSpace(legacy))
+            {
+                _cache[key] = legacy;
+                TrySave(_cache);
+                return legacy;
+            }
+
+            string color;
+            if (!string.IsNullOrWhiteSpace(externalId))
+            {
+                color = AllocateDeterministicColor(externalId, name);
+            }
+            else
+            {
+                color = AllocateColor(name, projectPath);
+            }
+
+            _cache[key] = color;
             TrySave(_cache);
             return color;
         }
+    }
+
+    public static void SetColorForExternalId(string? externalId, string? color)
+    {
+        if (string.IsNullOrWhiteSpace(externalId) || string.IsNullOrWhiteSpace(color))
+            return;
+
+        var key = GetKey(null, externalId);
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        lock (Sync)
+        {
+            if (_cache.TryGetValue(key, out var existing) && !string.IsNullOrWhiteSpace(existing))
+                return;
+
+            _cache[key] = color;
+            TrySave(_cache);
+        }
+    }
+
+    private static string GetKey(string? projectPath, string? externalId)
+    {
+        if (!string.IsNullOrWhiteSpace(externalId))
+            return $"ext:{externalId}";
+
+        return projectPath ?? string.Empty;
+    }
+
+    private static string AllocateDeterministicColor(string externalId, string? name)
+    {
+        var seed = $"ext:{externalId}|{name ?? string.Empty}";
+        var hash = seed.Aggregate(17, (acc, c) => unchecked(acc * 31 + c));
+        var idx = Math.Abs(hash) % Palette.Length;
+        return Palette[idx];
     }
 
     private static string AllocateColor(string? name, string? projectPath)

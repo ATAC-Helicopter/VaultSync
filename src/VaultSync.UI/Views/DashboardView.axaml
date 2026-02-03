@@ -9,59 +9,59 @@
     Background="{DynamicResource VS.WindowBackground}">
 
   <!-- Vertical scroll for short windows. The layout flexes to the available width. -->
-  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="12">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="{DynamicResource PagePadding}">
 
     <!-- Expand the layout to fill the available width while capping at 2200px for readability. -->
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
           RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
-          RowSpacing="12">
+          RowSpacing="{DynamicResource PageRowSpacing}">
 
         <!-- Header -->
         <Border Grid.Row="0"
                 Classes="card header"
-                Padding="20"
+                Padding="{DynamicResource CardPaddingLarge}"
                 Margin="0,0,0,4"
                 CornerRadius="20">
           <StackPanel Spacing="4">
             <TextBlock Text="{infra:LocalizedString Key=Dashboard.Title}"
                        Classes="section-title"
-                       FontSize="28"
+                       FontSize="{DynamicResource PageTitleFontSize}"
                        FontWeight="SemiBold"/>
             <TextBlock Text="{infra:LocalizedString Key=Dashboard.Description}"
                        Classes="kicker"
-                       FontSize="16"/>
+                       FontSize="{DynamicResource PageSubtitleFontSize}"/>
           </StackPanel>
         </Border>
 
         <!-- KPI row -->
         <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16" Margin="4,8,4,0">
-          <Border Classes="card" Padding="20" Grid.Column="0">
+          <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="0">
             <Grid RowDefinitions="Auto,*">
               <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Projects}" Classes="kicker"/>
               <StackPanel Grid.Row="1" Spacing="4">
-                <TextBlock Text="{Binding ProjectCount}" FontSize="36" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding ProjectCount}" FontSize="{DynamicResource MetricFontSize}" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding ProjectsHint}" Classes="metric-hint"/>
               </StackPanel>
             </Grid>
           </Border>
 
-          <Border Classes="card" Padding="20" Grid.Column="1">
+          <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="1">
             <Grid RowDefinitions="Auto,*">
               <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Backups}" Classes="kicker"/>
               <StackPanel Grid.Row="1" Spacing="4">
-                <TextBlock Text="{Binding SnapshotCount}" FontSize="36" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding SnapshotCount}" FontSize="{DynamicResource MetricFontSize}" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding SnapshotsHint}" Classes="metric-hint"/>
               </StackPanel>
             </Grid>
           </Border>
 
-          <Border Classes="card" Padding="20" Grid.Column="2">
+          <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="2">
             <Grid RowDefinitions="Auto,*">
               <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Storage}" Classes="kicker"/>
               <StackPanel Grid.Row="1" Orientation="Vertical" Spacing="6" HorizontalAlignment="Left">
                 <TextBlock Text="{Binding StorageUsed}"
-                           FontSize="36"
+                           FontSize="{DynamicResource MetricFontSize}"
                            FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis"
                            TextWrapping="NoWrap"
@@ -81,7 +81,7 @@
 
         <!-- Backup storage -->
         <Grid Grid.Row="2" Margin="4,12,4,0">
-          <Border Classes="card" Padding="14">
+          <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}">
             <StackPanel Spacing="6">
               <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupStorage}" Classes="section-title"/>
 
@@ -146,7 +146,7 @@
         <!-- Charts row -->
         <Grid Grid.Row="4" ColumnDefinitions="*,Auto" ColumnSpacing="16" Margin="4,12,4,0">
           <!-- Trend -->
-          <Border Classes="card" Padding="14" Grid.Column="0">
+          <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}" Grid.Column="0">
             <Grid RowDefinitions="Auto,Auto,*">
               <Grid Grid.Row="0">
                 <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupsThisWeek}" Classes="section-title"/>
@@ -296,7 +296,7 @@
           </Border>
 
           <!-- Donut -->
-          <Border Classes="card" Padding="14" Grid.Column="1" Width="400" ClipToBounds="True">
+          <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}" Grid.Column="1" Width="400" ClipToBounds="True">
             <Grid RowDefinitions="Auto,*,Auto">
                 <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.StorageUsage}" Classes="section-title" Margin="0,0,0,8"/>
 
@@ -347,7 +347,7 @@
         </Grid>
 
         <!-- Recent activity -->
-        <Border Classes="card" Padding="14" Margin="4,12,4,0" Grid.Row="5">
+        <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}" Margin="4,12,4,0" Grid.Row="5">
           <Grid RowDefinitions="Auto,*">
             <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.RecentActivity}" Classes="section-title" Margin="0,0,0,8"/>
             <ListBox Grid.Row="1"

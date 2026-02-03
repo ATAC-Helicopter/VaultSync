@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Text.Json;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -16,6 +17,9 @@ public sealed class MetadataSyncService
     private readonly SqliteRepository _repo;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
         new(StringComparer.OrdinalIgnoreCase);
+
+    public static Func<Project, string?>? ProjectColorResolver { get; set; }
+    public static Action<string, string>? ProjectColorApplier { get; set; }
 
     public MetadataSyncService(SqliteRepository repo)
     {
@@ -191,6 +195,8 @@ public sealed class MetadataSyncService
             if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
                 continue;
 
+            TryApplyProjectColor(metaProject);
+
             if (projectMap.ContainsKey(metaProject.ExternalId))
                 continue;
 
@@ -329,7 +335,8 @@ public sealed class MetadataSyncService
                 rootPath,
                 metaBackup.DestinationAlias,
                 metaBackup.IsProtected,
-                isImported: true);
+                isImported: true,
+                originMachineName: metaBackup.OriginMachineName);
             importedBackups++;
             affectedProjectIds.Add(projectId);
         }
@@ -1037,7 +1044,7 @@ public sealed class MetadataSyncService
         if (forceBackfill || !store.HasProject(projectExternalId))
         {
             backfilled = true;
-            var counts = ExportProjectHistory(store, project, projectExternalId, now);
+            var counts = ExportProjectHistory(store, project, projectExternalId, now, machineId);
             exportedProjects = 1;
             exportedSnapshots = counts.snapshots;
             exportedBackups = counts.backups;
@@ -1051,7 +1058,7 @@ public sealed class MetadataSyncService
                     Preset = project.Preset,
                     RootPathHint = project.RootPath,
                     CreatedUtc = project.CreatedUtc,
-                    SettingsJson = "{}",
+                    SettingsJson = BuildProjectSettingsJson(project),
                     UpdatedUtc = now
                 });
                 store.UpsertSnapshot(new MetaSnapshot
@@ -1072,6 +1079,7 @@ public sealed class MetadataSyncService
                     TotalBytes = backup.TotalBytes,
                     PathRel = backup.Path,
                     DestinationAlias = backup.DestinationAlias ?? string.Empty,
+                    OriginMachineName = machineId,
                     IsProtected = backup.IsProtected,
                     IsEncrypted = false,
                     KdfParamsJson = "{}"
@@ -1193,7 +1201,8 @@ public sealed class MetadataSyncService
         MetadataStore store,
         Project project,
         string projectExternalId,
-        DateTime now)
+        DateTime now,
+        string machineId)
     {
         var snapshots = _repo.GetSnapshotsForProject(project.Name).ToList();
         var backups = _repo.GetBackupsForProject(project.Id).ToList();
@@ -1207,7 +1216,7 @@ public sealed class MetadataSyncService
             Preset = project.Preset,
             RootPathHint = project.RootPath,
             CreatedUtc = project.CreatedUtc,
-            SettingsJson = "{}",
+            SettingsJson = BuildProjectSettingsJson(project),
             UpdatedUtc = now
         });
 
@@ -1261,6 +1270,7 @@ public sealed class MetadataSyncService
                 TotalBytes = backup.TotalBytes,
                 PathRel = backup.Path,
                 DestinationAlias = backup.DestinationAlias ?? string.Empty,
+                OriginMachineName = machineId,
                 IsProtected = backup.IsProtected,
                 IsEncrypted = false,
                 KdfParamsJson = "{}"
@@ -1322,6 +1332,51 @@ public sealed class MetadataSyncService
     }
 
     private static string NewExternalId() => Guid.NewGuid().ToString("N");
+
+    private static string BuildProjectSettingsJson(Project project)
+    {
+        try
+        {
+            var color = ProjectColorResolver?.Invoke(project);
+            if (string.IsNullOrWhiteSpace(color))
+                return "{}";
+
+            return JsonSerializer.Serialize(new Dictionary<string, string>
+            {
+                ["avatarColor"] = color
+            });
+        }
+        catch
+        {
+            return "{}";
+        }
+    }
+
+    private static void TryApplyProjectColor(MetaProject metaProject)
+    {
+        if (ProjectColorApplier is null || string.IsNullOrWhiteSpace(metaProject.ExternalId))
+            return;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(metaProject.SettingsJson))
+                return;
+
+            using var doc = JsonDocument.Parse(metaProject.SettingsJson);
+            if (!doc.RootElement.TryGetProperty("avatarColor", out var colorProp))
+                return;
+
+            var color = colorProp.GetString();
+            if (string.IsNullOrWhiteSpace(color))
+                return;
+
+            ProjectColorApplier(metaProject.ExternalId, color);
+        }
+        catch
+        {
+            // ignore malformed settings json
+        }
+    }
 }
 
 public sealed record MetadataSyncOptions(bool AllowCreateProjects, bool MarkNeedsRestoreOnImport)

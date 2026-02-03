@@ -42,4 +42,9 @@ public record Backup
     /// User-friendly label for the destination used when the backup was created.
     /// </summary>
     public string DestinationAlias { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Machine name that created this backup (from metadata sync).
+    /// </summary>
+    public string OriginMachineName { get; init; } = string.Empty;
 }

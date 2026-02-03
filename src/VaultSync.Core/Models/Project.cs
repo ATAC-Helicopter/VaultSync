@@ -2,6 +2,7 @@ namespace VaultSync.Core.Models;
 
 public record Project
 {
+    public const string DestinationAllId = "__ALL__";
     public int Id { get; init; }
     public string ExternalId { get; init; } = string.Empty;
     public required string Name { get; init; }
@@ -9,4 +10,5 @@ public record Project
     public required string Preset { get; init; }
     public DateTime CreatedUtc { get; init; } = DateTime.UtcNow;
     public bool NeedsRestore { get; init; }
+    public string? PreferredDestinationId { get; init; }
 }

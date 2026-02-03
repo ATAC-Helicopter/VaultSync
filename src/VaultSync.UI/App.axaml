@@ -25,6 +25,34 @@
             <Thickness x:Key="MetricHintMargin">0,2,0,0</Thickness>
             <x:Double x:Key="MetricFontSize">36</x:Double>
             <x:Double x:Key="SectionTitleFontSize">16</x:Double>
+            <Thickness x:Key="PagePadding">32,24,32,24</Thickness>
+            <Thickness x:Key="PageStackMargin">24</Thickness>
+            <Thickness x:Key="SectionMarginBottom">0,0,0,12</Thickness>
+            <Thickness x:Key="ListItemMargin">0,8,0,0</Thickness>
+            <Thickness x:Key="ListItemMarginTight">0,3,0,3</Thickness>
+            <Thickness x:Key="ListItemPadding">16</Thickness>
+            <Thickness x:Key="CardPaddingLarge">24</Thickness>
+            <Thickness x:Key="CardPaddingMedium">16</Thickness>
+            <Thickness x:Key="CardPaddingSmall">12</Thickness>
+            <Thickness x:Key="InputPadding">10,8</Thickness>
+            <Thickness x:Key="ButtonTightPadding">10,6</Thickness>
+            <Thickness x:Key="ButtonPillPadding">10,4</Thickness>
+            <Thickness x:Key="SmallButtonPadding">8,4</Thickness>
+            <Thickness x:Key="SmallPillPadding">10,4</Thickness>
+            <Thickness x:Key="StatPillPadding">8,2</Thickness>
+            <Thickness x:Key="BackupTagPadding">6,2</Thickness>
+            <Thickness x:Key="BackupTagMargin">4,0,0,0</Thickness>
+            <Thickness x:Key="SummaryStatPadding">10,8</Thickness>
+            <Thickness x:Key="ChartItemMargin">6,0</Thickness>
+            <Thickness x:Key="ChartLabelMargin">10,4,10,0</Thickness>
+            <x:Double x:Key="PageRowSpacing">16</x:Double>
+            <x:Double x:Key="ListRowSpacing">4</x:Double>
+            <x:Double x:Key="ProjectIconSize">28</x:Double>
+            <x:Double x:Key="ProjectIconRadius">14</x:Double>
+            <Thickness x:Key="ProjectIconMargin">0,0,8,0</Thickness>
+            <x:Double x:Key="PageTitleFontSize">22</x:Double>
+            <x:Double x:Key="PageSubtitleFontSize">12</x:Double>
+            <x:Double x:Key="SectionHeaderFontSize">14</x:Double>
             <FontFamily x:Key="AppFontFamily">Inter, Noto Sans, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial, Tahoma</FontFamily>
             <infra:BooleanInvertConverter x:Key="BoolInvertConverter" />
         </ResourceDictionary>
@@ -85,7 +113,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
             <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="{DynamicResource NavButtonPadding}" />
-            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="Margin" Value="{DynamicResource NavButtonMargin}" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
             <Setter Property="FontWeight" Value="Medium" />
         </Style>

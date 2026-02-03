@@ -9,10 +9,10 @@
         Height="600"
         Title="{infra:LocalizedString Key=LogConsole.WindowTitle}"
         WindowStartupLocation="CenterOwner">
-  <Grid RowDefinitions="Auto,*" Margin="16" RowSpacing="12">
+  <Grid RowDefinitions="Auto,*" Margin="{DynamicResource PagePadding}" RowSpacing="{DynamicResource PageRowSpacing}">
     <Border Classes="card"
             Margin="0"
-            Padding="14">
+            Padding="{DynamicResource CardPaddingSmall}">
       <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
         <StackPanel Grid.Row="0" Spacing="2">
           <TextBlock Text="{infra:LocalizedString Key=LogConsole.Header}"
@@ -50,7 +50,7 @@
     <Border Grid.Row="1"
             Classes="card"
             Margin="0"
-            Padding="12">
+            Padding="{DynamicResource CardPaddingSmall}">
       <ListBox x:Name="LogList"
                ItemsSource="{Binding Lines}"
                Background="Transparent"

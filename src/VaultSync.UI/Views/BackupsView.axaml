@@ -23,7 +23,7 @@
       <Setter Property="Template">
         <ControlTemplate TargetType="ListBoxItem">
           <Border x:Name="CardBorder"
-                  Margin="0,3,0,3"
+                  Margin="{DynamicResource ListItemMarginTight}"
                   Background="Transparent"
                   Padding="0">
             <ContentPresenter
@@ -34,22 +34,63 @@
       </Setter>
     </Style>
 
+    <!-- Preset dropdown: pill style (match Projects view) -->
+    <Style Selector="ComboBox.preset-combo">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="{DynamicResource ButtonTightPadding}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="MaxDropDownHeight" Value="240" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup Border">
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBox">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="Padding" Value="6" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem">
+      <Setter Property="Padding" Value="{DynamicResource ButtonTightPadding}" />
+      <Setter Property="Margin" Value="2" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CardRaisedBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem:selected">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}" />
+    </Style>
+
 
     <Style Selector="Border.backup-tag">
       <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="6,2" />
-      <Setter Property="Margin" Value="4,0,0,0" />
+      <Setter Property="Padding" Value="{DynamicResource BackupTagPadding}" />
+      <Setter Property="Margin" Value="{DynamicResource BackupTagMargin}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style Selector="Border.project-icon-circle">
-      <Setter Property="Width" Value="28" />
-      <Setter Property="Height" Value="28" />
-      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Width" Value="{DynamicResource ProjectIconSize}" />
+      <Setter Property="Height" Value="{DynamicResource ProjectIconSize}" />
+      <Setter Property="CornerRadius" Value="{DynamicResource ProjectIconRadius}" />
       <Setter Property="Background" Value="{DynamicResource AccentMutedBrush}" />
       <Setter Property="HorizontalAlignment" Value="Center" />
       <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="Margin" Value="{DynamicResource ProjectIconMargin}" />
     </Style>
 
     <Style Selector="Border.pulse-ring">
@@ -167,7 +208,7 @@
 
     <Style Selector="Border.stat-pill">
       <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="Padding" Value="{DynamicResource StatPillPadding}" />
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
     </Style>
 
@@ -176,7 +217,7 @@
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="12" />
-      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="Padding" Value="{DynamicResource SummaryStatPadding}" />
     </Style>
 
     <!-- Active backup cards -->
@@ -193,7 +234,7 @@
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="Padding" Value="{DynamicResource SmallButtonPadding}" />
       <Setter Property="FontSize" Value="11" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="MinWidth" Value="0" />
@@ -211,7 +252,7 @@
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="Padding" Value="{DynamicResource SmallPillPadding}" />
       <Setter Property="FontSize" Value="11" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="MinWidth" Value="0" />
@@ -232,8 +273,8 @@
       <!-- Stretch to the full available width with a soft cap for readability. -->
       <Grid MaxWidth="2200"
             HorizontalAlignment="Stretch">
-        <StackPanel Margin="24"
-                    Spacing="16">
+        <StackPanel Margin="{DynamicResource PageStackMargin}"
+                    Spacing="{DynamicResource PageRowSpacing}">
 
         <!-- HEADER -->
         <StackPanel Orientation="Horizontal"
@@ -242,10 +283,10 @@
                     Spacing="12">
           <StackPanel>
             <TextBlock Text="{infra:LocalizedString Key=Backups.Page.Title}"
-                       FontSize="22"
+                       FontSize="{DynamicResource PageTitleFontSize}"
                        FontWeight="SemiBold" />
             <TextBlock Text="{infra:LocalizedString Key=Backups.Page.Description}"
-                       FontSize="12"
+                       FontSize="{DynamicResource PageSubtitleFontSize}"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
           </StackPanel>
 
@@ -253,7 +294,8 @@
                       Spacing="8"
                       HorizontalAlignment="Right"
                       Margin="16,0,0,0">
-            <Button Content="{infra:LocalizedString Key=Backups.Action.BackupAll}"
+            <Button x:Name="BackupAllButton"
+                    Content="{infra:LocalizedString Key=Backups.Action.BackupAll}"
                     HorizontalAlignment="Left"
                     Classes="primary-button"
                     Command="{Binding CreateBackupCommand}"/>
@@ -276,13 +318,13 @@
 
             <!-- Total snapshots -->
             <Border Classes="card"
-                    Padding="16">
+                    Padding="{DynamicResource CardPaddingMedium}">
               <StackPanel Spacing="10">
                 <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.Total}"
                            FontSize="12"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Text="{Binding TotalSnapshots}"
-                           FontSize="24"
+                           FontSize="{DynamicResource PageTitleFontSize}"
                            FontWeight="SemiBold" />
                 <Grid ColumnDefinitions="*,*"
                       RowDefinitions="Auto,Auto,Auto"
@@ -360,14 +402,14 @@
 
             <!-- Last backup -->
             <Border Classes="card"
-                    Padding="16"
+                    Padding="{DynamicResource CardPaddingMedium}"
                     Grid.Column="1">
               <StackPanel Spacing="10">
                 <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.Last}"
                            FontSize="12"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Text="{Binding LastBackupDisplay}"
-                           FontSize="20"
+                           FontSize="{DynamicResource SectionHeaderFontSize}"
                            FontWeight="SemiBold" />
                 <Grid ColumnDefinitions="*,*"
                       RowDefinitions="Auto,Auto"
@@ -598,7 +640,7 @@
 
         <!-- MINI BACKUP STORAGE CARD (Backups page) -->
         <Border Classes="card"
-                Padding="16">
+                Padding="{DynamicResource CardPaddingMedium}">
           <StackPanel Spacing="6">
             <TextBlock Text="{infra:LocalizedString Key=Backups.Section.StorageLabel}"
                        FontSize="12"
@@ -612,8 +654,8 @@
             <StackPanel Orientation="Horizontal"
                         Spacing="6"
                         VerticalAlignment="Center">
-              <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
-                         FontSize="18"
+                <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
+                         FontSize="{DynamicResource SectionHeaderFontSize}"
                          FontWeight="SemiBold" />
               <TextBlock Text="·"
                          Margin="4,0"
@@ -717,6 +759,13 @@
                                        TextTrimming="CharacterEllipsis"
                                        HorizontalAlignment="Left"
                                        TextAlignment="Left" />
+                            <TextBlock Text="{Binding DestinationDisplay}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       HorizontalAlignment="Left"
+                                       TextAlignment="Left"
+                                       IsVisible="{Binding HasDestinationDisplay}" />
                             <TextBlock Text="{Binding StageDisplay}"
                                        FontSize="11"
                                        Foreground="{Binding StageBrush}"
@@ -727,10 +776,13 @@
                           <StackPanel Grid.Row="0"
                                       Grid.Column="2"
                                       Spacing="4"
-                                      HorizontalAlignment="Right">
+                                      HorizontalAlignment="Right"
+                                      MaxWidth="140">
                             <TextBlock Text="{Binding ProgressLabel}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap"
                                        HorizontalAlignment="Right" />
                             <Button Content="{infra:LocalizedString Key=Backups.Section.Cancel}"
                                     Command="{Binding CancelCommand}"
@@ -762,14 +814,26 @@
                                        TextWrapping="NoWrap"
                                        HorizontalAlignment="Left"
                                        TextAlignment="Left" />
-                            <TextBlock Text="{Binding EtaDisplay}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       IsVisible="{Binding HasEtaDisplay}"
-                                       TextTrimming="CharacterEllipsis"
-                                       TextWrapping="NoWrap"
-                                       HorizontalAlignment="Left"
-                                       TextAlignment="Left" />
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="6"
+                                  IsVisible="{Binding HasEtaDisplay}">
+                              <Border Grid.Column="0"
+                                      Classes="stat-pill"
+                                      IsVisible="{Binding IsEstimate}">
+                                <TextBlock Text="{Binding EstimateLabel}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                              </Border>
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding EtaDisplay}"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                         TextTrimming="CharacterEllipsis"
+                                         TextWrapping="NoWrap"
+                                         HorizontalAlignment="Left"
+                                         TextAlignment="Left" />
+                            </Grid>
                           </StackPanel>
                         </Grid>
                       </Border>
@@ -835,7 +899,7 @@
                             BorderBrush="{DynamicResource BorderSoft}"
                             BorderThickness="1">
                       <Grid ColumnDefinitions="4,Auto,*,Auto"
-                            RowDefinitions="Auto,Auto,Auto"
+                            RowDefinitions="Auto,Auto,Auto,Auto"
                             ColumnSpacing="10"
                             RowSpacing="2">
 
@@ -896,8 +960,28 @@
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                       </StackPanel>
 
-                      <!-- Stats pills -->
+                      <!-- Destination -->
                       <StackPanel Grid.Row="2"
+                                  Grid.Column="2"
+                                  Spacing="4">
+                        <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <ComboBox
+                            Classes="preset-combo"
+                            ItemsSource="{Binding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
+                            HorizontalAlignment="Stretch">
+                          <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                              <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                          </ComboBox.ItemTemplate>
+                        </ComboBox>
+                      </StackPanel>
+
+                      <!-- Stats pills -->
+                      <StackPanel Grid.Row="3"
                                   Grid.Column="2"
                                   Orientation="Horizontal"
                                   Spacing="6">
@@ -927,18 +1011,20 @@
                                    FontSize="11"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <ToggleSwitch IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
-                                      OffContent=""
-                                      OnContent=""
-                                      FontSize="11"
-                                      VerticalAlignment="Center"
-                                      MinWidth="0"
+                      <ToggleSwitch x:Name="AutoBackupToggle"
+                                    IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
+                                    OffContent=""
+                                    OnContent=""
+                                    FontSize="11"
+                                    VerticalAlignment="Center"
+                                    MinWidth="0"
                                       HorizontalAlignment="Right"
                                       ToolTip.Tip="{infra:LocalizedString Key=Backups.Section.AutoBackupsTooltip}" />
                       </StackPanel>
 
                       <!-- Primary action -->
-                      <Button Grid.Row="2"
+                      <Button x:Name="PerProjectBackupButton"
+                              Grid.Row="3"
                               Grid.Column="3"
                               Content="{infra:LocalizedString Key=Backups.Section.PerProjectAction}"
                               Classes="action-primary"
@@ -965,7 +1051,7 @@
             <!-- DESTINATIONS -->
             <Border Classes="card"
                     CornerRadius="18"
-                    Padding="14"
+                    Padding="{DynamicResource CardPaddingSmall}"
                     Grid.Row="0">
               <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,Auto"
@@ -1007,7 +1093,7 @@
             <!-- HISTORY -->
             <Border Classes="card"
                     CornerRadius="18"
-                    Padding="18"
+                    Padding="{DynamicResource CardPaddingLarge}"
                     MinWidth="360"
                     Grid.Row="1">
 
@@ -1076,12 +1162,12 @@
                           <StackPanel />
                         </ItemsPanelTemplate>
                       </ItemsControl.ItemsPanel>
-                      <ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemTemplate>
                       <DataTemplate>
                         <Border Classes="card project-card"
                                 CornerRadius="12"
                                 Padding="0"
-                                Margin="0,4,0,4">
+                                Margin="{DynamicResource ListItemMarginTight}">
                         <Expander Classes="backup-group"
                                   IsExpanded="{Binding IsExpanded}"
                                   HorizontalAlignment="Stretch">
@@ -1090,7 +1176,7 @@
                                   RowDefinitions="Auto,Auto,Auto"
                                   ColumnSpacing="10"
                                   RowSpacing="6"
-                                  Margin="10">
+                                  Margin="{DynamicResource CardPaddingSmall}">
                               <Border Grid.RowSpan="2"
                                       Grid.Column="0"
                                       Width="6"
@@ -1120,13 +1206,13 @@
                                           Orientation="Horizontal"
                                           Spacing="6">
                                 <Border Classes="stat-pill"
-                                        Padding="8,2">
+                                        Padding="{DynamicResource StatPillPadding}">
                                   <TextBlock Text="{Binding Summary}"
                                              FontSize="11"
                                              FontWeight="SemiBold" />
                                 </Border>
                                 <Border Classes="stat-pill"
-                                        Padding="8,2">
+                                        Padding="{DynamicResource StatPillPadding}">
                                   <TextBlock Text="{Binding TotalSizeFormatted}"
                                              FontSize="11"
                                              FontWeight="SemiBold" />
@@ -1136,7 +1222,7 @@
                           </Expander.Header>
 
                           <Border Margin="0,0,0,0"
-                                  Padding="10"
+                                  Padding="{DynamicResource CardPaddingSmall}"
                                   BorderBrush="{DynamicResource CardBorderBrush}"
                                   BorderThickness="0,1,0,0">
                               <ItemsControl ItemsSource="{Binding Snapshots}">
@@ -1146,7 +1232,7 @@
                                             BorderBrush="{DynamicResource BorderSoft}"
                                             BorderThickness="1"
                                             CornerRadius="14"
-                                            Padding="12"
+                                            Padding="{DynamicResource CardPaddingSmall}"
                                             Margin="0,4,0,10">
                                       <Grid ColumnDefinitions="6,*,Auto"
                                             ColumnSpacing="12"
@@ -1158,10 +1244,11 @@
                                                 CornerRadius="3"
                                                 Opacity="0.9" />
 
-                                        <StackPanel Grid.Row="0"
-                                                    Grid.Column="1"
-                                                    Orientation="Horizontal"
-                                                    Spacing="8">
+                                        <WrapPanel Grid.Row="0"
+                                                   Grid.Column="1"
+                                                   ItemSpacing="8"
+                                                   Orientation="Horizontal"
+                                                   VerticalAlignment="Center">
                                           <TextBlock Text="{Binding Label}"
                                                      FontSize="13"
                                                      FontWeight="SemiBold"
@@ -1177,12 +1264,12 @@
                                             <TextBlock Text="{Binding ImportedLabel}"
                                                        FontSize="11" />
                                           </Border>
-                                        </StackPanel>
+                                        </WrapPanel>
 
                                         <Border Grid.Row="0"
                                                 Grid.Column="2"
                                                 CornerRadius="999"
-                                                Padding="8,2"
+                                                Padding="{DynamicResource StatPillPadding}"
                                                 Background="{DynamicResource Surface3}">
                                           <TextBlock Text="{Binding SizeFormatted}"
                                                      FontSize="11"
@@ -1193,7 +1280,7 @@
                                                    Grid.Column="1"
                                                    ItemSpacing="6">
                                           <Border Classes="stat-pill"
-                                                  Padding="8,2"
+                                                  Padding="{DynamicResource StatPillPadding}"
                                                   Background="{DynamicResource Surface3}"
                                                   BorderBrush="{DynamicResource BorderSoft}"
                                                   BorderThickness="1">
@@ -1202,7 +1289,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                                           </Border>
                                           <Border Classes="stat-pill"
-                                                  Padding="8,2"
+                                                  Padding="{DynamicResource StatPillPadding}"
                                                   Background="{DynamicResource Surface2}"
                                                   BorderBrush="{Binding TagBackground}"
                                                   BorderThickness="1">
