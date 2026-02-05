@@ -1,4 +1,70 @@
 ﻿# Changelog
+## [1.4.1] - Unreleased
+### Added
+- Startup load deferral safeguards to reduce early UI stalls.
+### Changed
+- Dashboard/Backups now load immediately on first launch to avoid blank shells.
+- Backup drive health probes now apply a cooldown to avoid repeated disk checks.
+- Log console UI updates now use smaller batches when the console is open for smoother scrolling.
+- Tray menu refreshes now skip rebuilds when data hasn't changed.
+- Metadata auto-import now backs off longer after failures to reduce repeated I/O.
+- Update checks now enforce a minimum interval to avoid duplicate startup fetches.
+- Verbose log file writes now buffer more and flush less often to reduce I/O spikes.
+- Patch and installer downloads now report progress and use longer timeouts for slow connections.
+- Backups charts/summary now refresh only when the Backups view is active.
+- Backup progress UI updates are now throttled to reduce UI churn.
+- Tray storage health now stays hidden for network paths that can't report SMART.
+- Auto-import notifications now only appear when new metadata is actually imported.
+- Dashboard data now reuses a short cache window to reduce repeat DB reads.
+- Log export now runs on a background thread to avoid UI stalls.
+- Drive health probes are delayed briefly after startup to reduce early I/O spikes.
+- Initial destination probes are delayed briefly after startup to reduce early network load.
+- Backup history scans now skip destination sweeps when there are no backups.
+- Log snapshots keep fewer lines when verbose logging is disabled.
+- Active backup card updates are now batched to reduce UI thread churn.
+- Dashboard refresh now reuses a cached repository when possible.
+- Destination status overview now uses the in-memory config snapshot to reduce disk reads.
+- Dashboard view model now initializes lazily when first shown.
+- Startup retention/cleanup and metadata import now reuse the in-memory config snapshot to avoid extra disk reads.
+- Backups view model now initializes lazily when first shown.
+- Backups-related hot paths now use the in-memory config snapshot more consistently.
+- Tray menu composition now uses helper builders for cleaner, more maintainable code.
+- Backup progress labeling and backup-all aggregate updates now use shared helpers for clearer flow.
+- Snapshot scan cache decisions now use a shared helper for cleaner logic.
+### Fixed
+- macOS: reduced UI freezes by deferring log console UI updates until the console is opened.
+- macOS: tray menu opening no longer hangs the app.
+- Startup now guarantees an initial view is rendered instead of showing a blank shell.
+- Settings input text now centers vertically on Windows.
+- Network destinations now hide SMART/drive health status when unavailable to avoid clutter.
+- Backups destinations card now reflects configured destinations after lazy view model creation.
+- Verbose log file flushes now happen off the UI thread to avoid periodic stalls.
+- Destinations card now shows configured destinations as pending before probes run.
+- Verbose log capture now offloads UI-thread log writes to a background queue to reduce stalls.
+- Destinations overview now initializes as soon as the Backups view model is created.
+- Destinations overview refresh work now runs off the UI thread to avoid stalls.
+- Config reloads for settings/destination changes now happen off the UI thread.
+- Backups reload now snapshots UI state before background work to avoid cross-thread access.
+- Manual metadata refresh now loads config off the UI thread.
+- Manual metadata refresh now prepares destinations off the UI thread.
+- Launch-on-login setup now runs off the UI thread.
+- Deferred startup tasks now load config off the UI thread.
+- Resume-last-session view selection now loads config off the UI thread.
+- Last-view persistence and update-skip tagging now save config off the UI thread.
+- Backup verification config lookups now load off the UI thread.
+- Delete-confirm dialog now loads config off the UI thread.
+- Retention tombstone export now loads config off the UI thread.
+- Backup throughput persistence now saves config off the UI thread.
+- Delete flow now loads destination config off the UI thread.
+- Metadata import retention config lookups now run off the UI thread.
+- Force-backfill clearing now saves config off the UI thread.
+- Destination probes now retry faster after an unreachable result to clear stale error states.
+- Projects refresh now loads config off the UI thread.
+- Project removal and snapshot actions now load config off the UI thread.
+- Settings and destination tests now load/persist config off the UI thread.
+- Backups and dashboard view models now load config off the UI thread.
+- Onboarding tour now refreshes cached config off the UI thread.
+
 ## [1.4.0] - Unreleased
 ### Added
 - Backup estimate UI now shows size/time previews and capacity warnings.

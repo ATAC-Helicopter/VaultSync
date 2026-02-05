@@ -202,10 +202,15 @@ namespace VaultSync.UI.ViewModels
         private int _activeProjectsCount;
         private int _refreshInFlight;
         private int _refreshQueued;
+        private DashboardData? _lastDashboardData;
+        private DateTime _lastDashboardDataUtc = DateTime.MinValue;
+        private static readonly TimeSpan DashboardDataTtl = TimeSpan.FromSeconds(30);
+        private SqliteRepository? _repo;
+        private string? _repoDbPath;
 
         public DashboardViewModel()
         {
-            RefreshCommand = new RelayCommand(async _ => await RefreshAsync());
+            RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
             NewSnapshotCommand = new RelayCommand(_ => { /* wired later from dashboard actions */ });
 
             BuildStaticAxes();
@@ -249,7 +254,7 @@ namespace VaultSync.UI.ViewModels
         /// Called when the view is attached or when the user hits Refresh.
         /// Reads config, opens the shared DB, and populates KPIs + charts.
         /// </summary>
-        public async System.Threading.Tasks.Task RefreshAsync()
+        public async System.Threading.Tasks.Task RefreshAsync(bool force = false)
         {
             if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
             {
@@ -261,6 +266,12 @@ namespace VaultSync.UI.ViewModels
             {
                 var data = await Task.Run(() =>
                 {
+                    if (!force && _lastDashboardData is not null &&
+                        (DateTime.UtcNow - _lastDashboardDataUtc) < DashboardDataTtl)
+                    {
+                        return _lastDashboardData;
+                    }
+
                     var cfg = AppConfigStore.Load();
                     var diskUsage = ComputeBackupDiskUsage(cfg);
 
@@ -268,7 +279,13 @@ namespace VaultSync.UI.ViewModels
                         ? cfg.DbPath
                         : GetDefaultDbPath();
 
-                    var repo = new SqliteRepository(dbPath);
+                    if (_repo is null || !string.Equals(_repoDbPath, dbPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _repo = new SqliteRepository(dbPath);
+                        _repoDbPath = dbPath;
+                    }
+                    var repo = _repo;
+                    repo.EnsureSchema();
 
                     var projects = repo.GetAllProjects().ToList();
                     var backupCount = repo.GetBackupCount();
@@ -338,7 +355,7 @@ namespace VaultSync.UI.ViewModels
                         activities.Add((s.projectId, s.createdUtc, "snapshot"));
                     }
 
-                    return new DashboardData
+                    var dashboardData = new DashboardData
                     {
                         Config = cfg,
                         DiskUsage = diskUsage,
@@ -355,6 +372,9 @@ namespace VaultSync.UI.ViewModels
                         ManualCounts = manualCounts,
                         ImportedCounts = importedCounts
                     };
+                    _lastDashboardData = dashboardData;
+                    _lastDashboardDataUtc = DateTime.UtcNow;
+                    return dashboardData;
                 });
 
                 // Apply results on UI thread
@@ -494,7 +514,7 @@ namespace VaultSync.UI.ViewModels
                 Interlocked.Exchange(ref _refreshInFlight, 0);
                 if (Interlocked.Exchange(ref _refreshQueued, 0) == 1)
                 {
-                    await RefreshAsync();
+                    await RefreshAsync(force: true);
                 }
             }
         }
@@ -691,7 +711,12 @@ namespace VaultSync.UI.ViewModels
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
 
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
-            BuildBackupUsageBar(AppConfigStore.Load(), Array.Empty<(Project project, long bytes)>());
+            _ = Task.Run(() =>
+            {
+                var cfg = AppConfigStore.Load();
+                Dispatcher.UIThread.Post(() =>
+                    BuildBackupUsageBar(cfg, Array.Empty<(Project project, long bytes)>()));
+            });
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
         }

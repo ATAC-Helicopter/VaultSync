@@ -1,26 +1,19 @@
 # What's New
 
-## [1.4.0]
+## [1.4.1]
 
-### Destination-aware backups
-- Pick a destination per project (including an "All destinations" option).
-- Backups/snapshots/verification now resolve destinations per project.
-- Projects list shows the resolved destination label.
+### Faster, steadier startup
+- Initial view is now guaranteed to render immediately (no empty shell on launch).
+- Settings load happens synchronously so the UI doesn’t appear blank.
+- Database schema setup runs off the UI thread to prevent startup stalls.
 
-### Faster scans and smarter preflight
-- Snapshot scan cache (optional aggressive mode) to speed up large projects.
-- Preflight size/time estimates and capacity warnings.
-- ETA calibration tracks archive/copy throughput and reuses recent snapshot stats.
+### Smoother tray/menu bar behavior (macOS)
+- Tray menu opening no longer hangs the app.
+- Tray menu refreshes are deferred while the menu is opening.
 
-### UI density + consistency
-- Compact mode now tightens padding/typography across core pages.
-- Sidebar and Backups page destination cards show active destinations consistently.
-- Imported backup tags include the source machine name when available.
-
-### Reliability fixes
-- Restore/delete/open now resolve backups across inactive destinations.
-- Metadata import cleans missing backups and orphan snapshots.
-- Drive health status respects localization and refreshes with Backups data.
+### Performance cleanup
+- Log capture setup is delayed slightly to avoid blocking UI init.
+- Backups/dashboards load avoids blocking the UI thread.
 
 ### Updates
 - Release notes are available in the app. [Release notes](https://github.com/ATAC-Helicopter/VaultSync/releases)

@@ -45,6 +45,7 @@ public partial class MainWindow : Window
             {
                 _macFullscreenDisabled = TryDisableMacFullscreen();
             }
+            _appVm.EnsureInitialView();
         };
 
         // Activated = user focused the window again.
@@ -64,7 +65,10 @@ public partial class MainWindow : Window
         Closing += OnMainWindowClosing;
         // ------------------------------------------------------
 
-        AddHandler(PointerPressedEvent, OnWindowPointerPressed, RoutingStrategies.Tunnel);
+        if (!OperatingSystem.IsMacOS())
+        {
+            AddHandler(PointerPressedEvent, OnWindowPointerPressed, RoutingStrategies.Tunnel);
+        }
 
         PropertyChanged += (_, e) =>
         {
