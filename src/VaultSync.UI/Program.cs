@@ -3,6 +3,7 @@ using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Logging;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 
@@ -109,10 +110,11 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .LogToTrace();
+            // Avoid spamming stdout/in-app logs with Avalonia internals (e.g., binding trace).
+            .LogToTrace(LogEventLevel.Warning);
 
     private static AppBuilder BuildUpdaterApp()
         => AppBuilder.Configure<UpdaterApp>()
             .UsePlatformDetect()
-            .LogToTrace();
+            .LogToTrace(LogEventLevel.Warning);
 }

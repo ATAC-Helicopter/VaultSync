@@ -37,6 +37,8 @@ namespace VaultSync.UI.ViewModels
         private string _backupDiskFreeText = string.Empty;
         private string _backupDiskThresholdText = string.Empty;
         private bool _backupDiskIsBelowThreshold;
+        private string _snapshotActivitySummary = string.Empty;
+        private string _snapshotsSummaryLine = string.Empty;
 
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
@@ -165,6 +167,29 @@ namespace VaultSync.UI.ViewModels
             {
                 if (_backupDiskIsBelowThreshold == value) return;
                 _backupDiskIsBelowThreshold = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // Summary pills shown in the dashboard backups section.
+        public string SnapshotActivitySummary
+        {
+            get => _snapshotActivitySummary;
+            private set
+            {
+                if (_snapshotActivitySummary == value) return;
+                _snapshotActivitySummary = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string SnapshotsSummaryLine
+        {
+            get => _snapshotsSummaryLine;
+            private set
+            {
+                if (_snapshotsSummaryLine == value) return;
+                _snapshotsSummaryLine = value;
                 OnPropertyChanged();
             }
         }
@@ -387,6 +412,7 @@ namespace VaultSync.UI.ViewModels
                 SnapshotCount = data.BackupCount;
                 _backupsThisWeekCount = data.BackupsThisWeekCount;
                 SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
+                UpdateBackupSummaryPills();
 
                 _activeProjectsCount = data.StorageSlices.Count;
                 StorageUsed = FormatBytes(data.TotalLatestBytes);
@@ -1535,6 +1561,36 @@ namespace VaultSync.UI.ViewModels
             BackupDiskIsBelowThreshold = isBelowThreshold;
         }
 
+        private void UpdateBackupSummaryPills()
+        {
+            // Dashboard tracks the last 7 days (UTC date, including today) in the chart arrays.
+            var todayCount = _snapshotCountsByDay.Length > 0 ? (int)_snapshotCountsByDay[^1] : 0;
+            var autoWeek = _autoCountsByDay.Sum();
+            var manualWeek = _manualCountsByDay.Sum();
+            var importedWeek = _importedCountsByDay.Sum();
+            var weekTotal = autoWeek + manualWeek + importedWeek;
+
+            SnapshotsSummaryLine = Lf(
+                "Backups.Summary.TodayWeek",
+                "{0} backups today - {1} this week",
+                todayCount,
+                weekTotal);
+
+            if (weekTotal == 0)
+            {
+                SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
+            }
+            else
+            {
+                SnapshotActivitySummary = Lf(
+                    "Backups.Summary.ActivityTotals",
+                    "{0} backups total - {1} auto - {2} manual",
+                    weekTotal,
+                    autoWeek,
+                    manualWeek);
+            }
+        }
+
         private static double[] MovingAverage(IReadOnlyList<double> v, int window)
         {
             if (window <= 1) return v.ToArray();
@@ -1565,6 +1621,7 @@ namespace VaultSync.UI.ViewModels
         public void ReapplyLocalization()
         {
             SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
+            UpdateBackupSummaryPills();
 
             if (ProjectCount == 0)
             {
