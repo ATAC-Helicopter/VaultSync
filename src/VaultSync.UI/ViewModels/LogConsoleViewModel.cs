@@ -21,8 +21,13 @@ namespace VaultSync.UI.ViewModels
             _service.StateChanged += OnServiceStateChanged;
 
             ClearCommand = new RelayCommand(_ => _service.Clear());
-            ExportCommand = new RelayCommand(_ => ExportLogs());
+            ExportCommand = new RelayCommand(async _ => await ExportLogsAsync());
             OpenFolderCommand = new RelayCommand(_ => OpenLogFolder());
+        }
+
+        public void SetUiCaptureEnabled(bool enabled)
+        {
+            _service.SetUiCaptureEnabled(enabled, loadSnapshot: enabled);
         }
 
         public ReadOnlyObservableCollection<LogLine> Lines => _service.Lines;
@@ -40,9 +45,9 @@ namespace VaultSync.UI.ViewModels
         public ICommand ExportCommand { get; }
         public ICommand OpenFolderCommand { get; }
 
-        private void ExportLogs()
+        private async System.Threading.Tasks.Task ExportLogsAsync()
         {
-            var path = _service.ExportBuffer();
+            var path = await System.Threading.Tasks.Task.Run(() => _service.ExportBuffer());
             if (string.IsNullOrWhiteSpace(path))
             {
                 StatusMessage = L("LogConsole.ExportFailed", "Log export failed.");

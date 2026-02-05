@@ -60,6 +60,8 @@ namespace VaultSync.UI.ViewModels
         // Internal full list for summary + filtering
         private readonly List<BackupSnapshotItem> _allSnapshots = new();
         private readonly List<BackupSnapshotItem> _filteredSnapshots = new();
+        private readonly ConcurrentDictionary<string, PendingBackupUpdate> _pendingActiveBackupUpdates = new();
+        private readonly DispatcherTimer _activeBackupFlushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
 
         private int _snapshotRevision;
         private int _lastProjectSignature;
@@ -71,6 +73,15 @@ namespace VaultSync.UI.ViewModels
         private bool _showActivityPanel = true;
         private GridLength _activityColumnWidth = new GridLength(360);
         private double _summaryColumnSpacing = 12;
+
+        private sealed record PendingBackupUpdate(
+            string ProjectId,
+            string ProjectName,
+            double Progress,
+            string CurrentFile,
+            string EtaText,
+            bool AllowCancel,
+            string? DestinationLabel);
 
         private BackupSnapshotItem? _selectedSnapshotA;
         public BackupSnapshotItem? SelectedSnapshotA
@@ -170,7 +181,23 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private bool _isActiveView;
+        public bool IsActiveView
+        {
+            get => _isActiveView;
+            set
+            {
+                if (SetProperty(ref _isActiveView, value))
+                {
+                    OnPropertyChanged(nameof(IsActiveView));
+                }
+            }
+        }
+
         private int _diskUsageInFlight;
+        private readonly object _healthProbeGate = new();
+        private DateTime _lastHealthProbeUtc = DateTime.MinValue;
+        private static readonly TimeSpan HealthProbeCooldown = TimeSpan.FromMinutes(10);
         private int _refreshSnapshotsInFlight;
         private int _refreshSnapshotsQueued;
         private bool _refreshSnapshotsForceResetQueued;
@@ -393,6 +420,7 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _backupDiskHealthText, value))
                 {
                     OnPropertyChanged(nameof(BackupDiskHealthText));
+                    BackupDiskHealthVisible = !string.IsNullOrWhiteSpace(_backupDiskHealthText);
                 }
             }
         }
@@ -406,6 +434,19 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _backupDiskHealthBrush, value))
                 {
                     OnPropertyChanged(nameof(BackupDiskHealthBrush));
+                }
+            }
+        }
+
+        private bool _backupDiskHealthVisible = true;
+        public bool BackupDiskHealthVisible
+        {
+            get => _backupDiskHealthVisible;
+            private set
+            {
+                if (SetProperty(ref _backupDiskHealthVisible, value))
+                {
+                    OnPropertyChanged(nameof(BackupDiskHealthVisible));
                 }
             }
         }
@@ -550,6 +591,8 @@ namespace VaultSync.UI.ViewModels
 
         public BackupsViewModel()
         {
+            _activeBackupFlushTimer.Tick += (_, _) => FlushPendingActiveBackupUpdates();
+
             // All-project backup
             CreateBackupCommand = new RelayCommand(_ => CreateBackupForAllProjects());
 
@@ -746,42 +789,38 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(projectId))
                 return;
 
+            var update = new PendingBackupUpdate(
+                projectId,
+                projectName,
+                progress,
+                currentFile,
+                etaText,
+                allowCancel,
+                destinationLabel);
+
+            _pendingActiveBackupUpdates[projectId] = update;
+
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                Dispatcher.UIThread.Post(() => UpdateActiveBackup(projectId, projectName, progress, currentFile, etaText, allowCancel));
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (!_activeBackupFlushTimer.IsEnabled)
+                        _activeBackupFlushTimer.Start();
+                    if (progress >= 99.9 || !allowCancel)
+                    {
+                        FlushPendingActiveBackupUpdates();
+                    }
+                });
                 return;
             }
 
-            var item = ActiveBackups.FirstOrDefault(p => p.ProjectId == projectId);
-            if (item == null)
+            if (!_activeBackupFlushTimer.IsEnabled)
+                _activeBackupFlushTimer.Start();
+
+            if (progress >= 99.9 || !allowCancel)
             {
-                item = new BackupProgressItem
-                {
-                    ProjectId        = projectId,
-                    ProjectName      = string.IsNullOrWhiteSpace(projectName)
-                        ? L("Dashboard.Activity.UnknownProject", "Unknown project")
-                        : projectName,
-                    CancelRequested  = OnCancelActiveBackup
-                };
-                ActiveBackups.Add(item);
+                FlushPendingActiveBackupUpdates();
             }
-            else if (!string.IsNullOrWhiteSpace(projectName))
-            {
-                item.ProjectName = projectName;
-            }
-
-            if (destinationLabel != null)
-            {
-                item.DestinationLabel = destinationLabel;
-            }
-
-            item.AllowCancel = allowCancel;
-
-            if (!string.IsNullOrWhiteSpace(currentFile))
-                item.CurrentFile = currentFile;
-
-            item.EtaText = etaText ?? string.Empty;
-            item.Progress = progress;
         }
 
         /// <summary>
@@ -804,6 +843,62 @@ namespace VaultSync.UI.ViewModels
             {
                 ActiveBackups.Remove(item);
             }
+        }
+
+        private void FlushPendingActiveBackupUpdates()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(FlushPendingActiveBackupUpdates);
+                return;
+            }
+
+            if (_pendingActiveBackupUpdates.IsEmpty)
+            {
+                _activeBackupFlushTimer.Stop();
+                return;
+            }
+
+            foreach (var update in _pendingActiveBackupUpdates.Values)
+            {
+                ApplyActiveBackupUpdate(update);
+            }
+
+            _pendingActiveBackupUpdates.Clear();
+        }
+
+        private void ApplyActiveBackupUpdate(PendingBackupUpdate update)
+        {
+            var item = ActiveBackups.FirstOrDefault(p => p.ProjectId == update.ProjectId);
+            if (item == null)
+            {
+                item = new BackupProgressItem
+                {
+                    ProjectId        = update.ProjectId,
+                    ProjectName      = string.IsNullOrWhiteSpace(update.ProjectName)
+                        ? L("Dashboard.Activity.UnknownProject", "Unknown project")
+                        : update.ProjectName,
+                    CancelRequested  = OnCancelActiveBackup
+                };
+                ActiveBackups.Add(item);
+            }
+            else if (!string.IsNullOrWhiteSpace(update.ProjectName))
+            {
+                item.ProjectName = update.ProjectName;
+            }
+
+            if (update.DestinationLabel is not null)
+            {
+                item.DestinationLabel = update.DestinationLabel;
+            }
+
+            item.AllowCancel = update.AllowCancel;
+
+            if (!string.IsNullOrWhiteSpace(update.CurrentFile))
+                item.CurrentFile = update.CurrentFile;
+
+            item.EtaText = update.EtaText ?? string.Empty;
+            item.Progress = update.Progress;
         }
 
         private void OnCancelActiveBackup(BackupProgressItem? item)
@@ -1348,22 +1443,51 @@ namespace VaultSync.UI.ViewModels
                     string? healthText = null;
                     IBrush? healthBrush = null;
 
+                    var shouldProbeHealth = includeHealthProbe;
                     if (includeHealthProbe)
+                    {
+                        lock (_healthProbeGate)
+                        {
+                            var now = DateTime.UtcNow;
+                            if (now - _lastHealthProbeUtc < HealthProbeCooldown)
+                            {
+                                shouldProbeHealth = false;
+                            }
+                            else
+                            {
+                                _lastHealthProbeUtc = now;
+                            }
+                        }
+                    }
+                    if (shouldProbeHealth && DateTime.UtcNow - AppViewModel.AppStartUtc < TimeSpan.FromSeconds(20))
+                    {
+                        shouldProbeHealth = false;
+                    }
+
+                    if (shouldProbeHealth)
                     {
                         var healthService = new DriveHealthService();
                         var backupPath = config.Backups.BackupRoot ?? string.Empty;
                         var health = healthService.CheckPath(backupPath);
 
-                        var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
-                            ? L("Backups.Health.NotAvailable", "not available")
-                            : health.Message!;
-                        (healthText, healthBrush) = health.Status switch
+                        if (health.Status == DriveHealthStatus.Unknown && IsNetworkHealthPath(health))
                         {
-                            DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, health.Message ?? fallbackMessage), HealthOkBrush),
-                            DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthWarningBrush),
-                            DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthFailingBrush),
-                            _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, fallbackMessage), HealthUnknownBrush)
-                        };
+                            healthText = string.Empty;
+                            healthBrush = HealthUnknownBrush;
+                        }
+                        else
+                        {
+                            var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
+                                ? L("Backups.Health.NotAvailable", "not available")
+                                : health.Message!;
+                            (healthText, healthBrush) = health.Status switch
+                            {
+                                DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, health.Message ?? fallbackMessage), HealthOkBrush),
+                                DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthWarningBrush),
+                                DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthFailingBrush),
+                                _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, fallbackMessage), HealthUnknownBrush)
+                            };
+                        }
                     }
 
                     var displayUsedPercent = usedPercent;
@@ -1378,7 +1502,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         UpdateBackupDiskUsage(displayUsedPercent, freeText, thresholdText, displayBelowThreshold);
                         BackupDiskDriveLabel = driveLabel;
-                        if (includeHealthProbe && healthText is not null && healthBrush is not null)
+                        if (shouldProbeHealth && healthText is not null && healthBrush is not null)
                         {
                             BackupDiskHealthText = healthText;
                             BackupDiskHealthBrush = healthBrush;
@@ -1501,6 +1625,23 @@ namespace VaultSync.UI.ViewModels
             }
 
             return false;
+        }
+
+        private static bool IsNetworkHealthPath(DriveHealthResult health)
+        {
+            var id = health.DriveId ?? string.Empty;
+            if (id.StartsWith("//", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (id.Contains("://", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (!id.StartsWith("/dev/", StringComparison.OrdinalIgnoreCase) && id.Contains(':'))
+                return true;
+
+            var path = health.Path ?? string.Empty;
+            return path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("//", StringComparison.OrdinalIgnoreCase);
         }
 
         // ---------- Summary computation ----------
@@ -1973,18 +2114,28 @@ namespace VaultSync.UI.ViewModels
 
             Interlocked.Increment(ref _snapshotRevision);
 
-            // Rebuild the filtered history view + summary + mini-chart.
-            RefreshSnapshotsView(true);
-            RecalculateSummary();
-            RefreshBackupDiskUsage();
+            // Rebuild the filtered history view + summary + mini-chart only when the view is active.
+            if (IsActiveView)
+            {
+                RefreshActiveViewState();
+            }
 
             _lastProjectSignature = projectSignature;
             _lastBackupSignature = backupSignature;
             _lastAutoBackupSignature = autoSignature;
         }
 
+        public void RefreshActiveViewState()
+        {
+            RefreshSnapshotsView(true);
+            RecalculateSummary();
+            RefreshBackupDiskUsage(includeHealthProbe: true);
+        }
+
         public void RefreshBackupDriveHealth()
         {
+            if (!IsActiveView)
+                return;
             RefreshBackupDiskUsage(includeHealthProbe: true);
         }
 
@@ -2126,9 +2277,15 @@ namespace VaultSync.UI.ViewModels
             if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
                 return;
 
-            var config = AppConfigStore.Load();
-            UpdateProjectDestinationDisplay(item, config);
-            PreferredDestinationChanged?.Invoke(projectId, item.PreferredDestinationId ?? string.Empty);
+            _ = Task.Run(() =>
+            {
+                var config = AppConfigStore.Load();
+                Dispatcher.UIThread.Post(() =>
+                {
+                    UpdateProjectDestinationDisplay(item, config);
+                    PreferredDestinationChanged?.Invoke(projectId, item.PreferredDestinationId ?? string.Empty);
+                });
+            });
         }
 
         public void RefreshDestinationOptions(AppConfig config)
@@ -2990,6 +3147,7 @@ namespace VaultSync.UI.ViewModels
                 _             => StagePrepareBrush
             };
         }
+
     }
 
     public class SnapshotActivityPoint
@@ -3041,5 +3199,3 @@ namespace VaultSync.UI.ViewModels
             CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 }
-
-

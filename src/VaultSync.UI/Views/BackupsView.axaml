@@ -686,7 +686,8 @@
             <!-- SMART / drive health -->
             <TextBlock Text="{Binding BackupDiskHealthText}"
                        FontSize="11"
-                       Foreground="{Binding BackupDiskHealthBrush}" />
+                       Foreground="{Binding BackupDiskHealthBrush}"
+                       IsVisible="{Binding BackupDiskHealthVisible}" />
           </StackPanel>
         </Border>
 

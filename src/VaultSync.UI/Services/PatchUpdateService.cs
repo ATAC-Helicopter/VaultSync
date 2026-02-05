@@ -88,6 +88,7 @@ namespace VaultSync.UI.Services
 
         public async Task<string?> DownloadPatchArchiveAsync(
             PatchPlan plan,
+            Action<long, long?, double?>? progress,
             CancellationToken cancellationToken)
         {
             var stagingDir = Path.Combine(
@@ -110,14 +111,15 @@ namespace VaultSync.UI.Services
                 }
             }
 
-            using (var response = await s_httpClient.GetAsync(plan.ArchiveUrl, cancellationToken))
+            using (var response = await s_httpClient.GetAsync(plan.ArchiveUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
             {
                 if (!response.IsSuccessStatusCode)
                     return null;
 
-                using var sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                using var destinationStream = File.Create(destinationPath);
-                await sourceStream.CopyToAsync(destinationStream, cancellationToken);
+                var totalBytes = response.Content.Headers.ContentLength;
+                await using var sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                await using var destinationStream = File.Create(destinationPath);
+                await CopyToWithProgressAsync(sourceStream, destinationStream, totalBytes, progress, cancellationToken);
             }
 
             var downloaded = new FileInfo(destinationPath);
@@ -128,6 +130,54 @@ namespace VaultSync.UI.Services
                 return null;
 
             return destinationPath;
+        }
+
+        private static async Task CopyToWithProgressAsync(
+            Stream source,
+            Stream destination,
+            long? totalBytes,
+            Action<long, long?, double?>? progress,
+            CancellationToken cancellationToken)
+        {
+            var buffer = new byte[1024 * 128];
+            long totalRead = 0;
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var lastReport = TimeSpan.Zero;
+            long lastBytes = 0;
+
+            while (true)
+            {
+                var read = await source.ReadAsync(buffer, cancellationToken);
+                if (read <= 0)
+                    break;
+
+                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                totalRead += read;
+
+                if (progress is null)
+                    continue;
+
+                var elapsed = stopwatch.Elapsed;
+                if (elapsed - lastReport < TimeSpan.FromMilliseconds(250))
+                    continue;
+
+                var deltaBytes = totalRead - lastBytes;
+                var deltaTime = (elapsed - lastReport).TotalSeconds;
+                var bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
+
+                progress(totalRead, totalBytes, bytesPerSecond);
+                lastReport = elapsed;
+                lastBytes = totalRead;
+            }
+
+            if (progress is not null)
+            {
+                var elapsed = stopwatch.Elapsed;
+                var deltaBytes = totalRead - lastBytes;
+                var deltaTime = (elapsed - lastReport).TotalSeconds;
+                var bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
+                progress(totalRead, totalBytes, bytesPerSecond);
+            }
         }
 
         private static async Task<bool> VerifyChecksumAsync(
@@ -182,7 +232,7 @@ namespace VaultSync.UI.Services
         {
             var client = new HttpClient
             {
-                Timeout = TimeSpan.FromSeconds(20)
+                Timeout = TimeSpan.FromMinutes(20)
             };
             client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-PatchUpdater/1.0");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));

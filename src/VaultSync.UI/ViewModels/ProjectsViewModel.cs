@@ -212,7 +212,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             IsLoading = true;
 
-            var config = AppConfigStore.Load();
+            var config = await Task.Run(AppConfigStore.Load);
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             RefreshDestinationOptionsInternal(config);
@@ -698,33 +698,35 @@ public class ProjectsViewModel : ViewModelBase
 
         var removedProjectName = SelectedProject.Name;
 
-        try
+        _ = Task.Run(() =>
         {
-            // Resolve DB path (shared with CLI).
-            var config = AppConfigStore.Load();
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            // Open repository (schema already initialized at app startup).
-            var repo = new SqliteRepository(dbPath);
-
-            // Look up the project in the DB by name.
-            var existing = repo.GetProjectByName(removedProjectName);
-            if (existing is null)
+            try
             {
-                ShowNotification(Lf("Projects.Notification.RemoveMissing", "Project '{0}' was not registered in the backup database.", removedProjectName), NotificationSeverity.Warning);
+                var config = AppConfigStore.Load();
+                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                    ? config.DbPath
+                    : GetDefaultDbPath();
+
+                var repo = new SqliteRepository(dbPath);
+                var existing = repo.GetProjectByName(removedProjectName);
+                if (existing is null)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                        ShowNotification(Lf("Projects.Notification.RemoveMissing", "Project '{0}' was not registered in the backup database.", removedProjectName), NotificationSeverity.Warning));
+                }
+                else
+                {
+                    repo.RemoveProject(existing.Id);
+                    Dispatcher.UIThread.Post(() =>
+                        ShowNotification(Lf("Projects.Notification.RemoveSuccess", "Removed project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Info));
+                }
             }
-            else
+            catch (Exception)
             {
-                repo.RemoveProject(existing.Id);
-                ShowNotification(Lf("Projects.Notification.RemoveSuccess", "Removed project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Info);
+                Dispatcher.UIThread.Post(() =>
+                    ShowNotification(Lf("Projects.Notification.RemoveFailed", "Failed to remove project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Error));
             }
-        }
-        catch (Exception ex)
-        {
-            ShowNotification(Lf("Projects.Notification.RemoveFailed", "Failed to remove project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Error);
-        }
+        });
 
         // Reset the selected project's details so the right panel no longer shows stale data.
         if (SelectedProject != null && SelectedProject.Name == removedProjectName)
@@ -750,7 +752,7 @@ public class ProjectsViewModel : ViewModelBase
         try
         {
             // 1. Resolve DB path from shared AppConfig (with a sensible default).
-            var config = AppConfigStore.Load();
+            var config = await Task.Run(AppConfigStore.Load);
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();

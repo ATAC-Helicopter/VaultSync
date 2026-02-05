@@ -18,6 +18,8 @@ namespace VaultSync.UI.Services
 
     public sealed class LogConsoleService
     {
+        private const int DefaultMaxLines = 2000;
+        private const int ReducedMaxLines = 200;
         private readonly ObservableCollection<LogLine> _lines = new();
         private readonly ReadOnlyObservableCollection<LogLine> _readOnlyLines;
         private readonly object _snapshotGate = new();
@@ -25,14 +27,16 @@ namespace VaultSync.UI.Services
         private readonly ConcurrentQueue<LogLine> _pending = new();
         private readonly object _fileGate = new();
         private readonly StringBuilder _fileBuffer = new();
+        private int _uiCaptureEnabled;
         private bool _captureInstalled;
         private TextWriter? _originalOut;
         private TextWriter? _originalErr;
         private int _flushScheduled;
-        private const int MaxFlushBatch = 200;
+        private int _maxFlushBatch = 200;
         private Timer? _fileFlushTimer;
-        private const int FileFlushIntervalMs = 2000;
-        private const int MaxFileBufferChars = 32 * 1024;
+        private int _fileFlushIntervalMs = 2000;
+        private int _maxFileBufferChars = 32 * 1024;
+        private int _fileFlushQueued;
 
         public LogConsoleService()
         {
@@ -54,6 +58,18 @@ namespace VaultSync.UI.Services
                 if (_enabled == value)
                     return;
                 _enabled = value;
+                MaxLines = _enabled ? DefaultMaxLines : ReducedMaxLines;
+                if (!_enabled)
+                {
+                    lock (_snapshotGate)
+                    {
+                        if (_snapshotLines.Count > MaxLines)
+                        {
+                            var toRemove = _snapshotLines.Count - MaxLines;
+                            _snapshotLines.RemoveRange(0, toRemove);
+                        }
+                    }
+                }
                 StateChanged?.Invoke();
             }
         }
@@ -66,6 +82,8 @@ namespace VaultSync.UI.Services
                 if (_saveToFile == value)
                     return;
                 _saveToFile = value;
+                _fileFlushIntervalMs = _saveToFile ? 5000 : 2000;
+                _maxFileBufferChars = _saveToFile ? 128 * 1024 : 32 * 1024;
                 if (!_saveToFile)
                 {
                     StopFileCapture();
@@ -73,7 +91,30 @@ namespace VaultSync.UI.Services
                 StateChanged?.Invoke();
             }
         }
-        public int MaxLines { get; set; } = 2000;
+        public int MaxLines { get; set; } = DefaultMaxLines;
+
+        public void SetUiCaptureEnabled(bool enabled, bool loadSnapshot = false)
+        {
+            var value = enabled ? 1 : 0;
+            Interlocked.Exchange(ref _uiCaptureEnabled, value);
+            _maxFlushBatch = enabled ? 50 : 200;
+
+            if (enabled && loadSnapshot)
+            {
+                List<LogLine> snapshot;
+                lock (_snapshotGate)
+                {
+                    snapshot = _snapshotLines.ToList();
+                }
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _lines.Clear();
+                    foreach (var line in snapshot)
+                        _lines.Add(line);
+                });
+            }
+        }
 
         public void InstallCapture()
         {
@@ -170,6 +211,18 @@ namespace VaultSync.UI.Services
             if (!Enabled || string.IsNullOrWhiteSpace(message))
                 return;
 
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                var captured = message;
+                ThreadPool.QueueUserWorkItem(_ => AppendCore(captured, source));
+                return;
+            }
+
+            AppendCore(message, source);
+        }
+
+        private void AppendCore(string message, string source)
+        {
             foreach (var line in message.Replace("\r", string.Empty).Split('\n'))
             {
                 if (string.IsNullOrWhiteSpace(line))
@@ -189,8 +242,11 @@ namespace VaultSync.UI.Services
                     }
                 }
 
-                _pending.Enqueue(entry);
-                ScheduleFlush();
+                if (Interlocked.CompareExchange(ref _uiCaptureEnabled, 0, 0) == 1)
+                {
+                    _pending.Enqueue(entry);
+                    ScheduleFlush();
+                }
 
                 if (SaveToFile)
                 {
@@ -233,8 +289,8 @@ namespace VaultSync.UI.Services
             if (_pending.IsEmpty)
                 return;
 
-            var batch = new List<LogLine>(MaxFlushBatch);
-            while (batch.Count < MaxFlushBatch && _pending.TryDequeue(out var entry))
+            var batch = new List<LogLine>(_maxFlushBatch);
+            while (batch.Count < _maxFlushBatch && _pending.TryDequeue(out var entry))
             {
                 batch.Add(entry);
             }
@@ -263,13 +319,13 @@ namespace VaultSync.UI.Services
                         .Append(entry.Message)
                         .Append(Environment.NewLine);
 
-                    if (_fileBuffer.Length >= MaxFileBufferChars)
+                    if (_fileBuffer.Length >= _maxFileBufferChars)
                     {
-                        FlushFileBuffer(path);
+                        QueueFileFlush(path);
                     }
                     else if (_fileFlushTimer is null)
                     {
-                        _fileFlushTimer = new Timer(_ => FlushFileBuffer(path), null, FileFlushIntervalMs, FileFlushIntervalMs);
+                        _fileFlushTimer = new Timer(_ => QueueFileFlush(path), null, _fileFlushIntervalMs, _fileFlushIntervalMs);
                     }
                 }
             }
@@ -288,8 +344,8 @@ namespace VaultSync.UI.Services
                 {
                     _fileFlushTimer?.Dispose();
                     _fileFlushTimer = null;
-                    FlushFileBuffer(path);
                 }
+                FlushFileBuffer(path);
             }
             catch
             {
@@ -297,17 +353,41 @@ namespace VaultSync.UI.Services
             }
         }
 
+        private void QueueFileFlush(string path)
+        {
+            if (Interlocked.Exchange(ref _fileFlushQueued, 1) == 1)
+                return;
+
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    FlushFileBuffer(path);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _fileFlushQueued, 0);
+                }
+            });
+        }
+
         private void FlushFileBuffer(string path)
         {
+            string? payload = null;
             lock (_fileGate)
             {
                 if (_fileBuffer.Length == 0)
                     return;
 
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.AppendAllText(path, _fileBuffer.ToString());
+                payload = _fileBuffer.ToString();
                 _fileBuffer.Clear();
             }
+
+            if (string.IsNullOrEmpty(payload))
+                return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.AppendAllText(path, payload);
         }
 
         private static string GetLogRoot()

@@ -58,6 +58,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private string? _lastRequiredView;
     private AppConfig? _cachedConfig;
     private DateTime _lastConfigAt;
+    private int _configRefreshInFlight;
 
     public event Action? TourCompleted;
 
@@ -458,9 +459,35 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             return _cachedConfig;
         }
 
-        _cachedConfig = AppConfigStore.Load();
+        if (_cachedConfig is not null)
+        {
+            if (Interlocked.Exchange(ref _configRefreshInFlight, 1) == 0)
+            {
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        var cfg = AppConfigStore.Load();
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            _cachedConfig = cfg;
+                            _lastConfigAt = DateTime.UtcNow;
+                        });
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _configRefreshInFlight, 0);
+                    }
+                });
+            }
+
+            return _cachedConfig;
+        }
+
+        var fresh = AppConfigStore.Load();
+        _cachedConfig = fresh;
         _lastConfigAt = now;
-        return _cachedConfig;
+        return fresh;
     }
 
     private void Advance()

@@ -36,6 +36,7 @@ namespace VaultSync.UI.Views
 
         private void OnOpened(object? sender, System.EventArgs e)
         {
+            _viewModel.SetUiCaptureEnabled(true);
             if (this.FindControl<ListBox>("LogList") is { } list)
             {
                 _scrollViewer = list.GetVisualDescendants()
@@ -78,6 +79,7 @@ namespace VaultSync.UI.Views
 
         private void OnClosed(object? sender, System.EventArgs e)
         {
+            _viewModel.SetUiCaptureEnabled(false);
             if (_viewModel.Lines is INotifyCollectionChanged notifier)
             {
                 notifier.CollectionChanged -= OnLinesChanged;

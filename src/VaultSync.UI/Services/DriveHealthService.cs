@@ -74,6 +74,22 @@ namespace VaultSync.UI.Services
 
         private static DriveHealthResult CheckWindows(string root, string fullPath)
         {
+            try
+            {
+                var driveInfo = new DriveInfo(root);
+                if (driveInfo.DriveType == DriveType.Network)
+                {
+                    return Unknown(
+                        L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                        driveId: root,
+                        path: fullPath);
+                }
+            }
+            catch
+            {
+                // If DriveInfo fails, continue with best-effort checks below.
+            }
+
             // Try WMIC SMART status; if unavailable, fall back to basic readiness.
             var output = RunProcess("wmic", "diskdrive get Status,DeviceID", 4000);
             if (!string.IsNullOrWhiteSpace(output))
@@ -159,6 +175,14 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(device))
                 return Unknown(L("DriveHealth.Unknown.CouldNotResolveDevice", "Could not resolve device"), path: fullPath);
 
+            if (IsNetworkDevice(device))
+            {
+                return Unknown(
+                    L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                    driveId: device,
+                    path: fullPath);
+            }
+
             // Prefer smartctl if available on macOS (brew install smartmontools).
             if (TrySmartCtl(device, fullPath, out var smartResult))
                 return smartResult;
@@ -194,6 +218,14 @@ namespace VaultSync.UI.Services
             var device = ParseDeviceFromDf(dfOutput);
             if (string.IsNullOrWhiteSpace(device))
                 return Unknown(L("DriveHealth.Unknown.CouldNotResolveDevice", "Could not resolve device"), path: fullPath);
+
+            if (IsNetworkDevice(device))
+            {
+                return Unknown(
+                    L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                    driveId: device,
+                    path: fullPath);
+            }
 
             // Try smartctl -H <device> if available.
             if (TrySmartCtl(device, fullPath, out var smartResult))
@@ -260,6 +292,27 @@ namespace VaultSync.UI.Services
             }
 
             return string.Empty;
+        }
+
+        private static bool IsNetworkDevice(string device)
+        {
+            if (string.IsNullOrWhiteSpace(device))
+                return false;
+
+            if (device.StartsWith("//", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (device.Contains("://", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (!device.StartsWith("/dev/", StringComparison.OrdinalIgnoreCase) && device.Contains(':'))
+                return true;
+
+            return device.IndexOf("smbfs", StringComparison.OrdinalIgnoreCase) >= 0
+                || device.IndexOf("afpfs", StringComparison.OrdinalIgnoreCase) >= 0
+                || device.IndexOf("webdav", StringComparison.OrdinalIgnoreCase) >= 0
+                || device.IndexOf("cifs", StringComparison.OrdinalIgnoreCase) >= 0
+                || device.IndexOf("nfs", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static string RunProcess(string fileName, string arguments, int timeoutMs)
