@@ -51,7 +51,7 @@ public partial class App : Application
     private int _trayMenuRefreshFailureCount;
     private string? _trayMenuSignature;
     private DateTime _lastTrayMenuOpenUtc = DateTime.MinValue;
-    private int _trayMenuRefreshDeferred;
+    private DateTime _trayMenuSuppressUntilUtc = DateTime.MinValue;
     private const string DefaultFontFallback =
         "Inter, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, " +
         "Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, " +
@@ -63,6 +63,10 @@ public partial class App : Application
     private static readonly FontFamily ArabicMacFontFamily = new(
         $"avares://VaultSync.UI/Assets/Fonts/#Noto Sans Arabic, avares://VaultSync.UI/Assets/Fonts/#Noto Sans, " +
         "Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial");
+    private static long _uiHeartbeatTicks;
+    private static int _uiHangReported;
+    private static Timer? _uiWatchdogTimer;
+    private static DispatcherTimer? _uiHeartbeatTimer;
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -74,12 +78,14 @@ public partial class App : Application
 
         IsCrashing = true;
         IsShuttingDown = true;
+        DiagnosticsLogger.RecordWithStack("MarkCrashing called.");
         GlobalNotificationCenter.Instance.SuppressNotifications = true;
     }
 
     internal static void MarkShuttingDown()
     {
         IsShuttingDown = true;
+        DiagnosticsLogger.RecordWithStack("MarkShuttingDown called.");
     }
 
     private static string Lf(string key, string fallback, params object[] args)
@@ -103,6 +109,7 @@ public partial class App : Application
             WireLifecycleBreadcrumbs(desktop);
 
             AppViewModelInstance = new AppViewModel();
+            DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={AppViewModelInstance.CurrentVersionDisplay}");
             if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out var fontResource))
             {
                 _defaultFontFamily = fontResource as FontFamily;
@@ -203,12 +210,52 @@ public partial class App : Application
             {
                 CreateTrayIcon(desktop);
             }
+
+            StartUiWatchdog();
         }
 
         // Apply theme from stored config on startup
         ApplyThemeFromConfig();
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static void StartUiWatchdog()
+    {
+        if (_uiHeartbeatTimer is not null)
+            return;
+
+        _uiHeartbeatTicks = DateTime.UtcNow.Ticks;
+        _uiHeartbeatTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(250)
+        };
+        _uiHeartbeatTimer.Tick += (_, _) =>
+        {
+            Interlocked.Exchange(ref _uiHeartbeatTicks, DateTime.UtcNow.Ticks);
+            if (Interlocked.Exchange(ref _uiHangReported, 0) == 1)
+            {
+                DiagnosticsLogger.Record("UI heartbeat resumed after stall.");
+            }
+        };
+        _uiHeartbeatTimer.Start();
+
+        _uiWatchdogTimer = new Timer(_ =>
+        {
+            var last = Interlocked.Read(ref _uiHeartbeatTicks);
+            var ageMs = (DateTime.UtcNow - new DateTime(last, DateTimeKind.Utc)).TotalMilliseconds;
+            if (ageMs < 3000)
+                return;
+
+            if (Interlocked.Exchange(ref _uiHangReported, 1) == 1)
+                return;
+
+            var proc = System.Diagnostics.Process.GetCurrentProcess();
+            DiagnosticsLogger.Record(
+                $"UI hang suspected ({ageMs:0}ms). Threads={proc.Threads.Count}, " +
+                $"WorkingSetMB={proc.WorkingSet64 / (1024 * 1024)}, GC0={GC.CollectionCount(0)}, GC1={GC.CollectionCount(1)}, GC2={GC.CollectionCount(2)}");
+            DiagnosticsLogger.TryCollectDump($"ui_hang_{ageMs:0}ms");
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     private void ApplyLanguageFontOverrides()
@@ -304,7 +351,11 @@ public partial class App : Application
         if (OperatingSystem.IsMacOS())
         {
             _trayIcon.Menu = _trayMenu;
-            _trayIcon.Clicked += (_, _) => _lastTrayMenuOpenUtc = DateTime.UtcNow;
+            _trayIcon.Clicked += (_, _) =>
+            {
+                _lastTrayMenuOpenUtc = DateTime.UtcNow;
+                _trayMenuSuppressUntilUtc = _lastTrayMenuOpenUtc.AddSeconds(10);
+            };
         }
         else
         {
@@ -882,6 +933,7 @@ public partial class App : Application
         quitItem.Click += (_, _) =>
         {
             // Tell the window we're intentionally shutting down so it doesn't hijack the close.
+            DiagnosticsLogger.RecordWithStack("Quit tray menu clicked.");
             IsShuttingDown = true;
             desktop.Shutdown();
         };
@@ -949,11 +1001,13 @@ public partial class App : Application
 
             desktop.Exit += (_, _) =>
             {
+                DiagnosticsLogger.Record($"Desktop exit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
             };
 
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
+                DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
                 Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
             };
         }
@@ -1016,21 +1070,13 @@ public partial class App : Application
             return;
 
         var now = DateTime.UtcNow;
-        if (now - _lastTrayMenuRefreshUtc < TimeSpan.FromSeconds(1))
+        var minRefreshInterval = OperatingSystem.IsMacOS()
+            ? TimeSpan.FromSeconds(2)
+            : TimeSpan.FromSeconds(1);
+        if (now - _lastTrayMenuRefreshUtc < minRefreshInterval)
             return;
-        if (OperatingSystem.IsMacOS() && (now - _lastTrayMenuOpenUtc) < TimeSpan.FromSeconds(2))
-        {
-            if (Interlocked.Exchange(ref _trayMenuRefreshDeferred, 1) == 0)
-            {
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-                    Interlocked.Exchange(ref _trayMenuRefreshDeferred, 0);
-                    RefreshTrayMenu();
-                });
-            }
+        if (OperatingSystem.IsMacOS() && now < _trayMenuSuppressUntilUtc)
             return;
-        }
         if (_trayMenuRefreshFailureCount >= 3 &&
             now - _lastTrayMenuRefreshFailureUtc < TimeSpan.FromSeconds(10))
             return;
@@ -1075,6 +1121,12 @@ public partial class App : Application
             catch (Exception ex)
             {
                 // Best-effort: avoid crashing the app if tray menu rebuild fails.
+                if (OperatingSystem.IsMacOS() &&
+                    ex.Message.Contains("menu being updated does not match", StringComparison.OrdinalIgnoreCase))
+                {
+                    _trayMenuSuppressUntilUtc = DateTime.UtcNow.AddSeconds(10);
+                }
+
                 Console.WriteLine($"[Tray] Failed to refresh tray menu: {ex.Message}");
                 _trayMenuRefreshFailureCount++;
                 _lastTrayMenuRefreshFailureUtc = DateTime.UtcNow;
@@ -1151,6 +1203,7 @@ public partial class App : Application
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
+        DiagnosticsLogger.Record("Activation signal received; bringing window to front.");
         Dispatcher.UIThread.Post(() => BringMainWindowToFront(desktop));
     }
 

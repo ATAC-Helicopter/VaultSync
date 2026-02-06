@@ -16,6 +16,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using VaultSync.UI.Services;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
@@ -100,6 +101,7 @@ namespace VaultSync.UI
         private bool _isInitialized;
         private bool _isSaving;
         private bool _savePending;
+        private bool? _lastLaunchOnLoginApplied;
 
         public event Action? OpenLogConsoleRequested;
         public event Action? UpdateCheckRequested;
@@ -212,6 +214,7 @@ namespace VaultSync.UI
             _runInBackground         = cfg.Behavior.RunInBackground;
             _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
             _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
+            _lastLaunchOnLoginApplied = _launchOnLogin;
             _confirmDeleteBackup     = cfg.Behavior.ConfirmDeleteBackup;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
@@ -522,7 +525,12 @@ namespace VaultSync.UI
             cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
             cfg.Advanced.Language            = SelectedLanguageCode;
 
-            AutoStartService.SetLaunchOnLogin(_launchOnLogin);
+            if (_lastLaunchOnLoginApplied != _launchOnLogin)
+            {
+                _lastLaunchOnLoginApplied = _launchOnLogin;
+                var launchOnLogin = _launchOnLogin;
+                _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(launchOnLogin));
+            }
 
             AppConfigStore.Save(cfg);
 

@@ -35,6 +35,7 @@ internal static class CrashHandler
 
     private static void OnUiUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        DiagnosticsLogger.Record($"UI unhandled exception: {e.Exception.GetType().Name} - {e.Exception.Message}");
         HandleUiExceptionSoft(e.Exception);
         e.Handled = true;
     }
@@ -46,11 +47,13 @@ internal static class CrashHandler
     {
         var ex = e.ExceptionObject as Exception
             ?? new Exception("Unhandled exception (non-Exception object).");
+        DiagnosticsLogger.Record($"AppDomain unhandled exception: {ex.GetType().Name} - {ex.Message}");
         HandleException(ex, "AppDomain", e.IsTerminating);
     }
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
+        DiagnosticsLogger.Record($"Unobserved task exception: {e.Exception.GetType().Name} - {e.Exception.Message}");
         WriteCrashLog(e.Exception, "UnobservedTaskException", isTerminating: false);
         e.SetObserved();
     }
@@ -62,6 +65,7 @@ internal static class CrashHandler
             return;
         }
 
+        DiagnosticsLogger.Record($"Crash handler invoked: source={source}, terminating={isTerminating}, error={ex.GetType().Name} - {ex.Message}");
         App.MarkCrashing();
         var logPath = WriteCrashLog(ex, source, isTerminating);
         TryShowCrashDialog(logPath);
@@ -74,6 +78,7 @@ internal static class CrashHandler
             return;
         }
 
+        DiagnosticsLogger.Record($"Soft UI crash handled: {ex.GetType().Name} - {ex.Message}");
         var logPath = WriteCrashLog(ex, "UI thread", isTerminating: false);
         TryShowSoftCrashBanner(logPath);
     }
@@ -122,6 +127,17 @@ internal static class CrashHandler
             sb.AppendLine($"Culture: {CultureInfo.CurrentCulture.Name} / {CultureInfo.CurrentUICulture.Name}");
             sb.AppendLine($"CommandLine: {Environment.CommandLine}");
             sb.AppendLine($"CurrentDirectory: {Environment.CurrentDirectory}");
+            if (!string.IsNullOrWhiteSpace(DiagnosticsLogger.SessionLogPath))
+            {
+                sb.AppendLine($"DiagnosticsLog: {DiagnosticsLogger.SessionLogPath}");
+            }
+            var recent = DiagnosticsLogger.GetRecentLog();
+            if (!string.IsNullOrWhiteSpace(recent))
+            {
+                sb.AppendLine();
+                sb.AppendLine("Recent diagnostics:");
+                sb.AppendLine(recent);
+            }
             sb.AppendLine();
             sb.AppendLine(ex.ToString());
 

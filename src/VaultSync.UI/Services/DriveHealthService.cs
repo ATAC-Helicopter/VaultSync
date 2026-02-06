@@ -319,6 +319,14 @@ namespace VaultSync.UI.Services
         {
             try
             {
+                if (string.Equals(fileName, "smartctl", StringComparison.OrdinalIgnoreCase))
+                {
+                    var resolved = ResolveSmartctlPath();
+                    if (string.IsNullOrWhiteSpace(resolved))
+                        return string.Empty;
+                    fileName = resolved;
+                }
+
                 var psi = new ProcessStartInfo
                 {
                     FileName = fileName,
@@ -328,6 +336,8 @@ namespace VaultSync.UI.Services
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
+                if (Directory.Exists(Environment.CurrentDirectory))
+                    psi.WorkingDirectory = Environment.CurrentDirectory;
 
                 using var proc = Process.Start(psi);
                 if (proc is null)
@@ -349,5 +359,50 @@ namespace VaultSync.UI.Services
 
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+        private static string ResolveSmartctlPath()
+        {
+            if (OperatingSystem.IsWindows())
+                return "smartctl";
+
+            var candidates = OperatingSystem.IsMacOS()
+                ? new[]
+                {
+                    "/opt/homebrew/sbin/smartctl",
+                    "/usr/local/sbin/smartctl",
+                    "/usr/sbin/smartctl",
+                    "/usr/bin/smartctl"
+                }
+                : new[]
+                {
+                    "/usr/sbin/smartctl",
+                    "/usr/bin/smartctl",
+                    "/sbin/smartctl",
+                    "/bin/smartctl"
+                };
+
+            foreach (var candidate in candidates)
+            {
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+
+            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    var candidate = Path.Combine(dir, "smartctl");
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch
+                {
+                    // ignore malformed PATH entries
+                }
+            }
+
+            return string.Empty;
+        }
     }
 }

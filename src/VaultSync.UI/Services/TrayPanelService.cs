@@ -121,6 +121,7 @@ public sealed class TrayPanelService : IDisposable
             },
             quit: () =>
             {
+                DiagnosticsLogger.RecordWithStack("TrayPanelService quit requested.");
                 App.MarkShuttingDown();
                 _desktop.Shutdown();
             },

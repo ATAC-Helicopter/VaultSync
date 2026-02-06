@@ -79,7 +79,7 @@ namespace VaultSync.UI.Services
             CancellationToken cancellationToken)
         {
             Console.WriteLine($"[Update] Fetching GitHub releases (channel={channel}, current={currentVersion}).");
-            var releases = await FetchReleasesAsync(cancellationToken);
+            var releases = await FetchReleasesAsync(cancellationToken).ConfigureAwait(false);
             if (releases == null || releases.Count == 0)
             {
                 Console.WriteLine("[Update] No releases returned from GitHub.");
@@ -236,7 +236,7 @@ namespace VaultSync.UI.Services
                         request.Headers.IfNoneMatch.ParseAdd(cachedEtag);
                     }
 
-                    response = await s_httpClient.SendAsync(request, cancellationToken);
+                    response = await s_httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
                     if (response.StatusCode == HttpStatusCode.NotModified)
                     {
                         useCache = true;
@@ -248,7 +248,9 @@ namespace VaultSync.UI.Services
                         break;
                     }
 
-                    pageReleases = await response.Content.ReadFromJsonAsync<List<GitHubRelease>>(cancellationToken: cancellationToken);
+                    pageReleases = await response.Content
+                        .ReadFromJsonAsync<List<GitHubRelease>>(cancellationToken: cancellationToken)
+                        .ConfigureAwait(false);
                 }
                 catch
                 {

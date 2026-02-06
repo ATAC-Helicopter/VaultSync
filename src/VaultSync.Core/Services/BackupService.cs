@@ -1621,14 +1621,9 @@ public sealed class BackupService
         {
             while (!cts.IsCancellationRequested)
             {
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
-                }
-                catch (TaskCanceledException)
-                {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                if (cts.IsCancellationRequested)
                     return;
-                }
 
                 var lastProgress = new DateTime(Interlocked.Read(ref lastProgressTicks), DateTimeKind.Utc);
                 if (DateTime.UtcNow - lastProgress > stallTimeout)
@@ -1647,14 +1642,9 @@ public sealed class BackupService
             var heartbeatInterval = TimeSpan.FromSeconds(5);
             while (!cts.IsCancellationRequested)
             {
-                try
-                {
-                    await Task.Delay(heartbeatInterval, cts.Token);
-                }
-                catch (TaskCanceledException)
-                {
+                await Task.Delay(heartbeatInterval);
+                if (cts.IsCancellationRequested)
                     return;
-                }
 
                 var snapshotUploaded = Interlocked.Read(ref uploaded);
                 var now = DateTime.UtcNow;

@@ -174,6 +174,10 @@ namespace VaultSync.UI.ViewModels
         private DateTimeOffset? _lastUpdateCheckAt;
         private string? _lastUpdateCheckError;
         private UpdateCheckResult? _pendingUpdateResult;
+        private int _updateCheckLogCaptureSuppressed;
+        private bool _updateCheckLogServiceSuppressed;
+        private bool _updateCheckPrevLogEnabled;
+        private bool _updateCheckPrevSaveToFile;
         private bool _patchBlocked;
         private bool _patchFailed;
         private bool _isUpdateAvailable;
@@ -1983,11 +1987,13 @@ namespace VaultSync.UI.ViewModels
 
         private void OnOpenLogConsoleRequested()
         {
+            DiagnosticsLogger.Record("Log console requested.");
             ShowLogConsole();
         }
 
         private void OnUpdateCheckRequested()
         {
+            DiagnosticsLogger.Record("Manual update check requested.");
             Console.WriteLine("[Update] Manual update check requested.");
             StartUpdateCheck(ignoreSettings: true);
         }
@@ -1996,10 +2002,26 @@ namespace VaultSync.UI.ViewModels
         {
             if (_logConsoleWindow is not null)
             {
+                DiagnosticsLogger.Record("Log console already open; activating.");
                 _logConsoleWindow.Activate();
                 return;
             }
 
+            if (OperatingSystem.IsMacOS())
+            {
+                try
+                {
+                    DiagnosticsLogger.Record("Installing log capture for macOS.");
+                    _logConsoleService.InstallCapture();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LogConsole] Capture install failed: {ex.Message}");
+                    DiagnosticsLogger.Record($"Log capture install failed: {ex.GetType().Name} - {ex.Message}");
+                }
+            }
+
+            DiagnosticsLogger.Record("Creating log console window.");
             var vm = new LogConsoleViewModel(_logConsoleService);
             var window = new LogConsoleWindow(vm);
 
@@ -2014,6 +2036,7 @@ namespace VaultSync.UI.ViewModels
 
             window.Closed += (_, _) =>
             {
+                DiagnosticsLogger.Record("Log console closed.");
                 _logConsoleWindow = null;
             };
 
@@ -2086,6 +2109,7 @@ namespace VaultSync.UI.ViewModels
 
         private void StartUpdateCheck(bool ignoreSettings = false)
         {
+            DiagnosticsLogger.Record($"Update check start (ignoreSettings={ignoreSettings}, channel={CurrentUpdateChannel}).");
             CancelUpdateCheck();
             CancelUpdateRetry();
 
@@ -2104,7 +2128,20 @@ namespace VaultSync.UI.ViewModels
 
             _updateCheckCts = new CancellationTokenSource();
             Console.WriteLine($"[Update] Starting update check (channel={CurrentUpdateChannel}).");
-            _ = RunUpdateCheckAsync(_updateCheckCts.Token);
+            if (OperatingSystem.IsMacOS())
+            {
+                _logConsoleService.SetUiCaptureEnabled(false);
+                _updateCheckLogCaptureSuppressed = 1;
+                if (!_updateCheckLogServiceSuppressed)
+                {
+                    _updateCheckPrevLogEnabled = _logConsoleService.Enabled;
+                    _updateCheckPrevSaveToFile = _logConsoleService.SaveToFile;
+                    _logConsoleService.Enabled = false;
+                    _logConsoleService.SaveToFile = false;
+                    _updateCheckLogServiceSuppressed = true;
+                }
+            }
+            _ = Task.Run(() => RunUpdateCheckAsync(_updateCheckCts.Token));
         }
 
         private void ConfigureUpdateCheckTimer()
@@ -2273,6 +2310,7 @@ namespace VaultSync.UI.ViewModels
         {
             Dispatcher.UIThread.Post(() =>
             {
+                DiagnosticsLogger.RecordWithStack("Shutdown for patch install requested.");
                 App.MarkShuttingDown();
                 if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
@@ -2318,7 +2356,10 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var result = await _updateService.CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken);
+                DiagnosticsLogger.Record("Update check running.");
+                var result = await _updateService
+                    .CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken)
+                    .ConfigureAwait(false);
                 if (result is null)
                 {
                     Console.WriteLine("[Update] No update available.");
@@ -2338,7 +2379,9 @@ namespace VaultSync.UI.ViewModels
 
                 if (result.HasPatch)
                 {
-                    var plan = await _patchService.PreparePatchAsync(result, _currentVersionString, cancellationToken);
+                    var plan = await _patchService
+                        .PreparePatchAsync(result, _currentVersionString, cancellationToken)
+                        .ConfigureAwait(false);
                     if (plan is null)
                     {
                         _patchBlocked = true;
@@ -2356,20 +2399,35 @@ namespace VaultSync.UI.ViewModels
 
                 Console.WriteLine($"[Update] Update available: tag={result.TagName}, name={result.ReleaseName}, patch={result.HasPatch}, installer={result.HasInstaller}.");
                 RecordUpdateCheckSuccess();
+                DiagnosticsLogger.Record($"Update available: tag={result.TagName}, patch={result.HasPatch}, installer={result.HasInstaller}.");
                 Dispatcher.UIThread.Post(() => ApplyUpdateResult(result));
             }
             catch (OperationCanceledException)
             {
+                DiagnosticsLogger.Record("Update check cancelled.");
             }
             catch (Exception ex)
             {
                 // Silently ignore update failures; we don't want to disturb the user.
+                DiagnosticsLogger.Record($"Update check failed: {ex.GetType().Name} - {ex.Message}");
                 RecordUpdateCheckFailure(ex);
             }
             finally
             {
                 _updateCheckCts?.Dispose();
                 _updateCheckCts = null;
+                if (_updateCheckLogCaptureSuppressed == 1)
+                {
+                    _updateCheckLogCaptureSuppressed = 0;
+                    Dispatcher.UIThread.Post(() =>
+                        _logConsoleService.SetUiCaptureEnabled(true, loadSnapshot: false));
+                }
+                if (_updateCheckLogServiceSuppressed)
+                {
+                    _updateCheckLogServiceSuppressed = false;
+                    _logConsoleService.Enabled = _updateCheckPrevLogEnabled;
+                    _logConsoleService.SaveToFile = _updateCheckPrevSaveToFile;
+                }
             }
         }
 
@@ -2383,7 +2441,7 @@ namespace VaultSync.UI.ViewModels
             _isUpdateBannerDismissed = false;
             IsUpdateAvailable = true;
             UpdateBannerMessage = Lf("Update.Banner", "New update available: {0} ({1})", result.ReleaseName, result.TagName);
-            SetUpdateReleaseNotes(result.ReleaseNotes);
+            SetUpdateReleaseNotes(TrimUpdateReleaseNotes(result.ReleaseNotes));
             _updateReleaseUrl = (result.InstallerUrl ?? result.ReleaseUrl).ToString();
             _pendingUpdateResult = result;
             NotifyPatchAvailabilityChanged();
@@ -2405,7 +2463,7 @@ namespace VaultSync.UI.ViewModels
                 NotificationSeverity.Info,
                 title);
 
-            if (ShouldRaiseSystemNotification)
+            if (ShouldRaiseSystemNotification && !OperatingSystem.IsMacOS())
             {
                 GlobalNotificationCenter.Instance.ShowSystem(
                     message,
@@ -2418,6 +2476,19 @@ namespace VaultSync.UI.ViewModels
         {
             _updateReleaseNotes = notes ?? string.Empty;
             OnPropertyChanged(nameof(UpdateTooltip));
+        }
+
+        private static string TrimUpdateReleaseNotes(string? notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes))
+                return string.Empty;
+
+            var normalized = notes.Replace("\r", string.Empty).Trim();
+            const int maxChars = 1200;
+            if (normalized.Length <= maxChars)
+                return normalized;
+
+            return normalized[..maxChars] + "…";
         }
 
         private void ClearUpdateState()
@@ -4001,13 +4072,15 @@ namespace VaultSync.UI.ViewModels
                 {
                     throughput = cfg.Backups.LastBackupThroughputMbSec;
                 }
-                var preflight = await _backupService.PreflightBackupAsync(
-                    project,
-                    backupRoot,
-                    CancellationToken.None,
-                    throughputMbSec: throughput,
-                    useArchiveMode: useArchiveMode,
-                    cacheTtl: TimeSpan.FromSeconds(45));
+                var preflight = await Task.Run(
+                        () => _backupService.PreflightBackupAsync(
+                            project,
+                            backupRoot,
+                            CancellationToken.None,
+                            throughputMbSec: throughput,
+                            useArchiveMode: useArchiveMode,
+                            cacheTtl: TimeSpan.FromSeconds(45)))
+                    .ConfigureAwait(false);
 
                 var sizeLabel = BackupSnapshotItem.FormatSize(preflight.TotalBytes);
                 var estimateLabel = string.Empty;
@@ -6223,6 +6296,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(dest.Path))
                 return new DestinationTestResult(false, false, string.Empty, LStatic("Destinations.Test.EmptyPath", "Destination path is empty."));
 
+            DiagnosticsLogger.Record($"Destination test start: '{dest.Alias ?? dest.Path}'.");
             var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                 ? null
                 : cfg.Network.Credentials.FirstOrDefault(c =>
@@ -6230,7 +6304,10 @@ namespace VaultSync.UI.ViewModels
 
             var resolution = _networkMountService.PrepareDestination(dest, profile);
             if (!resolution.IsSuccess)
+            {
+                DiagnosticsLogger.Record($"Destination test failed: '{dest.Alias ?? dest.Path}' - {resolution.Message}");
                 return new DestinationTestResult(false, false, resolution.EffectivePath ?? string.Empty, resolution.Message);
+            }
 
             var testTarget = resolution.EffectivePath;
 
@@ -6259,10 +6336,12 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
+                DiagnosticsLogger.Record($"Destination test exception: '{dest.Alias ?? dest.Path}' - {ex.GetType().Name} - {ex.Message}");
                 return new DestinationTestResult(false, false, testTarget, ex.Message);
             }
             finally
             {
+                DiagnosticsLogger.Record($"Destination test complete: '{dest.Alias ?? dest.Path}'.");
                 if (resolution.MountedByUs)
                 {
                     // Respect destination auto-unmount setting for reachability probes.

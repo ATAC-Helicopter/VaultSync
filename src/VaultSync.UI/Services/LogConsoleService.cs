@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 
 namespace VaultSync.UI.Services
@@ -25,6 +26,7 @@ namespace VaultSync.UI.Services
         private readonly object _snapshotGate = new();
         private readonly List<LogLine> _snapshotLines = new();
         private readonly ConcurrentQueue<LogLine> _pending = new();
+        private int _pendingCount;
         private readonly object _fileGate = new();
         private readonly StringBuilder _fileBuffer = new();
         private int _uiCaptureEnabled;
@@ -32,6 +34,8 @@ namespace VaultSync.UI.Services
         private TextWriter? _originalOut;
         private TextWriter? _originalErr;
         private int _flushScheduled;
+        private int _flushDelayed;
+        private DateTime _lastFlushUtc = DateTime.MinValue;
         private int _maxFlushBatch = 200;
         private Timer? _fileFlushTimer;
         private int _fileFlushIntervalMs = 2000;
@@ -97,7 +101,9 @@ namespace VaultSync.UI.Services
         {
             var value = enabled ? 1 : 0;
             Interlocked.Exchange(ref _uiCaptureEnabled, value);
-            _maxFlushBatch = enabled ? 50 : 200;
+            _maxFlushBatch = enabled
+                ? (OperatingSystem.IsMacOS() ? 20 : 50)
+                : 200;
 
             if (enabled && loadSnapshot)
             {
@@ -113,6 +119,16 @@ namespace VaultSync.UI.Services
                     foreach (var line in snapshot)
                         _lines.Add(line);
                 });
+            }
+            else if (!enabled)
+            {
+                while (_pending.TryDequeue(out _))
+                {
+                }
+
+                Interlocked.Exchange(ref _pendingCount, 0);
+                Interlocked.Exchange(ref _flushScheduled, 0);
+                Interlocked.Exchange(ref _flushDelayed, 0);
             }
         }
 
@@ -244,6 +260,16 @@ namespace VaultSync.UI.Services
 
                 if (Interlocked.CompareExchange(ref _uiCaptureEnabled, 0, 0) == 1)
                 {
+                    if (OperatingSystem.IsMacOS())
+                    {
+                        var queued = Interlocked.Increment(ref _pendingCount);
+                        if (queued > 200)
+                        {
+                            Interlocked.Decrement(ref _pendingCount);
+                            continue;
+                        }
+                    }
+
                     _pending.Enqueue(entry);
                     ScheduleFlush();
                 }
@@ -279,12 +305,29 @@ namespace VaultSync.UI.Services
             if (Interlocked.Exchange(ref _flushScheduled, 1) == 1)
                 return;
 
+            var minInterval = TimeSpan.FromMilliseconds(200);
+            var now = DateTime.UtcNow;
+            if ((now - _lastFlushUtc) < minInterval)
+            {
+                if (Interlocked.Exchange(ref _flushDelayed, 1) == 0)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(minInterval).ConfigureAwait(false);
+                        Interlocked.Exchange(ref _flushDelayed, 0);
+                        Dispatcher.UIThread.Post(FlushPending);
+                    });
+                }
+                return;
+            }
+
             Dispatcher.UIThread.Post(FlushPending);
         }
 
         private void FlushPending()
         {
             Interlocked.Exchange(ref _flushScheduled, 0);
+            _lastFlushUtc = DateTime.UtcNow;
 
             if (_pending.IsEmpty)
                 return;
@@ -292,6 +335,7 @@ namespace VaultSync.UI.Services
             var batch = new List<LogLine>(_maxFlushBatch);
             while (batch.Count < _maxFlushBatch && _pending.TryDequeue(out var entry))
             {
+                Interlocked.Decrement(ref _pendingCount);
                 batch.Add(entry);
             }
 
@@ -426,7 +470,8 @@ namespace VaultSync.UI.Services
 
             public override void Write(char value)
             {
-                _passthrough?.Write(value);
+                if (!OperatingSystem.IsMacOS() && !Dispatcher.UIThread.CheckAccess())
+                    _passthrough?.Write(value);
                 if (value == '\n')
                 {
                     FlushBuffer();
@@ -439,7 +484,8 @@ namespace VaultSync.UI.Services
 
             public override void Write(string? value)
             {
-                _passthrough?.Write(value);
+                if (!OperatingSystem.IsMacOS() && !Dispatcher.UIThread.CheckAccess())
+                    _passthrough?.Write(value);
                 if (string.IsNullOrEmpty(value))
                     return;
 
@@ -451,7 +497,8 @@ namespace VaultSync.UI.Services
 
             public override void WriteLine(string? value)
             {
-                _passthrough?.WriteLine(value);
+                if (!OperatingSystem.IsMacOS() && !Dispatcher.UIThread.CheckAccess())
+                    _passthrough?.WriteLine(value);
                 if (!string.IsNullOrEmpty(value))
                 {
                     _buffer.Append(value);

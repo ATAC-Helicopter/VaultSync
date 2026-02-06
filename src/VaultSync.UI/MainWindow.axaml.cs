@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
+using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels;
 using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.Core.Config;
@@ -103,6 +104,7 @@ public partial class MainWindow : Window
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
     {
+        DiagnosticsLogger.Record($"MainWindow closing. IsShuttingDown={App.IsShuttingDown}, IsCrashing={App.IsCrashing}.");
         if (App.IsShuttingDown)
             return;
         // Respect the RunInBackground behavior flag from AppConfig.
@@ -117,6 +119,7 @@ public partial class MainWindow : Window
                 IsForeground = false;
                 Hide();
                 NotifyRunningInBackground();
+                DiagnosticsLogger.Record("MainWindow close intercepted; running in background.");
                 return;
             }
         }
@@ -126,6 +129,7 @@ public partial class MainWindow : Window
         }
 
         // Default: allow the window to close normally.
+        DiagnosticsLogger.Record("MainWindow close allowed to proceed.");
     }
 
     // -------- navigation handlers --------
