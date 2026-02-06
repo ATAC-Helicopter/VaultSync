@@ -74,6 +74,22 @@ namespace VaultSync.UI.Services
 
         private static DriveHealthResult CheckWindows(string root, string fullPath)
         {
+            try
+            {
+                var driveInfo = new DriveInfo(root);
+                if (driveInfo.DriveType == DriveType.Network)
+                {
+                    return Unknown(
+                        L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                        driveId: root,
+                        path: fullPath);
+                }
+            }
+            catch
+            {
+                // If DriveInfo fails, continue with best-effort checks below.
+            }
+
             // Try WMIC SMART status; if unavailable, fall back to basic readiness.
             var output = RunProcess("wmic", "diskdrive get Status,DeviceID", 4000);
             if (!string.IsNullOrWhiteSpace(output))
@@ -159,6 +175,14 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(device))
                 return Unknown(L("DriveHealth.Unknown.CouldNotResolveDevice", "Could not resolve device"), path: fullPath);
 
+            if (IsNetworkDevice(device))
+            {
+                return Unknown(
+                    L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                    driveId: device,
+                    path: fullPath);
+            }
+
             // Prefer smartctl if available on macOS (brew install smartmontools).
             if (TrySmartCtl(device, fullPath, out var smartResult))
                 return smartResult;
@@ -194,6 +218,14 @@ namespace VaultSync.UI.Services
             var device = ParseDeviceFromDf(dfOutput);
             if (string.IsNullOrWhiteSpace(device))
                 return Unknown(L("DriveHealth.Unknown.CouldNotResolveDevice", "Could not resolve device"), path: fullPath);
+
+            if (IsNetworkDevice(device))
+            {
+                return Unknown(
+                    L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                    driveId: device,
+                    path: fullPath);
+            }
 
             // Try smartctl -H <device> if available.
             if (TrySmartCtl(device, fullPath, out var smartResult))
@@ -262,10 +294,39 @@ namespace VaultSync.UI.Services
             return string.Empty;
         }
 
+        private static bool IsNetworkDevice(string device)
+        {
+            if (string.IsNullOrWhiteSpace(device))
+                return false;
+
+            if (device.StartsWith("//", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (device.Contains("://", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (!device.StartsWith("/dev/", StringComparison.OrdinalIgnoreCase) && device.Contains(':'))
+                return true;
+
+            return device.IndexOf("smbfs", StringComparison.OrdinalIgnoreCase) >= 0
+                || device.IndexOf("afpfs", StringComparison.OrdinalIgnoreCase) >= 0
+                || device.IndexOf("webdav", StringComparison.OrdinalIgnoreCase) >= 0
+                || device.IndexOf("cifs", StringComparison.OrdinalIgnoreCase) >= 0
+                || device.IndexOf("nfs", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private static string RunProcess(string fileName, string arguments, int timeoutMs)
         {
             try
             {
+                if (string.Equals(fileName, "smartctl", StringComparison.OrdinalIgnoreCase))
+                {
+                    var resolved = ResolveSmartctlPath();
+                    if (string.IsNullOrWhiteSpace(resolved))
+                        return string.Empty;
+                    fileName = resolved;
+                }
+
                 var psi = new ProcessStartInfo
                 {
                     FileName = fileName,
@@ -275,6 +336,8 @@ namespace VaultSync.UI.Services
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
+                if (Directory.Exists(Environment.CurrentDirectory))
+                    psi.WorkingDirectory = Environment.CurrentDirectory;
 
                 using var proc = Process.Start(psi);
                 if (proc is null)
@@ -296,5 +359,50 @@ namespace VaultSync.UI.Services
 
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+        private static string ResolveSmartctlPath()
+        {
+            if (OperatingSystem.IsWindows())
+                return "smartctl";
+
+            var candidates = OperatingSystem.IsMacOS()
+                ? new[]
+                {
+                    "/opt/homebrew/sbin/smartctl",
+                    "/usr/local/sbin/smartctl",
+                    "/usr/sbin/smartctl",
+                    "/usr/bin/smartctl"
+                }
+                : new[]
+                {
+                    "/usr/sbin/smartctl",
+                    "/usr/bin/smartctl",
+                    "/sbin/smartctl",
+                    "/bin/smartctl"
+                };
+
+            foreach (var candidate in candidates)
+            {
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+
+            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    var candidate = Path.Combine(dir, "smartctl");
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch
+                {
+                    // ignore malformed PATH entries
+                }
+            }
+
+            return string.Empty;
+        }
     }
 }

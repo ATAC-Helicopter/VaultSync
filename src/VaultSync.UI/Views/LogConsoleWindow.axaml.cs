@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using VaultSync.UI.Services;
 using VaultSync.UI.ViewModels;
@@ -13,7 +14,10 @@ namespace VaultSync.UI.Views
     {
         private readonly LogConsoleViewModel _viewModel;
         private ScrollViewer? _scrollViewer;
+        private ListBox? _logList;
         private bool _autoScroll = true;
+        private DispatcherTimer? _scrollTimer;
+        private bool _scrollPending;
 
         public LogConsoleWindow()
             : this(new LogConsoleViewModel(LogConsoleProvider.Service ?? new LogConsoleService()))
@@ -36,8 +40,12 @@ namespace VaultSync.UI.Views
 
         private void OnOpened(object? sender, System.EventArgs e)
         {
+            _viewModel.SetUiCaptureEnabled(true);
+            if (OperatingSystem.IsMacOS())
+                _autoScroll = false;
             if (this.FindControl<ListBox>("LogList") is { } list)
             {
+                _logList = list;
                 _scrollViewer = list.GetVisualDescendants()
                     .OfType<ScrollViewer>()
                     .FirstOrDefault();
@@ -47,6 +55,12 @@ namespace VaultSync.UI.Views
                     _scrollViewer.ScrollChanged += OnScrollChanged;
                 }
             }
+
+            _scrollTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(150)
+            };
+            _scrollTimer.Tick += (_, _) => FlushPendingScroll();
         }
 
         private void OnLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -54,17 +68,9 @@ namespace VaultSync.UI.Views
             if (!_autoScroll)
                 return;
 
-            if (_scrollViewer is not null)
-            {
-                _scrollViewer.ScrollToEnd();
-                return;
-            }
-
-            if (this.FindControl<ListBox>("LogList") is { } list && list.ItemCount > 0)
-            {
-                var last = list.Items[list.ItemCount - 1];
-                list.ScrollIntoView(last);
-            }
+            _scrollPending = true;
+            if (_scrollTimer is not null && !_scrollTimer.IsEnabled)
+                _scrollTimer.Start();
         }
 
         private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
@@ -78,6 +84,7 @@ namespace VaultSync.UI.Views
 
         private void OnClosed(object? sender, System.EventArgs e)
         {
+            _viewModel.SetUiCaptureEnabled(false);
             if (_viewModel.Lines is INotifyCollectionChanged notifier)
             {
                 notifier.CollectionChanged -= OnLinesChanged;
@@ -87,8 +94,39 @@ namespace VaultSync.UI.Views
                 _scrollViewer.ScrollChanged -= OnScrollChanged;
                 _scrollViewer = null;
             }
+            _logList = null;
+            if (_scrollTimer is not null)
+            {
+                _scrollTimer.Stop();
+                _scrollTimer = null;
+            }
             Opened -= OnOpened;
             Closed -= OnClosed;
+        }
+
+        private void FlushPendingScroll()
+        {
+            if (!_scrollPending)
+            {
+                _scrollTimer?.Stop();
+                return;
+            }
+
+            _scrollPending = false;
+            if (!_autoScroll)
+                return;
+
+            if (_scrollViewer is not null)
+            {
+                _scrollViewer.ScrollToEnd();
+                return;
+            }
+
+            if (_logList is not null && _logList.ItemCount > 0)
+            {
+                var last = _logList.Items[_logList.ItemCount - 1];
+                _logList.ScrollIntoView(last);
+            }
         }
     }
 }

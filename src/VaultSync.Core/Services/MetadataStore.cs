@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using Dapper;
 using Microsoft.Data.Sqlite;
 
@@ -24,8 +25,6 @@ public sealed class MetadataStore
     public void EnsureSchema()
     {
         using var c = Open(write: true);
-        _ = c.ExecuteScalar<string>("PRAGMA journal_mode = WAL;");
-
         c.Execute("""
             CREATE TABLE IF NOT EXISTS meta_info(
               schema_version INTEGER NOT NULL,
@@ -93,8 +92,9 @@ public sealed class MetadataStore
 
     public MetaInfo? GetMetaInfo()
     {
-        using var c = Open(write: false);
-        return c.QueryFirstOrDefault<MetaInfo>(
+        using var c = TryOpenRead();
+        return SafeQueryFirstOrDefault<MetaInfo>(
+            c,
             """
             SELECT
               schema_version as SchemaVersion,
@@ -232,8 +232,9 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaProject> ListProjects()
     {
-        using var c = Open(write: false);
-        return c.Query<MetaProject>(
+        using var c = TryOpenRead();
+        return SafeQuery<MetaProject>(
+            c,
             """
             SELECT
               external_id as ExternalId,
@@ -249,8 +250,9 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaProjectRef> ListProjectRefs()
     {
-        using var c = Open(write: false);
-        return c.Query<MetaProjectRef>(
+        using var c = TryOpenRead();
+        return SafeQuery<MetaProjectRef>(
+            c,
             """
             SELECT
               external_id as ExternalId,
@@ -264,16 +266,18 @@ public sealed class MetadataStore
         if (string.IsNullOrWhiteSpace(externalId))
             return false;
 
-        using var c = Open(write: false);
-        return c.ExecuteScalar<int>(
+        using var c = TryOpenRead();
+        return SafeExecuteScalarInt(
+            c,
             "SELECT 1 FROM projects WHERE external_id = @id LIMIT 1;",
             new { id = externalId }) == 1;
     }
 
     public IEnumerable<MetaSnapshot> ListSnapshots()
     {
-        using var c = Open(write: false);
-        return c.Query<MetaSnapshot>(
+        using var c = TryOpenRead();
+        return SafeQuery<MetaSnapshot>(
+            c,
             """
             SELECT
               external_id as ExternalId,
@@ -287,8 +291,9 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaSnapshotRef> ListSnapshotRefs()
     {
-        using var c = Open(write: false);
-        return c.Query<MetaSnapshotRef>(
+        using var c = TryOpenRead();
+        return SafeQuery<MetaSnapshotRef>(
+            c,
             """
             SELECT
               external_id as ExternalId,
@@ -299,10 +304,11 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaBackup> ListBackups()
     {
-        using var c = Open(write: false);
+        using var c = TryOpenRead();
         try
         {
-            return c.Query<MetaBackup>(
+            return SafeQuery<MetaBackup>(
+                c,
                 """
                 SELECT
                   external_id as ExternalId,
@@ -322,7 +328,8 @@ public sealed class MetadataStore
         }
         catch
         {
-            return c.Query<MetaBackup>(
+            return SafeQuery<MetaBackup>(
+                c,
                 """
                 SELECT
                   external_id as ExternalId,
@@ -343,8 +350,9 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaBackupRef> ListBackupRefs()
     {
-        using var c = Open(write: false);
-        return c.Query<MetaBackupRef>(
+        using var c = TryOpenRead();
+        return SafeQuery<MetaBackupRef>(
+            c,
             """
             SELECT
               external_id as ExternalId,
@@ -355,8 +363,9 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaTombstone> ListTombstones()
     {
-        using var c = Open(write: false);
-        return c.Query<MetaTombstone>(
+        using var c = TryOpenRead();
+        return SafeQuery<MetaTombstone>(
+            c,
             """
             SELECT
               entity_type as EntityType,
@@ -369,8 +378,9 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaTombstoneRef> ListTombstoneRefs()
     {
-        using var c = Open(write: false);
-        return c.Query<MetaTombstoneRef>(
+        using var c = TryOpenRead();
+        return SafeQuery<MetaTombstoneRef>(
+            c,
             """
             SELECT
               entity_type as EntityType,
@@ -380,6 +390,40 @@ public sealed class MetadataStore
     }
 
     private SqliteConnection Open(bool write)
+    {
+        var attempts = IsLikelyNetworkPath(_dbPath) ? 3 : 1;
+        var delayMs = 200;
+        Exception? lastError = null;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            try
+            {
+                return OpenCore(write);
+            }
+            catch (SqliteException ex)
+            {
+                lastError = ex;
+            }
+            catch (IOException ex)
+            {
+                lastError = ex;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                lastError = ex;
+            }
+
+            if (attempt < attempts - 1)
+            {
+                Thread.Sleep(delayMs);
+                delayMs *= 2;
+            }
+        }
+
+        throw lastError ?? new InvalidOperationException("Failed to open SQLite connection.");
+    }
+
+    private SqliteConnection OpenCore(bool write)
     {
         var dir = Path.GetDirectoryName(_dbPath);
         if (write && !string.IsNullOrWhiteSpace(dir))
@@ -395,15 +439,150 @@ public sealed class MetadataStore
 
         var conn = new SqliteConnection(builder.ConnectionString);
         conn.Open();
+        ConfigureConnection(conn, write);
         try
         {
-            conn.Execute("PRAGMA busy_timeout = 5000;");
+            var timeoutMs = IsLikelyNetworkPath(_dbPath) ? 10000 : 5000;
+            conn.Execute($"PRAGMA busy_timeout = {timeoutMs};");
         }
         catch
         {
             // Best-effort; ignore pragma failures.
         }
         return conn;
+    }
+
+    private SqliteConnection? TryOpenRead()
+    {
+        try
+        {
+            if (!File.Exists(_dbPath))
+                return null;
+
+            return Open(write: false);
+        }
+        catch (SqliteException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static IEnumerable<T> SafeQuery<T>(SqliteConnection? connection, string sql, object? param = null)
+    {
+        if (connection is null)
+            return Array.Empty<T>();
+
+        try
+        {
+            return connection.Query<T>(sql, param);
+        }
+        catch (SqliteException)
+        {
+            return Array.Empty<T>();
+        }
+        catch (IOException)
+        {
+            return Array.Empty<T>();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Array.Empty<T>();
+        }
+    }
+
+    private static T? SafeQueryFirstOrDefault<T>(SqliteConnection? connection, string sql, object? param = null)
+    {
+        if (connection is null)
+            return default;
+
+        try
+        {
+            return connection.QueryFirstOrDefault<T>(sql, param);
+        }
+        catch (SqliteException)
+        {
+            return default;
+        }
+        catch (IOException)
+        {
+            return default;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return default;
+        }
+    }
+
+    private static int SafeExecuteScalarInt(SqliteConnection? connection, string sql, object? param = null)
+    {
+        if (connection is null)
+            return 0;
+
+        try
+        {
+            return connection.ExecuteScalar<int>(sql, param);
+        }
+        catch (SqliteException)
+        {
+            return 0;
+        }
+        catch (IOException)
+        {
+            return 0;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return 0;
+        }
+    }
+
+    private void ConfigureConnection(SqliteConnection conn, bool write)
+    {
+        if (!write)
+            return;
+
+        try
+        {
+            if (IsLikelyNetworkPath(_dbPath))
+            {
+                _ = conn.ExecuteScalar<string>("PRAGMA journal_mode = DELETE;");
+                conn.Execute("PRAGMA synchronous = NORMAL;");
+            }
+            else
+            {
+                _ = conn.ExecuteScalar<string>("PRAGMA journal_mode = WAL;");
+            }
+        }
+        catch
+        {
+            // Best-effort; ignore pragma failures.
+        }
+    }
+
+    private static bool IsLikelyNetworkPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        if (path.StartsWith("//", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (path.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (path.Contains("/Library/Application Support/VaultSync/mounts/", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
     }
 
     private static string ToUtcString(DateTime utc) =>

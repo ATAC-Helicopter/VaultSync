@@ -42,9 +42,16 @@ public partial class App : Application
     private const string DefaultDriveHealthLabel = "Storage health: tap Recheck";
     private static string _cachedDriveHealthLabel = DefaultDriveHealthLabel;
     private static DriveHealthStatus _cachedDriveHealthStatus = DriveHealthStatus.Unknown;
+    private static bool _cachedDriveHealthIsNetwork;
     private const int MaxRecentBackupsPerProject = 3;
     private int _trayMenuRefreshInFlight;
     private int _trayMenuRefreshQueued;
+    private DateTime _lastTrayMenuRefreshUtc = DateTime.MinValue;
+    private DateTime _lastTrayMenuRefreshFailureUtc = DateTime.MinValue;
+    private int _trayMenuRefreshFailureCount;
+    private string? _trayMenuSignature;
+    private DateTime _lastTrayMenuOpenUtc = DateTime.MinValue;
+    private DateTime _trayMenuSuppressUntilUtc = DateTime.MinValue;
     private const string DefaultFontFallback =
         "Inter, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, " +
         "Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, " +
@@ -56,6 +63,10 @@ public partial class App : Application
     private static readonly FontFamily ArabicMacFontFamily = new(
         $"avares://VaultSync.UI/Assets/Fonts/#Noto Sans Arabic, avares://VaultSync.UI/Assets/Fonts/#Noto Sans, " +
         "Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial");
+    private static long _uiHeartbeatTicks;
+    private static int _uiHangReported;
+    private static Timer? _uiWatchdogTimer;
+    private static DispatcherTimer? _uiHeartbeatTimer;
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -67,12 +78,14 @@ public partial class App : Application
 
         IsCrashing = true;
         IsShuttingDown = true;
+        DiagnosticsLogger.RecordWithStack("MarkCrashing called.");
         GlobalNotificationCenter.Instance.SuppressNotifications = true;
     }
 
     internal static void MarkShuttingDown()
     {
         IsShuttingDown = true;
+        DiagnosticsLogger.RecordWithStack("MarkShuttingDown called.");
     }
 
     private static string Lf(string key, string fallback, params object[] args)
@@ -96,6 +109,7 @@ public partial class App : Application
             WireLifecycleBreadcrumbs(desktop);
 
             AppViewModelInstance = new AppViewModel();
+            DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={AppViewModelInstance.CurrentVersionDisplay}");
             if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out var fontResource))
             {
                 _defaultFontFamily = fontResource as FontFamily;
@@ -196,12 +210,52 @@ public partial class App : Application
             {
                 CreateTrayIcon(desktop);
             }
+
+            StartUiWatchdog();
         }
 
         // Apply theme from stored config on startup
         ApplyThemeFromConfig();
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static void StartUiWatchdog()
+    {
+        if (_uiHeartbeatTimer is not null)
+            return;
+
+        _uiHeartbeatTicks = DateTime.UtcNow.Ticks;
+        _uiHeartbeatTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(250)
+        };
+        _uiHeartbeatTimer.Tick += (_, _) =>
+        {
+            Interlocked.Exchange(ref _uiHeartbeatTicks, DateTime.UtcNow.Ticks);
+            if (Interlocked.Exchange(ref _uiHangReported, 0) == 1)
+            {
+                DiagnosticsLogger.Record("UI heartbeat resumed after stall.");
+            }
+        };
+        _uiHeartbeatTimer.Start();
+
+        _uiWatchdogTimer = new Timer(_ =>
+        {
+            var last = Interlocked.Read(ref _uiHeartbeatTicks);
+            var ageMs = (DateTime.UtcNow - new DateTime(last, DateTimeKind.Utc)).TotalMilliseconds;
+            if (ageMs < 3000)
+                return;
+
+            if (Interlocked.Exchange(ref _uiHangReported, 1) == 1)
+                return;
+
+            var proc = System.Diagnostics.Process.GetCurrentProcess();
+            DiagnosticsLogger.Record(
+                $"UI hang suspected ({ageMs:0}ms). Threads={proc.Threads.Count}, " +
+                $"WorkingSetMB={proc.WorkingSet64 / (1024 * 1024)}, GC0={GC.CollectionCount(0)}, GC1={GC.CollectionCount(1)}, GC2={GC.CollectionCount(2)}");
+            DiagnosticsLogger.TryCollectDump($"ui_hang_{ageMs:0}ms");
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     private void ApplyLanguageFontOverrides()
@@ -297,6 +351,11 @@ public partial class App : Application
         if (OperatingSystem.IsMacOS())
         {
             _trayIcon.Menu = _trayMenu;
+            _trayIcon.Clicked += (_, _) =>
+            {
+                _lastTrayMenuOpenUtc = DateTime.UtcNow;
+                _trayMenuSuppressUntilUtc = _lastTrayMenuOpenUtc.AddSeconds(10);
+            };
         }
         else
         {
@@ -488,7 +547,60 @@ public partial class App : Application
         // Build a small context menu: header / Open / Backup / Snapshot / Recent backups / Quit.
         menu.Items.Clear();
 
-        // Header (disabled) to give the menu a title and tighter OS alignment.
+        AddTrayHeader(menu);
+
+        var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
+                                   ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
+
+        var cfg = AppConfigStore.Load();
+        var configuredDestinations = GetConfiguredDestinations(cfg);
+
+        var (destinationsTitle, destinationsStatus) =
+            GetDestinationStatus(destinationSummaries, configuredDestinations);
+
+        menu.Items.Add(new NativeMenuItem($"{destinationsTitle} - {destinationsStatus}") { IsEnabled = false });
+        menu.Items.Add(new NativeMenuItemSeparator());
+
+        var openItem = BuildOpenTrayItem(desktop);
+
+        // ---------- Storage health ----------
+        var healthItem = BuildDriveHealthItem(desktop);
+
+        // ---------- Destinations submenu ----------
+        var destinationRootItem = BuildDestinationMenu(destinationsTitle, destinationSummaries, configuredDestinations);
+
+        // ---------- Backup submenu ----------
+        var backupRootItem = BuildBackupMenu(desktop);
+
+        // ---------- Snapshot submenu ----------
+        var snapshotRootItem = BuildSnapshotMenu(desktop);
+
+        // ---------- Recent backups (keep/delete) ----------
+        var manageBackupsRoot = BuildRecentBackupsMenu(desktop, recentBackups);
+
+        var separator1 = new NativeMenuItemSeparator();
+        var separator2 = new NativeMenuItemSeparator();
+        var settingsItem = BuildTraySettingsItem(desktop);
+        var quitItem = BuildQuitTrayItem(desktop);
+
+        menu.Items.Add(openItem);
+        menu.Items.Add(backupRootItem);
+        menu.Items.Add(snapshotRootItem);
+        menu.Items.Add(manageBackupsRoot);
+        menu.Items.Add(separator1);
+        menu.Items.Add(destinationRootItem);
+        if (healthItem is not null)
+        {
+            menu.Items.Add(healthItem);
+        }
+        menu.Items.Add(settingsItem);
+        menu.Items.Add(separator2);
+        menu.Items.Add(quitItem);
+
+    }
+
+    private void AddTrayHeader(NativeMenu menu)
+    {
         var headerText = L("Tray.Header", "VaultSync");
         var versionLabel = AppViewModelInstance?.CurrentVersionDisplay;
         if (!string.IsNullOrWhiteSpace(versionLabel))
@@ -496,11 +608,10 @@ public partial class App : Application
             headerText = $"{headerText} {versionLabel}";
         }
         menu.Items.Add(new NativeMenuItem(headerText) { IsEnabled = false });
+    }
 
-        var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
-            ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
-
-        var cfg = AppConfigStore.Load();
+    private static List<BackupDestination> GetConfiguredDestinations(AppConfig cfg)
+    {
         var configuredDestinations = new List<BackupDestination>();
 
         if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
@@ -522,6 +633,13 @@ public partial class App : Application
             });
         }
 
+        return configuredDestinations;
+    }
+
+    private (string Title, string Status) GetDestinationStatus(
+        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinationSummaries,
+        List<BackupDestination> configuredDestinations)
+    {
         var destinationsTitle = L("Tray.Destinations.Title", "Destinations");
         var destinationsStatus = string.Empty;
         if (destinationSummaries.Any())
@@ -540,10 +658,11 @@ public partial class App : Application
             destinationsStatus = L("Tray.Destinations.None", "No destinations configured");
         }
 
-        menu.Items.Add(new NativeMenuItem($"{destinationsTitle} - {destinationsStatus}") { IsEnabled = false });
-        var separator0 = new NativeMenuItemSeparator();
-        menu.Items.Add(separator0);
-        // Open main window
+        return (destinationsTitle, destinationsStatus);
+    }
+
+    private NativeMenuItem BuildOpenTrayItem(IClassicDesktopStyleApplicationLifetime desktop)
+    {
         var openItem = new NativeMenuItem(L("Tray.Open", "Open VaultSync"));
         openItem.Click += (_, _) =>
         {
@@ -562,10 +681,14 @@ public partial class App : Application
             window.Activate();
         };
 
-        // ---------- Storage health ----------
-        var healthItem = BuildDriveHealthItem(desktop);
+        return openItem;
+    }
 
-        // ---------- Destinations submenu ----------
+    private NativeMenuItem BuildDestinationMenu(
+        string destinationsTitle,
+        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinationSummaries,
+        List<BackupDestination> configuredDestinations)
+    {
         var destinationRootItem = new NativeMenuItem(destinationsTitle);
         var destinationMenu = new NativeMenu();
 
@@ -603,8 +726,11 @@ public partial class App : Application
         }
 
         destinationRootItem.Menu = destinationMenu;
+        return destinationRootItem;
+    }
 
-        // ---------- Backup submenu ----------
+    private NativeMenuItem BuildBackupMenu(IClassicDesktopStyleApplicationLifetime desktop)
+    {
         var backupRootItem = new NativeMenuItem(L("Tray.Backup.Title", "Backup"));
         var backupMenu = new NativeMenu();
 
@@ -643,8 +769,11 @@ public partial class App : Application
         }
 
         backupRootItem.Menu = backupMenu;
+        return backupRootItem;
+    }
 
-        // ---------- Snapshot submenu ----------
+    private NativeMenuItem BuildSnapshotMenu(IClassicDesktopStyleApplicationLifetime desktop)
+    {
         var snapshotRootItem = new NativeMenuItem(L("Tray.Snapshot.Title", "Snapshot"));
         var snapshotMenu = new NativeMenu();
 
@@ -690,8 +819,13 @@ public partial class App : Application
         }
 
         snapshotRootItem.Menu = snapshotMenu;
+        return snapshotRootItem;
+    }
 
-        // ---------- Recent backups (keep/delete) ----------
+    private NativeMenuItem BuildRecentBackupsMenu(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        IReadOnlyList<AppViewModel.TrayProjectBackups>? recentBackups)
+    {
         var manageBackupsRoot = new NativeMenuItem(L("Tray.Recent.Title", "Recent backups"));
         var manageBackupsMenu = new NativeMenu();
 
@@ -779,38 +913,31 @@ public partial class App : Application
         }
 
         manageBackupsRoot.Menu = manageBackupsMenu;
+        return manageBackupsRoot;
+    }
 
-        var separator1 = new NativeMenuItemSeparator();
-        var separator2 = new NativeMenuItemSeparator();
-
-        var quitItem = new NativeMenuItem(L("Tray.Quit", "Quit VaultSync"));
-        quitItem.Click += (_, _) =>
-        {
-            // Tell the window we're intentionally shutting down so it doesn't hijack the close.
-            IsShuttingDown = true;
-            desktop.Shutdown();
-        };
-
-        menu.Items.Add(openItem);
-        menu.Items.Add(backupRootItem);
-        menu.Items.Add(snapshotRootItem);
-        menu.Items.Add(manageBackupsRoot);
-        menu.Items.Add(separator1);
-        menu.Items.Add(destinationRootItem);
-        if (healthItem is not null)
-        {
-            menu.Items.Add(healthItem);
-        }
+    private NativeMenuItem BuildTraySettingsItem(IClassicDesktopStyleApplicationLifetime desktop)
+    {
         var settingsItem = new NativeMenuItem(L("Nav.Settings", "Settings"));
         settingsItem.Click += (_, _) =>
         {
             BringMainWindowToFront(desktop);
             AppViewModelInstance?.NavigateSettings?.Execute(null);
         };
-        menu.Items.Add(settingsItem);
-        menu.Items.Add(separator2);
-        menu.Items.Add(quitItem);
+        return settingsItem;
+    }
 
+    private static NativeMenuItem BuildQuitTrayItem(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        var quitItem = new NativeMenuItem(L("Tray.Quit", "Quit VaultSync"));
+        quitItem.Click += (_, _) =>
+        {
+            // Tell the window we're intentionally shutting down so it doesn't hijack the close.
+            DiagnosticsLogger.RecordWithStack("Quit tray menu clicked.");
+            IsShuttingDown = true;
+            desktop.Shutdown();
+        };
+        return quitItem;
     }
 
     /// <summary>
@@ -874,11 +1001,13 @@ public partial class App : Application
 
             desktop.Exit += (_, _) =>
             {
+                DiagnosticsLogger.Record($"Desktop exit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
             };
 
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
+                DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
                 Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
             };
         }
@@ -888,13 +1017,17 @@ public partial class App : Application
         }
     }
 
-    private NativeMenuItem BuildDriveHealthItem(IClassicDesktopStyleApplicationLifetime desktop)
+    private NativeMenuItem? BuildDriveHealthItem(IClassicDesktopStyleApplicationLifetime desktop)
     {
         try
         {
-            var cfg        = AppConfigStore.Load();
+            var cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.Load();
             var backupRoot = cfg.Backups.BackupLocation ?? string.Empty;
             var driveLabel = FormatDriveLabel(backupRoot);
+            if (_cachedDriveHealthIsNetwork)
+            {
+                return null;
+            }
             if (_cachedDriveHealthLabel == DefaultDriveHealthLabel)
             {
                 _cachedDriveHealthLabel = L("Tray.Health.DefaultLabel", DefaultDriveHealthLabel);
@@ -936,45 +1069,113 @@ public partial class App : Application
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
+        var now = DateTime.UtcNow;
+        var minRefreshInterval = OperatingSystem.IsMacOS()
+            ? TimeSpan.FromSeconds(2)
+            : TimeSpan.FromSeconds(1);
+        if (now - _lastTrayMenuRefreshUtc < minRefreshInterval)
+            return;
+        if (OperatingSystem.IsMacOS() && now < _trayMenuSuppressUntilUtc)
+            return;
+        if (_trayMenuRefreshFailureCount >= 3 &&
+            now - _lastTrayMenuRefreshFailureUtc < TimeSpan.FromSeconds(10))
+            return;
+
         if (Interlocked.Exchange(ref _trayMenuRefreshInFlight, 1) == 1)
         {
             Interlocked.Exchange(ref _trayMenuRefreshQueued, 1);
             return;
         }
 
-        var recent = await Task.Run(() =>
-            AppViewModelInstance?.GetRecentBackupsForTray(MaxRecentBackupsPerProject)
-            ?? Array.Empty<AppViewModel.TrayProjectBackups>());
+        _lastTrayMenuRefreshUtc = now;
+        var trayResult = await Task.Run(() =>
+        {
+            var viewModel = AppViewModelInstance;
+            var recentBackups = viewModel?.GetRecentBackupsForTray(MaxRecentBackupsPerProject)
+                                ?? Array.Empty<AppViewModel.TrayProjectBackups>();
+            var destinations = viewModel?.GetDestinationProbeSummaries()
+                               ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
+            var signatureValue = BuildTrayMenuSignature(recentBackups, destinations);
+            return (Recent: recentBackups, Signature: signatureValue);
+        });
+        var recent = trayResult.Recent;
+        var signature = trayResult.Signature;
 
         Dispatcher.UIThread.Post(() =>
         {
             try
             {
-                if (_trayMenu is null)
+                if (_trayMenuSignature == signature && _trayMenu is not null)
                 {
-                    _trayMenu = new NativeMenu();
+                    return;
                 }
 
-                PopulateTrayMenu(_trayMenu, desktop, recent);
-                if (_trayIcon.Menu is not null)
-                {
-                    _trayIcon.Menu = _trayMenu;
-                }
+                var newMenu = new NativeMenu();
+                PopulateTrayMenu(newMenu, desktop, recent);
+                _trayMenu = newMenu;
+                _trayIcon.Menu = newMenu;
+                _trayMenuSignature = signature;
+
+                _trayMenuRefreshFailureCount = 0;
             }
             catch (Exception ex)
             {
                 // Best-effort: avoid crashing the app if tray menu rebuild fails.
+                if (OperatingSystem.IsMacOS() &&
+                    ex.Message.Contains("menu being updated does not match", StringComparison.OrdinalIgnoreCase))
+                {
+                    _trayMenuSuppressUntilUtc = DateTime.UtcNow.AddSeconds(10);
+                }
+
                 Console.WriteLine($"[Tray] Failed to refresh tray menu: {ex.Message}");
+                _trayMenuRefreshFailureCount++;
+                _lastTrayMenuRefreshFailureUtc = DateTime.UtcNow;
             }
             finally
             {
                 Interlocked.Exchange(ref _trayMenuRefreshInFlight, 0);
                 if (Interlocked.Exchange(ref _trayMenuRefreshQueued, 0) == 1)
                 {
-                    RefreshTrayMenu();
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(200).ConfigureAwait(false);
+                        RefreshTrayMenu();
+                    });
                 }
             }
         });
+    }
+
+    private static string BuildTrayMenuSignature(
+        IReadOnlyList<AppViewModel.TrayProjectBackups> recent,
+        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(_trayRecentLatestOnly ? "latest=1;" : "latest=0;");
+        sb.Append(_cachedDriveHealthStatus).Append(';')
+          .Append(_cachedDriveHealthLabel).Append(';')
+          .Append(_cachedDriveHealthIsNetwork).Append(';');
+
+        foreach (var dest in destinations.OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            sb.Append(dest.Id).Append('|')
+              .Append(dest.Reachable).Append('|')
+              .Append(dest.LastChecked.ToString("O")).Append(';');
+        }
+
+        foreach (var project in recent)
+        {
+            sb.Append(project.ProjectId).Append('|').Append(project.ProjectName).Append(';');
+            foreach (var backup in project.Backups)
+            {
+                sb.Append(backup.Id).Append('|')
+                  .Append(backup.Label).Append('|')
+                  .Append(backup.IsProtected).Append('|')
+                  .Append(backup.ProjectId).Append(';');
+            }
+        }
+
+        return sb.ToString();
     }
 
 
@@ -1002,6 +1203,7 @@ public partial class App : Application
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
+        DiagnosticsLogger.Record("Activation signal received; bringing window to front.");
         Dispatcher.UIThread.Post(() => BringMainWindowToFront(desktop));
     }
 
@@ -1112,7 +1314,7 @@ public partial class App : Application
         {
             try
             {
-                var cfg        = AppConfigStore.Load();
+                var cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.Load();
                 var backupRoot = cfg.Backups.BackupRoot ?? string.Empty;
                 var driveLabel = FormatDriveLabel(backupRoot);
 
@@ -1128,6 +1330,7 @@ public partial class App : Application
                 var health = new DriveHealthService().CheckPath(backupRoot);
                 _cachedDriveHealthLabel  = DescribeHealth(health, driveLabel);
                 _cachedDriveHealthStatus = health.Status;
+                _cachedDriveHealthIsNetwork = IsNetworkHealthResult(health);
 
                 var severity = health.Status switch
                 {
@@ -1148,5 +1351,22 @@ public partial class App : Application
                     L("Tray.Health.Title", "Storage health"));
             }
         });
+    }
+
+    private static bool IsNetworkHealthResult(DriveHealthResult health)
+    {
+        var id = health.DriveId ?? string.Empty;
+        if (id.StartsWith("//", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (id.Contains("://", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (!id.StartsWith("/dev/", StringComparison.OrdinalIgnoreCase) && id.Contains(':'))
+            return true;
+
+        var path = health.Path ?? string.Empty;
+        return path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("//", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -67,19 +67,7 @@ public class SnapshotService
             // Build current file list (with optional scan cache)
             var filterHash = ComputeFilterHash(filter);
             var cache = useScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
-            var forceFullScan = cache is null || !useScanCache;
-            var fullScanInterval = aggressiveScanCache ? 10 : 5;
-            var fullScanMaxAge = aggressiveScanCache ? TimeSpan.FromDays(2) : TimeSpan.FromDays(7);
-            if (cache is not null && cache.RunsSinceFullScan >= fullScanInterval)
-            {
-                forceFullScan = true;
-            }
-            if (cache is not null &&
-                cache.LastFullScanUtc != DateTime.MinValue &&
-                DateTime.UtcNow - cache.LastFullScanUtc > fullScanMaxAge)
-            {
-                forceFullScan = true;
-            }
+            var forceFullScan = ShouldForceFullScan(cache, useScanCache, aggressiveScanCache);
 
             var dirMtimeCache = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             var currentEntries = BuildCurrentEntries(
@@ -503,6 +491,27 @@ public class SnapshotService
         }
 
         ScanCacheStore.Save(project, cache);
+    }
+
+    private static bool ShouldForceFullScan(
+        ScanCacheState? cache,
+        bool useScanCache,
+        bool aggressiveScanCache)
+    {
+        if (!useScanCache || cache is null)
+            return true;
+
+        var fullScanInterval = aggressiveScanCache ? 10 : 5;
+        var fullScanMaxAge = aggressiveScanCache ? TimeSpan.FromDays(2) : TimeSpan.FromDays(7);
+
+        if (cache.RunsSinceFullScan >= fullScanInterval)
+            return true;
+
+        if (cache.LastFullScanUtc != DateTime.MinValue &&
+            DateTime.UtcNow - cache.LastFullScanUtc > fullScanMaxAge)
+            return true;
+
+        return false;
     }
 
     // simple store for most recent outcome in-process

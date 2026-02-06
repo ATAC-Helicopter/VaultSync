@@ -17,6 +17,7 @@ public sealed class MetadataSyncService
     private readonly SqliteRepository _repo;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
         new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SemaphoreSlim MetadataIoGate = new(1, 1);
 
     public static Func<Project, string?>? ProjectColorResolver { get; set; }
     public static Action<string, string>? ProjectColorApplier { get; set; }
@@ -28,105 +29,123 @@ public sealed class MetadataSyncService
 
     public MetadataSyncResult ImportFromStore(string rootPath, MetadataSyncOptions? options = null)
     {
-        var opts = options ?? MetadataSyncOptions.Default;
-
-        if (string.IsNullOrWhiteSpace(rootPath))
-        {
-            Console.WriteLine("[MetadataSync] Import failed: root path is empty.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
-        }
-
-        var store = new MetadataStore(rootPath);
-        if (!File.Exists(store.DatabasePath))
-        {
-            Console.WriteLine($"[MetadataSync] Import skipped: store not found at '{store.DatabasePath}'.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.NoStore, "Metadata store not found.");
-        }
-
-        if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out var walTempRoot))
-        {
-            Console.WriteLine($"[MetadataSync] Import using temp copy (wal detected): '{walTempRoot}'.");
-            try
-            {
-                return ImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot), opts);
-            }
-            finally
-            {
-                TryDeleteTempStore(walTempRoot);
-            }
-        }
-
+        MetadataIoGate.Wait();
         try
         {
-            return ImportFromStoreInternal(rootPath, store, opts);
-        }
-        catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
-        {
-            Console.WriteLine($"[MetadataSync] Import failed opening store at '{store.DatabasePath}': {ex.Message}");
-            if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
-                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
+            WaitForNetworkReady(rootPath);
+            var opts = options ?? MetadataSyncOptions.Default;
 
-            Console.WriteLine($"[MetadataSync] Import retrying from temp copy: '{tempRoot}'.");
+            if (string.IsNullOrWhiteSpace(rootPath))
+            {
+                Console.WriteLine("[MetadataSync] Import failed: root path is empty.");
+                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
+            }
+
+            var store = new MetadataStore(rootPath);
+            if (!File.Exists(store.DatabasePath))
+            {
+                Console.WriteLine($"[MetadataSync] Import skipped: store not found at '{store.DatabasePath}'.");
+                return MetadataSyncResult.Failure(MetadataSyncStatus.NoStore, "Metadata store not found.");
+            }
+
+            if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out var walTempRoot))
+            {
+                Console.WriteLine($"[MetadataSync] Import using temp copy (wal detected): '{walTempRoot}'.");
+                try
+                {
+                    return ImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot), opts);
+                }
+                finally
+                {
+                    TryDeleteTempStore(walTempRoot);
+                }
+            }
+
             try
             {
-                return ImportFromStoreInternal(rootPath, new MetadataStore(tempRoot), opts);
+                return ImportFromStoreInternal(rootPath, store, opts);
             }
-            finally
+            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
             {
-                TryDeleteTempStore(tempRoot);
+                Console.WriteLine($"[MetadataSync] Import failed opening store at '{store.DatabasePath}': {ex.Message}");
+                if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
+                    return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
+
+                Console.WriteLine($"[MetadataSync] Import retrying from temp copy: '{tempRoot}'.");
+                try
+                {
+                    return ImportFromStoreInternal(rootPath, new MetadataStore(tempRoot), opts);
+                }
+                finally
+                {
+                    TryDeleteTempStore(tempRoot);
+                }
             }
+        }
+        finally
+        {
+            MetadataIoGate.Release();
         }
     }
 
     public MetadataSyncPreview PreviewImportFromStore(string rootPath, MetadataSyncOptions? options = null)
     {
-        var opts = options ?? MetadataSyncOptions.Default;
-
-        if (string.IsNullOrWhiteSpace(rootPath))
-        {
-            Console.WriteLine("[MetadataSync] Preview failed: root path is empty.");
-            return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidPath, rootPath, string.Empty, "Root path is empty.");
-        }
-
-        var store = new MetadataStore(rootPath);
-        if (!File.Exists(store.DatabasePath))
-        {
-            Console.WriteLine($"[MetadataSync] Preview skipped: store not found at '{store.DatabasePath}'.");
-            return MetadataSyncPreview.Failure(MetadataSyncStatus.NoStore, rootPath, store.DatabasePath, "Metadata store not found.");
-        }
-
-        if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out var walTempRoot))
-        {
-            Console.WriteLine($"[MetadataSync] Preview using temp copy (wal detected): '{walTempRoot}'.");
-            try
-            {
-                return PreviewImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot), opts);
-            }
-            finally
-            {
-                TryDeleteTempStore(walTempRoot);
-            }
-        }
-
+        MetadataIoGate.Wait();
         try
         {
-            return PreviewImportFromStoreInternal(rootPath, store, opts);
-        }
-        catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
-        {
-            Console.WriteLine($"[MetadataSync] Preview failed opening store at '{store.DatabasePath}': {ex.Message}");
-            if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
-                return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
+            WaitForNetworkReady(rootPath);
+            var opts = options ?? MetadataSyncOptions.Default;
 
-            Console.WriteLine($"[MetadataSync] Preview retrying from temp copy: '{tempRoot}'.");
+            if (string.IsNullOrWhiteSpace(rootPath))
+            {
+                Console.WriteLine("[MetadataSync] Preview failed: root path is empty.");
+                return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidPath, rootPath, string.Empty, "Root path is empty.");
+            }
+
+            var store = new MetadataStore(rootPath);
+            if (!File.Exists(store.DatabasePath))
+            {
+                Console.WriteLine($"[MetadataSync] Preview skipped: store not found at '{store.DatabasePath}'.");
+                return MetadataSyncPreview.Failure(MetadataSyncStatus.NoStore, rootPath, store.DatabasePath, "Metadata store not found.");
+            }
+
+            if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out var walTempRoot))
+            {
+                Console.WriteLine($"[MetadataSync] Preview using temp copy (wal detected): '{walTempRoot}'.");
+                try
+                {
+                    return PreviewImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot), opts);
+                }
+                finally
+                {
+                    TryDeleteTempStore(walTempRoot);
+                }
+            }
+
             try
             {
-                return PreviewImportFromStoreInternal(rootPath, new MetadataStore(tempRoot), opts);
+                return PreviewImportFromStoreInternal(rootPath, store, opts);
             }
-            finally
+            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
             {
-                TryDeleteTempStore(tempRoot);
+                Console.WriteLine($"[MetadataSync] Preview failed opening store at '{store.DatabasePath}': {ex.Message}");
+                if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
+                    return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
+
+                Console.WriteLine($"[MetadataSync] Preview retrying from temp copy: '{tempRoot}'.");
+                try
+                {
+                    return PreviewImportFromStoreInternal(rootPath, new MetadataStore(tempRoot), opts);
+                }
+                finally
+                {
+                    TryDeleteTempStore(tempRoot);
+                }
             }
+        }
+        finally
+        {
+            MetadataIoGate.Release();
         }
     }
 
@@ -936,34 +955,43 @@ public sealed class MetadataSyncService
 
     public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill = false)
     {
-        var retryDelays = new[]
+        MetadataIoGate.Wait();
+        try
         {
-            TimeSpan.FromMilliseconds(200),
-            TimeSpan.FromMilliseconds(500),
-            TimeSpan.FromMilliseconds(1000)
-        };
+            WaitForNetworkReady(rootPath);
+            var retryDelays = new[]
+            {
+                TimeSpan.FromMilliseconds(200),
+                TimeSpan.FromMilliseconds(500),
+                TimeSpan.FromMilliseconds(1000)
+            };
 
-        for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
-        {
-            try
+            for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
             {
-                return ExportBackupToStoreInternal(rootPath, backupId, appVersion, machineId, forceBackfill);
-            }
-            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
-            {
-                if (attempt >= retryDelays.Length)
+                try
                 {
-                    Console.WriteLine($"[MetadataSync] Export failed after retries: {ex.Message}");
-                    return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+                    return ExportBackupToStoreInternal(rootPath, backupId, appVersion, machineId, forceBackfill);
                 }
+                catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+                {
+                    if (attempt >= retryDelays.Length)
+                    {
+                        Console.WriteLine($"[MetadataSync] Export failed after retries: {ex.Message}");
+                        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+                    }
 
-                var delay = retryDelays[attempt];
-                Console.WriteLine($"[MetadataSync] Export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
-                Thread.Sleep(delay);
+                    var delay = retryDelays[attempt];
+                    Console.WriteLine($"[MetadataSync] Export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                    Thread.Sleep(delay);
+                }
             }
-        }
 
-        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Export failed after retries.");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Export failed after retries.");
+        }
+        finally
+        {
+            MetadataIoGate.Release();
+        }
     }
 
     private MetadataSyncResult ExportBackupToStoreInternal(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill)
@@ -974,7 +1002,18 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
         }
 
-        var store = new MetadataStore(rootPath);
+        TryFlushDeferredExport(rootPath);
+
+        var storeRoot = rootPath;
+        var isDeferred = false;
+        var destMetaDir = GetMetaDir(rootPath);
+        if (!TryEnsureMetadataDirWritable(destMetaDir))
+        {
+            storeRoot = GetDeferredExportRoot(rootPath);
+            isDeferred = true;
+        }
+
+        var store = new MetadataStore(storeRoot);
         Console.WriteLine($"[MetadataSync] Export target store: '{store.DatabasePath}'.");
         try
         {
@@ -1103,9 +1142,19 @@ public sealed class MetadataSyncService
             0,
             string.Empty);
         Console.WriteLine(backfilled
-            ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{rootPath}': snapshots={exportedSnapshots}, backups={exportedBackups}."
-            : $"[MetadataSync] Export complete for backup {backupId} to '{rootPath}'.");
+            ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{storeRoot}': snapshots={exportedSnapshots}, backups={exportedBackups}."
+            : $"[MetadataSync] Export complete for backup {backupId} to '{storeRoot}'.");
         LogStoreCounts(store);
+        if (isDeferred)
+        {
+            if (TryFlushDeferredExport(rootPath))
+                return exportResult;
+
+            return MetadataSyncResult.Failure(
+                MetadataSyncStatus.WriteFailed,
+                "Export queued: destination not writable. Will retry when available.");
+        }
+
         return exportResult;
     }
 
@@ -1114,38 +1163,57 @@ public sealed class MetadataSyncService
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
             return;
 
-        var retryDelays = new[]
+        MetadataIoGate.Wait();
+        try
         {
-            TimeSpan.FromMilliseconds(200),
-            TimeSpan.FromMilliseconds(500),
-            TimeSpan.FromMilliseconds(1000)
-        };
+            WaitForNetworkReady(rootPath);
+            var retryDelays = new[]
+            {
+                TimeSpan.FromMilliseconds(200),
+                TimeSpan.FromMilliseconds(500),
+                TimeSpan.FromMilliseconds(1000)
+            };
 
-        for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
-        {
-            try
+            for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
             {
-                ExportBackupTombstoneInternal(rootPath, backupExternalId, appVersion, machineId);
-                return;
-            }
-            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
-            {
-                if (attempt >= retryDelays.Length)
+                try
                 {
-                    Console.WriteLine($"[MetadataSync] Tombstone export failed after retries: {ex.Message}");
+                    ExportBackupTombstoneInternal(rootPath, backupExternalId, appVersion, machineId);
                     return;
                 }
+                catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+                {
+                    if (attempt >= retryDelays.Length)
+                    {
+                        Console.WriteLine($"[MetadataSync] Tombstone export failed after retries: {ex.Message}");
+                        return;
+                    }
 
-                var delay = retryDelays[attempt];
-                Console.WriteLine($"[MetadataSync] Tombstone store locked; retrying in {delay.TotalMilliseconds:0}ms.");
-                Thread.Sleep(delay);
+                    var delay = retryDelays[attempt];
+                    Console.WriteLine($"[MetadataSync] Tombstone store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                    Thread.Sleep(delay);
+                }
             }
+        }
+        finally
+        {
+            MetadataIoGate.Release();
         }
     }
 
     private void ExportBackupTombstoneInternal(string rootPath, string backupExternalId, string appVersion, string machineId)
     {
-        var store = new MetadataStore(rootPath);
+        TryFlushDeferredExport(rootPath);
+        var storeRoot = rootPath;
+        var isDeferred = false;
+        var destMetaDir = GetMetaDir(rootPath);
+        if (!TryEnsureMetadataDirWritable(destMetaDir))
+        {
+            storeRoot = GetDeferredExportRoot(rootPath);
+            isDeferred = true;
+        }
+
+        var store = new MetadataStore(storeRoot);
         try
         {
             store.EnsureSchema();
@@ -1194,6 +1262,117 @@ public sealed class MetadataSyncService
             if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
                 throw;
             Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{rootPath}': {ex.Message}");
+            return;
+        }
+
+        if (isDeferred)
+        {
+            TryFlushDeferredExport(rootPath);
+        }
+    }
+
+    private static string GetMetaDir(string rootPath) =>
+        Path.Combine(rootPath, ".vaultsync", "meta");
+
+    private static string GetDeferredExportRoot(string rootPath)
+    {
+        var hash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(rootPath)));
+        return Path.Combine(Path.GetTempPath(), "vaultsync-meta-export", hash.ToLowerInvariant());
+    }
+
+    private static void WaitForNetworkReady(string rootPath)
+    {
+        if (!IsLikelyNetworkPath(rootPath))
+            return;
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            if (Directory.Exists(rootPath))
+                return;
+
+            Thread.Sleep(200 * (attempt + 1));
+        }
+    }
+
+    private static bool IsLikelyNetworkPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        if (path.StartsWith("//", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (path.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (path.Contains("/Library/Application Support/VaultSync/mounts/", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+
+    private static bool TryEnsureMetadataDirWritable(string metaDir)
+    {
+        try
+        {
+            var rootDir = Directory.GetParent(Directory.GetParent(metaDir)?.FullName ?? string.Empty)?.FullName;
+            if (string.IsNullOrWhiteSpace(rootDir) || !Directory.Exists(rootDir))
+                return false;
+
+            Directory.CreateDirectory(metaDir);
+            var probe = Path.Combine(metaDir, ".write_test");
+            using (var fs = new FileStream(probe, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose))
+            {
+                fs.WriteByte(0);
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryFlushDeferredExport(string rootPath)
+    {
+        var deferredRoot = GetDeferredExportRoot(rootPath);
+        return TryCopyStoreFiles(deferredRoot, rootPath);
+    }
+
+    private static bool TryCopyStoreFiles(string fromRoot, string toRoot)
+    {
+        try
+        {
+            var sourceDir = GetMetaDir(fromRoot);
+            if (!Directory.Exists(sourceDir))
+                return false;
+
+            if (!Directory.Exists(toRoot))
+                return false;
+
+            var destDir = GetMetaDir(toRoot);
+            Directory.CreateDirectory(destDir);
+
+            var copied = false;
+            foreach (var suffix in new[] { "vaultsync.meta.db", "vaultsync.meta.db-wal", "vaultsync.meta.db-shm" })
+            {
+                var src = Path.Combine(sourceDir, suffix);
+                if (!File.Exists(src))
+                    continue;
+
+                var dst = Path.Combine(destDir, suffix);
+                File.Copy(src, dst, overwrite: true);
+                if (suffix.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
+                    copied = true;
+            }
+
+            return copied;
+        }
+        catch
+        {
+            return false;
         }
     }
 

@@ -37,6 +37,8 @@ namespace VaultSync.UI.ViewModels
         private string _backupDiskFreeText = string.Empty;
         private string _backupDiskThresholdText = string.Empty;
         private bool _backupDiskIsBelowThreshold;
+        private string _snapshotActivitySummary = string.Empty;
+        private string _snapshotsSummaryLine = string.Empty;
 
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
@@ -169,6 +171,29 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        // Summary pills shown in the dashboard backups section.
+        public string SnapshotActivitySummary
+        {
+            get => _snapshotActivitySummary;
+            private set
+            {
+                if (_snapshotActivitySummary == value) return;
+                _snapshotActivitySummary = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string SnapshotsSummaryLine
+        {
+            get => _snapshotsSummaryLine;
+            private set
+            {
+                if (_snapshotsSummaryLine == value) return;
+                _snapshotsSummaryLine = value;
+                OnPropertyChanged();
+            }
+        }
+
         // Search / actions (your RelayCommand expects Action<object?>)
         public string? SearchText { get; set; }
         public RelayCommand RefreshCommand { get; }
@@ -202,10 +227,15 @@ namespace VaultSync.UI.ViewModels
         private int _activeProjectsCount;
         private int _refreshInFlight;
         private int _refreshQueued;
+        private DashboardData? _lastDashboardData;
+        private DateTime _lastDashboardDataUtc = DateTime.MinValue;
+        private static readonly TimeSpan DashboardDataTtl = TimeSpan.FromSeconds(30);
+        private SqliteRepository? _repo;
+        private string? _repoDbPath;
 
         public DashboardViewModel()
         {
-            RefreshCommand = new RelayCommand(async _ => await RefreshAsync());
+            RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
             NewSnapshotCommand = new RelayCommand(_ => { /* wired later from dashboard actions */ });
 
             BuildStaticAxes();
@@ -249,7 +279,7 @@ namespace VaultSync.UI.ViewModels
         /// Called when the view is attached or when the user hits Refresh.
         /// Reads config, opens the shared DB, and populates KPIs + charts.
         /// </summary>
-        public async System.Threading.Tasks.Task RefreshAsync()
+        public async System.Threading.Tasks.Task RefreshAsync(bool force = false)
         {
             if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
             {
@@ -261,6 +291,12 @@ namespace VaultSync.UI.ViewModels
             {
                 var data = await Task.Run(() =>
                 {
+                    if (!force && _lastDashboardData is not null &&
+                        (DateTime.UtcNow - _lastDashboardDataUtc) < DashboardDataTtl)
+                    {
+                        return _lastDashboardData;
+                    }
+
                     var cfg = AppConfigStore.Load();
                     var diskUsage = ComputeBackupDiskUsage(cfg);
 
@@ -268,7 +304,13 @@ namespace VaultSync.UI.ViewModels
                         ? cfg.DbPath
                         : GetDefaultDbPath();
 
-                    var repo = new SqliteRepository(dbPath);
+                    if (_repo is null || !string.Equals(_repoDbPath, dbPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _repo = new SqliteRepository(dbPath);
+                        _repoDbPath = dbPath;
+                    }
+                    var repo = _repo;
+                    repo.EnsureSchema();
 
                     var projects = repo.GetAllProjects().ToList();
                     var backupCount = repo.GetBackupCount();
@@ -338,7 +380,7 @@ namespace VaultSync.UI.ViewModels
                         activities.Add((s.projectId, s.createdUtc, "snapshot"));
                     }
 
-                    return new DashboardData
+                    var dashboardData = new DashboardData
                     {
                         Config = cfg,
                         DiskUsage = diskUsage,
@@ -355,6 +397,9 @@ namespace VaultSync.UI.ViewModels
                         ManualCounts = manualCounts,
                         ImportedCounts = importedCounts
                     };
+                    _lastDashboardData = dashboardData;
+                    _lastDashboardDataUtc = DateTime.UtcNow;
+                    return dashboardData;
                 });
 
                 // Apply results on UI thread
@@ -367,6 +412,7 @@ namespace VaultSync.UI.ViewModels
                 SnapshotCount = data.BackupCount;
                 _backupsThisWeekCount = data.BackupsThisWeekCount;
                 SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
+                UpdateBackupSummaryPills();
 
                 _activeProjectsCount = data.StorageSlices.Count;
                 StorageUsed = FormatBytes(data.TotalLatestBytes);
@@ -494,7 +540,7 @@ namespace VaultSync.UI.ViewModels
                 Interlocked.Exchange(ref _refreshInFlight, 0);
                 if (Interlocked.Exchange(ref _refreshQueued, 0) == 1)
                 {
-                    await RefreshAsync();
+                    await RefreshAsync(force: true);
                 }
             }
         }
@@ -691,7 +737,12 @@ namespace VaultSync.UI.ViewModels
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
 
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
-            BuildBackupUsageBar(AppConfigStore.Load(), Array.Empty<(Project project, long bytes)>());
+            _ = Task.Run(() =>
+            {
+                var cfg = AppConfigStore.Load();
+                Dispatcher.UIThread.Post(() =>
+                    BuildBackupUsageBar(cfg, Array.Empty<(Project project, long bytes)>()));
+            });
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
         }
@@ -1510,6 +1561,36 @@ namespace VaultSync.UI.ViewModels
             BackupDiskIsBelowThreshold = isBelowThreshold;
         }
 
+        private void UpdateBackupSummaryPills()
+        {
+            // Dashboard tracks the last 7 days (UTC date, including today) in the chart arrays.
+            var todayCount = _snapshotCountsByDay.Length > 0 ? (int)_snapshotCountsByDay[^1] : 0;
+            var autoWeek = _autoCountsByDay.Sum();
+            var manualWeek = _manualCountsByDay.Sum();
+            var importedWeek = _importedCountsByDay.Sum();
+            var weekTotal = autoWeek + manualWeek + importedWeek;
+
+            SnapshotsSummaryLine = Lf(
+                "Backups.Summary.TodayWeek",
+                "{0} backups today - {1} this week",
+                todayCount,
+                weekTotal);
+
+            if (weekTotal == 0)
+            {
+                SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
+            }
+            else
+            {
+                SnapshotActivitySummary = Lf(
+                    "Backups.Summary.ActivityTotals",
+                    "{0} backups total - {1} auto - {2} manual",
+                    weekTotal,
+                    autoWeek,
+                    manualWeek);
+            }
+        }
+
         private static double[] MovingAverage(IReadOnlyList<double> v, int window)
         {
             if (window <= 1) return v.ToArray();
@@ -1540,6 +1621,7 @@ namespace VaultSync.UI.ViewModels
         public void ReapplyLocalization()
         {
             SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
+            UpdateBackupSummaryPills();
 
             if (ProjectCount == 0)
             {

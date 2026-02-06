@@ -16,6 +16,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using VaultSync.UI.Services;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
@@ -100,6 +101,7 @@ namespace VaultSync.UI
         private bool _isInitialized;
         private bool _isSaving;
         private bool _savePending;
+        private bool? _lastLaunchOnLoginApplied;
 
         public event Action? OpenLogConsoleRequested;
         public event Action? UpdateCheckRequested;
@@ -212,6 +214,7 @@ namespace VaultSync.UI
             _runInBackground         = cfg.Behavior.RunInBackground;
             _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
             _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
+            _lastLaunchOnLoginApplied = _launchOnLogin;
             _confirmDeleteBackup     = cfg.Behavior.ConfirmDeleteBackup;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
@@ -522,7 +525,12 @@ namespace VaultSync.UI
             cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
             cfg.Advanced.Language            = SelectedLanguageCode;
 
-            AutoStartService.SetLaunchOnLogin(_launchOnLogin);
+            if (_lastLaunchOnLoginApplied != _launchOnLogin)
+            {
+                _lastLaunchOnLoginApplied = _launchOnLogin;
+                var launchOnLogin = _launchOnLogin;
+                _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(launchOnLogin));
+            }
 
             AppConfigStore.Save(cfg);
 
@@ -1155,16 +1163,19 @@ namespace VaultSync.UI
 
         private void PersistLanguage()
         {
-            try
+            _ = Task.Run(() =>
             {
-                var cfg = AppConfigStore.Load();
-                cfg.Advanced.Language = _selectedLanguageCode;
-                AppConfigStore.Save(cfg);
-            }
-            catch
-            {
-                // Best effort; avoid crashing when persisting language.
-            }
+                try
+                {
+                    var cfg = AppConfigStore.Load();
+                    cfg.Advanced.Language = _selectedLanguageCode;
+                    AppConfigStore.Save(cfg);
+                }
+                catch
+                {
+                    // Best effort; avoid crashing when persisting language.
+                }
+            });
         }
 
         public void UpdateUpdateCheckStatus(DateTimeOffset? lastCheck, string? errorMessage)
@@ -1420,9 +1431,19 @@ namespace VaultSync.UI
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
-            var config = AppConfigStore.Load();
-            config.ProjectsRoot = path;
-            AppConfigStore.Save(config);
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var config = AppConfigStore.Load();
+                    config.ProjectsRoot = path;
+                    AppConfigStore.Save(config);
+                }
+                catch
+                {
+                    // Best effort
+                }
+            });
 
             ProjectsRootPath = path;
         }
@@ -1564,7 +1585,7 @@ namespace VaultSync.UI
             }
 
             var display = dest.DisplayName;
-            var cfg = AppConfigStore.Load();
+            var cfg = await Task.Run(AppConfigStore.Load);
             var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                 ? null
                 : cfg.Network.Credentials.FirstOrDefault(c =>
@@ -1751,23 +1772,23 @@ namespace VaultSync.UI
 
         private void ForgetAllProjects()
         {
-            try
+            _ = Task.Run(() =>
             {
-                // Dev helper: reset the VaultSync SQLite DB to a "fresh install" state
-                // without touching any real project files or backup folders on disk.
-                var cfg  = AppConfigStore.Load();
-                var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                try
+                {
+                    // Dev helper: reset the VaultSync SQLite DB to a "fresh install" state
+                    // without touching any real project files or backup folders on disk.
+                    var cfg  = AppConfigStore.Load();
+                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
 
-                repo.EnsureSchema();
-                repo.ResetAllData();
-
-                // Optionally, you could raise a notification/toast here in the future.
-            }
-            catch (Exception)
-            {
-                // For now, silently ignore errors. In the future we can surface a
-                // message in the UI or log details when verbose logging is enabled.
-            }
+                    repo.EnsureSchema();
+                    repo.ResetAllData();
+                }
+                catch
+                {
+                    // Best effort: ignore errors.
+                }
+            });
         }
 
         private static IStorageProvider? GetStorageProvider()
