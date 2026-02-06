@@ -2,18 +2,16 @@
 
 ## [1.4.1]
 
-### Faster, steadier startup
-- Initial view is now guaranteed to render immediately (no empty shell on launch).
-- Settings load happens synchronously so the UI doesn’t appear blank.
-- Database schema setup runs off the UI thread to prevent startup stalls.
+### macOS freeze fix
+- Launch-on-login updates no longer block the UI thread.
+- Autosave no longer triggers long UI stalls on macOS.
 
-### Smoother tray/menu bar behavior (macOS)
-- Tray menu opening no longer hangs the app.
-- Tray menu refreshes are deferred while the menu is opening.
+### Startup reliability
+- Windows and macOS login/startup entries now use the correct launch command.
+- macOS LaunchAgent includes a working directory for more consistent startup.
 
-### Performance cleanup
-- Log capture setup is delayed slightly to avoid blocking UI init.
-- Backups/dashboards load avoids blocking the UI thread.
+### Diagnostics (kept small)
+- Automatic diagnostics are kept, but only the most recent 5 sessions are retained.
 
 ### Updates
 - Release notes are available in the app. [Release notes](https://github.com/ATAC-Helicopter/VaultSync/releases)
