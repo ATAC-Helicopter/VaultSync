@@ -1,157 +1,179 @@
 # Roadmap
 
+## Priority legend
+- `P0` Critical: core reliability/security and release blockers.
+- `P1` High: major UX/product impact for the target release.
+- `P2` Medium: valuable but can slip without harming release quality.
 
-## Completed
-- [x] Stabilize updater: relaunch fixes, clearer status, UI redesign, and patch compatibility guardrails.
-- [x] Documentation refresh: expanded wiki with setup, usage, and troubleshooting guidance.
-- [x] [1.3.0] macOS support: ensure bundled tools (rsync) ship per-arch and verify updater/patch workflows.
-  - Include mac rsync arm64/x64 bundles in publish output and validate dylib loading.
-  - Add Settings diagnostics for rsync availability/version.
-  - Confirm installer/patch fallback behavior for non-writable install locations.
-- [x] [1.3.0] Cross-machine migration: restore a project and its full history (snapshots, backups, sizes, settings) across machines.
-  - User flow:
-    - Machine A creates backups to a destination.
-    - Machine B selects that destination; if it finds history not in the local DB, it auto-imports and merges it to reach parity (no restore required).
-    - Optional restore still pulls files; history merge happens even without restore.
-    - When returning to Machine A, the same destination syncs new history back so both machines converge.
-    - All of this is toggleable in settings (global + per-destination).
-  - Integration plan:
-    - Source of truth: backup destination stores portable metadata; local DB mirrors it. Project root can also act as a source when it contains backups + metadata.
-    - Discovery rule: destination is considered VaultSync-ready when `.vaultsync/meta/` exists and schema version is supported.
-    - Metadata location: `.vaultsync/meta/` at destination root; one store per destination.
-    - Storage: small SQLite store for fast sync + JSON summaries for quick UI.
-    - Project identity: stable project ID + machine ID to merge history without collisions.
-    - Auto-merge scope: if project is missing locally, auto-create it from metadata; if it exists, merge by project ID (root-path match is fallback). If both match, project ID wins.
-    - Restore prompt: after importing a new project from metadata, prompt to restore the latest backup before allowing new snapshots/backups.
-    - Merge rules: last-write-wins for settings, append-only for backups/snapshots, dedupe by IDs/hashes.
-    - Sync triggers: startup, destination mount, after backup, manual refresh.
-    - Opt-out: per-destination toggle disables metadata sync + auto-import.
-    - Compatibility: retention/totals read merged history so cleanup + UI stay consistent.
-    - Encryption support: store encryption flags + key-derivation params (never secrets).
-    - Non-zip backups: write per-backup metadata next to data folder with encryption marker.
-    - Deleted backups: use tombstones to prevent reimport of intentionally deleted entries.
-    - Read-only destinations: allow import/merge; skip metadata writes and show warning.
-    - First sync UX: toast/banner with counts (projects, backups) and a details link.
-    - Safety gate: optional confirm when importing > N backups or > X GB.
-    - Schema migration: versioned metadata with clear upgrade rules and backward compatibility.
-    - Version compatibility: allow read/merge across app versions; if incompatible, block writes/merges and prompt to update both sides.
-    - Rollback: snapshot local DB before merge; keep rolling retention (similar to backup retention) to revert a bad merge.
-    - Merge logs: record decisions in logs for diagnostics (per project/backup ID).
-    - Performance: incremental metadata scan and hash checks; avoid full rescan every time.
-    - Tests: missing metadata, stale refresh, merge conflicts, partial backup sets.
+## Completed (highlights)
+- [x] Updater stabilization: relaunch fixes, clearer status, patch compatibility guardrails.
+- [x] Documentation refresh: expanded wiki for setup, usage, and troubleshooting.
+- [x] `1.3.0` macOS support: bundled per-arch rsync + updater/patch flow validation.
+- [x] `1.3.0` Cross-machine migration and metadata sync (import/merge/tombstones/safety checks).
+- [x] `1.4.0` Per-project destination selection (All/Auto/Specific).
+- [x] `1.4.0` Faster snapshot scanning (scan cache + aggressive mode + cadence safeguards).
+- [x] `1.4.0` Dry-run backup estimates (size/time/capacity warnings + throughput-based ETA).
 
-## Near term
-- [x] [1.4.0] Per-project destination selection (multi-destination setups)
-  - Goals:
-    - Let each project target All, Auto, or a Specific destination.
-    - Make selection visible in project cards and active backup status.
-    - Keep safe fallback when a selected destination is unavailable.
-  - Implementation:
-    - Data: add `PreferredDestinationId` (nullable) on Project; migrate to null.
-    - DB: add column to `projects` table; migration + query/update helpers.
-    - Config/Model: expose destination preference on `Project` and map in repo.
-    - Resolver: map project -> destination list; honor Specific if reachable, otherwise fall back to active.
-    - UI: project settings dropdown (All/Auto/Specific + destinations).
-    - Status: show destination label in backup card + log lines.
-  - Validation:
-    - Warn when selected destination is inactive/unreachable.
-    - Allow one-time override to use active destination.
-  - Tests:
-    - Migration defaults to null.
-    - Resolver honors All/Auto/Specific.
-    - Backup routes only to selected destination.
-    - Restore/delete/metadata flows still resolve destination correctly.
+## 1.5.x (current focus)
 
-  - Current status (as of 2026-01-29):
-    - Done: Project model + DB migration + repo mapping for `PreferredDestinationId`.
-    - Done: project UI dropdown + list label for destination selection.
-    - Done: backups page per-project destination selector + history label.
-    - Done: per-project destination resolution in manual/auto/backup-all flows with warnings + telemetry.
-    - Done: validate restore/delete/metadata flows with mixed destination modes.
+### 1.5.0 priorities
+- [ ] `P0` Backup encryption and password-protected backups.
+- [ ] `P1` Backup bandwidth limits and quiet hours.
+- [ ] `P1` Incremental backup UX improvements.
+- [ ] `P2` Snapshot diff summaries.
 
-- [x] [1.4.0] Faster snapshot scanning on large projects
-  - Goals:
-    - Skip unchanged folders safely.
-    - Reduce scan times without missing changes.
-  - Implementation:
-    - Cache: per-project scan cache (path, mtime, size, file count).
-    - Heuristics: skip when unchanged; deep-scan when uncertain.
-    - Safety: periodic full scan (every N runs) to prevent drift.
-    - Telemetry: log scan duration, skipped counts, and cache hits.
-    - Settings: optional "Aggressive scan cache" toggle.
-    - Hook: integrate cache-aware scanner into SnapshotService (currently full tree scan).
-    - Storage: decide DB vs sidecar JSON cache + versioning/invalidation rules.
-  - Tests:
-    - Cache hit/miss coverage.
-    - Rename/move detection.
-    - Full-scan cadence enforced.
-    - Filter changes invalidate cache correctly.
+### 1.5.0 scope and contracts
 
-  - Current status (as of 2026-01-29):
-    - Done: scan cache store + cache-aware SnapshotService path.
-    - Done: config + settings flags (EnableScanCache/AggressiveScanCache) wired into backup/snapshot flows.
-    - Done: settings UI toggles + localization for scan cache.
-    - Done: cache invalidation + full-scan cadence enforced (run count + age).
+#### `P0` Backup encryption and password-protected backups
+- Core scope:
+  - Per-project + global encryption settings.
+  - Password-protected encrypted backups (no plaintext secrets stored).
+  - AES-256 + per-backup salt/IV; KDF via PBKDF2/Argon2 profile.
+  - Encrypted backup container under vault path (for example: `.vaultsync/vault/`).
+- Integration contract:
+  - Discovery/readability:
+    - Backup discovery must work for both encrypted and plain backups.
+    - Encrypted entries still expose non-secret metadata (time, size, destination, source machine, keep/protected state).
+  - Metadata sync:
+    - Export/import must work for mixed encrypted/plain history.
+    - Sync includes only non-secret crypto descriptor fields (encrypted flag, algorithm/KDF profile, format/version, parameter identifiers).
+    - No passwords, raw keys, or recoverable secrets in metadata payloads.
+    - Tombstones/merge behavior remains unchanged.
+  - Existing feature compatibility:
+    - Delete/open/keep/retention/destination scan/import keep working unchanged for encrypted and plain entries.
+    - Backup-all and per-project routing behavior does not change.
+    - Imported-history pause checks treat encrypted entries as normal history entries.
+  - Restore/verify:
+    - Password prompt only when restoring encrypted backup.
+    - Wrong password fails safely (no partial writes).
+    - Integrity checks run after decrypt stage and preserve current verification semantics.
+    - Plain backups restore exactly as today (no prompt).
+  - Key handling:
+    - Password material only in OS secure store (or session memory when explicitly allowed).
+    - Config and metadata store only non-secret references/parameters.
+    - If secure store unavailable, fallback must be explicit and user-confirmed.
+- Delivery phases:
+  1. Format + schema contract.
+  2. Encrypted write path.
+  3. Password-gated read/restore path.
+  4. Mixed encrypted/plain interop and migration behavior.
+  5. UX hardening (errors/recovery messaging).
+- Acceptance:
+  - Encrypted backup is unreadable without password.
+  - Valid password restore succeeds; invalid password restore fails safely.
+  - Existing plain backups remain fully functional.
+  - Metadata sync carries encryption metadata but no secrets.
+  - Mixed `1.4`/`1.5` environments do not corrupt sync state.
 
-- [x] [1.4.0] Dry-run backups (size/time estimates)
-  - Goals:
-    - Preview size/time before starting.
-    - Validate destination capacity early.
-  - Implementation:
-    - Preflight scan to estimate bytes/files.
-    - UI: show ETA + capacity warning; allow cancel.
-    - Cache preflight results briefly to avoid repeat scans.
-    - Wire: add preflight API in BackupService (no backup writes).
-    - Calibrate: use recent throughput to estimate ETA; fall back if missing.
-    - Strings: add localization keys for dry-run UI/labels/errors.
-  - Tests:
-    - Dry-run does not create backups.
-    - Estimates are recorded and shown.
-    - Capacity warning logic.
+#### `P1` Bandwidth limits and quiet hours
+- Scope:
+  - Bandwidth caps for network copy/archive workers.
+  - Quiet-hours scheduling for defer/pause/start policy.
+  - Current policy visible in UI and logs.
+- Delivery phases:
+  1. Config model + settings UI.
+  2. Throttling enforcement in transfer paths.
+  3. Quiet-hours runtime behavior.
+  4. Status visibility in active cards/tray/logs.
+- Acceptance:
+  - Effective transfer caps are respected.
+  - Quiet-hours policy is predictable and visible.
 
-  - Current status (as of 2026-01-29):
-    - Done: preflight API for file/size estimates + short-lived caching.
-    - Done: backup throughput sampling stored for ETA calibration.
-    - Done: UI shows estimates + capacity warnings before backups.
-    - Existing related parts: CLI has rsync dry-run flag (not the UI estimate flow).
-- [ ] [1.5.0] Backup encryption and password-protected backups.
-  - Integration plan:
-    - Data: add encryption settings (per-project + global defaults), store in config; no plaintext keys.
-    - UX: encryption toggle with password + confirm; strength hint; require password on restore.
-    - Crypto: AES-256 with per-backup salt + IV; derive key via PBKDF2/Argon2.
-    - Backup flow: write encrypted container per backup under a vault folder (e.g., `.vaultsync/vault/`).
-    - Vault rules: contents are not browsable/restorable without password; always stored as encrypted container.
-    - Metadata: store non-secret metadata + key derivation params alongside the container.
-    - Restore: prompt for password; validate; decrypt to temp; verify hash.
-    - Migration: encrypted backups restore by password; export/import includes encryption metadata (never secrets).
-    - Migration: existing backups remain unencrypted; show mixed-state badge.
-    - Tests: encryption round-trip, wrong password, performance guardrails.
-- [ ] [1.5.0] Backup bandwidth limits and quiet hours (avoid congesting networks).
-  - Plan: schedule window + throttling settings; apply to network copy workers; show active policy in status.
-- [ ] [1.5.0] Incremental backups UX: clearer retention behavior, restore guidance, size reporting.
-  - Plan: explain retention rules in UI; show "last full vs delta" info; add restore tips.
-- [ ] [1.5.0] Snapshot diff summaries (top changed folders/files, size deltas).
-  - Plan: compute delta summary after backup; show top changes; exportable summary.
+#### `P1` Incremental backup UX improvements
+- Scope:
+  - Clarify full/incremental/imported terminology.
+  - Surface retention outcome per backup.
+  - Add restore guidance by selected backup type.
+- Delivery phases:
+  1. Terminology cleanup.
+  2. History metadata chips/outcome line.
+  3. Restore helper content.
+  4. Docs/wiki parity.
+- Acceptance:
+  - Backup type and retention outcome are clear at a glance.
+  - Restore behavior is understandable before start.
 
-## Mid term
-- [ ] [1.6.0] Richer restore flows (selective restore, dry-run previews, conflict prompts).
-  - Plan: restore wizard; preview file list + size; conflict resolution prompts.
-- [ ] [1.6.0] Restore point browser with compare and timeline view.
-- [ ] [1.6.0] Smarter storage usage reporting (per-project deltas, last-change summaries).
-- [ ] [1.6.0] Custom preset editor for filters and ignore rules.
-- [ ] [1.6.0] Backup health timeline (success rate, last failure reason, trend chart).
-- [ ] [1.6.0] Exportable config bundle for easy migration and support.
-- [ ] [1.7.0] Project tagging and bulk actions (pause, backup, snapshot by tag).
-- [ ] [1.7.0] Per-destination retry policy with backoff and user-facing status summary.
-- [ ] [1.7.0] Destination quotas and cleanup suggestions (per-target caps).
-- [ ] [1.7.0] Team workflows: shared vaults, access control, audit trails.
-  - Plan: define shared-vault model; add audit log schema; role-based access controls.
+#### `P2` Snapshot diff summaries
+- Scope:
+  - Top changed folders/files.
+  - Added/modified/deleted and net size delta.
+  - Exportable summary (text/JSON).
+- Delivery phases:
+  1. Compute/store summary stats.
+  2. Surface in Projects/Backups.
+  3. Export action.
+- Acceptance:
+  - Accurate summaries with minimal UI delay.
 
-## Long term
-- [ ] [1.x.0] Multi-destination health scoring and auto-failover.
-- [ ] [1.x.0] Cloud backup targets (S3-compatible, Backblaze, etc.) with encryption options.
-- [ ] [1.x.0] Advanced automation hooks (webhooks, scripts on backup/restore events).
-- [ ] [1.x.0] CLI parity with UI features.
-- [ ] [1.x.0] Per-project verification toggle (always verify, verify on schedule, or manual).
-- [ ] [1.x.0] App signing for trusted distribution.
-- [ ] [1.x.0] Background integrity audits with alerts.
+### 1.5.0 UI map
+- Encryption UX:
+  - Settings: global encryption section, policy toggles, key profile, warning copy.
+  - Projects: inherit/override mode per project.
+  - History/cards: encrypted badge and source-machine badge (when available).
+  - Restore: password dialog for encrypted entries, explicit wrong-password and corruption flows.
+  - Notifications: dedicated messages for decrypt success/failure states.
+- Bandwidth + quiet-hours UX:
+  - Settings scheduler card with timezone and caps.
+  - Active backup cards show `Throttled` / `Quiet hours` policy chips.
+  - Tray shows current policy state.
+- Incremental UX:
+  - History chips for type (`Full`, `Incremental`, `Imported`).
+  - Retention outcome line in details.
+  - Restore confirmation "what happens next" block.
+- Snapshot diff UX:
+  - Compact summary panel in Projects/Backups.
+  - Export summary action in details.
+- UI quality gates:
+  - No clipping in common windowed sizes.
+  - All new text localized.
+  - Keyboard-accessible actions/dialogs.
+  - Color status always paired with text.
+
+### 1.5 implementation order
+1. Encryption format/schema contract.
+2. Encrypted write/read path.
+3. Bandwidth + quiet-hours policy.
+4. Incremental UX clarity pass.
+5. Snapshot diff summaries.
+6. Stabilization pass + release gate.
+
+### 1.5 stabilization pass
+- [ ] `P0` Post-feature hardening.
+  - Tune defaults.
+  - Reduce UI-thread churn in new flows.
+  - Close regressions before 1.6 work starts.
+  - Exit gate checklist:
+    - No blocking UI regressions in backup/restore/settings flows.
+    - Startup impact unchanged or improved versus 1.4 baseline.
+    - Localization coverage complete for all new `1.5` strings.
+    - Metadata sync compatibility verified across mixed 1.4/1.5 machines.
+    - Release docs and troubleshooting updated.
+
+### 1.5 risks
+- Crypto UX risk: password loss/typo can make backups unusable without clear recovery messaging.
+- Performance risk: encryption and diff summaries can increase backup time on slower disks.
+- Compatibility risk: metadata sync across versions must preserve mixed encrypted/plain behavior.
+- Support risk: quiet-hours/throttling can appear as random pauses if status is not clear.
+
+## 1.6.x
+- [ ] `P1` Richer restore flows (selective restore, dry-run previews, conflict prompts).
+- [ ] `P1` Restore point browser with compare + timeline.
+- [ ] `P1` Smarter storage usage reporting (per-project deltas, change summaries).
+- [ ] `P2` Custom preset editor for filter/ignore rules.
+- [ ] `P2` Backup health timeline (success/failure trends).
+- [ ] `P2` Exportable config bundle for migration/support.
+
+## 1.7.x
+- [ ] `P1` Project tagging + bulk actions (pause/backup/snapshot by tag).
+- [ ] `P1` Per-destination retry policy with backoff + user status summary.
+- [ ] `P2` Destination quotas + cleanup suggestions.
+- [ ] `P2` Team workflows (shared vaults, access control, audit trails).
+
+## Long-term
+- [ ] Multi-destination health scoring and auto-failover.
+- [ ] Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
+- [ ] Automation hooks (webhooks/scripts on backup/restore events).
+- [ ] CLI parity with all major UI features.
+- [ ] Per-project verification policies (always/scheduled/manual).
+- [ ] App signing for trusted distribution.
+- [ ] Background integrity audits with alerts.
