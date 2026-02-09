@@ -126,6 +126,28 @@ namespace VaultSync.Core.Config
         /// When empty, BackupRoot is used for legacy compatibility.
         /// </summary>
         public List<BackupDestination> Destinations { get; set; } = new();
+
+        /// <summary>
+        /// Global backup encryption policy and non-secret key/material references.
+        /// </summary>
+        public BackupEncryptionConfig Encryption { get; set; } = new();
+    }
+
+    public sealed class BackupEncryptionConfig
+    {
+        public bool Enabled { get; set; } = false;
+        /// <summary>
+        /// Reference to secure-store entry; no plaintext password is persisted in config.
+        /// </summary>
+        public string KeyRef { get; set; } = string.Empty;
+        public string Algorithm { get; set; } = "aes-256-gcm";
+        public string KdfProfile { get; set; } = "argon2id-v1";
+        public string KdfParamRef { get; set; } = "default";
+        /// <summary>
+        /// When true, in-memory session fallback can be offered if secure-store save fails.
+        /// Explicit user confirmation is still required by runtime flows.
+        /// </summary>
+        public bool AllowSessionFallback { get; set; } = false;
     }
 
     // -------- Storage --------

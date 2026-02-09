@@ -1121,7 +1121,7 @@ public sealed class MetadataSyncService
                     OriginMachineName = machineId,
                     IsProtected = backup.IsProtected,
                     IsEncrypted = false,
-                    KdfParamsJson = "{}"
+                    KdfParamsJson = BackupCryptoDescriptor.PlainMetadataJson
                 });
                 exportedBackups = 1;
             }
@@ -1452,7 +1452,7 @@ public sealed class MetadataSyncService
                 OriginMachineName = machineId,
                 IsProtected = backup.IsProtected,
                 IsEncrypted = false,
-                KdfParamsJson = "{}"
+                KdfParamsJson = BackupCryptoDescriptor.PlainMetadataJson
             });
             exportedBackups++;
         }

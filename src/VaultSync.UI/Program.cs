@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ internal static class Program
     private static Mutex? _instanceMutex;
     private static CancellationTokenSource? _activationListenerCts;
     private const string InstancePipeName = "VaultSync.UI.SingleInstancePipe";
+    private static readonly string? PsPath = ResolvePsPath();
 
     [System.STAThread]
     public static void Main(string[] args)
@@ -177,6 +179,9 @@ internal static class Program
 
     private static string GetParentProcessInfo()
     {
+        if (OperatingSystem.IsWindows())
+            return $"pid={Environment.ProcessId}, ppid=unsupported";
+
         try
         {
             var pid = Environment.ProcessId;
@@ -198,9 +203,12 @@ internal static class Program
 
     private static string RunPs(string arguments)
     {
+        if (string.IsNullOrWhiteSpace(PsPath))
+            return string.Empty;
+
         var psi = new ProcessStartInfo
         {
-            FileName = "/bin/ps",
+            FileName = PsPath,
             Arguments = arguments,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -212,6 +220,22 @@ internal static class Program
             return string.Empty;
         proc.WaitForExit(2000);
         return proc.StandardOutput.ReadToEnd();
+    }
+
+    private static string? ResolvePsPath()
+    {
+        if (OperatingSystem.IsWindows())
+            return null;
+
+        const string binPs = "/bin/ps";
+        if (File.Exists(binPs))
+            return binPs;
+
+        const string usrBinPs = "/usr/bin/ps";
+        if (File.Exists(usrBinPs))
+            return usrBinPs;
+
+        return null;
     }
 
 

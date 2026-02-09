@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Services;
 
@@ -177,6 +178,9 @@ public sealed class MetadataStore
 
     public void UpsertBackup(MetaBackup backup)
     {
+        var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.KdfParamsJson);
+        var descriptorJson = descriptor.ToMetadataJson(backup.IsEncrypted);
+
         using var c = Open(write: true);
         c.Execute(
             """
@@ -208,7 +212,7 @@ public sealed class MetadataStore
                 backup.OriginMachineName,
                 IsProtected = backup.IsProtected ? 1 : 0,
                 EncFlag = backup.IsEncrypted ? 1 : 0,
-                backup.KdfParamsJson
+                KdfParamsJson = descriptorJson
             });
     }
 

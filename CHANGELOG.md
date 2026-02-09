@@ -1,4 +1,23 @@
 ﻿# Changelog
+## [1.5.0] - Unreleased
+### Added
+- [VS-1501] Versioned backup crypto descriptor contract for metadata (`formatVersion`, `algorithm`, `kdfProfile`, `kdfParamRef`).
+- [VS-1504] `BackupEncryptionSecretService` with secure-store writes and explicit session-memory fallback workflow.
+- [VS-1504] Global backup encryption config contract with non-secret key reference fields (`KeyRef`, algorithm/KDF parameters).
+- release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
+- phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
+### Changed
+- [VS-1501] Metadata backup writes now normalize crypto descriptor payloads and persist only non-secret fields.
+- [VS-1501] Metadata sync export paths now use the shared plain-descriptor contract value for backward-safe plain backups.
+- [VS-1504] Encryption secret fallback now requires explicit confirmation before keeping secrets in session memory.
+- `CONTRIBUTING.md` fully restructured with the default `VS-xxxx` planning model and contribution flow.
+- Core test suite rewritten to match current metadata-sync and destination behavior contracts.
+### Fixed
+- [VS-1501] Legacy plain backup crypto metadata (`{}`) now parses through the typed descriptor compatibility path.
+- [VS-1504] Secure-store failures no longer require plaintext secret persistence in config as fallback path.
+- Windows startup/debug runs no longer attempt to execute `/bin/ps` for parent-process info logging.
+- Metadata sync tests now reflect current import rules for existing/missing backup paths.
+
 ## [1.4.1] - Unreleased
 ### Added
 - Startup load deferral safeguards to reduce early UI stalls.
