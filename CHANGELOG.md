@@ -4,17 +4,26 @@
 - [VS-1501] Versioned backup crypto descriptor contract for metadata (`formatVersion`, `algorithm`, `kdfProfile`, `kdfParamRef`).
 - [VS-1504] `BackupEncryptionSecretService` with secure-store writes and explicit session-memory fallback workflow.
 - [VS-1504] Global backup encryption config contract with non-secret key reference fields (`KeyRef`, algorithm/KDF parameters).
+- [VS-1502] `BackupArchiveCryptoService` for encrypted archive artifacts (`data.vse`) with per-backup salt/IV envelope metadata.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
 ### Changed
 - [VS-1501] Metadata backup writes now normalize crypto descriptor payloads and persist only non-secret fields.
 - [VS-1501] Metadata sync export paths now use the shared plain-descriptor contract value for backward-safe plain backups.
 - [VS-1504] Encryption secret fallback now requires explicit confirmation before keeping secrets in session memory.
+- [VS-1502] Backup runs now support encrypted archive write mode and persist encrypted descriptor metadata in backup records.
+- [VS-1502] Metadata sync import/export now preserves encryption flags and descriptor payloads for encrypted backups.
+- [VS-1503] Restore flow now prompts for an encryption password only for encrypted backups and uses staged decrypt/extract before applying files.
+- [VS-1505] Metadata sync import/export now stays compatible with mixed encrypted/plain history across legacy metadata-store schemas.
 - `CONTRIBUTING.md` fully restructured with the default `VS-xxxx` planning model and contribution flow.
 - Core test suite rewritten to match current metadata-sync and destination behavior contracts.
 ### Fixed
 - [VS-1501] Legacy plain backup crypto metadata (`{}`) now parses through the typed descriptor compatibility path.
 - [VS-1504] Secure-store failures no longer require plaintext secret persistence in config as fallback path.
+- [VS-1502] Destination scans and backup-size probes now recognize encrypted archive artifacts alongside plain archives.
+- [VS-1503] Encrypted restore now fails with an explicit invalid-password/corruption error and leaves no partial restored output on wrong-password attempts.
+- [VS-1503] `NeedsRestore` flags are now cleared only after a successful restore completion.
+- [VS-1505] Import/preview from older metadata stores (missing `origin_machine_name` and encryption columns) no longer fails and defaults backups to plain compatibility values.
 - Windows startup/debug runs no longer attempt to execute `/bin/ps` for parent-process info logging.
 - Metadata sync tests now reflect current import rules for existing/missing backup paths.
 

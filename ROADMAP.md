@@ -147,10 +147,11 @@
 ### 1.5 implementation order
 1. Encryption format/schema contract.
 2. Encrypted write/read path.
-3. Bandwidth + quiet-hours policy.
-4. Incremental UX clarity pass.
-5. Snapshot diff summaries.
-6. Stabilization pass + release gate.
+3. Encryption controls and key management UX (global + per-project).
+4. Bandwidth + quiet-hours policy.
+5. Incremental UX clarity pass.
+6. Snapshot diff summaries.
+7. Stabilization pass + release gate.
 
 ### 1.5 ticket backlog (execution-ready)
 
@@ -162,14 +163,14 @@
     - Unit: descriptor serialize/deserialize round-trip with version field preserved.
     - Unit: metadata export payload includes only non-secret crypto fields.
     - Integration: existing plain backup metadata still parses unchanged.
-- [ ] `VS-1502` Encrypted write pipeline.
+- [x] `VS-1502` Encrypted write pipeline.
   - Scope: produce encrypted backup artifacts (AES-256 + per-backup salt/IV) in vault storage path.
   - Depends on: `VS-1501`.
   - Acceptance tests:
     - Integration: encrypted backup artifact differs from plaintext source and cannot be opened as plain archive.
     - Integration: backup job reports success and emits encrypted flag in metadata.
     - Regression: plain (unencrypted) backup flow remains unchanged.
-- [ ] `VS-1503` Password-gated restore/decrypt pipeline.
+- [x] `VS-1503` Password-gated restore/decrypt pipeline.
   - Scope: restore path prompts for password only on encrypted entries and fails safely on wrong password.
   - Depends on: `VS-1501`, `VS-1502`.
   - Acceptance tests:
@@ -183,13 +184,62 @@
     - Unit: config persistence never contains plaintext password/key material.
     - Integration: secure-store unavailable path requires explicit user confirmation before continuing.
     - Security check: diagnostic export redacts all secret-like fields.
-- [ ] `VS-1505` Mixed encrypted/plain interop + metadata sync compatibility.
+- [x] `VS-1505` Mixed encrypted/plain interop + metadata sync compatibility.
   - Scope: preserve merge/tombstone/import behavior across mixed `1.4` and `1.5` machines.
   - Depends on: `VS-1501`, `VS-1502`, `VS-1503`.
   - Acceptance tests:
     - Integration: import/export round-trip with mixed encrypted/plain history works without data loss.
     - Integration: `1.4` client ignores unknown crypto descriptors without corrupting sync state.
     - Regression: delete/keep/retention/destination scan/import behavior remains stable.
+- [ ] `VS-1530` Global encryption settings UX + secure secret enrollment.
+  - Scope: add Settings UI for global encryption enable/disable, password set/change, and secure-store enrollment using non-secret config refs only.
+  - Depends on: `VS-1504`.
+  - Acceptance tests:
+    - UI: user can enable/disable global encryption and set/change password without storing plaintext in config.
+    - Unit: encrypted backup run fails fast with actionable error when global encryption is enabled but secret is unavailable.
+    - Regression: existing backup settings persist unchanged.
+- [ ] `VS-1531` Per-project encryption policy controls.
+  - Scope: add per-project toggle and policy mode (`inherit global`, `project encrypted`, `project plain`) with clear effective-state display.
+  - Depends on: `VS-1530`.
+  - Acceptance tests:
+    - UI: per-project policy can be changed and persists across restart.
+    - Integration: effective policy precedence works (`project override` > `global`).
+    - Regression: auto-backup per-project toggle behavior remains unchanged.
+- [ ] `VS-1532` Per-project key reference model + migration.
+  - Scope: persist per-project encryption mode and optional project `KeyRef` in DB/config with migration-safe defaults.
+  - Depends on: `VS-1531`.
+  - Acceptance tests:
+    - Migration: existing project rows load with `inherit` defaults and no data loss.
+    - Unit: model serialization/persistence stores only key references (no secret material).
+    - Integration: import/export keeps non-secret encryption policy fields stable.
+- [ ] `VS-1533` Backup pipeline effective-key resolution.
+  - Scope: resolve encryption mode and key source per project at backup runtime (global key, project key, or plain).
+  - Depends on: `VS-1532`.
+  - Acceptance tests:
+    - Integration: global encrypted + project plain produces plain backup for overridden project only.
+    - Integration: global plain + project encrypted produces encrypted backup for overridden project only.
+    - Regression: existing encrypted backup metadata contract (`is_encrypted`, descriptor JSON) remains unchanged.
+- [ ] `VS-1534` Restore key resolution and prompt fallback.
+  - Scope: restore flow resolves project key first, then global key, and prompts only when required.
+  - Depends on: `VS-1532`, `VS-1533`.
+  - Acceptance tests:
+    - Integration: encrypted restore succeeds without prompt when matching key exists in secure store.
+    - Integration: missing key triggers prompt and succeeds with correct password.
+    - Integration: wrong password fails safely without partial writes.
+- [ ] `VS-1535` Explorer `.vse` open flow (password dialog helper).
+  - Scope: register/handle encrypted artifact open action so opening `.vse` launches a minimal VaultSync dialog for password + temp extraction/open.
+  - Depends on: `VS-1534`.
+  - Acceptance tests:
+    - Integration: opening `.vse` triggers password dialog and opens extracted temp folder on success.
+    - Integration: wrong password shows explicit error and leaves no partial extracted data.
+    - Regression: standard “open backup folder” behavior remains unchanged.
+- [ ] `VS-1536` Existing-backup key rotation job.
+  - Scope: explicit user-triggered re-encryption of existing encrypted backups from old key to new key (project or global scope) with atomic replacement.
+  - Depends on: `VS-1533`, `VS-1534`.
+  - Acceptance tests:
+    - Integration: rotate succeeds for selected backups and old password no longer decrypts rotated artifacts.
+    - Integration: interruption/failure leaves original backup intact (no corruption).
+    - UX: per-backup failure summary lists skipped/failed/succeeded entries.
 
 #### `P1` Bandwidth limits and quiet hours
 - [ ] `VS-1510` Config model + settings UI for caps and schedule.
@@ -244,21 +294,21 @@
     - Support check: troubleshooting references updated terms only.
 
 #### `P2` Snapshot diff summaries
-- [ ] `VS-1530` Compute + persist diff summary statistics.
+- [ ] `VS-1540` Compute + persist diff summary statistics.
   - Scope: added/modified/deleted counts, top changed paths, net size delta.
   - Depends on: none.
   - Acceptance tests:
     - Unit: summary math is correct for synthetic change sets.
     - Perf: summary calculation does not introduce noticeable UI blocking.
-- [ ] `VS-1531` Projects/Backups summary panel.
+- [ ] `VS-1541` Projects/Backups summary panel.
   - Scope: compact diff summary UI with concise labels and fallback states.
-  - Depends on: `VS-1530`.
+  - Depends on: `VS-1540`.
   - Acceptance tests:
     - UI: summary panel renders correctly for empty, small, and large diffs.
     - UI quality: no clipping in common windowed sizes.
-- [ ] `VS-1532` Export summary action (text/JSON).
+- [ ] `VS-1542` Export summary action (text/JSON).
   - Scope: export per-snapshot summary for sharing/troubleshooting.
-  - Depends on: `VS-1530`.
+  - Depends on: `VS-1540`.
   - Acceptance tests:
     - Integration: exported file matches on-screen summary values.
     - Regression: export failure path shows actionable error without crashing flow.
@@ -282,14 +332,15 @@
 
 ### 1.5 release execution plan (how we tackle it)
 1. Phase `A` (security backbone): complete `VS-1501` -> `VS-1504` -> `VS-1502` -> `VS-1503` -> `VS-1505` before feature freeze.
-2. Phase `B` (operational controls): deliver `VS-1510` -> `VS-1511` -> `VS-1512` -> `VS-1513` with visible policy state in cards/tray/logs.
-3. Phase `C` (clarity and insights): run `VS-1520`/`VS-1521`/`VS-1522` in parallel with `VS-1530`, then close with `VS-1523`, `VS-1531`, `VS-1532`.
-4. Phase `D` (stabilization): execute `VS-1590`, `VS-1591`, `VS-1592` and block release until all exit gates pass.
-5. Weekly operating rhythm:
+2. Phase `B` (encryption controls + usability): deliver `VS-1530` -> `VS-1531` -> `VS-1532` -> `VS-1533` -> `VS-1534`, then `VS-1535`, `VS-1536`.
+3. Phase `C` (operational controls): deliver `VS-1510` -> `VS-1511` -> `VS-1512` -> `VS-1513` with visible policy state in cards/tray/logs.
+4. Phase `D` (clarity and insights): run `VS-1520`/`VS-1521`/`VS-1522` in parallel with `VS-1540`, then close with `VS-1523`, `VS-1541`, `VS-1542`.
+5. Phase `E` (stabilization): execute `VS-1590`, `VS-1591`, `VS-1592` and block release until all exit gates pass.
+6. Weekly operating rhythm:
    - Start-of-week: lock ticket scope and dependency order.
    - Mid-week: integration checkpoint on mixed-version sync + backup/restore regressions.
    - End-of-week: demo + hardening triage + release-gate burn-down.
-6. Release gate policy:
+7. Release gate policy:
    - No unresolved `P0` or compatibility defects.
    - No known data-loss/corruption path.
    - Localization/docs complete for all shipped `1.5` UX.

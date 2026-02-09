@@ -34,6 +34,16 @@ public record Backup
     public bool IsImported { get; init; }
 
     /// <summary>
+    /// When true, backup payload was written as encrypted artifact.
+    /// </summary>
+    public bool IsEncrypted { get; init; }
+
+    /// <summary>
+    /// Non-secret crypto descriptor JSON for metadata sync/export.
+    /// </summary>
+    public string CryptoDescriptorJson { get; init; } = BackupCryptoDescriptor.PlainMetadataJson;
+
+    /// <summary>
     /// Absolute path to the destination root that stored this backup.
     /// </summary>
     public string DestinationPath { get; init; } = string.Empty;

@@ -355,7 +355,9 @@ public sealed class MetadataSyncService
                 metaBackup.DestinationAlias,
                 metaBackup.IsProtected,
                 isImported: true,
-                originMachineName: metaBackup.OriginMachineName);
+                originMachineName: metaBackup.OriginMachineName,
+                isEncrypted: metaBackup.IsEncrypted,
+                cryptoDescriptorJson: metaBackup.KdfParamsJson);
             importedBackups++;
             affectedProjectIds.Add(projectId);
         }
@@ -1108,6 +1110,7 @@ public sealed class MetadataSyncService
                     FileCount = snapshot.FileCount,
                     TotalBytes = snapshot.TotalBytes
                 });
+                var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
                 store.UpsertBackup(new MetaBackup
                 {
                     ExternalId = backupExternalId,
@@ -1120,8 +1123,8 @@ public sealed class MetadataSyncService
                     DestinationAlias = backup.DestinationAlias ?? string.Empty,
                     OriginMachineName = machineId,
                     IsProtected = backup.IsProtected,
-                    IsEncrypted = false,
-                    KdfParamsJson = BackupCryptoDescriptor.PlainMetadataJson
+                    IsEncrypted = backup.IsEncrypted,
+                    KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
                 });
                 exportedBackups = 1;
             }
@@ -1439,6 +1442,7 @@ public sealed class MetadataSyncService
             }
 
             var backupExternalId = EnsureBackupExternalId(backup);
+            var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
             store.UpsertBackup(new MetaBackup
             {
                 ExternalId = backupExternalId,
@@ -1451,8 +1455,8 @@ public sealed class MetadataSyncService
                 DestinationAlias = backup.DestinationAlias ?? string.Empty,
                 OriginMachineName = machineId,
                 IsProtected = backup.IsProtected,
-                IsEncrypted = false,
-                KdfParamsJson = BackupCryptoDescriptor.PlainMetadataJson
+                IsEncrypted = backup.IsEncrypted,
+                KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
             });
             exportedBackups++;
         }

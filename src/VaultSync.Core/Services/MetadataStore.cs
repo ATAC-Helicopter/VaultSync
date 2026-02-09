@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Dapper;
 using Microsoft.Data.Sqlite;
@@ -84,6 +85,33 @@ public sealed class MetadataStore
         try
         {
             c.Execute("ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN enc_flag INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN kdf_params_json TEXT NOT NULL DEFAULT '{}';");
         }
         catch
         {
@@ -309,47 +337,41 @@ public sealed class MetadataStore
     public IEnumerable<MetaBackup> ListBackups()
     {
         using var c = TryOpenRead();
-        try
-        {
-            return SafeQuery<MetaBackup>(
-                c,
-                """
-                SELECT
-                  external_id as ExternalId,
-                  project_external_id as ProjectExternalId,
-                  snapshot_external_id as SnapshotExternalId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path_rel as PathRel,
-                  destination_alias as DestinationAlias,
-                  origin_machine_name as OriginMachineName,
-                  is_protected as IsProtected,
-                  enc_flag as IsEncrypted,
-                  kdf_params_json as KdfParamsJson
-                FROM backups;
-                """);
-        }
-        catch
-        {
-            return SafeQuery<MetaBackup>(
-                c,
-                """
-                SELECT
-                  external_id as ExternalId,
-                  project_external_id as ProjectExternalId,
-                  snapshot_external_id as SnapshotExternalId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path_rel as PathRel,
-                  destination_alias as DestinationAlias,
-                  is_protected as IsProtected,
-                  enc_flag as IsEncrypted,
-                  kdf_params_json as KdfParamsJson
-                FROM backups;
-                """);
-        }
+        if (c is null)
+            return Array.Empty<MetaBackup>();
+
+        var backupColumns = GetTableColumns(c, "backups");
+        var originMachineProjection = backupColumns.Contains("origin_machine_name")
+            ? "origin_machine_name as OriginMachineName"
+            : "'' as OriginMachineName";
+        var protectedProjection = backupColumns.Contains("is_protected")
+            ? "is_protected as IsProtected"
+            : "0 as IsProtected";
+        var encryptedProjection = backupColumns.Contains("enc_flag")
+            ? "enc_flag as IsEncrypted"
+            : "0 as IsEncrypted";
+        var descriptorProjection = backupColumns.Contains("kdf_params_json")
+            ? "kdf_params_json as KdfParamsJson"
+            : "'{}' as KdfParamsJson";
+
+        var sql = $"""
+            SELECT
+              external_id as ExternalId,
+              project_external_id as ProjectExternalId,
+              snapshot_external_id as SnapshotExternalId,
+              created_utc as CreatedUtc,
+              type,
+              total_bytes as TotalBytes,
+              path_rel as PathRel,
+              destination_alias as DestinationAlias,
+              {originMachineProjection},
+              {protectedProjection},
+              {encryptedProjection},
+              {descriptorProjection}
+            FROM backups;
+            """;
+
+        return SafeQuery<MetaBackup>(c, sql);
     }
 
     public IEnumerable<MetaBackupRef> ListBackupRefs()
@@ -548,6 +570,22 @@ public sealed class MetadataStore
         }
     }
 
+    private static HashSet<string> GetTableColumns(SqliteConnection connection, string tableName)
+    {
+        try
+        {
+            return connection
+                .Query<TableColumnInfo>($"PRAGMA table_info({tableName});")
+                .Select(c => c.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
     private void ConfigureConnection(SqliteConnection conn, bool write)
     {
         if (!write)
@@ -591,6 +629,11 @@ public sealed class MetadataStore
 
     private static string ToUtcString(DateTime utc) =>
         utc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
+
+    private sealed class TableColumnInfo
+    {
+        public string Name { get; set; } = string.Empty;
+    }
 }
 
 public sealed class MetaInfo

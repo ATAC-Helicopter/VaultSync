@@ -1138,6 +1138,13 @@ namespace VaultSync.UI.ViewModels
                                 sizeBytes);
 
                             var isProtected = IsBackupProtectedOnDisk(backupFolder);
+                            var isEncrypted = false;
+                            var cryptoDescriptorJson = BackupCryptoDescriptor.PlainMetadataJson;
+                            if (BackupArchiveCryptoService.TryReadDescriptor(backupFolder, out var descriptor, out var encrypted))
+                            {
+                                isEncrypted = encrypted;
+                                cryptoDescriptorJson = descriptor.ToMetadataJson(encrypted);
+                            }
                             _repo.CreateBackupFromMetadata(
                                 string.Empty,
                                 projectEntry.Value.Id,
@@ -1149,7 +1156,9 @@ namespace VaultSync.UI.ViewModels
                                 dest.Path ?? destRoot,
                                 dest.Alias ?? string.Empty,
                                 isProtected,
-                                isImported: true);
+                                isImported: true,
+                                isEncrypted: isEncrypted,
+                                cryptoDescriptorJson: cryptoDescriptorJson);
 
                             existingKeys.Add(key);
                             added++;
@@ -1225,8 +1234,9 @@ namespace VaultSync.UI.ViewModels
                 return false;
 
             var completed = Path.Combine(backupFolder, ".vaultsync_complete");
-            var archive = Path.Combine(backupFolder, "data.zip");
-            if (File.Exists(completed) || File.Exists(archive))
+            var archive = Path.Combine(backupFolder, BackupArchiveCryptoService.PlainArchiveFileName);
+            var encryptedArchive = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            if (File.Exists(completed) || File.Exists(archive) || File.Exists(encryptedArchive))
                 return true;
 
             try
@@ -1248,11 +1258,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var archive = Path.Combine(backupFolder, "data.zip");
-                if (File.Exists(archive))
-                {
-                    return new FileInfo(archive).Length;
-                }
+                return BackupArchiveCryptoService.GetStoredArchiveSize(backupFolder);
             }
             catch
             {
@@ -5194,16 +5200,20 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(projectRoot))
                 return RestoreBackupPreparation.Failure;
 
-            return new RestoreBackupPreparation(true, backupFullPath, projectRoot, project.Name);
+            var encryptedArchivePath = Path.Combine(backupFullPath, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            var isEncrypted = backup.IsEncrypted || File.Exists(encryptedArchivePath);
+
+            return new RestoreBackupPreparation(true, backupFullPath, projectRoot, project.Name, isEncrypted);
         }
 
         private sealed record RestoreBackupPreparation(
             bool IsReady,
             string BackupFullPath,
             string ProjectRoot,
-            string ProjectName)
+            string ProjectName,
+            bool IsEncrypted)
         {
-            public static RestoreBackupPreparation Failure => new(false, string.Empty, string.Empty, string.Empty);
+            public static RestoreBackupPreparation Failure => new(false, string.Empty, string.Empty, string.Empty, false);
         }
 
         private string ResolveRestoreTarget(Project project)
@@ -5266,6 +5276,121 @@ namespace VaultSync.UI.ViewModels
                 new(true, null, cfg, projects, disabled);
         }
 
+        private async Task<(bool Confirmed, string Password)> ConfirmEncryptedRestorePasswordAsync(string projectName)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Restore.EncryptedPasswordTitle", "Encrypted backup password"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var prompt = new TextBlock
+                {
+                    Text = string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Backups.Restore.EncryptedPasswordPrompt", "Enter the encryption password to restore '{0}'."),
+                        projectName),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var passwordLabel = new TextBlock
+                {
+                    Text = L("Backups.Restore.EncryptedPasswordLabel", "Password"),
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+
+                var passwordBox = new TextBox
+                {
+                    Width = 320,
+                    PasswordChar = '●'
+                };
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var restoreButton = new Button
+                {
+                    Content = L("Backups.Section.Restore", "Restore"),
+                    MinWidth = 140
+                };
+                restoreButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                cancelButton.Click += (_, _) => window?.Close();
+                restoreButton.Click += (_, _) =>
+                {
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(restoreButton);
+
+                var content = new StackPanel { Spacing = 10 };
+                content.Children.Add(title);
+                content.Children.Add(prompt);
+                content.Children.Add(passwordLabel);
+                content.Children.Add(passwordBox);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Restore.EncryptedPasswordTitle", "Encrypted backup password"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 540,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                var password = passwordBox.Text ?? string.Empty;
+                if (confirmed && string.IsNullOrWhiteSpace(password))
+                    return (false, string.Empty);
+
+                return (confirmed, password);
+            });
+        }
+
         private async void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
         {
             if (snapshot is null)
@@ -5285,6 +5410,23 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
+            string? encryptedRestorePassword = null;
+            if (preparation.IsEncrypted)
+            {
+                var passwordPrompt = await ConfirmEncryptedRestorePasswordAsync(preparation.ProjectName);
+                if (!passwordPrompt.Confirmed)
+                    return;
+
+                encryptedRestorePassword = passwordPrompt.Password;
+                if (string.IsNullOrWhiteSpace(encryptedRestorePassword))
+                {
+                    BackupsViewModel.ShowNotification(
+                        L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
+                        "Error");
+                    return;
+                }
+            }
+
             var projectRoot   = preparation.ProjectRoot;
             var backupFullPath = preparation.BackupFullPath;
             BackupsViewModel.IsBusy      = true;
@@ -5298,13 +5440,14 @@ namespace VaultSync.UI.ViewModels
                 string.Empty,
                 allowCancel: false);
 
+            var restoreSucceeded = false;
             try
             {
                 await Task.Run(() =>
                 {
                     Console.WriteLine($"[Restore] Starting restore for '{preparation.ProjectName}'.");
                     Console.WriteLine($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
-                    RestoreDirectory(backupFullPath, projectRoot, (percent, currentFile) =>
+                    RestoreDirectory(backupFullPath, projectRoot, encryptedRestorePassword, (percent, currentFile) =>
                     {
                         var label = string.IsNullOrWhiteSpace(currentFile)
                             ? L("Backups.Status.Restoring", "Restoring backup...")
@@ -5319,27 +5462,35 @@ namespace VaultSync.UI.ViewModels
                     });
                     Console.WriteLine($"[Restore] Completed restore for '{preparation.ProjectName}'.");
                 });
+                restoreSucceeded = true;
 
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Restore] Restore failed for '{preparation.ProjectName}': {ex.Message}");
 
+                var failureMessage = IsEncryptedRestorePasswordError(ex)
+                    ? L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted.")
+                    : ex.Message;
+
                 Dispatcher.UIThread.Post(() =>
                 {
                     BackupsViewModel.BackupCurrentFile = L("Backups.Status.RestoreFailed", "Restore failed.");
                     BackupsViewModel.BackupEtaText =
                         string.IsNullOrWhiteSpace(BackupsViewModel.BackupEtaText)
-                            ? ex.Message
+                            ? failureMessage
                                 : BackupsViewModel.BackupEtaText + " - " + L("Backups.Status.FailedSuffix", "Failed");
                 });
             }
             finally
             {
-                var restoredProject = _repo.GetProjectByName(preparation.ProjectName);
-                if (restoredProject != null && restoredProject.NeedsRestore)
+                if (restoreSucceeded)
                 {
-                    _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
+                    var restoredProject = _repo.GetProjectByName(preparation.ProjectName);
+                    if (restoredProject != null && restoredProject.NeedsRestore)
+                    {
+                        _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
+                    }
                 }
                 BackupsViewModel.RemoveActiveBackup(restoreCardId);
                 BackupsViewModel.IsBusy      = false;
@@ -5347,7 +5498,25 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private static void RestoreDirectory(string sourceDir, string targetDir, Action<double, string>? progress)
+        private static bool IsEncryptedRestorePasswordError(Exception ex)
+        {
+            Exception? current = ex;
+            while (current is not null)
+            {
+                if (string.Equals(
+                    current.Message,
+                    BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage,
+                    StringComparison.Ordinal))
+                {
+                    return true;
+                }
+                current = current.InnerException;
+            }
+
+            return false;
+        }
+
+        private static void RestoreDirectory(string sourceDir, string targetDir, string? encryptionPassword, Action<double, string>? progress)
         {
             if (string.IsNullOrWhiteSpace(sourceDir))
                 throw new ArgumentException("Source directory is required.", nameof(sourceDir));
@@ -5361,10 +5530,23 @@ namespace VaultSync.UI.ViewModels
             // Ensure target root exists
             Directory.CreateDirectory(targetDir);
 
-            var archivePath = Path.Combine(sourceDir, "data.zip");
+            var archivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.PlainArchiveFileName);
             if (File.Exists(archivePath))
             {
                 ExtractArchiveWithProgress(archivePath, targetDir, progress);
+                return;
+            }
+
+            var encryptedArchivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            if (File.Exists(encryptedArchivePath))
+            {
+                if (string.IsNullOrWhiteSpace(encryptionPassword))
+                {
+                    throw new InvalidOperationException(
+                        "A password is required to restore encrypted backups.");
+                }
+
+                RestoreEncryptedArchiveWithProgress(sourceDir, targetDir, encryptionPassword, progress);
                 return;
             }
 
@@ -5377,22 +5559,7 @@ namespace VaultSync.UI.ViewModels
             }
 
             // Copy all files, overwriting existing ones but not deleting extras.
-            var files = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories);
-            var totalFiles = files.Length;
-            var processed = 0;
-            foreach (var filePath in files)
-            {
-                var relative = Path.GetRelativePath(sourceDir, filePath);
-                var target   = Path.Combine(targetDir, relative);
-
-                var parentDir = Path.GetDirectoryName(target);
-                if (!string.IsNullOrEmpty(parentDir))
-                    Directory.CreateDirectory(parentDir);
-
-                File.Copy(filePath, target, overwrite: true);
-                processed++;
-                progress?.Invoke(totalFiles == 0 ? 100 : processed * 100d / totalFiles, relative);
-            }
+            CopyDirectoryWithProgress(sourceDir, targetDir, 0, 100, progress);
         }
 
         private static void ExtractArchiveWithProgress(string archivePath, string targetDir, Action<double, string>? progress)
@@ -5420,6 +5587,83 @@ namespace VaultSync.UI.ViewModels
                 processed++;
                 progress?.Invoke(totalEntries == 0 ? 100 : processed * 100d / totalEntries, entry.FullName);
             }
+        }
+
+        private static void RestoreEncryptedArchiveWithProgress(
+            string sourceDir,
+            string targetDir,
+            string password,
+            Action<double, string>? progress)
+        {
+            var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-restore-{Guid.NewGuid():N}");
+            var stagingExtracted = Path.Combine(stagingRoot, "content");
+            var stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
+
+            try
+            {
+                Directory.CreateDirectory(stagingExtracted);
+                progress?.Invoke(5, "Decrypting backup...");
+
+                var cryptoService = new BackupArchiveCryptoService();
+                cryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
+                progress?.Invoke(30, "Decrypting backup...");
+
+                ExtractArchiveWithProgress(stagingArchive, stagingExtracted, (percent, currentFile) =>
+                {
+                    var mapped = 30 + (percent * 0.5);
+                    progress?.Invoke(Math.Clamp(mapped, 30, 80), currentFile);
+                });
+
+                progress?.Invoke(82, "Restoring backup...");
+                CopyDirectoryWithProgress(stagingExtracted, targetDir, 82, 100, progress);
+            }
+            finally
+            {
+                if (Directory.Exists(stagingRoot))
+                {
+                    try
+                    {
+                        DeleteDirectoryRobust(stagingRoot);
+                    }
+                    catch
+                    {
+                        // best-effort cleanup
+                    }
+                }
+            }
+        }
+
+        private static void CopyDirectoryWithProgress(
+            string sourceDir,
+            string targetDir,
+            double startPercent,
+            double endPercent,
+            Action<double, string>? progress)
+        {
+            var files = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories);
+            var totalFiles = files.Length;
+            var processed = 0;
+            foreach (var filePath in files)
+            {
+                var relative = Path.GetRelativePath(sourceDir, filePath);
+                var target = Path.Combine(targetDir, relative);
+
+                var parentDir = Path.GetDirectoryName(target);
+                if (!string.IsNullOrEmpty(parentDir))
+                    Directory.CreateDirectory(parentDir);
+
+                File.Copy(filePath, target, overwrite: true);
+                processed++;
+                if (progress is not null)
+                {
+                    var ratio = totalFiles == 0 ? 1d : processed / (double)totalFiles;
+                    var value = startPercent + ((endPercent - startPercent) * ratio);
+                    progress(value, relative);
+                }
+            }
+
+            if (totalFiles == 0)
+                progress?.Invoke(endPercent, string.Empty);
         }
 
         private void OnCancelActiveBackupRequested(BackupProgressItem? item)

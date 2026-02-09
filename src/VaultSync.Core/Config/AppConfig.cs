@@ -140,9 +140,9 @@ namespace VaultSync.Core.Config
         /// Reference to secure-store entry; no plaintext password is persisted in config.
         /// </summary>
         public string KeyRef { get; set; } = string.Empty;
-        public string Algorithm { get; set; } = "aes-256-gcm";
-        public string KdfProfile { get; set; } = "argon2id-v1";
-        public string KdfParamRef { get; set; } = "default";
+        public string Algorithm { get; set; } = "aes-256-cbc-hmac-sha256-v1";
+        public string KdfProfile { get; set; } = "pbkdf2-sha256-v1";
+        public string KdfParamRef { get; set; } = "pbkdf2-iter-210000";
         /// <summary>
         /// When true, in-memory session fallback can be offered if secure-store save fails.
         /// Explicit user confirmation is still required by runtime flows.

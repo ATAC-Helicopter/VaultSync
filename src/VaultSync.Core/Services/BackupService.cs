@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
@@ -17,6 +18,8 @@ public sealed class BackupService
 {
     private readonly Dictionary<int, CancellationTokenSource> _cancelMap = new();
     private readonly SqliteRepository _repo;
+    private readonly BackupEncryptionSecretService _backupEncryptionSecretService;
+    private readonly BackupArchiveCryptoService _backupArchiveCryptoService;
     private const string InProgressMarkerFileName = ".vaultsync_inprogress";
     private const string CompletedMarkerFileName = ".vaultsync_complete";
     public event Action<Backup>? BackupRetentionDeleted;
@@ -38,9 +41,14 @@ public sealed class BackupService
     private const int PreflightCacheLimit = 128;
     private const int StatsCacheLimit = 128;
 
-    public BackupService(SqliteRepository repo)
+    public BackupService(
+        SqliteRepository repo,
+        BackupEncryptionSecretService? backupEncryptionSecretService = null,
+        BackupArchiveCryptoService? backupArchiveCryptoService = null)
     {
         _repo = repo;
+        _backupEncryptionSecretService = backupEncryptionSecretService ?? new BackupEncryptionSecretService();
+        _backupArchiveCryptoService = backupArchiveCryptoService ?? new BackupArchiveCryptoService();
     }
 
     public void CancelBackup(int projectId)
@@ -414,6 +422,19 @@ public sealed class BackupService
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
 
+        var configSnapshot = AppConfigStore.Load();
+        var encryptionConfig = configSnapshot.Backups.Encryption ?? new BackupEncryptionConfig();
+        var encryptionRequested = encryptionConfig.Enabled;
+        if (encryptionRequested && !useArchiveMode)
+        {
+            // Encrypted backups currently require archive artifacts.
+            useArchiveMode = true;
+            Console.WriteLine($"[BackupService] Encryption enabled; forcing archive mode for project '{project.Name}'.");
+        }
+
+        var backupIsEncrypted = false;
+        var backupCryptoDescriptorJson = BackupCryptoDescriptor.PlainMetadataJson;
+
         // Create (or replace) a CTS for this project and link with caller token.
         if (_cancelMap.ContainsKey(project.Id))
         {
@@ -699,6 +720,41 @@ public sealed class BackupService
             }
         }
 
+        if (encryptionRequested)
+        {
+            try
+            {
+                progressCallback?.Invoke(95, string.Empty, "Encrypting archive...");
+                var password = _backupEncryptionSecretService.GetSecret(
+                    encryptionConfig.KeyRef,
+                    username: "vaultsync-backup-encryption");
+                if (string.IsNullOrWhiteSpace(password))
+                {
+                    throw new InvalidOperationException(
+                        "Backup encryption is enabled but no encryption secret is available.");
+                }
+
+                var encryptionResult = _backupArchiveCryptoService.EncryptArchiveInPlace(
+                    backupFolderUsed,
+                    password,
+                    encryptionConfig,
+                    linkedToken);
+
+                backupIsEncrypted = encryptionResult.IsEncrypted;
+                backupCryptoDescriptorJson = encryptionResult.Descriptor.ToMetadataJson(backupIsEncrypted);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Console.WriteLine($"[BackupService] Backup encryption failed for '{project.Name}': {ex.Message}");
+                DeletePartialBackup(backupFolderUsed);
+                if (!string.Equals(backupFolderUsed, backupFolder, StringComparison.OrdinalIgnoreCase))
+                    DeletePartialBackup(backupFolder);
+                throw new InvalidOperationException(
+                    "Backup encryption failed; partial backup data was removed.",
+                    ex);
+            }
+        }
+
         // Store relative path so if backupRoot moves, paths are still valid.
         var relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
         var backupType = isAuto ? "auto" : "manual";
@@ -724,7 +780,9 @@ public sealed class BackupService
                 totalBytes: totalBytes,
                 relativePath: relativePath,
                 destinationPath: metadataRoot,
-                destinationAlias: metadataAlias);
+                destinationAlias: metadataAlias,
+                isEncrypted: backupIsEncrypted,
+                cryptoDescriptorJson: backupCryptoDescriptorJson);
 
             Console.WriteLine($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
 
@@ -749,7 +807,12 @@ public sealed class BackupService
             Console.WriteLine($"[BackupService] Skipping completion marker on network destination '{backupFolderUsed}'.");
         }
 
-        progressCallback?.Invoke(100, string.Empty, useArchiveMode ? "Backup completed (archive)." : "Backup completed.");
+        var completedMessage = backupIsEncrypted
+            ? "Backup completed (encrypted)."
+            : useArchiveMode
+                ? "Backup completed (archive)."
+                : "Backup completed.";
+        progressCallback?.Invoke(100, string.Empty, completedMessage);
 
         if (_cancelMap.TryGetValue(project.Id, out var finishedCts))
         {
@@ -1219,11 +1282,11 @@ public sealed class BackupService
 
         // 3. Prepare destination and local temp folder.
         Directory.CreateDirectory(destDir);
-        var finalArchivePath = Path.Combine(destDir, "data.zip");
+        var finalArchivePath = Path.Combine(destDir, BackupArchiveCryptoService.PlainArchiveFileName);
 
         var localTempRoot = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(localTempRoot);
-        var localArchive = Path.Combine(localTempRoot, "data.zip");
+        var localArchive = Path.Combine(localTempRoot, BackupArchiveCryptoService.PlainArchiveFileName);
 
         try
         {

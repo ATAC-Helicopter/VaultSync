@@ -130,6 +130,8 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           destination_path TEXT NOT NULL DEFAULT '',
           destination_alias TEXT NOT NULL DEFAULT '',
           origin_machine_name TEXT NOT NULL DEFAULT '',
+          is_encrypted INTEGER NOT NULL DEFAULT 0,
+          crypto_descriptor_json TEXT NOT NULL DEFAULT '{}',
           is_imported INTEGER NOT NULL DEFAULT 0,
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
@@ -142,6 +144,8 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("backups", "is_encrypted", "ALTER TABLE backups ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("backups", "crypto_descriptor_json", "ALTER TABLE backups ADD COLUMN crypto_descriptor_json TEXT NOT NULL DEFAULT '{}';");
     EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
     EnsureColumnExists("projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
@@ -707,17 +711,29 @@ DELETE FROM sqlite_sequence;";
         }
         // ---------- Backups ----------
 
-        public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath, string destinationPath, string destinationAlias, bool isProtected = false)
+        public int CreateBackup(
+            int projectId,
+            int snapshotId,
+            string type,
+            long totalBytes,
+            string relativePath,
+            string destinationPath,
+            string destinationAlias,
+            bool isProtected = false,
+            bool isEncrypted = false,
+            string? cryptoDescriptorJson = null)
         {
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
             var externalId = NewExternalId();
             var originMachineName = Environment.MachineName;
+            var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
+            var descriptorJson = descriptor.ToMetadataJson(isEncrypted);
 
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_imported)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsImported);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsEncrypted, @CryptoDescriptorJson, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -733,6 +749,8 @@ DELETE FROM sqlite_sequence;";
                     DestinationAlias = destinationAlias ?? string.Empty,
                     OriginMachineName = originMachineName,
                     IsProtected     = isProtected ? 1 : 0,
+                    IsEncrypted     = isEncrypted ? 1 : 0,
+                    CryptoDescriptorJson = descriptorJson,
                     IsImported      = 0
                 });
         }
@@ -749,15 +767,19 @@ DELETE FROM sqlite_sequence;";
             string destinationAlias,
             bool isProtected,
             bool isImported,
-            string originMachineName = "")
+            string originMachineName = "",
+            bool isEncrypted = false,
+            string? cryptoDescriptorJson = null)
         {
             using var c = Open();
             var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
             var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
+            var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
+            var descriptorJson = descriptor.ToMetadataJson(isEncrypted);
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_imported)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsImported);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsEncrypted, @CryptoDescriptorJson, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -773,6 +795,8 @@ DELETE FROM sqlite_sequence;";
                     DestinationAlias = destinationAlias ?? string.Empty,
                     OriginMachineName = originMachineName ?? string.Empty,
                     IsProtected     = isProtected ? 1 : 0,
+                    IsEncrypted     = isEncrypted ? 1 : 0,
+                    CryptoDescriptorJson = descriptorJson,
                     IsImported      = isImported ? 1 : 0
                 });
         }
@@ -798,6 +822,8 @@ DELETE FROM sqlite_sequence;";
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM backups
                 WHERE external_id = @externalId
@@ -846,6 +872,8 @@ DELETE FROM sqlite_sequence;";
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM backups
                 WHERE project_id = @pid
@@ -873,6 +901,8 @@ DELETE FROM sqlite_sequence;";
                     b.destination_alias as DestinationAlias,
                     b.origin_machine_name as OriginMachineName,
                     b.is_protected as IsProtected,
+                    b.is_encrypted as IsEncrypted,
+                    b.crypto_descriptor_json as CryptoDescriptorJson,
                     b.is_imported as IsImported
                   FROM backups b
                 INNER JOIN (
@@ -903,6 +933,8 @@ DELETE FROM sqlite_sequence;";
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM backups
                 WHERE id = @id
@@ -932,6 +964,8 @@ DELETE FROM sqlite_sequence;";
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM (
                     SELECT
@@ -963,6 +997,8 @@ DELETE FROM sqlite_sequence;";
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM backups
                   WHERE project_id = @pid
@@ -1011,6 +1047,8 @@ DELETE FROM sqlite_sequence;";
                   destination_alias as DestinationAlias,
                   origin_machine_name as OriginMachineName,
                   is_protected as IsProtected,
+                  is_encrypted as IsEncrypted,
+                  crypto_descriptor_json as CryptoDescriptorJson,
                   is_imported as IsImported
                 FROM backups
                 WHERE created_utc >= @from AND created_utc <= @to
@@ -1050,6 +1088,8 @@ DELETE FROM sqlite_sequence;";
                   destination_alias as DestinationAlias,
                   origin_machine_name as OriginMachineName,
                   is_protected as IsProtected,
+                  is_encrypted as IsEncrypted,
+                  crypto_descriptor_json as CryptoDescriptorJson,
                   is_imported as IsImported
                 FROM backups
                 ORDER BY created_utc DESC
