@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
@@ -14,6 +16,7 @@ namespace VaultSync.UI;
 
 internal static class Program
 {
+    private const int MaxActivationPayloadBytes = 8192;
     private static Mutex? _instanceMutex;
     private static CancellationTokenSource? _activationListenerCts;
     private const string InstancePipeName = "VaultSync.UI.SingleInstancePipe";
@@ -42,7 +45,7 @@ internal static class Program
             DiagnosticsLogger.Record("Second instance detected. Signaling existing instance.");
             _instanceMutex.Dispose();
             _instanceMutex = null;
-            TrySignalExistingInstance();
+            TrySignalExistingInstance(args);
             return;
         }
 
@@ -79,7 +82,7 @@ internal static class Program
         }
     }
 
-    private static void TrySignalExistingInstance()
+    private static void TrySignalExistingInstance(string[] args)
     {
         try
         {
@@ -90,7 +93,9 @@ internal static class Program
             try
             {
                 client.Connect(500);
-                client.WriteByte(1);
+                var payload = BuildActivationPayload(args);
+                var bytes = Encoding.UTF8.GetBytes(payload);
+                client.Write(bytes, 0, bytes.Length);
                 DiagnosticsLogger.Record("Signaled existing instance.");
             }
             catch (TimeoutException)
@@ -120,9 +125,12 @@ internal static class Program
                     PipeOptions.Asynchronous);
 
                 await server.WaitForConnectionAsync(token);
-                _ = server.ReadByte();
-                DiagnosticsLogger.Record("Received activation signal.");
-                App.ActivateMainWindowFromSignal();
+                var payload = await ReadPipePayloadAsync(server, token);
+                var payloadKind = payload.StartsWith("open-vse|", StringComparison.Ordinal)
+                    ? "open-vse"
+                    : "activate";
+                DiagnosticsLogger.Record($"Received activation signal. PayloadKind='{payloadKind}'.");
+                App.ActivateFromSignal(payload);
             }
             catch (OperationCanceledException)
             {
@@ -133,6 +141,53 @@ internal static class Program
                 // Ignore and keep listening.
             }
         }
+    }
+
+    private static string BuildActivationPayload(string[] args)
+    {
+        var encryptedArchivePath = args.FirstOrDefault(IsEncryptedArchiveArg);
+        if (!string.IsNullOrWhiteSpace(encryptedArchivePath))
+        {
+            var encodedPath = Convert.ToBase64String(Encoding.UTF8.GetBytes(encryptedArchivePath));
+            return $"open-vse|{encodedPath}";
+        }
+
+        return "activate";
+    }
+
+    private static async Task<string> ReadPipePayloadAsync(PipeStream server, CancellationToken token)
+    {
+        var buffer = new byte[1024];
+        using var ms = new MemoryStream();
+        while (true)
+        {
+            var read = await server.ReadAsync(buffer.AsMemory(0, buffer.Length), token);
+            if (read <= 0)
+                break;
+
+            ms.Write(buffer, 0, read);
+            if (ms.Length > MaxActivationPayloadBytes)
+                return "activate";
+
+            if (read < buffer.Length)
+                break;
+        }
+
+        if (ms.Length == 0)
+            return "activate";
+
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    private static bool IsEncryptedArchiveArg(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        if (value.StartsWith("-", StringComparison.Ordinal))
+            return false;
+
+        return value.EndsWith(".vse", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void RegisterPosixSignals()

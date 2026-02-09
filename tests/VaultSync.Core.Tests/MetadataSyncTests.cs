@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -276,6 +277,76 @@ public sealed class MetadataSyncTests : IDisposable
 
         var updatedBackup = repo.GetBackupById(backupId);
         Assert.False(string.IsNullOrWhiteSpace(updatedBackup?.ExternalId));
+    }
+
+    [Fact]
+    public void ImportFromStore_ProjectSettings_AppliesEncryptionPolicyAndKeyRef()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+
+        var store = CreateStore(metaRoot);
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-settings-1",
+            Name = "Project Settings",
+            Preset = "unity",
+            RootPathHint = projectRoot,
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{\"encryptionPolicy\":\"encrypted\",\"encryptionKeyRef\":\"project-key-ref-01\"}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        var repo = CreateRepository(dbPath);
+        var service = new MetadataSyncService(repo);
+        var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+        var project = repo.GetProjectByName("Project Settings");
+        Assert.NotNull(project);
+        Assert.Equal(ProjectEncryptionPolicy.Encrypted, project!.EncryptionPolicy);
+        Assert.Equal("project-key-ref-01", project.EncryptionKeyRef);
+    }
+
+    [Fact]
+    public void ExportBackupToStore_ProjectSettings_IncludeEncryptionFields()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+
+        var repo = CreateRepository(dbPath);
+        var projectId = repo.AddProject(new Project
+        {
+            Name = "Project Export Settings",
+            RootPath = CreateTempDir(),
+            Preset = "unity",
+            CreatedUtc = DateTime.UtcNow,
+            EncryptionPolicy = ProjectEncryptionPolicy.Encrypted,
+            EncryptionKeyRef = "project-key-ref-export"
+        });
+
+        var snapshotId = repo.CreateSnapshot(projectId, 2, 500);
+        var backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            500,
+            "project-export-settings/2025-01-01_00-00-00",
+            metaRoot,
+            "Primary");
+
+        var service = new MetadataSyncService(repo);
+        var result = service.ExportBackupToStore(metaRoot, backupId, "1.5.0", "machine-settings");
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+        var store = new MetadataStore(metaRoot);
+        var metaProject = store.ListProjects().Single();
+        using var doc = JsonDocument.Parse(metaProject.SettingsJson);
+        Assert.True(doc.RootElement.TryGetProperty("encryptionPolicy", out var policy));
+        Assert.Equal(ProjectEncryptionPolicy.Encrypted, policy.GetString());
+        Assert.True(doc.RootElement.TryGetProperty("encryptionKeyRef", out var keyRef));
+        Assert.Equal("project-key-ref-export", keyRef.GetString());
     }
 
     [Fact]

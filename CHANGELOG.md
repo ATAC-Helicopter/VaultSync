@@ -5,6 +5,13 @@
 - [VS-1504] `BackupEncryptionSecretService` with secure-store writes and explicit session-memory fallback workflow.
 - [VS-1504] Global backup encryption config contract with non-secret key reference fields (`KeyRef`, algorithm/KDF parameters).
 - [VS-1502] `BackupArchiveCryptoService` for encrypted archive artifacts (`data.vse`) with per-backup salt/IV envelope metadata.
+- [VS-1530] Global backup encryption settings UI with secure password enrollment and explicit clear/reset action.
+- [VS-1531] Per-project encryption policy selector (`inherit global`, `encrypted`, `plain`) in Projects view with effective-state display.
+- [VS-1532] Per-project encryption key reference persistence (`encryption_key_ref`) with migration-safe defaults in the projects schema.
+- [VS-1533] `BackupEncryptionPolicyResolver` to compute effective encryption mode/key source per project at backup runtime.
+- [VS-1535] Explorer/open-file activation for `.vse` encrypted archives now routes into VaultSync with a password prompt flow.
+- [VS-1536] `BackupKeyRotationService` with explicit user-triggered rotation flow for existing encrypted backups (global scope or single-project filter).
+- [VS-1537] Per-project encryption password management action is now available in both Projects and Backups pages.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
 ### Changed
@@ -15,6 +22,18 @@
 - [VS-1502] Metadata sync import/export now preserves encryption flags and descriptor payloads for encrypted backups.
 - [VS-1503] Restore flow now prompts for an encryption password only for encrypted backups and uses staged decrypt/extract before applying files.
 - [VS-1505] Metadata sync import/export now stays compatible with mixed encrypted/plain history across legacy metadata-store schemas.
+- [VS-1530] Settings persistence now stores only non-secret backup-encryption refs (`Enabled`, `KeyRef`, fallback policy) while password material stays in secure storage/session memory.
+- [VS-1531] Backup runtime now resolves encryption mode per project using policy precedence (`project override` > `global`) before deciding archive encryption.
+- [VS-1531] Projects repository schema now persists per-project encryption policy with migration-safe default `inherit`.
+- [VS-1532] Metadata sync project settings import/export now preserves non-secret encryption fields (`encryptionPolicy`, `encryptionKeyRef`) across devices.
+- [VS-1533] Backup encryption now resolves key source in order: project key reference first, then global key reference, while honoring project policy overrides.
+- [VS-1533] Backup runs now fail fast with explicit errors when encryption is required but no key reference/secret is available.
+- [VS-1534] Encrypted restore now attempts secure-store keys in order (project key reference first, then global key reference) before prompting for manual password entry.
+- [VS-1534] Restore key fallback now prompts only when no stored key succeeds, preserving plain-backup restore behavior unchanged.
+- [VS-1535] Single-instance activation now forwards file-open payloads so opening `.vse` while VaultSync is running reuses the current app session.
+- [VS-1536] Settings encryption panel now includes a rotation action that prompts for old/new passwords and can target all projects or one project by name.
+- [VS-1536] Backup records now update encrypted descriptor metadata/size after successful key rotation.
+- [VS-1537] Projects and Backups per-project cards now share one password-edit flow, using a single app-level handler to prevent cross-page mismatch.
 - `CONTRIBUTING.md` fully restructured with the default `VS-xxxx` planning model and contribution flow.
 - Core test suite rewritten to match current metadata-sync and destination behavior contracts.
 ### Fixed
@@ -24,10 +43,11 @@
 - [VS-1503] Encrypted restore now fails with an explicit invalid-password/corruption error and leaves no partial restored output on wrong-password attempts.
 - [VS-1503] `NeedsRestore` flags are now cleared only after a successful restore completion.
 - [VS-1505] Import/preview from older metadata stores (missing `origin_machine_name` and encryption columns) no longer fails and defaults backups to plain compatibility values.
+- [VS-1536] Rotation failures now preserve original encrypted backup artifacts via rollback-safe swap logic (no corruption on failure/interruption).
 - Windows startup/debug runs no longer attempt to execute `/bin/ps` for parent-process info logging.
 - Metadata sync tests now reflect current import rules for existing/missing backup paths.
 
-## [1.4.1] - Unreleased
+## [1.4.1] - 06.02.2026
 ### Added
 - Startup load deferral safeguards to reduce early UI stalls.
 ### Changed
@@ -93,7 +113,7 @@
 - Backups and dashboard view models now load config off the UI thread.
 - Onboarding tour now refreshes cached config off the UI thread.
 
-## [1.4.0] - Unreleased
+## [1.4.0] - 04.02.2026
 ### Added
 - Backup estimate UI now shows size/time previews and capacity warnings.
 - Backup preflight API for size/time estimates.

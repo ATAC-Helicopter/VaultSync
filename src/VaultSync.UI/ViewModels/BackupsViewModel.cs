@@ -15,6 +15,7 @@ using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using VaultSync.Core.Models;
 using VaultSync.Core.Config;
+using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.UI.Services;
@@ -23,6 +24,7 @@ namespace VaultSync.UI.ViewModels
 {
     public class BackupsViewModel : ViewModelBase
     {
+        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
 
@@ -147,10 +149,14 @@ namespace VaultSync.UI.ViewModels
             new ObservableCollection<ProjectBackupItem>();
         public ObservableCollection<DestinationOption> DestinationOptions { get; } =
             new ObservableCollection<DestinationOption>();
+        public ObservableCollection<EncryptionPolicyOption> EncryptionPolicyOptions { get; } =
+            new ObservableCollection<EncryptionPolicyOption>();
 
         public event Action<int, bool>? AutoBackupPreferenceChanged;
         public event Action<DestinationStatusItem, bool>? DestinationActiveChanged;
         public event Action<int, string>? PreferredDestinationChanged;
+        public event Action<int, string>? ProjectEncryptionPolicyChanged;
+        public event Action<int>? ManageProjectEncryptionRequested;
 
         // Appearance
         public bool ShowProjectAvatars { get; private set; } = true;
@@ -583,6 +589,7 @@ namespace VaultSync.UI.ViewModels
         public ICommand ToggleBackupProtectionCommand { get; }
 
         public ICommand BackupProjectCommand { get; }
+        public ICommand ManageProjectEncryptionCommand { get; }
         public ICommand ShowProjectHistoryCommand { get; }
         public ICommand FilterSnapshotsCommand { get; }
         public ICommand CloseVerificationPopupCommand { get; }
@@ -604,6 +611,7 @@ namespace VaultSync.UI.ViewModels
 
             // Per-project actions
             BackupProjectCommand      = new RelayCommand(p => BackupProject(p as ProjectBackupItem));
+            ManageProjectEncryptionCommand = new RelayCommand(p => ManageProjectEncryption(p as ProjectBackupItem));
             ShowProjectHistoryCommand = new RelayCommand(p => ShowProjectHistory(p as ProjectBackupItem));
 
             // History type filter
@@ -626,6 +634,7 @@ namespace VaultSync.UI.ViewModels
             // We no longer seed design-time demo data here.
 
             InitializeLocalizationDefaults();
+            RefreshEncryptionPolicyOptions();
         }
 
         private void UpdateActiveBackupTimer()
@@ -717,6 +726,17 @@ namespace VaultSync.UI.ViewModels
             SelectedProject = project;
         }
 
+        private void ManageProjectEncryption(ProjectBackupItem? project)
+        {
+            if (project is null)
+                return;
+
+            if (!int.TryParse(project.Id, out var projectId) || projectId <= 0)
+                return;
+
+            ManageProjectEncryptionRequested?.Invoke(projectId);
+        }
+
         private void InitializeLocalizationDefaults()
         {
             SnapshotsSummaryLine = Lf("Backups.Summary.TodayWeek", "{0} backups today - {1} this week", 0, 0);
@@ -745,6 +765,20 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(HistoryFilterProjectLabel));
             OnPropertyChanged(nameof(BackupDiskDriveLabel));
             OnPropertyChanged(nameof(BackupDiskHealthText));
+        }
+
+        private void RefreshEncryptionPolicyOptions()
+        {
+            EncryptionPolicyOptions.Clear();
+            EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
+                ProjectEncryptionPolicy.Inherit,
+                L("Projects.EncryptionPolicy.Inherit", "Inherit global")));
+            EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
+                ProjectEncryptionPolicy.Encrypted,
+                L("Projects.EncryptionPolicy.Encrypted", "Encrypted")));
+            EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
+                ProjectEncryptionPolicy.Plain,
+                L("Projects.EncryptionPolicy.Plain", "Plain")));
         }
 
         /// <summary>
@@ -2003,6 +2037,7 @@ namespace VaultSync.UI.ViewModels
             var config = AppConfigStore.Load();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
+            RefreshEncryptionPolicyOptions();
             RefreshDestinationOptionsInternal(config);
 
             var projectList = projects.ToList();
@@ -2064,10 +2099,14 @@ namespace VaultSync.UI.ViewModels
                     AutoBackupEnabled = autoBackupDisabledProjects is null || !autoBackupDisabledProjects.Contains(project.Id),
                     AutoBackupChanged = OnAutoBackupChanged,
                     PreferredDestinationId = project.PreferredDestinationId ?? string.Empty,
-                    PreferredDestinationChanged = OnPreferredDestinationChanged
+                    PreferredDestinationChanged = OnPreferredDestinationChanged,
+                    EncryptionPolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy),
+                    EncryptionKeyRef = project.EncryptionKeyRef ?? string.Empty,
+                    EncryptionPolicyChanged = OnProjectEncryptionPolicyChanged
                 };
                 projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath, project.ExternalId);
                 UpdateProjectDestinationDisplay(projectItem, config);
+                UpdateProjectEncryptionDisplay(projectItem, config);
                 ProjectBackups.Add(projectItem);
             }
 
@@ -2149,6 +2188,9 @@ namespace VaultSync.UI.ViewModels
                     hash = (hash * 397) ^ project.Id;
                     hash = (hash * 397) ^ (project.Name?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.RootPath?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.PreferredDestinationId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.EncryptionPolicy?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.EncryptionKeyRef?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                 }
                 return hash;
             }
@@ -2224,6 +2266,31 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private void UpdateProjectEncryptionDisplay(ProjectBackupItem item, AppConfig config)
+        {
+            item.EncryptionPolicy = ProjectEncryptionPolicy.Normalize(item.EncryptionPolicy);
+            var optionMatch = EncryptionPolicyOptions.FirstOrDefault(o =>
+                string.Equals(o.Id, item.EncryptionPolicy, StringComparison.OrdinalIgnoreCase));
+            item.SetEncryptionPolicyOption(optionMatch ?? EncryptionPolicyOptions.FirstOrDefault());
+
+            var effectiveEncrypted = ProjectEncryptionPolicy.IsEncrypted(
+                item.EncryptionPolicy,
+                config.Backups.Encryption.Enabled);
+            item.EffectiveEncryptionDisplay = effectiveEncrypted
+                ? L("Projects.EncryptionPolicy.EffectiveEncrypted", "Effective: Encrypted")
+                : L("Projects.EncryptionPolicy.EffectivePlain", "Effective: Plain");
+
+            var hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
+                string.IsNullOrWhiteSpace(item.EncryptionKeyRef) ? null : item.EncryptionKeyRef,
+                BackupEncryptionSecretUsername,
+                preferKeychain: true,
+                fallbackPlaintext: null));
+            item.HasEncryptionSecret = hasSecret;
+            item.EncryptionSecretStatus = hasSecret
+                ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+                : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
+        }
+
         private void UpdateProjectDestinationDisplay(ProjectBackupItem item, AppConfig config)
         {
             var id = item.PreferredDestinationId ?? string.Empty;
@@ -2288,12 +2355,29 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
+        private void OnProjectEncryptionPolicyChanged(ProjectBackupItem item)
+        {
+            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+                return;
+
+            _ = Task.Run(() =>
+            {
+                var config = AppConfigStore.Load();
+                Dispatcher.UIThread.Post(() =>
+                {
+                    UpdateProjectEncryptionDisplay(item, config);
+                    ProjectEncryptionPolicyChanged?.Invoke(projectId, item.EncryptionPolicy);
+                });
+            });
+        }
+
         public void RefreshDestinationOptions(AppConfig config)
         {
             RefreshDestinationOptionsInternal(config);
             foreach (var project in ProjectBackups)
             {
                 UpdateProjectDestinationDisplay(project, config);
+                UpdateProjectEncryptionDisplay(project, config);
             }
         }
     }
@@ -2457,6 +2541,7 @@ namespace VaultSync.UI.ViewModels
         private bool _autoBackupEnabled = true;
         public Action<ProjectBackupItem>? AutoBackupChanged { get; set; }
         public Action<ProjectBackupItem>? PreferredDestinationChanged { get; set; }
+        public Action<ProjectBackupItem>? EncryptionPolicyChanged { get; set; }
 
         private string _preferredDestinationId = string.Empty;
         public string PreferredDestinationId
@@ -2493,6 +2578,64 @@ namespace VaultSync.UI.ViewModels
 
             _preferredDestinationOption = option;
             OnPropertyChanged(nameof(PreferredDestinationOption));
+        }
+
+        private string _encryptionPolicy = ProjectEncryptionPolicy.Inherit;
+        public string EncryptionPolicy
+        {
+            get => _encryptionPolicy;
+            set => SetField(ref _encryptionPolicy, ProjectEncryptionPolicy.Normalize(value), nameof(EncryptionPolicy));
+        }
+
+        private string _encryptionKeyRef = string.Empty;
+        public string EncryptionKeyRef
+        {
+            get => _encryptionKeyRef;
+            set => SetField(ref _encryptionKeyRef, value ?? string.Empty, nameof(EncryptionKeyRef));
+        }
+
+        private EncryptionPolicyOption? _encryptionPolicyOption;
+        public EncryptionPolicyOption? EncryptionPolicyOption
+        {
+            get => _encryptionPolicyOption;
+            set
+            {
+                if (!SetField(ref _encryptionPolicyOption, value, nameof(EncryptionPolicyOption)))
+                    return;
+
+                EncryptionPolicy = value?.Id ?? ProjectEncryptionPolicy.Inherit;
+                EncryptionPolicyChanged?.Invoke(this);
+            }
+        }
+
+        public void SetEncryptionPolicyOption(EncryptionPolicyOption? option)
+        {
+            if (Equals(_encryptionPolicyOption, option))
+                return;
+
+            _encryptionPolicyOption = option;
+            OnPropertyChanged(nameof(EncryptionPolicyOption));
+        }
+
+        private string _effectiveEncryptionDisplay = string.Empty;
+        public string EffectiveEncryptionDisplay
+        {
+            get => _effectiveEncryptionDisplay;
+            set => SetField(ref _effectiveEncryptionDisplay, value ?? string.Empty, nameof(EffectiveEncryptionDisplay));
+        }
+
+        private bool _hasEncryptionSecret;
+        public bool HasEncryptionSecret
+        {
+            get => _hasEncryptionSecret;
+            set => SetField(ref _hasEncryptionSecret, value, nameof(HasEncryptionSecret));
+        }
+
+        private string _encryptionSecretStatus = string.Empty;
+        public string EncryptionSecretStatus
+        {
+            get => _encryptionSecretStatus;
+            set => SetField(ref _encryptionSecretStatus, value ?? string.Empty, nameof(EncryptionSecretStatus));
         }
 
         // Avatar

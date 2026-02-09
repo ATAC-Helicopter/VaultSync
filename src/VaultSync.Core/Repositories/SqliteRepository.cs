@@ -89,6 +89,8 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           external_id TEXT NOT NULL DEFAULT '',
           needs_restore INTEGER NOT NULL DEFAULT 0,
           preferred_destination_id TEXT,
+          encryption_policy TEXT NOT NULL DEFAULT 'inherit',
+          encryption_key_ref TEXT,
           name TEXT NOT NULL UNIQUE,
           root_path TEXT NOT NULL,
           preset TEXT NOT NULL,
@@ -149,6 +151,8 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
     EnsureColumnExists("projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
+    EnsureColumnExists("projects", "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
+    EnsureColumnExists("projects", "encryption_key_ref", "ALTER TABLE projects ADD COLUMN encryption_key_ref TEXT;");
     EnsureColumnExists("snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
 
@@ -241,7 +245,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
                 new { name });
         }
 
@@ -249,7 +253,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
                 new { id });
         }
 
@@ -279,7 +283,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.Query<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
         }
 
         /// <summary>
@@ -308,8 +312,8 @@ DELETE FROM sqlite_sequence;";
                 : p.ExternalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, name, root_path, preset, created_utc)
-                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @Name, @RootPath, @Preset, @CreatedUtc);
+                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, encryption_policy, encryption_key_ref, name, root_path, preset, created_utc)
+                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @EncryptionPolicy, @EncryptionKeyRef, @Name, @RootPath, @Preset, @CreatedUtc);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -317,6 +321,8 @@ DELETE FROM sqlite_sequence;";
                     ExternalId = externalId,
                     NeedsRestore = p.NeedsRestore ? 1 : 0,
                     PreferredDestinationId = string.IsNullOrWhiteSpace(p.PreferredDestinationId) ? null : p.PreferredDestinationId,
+                    EncryptionPolicy = ProjectEncryptionPolicy.Normalize(p.EncryptionPolicy),
+                    EncryptionKeyRef = string.IsNullOrWhiteSpace(p.EncryptionKeyRef) ? null : p.EncryptionKeyRef,
                     p.Name,
                     p.RootPath,
                     p.Preset,
@@ -344,6 +350,31 @@ DELETE FROM sqlite_sequence;";
                 });
         }
 
+        public void UpdateProjectEncryptionPolicy(int projectId, string? encryptionPolicy)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET encryption_policy = @policy WHERE id = @id;",
+                new
+                {
+                    policy = ProjectEncryptionPolicy.Normalize(encryptionPolicy),
+                    id = projectId
+                });
+        }
+
+        public void UpdateProjectEncryptionSettings(int projectId, string? encryptionPolicy, string? encryptionKeyRef)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET encryption_policy = @policy, encryption_key_ref = @keyRef WHERE id = @id;",
+                new
+                {
+                    policy = ProjectEncryptionPolicy.Normalize(encryptionPolicy),
+                    keyRef = string.IsNullOrWhiteSpace(encryptionKeyRef) ? null : encryptionKeyRef,
+                    id = projectId
+                });
+        }
+
         public Project? GetProjectByExternalId(string externalId)
         {
             if (string.IsNullOrWhiteSpace(externalId))
@@ -352,7 +383,7 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
                 """
-                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
+                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
                 FROM projects
                 WHERE external_id = @externalId
                 LIMIT 1;
@@ -852,6 +883,27 @@ DELETE FROM sqlite_sequence;";
             c.Execute(
                 "UPDATE backups SET external_id = @externalId WHERE id = @id;",
                 new { externalId, id = backupId });
+        }
+
+        public void UpdateBackupEncryptionMetadata(int backupId, bool isEncrypted, string? cryptoDescriptorJson, long totalBytes)
+        {
+            using var c = Open();
+            var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
+            c.Execute(
+                """
+                UPDATE backups
+                SET is_encrypted = @isEncrypted,
+                    crypto_descriptor_json = @descriptorJson,
+                    total_bytes = @totalBytes
+                WHERE id = @id;
+                """,
+                new
+                {
+                    id = backupId,
+                    isEncrypted = isEncrypted ? 1 : 0,
+                    descriptorJson = descriptor.ToMetadataJson(isEncrypted),
+                    totalBytes = Math.Max(0, totalBytes)
+                });
         }
 
         public Backup? GetLatestBackupForProject(int projectId)

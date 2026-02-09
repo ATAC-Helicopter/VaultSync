@@ -428,6 +428,82 @@
                   </Grid>
                 </Border>
 
+                <Border x:Name="SettingsEncryptionCard"
+                        Classes="card"
+                        Margin="0,6,0,0"
+                        Padding="12"
+                        Background="{DynamicResource Surface2}"
+                        BorderBrush="{DynamicResource BorderSoft}"
+                        CornerRadius="14">
+                  <StackPanel Spacing="10">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.Title}"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.Description}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" Spacing="2">
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.Enable}" />
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.EnableDescription}"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11" />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{Binding BackupEncryptionEnabled, Mode=TwoWay}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" Spacing="2">
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.AllowSessionFallback}" />
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.AllowSessionFallbackDescription}"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{Binding BackupEncryptionAllowSessionFallback, Mode=TwoWay}" />
+                    </Grid>
+
+                    <TextBlock Text="{Binding BackupEncryptionSecretStatus}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+
+                    <Grid ColumnDefinitions="*,Auto,Auto"
+                          ColumnSpacing="8">
+                      <TextBox Grid.Column="0"
+                               Text="{Binding BackupEncryptionPasswordInput, Mode=TwoWay}"
+                               PasswordChar="{Binding BackupEncryptionShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=*}"
+                               Watermark="{infra:LocalizedString Key=Settings.Encryption.PasswordWatermark}" />
+                      <Button Grid.Column="1"
+                              Classes="settings-ghost"
+                              Command="{Binding SetBackupEncryptionPasswordCommand}">
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.SetPassword}" />
+                      </Button>
+                      <Button Grid.Column="2"
+                              Classes="settings-ghost"
+                              Command="{Binding ClearBackupEncryptionPasswordCommand}">
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.ClearPassword}" />
+                      </Button>
+                    </Grid>
+
+                    <CheckBox IsChecked="{Binding BackupEncryptionShowPassword, Mode=TwoWay}"
+                              Content="{infra:LocalizedString Key=Settings.Credentials.ShowPassword}" />
+
+                    <Button Classes="settings-ghost"
+                            HorizontalAlignment="Left"
+                            Command="{Binding RotateEncryptedBackupsCommand}">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.RotateBackups}" />
+                    </Button>
+                  </StackPanel>
+                </Border>
+
                 <!-- Compression -->
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">

@@ -214,10 +214,17 @@ public sealed class MetadataSyncService
             if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
                 continue;
 
+            var parsedSettings = ParseProjectSettings(metaProject.SettingsJson);
             TryApplyProjectColor(metaProject);
 
-            if (projectMap.ContainsKey(metaProject.ExternalId))
+            if (projectMap.TryGetValue(metaProject.ExternalId, out var mappedProjectId))
+            {
+                _repo.UpdateProjectEncryptionSettings(
+                    mappedProjectId,
+                    parsedSettings.EncryptionPolicy,
+                    parsedSettings.EncryptionKeyRef);
                 continue;
+            }
 
             var existingByName = localProjects.FirstOrDefault(p =>
                 string.Equals(p.Name, metaProject.Name, StringComparison.OrdinalIgnoreCase));
@@ -229,6 +236,10 @@ public sealed class MetadataSyncService
                     _repo.UpdateProjectExternalId(existingByName.Id, metaProject.ExternalId);
                 }
 
+                _repo.UpdateProjectEncryptionSettings(
+                    existingByName.Id,
+                    parsedSettings.EncryptionPolicy,
+                    parsedSettings.EncryptionKeyRef);
                 projectMap[metaProject.ExternalId] = existingByName.Id;
                 continue;
             }
@@ -247,7 +258,9 @@ public sealed class MetadataSyncService
                 RootPath = projectRoot,
                 Preset = metaProject.Preset,
                 CreatedUtc = metaProject.CreatedUtc,
-                NeedsRestore = false
+                NeedsRestore = false,
+                EncryptionPolicy = parsedSettings.EncryptionPolicy,
+                EncryptionKeyRef = parsedSettings.EncryptionKeyRef
             };
 
             var newId = _repo.AddProject(project);
@@ -1521,17 +1534,54 @@ public sealed class MetadataSyncService
         try
         {
             var color = ProjectColorResolver?.Invoke(project);
-            if (string.IsNullOrWhiteSpace(color))
-                return "{}";
-
-            return JsonSerializer.Serialize(new Dictionary<string, string>
+            var settings = new Dictionary<string, string>();
+            if (!string.IsNullOrWhiteSpace(color))
             {
-                ["avatarColor"] = color
-            });
+                settings["avatarColor"] = color;
+            }
+
+            settings["encryptionPolicy"] = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy);
+
+            if (!string.IsNullOrWhiteSpace(project.EncryptionKeyRef))
+            {
+                settings["encryptionKeyRef"] = project.EncryptionKeyRef;
+            }
+
+            return settings.Count == 0 ? "{}" : JsonSerializer.Serialize(settings);
         }
         catch
         {
             return "{}";
+        }
+    }
+
+    private static (string EncryptionPolicy, string? EncryptionKeyRef) ParseProjectSettings(string? settingsJson)
+    {
+        if (string.IsNullOrWhiteSpace(settingsJson))
+            return (ProjectEncryptionPolicy.Inherit, null);
+
+        try
+        {
+            using var doc = JsonDocument.Parse(settingsJson);
+            var policy = ProjectEncryptionPolicy.Inherit;
+            string? keyRef = null;
+
+            if (doc.RootElement.TryGetProperty("encryptionPolicy", out var policyProp))
+            {
+                policy = ProjectEncryptionPolicy.Normalize(policyProp.GetString());
+            }
+
+            if (doc.RootElement.TryGetProperty("encryptionKeyRef", out var keyRefProp))
+            {
+                var rawKeyRef = keyRefProp.GetString();
+                keyRef = string.IsNullOrWhiteSpace(rawKeyRef) ? null : rawKeyRef;
+            }
+
+            return (policy, keyRef);
+        }
+        catch
+        {
+            return (ProjectEncryptionPolicy.Inherit, null);
         }
     }
 

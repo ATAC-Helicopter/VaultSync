@@ -32,7 +32,7 @@
 ## 1.5.x (current focus)
 
 ### 1.5.0 priorities
-- [ ] `P0` Backup encryption and password-protected backups.
+- [x] `P0` Backup encryption and password-protected backups.
 - [ ] `P1` Backup bandwidth limits and quiet hours.
 - [ ] `P1` Incremental backup UX improvements.
 - [ ] `P2` Snapshot diff summaries.
@@ -191,55 +191,62 @@
     - Integration: import/export round-trip with mixed encrypted/plain history works without data loss.
     - Integration: `1.4` client ignores unknown crypto descriptors without corrupting sync state.
     - Regression: delete/keep/retention/destination scan/import behavior remains stable.
-- [ ] `VS-1530` Global encryption settings UX + secure secret enrollment.
+- [x] `VS-1530` Global encryption settings UX + secure secret enrollment.
   - Scope: add Settings UI for global encryption enable/disable, password set/change, and secure-store enrollment using non-secret config refs only.
   - Depends on: `VS-1504`.
   - Acceptance tests:
     - UI: user can enable/disable global encryption and set/change password without storing plaintext in config.
     - Unit: encrypted backup run fails fast with actionable error when global encryption is enabled but secret is unavailable.
     - Regression: existing backup settings persist unchanged.
-- [ ] `VS-1531` Per-project encryption policy controls.
+- [x] `VS-1531` Per-project encryption policy controls.
   - Scope: add per-project toggle and policy mode (`inherit global`, `project encrypted`, `project plain`) with clear effective-state display.
   - Depends on: `VS-1530`.
   - Acceptance tests:
     - UI: per-project policy can be changed and persists across restart.
     - Integration: effective policy precedence works (`project override` > `global`).
     - Regression: auto-backup per-project toggle behavior remains unchanged.
-- [ ] `VS-1532` Per-project key reference model + migration.
+- [x] `VS-1532` Per-project key reference model + migration.
   - Scope: persist per-project encryption mode and optional project `KeyRef` in DB/config with migration-safe defaults.
   - Depends on: `VS-1531`.
   - Acceptance tests:
     - Migration: existing project rows load with `inherit` defaults and no data loss.
     - Unit: model serialization/persistence stores only key references (no secret material).
     - Integration: import/export keeps non-secret encryption policy fields stable.
-- [ ] `VS-1533` Backup pipeline effective-key resolution.
+- [x] `VS-1533` Backup pipeline effective-key resolution.
   - Scope: resolve encryption mode and key source per project at backup runtime (global key, project key, or plain).
   - Depends on: `VS-1532`.
   - Acceptance tests:
     - Integration: global encrypted + project plain produces plain backup for overridden project only.
     - Integration: global plain + project encrypted produces encrypted backup for overridden project only.
     - Regression: existing encrypted backup metadata contract (`is_encrypted`, descriptor JSON) remains unchanged.
-- [ ] `VS-1534` Restore key resolution and prompt fallback.
+- [x] `VS-1534` Restore key resolution and prompt fallback.
   - Scope: restore flow resolves project key first, then global key, and prompts only when required.
   - Depends on: `VS-1532`, `VS-1533`.
   - Acceptance tests:
     - Integration: encrypted restore succeeds without prompt when matching key exists in secure store.
     - Integration: missing key triggers prompt and succeeds with correct password.
     - Integration: wrong password fails safely without partial writes.
-- [ ] `VS-1535` Explorer `.vse` open flow (password dialog helper).
+- [x] `VS-1535` Explorer `.vse` open flow (password dialog helper).
   - Scope: register/handle encrypted artifact open action so opening `.vse` launches a minimal VaultSync dialog for password + temp extraction/open.
   - Depends on: `VS-1534`.
   - Acceptance tests:
     - Integration: opening `.vse` triggers password dialog and opens extracted temp folder on success.
     - Integration: wrong password shows explicit error and leaves no partial extracted data.
     - Regression: standard “open backup folder” behavior remains unchanged.
-- [ ] `VS-1536` Existing-backup key rotation job.
+- [x] `VS-1536` Existing-backup key rotation job.
   - Scope: explicit user-triggered re-encryption of existing encrypted backups from old key to new key (project or global scope) with atomic replacement.
   - Depends on: `VS-1533`, `VS-1534`.
   - Acceptance tests:
     - Integration: rotate succeeds for selected backups and old password no longer decrypts rotated artifacts.
     - Integration: interruption/failure leaves original backup intact (no corruption).
     - UX: per-backup failure summary lists skipped/failed/succeeded entries.
+- [x] `VS-1537` Per-project password management in Projects + Backups pages.
+  - Scope: expose per-project password set/clear flow in both pages using one shared app-level handler and one persisted `encryption_key_ref` source of truth.
+  - Depends on: `VS-1531`, `VS-1532`, `VS-1533`.
+  - Acceptance tests:
+    - UI: setting/clearing a project encryption password from Projects is reflected in Backups without drift.
+    - UI: setting/clearing from Backups is reflected in Projects without drift.
+    - Regression: policy updates (`inherit/encrypted/plain`) preserve existing key reference and do not desync between pages.
 
 #### `P1` Bandwidth limits and quiet hours
 - [ ] `VS-1510` Config model + settings UI for caps and schedule.

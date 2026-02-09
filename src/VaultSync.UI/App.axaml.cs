@@ -10,13 +10,17 @@ using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.UI.Views;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.Media;
+using Avalonia.Layout;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
@@ -63,6 +67,8 @@ public partial class App : Application
     private static readonly FontFamily ArabicMacFontFamily = new(
         $"avares://VaultSync.UI/Assets/Fonts/#Noto Sans Arabic, avares://VaultSync.UI/Assets/Fonts/#Noto Sans, " +
         "Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial");
+    private static readonly TimeSpan EncryptedOpenTempRetention = TimeSpan.FromHours(24);
+    private static int _encryptedOpenInFlight;
     private static long _uiHeartbeatTicks;
     private static int _uiHangReported;
     private static Timer? _uiWatchdogTimer;
@@ -159,6 +165,8 @@ public partial class App : Application
                     TryShowWhatsNew(desktop);
                 }
             });
+            _ = Task.Run(CleanupStaleEncryptedOpenTempFolders);
+            _ = HandleInitialActivationArgsAsync(desktop);
 
             // Small always-on-top widget that lights up for tray-started backups.
             var backupWidgetService = new BackupWidgetService(
@@ -1200,11 +1208,387 @@ public partial class App : Application
 
     public static void ActivateMainWindowFromSignal()
     {
+        ActivateFromSignal("activate");
+    }
+
+    public static void ActivateFromSignal(string? payload)
+    {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
-        DiagnosticsLogger.Record("Activation signal received; bringing window to front.");
-        Dispatcher.UIThread.Post(() => BringMainWindowToFront(desktop));
+        var payloadKind = payload is { Length: > 0 } && payload.StartsWith("open-vse|", StringComparison.Ordinal)
+            ? "open-vse"
+            : "activate";
+        DiagnosticsLogger.Record($"Activation signal received; payloadKind='{payloadKind}'.");
+        Dispatcher.UIThread.Post(async () =>
+        {
+            BringMainWindowToFront(desktop);
+            await HandleActivationPayloadAsync(desktop, payload).ConfigureAwait(false);
+        });
+    }
+
+    private static async Task HandleInitialActivationArgsAsync(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        var args = desktop.Args ?? Array.Empty<string>();
+        if (args.Length == 0)
+            return;
+
+        var encryptedArchivePath = args.FirstOrDefault(IsEncryptedArchivePath);
+        if (string.IsNullOrWhiteSpace(encryptedArchivePath))
+            return;
+
+        await HandleEncryptedArchiveOpenRequestAsync(desktop, encryptedArchivePath).ConfigureAwait(false);
+    }
+
+    private static async Task HandleActivationPayloadAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload) || string.Equals(payload, "activate", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (!payload.StartsWith("open-vse|", StringComparison.Ordinal))
+            return;
+
+        var encodedPath = payload["open-vse|".Length..];
+        if (string.IsNullOrWhiteSpace(encodedPath))
+            return;
+
+        string archivePath;
+        try
+        {
+            archivePath = Encoding.UTF8.GetString(Convert.FromBase64String(encodedPath));
+        }
+        catch
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(archivePath))
+            await HandleEncryptedArchiveOpenRequestAsync(desktop, archivePath).ConfigureAwait(false);
+    }
+
+    private static async Task HandleEncryptedArchiveOpenRequestAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string archivePath)
+    {
+        if (Interlocked.Exchange(ref _encryptedOpenInFlight, 1) == 1)
+            return;
+
+        try
+        {
+        if (!File.Exists(archivePath))
+        {
+            await ShowInfoDialogAsync(
+                desktop,
+                L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                Lf("Backups.OpenEncrypted.MissingFile", "The selected encrypted backup was not found: {0}", archivePath))
+                .ConfigureAwait(false);
+            return;
+        }
+
+        while (true)
+        {
+            var prompt = await PromptEncryptedArchivePasswordAsync(desktop, archivePath).ConfigureAwait(false);
+            if (!prompt.Confirmed)
+                return;
+
+            if (string.IsNullOrWhiteSpace(prompt.Password))
+            {
+                await ShowInfoDialogAsync(
+                    desktop,
+                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."))
+                    .ConfigureAwait(false);
+                continue;
+            }
+
+            try
+            {
+                var extractedDir = await Task.Run(() => ExtractEncryptedArchive(archivePath, prompt.Password)).ConfigureAwait(false);
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = extractedDir,
+                    UseShellExecute = true
+                });
+                return;
+            }
+            catch (Exception ex) when (string.Equals(ex.Message, BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, StringComparison.Ordinal))
+            {
+                await ShowInfoDialogAsync(
+                    desktop,
+                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted."))
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await ShowInfoDialogAsync(
+                    desktop,
+                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    ex.Message)
+                    .ConfigureAwait(false);
+                return;
+            }
+        }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _encryptedOpenInFlight, 0);
+        }
+    }
+
+    private static async Task<(bool Confirmed, string Password)> PromptEncryptedArchivePasswordAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string archivePath)
+    {
+        var owner = desktop.MainWindow;
+        if (owner is null)
+            return (false, string.Empty);
+
+        var tcs = new TaskCompletionSource<(bool Confirmed, string Password)>();
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var title = new TextBlock
+            {
+                Text = L("Backups.Restore.EncryptedPasswordTitle", "Encrypted backup password"),
+                FontSize = 18,
+                FontWeight = FontWeight.SemiBold
+            };
+
+            var prompt = new TextBlock
+            {
+                Text = Lf("Backups.OpenEncrypted.PasswordPrompt", "Enter the password to open '{0}'.", Path.GetFileName(archivePath)),
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            var passwordLabel = new TextBlock
+            {
+                Text = L("Backups.Restore.EncryptedPasswordLabel", "Password"),
+                FontWeight = FontWeight.SemiBold,
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+
+            var passwordBox = new TextBox
+            {
+                Width = 320,
+                PasswordChar = '●'
+            };
+
+            var buttonRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Spacing = 10
+            };
+
+            var cancelButton = new Button
+            {
+                Content = L("Common.Cancel", "Cancel"),
+                MinWidth = 120
+            };
+            cancelButton.Classes.Add("action-ghost");
+
+            var openButton = new Button
+            {
+                Content = L("Common.Open", "Open"),
+                MinWidth = 140
+            };
+            openButton.Classes.Add("action-primary");
+
+            Window? window = null;
+            var confirmed = false;
+            cancelButton.Click += (_, _) => window?.Close();
+            openButton.Click += (_, _) =>
+            {
+                confirmed = true;
+                window?.Close();
+            };
+
+            buttonRow.Children.Add(cancelButton);
+            buttonRow.Children.Add(openButton);
+
+            var content = new StackPanel { Spacing = 10 };
+            content.Children.Add(title);
+            content.Children.Add(prompt);
+            content.Children.Add(passwordLabel);
+            content.Children.Add(passwordBox);
+            content.Children.Add(buttonRow);
+
+            var card = new Border
+            {
+                Padding = new Thickness(18),
+                Margin = new Thickness(16)
+            };
+            card.Classes.Add("card");
+            card.Child = content;
+
+            window = new Window
+            {
+                Title = L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                Content = card,
+                CanResize = false,
+                Width = 540,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Icon = owner.Icon
+            };
+
+            await window.ShowDialog(owner);
+            tcs.TrySetResult((confirmed, passwordBox.Text ?? string.Empty));
+        });
+
+        return await tcs.Task.ConfigureAwait(false);
+    }
+
+    private static async Task ShowInfoDialogAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string title,
+        string message)
+    {
+        var owner = desktop.MainWindow;
+        if (owner is null)
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var messageBlock = new TextBlock
+            {
+                Text = message,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+
+            var okButton = new Button
+            {
+                Content = L("Common.Ok", "OK"),
+                MinWidth = 120,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            okButton.Classes.Add("action-primary");
+
+            Window? window = null;
+            okButton.Click += (_, _) => window?.Close();
+
+            var stack = new StackPanel { Spacing = 10 };
+            stack.Children.Add(messageBlock);
+            stack.Children.Add(okButton);
+
+            var card = new Border
+            {
+                Padding = new Thickness(18),
+                Margin = new Thickness(16)
+            };
+            card.Classes.Add("card");
+            card.Child = stack;
+
+            window = new Window
+            {
+                Title = title,
+                Content = card,
+                CanResize = false,
+                Width = 520,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Icon = owner.Icon
+            };
+
+            await window.ShowDialog(owner);
+        });
+    }
+
+    private static string ExtractEncryptedArchive(string archivePath, string password)
+    {
+        var sourceArchivePath = archivePath;
+        var sourceDir = Path.GetDirectoryName(archivePath);
+        if (string.IsNullOrWhiteSpace(sourceDir))
+            throw new InvalidOperationException("Unable to resolve archive source directory.");
+
+        string? copiedSourceRoot = null;
+        if (!string.Equals(Path.GetFileName(archivePath), BackupArchiveCryptoService.EncryptedArchiveFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            copiedSourceRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-open-src-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(copiedSourceRoot);
+            var copiedSourcePath = Path.Combine(copiedSourceRoot, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            File.Copy(archivePath, copiedSourcePath, overwrite: true);
+            sourceArchivePath = copiedSourcePath;
+            sourceDir = copiedSourceRoot;
+        }
+
+        var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-open-{Guid.NewGuid():N}");
+        var stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
+        var extractDir = Path.Combine(stagingRoot, "content");
+
+        try
+        {
+            Directory.CreateDirectory(extractDir);
+            if (!File.Exists(sourceArchivePath))
+                throw new FileNotFoundException("Encrypted backup archive not found.", sourceArchivePath);
+
+            var cryptoService = new BackupArchiveCryptoService();
+            cryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
+            ZipFile.ExtractToDirectory(stagingArchive, extractDir, overwriteFiles: true);
+            return extractDir;
+        }
+        catch
+        {
+            if (Directory.Exists(stagingRoot))
+            {
+                try { Directory.Delete(stagingRoot, recursive: true); }
+                catch { }
+            }
+            throw;
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(copiedSourceRoot) && Directory.Exists(copiedSourceRoot))
+            {
+                try { Directory.Delete(copiedSourceRoot, recursive: true); }
+                catch { }
+            }
+        }
+    }
+
+    private static void CleanupStaleEncryptedOpenTempFolders()
+    {
+        try
+        {
+            var tempRoot = Path.GetTempPath();
+            var now = DateTime.UtcNow;
+            var dirs = Directory.GetDirectories(tempRoot, "vaultsync-open-*", SearchOption.TopDirectoryOnly);
+            foreach (var dir in dirs)
+            {
+                try
+                {
+                    var createdUtc = Directory.GetCreationTimeUtc(dir);
+                    var modifiedUtc = Directory.GetLastWriteTimeUtc(dir);
+                    var referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
+                    if ((now - referenceUtc) < EncryptedOpenTempRetention)
+                        continue;
+
+                    Directory.Delete(dir, recursive: true);
+                }
+                catch
+                {
+                    // Best effort cleanup; skip locked folders.
+                }
+            }
+        }
+        catch
+        {
+            // Best effort cleanup only.
+        }
+    }
+
+    private static bool IsEncryptedArchivePath(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        if (value.StartsWith("-", StringComparison.Ordinal))
+            return false;
+
+        return value.EndsWith(".vse", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void BringMainWindowToFront(IClassicDesktopStyleApplicationLifetime desktop)

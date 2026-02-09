@@ -29,6 +29,7 @@ namespace VaultSync.UI.ViewModels;
 /// </summary>
 public class ProjectsViewModel : ViewModelBase
 {
+    private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
     private readonly IProjectDiscoveryService _discovery = new ProjectDiscoveryService();
     private IReadOnlyList<DiscoveredProject> _cachedDiscovery = Array.Empty<DiscoveredProject>();
     private string? _cachedDiscoveryRoot;
@@ -51,6 +52,8 @@ public class ProjectsViewModel : ViewModelBase
         new ObservableCollection<string>();
     public ObservableCollection<DestinationOption> DestinationOptions { get; } =
         new ObservableCollection<DestinationOption>();
+    public ObservableCollection<EncryptionPolicyOption> EncryptionPolicyOptions { get; } =
+        new ObservableCollection<EncryptionPolicyOption>();
     public ObservableCollection<ProjectItemViewModel> Projects { get; } =
         new ObservableCollection<ProjectItemViewModel>();
 
@@ -96,7 +99,9 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand RemoveProjectCommand { get; }
     public ICommand SnapshotCommand { get; }
     public ICommand TakeSnapshotCommand => SnapshotCommand;
+    public ICommand ManageProjectEncryptionCommand { get; }
     public ICommand ToggleSortCommand { get; }
+    public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
     public string SearchText
     {
         get => _searchText;
@@ -143,9 +148,11 @@ public class ProjectsViewModel : ViewModelBase
         OpenFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
         RemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
         SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
+        ManageProjectEncryptionCommand = new RelayCommand(p => RequestProjectEncryptionPasswordEdit(p as ProjectItemViewModel ?? SelectedProject));
         ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());
 
         LoadAvailablePresets();
+        RefreshEncryptionPolicyOptions();
 
         _ = RefreshAsync();
     }
@@ -371,14 +378,18 @@ public class ProjectsViewModel : ViewModelBase
             {
                 Name = p.Name,
                 Path = p.Path,
+                ProjectId = existingProject?.Id ?? 0,
                 ExternalId = existingProject?.ExternalId ?? string.Empty,
                 LastSnapshot = lastSnapshotTime ?? default,
                 SizeBytes = lastSnapshotBytes ?? 0,
                 Preset = existingProject?.Preset ?? string.Empty,
-                PreferredDestinationId = existingProject?.PreferredDestinationId ?? string.Empty
+                PreferredDestinationId = existingProject?.PreferredDestinationId ?? string.Empty,
+                EncryptionPolicy = ProjectEncryptionPolicy.Normalize(existingProject?.EncryptionPolicy),
+                EncryptionKeyRef = existingProject?.EncryptionKeyRef ?? string.Empty
             };
             vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path), vm.ExternalId);
             UpdateProjectDestinationDisplay(vm, config);
+            UpdateProjectEncryptionDisplay(vm, config);
             vm.PropertyChanged += OnProjectItemPropertyChanged;
 
             // Populate snapshot history from DB if available; otherwise fall back to discovery values.
@@ -458,7 +469,22 @@ public class ProjectsViewModel : ViewModelBase
         foreach (var project in Projects)
         {
             UpdateProjectDestinationDisplay(project, config);
+            UpdateProjectEncryptionDisplay(project, config);
         }
+    }
+
+    private void RefreshEncryptionPolicyOptions()
+    {
+        EncryptionPolicyOptions.Clear();
+        EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
+            ProjectEncryptionPolicy.Inherit,
+            L("Projects.EncryptionPolicy.Inherit", "Inherit global")));
+        EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
+            ProjectEncryptionPolicy.Encrypted,
+            L("Projects.EncryptionPolicy.Encrypted", "Encrypted")));
+        EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
+            ProjectEncryptionPolicy.Plain,
+            L("Projects.EncryptionPolicy.Plain", "Plain")));
     }
 
     private void UpdateProjectDestinationDisplay(ProjectItemViewModel vm, AppConfig config)
@@ -509,6 +535,32 @@ public class ProjectsViewModel : ViewModelBase
         }
 
         vm.SetPreferredDestinationOption(optionMatch);
+    }
+
+    private void UpdateProjectEncryptionDisplay(ProjectItemViewModel vm, AppConfig config)
+    {
+        vm.EncryptionPolicy = ProjectEncryptionPolicy.Normalize(vm.EncryptionPolicy);
+        var optionMatch = EncryptionPolicyOptions.FirstOrDefault(o =>
+            string.Equals(o.Id, vm.EncryptionPolicy, StringComparison.OrdinalIgnoreCase));
+        vm.SetEncryptionPolicyOption(optionMatch ?? EncryptionPolicyOptions.FirstOrDefault());
+
+        var effectiveEncrypted = ProjectEncryptionPolicy.IsEncrypted(
+            vm.EncryptionPolicy,
+            config.Backups.Encryption.Enabled);
+
+        vm.EffectiveEncryptionDisplay = effectiveEncrypted
+            ? L("Projects.EncryptionPolicy.EffectiveEncrypted", "Effective: Encrypted")
+            : L("Projects.EncryptionPolicy.EffectivePlain", "Effective: Plain");
+
+        var hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
+            string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef,
+            BackupEncryptionSecretUsername,
+            preferKeychain: true,
+            fallbackPlaintext: null));
+        vm.HasEncryptionSecret = hasSecret;
+        vm.EncryptionSecretStatus = hasSecret
+            ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+            : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
     }
 
     private void SortProjects()
@@ -781,7 +833,8 @@ public class ProjectsViewModel : ViewModelBase
                     RootPath = SelectedProject.Path,
                     Preset = SelectedProject.Preset,
                     CreatedUtc = DateTime.UtcNow,
-                    PreferredDestinationId = SelectedProject.PreferredDestinationId
+                    PreferredDestinationId = SelectedProject.PreferredDestinationId,
+                    EncryptionPolicy = SelectedProject.EncryptionPolicy
                 };
 
                 var id = repo.AddProject(project);
@@ -946,11 +999,17 @@ public class ProjectsViewModel : ViewModelBase
 
                 var repo = new SqliteRepository(dbPath);
                 var existing = repo.GetProjectByName(projectName);
-                return (existing is null, existing?.Preset ?? string.Empty, existing?.PreferredDestinationId ?? string.Empty);
+                return (
+                    existing is null,
+                    existing?.Id ?? 0,
+                    existing?.Preset ?? string.Empty,
+                    existing?.PreferredDestinationId ?? string.Empty,
+                    ProjectEncryptionPolicy.Normalize(existing?.EncryptionPolicy),
+                    existing?.EncryptionKeyRef ?? string.Empty);
             }
             catch
             {
-                return (true, string.Empty, string.Empty);
+                return (true, 0, string.Empty, string.Empty, ProjectEncryptionPolicy.Inherit, string.Empty);
             }
         }).ContinueWith(t =>
         {
@@ -963,11 +1022,13 @@ public class ProjectsViewModel : ViewModelBase
                     !string.Equals(SelectedProject.Name, projectName, StringComparison.OrdinalIgnoreCase))
                     return;
 
-                var (missing, preset, preferredDestinationId) = t.Result;
+                var (missing, projectId, preset, preferredDestinationId, encryptionPolicy, encryptionKeyRef) = t.Result;
                 if (missing)
                 {
                     SnapshotActionLabel = L("Snapshots.Action.AddProject", "Add project");
                     SelectedProject.IsRegistered = false;
+                    SelectedProject.ProjectId = 0;
+                    SelectedProject.EncryptionKeyRef = string.Empty;
 
                     if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
                     {
@@ -978,9 +1039,14 @@ public class ProjectsViewModel : ViewModelBase
                 {
                     SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
                     SelectedProject.IsRegistered = true;
+                    SelectedProject.ProjectId = projectId;
                     SelectedProject.Preset = preset;
                     SelectedProject.PreferredDestinationId = preferredDestinationId;
-                    UpdateProjectDestinationDisplay(SelectedProject, AppConfigStore.Load());
+                    SelectedProject.EncryptionPolicy = encryptionPolicy;
+                    SelectedProject.EncryptionKeyRef = encryptionKeyRef;
+                    var cfg = AppConfigStore.Load();
+                    UpdateProjectDestinationDisplay(SelectedProject, cfg);
+                    UpdateProjectEncryptionDisplay(SelectedProject, cfg);
                 }
             });
         });
@@ -991,7 +1057,9 @@ public class ProjectsViewModel : ViewModelBase
         if (sender is not ProjectItemViewModel vm)
             return;
 
-        if (!string.Equals(e.PropertyName, nameof(ProjectItemViewModel.PreferredDestinationId), StringComparison.Ordinal))
+        var changedDestination = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.PreferredDestinationId), StringComparison.Ordinal);
+        var changedEncryption = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.EncryptionPolicy), StringComparison.Ordinal);
+        if (!changedDestination && !changedEncryption)
             return;
 
         try
@@ -1006,8 +1074,20 @@ public class ProjectsViewModel : ViewModelBase
             if (project is null)
                 return;
 
-            repo.UpdateProjectPreferredDestination(project.Id, vm.PreferredDestinationId);
-            UpdateProjectDestinationDisplay(vm, config);
+            if (changedDestination)
+            {
+                repo.UpdateProjectPreferredDestination(project.Id, vm.PreferredDestinationId);
+                UpdateProjectDestinationDisplay(vm, config);
+            }
+
+            if (changedEncryption)
+            {
+                repo.UpdateProjectEncryptionSettings(
+                    project.Id,
+                    vm.EncryptionPolicy,
+                    string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef);
+                UpdateProjectEncryptionDisplay(vm, config);
+            }
         }
         catch
         {
@@ -1112,13 +1192,23 @@ public class ProjectsViewModel : ViewModelBase
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
         var config = AppConfigStore.Load();
+        RefreshEncryptionPolicyOptions();
         RefreshDestinationOptionsInternal(config);
         foreach (var project in _allProjects)
         {
             UpdateProjectDestinationDisplay(project, config);
+            UpdateProjectEncryptionDisplay(project, config);
         }
         RefreshHealthTags();
         RefreshSnapshotText();
+    }
+
+    private void RequestProjectEncryptionPasswordEdit(ProjectItemViewModel? project)
+    {
+        if (project is null || !project.IsRegistered)
+            return;
+
+        EditProjectEncryptionRequested?.Invoke(project);
     }
 
     private void RefreshHealthTags()
@@ -1360,6 +1450,13 @@ public class ProjectItemViewModel : ViewModelBase
         set => SetProperty(ref _externalId, value ?? string.Empty);
     }
 
+    private int _projectId;
+    public int ProjectId
+    {
+        get => _projectId;
+        set => SetProperty(ref _projectId, value);
+    }
+
     private ProjectHealthStatus _health;
     public ProjectHealthStatus Health
     {
@@ -1449,6 +1546,63 @@ public class ProjectItemViewModel : ViewModelBase
 
         _preferredDestinationOption = option;
         OnPropertyChanged(nameof(PreferredDestinationOption));
+    }
+
+    private string _encryptionPolicy = ProjectEncryptionPolicy.Inherit;
+    public string EncryptionPolicy
+    {
+        get => _encryptionPolicy;
+        set => SetProperty(ref _encryptionPolicy, ProjectEncryptionPolicy.Normalize(value));
+    }
+
+    private string _encryptionKeyRef = string.Empty;
+    public string EncryptionKeyRef
+    {
+        get => _encryptionKeyRef;
+        set => SetProperty(ref _encryptionKeyRef, value ?? string.Empty);
+    }
+
+    private EncryptionPolicyOption? _encryptionPolicyOption;
+    public EncryptionPolicyOption? EncryptionPolicyOption
+    {
+        get => _encryptionPolicyOption;
+        set
+        {
+            if (SetProperty(ref _encryptionPolicyOption, value))
+            {
+                EncryptionPolicy = value?.Id ?? ProjectEncryptionPolicy.Inherit;
+            }
+        }
+    }
+
+    private string _effectiveEncryptionDisplay = string.Empty;
+    public string EffectiveEncryptionDisplay
+    {
+        get => _effectiveEncryptionDisplay;
+        set => SetProperty(ref _effectiveEncryptionDisplay, value ?? string.Empty);
+    }
+
+    private bool _hasEncryptionSecret;
+    public bool HasEncryptionSecret
+    {
+        get => _hasEncryptionSecret;
+        set => SetProperty(ref _hasEncryptionSecret, value);
+    }
+
+    private string _encryptionSecretStatus = string.Empty;
+    public string EncryptionSecretStatus
+    {
+        get => _encryptionSecretStatus;
+        set => SetProperty(ref _encryptionSecretStatus, value ?? string.Empty);
+    }
+
+    public void SetEncryptionPolicyOption(EncryptionPolicyOption? option)
+    {
+        if (Equals(_encryptionPolicyOption, option))
+            return;
+
+        _encryptionPolicyOption = option;
+        OnPropertyChanged(nameof(EncryptionPolicyOption));
     }
 
     private bool _isRegistered;
@@ -1691,6 +1845,20 @@ public sealed class DestinationOption
     public DestinationOption(string id, string label)
     {
         Id = id ?? string.Empty;
+        Label = label ?? string.Empty;
+    }
+
+    public override string ToString() => Label;
+}
+
+public sealed class EncryptionPolicyOption
+{
+    public string Id { get; }
+    public string Label { get; }
+
+    public EncryptionPolicyOption(string id, string label)
+    {
+        Id = ProjectEncryptionPolicy.Normalize(id);
         Label = label ?? string.Empty;
     }
 

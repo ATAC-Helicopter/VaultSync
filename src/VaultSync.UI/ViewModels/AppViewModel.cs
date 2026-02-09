@@ -122,6 +122,7 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
         private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
+        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
         private DateTime _lastDestinationScanUtc = DateTime.MinValue;
         private int _destinationScanInFlight;
         private int _destinationOverviewRefreshInFlight;
@@ -666,12 +667,14 @@ namespace VaultSync.UI.ViewModels
             // 2) Section viewmodels
             _dashboardViewModel = null;
             _projectsViewModel  = new ProjectsViewModel();
+            _projectsViewModel.EditProjectEncryptionRequested += OnProjectEncryptionRequestedFromProjects;
             _backupsViewModel   = null;
             _settingsViewModel  = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
             _settingsViewModel.UpdateCheckRequested += OnUpdateCheckRequested;
             _settingsViewModel.RefreshHistoryRequested += OnRefreshHistoryRequested;
+            _settingsViewModel.RotateEncryptedBackupsRequested += OnRotateEncryptedBackupsRequested;
             _settingsViewModel.UpdateUpdateCheckStatus(null, null);
             _settingsViewModel.Destinations.CollectionChanged += OnDestinationsCollectionChanged;
             foreach (var dest in _settingsViewModel.Destinations)
@@ -737,6 +740,8 @@ namespace VaultSync.UI.ViewModels
             vm.BackupProtectionChanged += OnBackupProtectionChanged;
             vm.DestinationActiveChanged += OnDestinationActiveChanged;
             vm.PreferredDestinationChanged += OnPreferredDestinationChanged;
+            vm.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
+            vm.ManageProjectEncryptionRequested += OnProjectEncryptionRequestedFromBackups;
             vm.OpenSettingsRequested += OnOpenSettingsRequested;
             InitializeDestinationStatusOverview(vm);
             return vm;
@@ -1829,6 +1834,49 @@ namespace VaultSync.UI.ViewModels
             {
                 Console.WriteLine($"[Projects] Failed to update preferred destination for project {projectId}: {ex.Message}");
             }
+        }
+
+        private async void OnProjectEncryptionPolicyChanged(int projectId, string encryptionPolicy)
+        {
+            try
+            {
+                var project = _repo.GetProjectById(projectId);
+                if (project is null)
+                    return;
+
+                _repo.UpdateProjectEncryptionSettings(
+                    projectId,
+                    ProjectEncryptionPolicy.Normalize(encryptionPolicy),
+                    string.IsNullOrWhiteSpace(project.EncryptionKeyRef) ? null : project.EncryptionKeyRef);
+                await _projectsViewModel.RefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Projects] Failed to update encryption policy for project {projectId}: {ex.Message}");
+            }
+        }
+
+        private void OnProjectEncryptionRequestedFromBackups(int projectId)
+        {
+            _ = EditProjectEncryptionSecretAsync(projectId);
+        }
+
+        private void OnProjectEncryptionRequestedFromProjects(ProjectItemViewModel? project)
+        {
+            if (project is null)
+                return;
+
+            var projectId = project.ProjectId;
+            if (projectId <= 0)
+            {
+                var dbProject = _repo.GetProjectByName(project.Name);
+                projectId = dbProject?.Id ?? 0;
+            }
+
+            if (projectId <= 0)
+                return;
+
+            _ = EditProjectEncryptionSecretAsync(projectId);
         }
 
         private void OnDestinationActiveChanged(DestinationStatusItem item, bool isActive)
@@ -5203,17 +5251,45 @@ namespace VaultSync.UI.ViewModels
             var encryptedArchivePath = Path.Combine(backupFullPath, BackupArchiveCryptoService.EncryptedArchiveFileName);
             var isEncrypted = backup.IsEncrypted || File.Exists(encryptedArchivePath);
 
-            return new RestoreBackupPreparation(true, backupFullPath, projectRoot, project.Name, isEncrypted);
+            return new RestoreBackupPreparation(true, backupFullPath, projectRoot, project.Id, project.Name, isEncrypted);
         }
 
         private sealed record RestoreBackupPreparation(
             bool IsReady,
             string BackupFullPath,
             string ProjectRoot,
+            int ProjectId,
             string ProjectName,
             bool IsEncrypted)
         {
-            public static RestoreBackupPreparation Failure => new(false, string.Empty, string.Empty, string.Empty, false);
+            public static RestoreBackupPreparation Failure => new(false, string.Empty, string.Empty, 0, string.Empty, false);
+        }
+
+        private List<string> ResolveEncryptedRestorePasswordCandidates(int projectId)
+        {
+            var project = _repo.GetProjectById(projectId);
+            if (project is null)
+                return new List<string>();
+
+            var cfg = AppConfigStore.Load();
+            var keyRefs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg.Backups.Encryption);
+            if (keyRefs.Count == 0)
+                return new List<string>();
+
+            var candidates = new List<string>(keyRefs.Count);
+            foreach (var keyRef in keyRefs)
+            {
+                var secret = _credentialVault.GetSecret(
+                    keyRef,
+                    BackupEncryptionSecretUsername,
+                    preferKeychain: true,
+                    fallbackPlaintext: null);
+
+                if (!string.IsNullOrWhiteSpace(secret))
+                    candidates.Add(secret);
+            }
+
+            return candidates;
         }
 
         private string ResolveRestoreTarget(Project project)
@@ -5391,6 +5467,232 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
+        private sealed record ProjectEncryptionSecretDialogResult(bool Confirmed, bool ClearRequested, string Password);
+
+        private async Task<ProjectEncryptionSecretDialogResult> ConfirmProjectEncryptionSecretAsync(string projectName, bool hasExistingSecret)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Projects.Encryption.PasswordDialogTitle", "Project encryption password"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var prompt = new TextBlock
+                {
+                    Text = string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Projects.Encryption.PasswordDialogPrompt", "Set or update the encryption password for '{0}'."),
+                        projectName),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var passwordLabel = new TextBlock
+                {
+                    Text = L("Backups.Restore.EncryptedPasswordLabel", "Password"),
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+
+                var passwordBox = new TextBox
+                {
+                    Width = 320,
+                    PasswordChar = '●'
+                };
+
+                var confirmLabel = new TextBlock
+                {
+                    Text = L("Settings.Encryption.RotateConfirmPassword", "Confirm new password"),
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+
+                var confirmBox = new TextBox
+                {
+                    Width = 320,
+                    PasswordChar = '●'
+                };
+
+                var validationText = new TextBlock
+                {
+                    Foreground = Brushes.OrangeRed,
+                    IsVisible = false,
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var clearButton = new Button
+                {
+                    Content = L("Settings.Encryption.ClearPassword", "Clear password"),
+                    MinWidth = 150,
+                    IsVisible = hasExistingSecret
+                };
+                clearButton.Classes.Add("action-ghost");
+
+                var saveButton = new Button
+                {
+                    Content = L("Settings.Encryption.SetPassword", "Set password"),
+                    MinWidth = 160
+                };
+                saveButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                var clearRequested = false;
+
+                cancelButton.Click += (_, _) => window?.Close();
+                clearButton.Click += (_, _) =>
+                {
+                    clearRequested = true;
+                    confirmed = true;
+                    window?.Close();
+                };
+                saveButton.Click += (_, _) =>
+                {
+                    var password = passwordBox.Text ?? string.Empty;
+                    var confirm = confirmBox.Text ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(password))
+                    {
+                        validationText.Text = L("Projects.Encryption.PasswordValidationRequired", "Password and confirmation are required.");
+                        validationText.IsVisible = true;
+                        return;
+                    }
+
+                    if (!string.Equals(password, confirm, StringComparison.Ordinal))
+                    {
+                        validationText.Text = L("Projects.Encryption.PasswordValidationMismatch", "Password and confirmation do not match.");
+                        validationText.IsVisible = true;
+                        return;
+                    }
+
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(clearButton);
+                buttonRow.Children.Add(saveButton);
+
+                var content = new StackPanel { Spacing = 10 };
+                content.Children.Add(title);
+                content.Children.Add(prompt);
+                content.Children.Add(passwordLabel);
+                content.Children.Add(passwordBox);
+                content.Children.Add(confirmLabel);
+                content.Children.Add(confirmBox);
+                content.Children.Add(validationText);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Projects.Encryption.PasswordDialogTitle", "Project encryption password"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 560,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return new ProjectEncryptionSecretDialogResult(
+                    confirmed,
+                    clearRequested,
+                    passwordBox.Text ?? string.Empty);
+            });
+        }
+
+        private async Task EditProjectEncryptionSecretAsync(int projectId)
+        {
+            var project = _repo.GetProjectById(projectId);
+            if (project is null)
+            {
+                ShowBackupSkipNotification(
+                    Lf("Projects.Encryption.ProjectNotFound", "Project with id {0} was not found.", projectId),
+                    NotificationSeverity.Error);
+                return;
+            }
+
+            var existingKeyRef = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
+                ? null
+                : project.EncryptionKeyRef.Trim();
+            var hasExistingSecret = !string.IsNullOrWhiteSpace(_credentialVault.GetSecret(
+                existingKeyRef,
+                BackupEncryptionSecretUsername,
+                preferKeychain: true,
+                fallbackPlaintext: null));
+
+            var dialogResult = await ConfirmProjectEncryptionSecretAsync(project.Name, hasExistingSecret);
+            if (!dialogResult.Confirmed)
+                return;
+
+            try
+            {
+                if (dialogResult.ClearRequested)
+                {
+                    _credentialVault.DeleteSecret(existingKeyRef, BackupEncryptionSecretUsername);
+                    _repo.UpdateProjectEncryptionSettings(project.Id, project.EncryptionPolicy, null);
+                }
+                else
+                {
+                    var normalizedPassword = dialogResult.Password?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(normalizedPassword))
+                        return;
+
+                    var keyRef = _credentialVault.EnsureKeyRef(existingKeyRef, $"project-{project.Name}");
+                    _credentialVault.SaveSecret(keyRef, BackupEncryptionSecretUsername, normalizedPassword, preferKeychain: true);
+                    _repo.UpdateProjectEncryptionSettings(project.Id, project.EncryptionPolicy, keyRef);
+                }
+
+                await _projectsViewModel.RefreshAsync();
+                await ReloadBackupsVmDataAsync(force: true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Projects] Failed to update encryption password for project {project.Id}: {ex.Message}");
+                ShowBackupSkipNotification(
+                    L("Projects.Encryption.PasswordUpdateFailed", "Failed to update project encryption password."),
+                    NotificationSeverity.Error);
+            }
+        }
+
         private async void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
         {
             if (snapshot is null)
@@ -5410,23 +5712,6 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            string? encryptedRestorePassword = null;
-            if (preparation.IsEncrypted)
-            {
-                var passwordPrompt = await ConfirmEncryptedRestorePasswordAsync(preparation.ProjectName);
-                if (!passwordPrompt.Confirmed)
-                    return;
-
-                encryptedRestorePassword = passwordPrompt.Password;
-                if (string.IsNullOrWhiteSpace(encryptedRestorePassword))
-                {
-                    BackupsViewModel.ShowNotification(
-                        L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
-                        "Error");
-                    return;
-                }
-            }
-
             var projectRoot   = preparation.ProjectRoot;
             var backupFullPath = preparation.BackupFullPath;
             BackupsViewModel.IsBusy      = true;
@@ -5443,11 +5728,8 @@ namespace VaultSync.UI.ViewModels
             var restoreSucceeded = false;
             try
             {
-                await Task.Run(() =>
-                {
-                    Console.WriteLine($"[Restore] Starting restore for '{preparation.ProjectName}'.");
-                    Console.WriteLine($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
-                    RestoreDirectory(backupFullPath, projectRoot, encryptedRestorePassword, (percent, currentFile) =>
+                void RunRestore(string? encryptionPassword) =>
+                    RestoreDirectory(backupFullPath, projectRoot, encryptionPassword, (percent, currentFile) =>
                     {
                         var label = string.IsNullOrWhiteSpace(currentFile)
                             ? L("Backups.Status.Restoring", "Restoring backup...")
@@ -5460,10 +5742,69 @@ namespace VaultSync.UI.ViewModels
                             string.Empty,
                             allowCancel: false);
                     });
-                    Console.WriteLine($"[Restore] Completed restore for '{preparation.ProjectName}'.");
-                });
-                restoreSucceeded = true;
 
+                if (!preparation.IsEncrypted)
+                {
+                    await Task.Run(() =>
+                    {
+                        Console.WriteLine($"[Restore] Starting restore for '{preparation.ProjectName}'.");
+                        Console.WriteLine($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
+                        RunRestore(null);
+                        Console.WriteLine($"[Restore] Completed restore for '{preparation.ProjectName}'.");
+                    });
+                    restoreSucceeded = true;
+                }
+                else
+                {
+                    var attemptedPasswords = new HashSet<string>(StringComparer.Ordinal);
+                    var candidatePasswords = new Queue<string>(ResolveEncryptedRestorePasswordCandidates(preparation.ProjectId));
+
+                    while (true)
+                    {
+                        if (candidatePasswords.Count == 0)
+                        {
+                            var passwordPrompt = await ConfirmEncryptedRestorePasswordAsync(preparation.ProjectName);
+                            if (!passwordPrompt.Confirmed)
+                                return;
+
+                            if (string.IsNullOrWhiteSpace(passwordPrompt.Password))
+                            {
+                                BackupsViewModel.ShowNotification(
+                                    L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
+                                    "Error");
+                                continue;
+                            }
+
+                            candidatePasswords.Enqueue(passwordPrompt.Password);
+                        }
+
+                        var restorePassword = candidatePasswords.Dequeue();
+                        if (!attemptedPasswords.Add(restorePassword))
+                            continue;
+
+                        try
+                        {
+                            await Task.Run(() =>
+                            {
+                                Console.WriteLine($"[Restore] Starting restore for '{preparation.ProjectName}'.");
+                                Console.WriteLine($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
+                                RunRestore(restorePassword);
+                                Console.WriteLine($"[Restore] Completed restore for '{preparation.ProjectName}'.");
+                            });
+                            restoreSucceeded = true;
+                            break;
+                        }
+                        catch (Exception ex) when (IsEncryptedRestorePasswordError(ex))
+                        {
+                            Console.WriteLine($"[Restore] Restore decryption attempt failed for '{preparation.ProjectName}'. Trying next credential source.");
+                        }
+                    }
+                }
+
+                if (!restoreSucceeded)
+                    return;
+
+                restoreSucceeded = true;
             }
             catch (Exception ex)
             {
@@ -6405,6 +6746,326 @@ namespace VaultSync.UI.ViewModels
             catch
             {
                 // ignore manual refresh failures for now
+            }
+        }
+
+        private sealed record EncryptionRotationRequest(
+            bool Confirmed,
+            string? ProjectNameFilter,
+            string OldPassword,
+            string NewPassword);
+
+        private async Task<EncryptionRotationRequest> ConfirmEncryptionRotationRequestAsync()
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Settings.Encryption.RotateDialogTitle", "Rotate encrypted backups"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var body = new TextBlock
+                {
+                    Text = L("Settings.Encryption.RotateDialogBody", "Optionally target one project, then provide old and new passwords to re-encrypt existing encrypted backups."),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var projectLabel = new TextBlock
+                {
+                    Text = L("Settings.Encryption.RotateProjectFilter", "Project name (optional)"),
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+
+                var projectBox = new TextBox
+                {
+                    Width = 360,
+                    Watermark = L("Settings.Encryption.RotateProjectFilterWatermark", "Leave empty to rotate all encrypted backups")
+                };
+
+                var oldPasswordLabel = new TextBlock
+                {
+                    Text = L("Settings.Encryption.RotateOldPassword", "Old password"),
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+
+                var oldPasswordBox = new TextBox
+                {
+                    Width = 360,
+                    PasswordChar = '●'
+                };
+
+                var newPasswordLabel = new TextBlock
+                {
+                    Text = L("Settings.Encryption.RotateNewPassword", "New password"),
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+
+                var newPasswordBox = new TextBox
+                {
+                    Width = 360,
+                    PasswordChar = '●'
+                };
+
+                var confirmPasswordLabel = new TextBlock
+                {
+                    Text = L("Settings.Encryption.RotateConfirmPassword", "Confirm new password"),
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+
+                var confirmPasswordBox = new TextBox
+                {
+                    Width = 360,
+                    PasswordChar = '●'
+                };
+
+                var validationText = new TextBlock
+                {
+                    Foreground = Brushes.OrangeRed,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var rotateButton = new Button
+                {
+                    Content = L("Settings.Encryption.RotateExecute", "Rotate"),
+                    MinWidth = 140
+                };
+                rotateButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                cancelButton.Click += (_, _) => window?.Close();
+                rotateButton.Click += (_, _) =>
+                {
+                    var oldPassword = oldPasswordBox.Text ?? string.Empty;
+                    var newPassword = newPasswordBox.Text ?? string.Empty;
+                    var newPasswordConfirm = confirmPasswordBox.Text ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(oldPassword) || string.IsNullOrWhiteSpace(newPassword))
+                    {
+                        validationText.Text = L("Settings.Encryption.RotateValidationPassword", "Both old and new passwords are required.");
+                        return;
+                    }
+
+                    if (!string.Equals(newPassword, newPasswordConfirm, StringComparison.Ordinal))
+                    {
+                        validationText.Text = L("Settings.Encryption.RotateValidationMismatch", "New password and confirmation do not match.");
+                        return;
+                    }
+
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(rotateButton);
+
+                var content = new StackPanel { Spacing = 10 };
+                content.Children.Add(title);
+                content.Children.Add(body);
+                content.Children.Add(projectLabel);
+                content.Children.Add(projectBox);
+                content.Children.Add(oldPasswordLabel);
+                content.Children.Add(oldPasswordBox);
+                content.Children.Add(newPasswordLabel);
+                content.Children.Add(newPasswordBox);
+                content.Children.Add(confirmPasswordLabel);
+                content.Children.Add(confirmPasswordBox);
+                content.Children.Add(validationText);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Settings.Encryption.RotateDialogTitle", "Rotate encrypted backups"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 620,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return new EncryptionRotationRequest(
+                    confirmed,
+                    projectBox.Text?.Trim(),
+                    oldPasswordBox.Text ?? string.Empty,
+                    newPasswordBox.Text ?? string.Empty);
+            });
+        }
+
+        private async void OnRotateEncryptedBackupsRequested()
+        {
+            if (Volatile.Read(ref _backupAllInProgress) == 1 || Volatile.Read(ref _manualBackupInFlightCount) > 0)
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Settings.Encryption.RotateBusyBackups", "Wait for active backups to finish before rotating encrypted backups."),
+                    "Warning");
+                return;
+            }
+
+            var request = await ConfirmEncryptionRotationRequestAsync();
+            if (!request.Confirmed)
+                return;
+
+            var cfg = await Task.Run(AppConfigStore.Load);
+            var projects = await Task.Run(() => _repo.GetAllProjects().ToList());
+
+            Project? scopedProject = null;
+            if (!string.IsNullOrWhiteSpace(request.ProjectNameFilter))
+            {
+                scopedProject = projects.FirstOrDefault(p =>
+                    string.Equals(p.Name, request.ProjectNameFilter, StringComparison.OrdinalIgnoreCase));
+                if (scopedProject is null)
+                {
+                    BackupsViewModel.ShowNotification(
+                        Lf("Settings.Encryption.RotateProjectNotFound", "Project '{0}' was not found.", request.ProjectNameFilter),
+                        "Error");
+                    return;
+                }
+            }
+
+            var targetProjects = scopedProject is null
+                ? projects
+                : new List<Project> { scopedProject };
+
+            var destinations = GetAllDestinations(cfg);
+            var rotationService = new BackupKeyRotationService();
+            BackupsViewModel.IsBusy = true;
+            BackupsViewModel.BusyMessage = L("Settings.Encryption.RotateBusy", "Rotating encrypted backups...");
+            try
+            {
+                var summary = await Task.Run(() =>
+                {
+                    var succeeded = 0;
+                    var failed = 0;
+                    var skipped = 0;
+                    var failureMessages = new List<string>();
+
+                    foreach (var project in targetProjects)
+                    {
+                        var backups = _repo.GetBackupsForProject(project.Id)
+                            .Where(b => b.IsEncrypted)
+                            .ToList();
+
+                        foreach (var backup in backups)
+                        {
+                            var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
+                            if (string.IsNullOrWhiteSpace(backupRoot) || string.IsNullOrWhiteSpace(backup.Path))
+                            {
+                                skipped++;
+                                continue;
+                            }
+
+                            var backupFolder = Path.Combine(backupRoot, backup.Path);
+                            if (!Directory.Exists(backupFolder))
+                            {
+                                skipped++;
+                                continue;
+                            }
+
+                            try
+                            {
+                                var result = rotationService.RotateEncryptedBackup(
+                                    backupFolder,
+                                    request.OldPassword,
+                                    request.NewPassword,
+                                    cfg.Backups.Encryption);
+
+                                _repo.UpdateBackupEncryptionMetadata(
+                                    backup.Id,
+                                    isEncrypted: true,
+                                    result.CryptoDescriptorJson,
+                                    result.TotalBytes);
+
+                                succeeded++;
+                            }
+                            catch (Exception ex)
+                            {
+                                failed++;
+                                failureMessages.Add($"[{project.Name}] {backup.Path}: {ex.Message}");
+                            }
+                        }
+                    }
+
+                    return (succeeded, failed, skipped, failureMessages);
+                });
+
+                if (summary.succeeded > 0)
+                {
+                    ReloadBackupsVmData();
+                    await DashboardViewModel.RefreshAsync();
+                    await _projectsViewModel.RefreshAsync();
+                }
+
+                foreach (var line in summary.failureMessages.Take(5))
+                {
+                    Console.WriteLine($"[Rotate] {line}");
+                }
+
+                if (summary.succeeded == 0 && summary.failed == 0)
+                {
+                    BackupsViewModel.ShowNotification(
+                        L("Settings.Encryption.RotateNoBackups", "No encrypted backups matched the selected scope."),
+                        "Info");
+                    return;
+                }
+
+                var message = Lf(
+                    "Settings.Encryption.RotateSummary",
+                    "Rotation complete. Succeeded: {0}, Failed: {1}, Skipped: {2}.",
+                    summary.succeeded,
+                    summary.failed,
+                    summary.skipped);
+                BackupsViewModel.ShowNotification(
+                    message,
+                    summary.failed > 0 ? "Warning" : "Info");
+            }
+            finally
+            {
+                BackupsViewModel.IsBusy = false;
+                BackupsViewModel.BusyMessage = string.Empty;
             }
         }
 

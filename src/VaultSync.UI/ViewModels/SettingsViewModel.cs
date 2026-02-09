@@ -21,6 +21,7 @@ using VaultSync.UI.Services;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Models;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels.Notifications;
@@ -58,6 +59,13 @@ namespace VaultSync.UI
         private bool _autoImportMetadata = true;
         private bool _promptRestoreAfterImport = true;
         private string _backupLocationStatus = string.Empty;
+        private bool _backupEncryptionEnabled = false;
+        private bool _backupEncryptionAllowSessionFallback = false;
+        private string _backupEncryptionKeyRef = string.Empty;
+        private string _backupEncryptionPasswordInput = string.Empty;
+        private bool _backupEncryptionShowPassword = false;
+        private string _backupEncryptionSecretStatus = string.Empty;
+        private bool _backupEncryptionHasSecret = false;
 
         private bool _preferExternalDrives = true;
         private bool _showDriveHealthWarnings = true;
@@ -95,8 +103,10 @@ namespace VaultSync.UI
         private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
+        private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
         private bool _showLegacyBackupLocation = true;
+        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
 
         private bool _isInitialized;
         private bool _isSaving;
@@ -106,6 +116,7 @@ namespace VaultSync.UI
         public event Action? OpenLogConsoleRequested;
         public event Action? UpdateCheckRequested;
         public event Action? RefreshHistoryRequested;
+        public event Action? RotateEncryptedBackupsRequested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -172,6 +183,9 @@ namespace VaultSync.UI
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
+            SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
+            ClearBackupEncryptionPasswordCommand = new RelayCommand(_ => ClearBackupEncryptionPassword());
+            RotateEncryptedBackupsCommand = new RelayCommand(_ => RotateEncryptedBackupsRequested?.Invoke());
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
@@ -239,6 +253,15 @@ namespace VaultSync.UI
             _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
             _autoImportMetadata        = cfg.Backups.AutoImportMetadata;
             _promptRestoreAfterImport  = cfg.Backups.PromptRestoreAfterImport;
+            _backupEncryptionEnabled   = cfg.Backups.Encryption.Enabled;
+            _backupEncryptionAllowSessionFallback = cfg.Backups.Encryption.AllowSessionFallback;
+            _backupEncryptionKeyRef = cfg.Backups.Encryption.KeyRef ?? string.Empty;
+            _backupEncryptionHasSecret = !string.IsNullOrWhiteSpace(
+                _backupEncryptionSecretService.GetSecret(_backupEncryptionKeyRef, BackupEncryptionSecretUsername));
+            _backupEncryptionPasswordInput = string.Empty;
+            _backupEncryptionSecretStatus = _backupEncryptionHasSecret
+                ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+                : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
 
             _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
@@ -443,6 +466,11 @@ namespace VaultSync.UI
             cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
             cfg.Backups.AutoImportMetadata          = AutoImportMetadata;
             cfg.Backups.PromptRestoreAfterImport    = PromptRestoreAfterImport;
+            cfg.Backups.Encryption.Enabled          = BackupEncryptionEnabled;
+            cfg.Backups.Encryption.AllowSessionFallback = BackupEncryptionAllowSessionFallback;
+            cfg.Backups.Encryption.KeyRef = string.IsNullOrWhiteSpace(_backupEncryptionKeyRef)
+                ? string.Empty
+                : _backupEncryptionKeyRef;
             cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
@@ -906,6 +934,42 @@ namespace VaultSync.UI
         {
             get => _promptRestoreAfterImport;
             set => SetField(ref _promptRestoreAfterImport, value);
+        }
+
+        public bool BackupEncryptionEnabled
+        {
+            get => _backupEncryptionEnabled;
+            set => SetField(ref _backupEncryptionEnabled, value);
+        }
+
+        public bool BackupEncryptionAllowSessionFallback
+        {
+            get => _backupEncryptionAllowSessionFallback;
+            set => SetField(ref _backupEncryptionAllowSessionFallback, value);
+        }
+
+        public string BackupEncryptionPasswordInput
+        {
+            get => _backupEncryptionPasswordInput;
+            set => SetField(ref _backupEncryptionPasswordInput, value);
+        }
+
+        public bool BackupEncryptionShowPassword
+        {
+            get => _backupEncryptionShowPassword;
+            set => SetField(ref _backupEncryptionShowPassword, value);
+        }
+
+        public string BackupEncryptionSecretStatus
+        {
+            get => _backupEncryptionSecretStatus;
+            private set => SetField(ref _backupEncryptionSecretStatus, value);
+        }
+
+        public bool BackupEncryptionHasSecret
+        {
+            get => _backupEncryptionHasSecret;
+            private set => SetField(ref _backupEncryptionHasSecret, value);
         }
 
         public bool PreferExternalDrives
@@ -1413,6 +1477,61 @@ namespace VaultSync.UI
         public ICommand ExportLogConsoleCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
         public ICommand RefreshHistoryCommand { get; }
+        public ICommand SetBackupEncryptionPasswordCommand { get; }
+        public ICommand ClearBackupEncryptionPasswordCommand { get; }
+        public ICommand RotateEncryptedBackupsCommand { get; }
+
+        private void SetBackupEncryptionPassword()
+        {
+            if (string.IsNullOrWhiteSpace(BackupEncryptionPasswordInput))
+            {
+                BackupEncryptionSecretStatus = L(
+                    "Settings.Encryption.SecretStatusMissing",
+                    "No encryption password enrolled yet.");
+                return;
+            }
+
+            try
+            {
+                _backupEncryptionKeyRef = _backupEncryptionSecretService.EnsureSecretRef(
+                    _backupEncryptionKeyRef,
+                    "backup-encryption-global");
+
+                var storageMode = _backupEncryptionSecretService.SaveSecret(
+                    _backupEncryptionKeyRef,
+                    BackupEncryptionSecretUsername,
+                    BackupEncryptionPasswordInput,
+                    allowSessionFallback: BackupEncryptionAllowSessionFallback,
+                    fallbackConfirmed: BackupEncryptionAllowSessionFallback);
+
+                BackupEncryptionPasswordInput = string.Empty;
+                BackupEncryptionHasSecret = true;
+                BackupEncryptionSecretStatus = storageMode == EncryptionSecretStorageMode.SecureStore
+                    ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+                    : L("Settings.Encryption.SecretStatusSession", "Password is stored in this app session only.");
+
+                TriggerAutoSave();
+            }
+            catch (Exception ex)
+            {
+                BackupEncryptionSecretStatus = L("Settings.Encryption.SecretStatusSaveFailed", "Failed to store encryption password.");
+                GlobalNotificationCenter.Instance.Show(
+                    $"{BackupEncryptionSecretStatus} {ex.Message}",
+                    NotificationSeverity.Error,
+                    L("Settings.Encryption.Title", "Backup encryption"));
+            }
+        }
+
+        private void ClearBackupEncryptionPassword()
+        {
+            _backupEncryptionSecretService.DeleteSecret(_backupEncryptionKeyRef, BackupEncryptionSecretUsername);
+            BackupEncryptionHasSecret = false;
+            BackupEncryptionPasswordInput = string.Empty;
+            BackupEncryptionSecretStatus = L(
+                "Settings.Encryption.SecretStatusMissing",
+                "No encryption password enrolled yet.");
+            TriggerAutoSave();
+        }
 
         private async void BrowseProjectsRoot()
         {

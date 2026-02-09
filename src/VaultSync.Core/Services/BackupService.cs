@@ -424,7 +424,8 @@ public sealed class BackupService
 
         var configSnapshot = AppConfigStore.Load();
         var encryptionConfig = configSnapshot.Backups.Encryption ?? new BackupEncryptionConfig();
-        var encryptionRequested = encryptionConfig.Enabled;
+        var resolvedEncryption = BackupEncryptionPolicyResolver.Resolve(project, encryptionConfig);
+        var encryptionRequested = resolvedEncryption.EncryptionRequested;
         if (encryptionRequested && !useArchiveMode)
         {
             // Encrypted backups currently require archive artifacts.
@@ -725,13 +726,19 @@ public sealed class BackupService
             try
             {
                 progressCallback?.Invoke(95, string.Empty, "Encrypting archive...");
+                if (string.IsNullOrWhiteSpace(resolvedEncryption.EffectiveKeyRef))
+                {
+                    throw new InvalidOperationException(
+                        "Backup encryption is enabled for this project but no encryption key reference is configured.");
+                }
+
                 var password = _backupEncryptionSecretService.GetSecret(
-                    encryptionConfig.KeyRef,
+                    resolvedEncryption.EffectiveKeyRef,
                     username: "vaultsync-backup-encryption");
                 if (string.IsNullOrWhiteSpace(password))
                 {
                     throw new InvalidOperationException(
-                        "Backup encryption is enabled but no encryption secret is available.");
+                        $"Backup encryption is enabled but no encryption secret is available for the resolved {resolvedEncryption.KeySource} key.");
                 }
 
                 var encryptionResult = _backupArchiveCryptoService.EncryptArchiveInPlace(
