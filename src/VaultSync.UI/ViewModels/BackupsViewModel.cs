@@ -2134,8 +2134,12 @@ namespace VaultSync.UI.ViewModels
                 SizeBytes = backup.TotalBytes,
                 Type      = isAutoSnapshot ? "Auto" : "Manual",
                 IsImported = backup.IsImported,
+                IsEncrypted = backup.IsEncrypted,
                 OriginMachineName = backup.OriginMachineName,
                 ImportedLabel = importedLabel,
+                EncryptionLabel = backup.IsEncrypted
+                    ? L("Projects.EncryptionPolicy.Encrypted", "Encrypted")
+                    : L("Projects.EncryptionPolicy.Plain", "Plain"),
                 TypeLabel = isAutoSnapshot
                     ? L("Backups.Snapshot.Type.Auto", "Auto")
                     : L("Backups.Snapshot.Type.Manual", "Manual"),
@@ -2414,9 +2418,11 @@ namespace VaultSync.UI.ViewModels
         public string SizeFormatted => FormatSize(SizeBytes);
 
         public bool IsImported { get; set; }
+        public bool IsEncrypted { get; set; }
 
         /// <summary>Localized label for the imported tag.</summary>
         public string ImportedLabel { get; set; } = string.Empty;
+        public string EncryptionLabel { get; set; } = string.Empty;
         public string OriginMachineName { get; set; } = string.Empty;
 
         public bool IsProtected
@@ -2556,10 +2562,23 @@ namespace VaultSync.UI.ViewModels
             get => _preferredDestinationOption;
             set
             {
-                if (!SetField(ref _preferredDestinationOption, value, nameof(PreferredDestinationOption)))
+                // Ignore transient null selection events fired while destination options refresh.
+                // Real "Auto" selection is represented by a non-null option with empty Id.
+                if (value is null)
                     return;
 
-                PreferredDestinationId = value?.Id ?? string.Empty;
+                if (ReferenceEquals(_preferredDestinationOption, value))
+                    return;
+
+                var previousId = _preferredDestinationOption?.Id ?? string.Empty;
+                _preferredDestinationOption = value;
+                OnPropertyChanged(nameof(PreferredDestinationOption));
+
+                var nextId = value.Id ?? string.Empty;
+                if (string.Equals(previousId, nextId, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                PreferredDestinationId = nextId;
                 PreferredDestinationChanged?.Invoke(this);
             }
         }
@@ -2573,7 +2592,7 @@ namespace VaultSync.UI.ViewModels
 
         public void SetPreferredDestinationOption(DestinationOption? option)
         {
-            if (Equals(_preferredDestinationOption, option))
+            if (ReferenceEquals(_preferredDestinationOption, option))
                 return;
 
             _preferredDestinationOption = option;
@@ -2603,14 +2622,19 @@ namespace VaultSync.UI.ViewModels
                 if (!SetField(ref _encryptionPolicyOption, value, nameof(EncryptionPolicyOption)))
                     return;
 
-                EncryptionPolicy = value?.Id ?? ProjectEncryptionPolicy.Inherit;
+                // Ignore transient null selection events fired while option sources refresh.
+                // Real "inherit" selection is represented by a non-null option with Id="inherit".
+                if (value is null)
+                    return;
+
+                EncryptionPolicy = value.Id;
                 EncryptionPolicyChanged?.Invoke(this);
             }
         }
 
         public void SetEncryptionPolicyOption(EncryptionPolicyOption? option)
         {
-            if (Equals(_encryptionPolicyOption, option))
+            if (ReferenceEquals(_encryptionPolicyOption, option))
                 return;
 
             _encryptionPolicyOption = option;

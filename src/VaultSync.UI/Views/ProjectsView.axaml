@@ -242,17 +242,26 @@
                       <Run Text="{Binding PreferredDestinationDisplay}" />
                     </TextBlock>
 
-                    <TextBlock
-                      Grid.Row="3"
-                      Grid.ColumnSpan="2"
-                      Margin="0,2,0,0"
-                      Foreground="{DynamicResource TextMutedBrush}"
-                      FontSize="{DynamicResource PageSubtitleFontSize}"
-                      TextWrapping="NoWrap"
-                      TextTrimming="CharacterEllipsis">
-                      <Run Text="{infra:LocalizedString Key=Projects.List.EncryptionPrefix}" />
-                      <Run Text="{Binding EffectiveEncryptionDisplay}" />
-                    </TextBlock>
+                    <StackPanel Grid.Row="3"
+                                Grid.ColumnSpan="2"
+                                Margin="0,4,0,0"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{infra:LocalizedString Key=Projects.List.EncryptionPrefix}"
+                                 Foreground="{DynamicResource TextMutedBrush}"
+                                 FontSize="{DynamicResource PageSubtitleFontSize}" />
+                      <Border CornerRadius="999"
+                              Padding="8,2"
+                              Background="{Binding EncryptionBadgeBackground}">
+                        <TextBlock Text="{Binding EncryptionBadgeText}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding EncryptionBadgeForeground}"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis" />
+                      </Border>
+                    </StackPanel>
 
                     <!-- Health pill bar -->
                     <Border
@@ -437,12 +446,26 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Grid.Row="2"
-                           Text="{Binding EffectiveEncryptionDisplay}"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis" />
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                  <TextBlock Text="{Binding EffectiveEncryptionDisplay}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}"
+                             TextWrapping="NoWrap"
+                             TextTrimming="CharacterEllipsis" />
+                  <Border CornerRadius="999"
+                          Padding="8,2"
+                          Background="{Binding EncryptionBadgeBackground}">
+                    <TextBlock Text="{Binding EncryptionBadgeText}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{Binding EncryptionBadgeForeground}"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis" />
+                  </Border>
+                </StackPanel>
                 <Button Grid.Row="3"
                         Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
                         Classes="action-ghost"

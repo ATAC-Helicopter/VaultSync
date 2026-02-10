@@ -1295,6 +1295,11 @@
                                             <TextBlock Text="{Binding ImportedLabel}"
                                                        FontSize="11" />
                                           </Border>
+                                          <Border Classes="backup-tag"
+                                                  Background="{DynamicResource Surface3}">
+                                            <TextBlock Text="{Binding EncryptionLabel}"
+                                                       FontSize="11" />
+                                          </Border>
                                         </WrapPanel>
 
                                         <Border Grid.Row="0"

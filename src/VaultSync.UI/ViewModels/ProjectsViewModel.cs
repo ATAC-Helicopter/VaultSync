@@ -102,6 +102,7 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand ManageProjectEncryptionCommand { get; }
     public ICommand ToggleSortCommand { get; }
     public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
+    public event Action<int, string>? ProjectEncryptionPolicyChanged;
     public string SearchText
     {
         get => _searchText;
@@ -561,6 +562,25 @@ public class ProjectsViewModel : ViewModelBase
         vm.EncryptionSecretStatus = hasSecret
             ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
             : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
+
+        if (effectiveEncrypted && hasSecret)
+        {
+            vm.EncryptionBadgeText = L("Projects.EncryptionBadge.Protected", "Password protected");
+            vm.EncryptionBadgeBackground = "#1F5A44";
+            vm.EncryptionBadgeForeground = "#D6FFEB";
+        }
+        else if (effectiveEncrypted)
+        {
+            vm.EncryptionBadgeText = L("Projects.EncryptionBadge.MissingPassword", "Protection missing password");
+            vm.EncryptionBadgeBackground = "#6A4A20";
+            vm.EncryptionBadgeForeground = "#FFE7BE";
+        }
+        else
+        {
+            vm.EncryptionBadgeText = L("Projects.EncryptionBadge.NotProtected", "Not protected");
+            vm.EncryptionBadgeBackground = "#2F3650";
+            vm.EncryptionBadgeForeground = "#C7D2FE";
+        }
     }
 
     private void SortProjects()
@@ -1087,10 +1107,12 @@ public class ProjectsViewModel : ViewModelBase
                     vm.EncryptionPolicy,
                     string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef);
                 UpdateProjectEncryptionDisplay(vm, config);
+                ProjectEncryptionPolicyChanged?.Invoke(project.Id, vm.EncryptionPolicy);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[Projects] Failed to persist project settings for '{vm.Name}': {ex.Message}");
         }
     }
 
@@ -1541,7 +1563,7 @@ public class ProjectItemViewModel : ViewModelBase
 
     public void SetPreferredDestinationOption(DestinationOption? option)
     {
-        if (Equals(_preferredDestinationOption, option))
+        if (ReferenceEquals(_preferredDestinationOption, option))
             return;
 
         _preferredDestinationOption = option;
@@ -1570,7 +1592,12 @@ public class ProjectItemViewModel : ViewModelBase
         {
             if (SetProperty(ref _encryptionPolicyOption, value))
             {
-                EncryptionPolicy = value?.Id ?? ProjectEncryptionPolicy.Inherit;
+                // Ignore transient null selection events fired while option sources refresh.
+                // Real "inherit" selection is represented by a non-null option with Id="inherit".
+                if (value is null)
+                    return;
+
+                EncryptionPolicy = value.Id;
             }
         }
     }
@@ -1596,9 +1623,30 @@ public class ProjectItemViewModel : ViewModelBase
         set => SetProperty(ref _encryptionSecretStatus, value ?? string.Empty);
     }
 
+    private string _encryptionBadgeText = string.Empty;
+    public string EncryptionBadgeText
+    {
+        get => _encryptionBadgeText;
+        set => SetProperty(ref _encryptionBadgeText, value ?? string.Empty);
+    }
+
+    private string _encryptionBadgeBackground = "#2F3650";
+    public string EncryptionBadgeBackground
+    {
+        get => _encryptionBadgeBackground;
+        set => SetProperty(ref _encryptionBadgeBackground, value ?? "#2F3650");
+    }
+
+    private string _encryptionBadgeForeground = "#C7D2FE";
+    public string EncryptionBadgeForeground
+    {
+        get => _encryptionBadgeForeground;
+        set => SetProperty(ref _encryptionBadgeForeground, value ?? "#C7D2FE");
+    }
+
     public void SetEncryptionPolicyOption(EncryptionPolicyOption? option)
     {
-        if (Equals(_encryptionPolicyOption, option))
+        if (ReferenceEquals(_encryptionPolicyOption, option))
             return;
 
         _encryptionPolicyOption = option;
@@ -1849,6 +1897,17 @@ public sealed class DestinationOption
     }
 
     public override string ToString() => Label;
+
+    public override bool Equals(object? obj)
+    {
+        return obj is DestinationOption other &&
+               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override int GetHashCode()
+    {
+        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
+    }
 }
 
 public sealed class EncryptionPolicyOption
@@ -1863,6 +1922,17 @@ public sealed class EncryptionPolicyOption
     }
 
     public override string ToString() => Label;
+
+    public override bool Equals(object? obj)
+    {
+        return obj is EncryptionPolicyOption other &&
+               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override int GetHashCode()
+    {
+        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
+    }
 }
 
 public sealed class ProjectSnapshotViewModel

@@ -42,5 +42,12 @@ Filename: "{app}\{#MyAppExeName}"; \
   Description: "Launch {#MyAppName}"; \
   Flags: nowait postinstall skipifsilent
 
+[Registry]
+; Associate encrypted backup archives (.vse) with VaultSync
+Root: HKCR; Subkey: ".vse"; ValueType: string; ValueName: ""; ValueData: "VaultSync.EncryptedBackup"; Flags: uninsdeletevalue
+Root: HKCR; Subkey: "VaultSync.EncryptedBackup"; ValueType: string; ValueName: ""; ValueData: "VaultSync Encrypted Backup"; Flags: uninsdeletekey
+Root: HKCR; Subkey: "VaultSync.EncryptedBackup\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKCR; Subkey: "VaultSync.EncryptedBackup\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
+
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\tools"

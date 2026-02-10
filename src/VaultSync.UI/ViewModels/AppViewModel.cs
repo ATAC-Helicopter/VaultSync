@@ -122,6 +122,9 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
         private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
+        private static readonly TimeSpan EncryptedOpenAutoCleanupDelay = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan EncryptedOpenStaleRetention = TimeSpan.FromMinutes(30);
+        private static readonly ConcurrentDictionary<string, CancellationTokenSource> _encryptedOpenCleanup = new(StringComparer.OrdinalIgnoreCase);
         private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
         private DateTime _lastDestinationScanUtc = DateTime.MinValue;
         private int _destinationScanInFlight;
@@ -668,6 +671,7 @@ namespace VaultSync.UI.ViewModels
             _dashboardViewModel = null;
             _projectsViewModel  = new ProjectsViewModel();
             _projectsViewModel.EditProjectEncryptionRequested += OnProjectEncryptionRequestedFromProjects;
+            _projectsViewModel.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
             _backupsViewModel   = null;
             _settingsViewModel  = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
@@ -689,6 +693,7 @@ namespace VaultSync.UI.ViewModels
 
             _ = Task.Run(() => CleanupIncompleteBackupsOnStartup());
             _ = Task.Run(() => EnforceRetentionOnStartup());
+            _ = Task.Run(() => CleanupUnusedCredentialSecretsOnStartup());
 
             // 3) BackupsViewModel is created lazily; wiring happens when instantiated.
 
@@ -1848,6 +1853,7 @@ namespace VaultSync.UI.ViewModels
                     projectId,
                     ProjectEncryptionPolicy.Normalize(encryptionPolicy),
                     string.IsNullOrWhiteSpace(project.EncryptionKeyRef) ? null : project.EncryptionKeyRef);
+                await ExportMetadataForProjectSettingsChangeAsync(projectId);
                 await _projectsViewModel.RefreshAsync();
             }
             catch (Exception ex)
@@ -5681,6 +5687,7 @@ namespace VaultSync.UI.ViewModels
                     _repo.UpdateProjectEncryptionSettings(project.Id, project.EncryptionPolicy, keyRef);
                 }
 
+                await ExportMetadataForProjectSettingsChangeAsync(project.Id);
                 await _projectsViewModel.RefreshAsync();
                 await ReloadBackupsVmDataAsync(force: true);
             }
@@ -6371,59 +6378,412 @@ namespace VaultSync.UI.ViewModels
 
         private async void OpenBackupFolder(int backupId)
         {
+            var openCardId = $"open-{backupId}";
             try
             {
-                var fullPath = await Task.Run(() => ResolveBackupFullPathForOpen(backupId));
-                if (string.IsNullOrWhiteSpace(fullPath))
+                var preparation = await Task.Run(() => PrepareBackupFolderOpen(backupId));
+                if (!preparation.IsReady || string.IsNullOrWhiteSpace(preparation.BackupFolder))
                     return;
 
-                if (OperatingSystem.IsWindows())
+                if (preparation.IsEncrypted)
                 {
-                    Process.Start(new ProcessStartInfo("explorer.exe", $"\"{fullPath}\"") { UseShellExecute = true });
+                    BackupsViewModel.UpdateActiveBackup(
+                        openCardId,
+                        preparation.ProjectName,
+                        0,
+                        L("Backups.OpenEncrypted.Opening", "Opening encrypted backup..."),
+                        string.Empty,
+                        allowCancel: false);
+
+                    var extractedDir = await OpenEncryptedBackupFolderAsync(preparation, openCardId);
+                    if (string.IsNullOrWhiteSpace(extractedDir))
+                        return;
+
+                    BackupsViewModel.UpdateActiveBackup(
+                        openCardId,
+                        preparation.ProjectName,
+                        100,
+                        L("Backups.OpenEncrypted.Ready", "Open complete"),
+                        L("Backups.OpenEncrypted.ReadyEta", "Decrypted content is ready."),
+                        allowCancel: false);
+
+                    OpenPathInSystemFileManager(extractedDir);
+                    ScheduleEncryptedOpenCleanup(extractedDir);
+                    return;
                 }
-                else if (OperatingSystem.IsMacOS())
-                {
-                    Process.Start("open", fullPath);
-                }
-                else if (OperatingSystem.IsLinux())
-                {
-                    Process.Start("xdg-open", fullPath);
-                }
-                else
-                {
-                    Process.Start(new ProcessStartInfo { FileName = fullPath, UseShellExecute = true });
-                }
+
+                OpenPathInSystemFileManager(preparation.BackupFolder);
             }
             catch
             {
                 // Swallow tray errors
             }
+            finally
+            {
+                if (openCardId is not null)
+                {
+                    Dispatcher.UIThread.Post(() => BackupsViewModel.RemoveActiveBackup(openCardId));
+                }
+            }
         }
 
-        private string? ResolveBackupFullPathForOpen(int backupId)
+        private void CleanupUnusedCredentialSecretsOnStartup()
+        {
+            try
+            {
+                var activeKeyRefs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                var cfg = _config;
+                if (!string.IsNullOrWhiteSpace(cfg.Backups.Encryption.KeyRef))
+                    activeKeyRefs.Add(cfg.Backups.Encryption.KeyRef.Trim());
+
+                if (cfg.Network.Credentials is { Count: > 0 })
+                {
+                    foreach (var cred in cfg.Network.Credentials)
+                    {
+                        if (!string.IsNullOrWhiteSpace(cred.KeyRef))
+                            activeKeyRefs.Add(cred.KeyRef.Trim());
+                    }
+                }
+
+                foreach (var project in _repo.GetAllProjects())
+                {
+                    if (!string.IsNullOrWhiteSpace(project.EncryptionKeyRef))
+                        activeKeyRefs.Add(project.EncryptionKeyRef.Trim());
+                }
+
+                var removed = _credentialVault.CleanupUnusedSecrets(activeKeyRefs, TimeSpan.FromDays(30));
+                if (removed > 0)
+                {
+                    Console.WriteLine($"[Security] Removed {removed} stale credential vault entries at startup.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Security] Credential vault cleanup failed: {ex.Message}");
+            }
+        }
+
+        private BackupFolderOpenPreparation PrepareBackupFolderOpen(int backupId)
         {
             var backup = _repo.GetBackupById(backupId);
             if (backup is null)
-                return null;
+                return BackupFolderOpenPreparation.Failure;
 
             var cfg = AppConfigStore.Load();
             var destinations = GetAllDestinations(cfg);
             var destinationRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(destinationRoot))
-                return null;
+                return BackupFolderOpenPreparation.Failure;
 
             if (string.IsNullOrWhiteSpace(backup.Path))
-                return null;
+                return BackupFolderOpenPreparation.Failure;
 
             var fullPath = Path.GetFullPath(Path.Combine(destinationRoot, backup.Path));
-            return Directory.Exists(fullPath) ? fullPath : null;
+            if (!Directory.Exists(fullPath))
+                return BackupFolderOpenPreparation.Failure;
+
+            var encryptedArchivePath = Path.Combine(fullPath, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            var projectName = _repo.GetProjectById(backup.ProjectId)?.Name ?? "backup";
+
+            return new BackupFolderOpenPreparation(
+                IsReady: true,
+                BackupId: backup.Id,
+                ProjectId: backup.ProjectId,
+                ProjectName: projectName,
+                BackupFolder: fullPath,
+                IsEncrypted: backup.IsEncrypted || File.Exists(encryptedArchivePath));
+        }
+
+        private sealed record BackupFolderOpenPreparation(
+            bool IsReady,
+            int BackupId,
+            int ProjectId,
+            string ProjectName,
+            string BackupFolder,
+            bool IsEncrypted)
+        {
+            public static BackupFolderOpenPreparation Failure => new(false, 0, 0, string.Empty, string.Empty, false);
+        }
+
+        private async Task<string?> OpenEncryptedBackupFolderAsync(BackupFolderOpenPreparation preparation, string cardId)
+        {
+            CleanupStaleOpenBackupFolders();
+
+            var attemptedPasswords = new HashSet<string>(StringComparer.Ordinal);
+            var candidatePasswords = new Queue<string>(ResolveEncryptedRestorePasswordCandidates(preparation.ProjectId));
+
+            while (true)
+            {
+                if (candidatePasswords.Count == 0)
+                {
+                    var passwordPrompt = await ConfirmEncryptedRestorePasswordAsync(preparation.ProjectName);
+                    if (!passwordPrompt.Confirmed)
+                        return null;
+
+                    if (string.IsNullOrWhiteSpace(passwordPrompt.Password))
+                    {
+                        BackupsViewModel.ShowNotification(
+                            L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
+                            "Warning");
+                        continue;
+                    }
+
+                    candidatePasswords.Enqueue(passwordPrompt.Password);
+                }
+
+                var password = candidatePasswords.Dequeue();
+                if (!attemptedPasswords.Add(password))
+                    continue;
+
+                try
+                {
+                    return await Task.Run(() => ExtractEncryptedBackupForOpen(preparation.BackupFolder, password, (percent, status, eta) =>
+                    {
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            BackupsViewModel.UpdateActiveBackup(
+                                cardId,
+                                preparation.ProjectName,
+                                percent,
+                                status,
+                                eta,
+                                allowCancel: false);
+                        });
+                    }));
+                }
+                catch (Exception ex) when (IsEncryptedRestorePasswordError(ex))
+                {
+                    BackupsViewModel.ShowNotification(
+                        L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted."),
+                        "Warning");
+                }
+                catch (Exception ex)
+                {
+                    BackupsViewModel.ShowNotification(
+                        Lf("Backups.Notification.OpenFolderFailed", "Failed to open backup folder for '{0}'.", preparation.ProjectName),
+                        "Error");
+                    Console.WriteLine($"[OpenEncrypted] Failed to open backup {preparation.BackupId}: {ex.Message}");
+                    return null;
+                }
+            }
+        }
+
+        private static string ExtractEncryptedBackupForOpen(string backupFolder, string password, Action<double, string, string>? progress)
+        {
+            var encryptedArchivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            if (!File.Exists(encryptedArchivePath))
+                throw new FileNotFoundException("Encrypted archive not found.", encryptedArchivePath);
+
+            var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-open-{Guid.NewGuid():N}");
+            var stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
+            var extractDir = Path.Combine(stagingRoot, "content");
+
+            try
+            {
+                Directory.CreateDirectory(extractDir);
+                progress?.Invoke(10, "Decrypting archive...", string.Empty);
+
+                var cryptoService = new BackupArchiveCryptoService();
+                cryptoService.DecryptArchiveToPlainZip(backupFolder, password, stagingArchive);
+                progress?.Invoke(40, "Decrypting archive...", string.Empty);
+
+                using var archive = ZipFile.OpenRead(stagingArchive);
+                var totalEntries = archive.Entries.Count;
+                var processed = 0;
+                foreach (var entry in archive.Entries)
+                {
+                    var destinationPath = Path.Combine(extractDir, entry.FullName);
+                    if (string.IsNullOrEmpty(entry.Name))
+                    {
+                        Directory.CreateDirectory(destinationPath);
+                    }
+                    else
+                    {
+                        var parentDir = Path.GetDirectoryName(destinationPath);
+                        if (!string.IsNullOrEmpty(parentDir))
+                            Directory.CreateDirectory(parentDir);
+
+                        entry.ExtractToFile(destinationPath, overwrite: true);
+                    }
+
+                    processed++;
+                    var extractPercent = totalEntries == 0 ? 100d : (processed * 100d / totalEntries);
+                    var mappedPercent = 40d + (extractPercent * 0.6d);
+                    var fileLabel = string.IsNullOrWhiteSpace(entry.FullName) ? "Extracting..." : $"Extracting {entry.FullName}";
+                    var etaLabel = totalEntries == 0
+                        ? string.Empty
+                        : $"Extracting {processed}/{totalEntries}";
+                    progress?.Invoke(mappedPercent, fileLabel, etaLabel);
+                }
+
+                return extractDir;
+            }
+            catch
+            {
+                try
+                {
+                    if (Directory.Exists(stagingRoot))
+                        Directory.Delete(stagingRoot, recursive: true);
+                }
+                catch
+                {
+                    // best effort cleanup
+                }
+
+                throw;
+            }
+        }
+
+        private static void CleanupStaleOpenBackupFolders()
+        {
+            try
+            {
+                var nowUtc = DateTime.UtcNow;
+                foreach (var dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
+                {
+                    try
+                    {
+                        var createdUtc = Directory.GetCreationTimeUtc(dir);
+                        var modifiedUtc = Directory.GetLastWriteTimeUtc(dir);
+                        var referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
+                        if ((nowUtc - referenceUtc) < EncryptedOpenStaleRetention)
+                            continue;
+
+                        Directory.Delete(dir, recursive: true);
+                    }
+                    catch
+                    {
+                        // best effort cleanup
+                    }
+                }
+            }
+            catch
+            {
+                // best effort cleanup
+            }
+        }
+
+        private static void ScheduleEncryptedOpenCleanup(string extractedDir)
+        {
+            var stagingRoot = ResolveEncryptedOpenStagingRoot(extractedDir);
+            if (string.IsNullOrWhiteSpace(stagingRoot))
+                return;
+
+            var cts = new CancellationTokenSource();
+            var previous = _encryptedOpenCleanup.AddOrUpdate(stagingRoot, cts, (_, old) =>
+            {
+                try { old.Cancel(); } catch { }
+                old.Dispose();
+                return cts;
+            });
+            if (!ReferenceEquals(previous, cts))
+            {
+                // no-op, handled above
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(EncryptedOpenAutoCleanupDelay, cts.Token).ConfigureAwait(false);
+                    await TryDeleteEncryptedOpenStagingRootAsync(stagingRoot, cts.Token).ConfigureAwait(false);
+                }
+                catch (TaskCanceledException)
+                {
+                    // replaced by a newer schedule
+                }
+                catch
+                {
+                    // best effort cleanup
+                }
+                finally
+                {
+                    if (_encryptedOpenCleanup.TryRemove(stagingRoot, out var token))
+                    {
+                        token.Dispose();
+                    }
+                }
+            });
+        }
+
+        private static string? ResolveEncryptedOpenStagingRoot(string extractedDir)
+        {
+            if (string.IsNullOrWhiteSpace(extractedDir))
+                return null;
+
+            try
+            {
+                var full = Path.GetFullPath(extractedDir);
+                var tempRoot = Path.GetFullPath(Path.GetTempPath());
+                if (!full.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
+                    return null;
+
+                var current = new DirectoryInfo(full);
+                while (current is not null)
+                {
+                    if (current.Name.StartsWith("vaultsync-open-", StringComparison.OrdinalIgnoreCase))
+                        return current.FullName;
+                    current = current.Parent;
+                }
+            }
+            catch
+            {
+                // best effort path validation
+            }
+
+            return null;
+        }
+
+        private static async Task TryDeleteEncryptedOpenStagingRootAsync(string stagingRoot, CancellationToken ct)
+        {
+            for (var attempt = 0; attempt < 8; attempt++)
+            {
+                ct.ThrowIfCancellationRequested();
+                try
+                {
+                    if (!Directory.Exists(stagingRoot))
+                        return;
+                    Directory.Delete(stagingRoot, recursive: true);
+                    return;
+                }
+                catch
+                {
+                    if (attempt == 7)
+                        return;
+                    await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private static void OpenPathInSystemFileManager(string path)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
+                return;
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", path);
+                return;
+            }
+
+            if (OperatingSystem.IsLinux())
+            {
+                Process.Start("xdg-open", path);
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
         }
 
         private void UpdateBackupProtectionMarker(int backupId, bool isProtected)
         {
             try
             {
-                var fullPath = ResolveBackupFullPathForOpen(backupId);
+                var fullPath = PrepareBackupFolderOpen(backupId).BackupFolder;
                 if (string.IsNullOrWhiteSpace(fullPath))
                     return;
 
@@ -7690,7 +8050,12 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void TryExportMetadataForBackup(AppConfig cfg, BackupDestination dest, string effectivePath, int backupId)
+        private void TryExportMetadataForBackup(
+            AppConfig cfg,
+            BackupDestination dest,
+            string effectivePath,
+            int backupId,
+            bool? forceBackfillOverride = null)
         {
             if (!IsMetadataSyncEnabled(cfg, dest))
                 return;
@@ -7700,6 +8065,7 @@ namespace VaultSync.UI.ViewModels
 
             var machineId = Environment.MachineName;
             var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+            var forceBackfill = forceBackfillOverride ?? dest.ForceMetadataBackfill;
             _ = Task.Run(() =>
             {
                 try
@@ -7710,9 +8076,11 @@ namespace VaultSync.UI.ViewModels
                         backupId,
                         _currentVersionString,
                         machineId,
-                        dest.ForceMetadataBackfill);
+                        forceBackfill);
                     Console.WriteLine($"[MetadataSync] Export ({name}) result: {result.Status}.");
-                    if (dest.ForceMetadataBackfill && result.Status == MetadataSyncStatus.Success)
+                    if (forceBackfillOverride is null &&
+                        dest.ForceMetadataBackfill &&
+                        result.Status == MetadataSyncStatus.Success)
                     {
                         ClearDestinationForceBackfill(dest);
                     }
@@ -7722,6 +8090,46 @@ namespace VaultSync.UI.ViewModels
                     Console.WriteLine($"[MetadataSync] Export failed for '{name}': {ex.Message}");
                 }
             });
+        }
+
+        private async Task ExportMetadataForProjectSettingsChangeAsync(int projectId)
+        {
+            try
+            {
+                var project = _repo.GetProjectById(projectId);
+                if (project is null)
+                    return;
+
+                var latestBackup = _repo.GetLatestBackupForProject(projectId);
+                if (latestBackup is null || latestBackup.Id <= 0)
+                    return;
+
+                var cfg = await Task.Run(() => AppConfigStore.Load());
+                var destinations = ResolveDestinationsForProject(project, cfg).Destinations;
+                if (destinations.Count == 0)
+                    return;
+
+                foreach (var dest in destinations)
+                {
+                    if (!IsMetadataSyncEnabled(cfg, dest))
+                        continue;
+
+                    var resolution = await PrepareDestinationAsync(dest, cfg);
+                    if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                        continue;
+
+                    TryExportMetadataForBackup(
+                        cfg,
+                        dest,
+                        resolution.EffectivePath,
+                        latestBackup.Id,
+                        forceBackfillOverride: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MetadataSync] Project settings export failed for projectId={projectId}: {ex.Message}");
+            }
         }
 
         private void ClearDestinationForceBackfill(BackupDestination dest)

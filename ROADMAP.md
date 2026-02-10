@@ -32,7 +32,7 @@
 ## 1.5.x (current focus)
 
 ### 1.5.0 priorities
-- [x] `P0` Backup encryption and password-protected backups.
+- [ ] `P0` Backup encryption and password-protected backups.
 - [ ] `P1` Backup bandwidth limits and quiet hours.
 - [ ] `P1` Incremental backup UX improvements.
 - [ ] `P2` Snapshot diff summaries.
@@ -247,6 +247,24 @@
     - UI: setting/clearing a project encryption password from Projects is reflected in Backups without drift.
     - UI: setting/clearing from Backups is reflected in Projects without drift.
     - Regression: policy updates (`inherit/encrypted/plain`) preserve existing key reference and do not desync between pages.
+- [ ] `VS-1538` Encrypted `Open folder` unlock entry flow.
+  - Scope: clicking `Open folder` on encrypted backups runs password/key resolution, decrypts into a temp workspace, and opens that decrypted workspace directly.
+  - Depends on: `VS-1534`, `VS-1535`.
+  - Acceptance tests:
+    - Integration: encrypted `Open folder` opens decrypted temp workspace after valid password/key.
+    - Integration: invalid password shows explicit error and creates no partial workspace.
+    - Regression: plain `Open folder` keeps current behavior unchanged.
+- [ ] `VS-1539` Encrypted `Open folder` lock lifecycle + cleanup hardening.
+  - Scope: add lock/cleanup lifecycle for decrypted temp workspaces (explicit lock action, timeout auto-lock, startup stale cleanup, safe crash recovery path).
+  - Depends on: `VS-1538`.
+  - Integration contract:
+    - Encrypted backups never expose decrypted files in destination roots.
+    - Decrypted temp workspaces are never persisted in metadata/config.
+    - Metadata sync/export/import remains unchanged (no secret material, no decrypted-path persistence).
+  - Acceptance tests:
+    - Integration: temp workspace is removed on lock/timeout/restart.
+    - Integration: stale workspace cleanup runs on app startup.
+    - Regression: restore and metadata sync behavior unchanged.
 
 #### `P1` Bandwidth limits and quiet hours
 - [ ] `VS-1510` Config model + settings UI for caps and schedule.

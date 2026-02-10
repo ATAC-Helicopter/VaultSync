@@ -14,6 +14,8 @@
 - [VS-1537] Per-project encryption password management action is now available in both Projects and Backups pages.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
+- Backup history cards now show an explicit encryption status tag (`Encrypted` / `Plain`).
+- Project cards now show an explicit encryption status tag (`Encrypted` / `Plain`) for quick visibility.
 ### Changed
 - [VS-1501] Metadata backup writes now normalize crypto descriptor payloads and persist only non-secret fields.
 - [VS-1501] Metadata sync export paths now use the shared plain-descriptor contract value for backward-safe plain backups.
@@ -34,6 +36,8 @@
 - [VS-1536] Settings encryption panel now includes a rotation action that prompts for old/new passwords and can target all projects or one project by name.
 - [VS-1536] Backup records now update encrypted descriptor metadata/size after successful key rotation.
 - [VS-1537] Projects and Backups per-project cards now share one password-edit flow, using a single app-level handler to prevent cross-page mismatch.
+- Projects and Backups encryption sections now show a dedicated status pill (`Encrypted`, `Not protected`, or missing-password warning).
+- [VS-1538] Backups `Open folder` now detects encrypted backups, prompts for password (stored keys first), decrypts to a temp workspace, and opens decrypted content directly.
 - `CONTRIBUTING.md` fully restructured with the default `VS-xxxx` planning model and contribution flow.
 - Core test suite rewritten to match current metadata-sync and destination behavior contracts.
 ### Fixed
@@ -46,6 +50,8 @@
 - [VS-1536] Rotation failures now preserve original encrypted backup artifacts via rollback-safe swap logic (no corruption on failure/interruption).
 - Windows startup/debug runs no longer attempt to execute `/bin/ps` for parent-process info logging.
 - Metadata sync tests now reflect current import rules for existing/missing backup paths.
+- Windows installer now registers `.vse` file association so encrypted backup files open directly in VaultSync.
+- [VS-1538] In-app `Open folder` no longer sends encrypted backups to the raw backup folder path that could trigger OS "Open with" on `.vse`.
 
 ## [1.4.1] - 06.02.2026
 ### Added

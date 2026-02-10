@@ -67,7 +67,8 @@ public partial class App : Application
     private static readonly FontFamily ArabicMacFontFamily = new(
         $"avares://VaultSync.UI/Assets/Fonts/#Noto Sans Arabic, avares://VaultSync.UI/Assets/Fonts/#Noto Sans, " +
         "Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial");
-    private static readonly TimeSpan EncryptedOpenTempRetention = TimeSpan.FromHours(24);
+    private static readonly TimeSpan EncryptedOpenTempRetention = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan EncryptedOpenTempAutoCleanupDelay = TimeSpan.FromMinutes(10);
     private static int _encryptedOpenInFlight;
     private static long _uiHeartbeatTicks;
     private static int _uiHangReported;
@@ -1010,12 +1011,14 @@ public partial class App : Application
             desktop.Exit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"Desktop exit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
             };
 
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
             };
         }
@@ -1311,6 +1314,7 @@ public partial class App : Application
                     FileName = extractedDir,
                     UseShellExecute = true
                 });
+                ScheduleEncryptedOpenTempCleanup(extractedDir);
                 return;
             }
             catch (Exception ex) when (string.Equals(ex.Message, BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, StringComparison.Ordinal))
@@ -1578,6 +1582,79 @@ public partial class App : Application
         {
             // Best effort cleanup only.
         }
+    }
+
+    private static void CleanupAllEncryptedOpenTempFolders()
+    {
+        try
+        {
+            var tempRoot = Path.GetTempPath();
+            var dirs = Directory.GetDirectories(tempRoot, "vaultsync-open-*", SearchOption.TopDirectoryOnly);
+            foreach (var dir in dirs)
+            {
+                try
+                {
+                    Directory.Delete(dir, recursive: true);
+                }
+                catch
+                {
+                    // Best effort cleanup; skip locked folders.
+                }
+            }
+        }
+        catch
+        {
+            // Best effort cleanup only.
+        }
+    }
+
+    private static void ScheduleEncryptedOpenTempCleanup(string extractedDir)
+    {
+        var stagingRoot = ResolveEncryptedOpenStagingRoot(extractedDir);
+        if (string.IsNullOrWhiteSpace(stagingRoot))
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(EncryptedOpenTempAutoCleanupDelay).ConfigureAwait(false);
+                if (Directory.Exists(stagingRoot))
+                    Directory.Delete(stagingRoot, recursive: true);
+            }
+            catch
+            {
+                // Best effort cleanup only.
+            }
+        });
+    }
+
+    private static string? ResolveEncryptedOpenStagingRoot(string extractedDir)
+    {
+        if (string.IsNullOrWhiteSpace(extractedDir))
+            return null;
+
+        try
+        {
+            var full = Path.GetFullPath(extractedDir);
+            var tempRoot = Path.GetFullPath(Path.GetTempPath());
+            if (!full.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var current = new DirectoryInfo(full);
+            while (current is not null)
+            {
+                if (current.Name.StartsWith("vaultsync-open-", StringComparison.OrdinalIgnoreCase))
+                    return current.FullName;
+                current = current.Parent;
+            }
+        }
+        catch
+        {
+            // Best effort path validation.
+        }
+
+        return null;
     }
 
     private static bool IsEncryptedArchivePath(string value)
