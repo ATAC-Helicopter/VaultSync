@@ -117,6 +117,7 @@ namespace VaultSync.UI
         public event Action? UpdateCheckRequested;
         public event Action? RefreshHistoryRequested;
         public event Action? RotateEncryptedBackupsRequested;
+        public event Action? EnrollProjectEncryptionRequested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -153,6 +154,7 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(SelectedLanguage));
                 RefreshUpdateCheckStatus();
                 RefreshRsyncStatusHint();
+                OnPropertyChanged(nameof(EnrollProjectEncryptionPasswordLabel));
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -186,6 +188,7 @@ namespace VaultSync.UI
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
             ClearBackupEncryptionPasswordCommand = new RelayCommand(_ => ClearBackupEncryptionPassword());
             RotateEncryptedBackupsCommand = new RelayCommand(_ => RotateEncryptedBackupsRequested?.Invoke());
+            EnrollProjectEncryptionPasswordCommand = new RelayCommand(_ => EnrollProjectEncryptionRequested?.Invoke());
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
@@ -1480,6 +1483,9 @@ namespace VaultSync.UI
         public ICommand SetBackupEncryptionPasswordCommand { get; }
         public ICommand ClearBackupEncryptionPasswordCommand { get; }
         public ICommand RotateEncryptedBackupsCommand { get; }
+        public ICommand EnrollProjectEncryptionPasswordCommand { get; }
+        public string EnrollProjectEncryptionPasswordLabel =>
+            $"{L("Settings.Encryption.SetPassword", "Set password")} ({L("Nav.Projects", "Projects")})";
 
         private void SetBackupEncryptionPassword()
         {

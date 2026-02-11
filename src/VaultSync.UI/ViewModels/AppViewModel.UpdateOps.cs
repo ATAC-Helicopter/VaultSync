@@ -1,0 +1,778 @@
+﻿using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Net.Http;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
+using VaultSync.Core.Config;
+using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
+using VaultSync.UI.Notifications;
+using VaultSync.UI.Services;
+using VaultSync.UI.ViewModels.Notifications;
+using VaultSync.UI.Views;
+
+namespace VaultSync.UI.ViewModels
+{
+    public partial class AppViewModel
+    {
+        private void OnUpdateCheckRequested()
+        {
+            DiagnosticsLogger.Record("Manual update check requested.");
+            Console.WriteLine("[Update] Manual update check requested.");
+            StartUpdateCheck(ignoreSettings: true);
+        }
+
+        private void ShowLogConsole()
+        {
+            if (_logConsoleWindow is not null)
+            {
+                DiagnosticsLogger.Record("Log console already open; activating.");
+                _logConsoleWindow.Activate();
+                return;
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                try
+                {
+                    DiagnosticsLogger.Record("Installing log capture for macOS.");
+                    _logConsoleService.InstallCapture();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LogConsole] Capture install failed: {ex.Message}");
+                    DiagnosticsLogger.Record($"Log capture install failed: {ex.GetType().Name} - {ex.Message}");
+                }
+            }
+
+            DiagnosticsLogger.Record("Creating log console window.");
+            var vm = new LogConsoleViewModel(_logConsoleService);
+            var window = new LogConsoleWindow(vm);
+
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
+            {
+                window.Show();
+            }
+            else
+            {
+                window.Show();
+            }
+
+            window.Closed += (_, _) =>
+            {
+                DiagnosticsLogger.Record("Log console closed.");
+                _logConsoleWindow = null;
+            };
+
+            _logConsoleWindow = window;
+        }
+
+        private void OnLanguageChanged()
+        {
+            try
+            {
+                var culture = new CultureInfo(_localizationService.CurrentLanguage);
+                CultureInfo.CurrentCulture = culture;
+                CultureInfo.CurrentUICulture = culture;
+                CultureInfo.DefaultThreadCurrentCulture = culture;
+                CultureInfo.DefaultThreadCurrentUICulture = culture;
+            }
+            catch
+            {
+                // Ignore culture switch failures to avoid breaking UI refresh.
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                _projectsViewModel.RefreshLocalization();
+                RefreshHeadersForCurrentView();
+                RefreshCurrentViewLocalization();
+                TrayMenuRefreshRequested?.Invoke();
+            });
+        }
+
+        private void RefreshHeadersForCurrentView()
+        {
+            if (CurrentView == _projectsViewModel)
+            {
+                HeaderTitle  = L("Nav.Projects", "Projects");
+                HeaderKicker = L("Main.HeaderProjects", "All repositories");
+            }
+            else if (CurrentView == _backupsViewModel)
+            {
+                HeaderTitle  = L("Nav.Backups", "Backups");
+                HeaderKicker = L("Main.HeaderBackups", "Snapshots & history");
+            }
+            else if (CurrentView == _settingsViewModel)
+            {
+                HeaderTitle  = L("Nav.Settings", "Settings");
+                HeaderKicker = L("Main.HeaderSettings", "Preferences");
+            }
+            else
+            {
+                HeaderTitle  = L("Nav.Dashboard", "Dashboard");
+                HeaderKicker = L("Main.HeaderOverview", "Overview");
+            }
+        }
+
+        private void RefreshCurrentViewLocalization()
+        {
+            if (CurrentView == _dashboardViewModel)
+            {
+                DashboardViewModel.ReapplyLocalization();
+            }
+            else if (CurrentView == _backupsViewModel)
+            {
+                ReloadBackupsVmData();
+            }
+            else if (CurrentView == _projectsViewModel)
+            {
+                _projectsViewModel.RefreshLocalization();
+            }
+        }
+
+        private void StartUpdateCheck(bool ignoreSettings = false)
+        {
+            DiagnosticsLogger.Record($"Update check start (ignoreSettings={ignoreSettings}, channel={CurrentUpdateChannel}).");
+            CancelUpdateCheck();
+            CancelUpdateRetry();
+
+            if (!ignoreSettings && !_settingsViewModel.CheckForUpdatesOnStartup)
+            {
+                ClearUpdateState();
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            if (!ignoreSettings && (now - _lastUpdateCheckUtc) < UpdateCheckMinInterval)
+            {
+                return;
+            }
+            _lastUpdateCheckUtc = now;
+
+            _updateCheckCts = new CancellationTokenSource();
+            Console.WriteLine($"[Update] Starting update check (channel={CurrentUpdateChannel}).");
+            if (OperatingSystem.IsMacOS())
+            {
+                _logConsoleService.SetUiCaptureEnabled(false);
+                _updateCheckLogCaptureSuppressed = 1;
+                if (!_updateCheckLogServiceSuppressed)
+                {
+                    _updateCheckPrevLogEnabled = _logConsoleService.Enabled;
+                    _updateCheckPrevSaveToFile = _logConsoleService.SaveToFile;
+                    _logConsoleService.Enabled = false;
+                    _logConsoleService.SaveToFile = false;
+                    _updateCheckLogServiceSuppressed = true;
+                }
+            }
+            _ = Task.Run(() => RunUpdateCheckAsync(_updateCheckCts.Token));
+        }
+
+        private void ConfigureUpdateCheckTimer()
+        {
+            _updateCheckTimer?.Dispose();
+            _updateCheckTimer = null;
+            CancelUpdateRetry();
+
+            if (!_settingsViewModel.CheckForUpdatesOnStartup)
+                return;
+
+            var intervalMinutes = Math.Max(15, _settingsViewModel.UpdateCheckIntervalMinutes);
+            var interval = TimeSpan.FromMinutes(intervalMinutes);
+
+            _updateCheckTimer = new Timer(_ =>
+            {
+                if (!_settingsViewModel.CheckForUpdatesOnStartup)
+                    return;
+
+                if (Interlocked.Exchange(ref _updateCheckInFlight, 1) == 1)
+                    return;
+
+                try
+                {
+                    StartUpdateCheck(ignoreSettings: true);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _updateCheckInFlight, 0);
+                }
+            }, null, interval, interval);
+        }
+
+        private void StartDeferredStartupTasks()
+        {
+            _ = Task.Run(async () =>
+            {
+                var delay = OperatingSystem.IsMacOS()
+                    ? TimeSpan.FromSeconds(30)
+                    : TimeSpan.FromSeconds(2);
+                await Task.Delay(delay);
+
+                var cfg = AppConfigStore.Load();
+                EnsureDestinationProbeStarted();
+
+                if (cfg.Backups.EnableMetadataSync)
+                {
+                    TryImportMetadataFromRoot(cfg.ProjectsRoot ?? string.Empty);
+                }
+
+                StartUpdateCheck();
+                ConfigureUpdateCheckTimer();
+            });
+        }
+
+        private void ScheduleLogCaptureInstall()
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+                Dispatcher.UIThread.Post(() =>
+                {
+                    try
+                    {
+                        _logConsoleService.InstallCapture();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[LogConsole] Capture install failed: {ex.Message}");
+                    }
+                });
+            });
+        }
+
+
+        private async Task StartPatchInstallAsync()
+        {
+            if (!IsPatchAvailable || _pendingUpdateResult is null || IsPatchInstalling)
+                return;
+
+            if (OperatingSystem.IsMacOS() && !CanWriteInstallDir(AppContext.BaseDirectory))
+            {
+                PatchStatusMessage = L("Patch.Status.ManifestIncompatible", "Patch not available for this version. Use the installer instead.");
+                _patchBlocked = true;
+                _patchFailed = true;
+                NotifyPatchAvailabilityChanged();
+                OnPropertyChanged(nameof(ShowInstallerFallback));
+                return;
+            }
+
+            IsPatchInstalling = true;
+            PatchStatusMessage = L("Patch.Status.Downloading", "Downloading patch...");
+            _patchFailed = false;
+            OnPropertyChanged(nameof(ShowInstallerFallback));
+
+            try
+            {
+                var plan = await _patchService.PreparePatchAsync(
+                    _pendingUpdateResult,
+                    _currentVersionString,
+                    CancellationToken.None);
+
+                if (plan is null)
+                {
+                    PatchStatusMessage = L("Patch.Status.ManifestIncompatible", "Patch manifest cannot be applied to this version.");
+                    _patchBlocked = true;
+                    _patchFailed = true;
+                    NotifyPatchAvailabilityChanged();
+                    OnPropertyChanged(nameof(ShowInstallerFallback));
+                    return;
+                }
+
+                var archivePath = await _patchService.DownloadPatchArchiveAsync(
+                    plan,
+                    (downloaded, total, rate) =>
+                    {
+                        UpdateDownloadStatus(
+                            L("Patch.Status.Downloading", "Downloading patch"),
+                            downloaded,
+                            total,
+                            rate);
+                    },
+                    CancellationToken.None);
+                if (archivePath is null)
+                {
+                    PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
+                    _patchFailed = true;
+                    OnPropertyChanged(nameof(ShowInstallerFallback));
+                    return;
+                }
+
+                PatchStatusMessage = L("Patch.Status.Installing", "Installing patch and restarting...");
+
+                if (!PatchInstallService.TryLaunchPatchInstaller(plan, archivePath, out var error))
+                {
+                    PatchStatusMessage = L("Patch.Status.InstallFailed", "Failed to start the patch installer.");
+                    Debug.WriteLine($"[Patch] Failed to launch helper: {error}");
+                    _patchFailed = true;
+                    OnPropertyChanged(nameof(ShowInstallerFallback));
+                    return;
+                }
+
+                ShutdownForPatchInstall();
+                return;
+            }
+            catch (TaskCanceledException)
+            {
+                PatchStatusMessage = L("Patch.Status.Timeout", "Patch download timed out. Check your connection or use the installer.");
+                _patchFailed = true;
+                OnPropertyChanged(nameof(ShowInstallerFallback));
+            }
+            catch (Exception ex)
+            {
+                PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
+                Debug.WriteLine($"[Patch] Install failed: {ex}");
+                _patchFailed = true;
+                OnPropertyChanged(nameof(ShowInstallerFallback));
+            }
+            finally
+            {
+                IsPatchInstalling = false;
+            }
+        }
+
+        private void ShutdownForPatchInstall()
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                DiagnosticsLogger.RecordWithStack("Shutdown for patch install requested.");
+                App.MarkShuttingDown();
+                if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    desktop.Shutdown();
+                }
+                else
+                {
+                    Environment.Exit(0);
+                }
+            });
+        }
+
+        private static bool CanWriteInstallDir(string installDir)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(installDir))
+                    return false;
+
+                Directory.CreateDirectory(installDir);
+                var testPath = Path.Combine(installDir, $".vaultsync-write-test-{Guid.NewGuid():N}");
+                using (new FileStream(testPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                }
+                File.Delete(testPath);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void NotifyPatchAvailabilityChanged()
+        {
+            OnPropertyChanged(nameof(IsPatchAvailable));
+            OnPropertyChanged(nameof(ShowPatchButton));
+            OnPropertyChanged(nameof(ShowInstallerFallback));
+            _installPatchCommand.RaiseCanExecuteChanged();
+        }
+
+        private async Task RunUpdateCheckAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                DiagnosticsLogger.Record("Update check running.");
+                var result = await _updateService
+                    .CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken)
+                    .ConfigureAwait(false);
+                if (result is null)
+                {
+                    Console.WriteLine("[Update] No update available.");
+                    RecordUpdateCheckSuccess();
+                    Dispatcher.UIThread.Post(ClearUpdateState);
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(_config.Advanced.SkippedUpdateTag)
+                    && string.Equals(result.TagName, _config.Advanced.SkippedUpdateTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[Update] Update skipped: tag={result.TagName}.");
+                    RecordUpdateCheckSuccess();
+                    Dispatcher.UIThread.Post(ClearUpdateState);
+                    return;
+                }
+
+                if (result.HasPatch)
+                {
+                    var plan = await _patchService
+                        .PreparePatchAsync(result, _currentVersionString, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (plan is null)
+                    {
+                        _patchBlocked = true;
+                        Console.WriteLine("[Update] Patch manifest is not compatible with the current version; hiding patch option.");
+                    }
+                    else
+                    {
+                        _patchBlocked = false;
+                    }
+                }
+                else
+                {
+                    _patchBlocked = false;
+                }
+
+                Console.WriteLine($"[Update] Update available: tag={result.TagName}, name={result.ReleaseName}, patch={result.HasPatch}, installer={result.HasInstaller}.");
+                RecordUpdateCheckSuccess();
+                DiagnosticsLogger.Record($"Update available: tag={result.TagName}, patch={result.HasPatch}, installer={result.HasInstaller}.");
+                Dispatcher.UIThread.Post(() => ApplyUpdateResult(result));
+            }
+            catch (OperationCanceledException)
+            {
+                DiagnosticsLogger.Record("Update check cancelled.");
+            }
+            catch (Exception ex)
+            {
+                // Silently ignore update failures; we don't want to disturb the user.
+                DiagnosticsLogger.Record($"Update check failed: {ex.GetType().Name} - {ex.Message}");
+                RecordUpdateCheckFailure(ex);
+            }
+            finally
+            {
+                _updateCheckCts?.Dispose();
+                _updateCheckCts = null;
+                if (_updateCheckLogCaptureSuppressed == 1)
+                {
+                    _updateCheckLogCaptureSuppressed = 0;
+                    Dispatcher.UIThread.Post(() =>
+                        _logConsoleService.SetUiCaptureEnabled(true, loadSnapshot: false));
+                }
+                if (_updateCheckLogServiceSuppressed)
+                {
+                    _updateCheckLogServiceSuppressed = false;
+                    _logConsoleService.Enabled = _updateCheckPrevLogEnabled;
+                    _logConsoleService.SaveToFile = _updateCheckPrevSaveToFile;
+                }
+            }
+        }
+
+        private void ApplyUpdateResult(UpdateCheckResult result)
+        {
+            if (App.IsCrashing)
+                return;
+
+            IsInstallerDownloading = false;
+            _patchFailed = false;
+            _isUpdateBannerDismissed = false;
+            IsUpdateAvailable = true;
+            UpdateBannerMessage = Lf("Update.Banner", "New update available: {0} ({1})", result.ReleaseName, result.TagName);
+            SetUpdateReleaseNotes(TrimUpdateReleaseNotes(result.ReleaseNotes));
+            _updateReleaseUrl = (result.InstallerUrl ?? result.ReleaseUrl).ToString();
+            _pendingUpdateResult = result;
+            NotifyPatchAvailabilityChanged();
+            PatchStatusMessage = string.Empty;
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+            OnPropertyChanged(nameof(ShowInstallerFallback));
+            OnPropertyChanged(nameof(ReleaseActionText));
+            OnPropertyChanged(nameof(IsReleaseActionEnabled));
+            OnPropertyChanged(nameof(CanSkipUpdate));
+
+            var title = L("Update.Available.Title", "Update available");
+            var channelLabel = CurrentUpdateChannel == GitHubReleaseChannel.Beta
+                ? L("Update.Channel.Beta", "Beta")
+                : L("Update.Channel.Stable", "Stable");
+            var message = Lf("Update.Available.MessageChannel", "VaultSync {0} is ready on the {1} channel.", result.TagName, channelLabel);
+
+            GlobalNotificationCenter.Instance.Show(
+                message,
+                NotificationSeverity.Info,
+                title);
+
+            if (ShouldRaiseSystemNotification && !OperatingSystem.IsMacOS())
+            {
+                GlobalNotificationCenter.Instance.ShowSystem(
+                    message,
+                    NotificationSeverity.Info,
+                    title);
+            }
+        }
+
+        private void SetUpdateReleaseNotes(string? notes)
+        {
+            _updateReleaseNotes = notes ?? string.Empty;
+            OnPropertyChanged(nameof(UpdateTooltip));
+        }
+
+        private static string TrimUpdateReleaseNotes(string? notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes))
+                return string.Empty;
+
+            var normalized = notes.Replace("\r", string.Empty).Trim();
+            const int maxChars = 1200;
+            if (normalized.Length <= maxChars)
+                return normalized;
+
+            return normalized[..maxChars] + "…";
+        }
+
+        private void ClearUpdateState()
+        {
+            IsUpdateAvailable = false;
+            UpdateBannerMessage = string.Empty;
+            _updateReleaseUrl = string.Empty;
+            SetUpdateReleaseNotes(string.Empty);
+            _pendingUpdateResult = null;
+            _patchBlocked = false;
+            _patchFailed = false;
+            _isUpdateBannerDismissed = false;
+            NotifyPatchAvailabilityChanged();
+            PatchStatusMessage = string.Empty;
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+            OnPropertyChanged(nameof(ShowInstallerFallback));
+            OnPropertyChanged(nameof(ReleaseActionText));
+            OnPropertyChanged(nameof(IsReleaseActionEnabled));
+            OnPropertyChanged(nameof(CanSkipUpdate));
+        }
+
+        private void SkipUpdateVersion()
+        {
+            if (_pendingUpdateResult is null)
+                return;
+
+            var tag = _pendingUpdateResult.TagName ?? string.Empty;
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var cfg = AppConfigStore.Load();
+                    cfg.Advanced.SkippedUpdateTag = tag;
+                    AppConfigStore.Save(cfg);
+                    Dispatcher.UIThread.Post(() => _config.Advanced.SkippedUpdateTag = tag);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Update] Failed to persist skipped tag: {ex.Message}");
+                }
+            });
+
+            ClearUpdateState();
+            _isUpdateBannerDismissed = true;
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+        }
+
+        private void DismissUpdateBanner()
+        {
+            if (!IsUpdateAvailable)
+                return;
+
+            _isUpdateBannerDismissed = true;
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+        }
+
+        private void CancelUpdateCheck()
+        {
+            if (_updateCheckCts is null)
+                return;
+
+            _updateCheckCts.Cancel();
+            _updateCheckCts.Dispose();
+            _updateCheckCts = null;
+        }
+
+        private void CancelUpdateRetry()
+        {
+            _updateCheckRetryTimer?.Dispose();
+            _updateCheckRetryTimer = null;
+        }
+
+        private void RecordUpdateCheckSuccess()
+        {
+            _lastUpdateCheckAt = DateTimeOffset.Now;
+            _lastUpdateCheckError = null;
+            CancelUpdateRetry();
+            Dispatcher.UIThread.Post(() =>
+                _settingsViewModel.UpdateUpdateCheckStatus(_lastUpdateCheckAt, _lastUpdateCheckError));
+        }
+
+        private void RecordUpdateCheckFailure(Exception ex)
+        {
+            _lastUpdateCheckAt = DateTimeOffset.Now;
+            _lastUpdateCheckError = ex.Message;
+            Console.WriteLine($"[Update] Update check failed: {ex.GetType().Name}: {ex.Message}");
+            Dispatcher.UIThread.Post(() =>
+                _settingsViewModel.UpdateUpdateCheckStatus(_lastUpdateCheckAt, _lastUpdateCheckError));
+            ScheduleUpdateRetry();
+        }
+
+        private void ScheduleUpdateRetry()
+        {
+            if (_updateCheckRetryTimer is not null)
+                return;
+
+            var delay = TimeSpan.FromMinutes(5);
+            _updateCheckRetryTimer = new Timer(_ =>
+            {
+                _updateCheckRetryTimer?.Dispose();
+                _updateCheckRetryTimer = null;
+
+                if (!_settingsViewModel.CheckForUpdatesOnStartup)
+                    return;
+
+                StartUpdateCheck(ignoreSettings: true);
+            }, null, delay, Timeout.InfiniteTimeSpan);
+        }
+
+        private async Task OpenUpdateReleaseAsync()
+        {
+            if (IsInstallerDownloading)
+                return;
+
+            if (_pendingUpdateResult?.HasInstaller == true && _pendingUpdateResult.InstallerUrl is not null)
+            {
+                await DownloadAndLaunchInstallerAsync(_pendingUpdateResult.InstallerUrl, _pendingUpdateResult.InstallerName);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_updateReleaseUrl))
+                return;
+
+            TryOpenUrl(_updateReleaseUrl);
+        }
+
+        private async Task DownloadAndLaunchInstallerAsync(Uri installerUrl, string? installerName)
+        {
+            IsInstallerDownloading = true;
+            PatchStatusMessage = L("Update.Installer.Downloading", "Downloading installer...");
+
+            try
+            {
+                var downloadDir = Path.Combine(Path.GetTempPath(), "VaultSync", "updates");
+                Directory.CreateDirectory(downloadDir);
+
+                var fileName = string.IsNullOrWhiteSpace(installerName)
+                    ? Path.GetFileName(installerUrl.LocalPath)
+                    : installerName;
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    fileName = "VaultSync-Installer";
+                }
+
+                var tempPath = Path.Combine(downloadDir, $"{fileName}.download");
+                var finalPath = Path.Combine(downloadDir, fileName);
+
+                using var response = await s_installerClient.GetAsync(installerUrl, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                var totalBytes = response.Content.Headers.ContentLength;
+                await using (var contentStream = await response.Content.ReadAsStreamAsync())
+                await using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await CopyToWithProgressAsync(
+                        contentStream,
+                        fileStream,
+                        totalBytes,
+                        (downloaded, total, rate) =>
+                        {
+                            UpdateDownloadStatus(
+                                L("Update.Installer.Downloading", "Downloading installer"),
+                                downloaded,
+                                total,
+                                rate);
+                        },
+                        CancellationToken.None);
+                }
+
+                File.Copy(tempPath, finalPath, overwrite: true);
+                File.Delete(tempPath);
+
+                PatchStatusMessage = L("Update.Installer.Launching", "Launching installer...");
+
+                if (!TryLaunchInstaller(finalPath))
+                {
+                    PatchStatusMessage = L("Update.Installer.LaunchFailed", "Installer downloaded but could not be started.");
+                    ShowUpdateError(PatchStatusMessage);
+                    return;
+                }
+
+                PatchStatusMessage = L("Update.Installer.Launched", "Installer launched. Close VaultSync if prompted.");
+            }
+            catch (TaskCanceledException)
+            {
+                PatchStatusMessage = L("Update.Installer.Timeout", "Installer download timed out. Check your connection or open the release page.");
+                ShowUpdateError(PatchStatusMessage);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Update] Installer download failed: {ex}");
+                PatchStatusMessage = L("Update.Installer.DownloadFailed", "Failed to download the installer. Open the release page instead.");
+                ShowUpdateError(PatchStatusMessage);
+            }
+            finally
+            {
+                IsInstallerDownloading = false;
+            }
+        }
+
+        private static bool TryLaunchInstaller(string installerPath)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = installerPath,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void TryOpenUrl(string url)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch
+            {
+                var message = L("Update.Failed.Message", "Unable to open the release page; visit the GitHub releases manually.");
+                ShowUpdateError(message);
+            }
+        }
+
+        private void ShowUpdateError(string message, string? titleOverride = null)
+        {
+            var title = titleOverride ?? L("Update.Failed.Title", "Update failed");
+            GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Error, title);
+            if (ShouldRaiseSystemNotification)
+            {
+                GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Error, title);
+            }
+        }
+
+        private static HttpClient CreateInstallerHttpClient()
+        {
+            var client = new HttpClient
+            {
+                Timeout = TimeSpan.FromMinutes(20)
+            };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-Installer/1.0");
+            return client;
+        }
+
+    }
+}

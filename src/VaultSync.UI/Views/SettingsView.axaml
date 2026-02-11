@@ -452,7 +452,8 @@
                                    Foreground="{StaticResource TextSecondary}"
                                    FontSize="11" />
                       </StackPanel>
-                      <ToggleSwitch Grid.Column="1"
+                      <ToggleSwitch x:Name="SettingsEncryptionEnableToggle"
+                                    Grid.Column="1"
                                     VerticalAlignment="Center"
                                     IsChecked="{Binding BackupEncryptionEnabled, Mode=TwoWay}" />
                     </Grid>
@@ -477,7 +478,8 @@
 
                     <Grid ColumnDefinitions="*,Auto,Auto"
                           ColumnSpacing="8">
-                      <TextBox Grid.Column="0"
+                      <TextBox x:Name="SettingsEncryptionPasswordInput"
+                               Grid.Column="0"
                                Text="{Binding BackupEncryptionPasswordInput, Mode=TwoWay}"
                                PasswordChar="{Binding BackupEncryptionShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=*}"
                                Watermark="{infra:LocalizedString Key=Settings.Encryption.PasswordWatermark}" />
@@ -497,6 +499,13 @@
                               Content="{infra:LocalizedString Key=Settings.Credentials.ShowPassword}" />
 
                     <Button Classes="settings-ghost"
+                            HorizontalAlignment="Left"
+                            Command="{Binding EnrollProjectEncryptionPasswordCommand}">
+                      <TextBlock Text="{Binding EnrollProjectEncryptionPasswordLabel}" />
+                    </Button>
+
+                    <Button x:Name="SettingsEncryptionRotateButton"
+                            Classes="settings-ghost"
                             HorizontalAlignment="Left"
                             Command="{Binding RotateEncryptedBackupsCommand}">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.RotateBackups}" />

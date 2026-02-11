@@ -984,7 +984,7 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,6,0,0" />
-                        <ComboBox
+                        <ComboBox x:Name="BackupsProjectEncryptionPolicyCombo"
                             Classes="preset-combo"
                             ItemsSource="{Binding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             SelectedItem="{Binding EncryptionPolicyOption, Mode=TwoWay}"
@@ -999,7 +999,8 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                          <Button Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
+                          <Button x:Name="BackupsProjectEncryptionPasswordButton"
+                                  Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
                                   Classes="small-button"
                                   Command="{Binding DataContext.ManageProjectEncryptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                   CommandParameter="{Binding}" />
@@ -1305,11 +1306,20 @@
                                         <Border Grid.Row="0"
                                                 Grid.Column="2"
                                                 CornerRadius="999"
-                                                Padding="{DynamicResource StatPillPadding}"
-                                                Background="{DynamicResource Surface3}">
+                                                Padding="10,4"
+                                                Background="{DynamicResource Surface3}"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Width="96"
+                                                MinHeight="30">
                                           <TextBlock Text="{Binding SizeFormatted}"
                                                      FontSize="11"
-                                                     FontWeight="SemiBold" />
+                                                     FontWeight="SemiBold"
+                                                     TextWrapping="NoWrap"
+                                                     TextTrimming="CharacterEllipsis"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center"
+                                                     MaxWidth="84" />
                                         </Border>
 
                                         <WrapPanel Grid.Row="1"

@@ -45,3 +45,6 @@ packages/
 .vaultsync_write_test
 # Build artifacts
 dist/
+
+# Local safety snapshots
+.safety/*.bundle

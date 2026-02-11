@@ -423,13 +423,17 @@ public partial class App : Application
             return false;
 
         var cfg = AppConfigStore.Load();
-        if (cfg.Advanced.HasSeenOnboarding)
+        var showForTesting = IsOnboardingAlwaysEnabledForTesting();
+        if (!showForTesting && cfg.Advanced.HasSeenOnboarding)
             return false;
 
         void Finish()
         {
             AppViewModelInstance.OnboardingTour.TourCompleted -= Finish;
-            cfg.Advanced.HasSeenOnboarding = true;
+            if (!showForTesting)
+            {
+                cfg.Advanced.HasSeenOnboarding = true;
+            }
             AppConfigStore.Save(cfg);
             TryShowWhatsNew(desktop);
         }
@@ -437,6 +441,11 @@ public partial class App : Application
         AppViewModelInstance.OnboardingTour.TourCompleted += Finish;
         AppViewModelInstance.OnboardingTour.Start();
         return true;
+    }
+
+    private static bool IsOnboardingAlwaysEnabledForTesting()
+    {
+        return false;
     }
 
     private static List<WhatsNewSection> LoadWhatsNewSections(string currentVersion)

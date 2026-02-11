@@ -12,6 +12,7 @@
 - [VS-1535] Explorer/open-file activation for `.vse` encrypted archives now routes into VaultSync with a password prompt flow.
 - [VS-1536] `BackupKeyRotationService` with explicit user-triggered rotation flow for existing encrypted backups (global scope or single-project filter).
 - [VS-1537] Per-project encryption password management action is now available in both Projects and Backups pages.
+- [VS-1539] Settings > Encryption now includes a proactive "Set password (Projects)" flow to enroll project passwords on a new machine before restore/open.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
 - Backup history cards now show an explicit encryption status tag (`Encrypted` / `Plain`).
@@ -38,6 +39,30 @@
 - [VS-1537] Projects and Backups per-project cards now share one password-edit flow, using a single app-level handler to prevent cross-page mismatch.
 - Projects and Backups encryption sections now show a dedicated status pill (`Encrypted`, `Not protected`, or missing-password warning).
 - [VS-1538] Backups `Open folder` now detects encrypted backups, prompts for password (stored keys first), decrypts to a temp workspace, and opens decrypted content directly.
+- [VS-1539] Project encryption enrollment/edit dialogs were extracted from `AppViewModel` into a dedicated `ProjectEncryptionEnrollmentService` while preserving existing metadata export + UI
+            refresh behavior.
+- Backup orchestration support methods (`destination prep`, `backup-all prep`, aggregate progress update, NAS temp-root migration helpers) were extracted from
+  `AppViewModel` into a dedicated partial class file to reduce main view-model complexity without changing runtime behavior.
+- Manual backup and backup-all handler implementations were extracted from `AppViewModel` into a dedicated partial file to isolate orchestration flow from
+  unrelated UI/update logic while keeping behavior unchanged.
+- Backup history workflows (`delete`, `restore`, encrypted open-folder/decrypt prompts, and related preparation helpers) were extracted from
+  `AppViewModel` into a dedicated partial file to keep history operations isolated from startup/navigation/update logic.
+- Runtime operations (`NAS monitor`, destination probing/status summaries, metadata sync import/export/refresh flow, and encryption-rotation settings workflow)
+  were extracted from `AppViewModel` into a dedicated partial file to reduce central view-model coupling.
+- Tray/menu workflows (backup/snapshot trigger surface, recent-backups tray actions, open-folder-from-tray, and encrypted-open cleanup helpers) were extracted
+  from `AppViewModel` into a dedicated partial file for clearer operational boundaries.
+- Update/startup-check workflow (`manual/auto update checks`, `retry/timer state`, `patch + installer download/launch`, and related UI status methods) was extracted
+  from `AppViewModel` into a dedicated partial file to isolate release/update flow.
+- Added repository-level Prettier configuration (`.prettierrc.json`) and ignore rules (`.prettierignore`) for consistent formatting of supported text assets.
+- Added repository-level `.editorconfig` with C# and text formatting defaults so .NET/C# formatters apply consistent style in IDE and CLI.
+- Backup support helpers (`post-hash`, verification, drive-health evaluation/notifications, restore advisories, and project-root fallback checks) were extracted
+  from `AppViewModel` into a dedicated partial file for clearer backup-domain boundaries.
+- Navigation/view-state members (`CurrentView`, header state, initial route guard, and shell navigation commands) were extracted from `AppViewModel`
+  into a dedicated partial file to keep routing concerns isolated.
+- Startup/bootstrap orchestration (constructor service wiring, initial config/runtime setup, and lazy Backups view-model composition) was extracted from
+  `AppViewModel` into a dedicated partial file while preserving startup behavior.
+- Shared helper methods (progress label computation, localization helpers, system-language resolution, download status updates, and backup skip notifications)
+  were extracted from `AppViewModel` into a dedicated partial file to reduce core file coupling.
 - `CONTRIBUTING.md` fully restructured with the default `VS-xxxx` planning model and contribution flow.
 - Core test suite rewritten to match current metadata-sync and destination behavior contracts.
 ### Fixed

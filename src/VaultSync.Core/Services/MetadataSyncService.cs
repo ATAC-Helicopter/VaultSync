@@ -1532,18 +1532,16 @@ public sealed class MetadataSyncService
         try
         {
             var color = ProjectColorResolver?.Invoke(project);
-            var settings = new Dictionary<string, string>();
+            var settings = new Dictionary<string, object?>();
             if (!string.IsNullOrWhiteSpace(color))
             {
                 settings["avatarColor"] = color;
             }
 
             settings["encryptionPolicy"] = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy);
-
-            if (!string.IsNullOrWhiteSpace(project.EncryptionKeyRef))
-            {
-                settings["encryptionKeyRef"] = project.EncryptionKeyRef;
-            }
+            settings["encryptionKeyRef"] = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
+                ? null
+                : project.EncryptionKeyRef;
 
             return settings.Count == 0 ? "{}" : JsonSerializer.Serialize(settings);
         }
@@ -1628,25 +1626,9 @@ public sealed class MetadataSyncService
                  && !string.Equals(currentPolicy, ProjectEncryptionPolicy.Inherit, StringComparison.OrdinalIgnoreCase));
 
         var nextPolicy = applyPolicy ? incomingPolicy : currentPolicy;
-        var nextKeyRef = current.EncryptionKeyRef;
-
-        if (parsedSettings.HasEncryptionKeyRef)
-        {
-            if (applyPolicy)
-            {
-                nextKeyRef = parsedSettings.EncryptionKeyRef;
-            }
-            else
-            {
-                // When policy is unchanged/ignored, only fill a missing key ref.
-                // Never clear an existing local key ref from imported null/empty values.
-                if (!string.IsNullOrWhiteSpace(parsedSettings.EncryptionKeyRef) &&
-                    string.IsNullOrWhiteSpace(current.EncryptionKeyRef))
-                {
-                    nextKeyRef = parsedSettings.EncryptionKeyRef;
-                }
-            }
-        }
+        var nextKeyRef = parsedSettings.HasEncryptionKeyRef
+            ? parsedSettings.EncryptionKeyRef
+            : current.EncryptionKeyRef;
 
         var currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
         var normalizedNextKeyRef = string.IsNullOrWhiteSpace(nextKeyRef) ? null : nextKeyRef;

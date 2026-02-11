@@ -372,10 +372,10 @@
           <!-- Stat badges row -->
           <WrapPanel Grid.Row="2"
                      Orientation="Horizontal"
-                     ItemWidth="220"
-                     ItemHeight="78">
+                     ItemWidth="240">
             <!-- Preset -->
-            <Border CornerRadius="14"
+            <Border x:Name="ProjectEncryptionCard"
+                    CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
                     Margin="0,0,12,12">
@@ -434,7 +434,7 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="NoWrap"
                            TextTrimming="CharacterEllipsis" />
-                <ComboBox
+                <ComboBox x:Name="ProjectEncryptionPolicyCombo"
                     Grid.Row="1"
                     Classes="preset-combo"
                     ItemsSource="{Binding DataContext.EncryptionPolicyOptions, ElementName=Root}"
@@ -446,10 +446,10 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <StackPanel Grid.Row="2"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Center">
+                <WrapPanel Grid.Row="2"
+                           Orientation="Horizontal"
+                           ItemSpacing="8"
+                           VerticalAlignment="Center">
                   <TextBlock Text="{Binding EffectiveEncryptionDisplay}"
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}"
@@ -465,8 +465,9 @@
                                TextWrapping="NoWrap"
                                TextTrimming="CharacterEllipsis" />
                   </Border>
-                </StackPanel>
-                <Button Grid.Row="3"
+                </WrapPanel>
+                <Button x:Name="ProjectEncryptionPasswordButton"
+                        Grid.Row="3"
                         Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
                         Classes="action-ghost"
                         Padding="10,4"

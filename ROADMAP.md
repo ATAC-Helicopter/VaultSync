@@ -265,6 +265,19 @@
     - Integration: temp workspace is removed on lock/timeout/restart.
     - Integration: stale workspace cleanup runs on app startup.
     - Regression: restore and metadata sync behavior unchanged.
+- [ ] `VS-1543` Session unlock cache + timed auto-relock for encrypted open flow.
+  - Scope: introduce a per-project encrypted-open session unlock cache so repeated `Open folder` actions within a configured timeout do not re-prompt for password.
+  - Depends on: `VS-1538`, `VS-1539`.
+  - Integration contract:
+    - Session unlock is memory-only (no plaintext secrets persisted to config/metadata).
+    - Unlock timeout is configurable in Settings and auto-relocks on expiry.
+    - Lock state controls access checks (not temp folder lifetime): decrypted workspace handling remains governed by `VS-1539` cleanup/lock rules.
+    - Manual `Lock now` invalidates active session unlock immediately.
+  - Acceptance tests:
+    - Integration: first encrypted open prompts for password; repeated open within timeout does not.
+    - Integration: after timeout expiry, password prompt is required again.
+    - Integration: `Lock now` forces prompt on next open even before timeout.
+    - Regression: metadata sync/export/import and plain backup open flow are unchanged.
 
 #### `P1` Bandwidth limits and quiet hours
 - [ ] `VS-1510` Config model + settings UI for caps and schedule.
@@ -357,7 +370,7 @@
 
 ### 1.5 release execution plan (how we tackle it)
 1. Phase `A` (security backbone): complete `VS-1501` -> `VS-1504` -> `VS-1502` -> `VS-1503` -> `VS-1505` before feature freeze.
-2. Phase `B` (encryption controls + usability): deliver `VS-1530` -> `VS-1531` -> `VS-1532` -> `VS-1533` -> `VS-1534`, then `VS-1535`, `VS-1536`.
+2. Phase `B` (encryption controls + usability): deliver `VS-1530` -> `VS-1531` -> `VS-1532` -> `VS-1533` -> `VS-1534`, then `VS-1535`, `VS-1536`, `VS-1538`, `VS-1539`, `VS-1543`.
 3. Phase `C` (operational controls): deliver `VS-1510` -> `VS-1511` -> `VS-1512` -> `VS-1513` with visible policy state in cards/tray/logs.
 4. Phase `D` (clarity and insights): run `VS-1520`/`VS-1521`/`VS-1522` in parallel with `VS-1540`, then close with `VS-1523`, `VS-1541`, `VS-1542`.
 5. Phase `E` (stabilization): execute `VS-1590`, `VS-1591`, `VS-1592` and block release until all exit gates pass.
