@@ -14,6 +14,9 @@
 - [VS-1537] Per-project encryption password management action is now available in both Projects and Backups pages.
 - [VS-1539] Settings > Encryption now includes a proactive "Set password (Projects)" flow to enroll project passwords on a new machine before restore/open.
 - [VS-1539] Settings > Encryption now includes a `Lock now` action to immediately close/decrypt-open temp workspaces.
+- [VS-1510] Settings now includes backup bandwidth cap and quiet-hours controls with persisted config fields.
+- [VS-1511] Added shared transfer policy helper and automated unit tests for bandwidth conversion/throttling math.
+- [VS-1512] Added shared quiet-hours policy helper and automated unit tests for overnight/daytime schedule evaluation.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
 - Backup history cards now show an explicit encryption status tag (`Encrypted` / `Plain`).
@@ -42,6 +45,9 @@
 - [VS-1538] Backups `Open folder` now detects encrypted backups, prompts for password (stored keys first), decrypts to a temp workspace, and opens decrypted content directly.
 - [VS-1539] Encrypted open-folder auto-lock timeout is now configurable in Settings and shared by in-app and external `.vse` open flows.
 - [VS-1543] Encrypted open-folder now reuses a per-project in-memory session unlock within the configured timeout, then re-prompts after expiry.
+- [VS-1511] Native backup copy path now enforces configured bandwidth caps in `rsync` (`--bwlimit`) and robocopy (`/IPG`).
+- [VS-1512] Auto-backup timer now defers backup starts during configured quiet-hours windows with deterministic resume timing.
+- [VS-1512] Quiet-hours policy is applied to new auto-backup starts only; active in-flight backups are allowed to complete.
 - [VS-1539] Project encryption enrollment/edit dialogs were extracted from `AppViewModel` into a dedicated `ProjectEncryptionEnrollmentService` while preserving existing metadata export + UI
             refresh behavior.
 - Backup orchestration support methods (`destination prep`, `backup-all prep`, aggregate progress update, NAS temp-root migration helpers) were extracted from

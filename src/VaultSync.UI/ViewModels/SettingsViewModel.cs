@@ -58,6 +58,11 @@ namespace VaultSync.UI
         private bool _enableMetadataSync = true;
         private bool _autoImportMetadata = true;
         private bool _promptRestoreAfterImport = true;
+        private bool _enableBandwidthLimit = false;
+        private int _maxBandwidthMbps = 100;
+        private bool _enableQuietHours = false;
+        private string _quietHoursStart = "23:00";
+        private string _quietHoursEnd = "07:00";
         private string _backupLocationStatus = string.Empty;
         private bool _backupEncryptionEnabled = false;
         private bool _backupEncryptionAllowSessionFallback = false;
@@ -160,6 +165,13 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(EncryptionOpenTimeoutLabel));
                 OnPropertyChanged(nameof(EncryptionOpenTimeoutDescription));
                 OnPropertyChanged(nameof(LockEncryptedOpenNowLabel));
+                OnPropertyChanged(nameof(BandwidthLimitLabel));
+                OnPropertyChanged(nameof(BandwidthLimitDescription));
+                OnPropertyChanged(nameof(BandwidthLimitValueLabel));
+                OnPropertyChanged(nameof(QuietHoursLabel));
+                OnPropertyChanged(nameof(QuietHoursDescription));
+                OnPropertyChanged(nameof(QuietHoursStartLabel));
+                OnPropertyChanged(nameof(QuietHoursEndLabel));
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -262,6 +274,11 @@ namespace VaultSync.UI
             _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
             _autoImportMetadata        = cfg.Backups.AutoImportMetadata;
             _promptRestoreAfterImport  = cfg.Backups.PromptRestoreAfterImport;
+            _enableBandwidthLimit      = cfg.Backups.EnableBandwidthLimit;
+            _maxBandwidthMbps          = ClampInt(cfg.Backups.MaxBandwidthMbps, 1, 5000, 100);
+            _enableQuietHours          = cfg.Backups.EnableQuietHours;
+            _quietHoursStart           = NormalizeTimeOfDay(cfg.Backups.QuietHoursStart, "23:00");
+            _quietHoursEnd             = NormalizeTimeOfDay(cfg.Backups.QuietHoursEnd, "07:00");
             _backupEncryptionEnabled   = cfg.Backups.Encryption.Enabled;
             _backupEncryptionAllowSessionFallback = cfg.Backups.Encryption.AllowSessionFallback;
             _backupEncryptionOpenUnlockTimeoutMinutes = ClampInt(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes, 1, 240, 10);
@@ -395,6 +412,10 @@ namespace VaultSync.UI
             {
                 return;
             }
+            if (!ValidateTransferPolicy(notifyOnValidationError))
+            {
+                return;
+            }
 
             // Keep name + object selection aligned before taking snapshots.
             foreach (var dest in Destinations)
@@ -476,6 +497,11 @@ namespace VaultSync.UI
             cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
             cfg.Backups.AutoImportMetadata          = AutoImportMetadata;
             cfg.Backups.PromptRestoreAfterImport    = PromptRestoreAfterImport;
+            cfg.Backups.EnableBandwidthLimit        = EnableBandwidthLimit;
+            cfg.Backups.MaxBandwidthMbps            = ClampInt(MaxBandwidthMbps, 1, 5000, 100);
+            cfg.Backups.EnableQuietHours            = EnableQuietHours;
+            cfg.Backups.QuietHoursStart             = NormalizeTimeOfDay(QuietHoursStart, "23:00");
+            cfg.Backups.QuietHoursEnd               = NormalizeTimeOfDay(QuietHoursEnd, "07:00");
             cfg.Backups.Encryption.Enabled          = BackupEncryptionEnabled;
             cfg.Backups.Encryption.AllowSessionFallback = BackupEncryptionAllowSessionFallback;
             cfg.Backups.Encryption.OpenUnlockTimeoutMinutes = ClampInt(BackupEncryptionOpenUnlockTimeoutMinutes, 1, 240, 10);
@@ -610,6 +636,32 @@ namespace VaultSync.UI
                     return false;
                 }
 
+            }
+
+            return true;
+        }
+
+        private bool ValidateTransferPolicy(bool notifyOnError)
+        {
+            if (EnableBandwidthLimit && (MaxBandwidthMbps < 1 || MaxBandwidthMbps > 5000))
+            {
+                if (notifyOnError)
+                {
+                    SaveStatus = "Bandwidth limit must be between 1 and 5000 Mbps.";
+                }
+
+                return false;
+            }
+
+            if (EnableQuietHours &&
+                (!TryParseTimeOfDay(QuietHoursStart, out _) || !TryParseTimeOfDay(QuietHoursEnd, out _)))
+            {
+                if (notifyOnError)
+                {
+                    SaveStatus = "Quiet hours must use HH:mm format (24h).";
+                }
+
+                return false;
             }
 
             return true;
@@ -945,6 +997,36 @@ namespace VaultSync.UI
         {
             get => _promptRestoreAfterImport;
             set => SetField(ref _promptRestoreAfterImport, value);
+        }
+
+        public bool EnableBandwidthLimit
+        {
+            get => _enableBandwidthLimit;
+            set => SetField(ref _enableBandwidthLimit, value);
+        }
+
+        public int MaxBandwidthMbps
+        {
+            get => _maxBandwidthMbps;
+            set => SetField(ref _maxBandwidthMbps, ClampInt(value, 1, 5000, 100));
+        }
+
+        public bool EnableQuietHours
+        {
+            get => _enableQuietHours;
+            set => SetField(ref _enableQuietHours, value);
+        }
+
+        public string QuietHoursStart
+        {
+            get => _quietHoursStart;
+            set => SetField(ref _quietHoursStart, value ?? string.Empty);
+        }
+
+        public string QuietHoursEnd
+        {
+            get => _quietHoursEnd;
+            set => SetField(ref _quietHoursEnd, value ?? string.Empty);
         }
 
         public bool BackupEncryptionEnabled
@@ -1330,6 +1412,25 @@ namespace VaultSync.UI
                 : value;
         }
 
+        private static bool TryParseTimeOfDay(string? value, out TimeSpan result)
+        {
+            return TimeSpan.TryParseExact(
+                value ?? string.Empty,
+                @"hh\:mm",
+                CultureInfo.InvariantCulture,
+                out result);
+        }
+
+        private static string NormalizeTimeOfDay(string? value, string fallback)
+        {
+            if (TryParseTimeOfDay(value, out var parsed))
+            {
+                return $"{parsed.Hours:00}:{parsed.Minutes:00}";
+            }
+
+            return fallback;
+        }
+
         private static string? TryFindRsyncOnPath()
         {
             var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
@@ -1501,6 +1602,13 @@ namespace VaultSync.UI
         public ICommand LockEncryptedOpenWorkspacesCommand { get; }
         public string EnrollProjectEncryptionPasswordLabel =>
             $"{L("Settings.Encryption.SetPassword", "Set password")} ({L("Nav.Projects", "Projects")})";
+        public string BandwidthLimitLabel => L("Settings.Backups.BandwidthLimit", "Bandwidth limit");
+        public string BandwidthLimitDescription => L("Settings.Backups.BandwidthLimitDescription", "Cap backup transfer speed to reduce network impact.");
+        public string BandwidthLimitValueLabel => L("Settings.Backups.BandwidthLimitValue", "Max Mbps");
+        public string QuietHoursLabel => L("Settings.Backups.QuietHours", "Quiet hours");
+        public string QuietHoursDescription => L("Settings.Backups.QuietHoursDescription", "Pause/defer automatic backups during this time window.");
+        public string QuietHoursStartLabel => L("Settings.Backups.QuietHoursStart", "Start (HH:mm)");
+        public string QuietHoursEndLabel => L("Settings.Backups.QuietHoursEnd", "End (HH:mm)");
         public string EncryptionOpenTimeoutLabel =>
             L("Settings.Encryption.OpenTimeoutLabel", "Encrypted open timeout (minutes)");
         public string EncryptionOpenTimeoutDescription =>

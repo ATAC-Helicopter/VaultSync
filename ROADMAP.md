@@ -32,7 +32,7 @@
 ## 1.5.x (current focus)
 
 ### 1.5.0 priorities
-- [ ] `P0` Backup encryption and password-protected backups.
+- [x] `P0` Backup encryption and password-protected backups.
 - [ ] `P1` Backup bandwidth limits and quiet hours.
 - [ ] `P1` Incremental backup UX improvements.
 - [ ] `P2` Snapshot diff summaries.
@@ -79,6 +79,9 @@
   - Existing plain backups remain fully functional.
   - Metadata sync carries encryption metadata but no secrets.
   - Mixed `1.4`/`1.5` environments do not corrupt sync state.
+  - Status:
+    - Feature implementation is complete (`VS-1501`..`VS-1505`, `VS-1530`..`VS-1539`, `VS-1543`).
+    - Remaining release-gate validation is tracked under `VS-1591` (compatibility matrix) and `VS-1592` (localization/docs readiness).
 
 #### `P1` Bandwidth limits and quiet hours
 - Scope:
@@ -292,24 +295,32 @@
     - Regression: metadata sync/export/import and plain backup open flow are unchanged.
 
 #### `P1` Bandwidth limits and quiet hours
-- [ ] `VS-1510` Config model + settings UI for caps and schedule.
+- [x] `VS-1510` Config model + settings UI for caps and schedule.
   - Scope: settings schema, validation, timezone-aware quiet-hours range editor.
   - Depends on: none.
   - Acceptance tests:
     - Unit: invalid caps/schedules are rejected with actionable validation messages.
     - UI: settings persist and reload accurately across restart.
-- [ ] `VS-1511` Transfer throttling enforcement.
+  - Current status:
+    - Done: config schema fields for bandwidth caps + quiet-hours and Settings UI controls with validation/persistence.
+- [x] `VS-1511` Transfer throttling enforcement.
   - Scope: apply effective bandwidth cap to archive upload/network copy workers.
   - Depends on: `VS-1510`.
   - Acceptance tests:
     - Integration: measured throughput stays within configured cap tolerance.
     - Regression: no cap configured preserves current throughput behavior.
-- [ ] `VS-1512` Quiet-hours runtime policy engine.
+  - Current status:
+    - Done: native copy runners now apply configured bandwidth caps (`rsync --bwlimit`, robocopy `/IPG`) via shared transfer policy math.
+- [x] `VS-1512` Quiet-hours runtime policy engine.
   - Scope: defer/pause/start rules based on local time and running backup state.
   - Depends on: `VS-1510`.
   - Acceptance tests:
     - Integration: backup start during quiet hours follows configured policy deterministically.
     - Integration: crossing quiet-hours boundary transitions active jobs predictably.
+  - Current status:
+    - Done: auto-backup timer runs now evaluate quiet-hours policy before preflight and skip deterministically during the configured window.
+    - Done: active backup runs are not force-cancelled when quiet-hours begins; policy applies to new auto-backup starts only.
+    - Done: shared `QuietHoursPolicy` helper + automated unit coverage for overnight/daytime windows and invalid-time fallback.
 - [ ] `VS-1513` Policy visibility in cards, tray, and logs.
   - Scope: expose effective policy state (`Throttled`, `Quiet hours`) in UI and operational logs.
   - Depends on: `VS-1511`, `VS-1512`.

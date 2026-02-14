@@ -335,6 +335,68 @@
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding BandwidthLimitLabel}" />
+                    <TextBlock Text="{Binding BandwidthLimitDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding EnableBandwidthLimit, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <TextBlock Grid.Column="0"
+                             VerticalAlignment="Center"
+                             Text="{Binding BandwidthLimitValueLabel}" />
+                  <TextBox Grid.Column="1"
+                           Width="80"
+                           HorizontalContentAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Text="{Binding MaxBandwidthMbps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           IsEnabled="{Binding EnableBandwidthLimit}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding QuietHoursLabel}" />
+                    <TextBlock Text="{Binding QuietHoursDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding EnableQuietHours, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                      ColumnSpacing="8"
+                      Margin="0,4,0,0">
+                  <TextBlock Grid.Column="0"
+                             VerticalAlignment="Center"
+                             Text="{Binding QuietHoursStartLabel}" />
+                  <TextBox Grid.Column="1"
+                           Width="80"
+                           HorizontalContentAlignment="Center"
+                           Text="{Binding QuietHoursStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           IsEnabled="{Binding EnableQuietHours}" />
+                  <TextBlock Grid.Column="2"
+                             VerticalAlignment="Center"
+                             Text="{Binding QuietHoursEndLabel}" />
+                  <TextBox Grid.Column="3"
+                           Width="80"
+                           HorizontalContentAlignment="Center"
+                           Text="{Binding QuietHoursEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           IsEnabled="{Binding EnableQuietHours}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,4,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RefreshHistory}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RefreshHistoryDescription}"
                                Foreground="{StaticResource TextSecondary}"

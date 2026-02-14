@@ -633,6 +633,9 @@ public sealed class BackupService
                     useRsyncDelta,
                     useIncrementalBackups,
                     linkDest,
+                    TransferPolicy.NormalizeBandwidthLimitMbps(
+                        configSnapshot.Backups.EnableBandwidthLimit,
+                        configSnapshot.Backups.MaxBandwidthMbps),
                     preferRunnerProgressOnly);
             }
         }
@@ -850,6 +853,7 @@ public sealed class BackupService
         bool useRsyncDelta,
         bool useIncrementalBackups,
         string? linkDest,
+        int? maxBandwidthMbps,
         bool preferRunnerProgressOnly)
     {
         ct.ThrowIfCancellationRequested();
@@ -970,7 +974,8 @@ public sealed class BackupService
                     // rsync-based backup on Windows (when installed)
                     var source = bundledRsync is null ? "PATH" : "bundled";
                     var rsyncPath = bundledRsync ?? "rsync";
-                    Console.WriteLine($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}).");
+                    var rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
+                    Console.WriteLine($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
                     Console.WriteLine($"[BackupService] Using rsync on Windows ({source}).");
                     var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta, rsyncPath: rsyncPath);
                     exitCode = await runner.SyncAsync(
@@ -979,6 +984,7 @@ public sealed class BackupService
                         dryRun: false,
                         callbackForRunner,
                         useIncrementalBackups ? linkDest : null,
+                        rsyncBwLimit,
                         ct);
 
                     if (exitCode != 0)
@@ -990,13 +996,14 @@ public sealed class BackupService
                     if ((effectiveUseRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath("rsync"))
                         Console.WriteLine("[BackupService] rsync not found on PATH; falling back to robocopy.");
 
-                    Console.WriteLine($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}).");
+                    Console.WriteLine($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}, bw={(maxBandwidthMbps is > 0 ? $"{maxBandwidthMbps}Mbps" : "unlimited")}).");
                     var runner = new RobocopyRunner(isNetworkDestination);
                     exitCode = await runner.SyncAsync(
                         project,
                         destDir,
                         dryRun: false,
                         callbackForRunner,
+                        maxBandwidthMbps,
                         ct);
 
                     if (exitCode != 0)
@@ -1006,7 +1013,8 @@ public sealed class BackupService
             else
             {
                 // rsync-based backup (fast, incremental on macOS/Linux)
-                Console.WriteLine($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}).");
+                var rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
+                Console.WriteLine($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
                 var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta);
                 exitCode = await runner.SyncAsync(
                     project,
@@ -1014,6 +1022,7 @@ public sealed class BackupService
                     dryRun: false,
                     callbackForRunner,
                     useIncrementalBackups ? linkDest : null,
+                    rsyncBwLimit,
                     ct);
 
                 if (exitCode != 0)

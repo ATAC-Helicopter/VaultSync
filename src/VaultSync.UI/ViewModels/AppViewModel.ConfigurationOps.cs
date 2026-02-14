@@ -647,6 +647,23 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
+                if (ShouldPauseAutoBackupsForQuietHours(_config, out var quietReason, out var quietResumeAtLocal))
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        BackupsViewModel.BackupCurrentFile = quietReason;
+                        BackupsViewModel.BusyMessage = quietReason;
+                    });
+
+                    Telemetry.Log("auto_backup_skipped", b =>
+                    {
+                        b.WithCode("reason", "quiet_hours");
+                        if (quietResumeAtLocal.HasValue)
+                            b.WithHashedString("resumeAtLocal", quietResumeAtLocal.Value.ToString("O", CultureInfo.InvariantCulture));
+                    });
+                    return;
+                }
+
                 var preparation = await Task.Run(PrepareAutoBackupRun);
                 if (!preparation.IsReady)
                 {
@@ -876,6 +893,38 @@ namespace VaultSync.UI.ViewModels
             {
                 Interlocked.Exchange(ref _autoBackupInFlight, 0);
             }
+        }
+
+        private bool ShouldPauseAutoBackupsForQuietHours(
+            AppConfig cfg,
+            out string reason,
+            out DateTimeOffset? resumeAtLocal)
+        {
+            var decision = QuietHoursPolicy.Evaluate(
+                cfg.Backups.EnableQuietHours,
+                cfg.Backups.QuietHoursStart,
+                cfg.Backups.QuietHoursEnd,
+                DateTimeOffset.Now);
+
+            resumeAtLocal = decision.ResumeAtLocal;
+            if (!decision.IsInQuietHours)
+            {
+                reason = string.Empty;
+                return false;
+            }
+
+            var startLabel = decision.StartTime.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
+            var endLabel = decision.EndTime.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
+            var resumeLabel = resumeAtLocal?.ToString("g", CultureInfo.CurrentCulture)
+                ?? L("Backups.QuietHours.ResumeUnknown", "the end of quiet hours");
+
+            reason = Lf(
+                "Backups.Notification.QuietHoursPaused",
+                "Backups paused during quiet hours ({0}-{1}). Next run after {2}.",
+                startLabel,
+                endLabel,
+                resumeLabel);
+            return true;
         }
 
         private void OnAutoBackupPreferenceChanged(int projectId, bool enabled)

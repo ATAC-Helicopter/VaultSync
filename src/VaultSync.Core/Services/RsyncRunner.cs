@@ -27,7 +27,7 @@ namespace VaultSync.Core.Services
 
         // ISyncRunner implementation (without progress callback)
         public Task<int> SyncAsync(Project project, string destination, bool dryRun, CancellationToken ct)
-            => SyncAsync(project, destination, dryRun, progressCallback: null, linkDest: null, ct);
+            => SyncAsync(project, destination, dryRun, progressCallback: null, linkDest: null, ct: ct);
 
         /// <summary>
         /// Run rsync to mirror project.RootPath into destination, optionally reporting progress.
@@ -38,6 +38,7 @@ namespace VaultSync.Core.Services
             bool dryRun,
             Action<double, string, string>? progressCallback,
             string? linkDest = null,
+            int? maxBandwidthKbps = null,
             CancellationToken ct = default)
         {
             // Build ignore filter file based on project's preset and local .vaultsyncignore
@@ -80,6 +81,9 @@ namespace VaultSync.Core.Services
             psi.ArgumentList.Add("--no-compress"); // avoid wasting CPU on compression over LAN / local FS
             if (_useWholeFile)
                 psi.ArgumentList.Add("--whole-file");  // skip delta algorithm, faster for LAN and mounted shares
+
+            if (maxBandwidthKbps is > 0)
+                psi.ArgumentList.Add($"--bwlimit={maxBandwidthKbps.Value}");
 
             // Make rsync actually print progress lines with percentages.
             psi.ArgumentList.Add("--progress");

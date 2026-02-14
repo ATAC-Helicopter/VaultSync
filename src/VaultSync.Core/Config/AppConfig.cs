@@ -48,6 +48,26 @@ namespace VaultSync.Core.Config
         public bool   EnableMetadataSync    { get; set; } = true;
         public bool   AutoImportMetadata    { get; set; } = true;
         public bool   PromptRestoreAfterImport { get; set; } = true;
+        /// <summary>
+        /// When enabled, backup transfer speed is capped to reduce bandwidth impact.
+        /// </summary>
+        public bool EnableBandwidthLimit { get; set; } = false;
+        /// <summary>
+        /// Maximum transfer bandwidth in megabits per second (Mbps) when the limit is enabled.
+        /// </summary>
+        public int MaxBandwidthMbps { get; set; } = 100;
+        /// <summary>
+        /// When enabled, automatic backups follow the quiet-hours schedule.
+        /// </summary>
+        public bool EnableQuietHours { get; set; } = false;
+        /// <summary>
+        /// Quiet-hours start time in 24h HH:mm format.
+        /// </summary>
+        public string QuietHoursStart { get; set; } = "23:00";
+        /// <summary>
+        /// Quiet-hours end time in 24h HH:mm format.
+        /// </summary>
+        public string QuietHoursEnd { get; set; } = "07:00";
         // New canonical backup root path used by UI + snapshot service
         public string? BackupRoot { get; set; } = string.Empty;
 

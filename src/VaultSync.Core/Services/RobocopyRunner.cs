@@ -28,7 +28,7 @@ namespace VaultSync.Core.Services
 
         // ISyncRunner base signature (no progress)
         public Task<int> SyncAsync(Project project, string destination, bool dryRun, CancellationToken ct)
-            => SyncAsync(project, destination, dryRun, progressCallback: null, ct);
+            => SyncAsync(project, destination, dryRun, progressCallback: null, maxBandwidthMbps: null, ct);
 
         /// <summary>
         /// Runs robocopy to mirror project.RootPath into destination, optionally reporting progress.
@@ -38,6 +38,7 @@ namespace VaultSync.Core.Services
             string destination,
             bool dryRun,
             Action<double, string, string>? progressCallback,
+            int? maxBandwidthMbps = null,
             CancellationToken ct = default)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -78,6 +79,12 @@ namespace VaultSync.Core.Services
                 ? Math.Min(32, Math.Max(4, Environment.ProcessorCount))
                 : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2));
             psi.ArgumentList.Add($"/MT:{threadCount}");
+            if (maxBandwidthMbps is > 0)
+            {
+                var ipg = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps.Value, threadCount);
+                if (ipg > 0)
+                    psi.ArgumentList.Add($"/IPG:{ipg}");
+            }
             if (_isNetworkDestination)
             {
                 // Network share tuning: restartable + tolerate time granularity, avoid cache thrash.
