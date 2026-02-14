@@ -13,6 +13,7 @@
 - [VS-1536] `BackupKeyRotationService` with explicit user-triggered rotation flow for existing encrypted backups (global scope or single-project filter).
 - [VS-1537] Per-project encryption password management action is now available in both Projects and Backups pages.
 - [VS-1539] Settings > Encryption now includes a proactive "Set password (Projects)" flow to enroll project passwords on a new machine before restore/open.
+- [VS-1539] Settings > Encryption now includes a `Lock now` action to immediately close/decrypt-open temp workspaces.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
 - Backup history cards now show an explicit encryption status tag (`Encrypted` / `Plain`).
@@ -39,6 +40,8 @@
 - [VS-1537] Projects and Backups per-project cards now share one password-edit flow, using a single app-level handler to prevent cross-page mismatch.
 - Projects and Backups encryption sections now show a dedicated status pill (`Encrypted`, `Not protected`, or missing-password warning).
 - [VS-1538] Backups `Open folder` now detects encrypted backups, prompts for password (stored keys first), decrypts to a temp workspace, and opens decrypted content directly.
+- [VS-1539] Encrypted open-folder auto-lock timeout is now configurable in Settings and shared by in-app and external `.vse` open flows.
+- [VS-1543] Encrypted open-folder now reuses a per-project in-memory session unlock within the configured timeout, then re-prompts after expiry.
 - [VS-1539] Project encryption enrollment/edit dialogs were extracted from `AppViewModel` into a dedicated `ProjectEncryptionEnrollmentService` while preserving existing metadata export + UI
             refresh behavior.
 - Backup orchestration support methods (`destination prep`, `backup-all prep`, aggregate progress update, NAS temp-root migration helpers) were extracted from

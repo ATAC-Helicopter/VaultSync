@@ -258,6 +258,24 @@ namespace VaultSync.UI.ViewModels
             OpenBackupFolder(backupId);
         }
 
+        private async void OnLockEncryptedOpenWorkspacesRequested()
+        {
+            try
+            {
+                await LockEncryptedOpenWorkspacesNowAsync();
+                BackupsViewModel.ShowNotification(
+                    L("Backups.OpenEncrypted.LockedNow", "Encrypted open folders were locked and cleaned up."),
+                    "Info");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OpenEncrypted] Lock-now cleanup failed: {ex.Message}");
+                BackupsViewModel.ShowNotification(
+                    L("Backups.OpenEncrypted.LockedNowFailed", "Failed to lock encrypted open folders."),
+                    "Warning");
+            }
+        }
+
         private async void OpenBackupFolder(int backupId)
         {
             var openCardId = $"open-{backupId}";
@@ -409,6 +427,11 @@ namespace VaultSync.UI.ViewModels
 
             var attemptedPasswords = new HashSet<string>(StringComparer.Ordinal);
             var candidatePasswords = new Queue<string>(ResolveEncryptedRestorePasswordCandidates(preparation.ProjectId));
+            if (TryGetEncryptedOpenSessionPassword(preparation.ProjectId, out var cachedSessionPassword) &&
+                !string.IsNullOrWhiteSpace(cachedSessionPassword))
+            {
+                candidatePasswords.Enqueue(cachedSessionPassword);
+            }
 
             while (true)
             {
@@ -435,7 +458,7 @@ namespace VaultSync.UI.ViewModels
 
                 try
                 {
-                    return await Task.Run(() => ExtractEncryptedBackupForOpen(preparation.BackupFolder, password, (percent, status, eta) =>
+                    var extractedPath = await Task.Run(() => ExtractEncryptedBackupForOpen(preparation.BackupFolder, password, (percent, status, eta) =>
                     {
                         Dispatcher.UIThread.Post(() =>
                         {
@@ -448,9 +471,13 @@ namespace VaultSync.UI.ViewModels
                                 allowCancel: false);
                         });
                     }));
+
+                    SetEncryptedOpenSession(preparation.ProjectId, password);
+                    return extractedPath;
                 }
                 catch (Exception ex) when (IsEncryptedRestorePasswordError(ex))
                 {
+                    InvalidateEncryptedOpenSession(preparation.ProjectId, password);
                     BackupsViewModel.ShowNotification(
                         L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted."),
                         "Warning");
@@ -561,11 +588,12 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private static void ScheduleEncryptedOpenCleanup(string extractedDir)
+        private void ScheduleEncryptedOpenCleanup(string extractedDir)
         {
             var stagingRoot = ResolveEncryptedOpenStagingRoot(extractedDir);
             if (string.IsNullOrWhiteSpace(stagingRoot))
                 return;
+            var cleanupDelay = GetEncryptedOpenTimeout();
 
             var cts = new CancellationTokenSource();
             var previous = _encryptedOpenCleanup.AddOrUpdate(stagingRoot, cts, (_, old) =>
@@ -583,7 +611,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    await Task.Delay(EncryptedOpenAutoCleanupDelay, cts.Token).ConfigureAwait(false);
+                    await Task.Delay(cleanupDelay, cts.Token).ConfigureAwait(false);
                     await TryDeleteEncryptedOpenStagingRootAsync(stagingRoot, cts.Token).ConfigureAwait(false);
                 }
                 catch (TaskCanceledException)
@@ -652,6 +680,91 @@ namespace VaultSync.UI.ViewModels
                 }
             }
         }
+
+        private TimeSpan GetEncryptedOpenTimeout()
+        {
+            var minutes = DefaultEncryptedOpenTimeoutMinutes;
+            try
+            {
+                var configured = _config?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes;
+                minutes = Math.Clamp(configured, 1, 240);
+            }
+            catch
+            {
+                minutes = DefaultEncryptedOpenTimeoutMinutes;
+            }
+
+            return TimeSpan.FromMinutes(minutes);
+        }
+
+        private bool TryGetEncryptedOpenSessionPassword(int projectId, out string password)
+        {
+            password = string.Empty;
+            if (!_encryptedOpenSessions.TryGetValue(projectId, out var session))
+                return false;
+
+            if (session.ExpiresUtc <= DateTime.UtcNow)
+            {
+                _encryptedOpenSessions.TryRemove(projectId, out _);
+                return false;
+            }
+
+            password = session.Password;
+            return !string.IsNullOrWhiteSpace(password);
+        }
+
+        private void SetEncryptedOpenSession(int projectId, string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+                return;
+
+            _encryptedOpenSessions[projectId] = new EncryptedOpenUnlockSession(
+                password,
+                DateTime.UtcNow.Add(GetEncryptedOpenTimeout()));
+        }
+
+        private void InvalidateEncryptedOpenSession(int projectId, string attemptedPassword)
+        {
+            if (!_encryptedOpenSessions.TryGetValue(projectId, out var session))
+                return;
+
+            if (string.Equals(session.Password, attemptedPassword, StringComparison.Ordinal))
+            {
+                _encryptedOpenSessions.TryRemove(projectId, out _);
+            }
+        }
+
+        private async Task LockEncryptedOpenWorkspacesNowAsync()
+        {
+            _encryptedOpenSessions.Clear();
+
+            foreach (var entry in _encryptedOpenCleanup.ToArray())
+            {
+                try { entry.Value.Cancel(); } catch { }
+                entry.Value.Dispose();
+                _encryptedOpenCleanup.TryRemove(entry.Key, out _);
+            }
+
+            await CleanupAllOpenBackupFoldersAsync().ConfigureAwait(false);
+        }
+
+        private static async Task CleanupAllOpenBackupFoldersAsync()
+        {
+            try
+            {
+                foreach (var dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                    await TryDeleteEncryptedOpenStagingRootAsync(dir, cts.Token).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                // best effort cleanup
+            }
+        }
+
+        private sealed record EncryptedOpenUnlockSession(string Password, DateTime ExpiresUtc);
 
         private static void OpenPathInSystemFileManager(string path)
         {

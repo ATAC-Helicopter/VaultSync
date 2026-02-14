@@ -471,6 +471,22 @@
                                     IsChecked="{Binding BackupEncryptionAllowSessionFallback, Mode=TwoWay}" />
                     </Grid>
 
+                    <Grid ColumnDefinitions="*,Auto"
+                          Margin="0,2,0,0">
+                      <StackPanel Grid.Column="0" Spacing="2">
+                        <TextBlock Text="{Binding EncryptionOpenTimeoutLabel}" />
+                        <TextBlock Text="{Binding EncryptionOpenTimeoutDescription}"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                      <TextBox Grid.Column="1"
+                               Width="70"
+                               HorizontalContentAlignment="Center"
+                               Text="{Binding BackupEncryptionOpenUnlockTimeoutMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               HorizontalAlignment="Right" />
+                    </Grid>
+
                     <TextBlock Text="{Binding BackupEncryptionSecretStatus}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11"
@@ -509,6 +525,12 @@
                             HorizontalAlignment="Left"
                             Command="{Binding RotateEncryptedBackupsCommand}">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.RotateBackups}" />
+                    </Button>
+
+                    <Button Classes="settings-ghost"
+                            HorizontalAlignment="Left"
+                            Command="{Binding LockEncryptedOpenWorkspacesCommand}">
+                      <TextBlock Text="{Binding LockEncryptedOpenNowLabel}" />
                     </Button>
                   </StackPanel>
                 </Border>

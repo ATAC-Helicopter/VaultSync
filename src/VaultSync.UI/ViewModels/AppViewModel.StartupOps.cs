@@ -70,6 +70,7 @@ namespace VaultSync.UI.ViewModels
             _settingsViewModel.RefreshHistoryRequested += OnRefreshHistoryRequested;
             _settingsViewModel.RotateEncryptedBackupsRequested += OnRotateEncryptedBackupsRequested;
             _settingsViewModel.EnrollProjectEncryptionRequested += OnEnrollProjectEncryptionRequested;
+            _settingsViewModel.LockEncryptedOpenWorkspacesRequested += OnLockEncryptedOpenWorkspacesRequested;
             _settingsViewModel.UpdateUpdateCheckStatus(null, null);
             _settingsViewModel.Destinations.CollectionChanged += OnDestinationsCollectionChanged;
             foreach (var dest in _settingsViewModel.Destinations)

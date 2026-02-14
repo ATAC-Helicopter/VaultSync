@@ -247,16 +247,21 @@
     - UI: setting/clearing a project encryption password from Projects is reflected in Backups without drift.
     - UI: setting/clearing from Backups is reflected in Projects without drift.
     - Regression: policy updates (`inherit/encrypted/plain`) preserve existing key reference and do not desync between pages.
-- [ ] `VS-1538` Encrypted `Open folder` unlock entry flow.
+- [x] `VS-1538` Encrypted `Open folder` unlock entry flow.
   - Scope: clicking `Open folder` on encrypted backups runs password/key resolution, decrypts into a temp workspace, and opens that decrypted workspace directly.
   - Depends on: `VS-1534`, `VS-1535`.
   - Acceptance tests:
     - Integration: encrypted `Open folder` opens decrypted temp workspace after valid password/key.
     - Integration: invalid password shows explicit error and creates no partial workspace.
     - Regression: plain `Open folder` keeps current behavior unchanged.
-- [ ] `VS-1539` Encrypted `Open folder` lock lifecycle + cleanup hardening.
+- [x] `VS-1539` Encrypted `Open folder` lock lifecycle + cleanup hardening.
   - Scope: add lock/cleanup lifecycle for decrypted temp workspaces (explicit lock action, timeout auto-lock, startup stale cleanup, safe crash recovery path).
   - Depends on: `VS-1538`.
+  - Plain-language behavior:
+    - When an encrypted backup is opened, VaultSync decrypts it to a temp workspace only.
+    - User can force-close that decrypted workspace with `Lock now`.
+    - If the user does nothing, VaultSync auto-locks (deletes temp decrypted data) after a timeout.
+    - On app restart/crash recovery, stale decrypted temp folders are cleaned automatically.
   - Integration contract:
     - Encrypted backups never expose decrypted files in destination roots.
     - Decrypted temp workspaces are never persisted in metadata/config.
@@ -265,9 +270,16 @@
     - Integration: temp workspace is removed on lock/timeout/restart.
     - Integration: stale workspace cleanup runs on app startup.
     - Regression: restore and metadata sync behavior unchanged.
-- [ ] `VS-1543` Session unlock cache + timed auto-relock for encrypted open flow.
+  - Current status:
+    - Done: startup stale temp cleanup, timed auto-cleanup for decrypted open-folder staging roots, explicit `Lock now` action, and shared configurable timeout for in-app + external `.vse` open flows.
+- [x] `VS-1543` Session unlock cache + timed auto-relock for encrypted open flow.
   - Scope: introduce a per-project encrypted-open session unlock cache so repeated `Open folder` actions within a configured timeout do not re-prompt for password.
   - Depends on: `VS-1538`, `VS-1539`.
+  - Plain-language behavior:
+    - First encrypted open asks for password.
+    - Additional opens for the same project within the unlock window do not ask again.
+    - Once timeout expires (or user clicks `Lock now`), password is required again.
+    - This cache is memory-only for the current app session (never written to config/metadata).
   - Integration contract:
     - Session unlock is memory-only (no plaintext secrets persisted to config/metadata).
     - Unlock timeout is configurable in Settings and auto-relocks on expiry.

@@ -190,7 +190,8 @@ public sealed class CredentialVault
         var activeFamilies = new HashSet<string>(
             activeSet
                 .Select(GetKeyFamily)
-                .Where(f => !string.IsNullOrWhiteSpace(f)),
+                .Where(f => !string.IsNullOrWhiteSpace(f))
+                .Select(f => f!),
             StringComparer.OrdinalIgnoreCase);
 
         lock (_sync)

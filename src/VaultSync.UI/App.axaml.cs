@@ -68,7 +68,7 @@ public partial class App : Application
         $"avares://VaultSync.UI/Assets/Fonts/#Noto Sans Arabic, avares://VaultSync.UI/Assets/Fonts/#Noto Sans, " +
         "Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial");
     private static readonly TimeSpan EncryptedOpenTempRetention = TimeSpan.FromMinutes(30);
-    private static readonly TimeSpan EncryptedOpenTempAutoCleanupDelay = TimeSpan.FromMinutes(10);
+    private const int DefaultEncryptedOpenTimeoutMinutes = 10;
     private static int _encryptedOpenInFlight;
     private static long _uiHeartbeatTicks;
     private static int _uiHangReported;
@@ -1622,12 +1622,13 @@ public partial class App : Application
         var stagingRoot = ResolveEncryptedOpenStagingRoot(extractedDir);
         if (string.IsNullOrWhiteSpace(stagingRoot))
             return;
+        var delay = GetEncryptedOpenAutoCleanupDelay();
 
         _ = Task.Run(async () =>
         {
             try
             {
-                await Task.Delay(EncryptedOpenTempAutoCleanupDelay).ConfigureAwait(false);
+                await Task.Delay(delay).ConfigureAwait(false);
                 if (Directory.Exists(stagingRoot))
                     Directory.Delete(stagingRoot, recursive: true);
             }
@@ -1664,6 +1665,23 @@ public partial class App : Application
         }
 
         return null;
+    }
+
+    private static TimeSpan GetEncryptedOpenAutoCleanupDelay()
+    {
+        try
+        {
+            var cfg = AppConfigStore.Load();
+            var minutes = Math.Clamp(
+                cfg?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes,
+                1,
+                240);
+            return TimeSpan.FromMinutes(minutes);
+        }
+        catch
+        {
+            return TimeSpan.FromMinutes(DefaultEncryptedOpenTimeoutMinutes);
+        }
     }
 
     private static bool IsEncryptedArchivePath(string value)

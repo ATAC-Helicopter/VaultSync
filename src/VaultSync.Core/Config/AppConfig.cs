@@ -148,6 +148,10 @@ namespace VaultSync.Core.Config
         /// Explicit user confirmation is still required by runtime flows.
         /// </summary>
         public bool AllowSessionFallback { get; set; } = false;
+        /// <summary>
+        /// Minutes before encrypted "Open folder" session unlock expires and temp content is auto-locked.
+        /// </summary>
+        public int OpenUnlockTimeoutMinutes { get; set; } = 10;
     }
 
     // -------- Storage --------
