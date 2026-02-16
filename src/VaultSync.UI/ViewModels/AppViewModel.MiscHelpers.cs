@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
+using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
@@ -161,6 +163,106 @@ namespace VaultSync.UI.ViewModels
                 return false;
 
             return _powerStatusProvider.GetPowerState() == PowerState.OnBattery;
+        }
+
+        private readonly record struct BackupPolicyState(
+            bool IsThrottled,
+            int? BandwidthLimitMbps,
+            bool IsInQuietHours,
+            string QuietHoursRangeLabel)
+        {
+            public string Signature =>
+                $"{(IsThrottled ? 1 : 0)}|{BandwidthLimitMbps ?? 0}|{(IsInQuietHours ? 1 : 0)}|{QuietHoursRangeLabel}";
+        }
+
+        private BackupPolicyState GetBackupPolicyState(AppConfig cfg, DateTimeOffset nowLocal)
+        {
+            var throttledMbps = TransferPolicy.NormalizeBandwidthLimitMbps(
+                cfg.Backups.EnableBandwidthLimit,
+                cfg.Backups.MaxBandwidthMbps);
+
+            var quietDecision = QuietHoursPolicy.Evaluate(
+                cfg.Backups.EnableQuietHours,
+                cfg.Backups.QuietHoursStart,
+                cfg.Backups.QuietHoursEnd,
+                nowLocal);
+
+            var quietRange = $"{quietDecision.StartTime:hh\\:mm}-{quietDecision.EndTime:hh\\:mm}";
+            return new BackupPolicyState(
+                IsThrottled: throttledMbps is > 0,
+                BandwidthLimitMbps: throttledMbps,
+                IsInQuietHours: quietDecision.IsInQuietHours,
+                QuietHoursRangeLabel: quietRange);
+        }
+
+        private string BuildPolicyChipText(BackupPolicyState state)
+        {
+            var chips = new List<string>(2);
+            if (state.IsThrottled)
+            {
+                chips.Add(
+                    state.BandwidthLimitMbps is > 0
+                        ? Lf("Backups.Policy.ThrottledWithLimit", "Throttled ({0} Mbps)", state.BandwidthLimitMbps.Value)
+                        : L("Backups.Policy.Throttled", "Throttled"));
+            }
+
+            if (state.IsInQuietHours)
+            {
+                chips.Add(L("Backups.Policy.QuietHours", "Quiet hours"));
+            }
+
+            return string.Join(" · ", chips);
+        }
+
+        public string GetBackupPolicyChipText()
+        {
+            return BuildPolicyChipText(GetBackupPolicyState(_config, DateTimeOffset.Now));
+        }
+
+        public string GetBackupPolicyTraySummary()
+        {
+            var state = GetBackupPolicyState(_config, DateTimeOffset.Now);
+            var chipText = BuildPolicyChipText(state);
+            if (string.IsNullOrWhiteSpace(chipText))
+                return string.Empty;
+
+            return Lf("Tray.Policy.Active", "Policy: {0}", chipText);
+        }
+
+        public string GetBackupPolicySignatureForTray()
+        {
+            return GetBackupPolicyState(_config, DateTimeOffset.Now).Signature;
+        }
+
+        private string GetBackupPolicyChipTextForConfig(AppConfig cfg)
+        {
+            return BuildPolicyChipText(GetBackupPolicyState(cfg, DateTimeOffset.Now));
+        }
+
+        private void LogBackupPolicyTransitionIfChanged(AppConfig cfg, string source)
+        {
+            var state = GetBackupPolicyState(cfg, DateTimeOffset.Now);
+            var changed = false;
+            lock (_backupPolicyStateGate)
+            {
+                if (!string.Equals(_lastBackupPolicySignature, state.Signature, StringComparison.Ordinal))
+                {
+                    _lastBackupPolicySignature = state.Signature;
+                    changed = true;
+                }
+            }
+
+            if (!changed)
+                return;
+
+            var detail = BuildPolicyChipText(state);
+            if (string.IsNullOrWhiteSpace(detail))
+                detail = L("Backups.Policy.None", "No active transfer policy");
+
+            var message = $"[Policy] source={source}; state={detail}";
+            Console.WriteLine(message);
+            DiagnosticsLogger.Record(message);
+            TrayMenuRefreshRequested?.Invoke();
         }
 
         private string L(string key, string fallback) => LStatic(key, fallback);

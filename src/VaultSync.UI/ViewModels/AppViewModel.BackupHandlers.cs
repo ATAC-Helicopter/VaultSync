@@ -102,6 +102,8 @@ namespace VaultSync.UI.ViewModels
             var cfg = preparation.Config;
             var destinations = preparation.Destinations;
             var project = preparation.Project;
+            LogBackupPolicyTransitionIfChanged(cfg, "manual-backup-start");
+            var activePolicyText = GetBackupPolicyChipTextForConfig(cfg);
             if (!string.IsNullOrWhiteSpace(preparation.DestinationWarning))
             {
                 BackupsViewModel.ShowNotification(preparation.DestinationWarning, "Warning");
@@ -163,7 +165,8 @@ namespace VaultSync.UI.ViewModels
                 project.Name,
                 0,
                 L("Backups.Status.Preparing", "Preparing backup..."),
-                string.Empty);
+                string.Empty,
+                policyText: activePolicyText);
             if (isFirstManual)
             {
                 var allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
@@ -276,7 +279,8 @@ namespace VaultSync.UI.ViewModels
                                         label,
                                         etaText,
                                         allowCancel: !isFinalizing,
-                                        destinationLabel: labelPrefix);
+                                        destinationLabel: labelPrefix,
+                                        policyText: activePolicyText);
                                     LogBackupProgress(project.Id, project.Name, percent, label, etaText);
 
                                     // Keep legacy aggregate fields in sync (if anything else binds to them)
@@ -340,7 +344,8 @@ namespace VaultSync.UI.ViewModels
                                 100,
                                 L("Backups.Status.Cancelled", "Cancelled"),
                                 string.Empty,
-                                allowCancel: false);
+                                allowCancel: false,
+                                policyText: activePolicyText);
                             Telemetry.Log("backup_single_cancelled", b => b
                                 .WithHashedString("project", project.Name)
                                 .WithHashedString("destinationPath", dest.Path ?? string.Empty)
@@ -355,7 +360,8 @@ namespace VaultSync.UI.ViewModels
                                 project.Name,
                                 100,
                                 L("Backups.Status.Completed", "Completed"),
-                                string.Empty);
+                                string.Empty,
+                                policyText: activePolicyText);
                             succeeded++;
                             RecordBackupThroughput(backupResult.Result.BackupId, backupResult.Elapsed, useArchiveMode);
                             TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.Result.BackupId);
@@ -654,6 +660,8 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             var cfg = preparation.Config!;
+            LogBackupPolicyTransitionIfChanged(cfg, "backup-all-start");
+            var activePolicyText = GetBackupPolicyChipTextForConfig(cfg);
             var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
             var useArchiveMode = _settingsViewModel.UseBackupCompression;
             Telemetry.Log("backup_all_start", b => b
@@ -695,7 +703,8 @@ namespace VaultSync.UI.ViewModels
                             p.Name,
                             0,
                             L("Backups.Status.Preparing", "Preparing backup..."),
-                            string.Empty);
+                            string.Empty,
+                            policyText: activePolicyText);
                     }
 
                     void UpdateAggregateProgress(string currentFile, string etaText)
@@ -729,7 +738,8 @@ namespace VaultSync.UI.ViewModels
                                     project.Name,
                                     100,
                                     message,
-                                    string.Empty);
+                                    string.Empty,
+                                    policyText: activePolicyText);
                             });
                             UpdateAggregateProgress(message, string.Empty);
                             return;
@@ -753,7 +763,8 @@ namespace VaultSync.UI.ViewModels
                                     project.Name,
                                     100,
                                     message,
-                                    string.Empty);
+                                    string.Empty,
+                                    policyText: activePolicyText);
                             });
                             UpdateAggregateProgress(message, string.Empty);
                             return;
@@ -779,7 +790,8 @@ namespace VaultSync.UI.ViewModels
                                     project.Name,
                                     100,
                                     rootError,
-                                    string.Empty);
+                                    string.Empty,
+                                    policyText: activePolicyText);
                             });
                             UpdateAggregateProgress(rootError, string.Empty);
                             return;
@@ -807,7 +819,8 @@ namespace VaultSync.UI.ViewModels
                                     project.Name,
                                     100,
                                     driveDecision.Message,
-                                    string.Empty);
+                                    string.Empty,
+                                    policyText: activePolicyText);
                             });
                             UpdateAggregateProgress(driveDecision.Message, string.Empty);
                             return;
@@ -892,7 +905,8 @@ namespace VaultSync.UI.ViewModels
                                         percent,
                                         label,
                                         etaText,
-                                        allowCancel: !isFinalizing);
+                                        allowCancel: !isFinalizing,
+                                        policyText: activePolicyText);
                                     LogBackupProgress(project.Id, project.Name, percent, label, etaText);
                                 },
                                 useArchiveMode: useArchiveMode,
@@ -920,7 +934,8 @@ namespace VaultSync.UI.ViewModels
                                     project.Name,
                                     100,
                                     L("Backups.Status.NoChanges", "No changes detected"),
-                                    string.Empty);
+                                    string.Empty,
+                                    policyText: activePolicyText);
                                 UpdateAggregateProgress(string.Empty, string.Empty);
                                 results.Add((project.Name, project.RootPath, true));
                                 Telemetry.Log("backup_all_project_skipped", b => b
@@ -944,7 +959,8 @@ namespace VaultSync.UI.ViewModels
                                     100,
                                     L("Backups.Status.Cancelled", "Cancelled"),
                                     string.Empty,
-                                    allowCancel: false);
+                                    allowCancel: false,
+                                    policyText: activePolicyText);
                                 return;
                             }
 
@@ -955,7 +971,8 @@ namespace VaultSync.UI.ViewModels
                                 project.Name,
                                 100,
                                 L("Backups.Status.Completed", "Completed"),
-                                string.Empty);
+                                string.Empty,
+                                policyText: activePolicyText);
                             results.Add((project.Name, project.RootPath, backupResult.BackupId > 0));
                             if (backupResult.BackupId > 0)
                             {
@@ -981,7 +998,8 @@ namespace VaultSync.UI.ViewModels
                                 0,
                                 L("Backups.Status.Cancelled", "Cancelled"),
                                 string.Empty,
-                                allowCancel: false);
+                                allowCancel: false,
+                                policyText: activePolicyText);
                             return;
                         }
                         catch (Exception ex)
@@ -1150,6 +1168,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
+                var activePolicyText = GetBackupPolicyChipTextForConfig(cfg);
                 var throughput = useArchiveMode
                     ? cfg.Backups.LastBackupThroughputArchiveMbSec
                     : cfg.Backups.LastBackupThroughputCopyMbSec;
@@ -1205,7 +1224,8 @@ namespace VaultSync.UI.ViewModels
                             0,
                             L("Backups.Progress.Estimating", "Estimating..."),
                             estimateLabel,
-                            allowCancel: true);
+                            allowCancel: true,
+                            policyText: activePolicyText);
                     }
 
                     if (!preflight.HasEnoughSpace && preflight.VolumeFreeBytes.HasValue)

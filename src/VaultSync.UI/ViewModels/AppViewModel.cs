@@ -141,6 +141,8 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<int, DateTime> _backupProgressLogTimestamps = new();
         private int _configReloadInFlight;
         private int _configReloadQueued;
+        private readonly object _backupPolicyStateGate = new();
+        private string _lastBackupPolicySignature = string.Empty;
         private int _manualBackupInFlightCount;
         private int _backupAllInProgress;
         private bool _trayInitiatedBackup;

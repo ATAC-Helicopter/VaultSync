@@ -17,6 +17,8 @@
 - [VS-1510] Settings now includes backup bandwidth cap and quiet-hours controls with persisted config fields.
 - [VS-1511] Added shared transfer policy helper and automated unit tests for bandwidth conversion/throttling math.
 - [VS-1512] Added shared quiet-hours policy helper and automated unit tests for overnight/daytime schedule evaluation.
+- [VS-1513] Active backup cards now show runtime transfer-policy chips (`Throttled`, `Quiet hours`) in both the Backups page and backup widget.
+- [VS-1513] Tray native menu and tray panel summary now show the active transfer-policy state when applicable.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
 - Backup history cards now show an explicit encryption status tag (`Encrypted` / `Plain`).
@@ -48,6 +50,7 @@
 - [VS-1511] Native backup copy path now enforces configured bandwidth caps in `rsync` (`--bwlimit`) and robocopy (`/IPG`).
 - [VS-1512] Auto-backup timer now defers backup starts during configured quiet-hours windows with deterministic resume timing.
 - [VS-1512] Quiet-hours policy is applied to new auto-backup starts only; active in-flight backups are allowed to complete.
+- [VS-1513] Backup policy transitions are now emitted as informational `[Policy]` log entries (no warning/error noise) and trigger tray status refresh when state changes.
 - [VS-1539] Project encryption enrollment/edit dialogs were extracted from `AppViewModel` into a dedicated `ProjectEncryptionEnrollmentService` while preserving existing metadata export + UI
             refresh behavior.
 - Backup orchestration support methods (`destination prep`, `backup-all prep`, aggregate progress update, NAS temp-root migration helpers) were extracted from

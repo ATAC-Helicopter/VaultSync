@@ -83,7 +83,8 @@ namespace VaultSync.UI.ViewModels
             string CurrentFile,
             string EtaText,
             bool AllowCancel,
-            string? DestinationLabel);
+            string? DestinationLabel,
+            string PolicyText);
 
         private BackupSnapshotItem? _selectedSnapshotA;
         public BackupSnapshotItem? SelectedSnapshotA
@@ -818,7 +819,15 @@ namespace VaultSync.UI.ViewModels
         /// changes safe and avoid UI-thread violations when progress is raised from
         /// background threads.
         /// </summary>
-        public void UpdateActiveBackup(string projectId, string projectName, double progress, string currentFile, string etaText, bool allowCancel = true, string? destinationLabel = null)
+        public void UpdateActiveBackup(
+            string projectId,
+            string projectName,
+            double progress,
+            string currentFile,
+            string etaText,
+            bool allowCancel = true,
+            string? destinationLabel = null,
+            string? policyText = null)
         {
             if (string.IsNullOrWhiteSpace(projectId))
                 return;
@@ -830,7 +839,8 @@ namespace VaultSync.UI.ViewModels
                 currentFile,
                 etaText,
                 allowCancel,
-                destinationLabel);
+                destinationLabel,
+                policyText ?? string.Empty);
 
             _pendingActiveBackupUpdates[projectId] = update;
 
@@ -925,6 +935,7 @@ namespace VaultSync.UI.ViewModels
             {
                 item.DestinationLabel = update.DestinationLabel;
             }
+            item.PolicyText = update.PolicyText;
 
             item.AllowCancel = update.AllowCancel;
 
@@ -2893,6 +2904,24 @@ namespace VaultSync.UI.ViewModels
         }
 
         public bool HasDestinationDisplay => !string.IsNullOrWhiteSpace(DestinationDisplay);
+
+        private string _policyText = string.Empty;
+        public string PolicyText
+        {
+            get => _policyText;
+            set
+            {
+                var normalized = value ?? string.Empty;
+                if (_policyText == normalized)
+                    return;
+
+                _policyText = normalized;
+                OnPropertyChanged(nameof(PolicyText));
+                OnPropertyChanged(nameof(HasPolicyText));
+            }
+        }
+
+        public bool HasPolicyText => !string.IsNullOrWhiteSpace(PolicyText);
 
         private double _progress;
         private double _displayProgress;

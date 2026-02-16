@@ -354,7 +354,7 @@ public partial class App : Application
         };
 
         _trayMenu = new NativeMenu();
-        PopulateTrayMenu(_trayMenu, desktop);
+        PopulateTrayMenu(_trayMenu, desktop, policySummary: AppViewModelInstance?.GetBackupPolicyTraySummary());
 
         // macOS prefers the native menu; custom tray panels can fail to open.
         if (OperatingSystem.IsMacOS())
@@ -560,7 +560,8 @@ public partial class App : Application
     private void PopulateTrayMenu(
         NativeMenu menu,
         IClassicDesktopStyleApplicationLifetime desktop,
-        IReadOnlyList<AppViewModel.TrayProjectBackups>? recentBackups = null)
+        IReadOnlyList<AppViewModel.TrayProjectBackups>? recentBackups = null,
+        string? policySummary = null)
     {
         // Build a small context menu: header / Open / Backup / Snapshot / Recent backups / Quit.
         menu.Items.Clear();
@@ -577,6 +578,10 @@ public partial class App : Application
             GetDestinationStatus(destinationSummaries, configuredDestinations);
 
         menu.Items.Add(new NativeMenuItem($"{destinationsTitle} - {destinationsStatus}") { IsEnabled = false });
+        if (!string.IsNullOrWhiteSpace(policySummary))
+        {
+            menu.Items.Add(new NativeMenuItem(policySummary) { IsEnabled = false });
+        }
         menu.Items.Add(new NativeMenuItemSeparator());
 
         var openItem = BuildOpenTrayItem(desktop);
@@ -1115,11 +1120,14 @@ public partial class App : Application
                                 ?? Array.Empty<AppViewModel.TrayProjectBackups>();
             var destinations = viewModel?.GetDestinationProbeSummaries()
                                ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
-            var signatureValue = BuildTrayMenuSignature(recentBackups, destinations);
-            return (Recent: recentBackups, Signature: signatureValue);
+            var policySummary = viewModel?.GetBackupPolicyTraySummary() ?? string.Empty;
+            var policySignature = viewModel?.GetBackupPolicySignatureForTray() ?? string.Empty;
+            var signatureValue = BuildTrayMenuSignature(recentBackups, destinations, policySignature, policySummary);
+            return (Recent: recentBackups, Signature: signatureValue, PolicySummary: policySummary);
         });
         var recent = trayResult.Recent;
         var signature = trayResult.Signature;
+        var policySummary = trayResult.PolicySummary;
 
         Dispatcher.UIThread.Post(() =>
         {
@@ -1131,7 +1139,7 @@ public partial class App : Application
                 }
 
                 var newMenu = new NativeMenu();
-                PopulateTrayMenu(newMenu, desktop, recent);
+                PopulateTrayMenu(newMenu, desktop, recent, policySummary);
                 _trayMenu = newMenu;
                 _trayIcon.Menu = newMenu;
                 _trayMenuSignature = signature;
@@ -1168,13 +1176,17 @@ public partial class App : Application
 
     private static string BuildTrayMenuSignature(
         IReadOnlyList<AppViewModel.TrayProjectBackups> recent,
-        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations)
+        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations,
+        string policySignature,
+        string policySummary)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append(_trayRecentLatestOnly ? "latest=1;" : "latest=0;");
         sb.Append(_cachedDriveHealthStatus).Append(';')
           .Append(_cachedDriveHealthLabel).Append(';')
-          .Append(_cachedDriveHealthIsNetwork).Append(';');
+          .Append(_cachedDriveHealthIsNetwork).Append(';')
+          .Append(policySignature ?? string.Empty).Append(';')
+          .Append(policySummary ?? string.Empty).Append(';');
 
         foreach (var dest in destinations.OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase))
         {

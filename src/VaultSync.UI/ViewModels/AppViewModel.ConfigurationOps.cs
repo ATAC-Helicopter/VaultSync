@@ -628,6 +628,8 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
+                LogBackupPolicyTransitionIfChanged(_config, "auto-backup-tick");
+
                 if (BackupsViewModel.IsBusy)
                 {
                     Telemetry.Log("auto_backup_skipped", b => b
@@ -1077,6 +1079,7 @@ namespace VaultSync.UI.ViewModels
             QueueConfigReload(cfg =>
             {
                 _config = cfg;
+                LogBackupPolicyTransitionIfChanged(_config, $"settings:{propertyName}");
 
                 if (propertyName is nameof(SettingsViewModel.EnableAutoBackups)
                     or nameof(SettingsViewModel.AutoBackupIntervalMinutes))

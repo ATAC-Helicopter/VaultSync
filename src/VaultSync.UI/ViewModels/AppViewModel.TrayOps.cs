@@ -36,7 +36,8 @@ namespace VaultSync.UI.ViewModels
                 item.Progress,
                 L("Backups.Status.Cancelling", "Cancelling..."),
                 string.Empty,
-                allowCancel: false);
+                allowCancel: false,
+                policyText: item.PolicyText);
             Console.WriteLine($"[Backup] Cancel requested for projectId={projectId} ({item.ProjectName}).");
             Telemetry.Log("backup_cancel_requested", b => b
                 .WithHashedString("projectId", item.ProjectId));

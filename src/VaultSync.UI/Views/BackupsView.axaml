@@ -767,6 +767,16 @@
                                        HorizontalAlignment="Left"
                                        TextAlignment="Left"
                                        IsVisible="{Binding HasDestinationDisplay}" />
+                            <Border Classes="stat-pill"
+                                    HorizontalAlignment="Left"
+                                    IsVisible="{Binding HasPolicyText}">
+                              <TextBlock Text="{Binding PolicyText}"
+                                         FontSize="10"
+                                         FontWeight="SemiBold"
+                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                         TextTrimming="CharacterEllipsis"
+                                         MaxWidth="220" />
+                            </Border>
                             <TextBlock Text="{Binding StageDisplay}"
                                        FontSize="11"
                                        Foreground="{Binding StageBrush}"

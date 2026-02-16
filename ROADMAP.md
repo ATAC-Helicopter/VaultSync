@@ -33,7 +33,7 @@
 
 ### 1.5.0 priorities
 - [x] `P0` Backup encryption and password-protected backups.
-- [ ] `P1` Backup bandwidth limits and quiet hours.
+- [x] `P1` Backup bandwidth limits and quiet hours.
 - [ ] `P1` Incremental backup UX improvements.
 - [ ] `P2` Snapshot diff summaries.
 
@@ -321,12 +321,16 @@
     - Done: auto-backup timer runs now evaluate quiet-hours policy before preflight and skip deterministically during the configured window.
     - Done: active backup runs are not force-cancelled when quiet-hours begins; policy applies to new auto-backup starts only.
     - Done: shared `QuietHoursPolicy` helper + automated unit coverage for overnight/daytime windows and invalid-time fallback.
-- [ ] `VS-1513` Policy visibility in cards, tray, and logs.
+- [x] `VS-1513` Policy visibility in cards, tray, and logs.
   - Scope: expose effective policy state (`Throttled`, `Quiet hours`) in UI and operational logs.
   - Depends on: `VS-1511`, `VS-1512`.
   - Acceptance tests:
     - UI: active cards and tray always show current policy state when applicable.
     - Log check: policy transition logs are informational, not error/warning noise.
+  - Current status:
+    - Done: active backup cards (Backups + backup widget) now show a policy chip when throttling/quiet-hours policy is active.
+    - Done: tray native menu + tray panel summary now include current policy state.
+    - Done: backup policy transitions are logged as informational `[Policy]` entries and trigger tray refresh on change.
 
 #### `P1` Incremental backup UX improvements
 - [ ] `VS-1520` Terminology cleanup (`Full`, `Incremental`, `Imported`).
