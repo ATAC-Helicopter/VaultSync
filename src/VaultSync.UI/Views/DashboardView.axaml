@@ -146,8 +146,8 @@
         <!-- Charts row -->
         <Grid Grid.Row="4" ColumnDefinitions="*,Auto" ColumnSpacing="16" Margin="4,12,4,0">
           <!-- Trend -->
-          <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}" Grid.Column="0">
-            <Grid RowDefinitions="Auto,Auto,*">
+          <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}" Grid.Column="0" VerticalAlignment="Top">
+            <Grid RowDefinitions="Auto,Auto,Auto,*">
               <Grid Grid.Row="0">
                 <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupsThisWeek}" Classes="section-title"/>
                 <Border HorizontalAlignment="Right" VerticalAlignment="Center" CornerRadius="8" Padding="8,4"
@@ -184,35 +184,46 @@
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                   </StackPanel>
                 </StackPanel>
-              <Border Grid.Row="1"
+              <Border Grid.Row="2"
                       Height="1"
-                      Margin="0,16,0,0"
+                      Margin="0,8,0,0"
                       Background="{DynamicResource DividerBrush}"
                       Opacity="0.4"/>
-              <StackPanel Grid.Row="1"
+              <StackPanel Grid.Row="2"
                           Orientation="Horizontal"
                           Spacing="10"
-                          Margin="0,28,0,0">
-                <Border Classes="stat-pill">
-                  <TextBlock Text="{Binding SnapshotActivitySummary}"
-                             FontSize="11"
-                             TextTrimming="CharacterEllipsis"
-                             MaxWidth="360" />
+                          Margin="0,14,0,0">
+                <Border Classes="stat-pill sm info">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="pill-icon" Text="◷" />
+                    <TextBlock Text="{Binding SnapshotActivitySummary}"
+                               FontSize="11"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="360"
+                               ToolTip.Tip="{Binding SnapshotActivitySummary}" />
+                  </StackPanel>
                 </Border>
-                <Border Classes="stat-pill">
-                  <TextBlock Text="{Binding SnapshotsSummaryLine}"
-                             FontSize="11"
-                             TextTrimming="CharacterEllipsis"
-                             MaxWidth="260" />
+                <Border Classes="stat-pill sm info">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="pill-icon" Text="⬤" />
+                    <TextBlock Text="{Binding SnapshotsSummaryLine}"
+                               FontSize="11"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="260"
+                               ToolTip.Tip="{Binding SnapshotsSummaryLine}" />
+                  </StackPanel>
                 </Border>
               </StackPanel>
-              <Border Grid.Row="2"
+              <Border Grid.Row="3"
                       Background="{DynamicResource Surface1}"
                       CornerRadius="12"
                       Padding="12"
                       VerticalAlignment="Stretch"
                       Height="{Binding WeeklyChartHeight}">
-                <Grid RowDefinitions="*,Auto" RowSpacing="8">
+                <Grid RowDefinitions="*,Auto"
+                      RowSpacing="8"
+                      MaxWidth="1120"
+                      HorizontalAlignment="Center">
                   <Grid Grid.Row="0">
                     <Canvas VerticalAlignment="Bottom">
                       <shapes:Path Data="M0,0 L1,0"
@@ -248,24 +259,35 @@
                       </ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                          <Border Width="46"
-                                  HorizontalAlignment="Center"
+                          <Border Margin="4,0"
+                                  HorizontalAlignment="Stretch"
                                   ToolTip.Tip="{Binding TooltipText}">
-                            <StackPanel VerticalAlignment="Bottom" Spacing="6">
+                            <StackPanel Width="64"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Bottom"
+                                        Spacing="4">
+                              <Border Height="{Binding ImportedHeight}"
+                                      Width="64"
+                                      HorizontalAlignment="Center"
+                                      Background="{Binding ImportedBrush}"
+                                      CornerRadius="6"
+                                      IsVisible="{Binding HasImported}" />
                               <Border Height="{Binding ManualHeight}"
+                                      Width="64"
+                                      HorizontalAlignment="Center"
                                       Background="{Binding ManualBrush}"
                                       CornerRadius="6"
                                       IsVisible="{Binding HasManual}" />
                               <Border Height="{Binding AutoHeight}"
+                                      Width="64"
+                                      HorizontalAlignment="Center"
                                       Background="{Binding AutoBrush}"
                                       CornerRadius="6"
                                       IsVisible="{Binding HasAuto}" />
-                              <Border Height="{Binding ImportedHeight}"
-                                      Background="{Binding ImportedBrush}"
-                                      CornerRadius="6"
-                                      IsVisible="{Binding HasImported}" />
                               <Border Height="{Binding EmptyHeight}"
-                                      MinHeight="10"
+                                      Width="28"
+                                      HorizontalAlignment="Center"
+                                      MinHeight="8"
                                       Background="{Binding EmptyBrush}"
                                       CornerRadius="6"
                                       IsVisible="{Binding IsEmpty}" />

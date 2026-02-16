@@ -14,6 +14,11 @@ public record Backup
     public string Type      { get; init; } = string.Empty;
 
     /// <summary>
+    /// Backup data mode: "full" or "incremental".
+    /// </summary>
+    public string BackupMode { get; init; } = BackupModes.Full;
+
+    /// <summary>
     /// Size of the backup archive on disk (folder or zip), in bytes.
     /// </summary>
     public long TotalBytes  { get; init; }

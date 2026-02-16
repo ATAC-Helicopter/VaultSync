@@ -373,26 +373,62 @@
                                 IsChecked="{Binding EnableQuietHours, Mode=TwoWay}" />
                 </Grid>
 
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto"
-                      ColumnSpacing="8"
-                      Margin="0,4,0,0">
-                  <TextBlock Grid.Column="0"
-                             VerticalAlignment="Center"
-                             Text="{Binding QuietHoursStartLabel}" />
-                  <TextBox Grid.Column="1"
-                           Width="80"
-                           HorizontalContentAlignment="Center"
-                           Text="{Binding QuietHoursStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           IsEnabled="{Binding EnableQuietHours}" />
-                  <TextBlock Grid.Column="2"
-                             VerticalAlignment="Center"
-                             Text="{Binding QuietHoursEndLabel}" />
-                  <TextBox Grid.Column="3"
-                           Width="80"
-                           HorizontalContentAlignment="Center"
-                           Text="{Binding QuietHoursEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           IsEnabled="{Binding EnableQuietHours}" />
-                </Grid>
+                <Border Classes="card"
+                        Margin="0,6,0,0"
+                        Padding="10"
+                        IsEnabled="{Binding EnableQuietHours}">
+                  <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <Border Classes="stat-pill sm info">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <TextBlock Classes="pill-icon" Text="◴" />
+                          <TextBlock Text="{Binding QuietHoursWindowLabel}" />
+                        </StackPanel>
+                      </Border>
+                      <Border Classes="stat-pill sm warning">
+                        <TextBlock Text="{Binding QuietHoursWindowPreview}"
+                                   ToolTip.Tip="{Binding QuietHoursWindowPreview}" />
+                      </Border>
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="Auto,Auto,Auto"
+                          ColumnSpacing="12"
+                          HorizontalAlignment="Center">
+                      <StackPanel Grid.Column="0"
+                                  Spacing="4">
+                        <TextBlock Text="{Binding QuietHoursStartLabel}"
+                                   FontSize="11"
+                                   Foreground="{StaticResource TextSecondary}" />
+                        <TextBox Width="92"
+                                 HorizontalContentAlignment="Center"
+                                 Watermark="HH:mm"
+                                 Text="{Binding QuietHoursStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding EnableQuietHours}" />
+                      </StackPanel>
+
+                      <TextBlock Grid.Column="1"
+                                 Text="→"
+                                 FontSize="14"
+                                 VerticalAlignment="Bottom"
+                                 Margin="0,0,0,10"
+                                 Foreground="{StaticResource TextSecondary}" />
+
+                      <StackPanel Grid.Column="2"
+                                  Spacing="4">
+                        <TextBlock Text="{Binding QuietHoursEndLabel}"
+                                   FontSize="11"
+                                   Foreground="{StaticResource TextSecondary}" />
+                        <TextBox Width="92"
+                                 HorizontalContentAlignment="Center"
+                                 Watermark="HH:mm"
+                                 Text="{Binding QuietHoursEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding EnableQuietHours}" />
+                      </StackPanel>
+                    </Grid>
+                  </StackPanel>
+                </Border>
 
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
@@ -838,21 +874,30 @@
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
                             <Grid ColumnDefinitions="Auto,*,Auto"
-                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="10"
-                                  RowSpacing="6">
-                              <WrapPanel x:Name="DestinationBasicsRow"
-                                         Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" VerticalAlignment="Center">
-                                <TextBox Width="140"
-                                         MaxWidth="200"
+                                  RowSpacing="8">
+                              <Grid x:Name="DestinationBasicsRow"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="2"
+                                    Grid.Row="0"
+                                    ColumnDefinitions="Auto,Auto,Auto"
+                                    ColumnSpacing="10"
+                                    VerticalAlignment="Center">
+                                <TextBox Width="170"
+                                         MaxWidth="220"
                                          HorizontalAlignment="Left"
                                          Watermark="{infra:LocalizedString Key=Settings.Destinations.AliasWatermark}"
                                          Text="{Binding Alias, Mode=TwoWay}" />
-                                <ToggleSwitch Margin="12,0,0,0"
+                                <TextBlock Grid.Column="1"
+                                           Text="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}" />
+                                <ToggleSwitch Grid.Column="2"
                                               IsChecked="{Binding Active, Mode=TwoWay}"
-                                              Content="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}"
+                                              VerticalAlignment="Center"
                                               ToolTip.Tip="When off, this destination is ignored for backups." />
-                              </WrapPanel>
+                              </Grid>
                               <Button Grid.Column="2" Grid.Row="0"
                                       Classes="settings-ghost"
                                       HorizontalAlignment="Right"
@@ -866,17 +911,27 @@
                                        Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1"
                                        Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
                                        Text="{Binding Path, Mode=TwoWay}" />
-                              <Button Grid.Column="2" Grid.Row="1"
-                                      Classes="settings-ghost"
-                                      HorizontalAlignment="Right"
-                                      VerticalAlignment="Center"
-                                      Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                      CommandParameter="{Binding}">
-                                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
-                              </Button>
+                              <StackPanel Grid.Column="2"
+                                          Grid.Row="1"
+                                          Orientation="Horizontal"
+                                          Spacing="6"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center">
+                                <Button Classes="settings-ghost"
+                                        Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
+                                </Button>
+                                <Button Classes="settings-ghost"
+                                        Command="{Binding DataContext.TestDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.TestTooltip}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
+                                </Button>
+                              </StackPanel>
 
                               <ComboBox x:Name="DestinationCredentialRow"
-                                        Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2"
+                                        Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2"
                                         MinWidth="160"
                                         HorizontalAlignment="Stretch"
                                         ItemsSource="{Binding DataContext.CredentialNames, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -888,49 +943,38 @@
                                   </DataTemplate>
                                 </ComboBox.ItemTemplate>
                               </ComboBox>
-                              <Button Grid.Column="2" Grid.Row="2"
-                                      Classes="settings-ghost"
-                                      HorizontalAlignment="Right"
-                                      VerticalAlignment="Center"
-                                      Command="{Binding DataContext.TestDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                      CommandParameter="{Binding}"
-                                      ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.TestTooltip}">
-                                <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
-                              </Button>
+                              <Grid Grid.Column="0"
+                                    Grid.ColumnSpan="3"
+                                    Grid.Row="3"
+                                    ColumnDefinitions="*,*"
+                                    ColumnSpacing="16">
+                                <StackPanel Grid.Column="0"
+                                            Spacing="4">
+                                  <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.PreMounted}"
+                                            ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.PreMountedTooltip}"
+                                            IsChecked="{Binding PreMounted, Mode=TwoWay}" />
+                                  <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoMount}"
+                                            ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoMountTooltip}"
+                                            IsChecked="{Binding AutoMount, Mode=TwoWay}" />
+                                  <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
+                                            ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
+                                            IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1"
+                                            Spacing="4">
+                                  <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.SyncHistory}"
+                                            IsChecked="{Binding EnableMetadataSync, Mode=TwoWay}" />
+                                  <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoImportHistory}"
+                                            IsChecked="{Binding AutoImportMetadata, Mode=TwoWay}"
+                                            IsEnabled="{Binding EnableMetadataSync}" />
+                                  <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.ForceHistoryExport}"
+                                            ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.ForceHistoryExportDescription}"
+                                            IsChecked="{Binding ForceMetadataBackfill, Mode=TwoWay}"
+                                            IsEnabled="{Binding EnableMetadataSync}" />
+                                </StackPanel>
+                              </Grid>
 
-                              <WrapPanel x:Name="DestinationMountOptionsRow"
-                                         Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="3">
-                                <CheckBox Margin="0,0,12,6"
-                                          Content="{infra:LocalizedString Key=Settings.Destinations.PreMounted}"
-                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.PreMountedTooltip}"
-                                          IsChecked="{Binding PreMounted, Mode=TwoWay}" />
-                                <CheckBox Margin="0,0,12,6"
-                                          Content="{infra:LocalizedString Key=Settings.Destinations.AutoMount}"
-                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoMountTooltip}"
-                                          IsChecked="{Binding AutoMount, Mode=TwoWay}" />
-                                <CheckBox Margin="0,0,12,6"
-                                          Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
-                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
-                                          IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
-                              </WrapPanel>
-
-                              <WrapPanel x:Name="DestinationHistoryOptionsRow"
-                                         Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="4">
-                                <CheckBox Margin="0,0,12,6"
-                                          Content="{infra:LocalizedString Key=Settings.Destinations.SyncHistory}"
-                                          IsChecked="{Binding EnableMetadataSync, Mode=TwoWay}" />
-                                <CheckBox Margin="0,0,12,6"
-                                          Content="{infra:LocalizedString Key=Settings.Destinations.AutoImportHistory}"
-                                          IsChecked="{Binding AutoImportMetadata, Mode=TwoWay}"
-                                          IsEnabled="{Binding EnableMetadataSync}" />
-                                <CheckBox Margin="0,0,12,6"
-                                          Content="{infra:LocalizedString Key=Settings.Destinations.ForceHistoryExport}"
-                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.ForceHistoryExportDescription}"
-                                          IsChecked="{Binding ForceMetadataBackfill, Mode=TwoWay}"
-                                          IsEnabled="{Binding EnableMetadataSync}" />
-                              </WrapPanel>
-
-                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="5" Orientation="Vertical" Spacing="4" Margin="0,6,0,0">
+                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="4" Orientation="Vertical" Spacing="4" Margin="0,4,0,0">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.CredentialWarning}"
                                            Foreground="{DynamicResource WarningTextBrush}"
                                            FontSize="11"

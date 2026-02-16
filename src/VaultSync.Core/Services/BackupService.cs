@@ -768,6 +768,11 @@ public sealed class BackupService
         // Store relative path so if backupRoot moves, paths are still valid.
         var relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
         var backupType = isAuto ? "auto" : "manual";
+        var backupMode = !useArchiveMode &&
+                         useIncrementalBackups &&
+                         !string.IsNullOrWhiteSpace(linkDest)
+            ? BackupModes.Incremental
+            : BackupModes.Full;
 
         Console.WriteLine($"[BackupService] Backup data written for '{project.Name}', creating backup metadata in database...");
 
@@ -787,6 +792,7 @@ public sealed class BackupService
                 projectId: project.Id,
                 snapshotId: snapshotId,
                 type: backupType,
+                backupMode: backupMode,
                 totalBytes: totalBytes,
                 relativePath: relativePath,
                 destinationPath: metadataRoot,

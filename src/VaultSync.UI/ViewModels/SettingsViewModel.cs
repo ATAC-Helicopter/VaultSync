@@ -172,6 +172,8 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(QuietHoursDescription));
                 OnPropertyChanged(nameof(QuietHoursStartLabel));
                 OnPropertyChanged(nameof(QuietHoursEndLabel));
+                OnPropertyChanged(nameof(QuietHoursWindowLabel));
+                OnPropertyChanged(nameof(QuietHoursWindowPreview));
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -1020,13 +1022,25 @@ namespace VaultSync.UI
         public string QuietHoursStart
         {
             get => _quietHoursStart;
-            set => SetField(ref _quietHoursStart, value ?? string.Empty);
+            set
+            {
+                if (SetField(ref _quietHoursStart, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(QuietHoursWindowPreview));
+                }
+            }
         }
 
         public string QuietHoursEnd
         {
             get => _quietHoursEnd;
-            set => SetField(ref _quietHoursEnd, value ?? string.Empty);
+            set
+            {
+                if (SetField(ref _quietHoursEnd, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(QuietHoursWindowPreview));
+                }
+            }
         }
 
         public bool BackupEncryptionEnabled
@@ -1609,6 +1623,9 @@ namespace VaultSync.UI
         public string QuietHoursDescription => L("Settings.Backups.QuietHoursDescription", "Pause/defer automatic backups during this time window.");
         public string QuietHoursStartLabel => L("Settings.Backups.QuietHoursStart", "Start (HH:mm)");
         public string QuietHoursEndLabel => L("Settings.Backups.QuietHoursEnd", "End (HH:mm)");
+        public string QuietHoursWindowLabel => L("Settings.Backups.QuietHoursWindow", "Active window");
+        public string QuietHoursWindowPreview =>
+            $"{NormalizeTimeOfDay(QuietHoursStart, "23:00")} -> {NormalizeTimeOfDay(QuietHoursEnd, "07:00")}";
         public string EncryptionOpenTimeoutLabel =>
             L("Settings.Encryption.OpenTimeoutLabel", "Encrypted open timeout (minutes)");
         public string EncryptionOpenTimeoutDescription =>

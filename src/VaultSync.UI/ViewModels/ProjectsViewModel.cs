@@ -1488,6 +1488,7 @@ public class ProjectItemViewModel : ViewModelBase
             if (SetProperty(ref _health, value))
             {
                 OnPropertyChanged(nameof(HealthBackground));
+                OnPropertyChanged(nameof(HealthForeground));
             }
         }
     }
@@ -1832,6 +1833,8 @@ public class ProjectItemViewModel : ViewModelBase
             ProjectHealthStatus.OutOfDate => "#471C1C",
             _ => "#181B23"
         };
+
+    public string HealthForeground => "#F4F8FF";
 
     public void SetCustomAvatar(string path)
     {

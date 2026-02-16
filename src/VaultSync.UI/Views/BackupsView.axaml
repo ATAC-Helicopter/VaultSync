@@ -76,12 +76,6 @@
     </Style>
 
 
-    <Style Selector="Border.backup-tag">
-      <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="{DynamicResource BackupTagPadding}" />
-      <Setter Property="Margin" Value="{DynamicResource BackupTagMargin}" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
 
     <Style Selector="Border.project-icon-circle">
       <Setter Property="Width" Value="{DynamicResource ProjectIconSize}" />
@@ -206,11 +200,6 @@
       <Setter Property="CornerRadius" Value="16" />
     </Style>
 
-    <Style Selector="Border.stat-pill">
-      <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="{DynamicResource StatPillPadding}" />
-      <Setter Property="Background" Value="{DynamicResource Surface2}" />
-    </Style>
 
     <Style Selector="Border.summary-stat">
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
@@ -244,24 +233,6 @@
     </Style>
     <Style Selector="Button.small-button:pressed">
       <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
-    </Style>
-
-    <!-- Small filter pills -->
-    <Style Selector="Button.small-pill">
-      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="{DynamicResource SmallPillPadding}" />
-      <Setter Property="FontSize" Value="11" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="MinWidth" Value="0" />
-    </Style>
-    <Style Selector="Button.small-pill:pointerover">
-      <Setter Property="Background" Value="{DynamicResource Surface2}" />
-    </Style>
-    <Style Selector="Button.small-pill:pressed">
-      <Setter Property="Background" Value="{DynamicResource Surface2}" />
     </Style>
 
     <!-- Per-project primary action -->
@@ -397,6 +368,53 @@
                     </Grid>
                   </Border>
                 </Grid>
+                <StackPanel Spacing="6"
+                            Margin="0,2,0,0">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.ThisWeekMixLabel}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <Grid ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto"
+                        ColumnSpacing="8"
+                        RowSpacing="4">
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding ThisWeekAutoPercent}"
+                                 Height="6"
+                                 Foreground="#3A7AFE"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="1"
+                               Text="{infra:LocalizedString Key=Backups.Section.FilterManual}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="1"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding ThisWeekManualPercent}"
+                                 Height="6"
+                                 Foreground="#22CC88"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="2"
+                               Text="{infra:LocalizedString Key=Backups.Snapshot.Type.Imported}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="2"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding ThisWeekImportedPercent}"
+                                 Height="6"
+                                 Foreground="#FFB84C"
+                                 Background="{DynamicResource Surface2}" />
+                  </Grid>
+                </StackPanel>
               </StackPanel>
             </Border>
 
@@ -460,6 +478,27 @@
                     </Grid>
                   </Border>
                 </Grid>
+                <StackPanel Spacing="4"
+                            Margin="0,2,0,0">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.FreshnessLabel}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding LastBackupFreshnessLabel}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{Binding LastBackupFreshnessBrush}"
+                               ToolTip.Tip="{Binding LastBackupFreshnessTooltip}" />
+                  </Grid>
+                  <ProgressBar Minimum="0"
+                               Maximum="100"
+                               Value="{Binding LastBackupFreshnessPercent}"
+                               Height="8"
+                               CornerRadius="4"
+                               Foreground="{Binding LastBackupFreshnessBrush}"
+                               ToolTip.Tip="{Binding LastBackupFreshnessTooltip}" />
+                </StackPanel>
               </StackPanel>
             </Border>
 
@@ -523,6 +562,40 @@
                     </Grid>
                   </Border>
                 </Grid>
+                <StackPanel Spacing="6"
+                            Margin="0,2,0,0">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.StorageMixLabel}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <Grid ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto"
+                        ColumnSpacing="8"
+                        RowSpacing="4">
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.LocalLabel}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding StorageLocalPercent}"
+                                 Height="6"
+                                 Foreground="#3A7AFE"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="1"
+                               Text="{infra:LocalizedString Key=Backups.Summary.ImportedLabel}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="1"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding StorageImportedPercent}"
+                                 Height="6"
+                                 Foreground="#FFB84C"
+                                 Background="{DynamicResource Surface2}" />
+                  </Grid>
+                </StackPanel>
               </StackPanel>
             </Border>
           </Grid>
@@ -589,23 +662,34 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border Width="36"
+                        <Border Width="52"
                                 HorizontalAlignment="Center"
                                 ToolTip.Tip="{Binding TooltipText}">
-                          <StackPanel VerticalAlignment="Bottom" Spacing="4">
+                          <StackPanel Width="52"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Bottom"
+                                      Spacing="4">
+                            <Border Height="{Binding ImportedHeight}"
+                                    Width="52"
+                                    HorizontalAlignment="Center"
+                                    Background="{Binding ImportedBrush}"
+                                    CornerRadius="6"
+                                    IsVisible="{Binding HasImported}" />
                             <Border Height="{Binding ManualHeight}"
+                                    Width="52"
+                                    HorizontalAlignment="Center"
                                     Background="{Binding ManualBrush}"
                                     CornerRadius="6"
                                     IsVisible="{Binding HasManual}" />
                             <Border Height="{Binding AutoHeight}"
+                                    Width="52"
+                                    HorizontalAlignment="Center"
                                     Background="{Binding AutoBrush}"
                                     CornerRadius="6"
                                     IsVisible="{Binding HasAuto}" />
-                            <Border Height="{Binding ImportedHeight}"
-                                    Background="{Binding ImportedBrush}"
-                                    CornerRadius="6"
-                                    IsVisible="{Binding HasImported}" />
                             <Border Height="{Binding EmptyHeight}"
+                                    Width="28"
+                                    HorizontalAlignment="Center"
                                     MinHeight="8"
                                     Background="{Binding EmptyBrush}"
                                     CornerRadius="6"
@@ -767,15 +851,19 @@
                                        HorizontalAlignment="Left"
                                        TextAlignment="Left"
                                        IsVisible="{Binding HasDestinationDisplay}" />
-                            <Border Classes="stat-pill"
+                            <Border Classes="stat-pill sm info"
                                     HorizontalAlignment="Left"
                                     IsVisible="{Binding HasPolicyText}">
-                              <TextBlock Text="{Binding PolicyText}"
-                                         FontSize="10"
-                                         FontWeight="SemiBold"
-                                         Foreground="{DynamicResource TextSecondaryBrush}"
-                                         TextTrimming="CharacterEllipsis"
-                                         MaxWidth="220" />
+                              <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Classes="pill-icon" Text="⚑" />
+                                <TextBlock Text="{Binding PolicyText}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="220"
+                                           ToolTip.Tip="{Binding PolicyText}" />
+                              </StackPanel>
                             </Border>
                             <TextBlock Text="{Binding StageDisplay}"
                                        FontSize="11"
@@ -829,12 +917,15 @@
                                   ColumnSpacing="6"
                                   IsVisible="{Binding HasEtaDisplay}">
                               <Border Grid.Column="0"
-                                      Classes="stat-pill"
+                                      Classes="stat-pill sm info"
                                       IsVisible="{Binding IsEstimate}">
-                                <TextBlock Text="{Binding EstimateLabel}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                  <TextBlock Classes="pill-icon" Text="≈" />
+                                  <TextBlock Text="{Binding EstimateLabel}"
+                                             FontSize="10"
+                                             FontWeight="SemiBold"
+                                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
                               </Border>
                               <TextBlock Grid.Column="1"
                                          Text="{Binding EtaDisplay}"
@@ -904,53 +995,53 @@
                   <DataTemplate>
                     <Border Classes="card project-card"
                             CornerRadius="14"
-                            Padding="6"
+                            Padding="10"
                             Margin="0,2,0,2"
                             Background="{DynamicResource Surface2}"
                             BorderBrush="{DynamicResource BorderSoft}"
                             BorderThickness="1">
-                      <Grid ColumnDefinitions="4,Auto,*,Auto"
-                            RowDefinitions="Auto,Auto,Auto,Auto"
+                      <Grid ColumnDefinitions="Auto,*,Auto"
+                            RowDefinitions="Auto,Auto,Auto"
                             ColumnSpacing="10"
-                            RowSpacing="2">
+                            RowSpacing="6">
 
-                      <Border Grid.RowSpan="3"
-                              Grid.Column="0"
-                              Width="4"
-                              Background="{Binding AvatarColor}"
-                              CornerRadius="2"
-                              Opacity="0.85"
-                              VerticalAlignment="Center"
-                              Height="44"
-                              Margin="0" />
-
-                      <!-- Avatar -->
-                      <Grid Grid.RowSpan="3"
-                            Grid.Column="1"
-                            Width="36"
-                            Height="36"
-                            IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                        <Border Width="36"
-                                Height="36"
-                                CornerRadius="999"
-                                Background="{Binding AvatarColor}" />
-                        <Image Source="{Binding AvatarImagePath}"
-                               Stretch="UniformToFill"
-                               IsVisible="{Binding HasCustomAvatar}">
-                          <Image.Clip>
-                            <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/>
-                          </Image.Clip>
-                        </Image>
-                        <TextBlock Text="{Binding AvatarInitials}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontWeight="SemiBold"
-                                   Foreground="White" />
-                      </Grid>
+                      <StackPanel Grid.RowSpan="3"
+                                  Grid.Column="0"
+                                  Orientation="Horizontal"
+                                  Spacing="10"
+                                  VerticalAlignment="Top"
+                                  Margin="0,2,0,0">
+                        <Border Width="4"
+                                Height="34"
+                                Background="{Binding AvatarColor}"
+                                CornerRadius="2"
+                                Opacity="0.85"
+                                VerticalAlignment="Center" />
+                        <Grid Width="40"
+                              Height="40"
+                              IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                          <Border Width="40"
+                                  Height="40"
+                                  CornerRadius="999"
+                                  Background="{Binding AvatarColor}" />
+                          <Image Source="{Binding AvatarImagePath}"
+                                 Stretch="UniformToFill"
+                                 IsVisible="{Binding HasCustomAvatar}">
+                            <Image.Clip>
+                              <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
+                            </Image.Clip>
+                          </Image>
+                          <TextBlock Text="{Binding AvatarInitials}"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     FontWeight="SemiBold"
+                                     Foreground="White" />
+                        </Grid>
+                      </StackPanel>
 
                       <!-- Name -->
                       <StackPanel Grid.Row="0"
-                                  Grid.Column="2"
+                                  Grid.Column="1"
                                   Spacing="2">
                         <TextBlock Text="{Binding Name}"
                                    FontSize="14"
@@ -958,95 +1049,128 @@
                                    TextTrimming="CharacterEllipsis" />
                       </StackPanel>
 
-                      <!-- Last backup -->
-                      <StackPanel Grid.Row="1"
-                                  Grid.Column="2"
-                                  Orientation="Horizontal"
-                                  Spacing="6">
-                        <TextBlock Text="{infra:LocalizedString Key=Backups.Section.LastBackupLabel}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBlock Text="{Binding LastBackupDisplay}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                      </StackPanel>
-
-                      <!-- Destination -->
-                      <StackPanel Grid.Row="2"
-                                  Grid.Column="2"
-                                  Spacing="4">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <ComboBox
-                            Classes="preset-combo"
-                            ItemsSource="{Binding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
-                            HorizontalAlignment="Stretch">
-                          <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                              <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                          </ComboBox.ItemTemplate>
-                        </ComboBox>
-
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,6,0,0" />
-                        <ComboBox x:Name="BackupsProjectEncryptionPolicyCombo"
-                            Classes="preset-combo"
-                            ItemsSource="{Binding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            SelectedItem="{Binding EncryptionPolicyOption, Mode=TwoWay}"
-                            HorizontalAlignment="Stretch">
-                          <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                              <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                          </ComboBox.ItemTemplate>
-                        </ComboBox>
-                        <TextBlock Text="{Binding EffectiveEncryptionDisplay}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                          <Button x:Name="BackupsProjectEncryptionPasswordButton"
-                                  Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
-                                  Classes="small-button"
-                                  Command="{Binding DataContext.ManageProjectEncryptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  CommandParameter="{Binding}" />
-                          <TextBlock Text="{Binding EncryptionSecretStatus}"
-                                     VerticalAlignment="Center"
+                      <!-- Last backup + stats -->
+                      <Grid Grid.Row="1"
+                            Grid.Column="1"
+                            ColumnDefinitions="*,Auto"
+                            ColumnSpacing="8"
+                            VerticalAlignment="Center">
+                        <StackPanel Grid.Column="0"
+                                    Orientation="Horizontal"
+                                    Spacing="6"
+                                    VerticalAlignment="Center">
+                          <TextBlock Text="{infra:LocalizedString Key=Backups.Section.LastBackupLabel}"
+                                     FontSize="11"
+                                     Foreground="{DynamicResource TextSecondaryBrush}" />
+                          <TextBlock Text="{Binding LastBackupDisplay}"
                                      FontSize="11"
                                      Foreground="{DynamicResource TextSecondaryBrush}"
-                                     TextWrapping="Wrap" />
+                                     TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                      </StackPanel>
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    HorizontalAlignment="Right">
+                          <Border Classes="stat-pill sm info">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <TextBlock Classes="pill-icon" Text="◷" />
+                              <TextBlock Text="{Binding SnapshotCount}" FontWeight="SemiBold" />
+                            </StackPanel>
+                          </Border>
+                          <Border Classes="stat-pill sm success">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <TextBlock Classes="pill-icon" Text="⬤" />
+                              <TextBlock Text="{Binding TotalSizeFormatted}" FontWeight="SemiBold" />
+                            </StackPanel>
+                          </Border>
+                        </StackPanel>
+                      </Grid>
 
-                      <!-- Stats pills -->
-                      <StackPanel Grid.Row="3"
-                                  Grid.Column="2"
-                                  Orientation="Horizontal"
-                                  Spacing="6">
-                        <Border Classes="stat-pill">
-                          <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding SnapshotCount}"
-                                       FontSize="11"
-                                       FontWeight="SemiBold" />
-                            <TextBlock Text="{infra:LocalizedString Key=Backups.Section.BackupsLabel}"
+                      <!-- Destination + Encryption -->
+                      <Grid Grid.Row="2"
+                            Grid.Column="1"
+                            ColumnDefinitions="*,Auto"
+                            ColumnSpacing="10">
+                        <Grid Grid.Column="0"
+                              ColumnDefinitions="*,*"
+                              ColumnSpacing="10"
+                              RowDefinitions="Auto,Auto,Auto">
+                          <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+                            <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <ComboBox
+                                Classes="preset-combo"
+                                ItemsSource="{Binding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
+                                HorizontalAlignment="Stretch">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                  <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
                           </StackPanel>
-                        </Border>
-                        <Border Classes="stat-pill">
-                          <TextBlock Text="{Binding TotalSizeFormatted}"
+
+                          <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                            <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <ComboBox x:Name="BackupsProjectEncryptionPolicyCombo"
+                                Classes="preset-combo"
+                                ItemsSource="{Binding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                SelectedItem="{Binding EncryptionPolicyOption, Mode=TwoWay}"
+                                HorizontalAlignment="Stretch">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                  <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
+                          </StackPanel>
+
+                          <Border Grid.Row="1"
+                                  Grid.Column="0"
+                                  Classes="backup-tag sm info"
+                                  HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding EffectiveEncryptionDisplay}" />
+                          </Border>
+
+                          <StackPanel Grid.Row="1"
+                                      Grid.Column="1"
+                                      Orientation="Horizontal"
+                                      Spacing="8"
+                                      VerticalAlignment="Center">
+                            <Button x:Name="BackupsProjectEncryptionPasswordButton"
+                                    Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
+                                    Classes="small-button"
+                                    Command="{Binding DataContext.ManageProjectEncryptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" />
+                          </StackPanel>
+                          <TextBlock Grid.Row="2"
+                                     Grid.ColumnSpan="2"
+                                     Text="{Binding EncryptionSecretStatus}"
                                      FontSize="11"
-                                     FontWeight="SemiBold" />
-                        </Border>
-                      </StackPanel>
+                                     Foreground="{DynamicResource TextSecondaryBrush}"
+                                     TextWrapping="Wrap"
+                                     MaxHeight="32"
+                                     TextTrimming="CharacterEllipsis" />
+                        </Grid>
+
+                        <Button x:Name="PerProjectBackupButton"
+                                Grid.Column="1"
+                                Content="{infra:LocalizedString Key=Backups.Section.PerProjectAction}"
+                                Classes="action-primary"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,0,2"
+                                Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}" />
+                      </Grid>
 
                       <!-- Auto backup toggle -->
                       <StackPanel Grid.Row="0"
-                                  Grid.Column="3"
+                                  Grid.Column="2"
                                   Spacing="4"
                                   HorizontalAlignment="Right">
                         <TextBlock Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}"
@@ -1063,18 +1187,6 @@
                                       HorizontalAlignment="Right"
                                       ToolTip.Tip="{infra:LocalizedString Key=Backups.Section.AutoBackupsTooltip}" />
                       </StackPanel>
-
-                      <!-- Primary action -->
-                      <Button x:Name="PerProjectBackupButton"
-                              Grid.Row="3"
-                              Grid.Column="3"
-                              Content="{infra:LocalizedString Key=Backups.Section.PerProjectAction}"
-                              Classes="action-primary"
-                              HorizontalAlignment="Right"
-                              VerticalAlignment="Center"
-                              Margin="0,4,0,0"
-                              Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                              CommandParameter="{Binding}" />
 
                     </Grid>
                     </Border>
@@ -1166,18 +1278,33 @@
                               Orientation="Horizontal"
                               Spacing="6"
                               HorizontalAlignment="Right">
-                    <Button Content="{infra:LocalizedString Key=Backups.Section.FilterAll}"
-                            Classes="small-pill"
-                            Command="{Binding FilterSnapshotsCommand}"
-                            CommandParameter="All" />
-                    <Button Content="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
-                            Classes="small-pill"
-                            Command="{Binding FilterSnapshotsCommand}"
-                            CommandParameter="Auto" />
-                    <Button Content="{infra:LocalizedString Key=Backups.Section.FilterManual}"
-                            Classes="small-pill"
-                            Command="{Binding FilterSnapshotsCommand}"
-                            CommandParameter="Manual" />
+                    <ToggleButton Classes="small-pill"
+                                  IsChecked="{Binding IsTypeFilterAll, Mode=OneWay}"
+                                  Command="{Binding FilterSnapshotsCommand}"
+                                  CommandParameter="All">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="pill-icon" Text="•" />
+                        <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAll}" />
+                      </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="small-pill"
+                                  IsChecked="{Binding IsTypeFilterAuto, Mode=OneWay}"
+                                  Command="{Binding FilterSnapshotsCommand}"
+                                  CommandParameter="Auto">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="pill-icon" Text="▲" />
+                        <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAuto}" />
+                      </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="small-pill"
+                                  IsChecked="{Binding IsTypeFilterManual, Mode=OneWay}"
+                                  Command="{Binding FilterSnapshotsCommand}"
+                                  CommandParameter="Manual">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="pill-icon" Text="■" />
+                        <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterManual}" />
+                      </StackPanel>
+                    </ToggleButton>
                   </StackPanel>
                 </Grid>
 
@@ -1247,17 +1374,25 @@
                                           Grid.Column="1"
                                           Orientation="Horizontal"
                                           Spacing="6">
-                                <Border Classes="stat-pill"
+                                <Border Classes="stat-pill sm info"
                                         Padding="{DynamicResource StatPillPadding}">
-                                  <TextBlock Text="{Binding Summary}"
-                                             FontSize="11"
-                                             FontWeight="SemiBold" />
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Classes="pill-icon" Text="◷" />
+                                    <TextBlock Text="{Binding Summary}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               ToolTip.Tip="{Binding Summary}" />
+                                  </StackPanel>
                                 </Border>
-                                <Border Classes="stat-pill"
+                                <Border Classes="stat-pill sm success"
                                         Padding="{DynamicResource StatPillPadding}">
-                                  <TextBlock Text="{Binding TotalSizeFormatted}"
-                                             FontSize="11"
-                                             FontWeight="SemiBold" />
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Classes="pill-icon" Text="⬤" />
+                                    <TextBlock Text="{Binding TotalSizeFormatted}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               ToolTip.Tip="{Binding TotalSizeFormatted}" />
+                                  </StackPanel>
                                 </Border>
                               </StackPanel>
                             </Grid>
@@ -1295,21 +1430,33 @@
                                                      FontSize="13"
                                                      FontWeight="SemiBold"
                                                      TextTrimming="CharacterEllipsis" />
-                                          <Border Classes="backup-tag"
+                                          <Border Classes="backup-tag sm info"
                                                   Background="{Binding TagBackground}">
-                                            <TextBlock Text="{Binding TypeLabel}"
-                                                       FontSize="11" />
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                              <TextBlock Classes="pill-icon" Text="●" />
+                                              <TextBlock Text="{Binding ModeChipLabel}"
+                                                         FontSize="11"
+                                                         ToolTip.Tip="{Binding ModeChipLabel}" />
+                                            </StackPanel>
                                           </Border>
-                                          <Border Classes="backup-tag"
+                                          <Border Classes="backup-tag sm warning"
                                                   Background="{Binding ImportedTagBackground}"
                                                   IsVisible="{Binding IsImported}">
-                                            <TextBlock Text="{Binding ImportedLabel}"
-                                                       FontSize="11" />
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                              <TextBlock Classes="pill-icon" Text="⇄" />
+                                              <TextBlock Text="{Binding ImportedLabel}"
+                                                         FontSize="11"
+                                                         ToolTip.Tip="{Binding ImportedLabel}" />
+                                            </StackPanel>
                                           </Border>
-                                          <Border Classes="backup-tag"
+                                          <Border Classes="backup-tag sm info"
                                                   Background="{DynamicResource Surface3}">
-                                            <TextBlock Text="{Binding EncryptionLabel}"
-                                                       FontSize="11" />
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                              <TextBlock Classes="pill-icon" Text="⌁" />
+                                              <TextBlock Text="{Binding EncryptionChipLabel}"
+                                                         FontSize="11"
+                                                         ToolTip.Tip="{Binding EncryptionChipLabel}" />
+                                            </StackPanel>
                                           </Border>
                                         </WrapPanel>
 
@@ -1335,27 +1482,46 @@
                                         <WrapPanel Grid.Row="1"
                                                    Grid.Column="1"
                                                    ItemSpacing="6">
-                                          <Border Classes="stat-pill"
+                                          <Border Classes="stat-pill sm info"
                                                   Padding="{DynamicResource StatPillPadding}"
                                                   Background="{DynamicResource Surface3}"
                                                   BorderBrush="{DynamicResource BorderSoft}"
                                                   BorderThickness="1">
-                                            <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                              <TextBlock Classes="pill-icon" Text="◴" />
+                                              <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                         FontSize="11"
+                                                         Foreground="{DynamicResource TextSecondaryBrush}" />
+                                            </StackPanel>
                                           </Border>
-                                          <Border Classes="stat-pill"
+                                          <Border Classes="stat-pill sm info"
                                                   Padding="{DynamicResource StatPillPadding}"
                                                   Background="{DynamicResource Surface2}"
                                                   BorderBrush="{Binding TagBackground}"
                                                   BorderThickness="1">
-                                            <TextBlock Text="{Binding DestinationDisplay}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       TextWrapping="NoWrap" />
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                              <TextBlock Classes="pill-icon" Text="⌂" />
+                                              <TextBlock Text="{Binding DestinationDisplay}"
+                                                         FontSize="11"
+                                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                                         TextTrimming="CharacterEllipsis"
+                                                         TextWrapping="NoWrap"
+                                                         MaxWidth="260"
+                                                         ToolTip.Tip="{Binding DestinationDisplay}" />
+                                            </StackPanel>
                                           </Border>
                                         </WrapPanel>
+
+                                        <TextBlock Grid.Row="1"
+                                                   Grid.Column="2"
+                                                   Text="{Binding RetentionOutcomeLabel}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   HorizontalAlignment="Right"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   MaxWidth="230"
+                                                   TextAlignment="Right" />
 
                                         <WrapPanel Grid.Row="2"
                                                    Grid.Column="1"

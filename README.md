@@ -145,6 +145,11 @@ or choose **No preset** if no presets apply or you want no file exclusion.
 - Progress, file count, and failure handling (NAS sleep detection)
 - Retention: keep the newest N backups per project; protected ("Keep") backups are never pruned
 - Integrated snapshot creation: every backup captures a fresh snapshot; orphan snapshots are cleaned up when backups are pruned
+- Backup history terminology:
+  - `Full`: complete backup payload
+  - `Incremental`: backup created using incremental copy mode
+  - `Imported`: history discovered/imported from metadata sync or destination scan
+- Restore flow now shows a "What happens next" confirmation block before running restore.
 
 ### Network shares (SMB/NFS)
 

@@ -1,14 +1,14 @@
-# VaultSync Documentation
+﻿# VaultSync Documentation
 
 VaultSync is a cross-platform snapshot, backup, sync, and verification toolkit for developers, creators, and power users managing large project folders. This document mirrors the README content but presents it as a standalone reference page so you can link directly to a clean feature overview, CLI cheatsheet, and operational guidance.
 
 ## Key Concepts
 
-- **Snapshot | Backup | Sync | Verify** – Each project snapshot captures file state with hashes, backups mirror those snapshots to destinations, sync pushes file changes, and verify compares hashes between source and backup.
-- **Smart presets** – Presets act like `.gitignore` filters (Unity, .NET/C#, game engines, language stacks, creative tools, etc.) so VaultSync only tracks relevant artifacts. You can also opt for **No preset** to keep everything.
-- **Cross-platform** – One-click snapshots/backups, progress overlays, per-project status cards, backup history with “Keep” protection, SMART-style disk health, and retention controls are all available on macOS, Windows, and Linux.
-- **History sync** – Portable metadata in `.vaultsync/meta/` lets multiple machines merge project history across destinations.
-- **Channels** – Stable uses the latest non-prerelease GitHub release, Beta surfaces prereleases (or falls back to stable when there are none). Badge links in the README jump directly to each channel.
+- **Snapshot | Backup | Sync | Verify** â€“ Each project snapshot captures file state with hashes, backups mirror those snapshots to destinations, sync pushes file changes, and verify compares hashes between source and backup.
+- **Smart presets** â€“ Presets act like `.gitignore` filters (Unity, .NET/C#, game engines, language stacks, creative tools, etc.) so VaultSync only tracks relevant artifacts. You can also opt for **No preset** to keep everything.
+- **Cross-platform** â€“ One-click snapshots/backups, progress overlays, per-project status cards, backup history with â€œKeepâ€ protection, SMART-style disk health, and retention controls are all available on macOS, Windows, and Linux.
+- **History sync** â€“ Portable metadata in `.vaultsync/meta/` lets multiple machines merge project history across destinations.
+- **Channels** â€“ Stable uses the latest non-prerelease GitHub release, Beta surfaces prereleases (or falls back to stable when there are none). Badge links in the README jump directly to each channel.
 
 ## Quick CLI Reference
 
@@ -38,37 +38,42 @@ VaultSync is a cross-platform snapshot, backup, sync, and verification toolkit f
 ## Snapshot & Backup Details
 
 - Snapshots track added / modified / deleted / unchanged files and store metadata in SQLite tables for projects, snapshots, and files.
-- Backup folders are timestamped (`YYYY-MM-DD_HH-MM-SS`) and can be per-project or “backup all”.
+- Backup folders are timestamped (`YYYY-MM-DD_HH-MM-SS`) and can be per-project or â€œbackup allâ€.
 - Automatic backups can be enabled from the desktop UI; VaultSync compares snapshots before running and skips when nothing has changed, reporting skips separately.
-- Protected backups (“Keep”) bypass retention heuristics so you can always preserve critical states.
+- Protected backups (â€œKeepâ€) bypass retention heuristics so you can always preserve critical states.
 - Orphaned snapshots are removed when their associated backups are pruned.
+- Backup history labels:
+  - `Full`: complete backup payload.
+  - `Incremental`: backup produced via incremental copy mode.
+  - `Imported`: history imported/discovered from metadata sync or destination scans.
+- Restore confirmation includes a "What happens next" guidance section before execution.
 
 ## Desktop UI Highlights
 
 - One-click snapshot + backup buttons with live progress overlays.
-- Dashboard cards show each project’s latest snapshot, backup health, and destination status.
+- Dashboard cards show each projectâ€™s latest snapshot, backup health, and destination status.
 - Backup history includes retention controls and disk health hints (best-effort SMART data).
-- Translations (Localization folder) power language selectors in Settings → Advanced.
-- “Beta channel” toggle in Settings → Advanced opts into the `dev` branch (checks for prereleases using `target_commitish = dev`).
+- Translations (Localization folder) power language selectors in Settings â†’ Advanced.
+- â€œBeta channelâ€ toggle in Settings â†’ Advanced opts into the `dev` branch (checks for prereleases using `target_commitish = dev`).
 - Clipboard and mount tooling run hidden to avoid flickering consoles, and SMB mounts automatically handle error 1219 by disconnecting existing sessions before retrying.
 
 ## Installation & Updates
 
 - Clone or download the repo, build installers via `dotnet pack` (CLI) or `installer/VaultSyncInstaller.iss` (Windows).
-- Desktop updates poll the `stable` GitHub release channel on startup when “Check for updates” is enabled. The UI compares release metadata, warns when a newer version exists, and lets users choose to install.
+- Desktop updates poll the `stable` GitHub release channel on startup when â€œCheck for updatesâ€ is enabled. The UI compares release metadata, warns when a newer version exists, and lets users choose to install.
 - CLI updates happen via `dotnet tool update --global vaultsync.cli` after a release is published.
 - macOS currently ships unsigned `.dmg` images of the `.app` bundle on GitHub Releases; macOS/Linux updates use delta patches produced by the updater. See `docs/UPDATER.md` for the step-by-step flow and patch packaging instructions.
 
 ## Release Channels
 
-- **Stable** – Latest release with `prerelease = false`.
-- **Beta/Dev** – Releases marked as prerelease (or the `dev` branch); the README badges fall back to the stable release if no prerelease exists.
+- **Stable** â€“ Latest release with `prerelease = false`.
+- **Beta/Dev** â€“ Releases marked as prerelease (or the `dev` branch); the README badges fall back to the stable release if no prerelease exists.
 - Badges on the README header link to `%github%/releases/tag/...` for direct download.
-- Desktop “Beta channel” toggle listens to `target_commitish == dev` and includes prereleases.
+- Desktop â€œBeta channelâ€ toggle listens to `target_commitish == dev` and includes prereleases.
 
 ## Troubleshooting & Notes
 
-- **Unsigned builds** trigger Windows SmartScreen: click **More info** → **Run anyway** once you trust VaultSync.
+- **Unsigned builds** trigger Windows SmartScreen: click **More info** â†’ **Run anyway** once you trust VaultSync.
 - **macOS NFS**: auto-mount is not supported (requires admin privileges). Pre-mount the share (sudo `mount_nfs`) and
   set the destination to the local mount path with **Pre-mounted** enabled and **Auto-mount** disabled.
 - Check the `Localization/` folder for strings and help translate additional languages.
@@ -77,7 +82,8 @@ VaultSync is a cross-platform snapshot, backup, sync, and verification toolkit f
 
 ## Supporting Resources
 
-- Screenshots and flow descriptions live in the README (search for “VaultSync_MM1”, etc.).
+- Screenshots and flow descriptions live in the README (search for â€œVaultSync_MM1â€, etc.).
 - Use this documentation as the canonical reference when sharing release news, onboarding teammates, or pointing customers to CLI cheatsheets.
 - Keep the badges/links at the top of the README as the entry points to Stable/Beta, discussions, and documentation (this file).
 - Roadmap and changelog live at [ROADMAP.md](ROADMAP.md) and [CHANGELOG.md](CHANGELOG.md).
+

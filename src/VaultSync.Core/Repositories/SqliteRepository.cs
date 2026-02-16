@@ -127,6 +127,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           snapshot_id INTEGER NOT NULL,
           created_utc TEXT NOT NULL,
           type TEXT NOT NULL,
+          backup_mode TEXT NOT NULL DEFAULT 'full',
           total_bytes INTEGER NOT NULL,
           path TEXT NOT NULL,
           destination_path TEXT NOT NULL DEFAULT '',
@@ -148,6 +149,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     EnsureColumnExists("backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "is_encrypted", "ALTER TABLE backups ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0;");
     EnsureColumnExists("backups", "crypto_descriptor_json", "ALTER TABLE backups ADD COLUMN crypto_descriptor_json TEXT NOT NULL DEFAULT '{}';");
+    EnsureColumnExists("backups", "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
     EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
     EnsureColumnExists("projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
@@ -750,6 +752,7 @@ DELETE FROM sqlite_sequence;";
             string relativePath,
             string destinationPath,
             string destinationAlias,
+            string backupMode = BackupModes.Full,
             bool isProtected = false,
             bool isEncrypted = false,
             string? cryptoDescriptorJson = null)
@@ -763,8 +766,8 @@ DELETE FROM sqlite_sequence;";
 
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsEncrypted, @CryptoDescriptorJson, @IsImported);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, backup_mode, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @BackupMode, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsEncrypted, @CryptoDescriptorJson, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -774,6 +777,7 @@ DELETE FROM sqlite_sequence;";
                     SnapshotId      = snapshotId,
                     CreatedUtc      = created,
                     Type            = type,
+                    BackupMode      = BackupModes.Normalize(backupMode),
                     TotalBytes      = totalBytes,
                     Path            = relativePath,
                     DestinationPath = destinationPath ?? string.Empty,
@@ -798,6 +802,7 @@ DELETE FROM sqlite_sequence;";
             string destinationAlias,
             bool isProtected,
             bool isImported,
+            string backupMode = BackupModes.Full,
             string originMachineName = "",
             bool isEncrypted = false,
             string? cryptoDescriptorJson = null)
@@ -809,8 +814,8 @@ DELETE FROM sqlite_sequence;";
             var descriptorJson = descriptor.ToMetadataJson(isEncrypted);
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsEncrypted, @CryptoDescriptorJson, @IsImported);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, backup_mode, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @BackupMode, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsEncrypted, @CryptoDescriptorJson, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -820,6 +825,7 @@ DELETE FROM sqlite_sequence;";
                     SnapshotId      = snapshotId,
                     CreatedUtc      = created,
                     Type            = type,
+                    BackupMode      = BackupModes.Normalize(backupMode),
                     TotalBytes      = totalBytes,
                     Path            = relativePath ?? string.Empty,
                     DestinationPath = destinationPath ?? string.Empty,
@@ -847,6 +853,7 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
@@ -918,6 +925,7 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
@@ -947,6 +955,7 @@ DELETE FROM sqlite_sequence;";
                     b.snapshot_id as SnapshotId,
                     b.created_utc as CreatedUtc,
                     b.type,
+                    b.backup_mode as BackupMode,
                     b.total_bytes as TotalBytes,
                     b.path,
                     b.destination_path as DestinationPath,
@@ -979,6 +988,7 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
@@ -1010,6 +1020,7 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
@@ -1043,6 +1054,7 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
@@ -1093,6 +1105,7 @@ DELETE FROM sqlite_sequence;";
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
                   type,
+                  backup_mode as BackupMode,
                   total_bytes as TotalBytes,
                   path,
                   destination_path as DestinationPath,
@@ -1134,6 +1147,7 @@ DELETE FROM sqlite_sequence;";
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
                   type,
+                  backup_mode as BackupMode,
                   total_bytes as TotalBytes,
                   path,
                   destination_path as DestinationPath,

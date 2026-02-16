@@ -19,6 +19,11 @@
 - [VS-1512] Added shared quiet-hours policy helper and automated unit tests for overnight/daytime schedule evaluation.
 - [VS-1513] Active backup cards now show runtime transfer-policy chips (`Throttled`, `Quiet hours`) in both the Backups page and backup widget.
 - [VS-1513] Tray native menu and tray panel summary now show the active transfer-policy state when applicable.
+- [VS-1520] Added persisted backup mode metadata (`full`/`incremental`) on backups and metadata sync records.
+- [VS-1521] Added retention outcome line metadata on backup history card items.
+- [VS-1522] Added restore confirmation guidance block support (type-aware and encryption-aware).
+- [VS-1523] Updated README and docs terminology to document `Full` / `Incremental` / `Imported` backup types and restore guidance behavior.
+- [VS-1523] Backups summary cards now include compact utility meters (run mix, backup freshness, storage composition) to use empty card space with actionable context.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
 - Backup history cards now show an explicit encryption status tag (`Encrypted` / `Plain`).
@@ -51,8 +56,29 @@
 - [VS-1512] Auto-backup timer now defers backup starts during configured quiet-hours windows with deterministic resume timing.
 - [VS-1512] Quiet-hours policy is applied to new auto-backup starts only; active in-flight backups are allowed to complete.
 - [VS-1513] Backup policy transitions are now emitted as informational `[Policy]` log entries (no warning/error noise) and trigger tray status refresh when state changes.
-- [VS-1539] Project encryption enrollment/edit dialogs were extracted from `AppViewModel` into a dedicated `ProjectEncryptionEnrollmentService` while preserving existing metadata export + UI
-            refresh behavior.
+- [VS-1520] Backups history type chips now use `Full`/`Incremental`/`Imported` terminology from per-backup mode metadata.
+- [VS-1521] Backup history cards now show retention outcome text (`eligible`, `protected`, `imported history`) and refresh it when Keep toggles.
+- [VS-1522] Restore requests now open a confirmation dialog with a "What happens next" block before starting restore.
+- Settings quiet-hours inputs now use explicit side-by-side Start/End field groups for clearer overnight scheduling setup.
+- Backup history chips now separate mode and encryption context (`Mode: ...`, `Encryption: ...`) for faster scanning.
+- New backup summary/mode/encryption chip strings are now fully localization-key based (no hardcoded UI literals), and keys were added to all language packs.
+- Backup freshness summary now shows localized state + relative age, with a localized threshold tooltip and state-based color coding.
+- Backups page pills now use semantic/size variants (`info/success/warning`, `sm/md`) and long pill text now truncates safely with tooltips to avoid clipping in windowed layouts.
+- Pill styling is now centralized in app-wide styles so Backups and Dashboard share the same visual behavior.
+- Backups history type filters now use active-state toggle pills for clearer selected filter feedback.
+- Quiet hours settings UI was redesigned with a compact window preview card and clearer start/end time inputs.
+- Dashboard weekly activity graph now avoids stretch-to-row behavior, with thicker bars and adaptive chart height so low-activity weeks don't look sparse.
+- Backups activity mini-chart now uses adaptive height and thicker bar segments for better readability at low counts.
+- Backups per-project cards were reworked into a denser two-column layout (stats, destination, encryption, and actions grouped more cleanly).
+- Dashboard weekly chart header now separates legend and summary rows to prevent overlap/clutter in windowed layouts.
+- Project health warning strip now uses higher-contrast foreground text, and out-of-date copy is clearer.
+- Projects details panel now uses a denser layout with key snapshot/size info pulled into the header and reduced empty middle spacing.
+- Projects detail controls now use a structured 4-column grid to improve alignment of preset/destination/encryption/health sections.
+- Settings destinations cards were reflowed with cleaner grouping (header, path actions, credentials, and two-column options) for better windowed readability.
+- Settings quiet-hours window card was compacted with centered start/end controls and reduced horizontal dead space.
+- Backups per-project cards were further tightened to prevent overlap between toggle/stat pills/actions on narrower widths.
+- Dashboard and Backups weekly activity bars now use fixed centered segment widths to prevent stretch/overlap artifacts at low activity.
+- [VS-1539] Project encryption enrollment/edit dialogs were extracted from `AppViewModel` into a dedicated `ProjectEncryptionEnrollmentService` while preserving existing metadata export + UI refresh behavior.
 - Backup orchestration support methods (`destination prep`, `backup-all prep`, aggregate progress update, NAS temp-root migration helpers) were extracted from
   `AppViewModel` into a dedicated partial class file to reduce main view-model complexity without changing runtime behavior.
 - Manual backup and backup-all handler implementations were extracted from `AppViewModel` into a dedicated partial file to isolate orchestration flow from
@@ -89,6 +115,7 @@
 - Metadata sync tests now reflect current import rules for existing/missing backup paths.
 - Windows installer now registers `.vse` file association so encrypted backup files open directly in VaultSync.
 - [VS-1538] In-app `Open folder` no longer sends encrypted backups to the raw backup folder path that could trigger OS "Open with" on `.vse`.
+- Build no longer picks up generated `artifacts/tmpobj` sources as compile inputs, fixing duplicate assembly attribute errors (`CS0579`) in local builds.
 
 ## [1.4.1] - 06.02.2026
 ### Added

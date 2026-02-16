@@ -277,7 +277,7 @@
                         Text="{Binding HealthTag}"
                         FontSize="11"
                         FontWeight="SemiBold"
-                        Foreground="{DynamicResource TextOnPillBrush}" />
+                        Foreground="{Binding HealthForeground}" />
                     </Border>
                   </Grid>
                 </DataTemplate>
@@ -296,7 +296,7 @@
               DataContext="{Binding SelectedItem, ElementName=ProjectList}">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="16">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
           <!-- Header: avatar + name + path -->
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <Grid Width="48"
@@ -319,7 +319,7 @@
                          Foreground="White"/>
             </Grid>
 
-            <StackPanel Grid.Column="1">
+            <StackPanel Grid.Column="1" Spacing="6">
               <TextBlock
                 Text="{Binding Name}"
                 FontSize="{DynamicResource PageTitleFontSize}"
@@ -328,7 +328,6 @@
                 TextWrapping="NoWrap"
                 TextTrimming="CharacterEllipsis" />
                   <TextBlock
-                    Margin="0,4,0,0"
                     FontSize="12"
                     Foreground="{DynamicResource TextMutedBrush}"
                     TextWrapping="NoWrap"
@@ -337,6 +336,20 @@
                     <Run Text=" " />
                     <Run Text="{Binding Path}" />
                   </TextBlock>
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Classes="stat-pill sm info"
+                            ToolTip.Tip="{infra:LocalizedString Key=Projects.Stat.LastSnapshotLabel}">
+                      <TextBlock Text="{Binding LastSnapshotSummary}"
+                                 FontSize="11"
+                                 TextTrimming="CharacterEllipsis"
+                                 MaxWidth="220" />
+                    </Border>
+                    <Border Classes="stat-pill sm info"
+                            ToolTip.Tip="{infra:LocalizedString Key=Projects.Stat.ProjectSize}">
+                      <TextBlock Text="{Binding SizeDisplay}"
+                                 FontSize="11" />
+                    </Border>
+                  </StackPanel>
             </StackPanel>
           </Grid>
 
@@ -369,16 +382,20 @@
             </Button>
           </StackPanel>
 
-          <!-- Stat badges row -->
-          <WrapPanel Grid.Row="2"
-                     Orientation="Horizontal"
-                     ItemWidth="240">
+          <!-- Project controls + key stats -->
+          <Grid Grid.Row="2"
+                ColumnDefinitions="*,*,*,*"
+                RowDefinitions="Auto"
+                ColumnSpacing="12"
+                RowSpacing="12">
             <!-- Preset -->
             <Border x:Name="ProjectEncryptionCard"
+                    Grid.Column="0"
+                    Grid.Row="0"
                     CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
+                    Margin="0">
               <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
@@ -397,9 +414,11 @@
 
             <!-- Destination -->
             <Border CornerRadius="14"
+                    Grid.Column="1"
+                    Grid.Row="0"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
+                    Margin="0">
               <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
                            FontSize="11"
@@ -424,9 +443,11 @@
 
             <!-- Encryption policy -->
             <Border CornerRadius="14"
+                    Grid.Column="2"
+                    Grid.Row="0"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
+                    Margin="0">
               <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}"
                            FontSize="11"
@@ -485,9 +506,11 @@
 
             <!-- Health -->
             <Border CornerRadius="14"
+                    Grid.Column="3"
+                    Grid.Row="0"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
+                    Margin="0">
               <StackPanel Spacing="4">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectHealth}"
                            FontSize="11"
@@ -500,7 +523,7 @@
                   <TextBlock Text="{Binding HealthTag}"
                              FontSize="12"
                              FontWeight="SemiBold"
-                             Foreground="{DynamicResource TextOnPillBrush}"
+                             Foreground="{Binding HealthForeground}"
                              HorizontalAlignment="Center"
                              TextWrapping="NoWrap"
                              TextTrimming="CharacterEllipsis" />
@@ -508,48 +531,11 @@
               </StackPanel>
             </Border>
 
-            <!-- Last snapshot -->
-            <Border CornerRadius="14"
-                    Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
-              <StackPanel Spacing="2">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.LastSnapshotLabel}"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           TextTrimming="None" />
-                <TextBlock Text="{Binding LastSnapshotSummary}"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-            </Border>
-
-            <!-- Size -->
-            <Border CornerRadius="14"
-                    Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
-              <StackPanel Spacing="2">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectSize}"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           TextTrimming="None" />
-                <TextBlock Text="{Binding SizeDisplay}"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}" />
-              </StackPanel>
-            </Border>
-          </WrapPanel>
+          </Grid>
 
           <!-- Stats card -->
-          <Border Grid.Row="3"
-                  Margin="0,4,0,0"
+          <Border Grid.Row="2"
+                  Margin="0,2,0,0"
                   CornerRadius="18"
                   Background="{DynamicResource CardBackgroundBrush}"
                   Padding="{DynamicResource CardPaddingMedium}">

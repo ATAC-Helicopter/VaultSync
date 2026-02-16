@@ -60,6 +60,7 @@ public sealed class MetadataStore
               snapshot_external_id TEXT NOT NULL,
               created_utc TEXT NOT NULL,
               type TEXT NOT NULL,
+              backup_mode TEXT NOT NULL DEFAULT 'full',
               total_bytes INTEGER NOT NULL,
               path_rel TEXT NOT NULL,
               destination_alias TEXT NOT NULL,
@@ -112,6 +113,15 @@ public sealed class MetadataStore
         try
         {
             c.Execute("ALTER TABLE backups ADD COLUMN kdf_params_json TEXT NOT NULL DEFAULT '{}';");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
         }
         catch
         {
@@ -212,13 +222,14 @@ public sealed class MetadataStore
         using var c = Open(write: true);
         c.Execute(
             """
-            INSERT INTO backups(external_id, project_external_id, snapshot_external_id, created_utc, type, total_bytes, path_rel, destination_alias, origin_machine_name, is_protected, enc_flag, kdf_params_json)
-            VALUES(@ExternalId, @ProjectExternalId, @SnapshotExternalId, @CreatedUtc, @Type, @TotalBytes, @PathRel, @DestinationAlias, @OriginMachineName, @IsProtected, @EncFlag, @KdfParamsJson)
+            INSERT INTO backups(external_id, project_external_id, snapshot_external_id, created_utc, type, backup_mode, total_bytes, path_rel, destination_alias, origin_machine_name, is_protected, enc_flag, kdf_params_json)
+            VALUES(@ExternalId, @ProjectExternalId, @SnapshotExternalId, @CreatedUtc, @Type, @BackupMode, @TotalBytes, @PathRel, @DestinationAlias, @OriginMachineName, @IsProtected, @EncFlag, @KdfParamsJson)
             ON CONFLICT(external_id) DO UPDATE SET
               project_external_id = excluded.project_external_id,
               snapshot_external_id = excluded.snapshot_external_id,
               created_utc = excluded.created_utc,
               type = excluded.type,
+              backup_mode = excluded.backup_mode,
               total_bytes = excluded.total_bytes,
               path_rel = excluded.path_rel,
               destination_alias = excluded.destination_alias,
@@ -234,6 +245,7 @@ public sealed class MetadataStore
                 backup.SnapshotExternalId,
                 CreatedUtc = ToUtcString(backup.CreatedUtc),
                 backup.Type,
+                BackupMode = BackupModes.Normalize(backup.BackupMode),
                 backup.TotalBytes,
                 backup.PathRel,
                 backup.DestinationAlias,
@@ -353,6 +365,9 @@ public sealed class MetadataStore
         var descriptorProjection = backupColumns.Contains("kdf_params_json")
             ? "kdf_params_json as KdfParamsJson"
             : "'{}' as KdfParamsJson";
+        var backupModeProjection = backupColumns.Contains("backup_mode")
+            ? "backup_mode as BackupMode"
+            : "'full' as BackupMode";
 
         var sql = $"""
             SELECT
@@ -361,6 +376,7 @@ public sealed class MetadataStore
               snapshot_external_id as SnapshotExternalId,
               created_utc as CreatedUtc,
               type,
+              {backupModeProjection},
               total_bytes as TotalBytes,
               path_rel as PathRel,
               destination_alias as DestinationAlias,
@@ -672,6 +688,7 @@ public sealed class MetaBackup
     public string SnapshotExternalId { get; set; } = string.Empty;
     public DateTime CreatedUtc { get; set; }
     public string Type { get; set; } = string.Empty;
+    public string BackupMode { get; set; } = BackupModes.Full;
     public long TotalBytes { get; set; }
     public string PathRel { get; set; } = string.Empty;
     public string DestinationAlias { get; set; } = string.Empty;

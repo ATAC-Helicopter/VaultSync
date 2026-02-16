@@ -40,6 +40,10 @@ namespace VaultSync.UI.ViewModels
         private static readonly IBrush HealthWarningBrush = new ImmutableSolidColorBrush(Colors.Orange);
         private static readonly IBrush HealthFailingBrush = new ImmutableSolidColorBrush(Colors.Tomato);
         private static readonly IBrush HealthUnknownBrush = new ImmutableSolidColorBrush(Colors.Gray);
+        private static readonly IBrush FreshnessGoodBrush = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
+        private static readonly IBrush FreshnessModerateBrush = new ImmutableSolidColorBrush(Color.Parse("#FFB84C"));
+        private static readonly IBrush FreshnessStaleBrush = new ImmutableSolidColorBrush(Color.Parse("#F56A5A"));
+        private static readonly IBrush FreshnessUnknownBrush = new ImmutableSolidColorBrush(Color.Parse("#7F8FA8"));
         private static readonly ConcurrentDictionary<string, ImmutableSolidColorBrush> AccentBrushCache = new(StringComparer.OrdinalIgnoreCase);
         // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
@@ -279,6 +283,7 @@ namespace VaultSync.UI.ViewModels
 
         public int AutoSnapshotsThisWeek { get; private set; }
         public int ManualSnapshotsThisWeek { get; private set; }
+        public int ImportedSnapshotsThisWeek { get; private set; }
 
         public string SnapshotsSummaryLine { get; private set; } =
             Lf("Backups.Summary.TodayWeek", "{0} backups today - {1} this week", 0, 0);
@@ -350,6 +355,15 @@ namespace VaultSync.UI.ViewModels
             Lf("Backups.Summary.ImportedTotal", "Imported total: {0}", "0 B");
         public string TotalStoredImportedValueFormatted { get; private set; } = "0 B";
         public int ImportedSnapshotsCount { get; private set; }
+        public double LastBackupFreshnessPercent { get; private set; }
+        public string LastBackupFreshnessLabel { get; private set; } = "-";
+        public string LastBackupFreshnessTooltip { get; private set; } = string.Empty;
+        public IBrush LastBackupFreshnessBrush { get; private set; } = FreshnessUnknownBrush;
+        public double ThisWeekAutoPercent { get; private set; }
+        public double ThisWeekManualPercent { get; private set; }
+        public double ThisWeekImportedPercent { get; private set; }
+        public double StorageLocalPercent { get; private set; }
+        public double StorageImportedPercent { get; private set; }
 
         // Mini backup storage card (for Backups page)
         private double _backupDiskUsedPercent;
@@ -596,6 +610,10 @@ namespace VaultSync.UI.ViewModels
         public ICommand CloseVerificationPopupCommand { get; }
         public ICommand DeleteFailedBackupCommand { get; }
         public ICommand OpenSettingsCommand { get; }
+
+        public bool IsTypeFilterAll => string.Equals(_currentTypeFilter, "All", StringComparison.OrdinalIgnoreCase);
+        public bool IsTypeFilterAuto => string.Equals(_currentTypeFilter, "Auto", StringComparison.OrdinalIgnoreCase);
+        public bool IsTypeFilterManual => string.Equals(_currentTypeFilter, "Manual", StringComparison.OrdinalIgnoreCase);
 
         public BackupsViewModel()
         {
@@ -1233,6 +1251,9 @@ namespace VaultSync.UI.ViewModels
             }
 
             RefreshSnapshotsView(false);
+            OnPropertyChanged(nameof(IsTypeFilterAll));
+            OnPropertyChanged(nameof(IsTypeFilterAuto));
+            OnPropertyChanged(nameof(IsTypeFilterManual));
         }
 
         private void ReplaceSnapshots(IEnumerable<BackupSnapshotItem> newSnapshots, bool forceResetCompare = false)
@@ -1806,6 +1827,9 @@ namespace VaultSync.UI.ViewModels
             ManualSnapshotsThisWeek = _allSnapshots.Count(s =>
                 s.Timestamp.Date >= weekStart &&
                 string.Equals(s.Type, "Manual", StringComparison.OrdinalIgnoreCase));
+            ImportedSnapshotsThisWeek = _allSnapshots.Count(s =>
+                s.Timestamp.Date >= weekStart &&
+                s.IsImported);
 
             OnPropertyChanged(nameof(HasAnyBackups));
 
@@ -1842,6 +1866,23 @@ namespace VaultSync.UI.ViewModels
                     "Size {0}",
                     BackupSnapshotItem.FormatSize(last.SizeBytes));
                 LastBackupSizeValueFormatted = BackupSnapshotItem.FormatSize(last.SizeBytes);
+                var ageHours = Math.Max(0, (now - last.Timestamp).TotalHours);
+                var freshness = Math.Clamp(100d - (ageHours / 72d * 100d), 0d, 100d);
+                LastBackupFreshnessPercent = freshness;
+                var freshnessStateLabel = freshness >= 80
+                    ? L("Backups.Summary.Freshness.Good", "Fresh")
+                    : freshness >= 40
+                        ? L("Backups.Summary.Freshness.Moderate", "Aging")
+                        : L("Backups.Summary.Freshness.Stale", "Stale");
+                LastBackupFreshnessLabel = Lf("Backups.Summary.Freshness.WithAge", "{0} - {1}",
+                    freshnessStateLabel,
+                    LastBackupRelative);
+                LastBackupFreshnessTooltip = L("Backups.Summary.Freshness.Tooltip", "Good: <24h | Moderate: 24-72h | Stale: >72h");
+                LastBackupFreshnessBrush = freshness >= 80
+                    ? FreshnessGoodBrush
+                    : freshness >= 40
+                        ? FreshnessModerateBrush
+                        : FreshnessStaleBrush;
             }
             else
             {
@@ -1849,6 +1890,10 @@ namespace VaultSync.UI.ViewModels
                 LastBackupRelative = "-";
                 LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
                 LastBackupSizeValueFormatted = "0 B";
+                LastBackupFreshnessPercent = 0;
+                LastBackupFreshnessLabel = L("Backups.Summary.NoBackups", "No backups yet");
+                LastBackupFreshnessTooltip = L("Backups.Summary.NoBackups", "No backups yet");
+                LastBackupFreshnessBrush = FreshnessUnknownBrush;
             }
 
             var totalBytes = _allSnapshots.Sum(s => s.SizeBytes);
@@ -1879,6 +1924,33 @@ namespace VaultSync.UI.ViewModels
                 BackupSnapshotItem.FormatSize(importedBytes));
             TotalStoredImportedValueFormatted = BackupSnapshotItem.FormatSize(importedBytes);
 
+            if (SnapshotsThisWeek <= 0)
+            {
+                ThisWeekAutoPercent = 0;
+                ThisWeekManualPercent = 0;
+                ThisWeekImportedPercent = 0;
+            }
+            else
+            {
+                ThisWeekAutoPercent = AutoSnapshotsThisWeek * 100d / SnapshotsThisWeek;
+                ThisWeekManualPercent = ManualSnapshotsThisWeek * 100d / SnapshotsThisWeek;
+                ThisWeekImportedPercent = ImportedSnapshotsThisWeek * 100d / SnapshotsThisWeek;
+            }
+
+            var safeLocal = Math.Max(0, localBytes);
+            var safeImported = Math.Max(0, importedBytes);
+            if (safeLocal + safeImported == 0)
+            {
+                StorageLocalPercent = 0;
+                StorageImportedPercent = 0;
+            }
+            else
+            {
+                var totalStorage = safeLocal + safeImported;
+                StorageLocalPercent = safeLocal * 100d / totalStorage;
+                StorageImportedPercent = safeImported * 100d / totalStorage;
+            }
+
             RebuildSnapshotActivity(now);
 
             // Notify UI that summary properties changed
@@ -1888,6 +1960,7 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(SnapshotsYesterday));
             OnPropertyChanged(nameof(AutoSnapshotsThisWeek));
             OnPropertyChanged(nameof(ManualSnapshotsThisWeek));
+            OnPropertyChanged(nameof(ImportedSnapshotsThisWeek));
             OnPropertyChanged(nameof(SnapshotsSummaryLine));
             OnPropertyChanged(nameof(TotalSnapshotsSecondaryLine));
             OnPropertyChanged(nameof(SnapshotActivitySummary));
@@ -1895,6 +1968,10 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(LastBackupRelative));
             OnPropertyChanged(nameof(LastBackupSecondaryLine));
             OnPropertyChanged(nameof(LastBackupSizeValueFormatted));
+            OnPropertyChanged(nameof(LastBackupFreshnessPercent));
+            OnPropertyChanged(nameof(LastBackupFreshnessLabel));
+            OnPropertyChanged(nameof(LastBackupFreshnessTooltip));
+            OnPropertyChanged(nameof(LastBackupFreshnessBrush));
             OnPropertyChanged(nameof(TotalBackupSizeFormatted));
             OnPropertyChanged(nameof(LocalSnapshotsCount));
             OnPropertyChanged(nameof(TotalStoredLocalLine));
@@ -1902,6 +1979,11 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(TotalStoredImportedLine));
             OnPropertyChanged(nameof(TotalStoredImportedValueFormatted));
             OnPropertyChanged(nameof(ImportedSnapshotsCount));
+            OnPropertyChanged(nameof(ThisWeekAutoPercent));
+            OnPropertyChanged(nameof(ThisWeekManualPercent));
+            OnPropertyChanged(nameof(ThisWeekImportedPercent));
+            OnPropertyChanged(nameof(StorageLocalPercent));
+            OnPropertyChanged(nameof(StorageImportedPercent));
         }
 
         public void UpdateSummaryLayout(double width)
@@ -1937,10 +2019,6 @@ namespace VaultSync.UI.ViewModels
         private void RebuildSnapshotActivity(DateTime now)
         {
             SnapshotActivity.Clear();
-            const double chartHeight = 220;
-            const double barBase = 14;
-            const double barRange = chartHeight - 48;
-            SnapshotActivityChartHeight = chartHeight;
 
             // Last 7 days, oldest -> newest
             var days = Enumerable.Range(0, 7)
@@ -1977,6 +2055,11 @@ namespace VaultSync.UI.ViewModels
             if (maxTotal == 0)
                 maxTotal = 1; // avoid divide-by-zero
 
+            var chartHeight = maxTotal <= 2 ? 150d : (maxTotal <= 4 ? 172d : 192d);
+            const double barBase = 12;
+            var barRange = chartHeight - 36;
+            SnapshotActivityChartHeight = chartHeight;
+
             long maxBytes = bytesByDate.Values.DefaultIfEmpty(0L).Max();
             if (maxBytes == 0)
                 maxBytes = 1;
@@ -1999,9 +2082,9 @@ namespace VaultSync.UI.ViewModels
                 var importedHeight = 0d;
                 if (totalCount > 0)
                 {
-                    autoHeight = autoCount == 0 ? 0 : Math.Max(3, totalHeight * autoCount / totalCount);
-                    manualHeight = manualCount == 0 ? 0 : Math.Max(3, totalHeight * manualCount / totalCount);
-                    importedHeight = importedCount == 0 ? 0 : Math.Max(3, totalHeight * importedCount / totalCount);
+                    autoHeight = autoCount == 0 ? 0 : Math.Max(5, totalHeight * autoCount / totalCount);
+                    manualHeight = manualCount == 0 ? 0 : Math.Max(5, totalHeight * manualCount / totalCount);
+                    importedHeight = importedCount == 0 ? 0 : Math.Max(5, totalHeight * importedCount / totalCount);
 
                     var combined = autoHeight + manualHeight + importedHeight;
                     if (combined > totalHeight && combined > 0)
@@ -2133,6 +2216,8 @@ namespace VaultSync.UI.ViewModels
                     : backup.DestinationAlias;
 
             var isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
+            var backupMode = BackupModes.Normalize(backup.BackupMode);
+            var isIncremental = string.Equals(backupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase);
             var importedLabel = L("Backups.Snapshot.Type.Imported", "Imported");
             if (backup.IsImported && !string.IsNullOrWhiteSpace(backup.OriginMachineName))
             {
@@ -2151,13 +2236,25 @@ namespace VaultSync.UI.ViewModels
                 EncryptionLabel = backup.IsEncrypted
                     ? L("Projects.EncryptionPolicy.Encrypted", "Encrypted")
                     : L("Projects.EncryptionPolicy.Plain", "Plain"),
-                TypeLabel = isAutoSnapshot
-                    ? L("Backups.Snapshot.Type.Auto", "Auto")
-                    : L("Backups.Snapshot.Type.Manual", "Manual"),
+                TypeLabel = isIncremental
+                        ? L("Backups.Snapshot.Type.Incremental", "Incremental")
+                        : L("Backups.Snapshot.Type.Full", "Full"),
+                ModeChipLabel = Lf("Backups.Snapshot.ModeChip", "Mode: {0}",
+                    isIncremental
+                        ? L("Backups.Snapshot.Type.Incremental", "Incremental")
+                        : L("Backups.Snapshot.Type.Full", "Full")),
+                EncryptionChipLabel = Lf("Backups.Snapshot.EncryptionChip", "Encryption: {0}",
+                    backup.IsEncrypted
+                        ? L("Projects.EncryptionPolicy.Encrypted", "Encrypted")
+                        : L("Projects.EncryptionPolicy.Plain", "Plain")),
+                RetentionDefaultLabel = backup.IsImported
+                    ? L("Backups.Retention.Outcome.Imported", "Retention: imported history entry")
+                    : L("Backups.Retention.Outcome.Eligible", "Retention: eligible for pruning"),
+                RetentionProtectedLabel = L("Backups.Retention.Outcome.Protected", "Retention: kept (protected)"),
                     Status    = "Completed",
                     Label     = isAutoSnapshot
-                        ? L("Backups.Snapshot.Label.Auto", "Auto backup")
-                        : L("Backups.Snapshot.Label.Manual", "Manual backup"),
+                        ? L("Backups.Snapshot.Label.Auto", "Scheduled backup")
+                        : L("Backups.Snapshot.Label.Manual", "On-demand backup"),
                     ProjectId = project?.Id.ToString(),
                     IsProtected = backup.IsProtected,
                     DestinationDisplay = destinationDisplay
@@ -2408,7 +2505,7 @@ namespace VaultSync.UI.ViewModels
         public long SizeBytes { get; set; }
         private bool _isProtected;
 
-        /// <summary>Snapshot type, e.g. "Auto" or "Manual".</summary>
+        /// <summary>Run trigger type, e.g. "Auto" or "Manual".</summary>
         public string Type { get; set; } = "Manual";
 
         /// <summary>Status, e.g. "Completed", "Failed".</summary>
@@ -2417,8 +2514,13 @@ namespace VaultSync.UI.ViewModels
         /// <summary>Label shown inside the tag pill.</summary>
         public string? Label { get; set; }
 
-        /// <summary>Localized type label for display (Auto/Manual).</summary>
+        /// <summary>Localized backup mode label for display (Full/Incremental/Imported context).</summary>
         public string TypeLabel { get; set; } = string.Empty;
+        public string ModeChipLabel { get; set; } = string.Empty;
+        public string EncryptionChipLabel { get; set; } = string.Empty;
+        public string RetentionDefaultLabel { get; set; } = "Retention: eligible for pruning";
+        public string RetentionProtectedLabel { get; set; } = "Retention: kept (protected)";
+        public string RetentionOutcomeLabel => IsProtected ? RetentionProtectedLabel : RetentionDefaultLabel;
 
         /// <summary>Optional project id this snapshot belongs to; null for global.</summary>
         public string? ProjectId { get; set; }
@@ -2445,6 +2547,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     _isProtected = value;
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsProtected)));
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RetentionOutcomeLabel)));
                 }
             }
         }

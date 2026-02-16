@@ -585,21 +585,21 @@ namespace VaultSync.UI.ViewModels
         {
             WeeklySnapshotActivity.Clear();
 
-            const double chartHeight = 180;
-            const double barBase = 20;
-            const double barRange = chartHeight - 36;
-            WeeklyChartHeight = chartHeight;
-
             var max = _snapshotCountsByDay.DefaultIfEmpty(0d).Max();
             if (max < 1)
             {
                 max = 1;
             }
 
+            var chartHeight = max <= 2 ? 150d : (max <= 4 ? 170d : 188d);
+            const double barBase = 14;
+            var barRange = chartHeight - 30;
+            WeeklyChartHeight = chartHeight;
+
             var avg = _snapshotCountsByDay.Length == 0 ? 0d : _snapshotCountsByDay.Average();
             var avgNormalized = avg / max;
             var avgHeight = avg <= 0 ? 0 : barBase + avgNormalized * barRange;
-            const double labelOffset = 12;
+            const double labelOffset = 10;
             WeeklyAverageLineOffset = labelOffset + avgHeight;
             WeeklyAverageLabel = Lf("Dashboard.Chart.AvgLabel", "Avg {0:0.0}", avg);
 

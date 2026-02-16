@@ -366,6 +366,7 @@ public sealed class MetadataSyncService
                 metaBackup.DestinationAlias,
                 metaBackup.IsProtected,
                 isImported: true,
+                backupMode: metaBackup.BackupMode,
                 originMachineName: metaBackup.OriginMachineName,
                 isEncrypted: metaBackup.IsEncrypted,
                 cryptoDescriptorJson: metaBackup.KdfParamsJson);
@@ -1129,6 +1130,7 @@ public sealed class MetadataSyncService
                     SnapshotExternalId = snapshotExternalId,
                     CreatedUtc = backup.CreatedUtc,
                     Type = backup.Type,
+                    BackupMode = BackupModes.Normalize(backup.BackupMode),
                     TotalBytes = backup.TotalBytes,
                     PathRel = backup.Path,
                     DestinationAlias = backup.DestinationAlias ?? string.Empty,
@@ -1461,6 +1463,7 @@ public sealed class MetadataSyncService
                 SnapshotExternalId = snapshotExternalId,
                 CreatedUtc = backup.CreatedUtc,
                 Type = backup.Type,
+                BackupMode = BackupModes.Normalize(backup.BackupMode),
                 TotalBytes = backup.TotalBytes,
                 PathRel = backup.Path,
                 DestinationAlias = backup.DestinationAlias ?? string.Empty,

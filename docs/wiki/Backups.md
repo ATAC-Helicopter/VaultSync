@@ -9,8 +9,13 @@ optional post-backup verification.
 - Backup: the physical copy of project data in a destination.
 
 ## Backup types
-- Manual backups: run on demand per project.
-- Auto backups: scheduled or triggered by configured rules.
+- Trigger type:
+  - On-demand backups: started manually per project.
+  - Scheduled backups: started by the automatic scheduler/rules.
+- Data mode:
+  - Full: complete backup payload.
+  - Incremental: backup created using incremental copy mode.
+  - Imported: history discovered/imported from metadata sync or destination scan.
 
 ## What happens during a backup
 1. Prepare destination
@@ -23,6 +28,10 @@ optional post-backup verification.
 ## Progress and stages
 The UI shows stages like Preparing, Hashing, Copying, Compressing, and Uploading
 (when applicable), along with file counts, speed, and ETA.
+
+## Restore guidance
+- Before restore starts, VaultSync shows a confirmation dialog with a "What happens next" block.
+- The guidance is type-aware (`Full` / `Incremental` / `Imported`) and highlights password requirements for encrypted backups.
 
 ## Delete and permissions
 - If a delete fails due to permissions, VaultSync can prompt for credentials to retry.

@@ -640,5 +640,16 @@
     "Onboarding.Tour.Step13.Title": "Configuración de apariencia",
     "Projects.EncryptionBadge.Protected": "Password protected",
     "Projects.EncryptionBadge.MissingPassword": "Protection missing password",
-    "Projects.EncryptionBadge.NotProtected": "Not protected"
+    "Projects.EncryptionBadge.NotProtected": "Not protected",
+  "Backups.Summary.ThisWeekMixLabel": "This-week run mix",
+  "Backups.Summary.FreshnessLabel": "Backup freshness",
+  "Backups.Summary.StorageMixLabel": "Storage composition",
+  "Backups.Snapshot.ModeChip": "Mode: {0}",
+  "Backups.Snapshot.EncryptionChip": "Encryption: {0}",
+  "Backups.Summary.Freshness.Good": "Fresh",
+  "Backups.Summary.Freshness.Moderate": "Aging",
+  "Backups.Summary.Freshness.Stale": "Stale",
+  "Backups.Summary.Freshness.WithAge": "{0} - {1}",
+  "Backups.Summary.Freshness.Tooltip": "Good: <24h | Moderate: 24-72h | Stale: >72h",
+  "Settings.Backups.QuietHoursWindow": "Active window"
 }

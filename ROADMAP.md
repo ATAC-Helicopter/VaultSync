@@ -34,7 +34,7 @@
 ### 1.5.0 priorities
 - [x] `P0` Backup encryption and password-protected backups.
 - [x] `P1` Backup bandwidth limits and quiet hours.
-- [ ] `P1` Incremental backup UX improvements.
+- [x] `P1` Incremental backup UX improvements.
 - [ ] `P2` Snapshot diff summaries.
 
 ### 1.5.0 scope and contracts
@@ -333,30 +333,40 @@
     - Done: backup policy transitions are logged as informational `[Policy]` entries and trigger tray refresh on change.
 
 #### `P1` Incremental backup UX improvements
-- [ ] `VS-1520` Terminology cleanup (`Full`, `Incremental`, `Imported`).
+- [x] `VS-1520` Terminology cleanup (`Full`, `Incremental`, `Imported`).
   - Scope: unify labels across Dashboard/Projects/Backups/restore dialogs.
   - Depends on: none.
   - Acceptance tests:
     - UI: no conflicting legacy terms remain in primary flows.
     - Localization: new keys exist for all supported languages.
-- [ ] `VS-1521` Retention outcome surfacing in history/details.
+  - Current status:
+    - Done: backup records now persist `backup_mode` (`full` / `incremental`) so terminology is rendered from real per-backup data.
+    - Done: Backups history cards now use `Full` / `Incremental` / `Imported` terminology based on stored mode + imported state.
+- [x] `VS-1521` Retention outcome surfacing in history/details.
   - Scope: show what retention will do or did for the selected backup entry.
   - Depends on: `VS-1520`.
   - Acceptance tests:
     - UI: retention outcome line appears for full/incremental/imported entries.
     - Integration: values align with actual retention engine decisions.
-- [ ] `VS-1522` Restore guidance block by backup type.
+  - Current status:
+    - Done: Backups history cards now render a retention outcome line (`eligible`, `protected`, `imported history`) and update live when Keep is toggled.
+- [x] `VS-1522` Restore guidance block by backup type.
   - Scope: show "what happens next" guidance before confirmation.
   - Depends on: `VS-1520`.
   - Acceptance tests:
     - UI: guidance changes correctly with selected backup type.
     - UX check: keyboard navigation reaches guidance and actions cleanly.
-- [ ] `VS-1523` Documentation and help parity.
+  - Current status:
+    - Done: restore flow now shows a confirmation dialog with a "What happens next" guidance block before restore starts.
+    - Done: guidance content is type-aware (`Full` / `Incremental` / `Imported`) and encryption-aware.
+- [x] `VS-1523` Documentation and help parity.
   - Scope: README/wiki/help text updated to match final terminology and restore guidance.
   - Depends on: `VS-1520`, `VS-1521`, `VS-1522`.
   - Acceptance tests:
     - Docs: screenshots and terminology match shipped UI.
     - Support check: troubleshooting references updated terms only.
+  - Current status:
+    - Done: README and docs/wiki pages now include backup-type terminology (`Full`, `Incremental`, `Imported`) and restore-guidance confirmation notes.
 
 #### `P2` Snapshot diff summaries
 - [ ] `VS-1540` Compute + persist diff summary statistics.

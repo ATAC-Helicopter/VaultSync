@@ -920,7 +920,15 @@ namespace VaultSync.UI.ViewModels
             var encryptedArchivePath = Path.Combine(backupFullPath, BackupArchiveCryptoService.EncryptedArchiveFileName);
             var isEncrypted = backup.IsEncrypted || File.Exists(encryptedArchivePath);
 
-            return new RestoreBackupPreparation(true, backupFullPath, projectRoot, project.Id, project.Name, isEncrypted);
+            return new RestoreBackupPreparation(
+                true,
+                backupFullPath,
+                projectRoot,
+                project.Id,
+                project.Name,
+                isEncrypted,
+                backup.IsImported,
+                BackupModes.Normalize(backup.BackupMode));
         }
 
         private sealed record RestoreBackupPreparation(
@@ -929,9 +937,19 @@ namespace VaultSync.UI.ViewModels
             string ProjectRoot,
             int ProjectId,
             string ProjectName,
-            bool IsEncrypted)
+            bool IsEncrypted,
+            bool IsImported,
+            string BackupMode)
         {
-            public static RestoreBackupPreparation Failure => new(false, string.Empty, string.Empty, 0, string.Empty, false);
+            public static RestoreBackupPreparation Failure => new(
+                false,
+                string.Empty,
+                string.Empty,
+                0,
+                string.Empty,
+                false,
+                false,
+                BackupModes.Full);
         }
 
         private List<string> ResolveEncryptedRestorePasswordCandidates(int projectId)
@@ -1136,6 +1154,144 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
+        private async Task<bool> ConfirmRestoreBackupAsync(RestoreBackupPreparation preparation)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Restore.ConfirmTitle", "Restore backup?"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var targetLabel = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Backups.Restore.ConfirmPrompt", "Restore '{0}' into:\n{1}"),
+                    preparation.ProjectName,
+                    preparation.ProjectRoot);
+
+                var question = new TextBlock
+                {
+                    Text = targetLabel,
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var guidanceHeader = new TextBlock
+                {
+                    Text = L("Backups.Restore.GuidanceHeader", "What happens next"),
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var backupTypeLabel = preparation.IsImported
+                    ? L("Backups.Snapshot.Type.Imported", "Imported")
+                    : string.Equals(preparation.BackupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase)
+                        ? L("Backups.Snapshot.Type.Incremental", "Incremental")
+                        : L("Backups.Snapshot.Type.Full", "Full");
+
+                var guidanceLines = new[]
+                {
+                    Lf("Backups.Restore.GuidanceType", "Type: {0}", backupTypeLabel),
+                    L("Backups.Restore.GuidanceOverwrite", "Files with matching paths are overwritten by restored files."),
+                    L("Backups.Restore.GuidanceKeepExtra", "Files that exist only in the current project folder are kept."),
+                    preparation.IsEncrypted
+                        ? L("Backups.Restore.GuidanceEncrypted", "If needed, VaultSync will ask for the encryption password before restore starts.")
+                        : L("Backups.Restore.GuidancePlain", "No encryption password is required for this backup.")
+                };
+
+                var guidancePanel = new StackPanel { Spacing = 4 };
+                foreach (var line in guidanceLines)
+                {
+                    var row = new TextBlock
+                    {
+                        Text = "• " + line,
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    if (GetBrush("TextSecondary") is { } secondary)
+                        row.Foreground = secondary;
+                    guidancePanel.Children.Add(row);
+                }
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120,
+                    IsCancel = true
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var restoreButton = new Button
+                {
+                    Content = L("Backups.Section.Restore", "Restore"),
+                    MinWidth = 140,
+                    IsDefault = true
+                };
+                restoreButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                cancelButton.Click += (_, _) => window?.Close();
+                restoreButton.Click += (_, _) =>
+                {
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(restoreButton);
+
+                var content = new StackPanel { Spacing = 12 };
+                content.Children.Add(title);
+                content.Children.Add(question);
+                content.Children.Add(guidanceHeader);
+                content.Children.Add(guidancePanel);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Restore.ConfirmTitle", "Restore backup?"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 620,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return confirmed;
+            });
+        }
+
         private async void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
         {
             if (snapshot is null)
@@ -1154,6 +1310,10 @@ namespace VaultSync.UI.ViewModels
                 Console.WriteLine($"[Restore] Restore preparation failed for backupId={backupId}.");
                 return;
             }
+
+            var restoreConfirmed = await ConfirmRestoreBackupAsync(preparation);
+            if (!restoreConfirmed)
+                return;
 
             var projectRoot   = preparation.ProjectRoot;
             var backupFullPath = preparation.BackupFullPath;
