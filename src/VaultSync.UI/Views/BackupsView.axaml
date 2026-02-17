@@ -1003,7 +1003,7 @@
                       <Grid ColumnDefinitions="Auto,*,Auto"
                             RowDefinitions="Auto,Auto,Auto"
                             ColumnSpacing="10"
-                            RowSpacing="6">
+                            RowSpacing="8">
 
                       <StackPanel Grid.RowSpan="3"
                                   Grid.Column="0"
@@ -1065,6 +1065,8 @@
                           <TextBlock Text="{Binding LastBackupDisplay}"
                                      FontSize="11"
                                      Foreground="{DynamicResource TextSecondaryBrush}"
+                                     MaxWidth="240"
+                                     ToolTip.Tip="{Binding LastBackupDisplay}"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <StackPanel Grid.Column="1"
@@ -1073,13 +1075,13 @@
                                     HorizontalAlignment="Right">
                           <Border Classes="stat-pill sm info">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                              <TextBlock Classes="pill-icon" Text="◷" />
+                              <TextBlock Classes="pill-icon" Text="*" />
                               <TextBlock Text="{Binding SnapshotCount}" FontWeight="SemiBold" />
                             </StackPanel>
                           </Border>
                           <Border Classes="stat-pill sm success">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                              <TextBlock Classes="pill-icon" Text="⬤" />
+                              <TextBlock Classes="pill-icon" Text="+" />
                               <TextBlock Text="{Binding TotalSizeFormatted}" FontWeight="SemiBold" />
                             </StackPanel>
                           </Border>
@@ -1094,8 +1096,9 @@
                         <Grid Grid.Column="0"
                               ColumnDefinitions="*,*"
                               ColumnSpacing="10"
-                              RowDefinitions="Auto,Auto,Auto">
-                          <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+                              RowDefinitions="Auto,Auto,Auto"
+                              RowSpacing="4">
+                          <StackPanel Grid.Row="0" Grid.Column="0" Spacing="5">
                             <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -1103,6 +1106,7 @@
                                 Classes="preset-combo"
                                 ItemsSource="{Binding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
+                                MaxWidth="420"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -1112,7 +1116,7 @@
                             </ComboBox>
                           </StackPanel>
 
-                          <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                          <StackPanel Grid.Row="0" Grid.Column="1" Spacing="5">
                             <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -1120,6 +1124,7 @@
                                 Classes="preset-combo"
                                 ItemsSource="{Binding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 SelectedItem="{Binding EncryptionPolicyOption, Mode=TwoWay}"
+                                MaxWidth="420"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -1132,6 +1137,7 @@
                           <Border Grid.Row="1"
                                   Grid.Column="0"
                                   Classes="backup-tag sm info"
+                                  Margin="0,4,0,0"
                                   HorizontalAlignment="Left">
                             <TextBlock Text="{Binding EffectiveEncryptionDisplay}" />
                           </Border>
@@ -1140,6 +1146,7 @@
                                       Grid.Column="1"
                                       Orientation="Horizontal"
                                       Spacing="8"
+                                      Margin="0,4,0,0"
                                       VerticalAlignment="Center">
                             <Button x:Name="BackupsProjectEncryptionPasswordButton"
                                     Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
@@ -1152,6 +1159,7 @@
                                      Text="{Binding EncryptionSecretStatus}"
                                      FontSize="11"
                                      Foreground="{DynamicResource TextSecondaryBrush}"
+                                     Margin="0,2,0,0"
                                      TextWrapping="Wrap"
                                      MaxHeight="32"
                                      TextTrimming="CharacterEllipsis" />
@@ -1267,9 +1275,6 @@
                       <TextBlock Text="{Binding HistoryFilterProjectLabel}"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <Button Content="{infra:LocalizedString Key=Backups.Section.HistoryFilterAllProjects}"
-                              Classes="small-pill"
-                              Command="{Binding ShowProjectHistoryCommand}" />
                     </StackPanel>
                   </StackPanel>
 

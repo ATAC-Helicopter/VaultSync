@@ -103,6 +103,9 @@
   were extracted from `AppViewModel` into a dedicated partial file to reduce core file coupling.
 - `CONTRIBUTING.md` fully restructured with the default `VS-xxxx` planning model and contribution flow.
 - Core test suite rewritten to match current metadata-sync and destination behavior contracts.
+- Dashboard weekly analytics card was fully redesigned with a split insight rail + chart stage, updated lighter surface layering, and a capsule/lollipop activity graph style.
+- Dashboard charts row was rebalanced so the storage card remains visible at large widths, and storage usage now uses a side-by-side donut + legend layout with a bottom capacity strip.
+- Projects detail action row now wraps responsively so `Open folder` / `Snapshot now` / `Remove from VaultSync` actions do not clip or overlap in windowed layouts.
 ### Fixed
 - [VS-1501] Legacy plain backup crypto metadata (`{}`) now parses through the typed descriptor compatibility path.
 - [VS-1504] Secure-store failures no longer require plaintext secret persistence in config as fallback path.
@@ -116,6 +119,8 @@
 - Windows installer now registers `.vse` file association so encrypted backup files open directly in VaultSync.
 - [VS-1538] In-app `Open folder` no longer sends encrypted backups to the raw backup folder path that could trigger OS "Open with" on `.vse`.
 - Build no longer picks up generated `artifacts/tmpobj` sources as compile inputs, fixing duplicate assembly attribute errors (`CS0579`) in local builds.
+- Dashboard weekly summary labels now compute after day-series arrays are populated, so summary text matches the rendered weekly chart.
+- Dashboard activity summary now includes imported-run counts for parity with the weekly graph breakdown.
 
 ## [1.4.1] - 06.02.2026
 ### Added

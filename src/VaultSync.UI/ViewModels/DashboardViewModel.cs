@@ -412,7 +412,6 @@ namespace VaultSync.UI.ViewModels
                 SnapshotCount = data.BackupCount;
                 _backupsThisWeekCount = data.BackupsThisWeekCount;
                 SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
-                UpdateBackupSummaryPills();
 
                 _activeProjectsCount = data.StorageSlices.Count;
                 StorageUsed = FormatBytes(data.TotalLatestBytes);
@@ -521,6 +520,9 @@ namespace VaultSync.UI.ViewModels
                 {
                     _importedCountsByDay[i] = data.ImportedCounts[i];
                 }
+
+                // Compute textual summary after chart arrays are populated.
+                UpdateBackupSummaryPills();
 
                 BuildSnapshotSeries();
                 BuildWeeklyActivity();
@@ -1584,10 +1586,11 @@ namespace VaultSync.UI.ViewModels
             {
                 SnapshotActivitySummary = Lf(
                     "Backups.Summary.ActivityTotals",
-                    "{0} backups total - {1} auto - {2} manual",
+                    "{0} backups total - {1} auto - {2} manual - {3} imported",
                     weekTotal,
                     autoWeek,
-                    manualWeek);
+                    manualWeek,
+                    importedWeek);
             }
         }
 

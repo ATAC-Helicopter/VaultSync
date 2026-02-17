@@ -137,6 +137,7 @@
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinHeight" Value="34" />
             <Setter Property="MinWidth" Value="0" />
         </Style>
         <Style Selector="Button.action-ghost:pointerover">
@@ -155,6 +156,7 @@
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinHeight" Value="34" />
             <Setter Property="MinWidth" Value="0" />
         </Style>
         <Style Selector="Button.action-primary:pointerover">
@@ -164,6 +166,14 @@
         <Style Selector="Button.action-primary:pressed">
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
         </Style>
+        <Style Selector="Button.action-danger">
+            <Setter Property="Background" Value="#4A2B2B" />
+            <Setter Property="BorderBrush" Value="#8E4B4B" />
+            <Setter Property="Foreground" Value="#F4D9D9" />
+        </Style>
+        <Style Selector="Button.action-danger:pointerover">
+            <Setter Property="Background" Value="#5A3333" />
+        </Style>
 
         <!-- Shared pills/tags -->
         <Style Selector="Border.stat-pill">
@@ -172,13 +182,16 @@
             <Setter Property="Background" Value="{DynamicResource Surface2}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="MaxWidth" Value="320" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="MaxWidth" Value="280" />
         </Style>
         <Style Selector="Border.stat-pill.sm">
             <Setter Property="Padding" Value="8,2" />
+            <Setter Property="MinHeight" Value="22" />
         </Style>
         <Style Selector="Border.stat-pill.md">
             <Setter Property="Padding" Value="10,4" />
+            <Setter Property="MinHeight" Value="28" />
         </Style>
         <Style Selector="Border.stat-pill.info">
             <Setter Property="Background" Value="#1F3559" />
@@ -208,7 +221,8 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="MaxWidth" Value="320" />
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="MaxWidth" Value="280" />
         </Style>
         <Style Selector="Border.backup-tag.sm">
             <Setter Property="Padding" Value="8,2" />
@@ -245,6 +259,7 @@
             <Setter Property="Padding" Value="{DynamicResource SmallPillPadding}" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinHeight" Value="24" />
             <Setter Property="MinWidth" Value="0" />
         </Style>
         <Style Selector="Button.small-pill:pointerover, ToggleButton.small-pill:pointerover">

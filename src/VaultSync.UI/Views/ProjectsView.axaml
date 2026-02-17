@@ -355,32 +355,30 @@
 
           <!-- Actions: open folder + snapshot -->
 
-          <StackPanel Grid.Row="1"
-                      Orientation="Horizontal"
-                      HorizontalAlignment="Left"
-                      Spacing="8">
-            <Button Padding="{DynamicResource ButtonPillPadding}"
+          <WrapPanel Grid.Row="1"
+                     ItemSpacing="8"
+                     LineSpacing="8"
+                     HorizontalAlignment="Left">
+            <Button Classes="action-ghost"
+                    Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
-                    Background="{DynamicResource InputBackgroundBrush}"
-                    Foreground="{DynamicResource TextPrimaryBrush}"
                     Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}">
               <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.OpenFolder}" />
             </Button>
             <Button x:Name="ProjectSnapshotButton"
+                    Classes="action-primary"
                     Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
-                    Background="{DynamicResource AccentBrush}"
-                    Foreground="{DynamicResource ButtonForegroundBrush}"
                     Command="{Binding DataContext.TakeSnapshotCommand, ElementName=Root}"
                     Content="{Binding DataContext.SnapshotActionLabel, ElementName=Root}" />
-            <Button Padding="{DynamicResource ButtonPillPadding}"
+            <Button
+                    Classes="action-ghost action-danger"
+                    Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
-                    Background="{DynamicResource InputBackgroundBrush}"
-                    Foreground="{DynamicResource TextPrimaryBrush}"
                     Command="{Binding DataContext.RemoveProjectCommand, ElementName=Root}">
               <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.RemoveProject}" />
             </Button>
-          </StackPanel>
+          </WrapPanel>
 
           <!-- Project controls + key stats -->
           <Grid Grid.Row="2"
@@ -548,7 +546,8 @@
                     ColumnSpacing="12">
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
-                        Padding="{DynamicResource CardPaddingSmall}">
+                        Padding="{DynamicResource CardPaddingSmall}"
+                        MinHeight="64">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TotalSnapshots}"
                                FontSize="11"
@@ -565,6 +564,7 @@
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
                         Padding="{DynamicResource CardPaddingSmall}"
+                        MinHeight="64"
                         Grid.Column="1">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotStorage}"
@@ -582,6 +582,7 @@
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
                         Padding="{DynamicResource CardPaddingSmall}"
+                        MinHeight="64"
                         Grid.Column="2">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.AverageSnapshot}"
@@ -599,6 +600,7 @@
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
                         Padding="{DynamicResource CardPaddingSmall}"
+                        MinHeight="64"
                         Grid.Column="3">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TimeSinceLast}"
