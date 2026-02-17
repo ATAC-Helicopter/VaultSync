@@ -369,24 +369,36 @@
     - Done: README and docs/wiki pages now include backup-type terminology (`Full`, `Incremental`, `Imported`) and restore-guidance confirmation notes.
 
 #### `P2` Snapshot diff summaries
-- [ ] `VS-1540` Compute + persist diff summary statistics.
+- [x] `VS-1540` Compute + persist diff summary statistics.
   - Scope: added/modified/deleted counts, top changed paths, net size delta.
   - Depends on: none.
   - Acceptance tests:
     - Unit: summary math is correct for synthetic change sets.
     - Perf: summary calculation does not introduce noticeable UI blocking.
-- [ ] `VS-1541` Projects/Backups summary panel.
+  - Current status:
+    - Done: snapshot creation now computes and persists diff counts, top-changed path stats, and net size delta in local DB schema.
+    - Done: metadata export/import for snapshots now carries diff summary fields with backward-compatible defaults for older metadata stores.
+    - Done: automated tests cover repository persistence, snapshot-service summary math, and metadata-sync summary round-trip import.
+- [x] `VS-1541` Projects/Backups summary panel.
   - Scope: compact diff summary UI with concise labels and fallback states.
   - Depends on: `VS-1540`.
   - Acceptance tests:
     - UI: summary panel renders correctly for empty, small, and large diffs.
     - UI quality: no clipping in common windowed sizes.
-- [ ] `VS-1542` Export summary action (text/JSON).
+  - Current status:
+    - Done: Projects recent snapshot cards now show compact diff summary lines (+/~/- with signed net delta) and optional top-path preview.
+    - Done: Backups history cards now render per-snapshot diff summary and top changed paths (when present), with fallback text for no-change/unavailable states.
+    - Done: layout was reflowed to keep summary content inside card bounds in windowed mode.
+- [x] `VS-1542` Export summary action (text/JSON).
   - Scope: export per-snapshot summary for sharing/troubleshooting.
   - Depends on: `VS-1540`.
   - Acceptance tests:
     - Integration: exported file matches on-screen summary values.
     - Regression: export failure path shows actionable error without crashing flow.
+  - Current status:
+    - Done: Backups history cards now include export actions for text and JSON snapshot diff summaries.
+    - Done: exports are written under `Documents/VaultSync/Exports/SnapshotDiff` with collision-safe filenames and user-facing success/failure notifications.
+    - Done: Backups history cards now include an in-app git-style diff preview dialog for per-snapshot inspection before export/share.
 
 #### Stabilization + release gate tickets
 - [ ] `VS-1590` Performance and UI-thread hardening.

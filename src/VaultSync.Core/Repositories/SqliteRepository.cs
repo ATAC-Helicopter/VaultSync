@@ -105,6 +105,11 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           created_utc TEXT NOT NULL,
           file_count INTEGER NOT NULL,
           total_bytes INTEGER NOT NULL,
+          diff_added INTEGER NOT NULL DEFAULT 0,
+          diff_modified INTEGER NOT NULL DEFAULT 0,
+          diff_deleted INTEGER NOT NULL DEFAULT 0,
+          diff_net_bytes INTEGER NOT NULL DEFAULT 0,
+          diff_top_paths_json TEXT NOT NULL DEFAULT '[]',
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
         );
 
@@ -156,6 +161,11 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     EnsureColumnExists("projects", "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
     EnsureColumnExists("projects", "encryption_key_ref", "ALTER TABLE projects ADD COLUMN encryption_key_ref TEXT;");
     EnsureColumnExists("snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("snapshots", "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
     EnsureColumnExists("backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
 
     // Indexes (idempotent)
@@ -444,15 +454,36 @@ DELETE FROM sqlite_sequence;";
         }
 
         // ---------- Snapshots ----------
-        public int CreateSnapshot(int projectId, long fileCount, long totalBytes)
+        public int CreateSnapshot(int projectId, long fileCount, long totalBytes, SnapshotDiffSummary? diffSummary = null)
         {
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
             var externalId = NewExternalId();
+            var summary = diffSummary ?? SnapshotDiffSummary.Empty;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO snapshots(external_id, project_id, created_utc, file_count, total_bytes)
-                VALUES(@ExternalId, @ProjectId, @CreatedUtc, @FileCount, @TotalBytes);
+                INSERT INTO snapshots(
+                  external_id,
+                  project_id,
+                  created_utc,
+                  file_count,
+                  total_bytes,
+                  diff_added,
+                  diff_modified,
+                  diff_deleted,
+                  diff_net_bytes,
+                  diff_top_paths_json)
+                VALUES(
+                  @ExternalId,
+                  @ProjectId,
+                  @CreatedUtc,
+                  @FileCount,
+                  @TotalBytes,
+                  @DiffAdded,
+                  @DiffModified,
+                  @DiffDeleted,
+                  @DiffNetBytes,
+                  @DiffTopPathsJson);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -461,19 +492,51 @@ DELETE FROM sqlite_sequence;";
                     ProjectId = projectId,
                     CreatedUtc = created,
                     FileCount = fileCount,
-                    TotalBytes = totalBytes
+                    TotalBytes = totalBytes,
+                    DiffAdded = summary.Added,
+                    DiffModified = summary.Modified,
+                    DiffDeleted = summary.Deleted,
+                    DiffNetBytes = summary.NetSizeBytes,
+                    DiffTopPathsJson = summary.TopChangedPathsJson
                 });
         }
 
-        public int CreateSnapshotFromMetadata(string externalId, int projectId, DateTime createdUtc, long fileCount, long totalBytes)
+        public int CreateSnapshotFromMetadata(
+            string externalId,
+            int projectId,
+            DateTime createdUtc,
+            long fileCount,
+            long totalBytes,
+            SnapshotDiffSummary? diffSummary = null)
         {
             using var c = Open();
             var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
             var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
+            var summary = diffSummary ?? SnapshotDiffSummary.Empty;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO snapshots(external_id, project_id, created_utc, file_count, total_bytes)
-                VALUES(@ExternalId, @ProjectId, @CreatedUtc, @FileCount, @TotalBytes);
+                INSERT INTO snapshots(
+                  external_id,
+                  project_id,
+                  created_utc,
+                  file_count,
+                  total_bytes,
+                  diff_added,
+                  diff_modified,
+                  diff_deleted,
+                  diff_net_bytes,
+                  diff_top_paths_json)
+                VALUES(
+                  @ExternalId,
+                  @ProjectId,
+                  @CreatedUtc,
+                  @FileCount,
+                  @TotalBytes,
+                  @DiffAdded,
+                  @DiffModified,
+                  @DiffDeleted,
+                  @DiffNetBytes,
+                  @DiffTopPathsJson);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -482,7 +545,12 @@ DELETE FROM sqlite_sequence;";
                     ProjectId = projectId,
                     CreatedUtc = created,
                     FileCount = fileCount,
-                    TotalBytes = totalBytes
+                    TotalBytes = totalBytes,
+                    DiffAdded = summary.Added,
+                    DiffModified = summary.Modified,
+                    DiffDeleted = summary.Deleted,
+                    DiffNetBytes = summary.NetSizeBytes,
+                    DiffTopPathsJson = summary.TopChangedPathsJson
                 });
         }
 
@@ -500,7 +568,12 @@ DELETE FROM sqlite_sequence;";
                   project_id  AS ProjectId,
                   created_utc AS CreatedUtc,
                   file_count  AS FileCount,
-                  total_bytes AS TotalBytes
+                  total_bytes AS TotalBytes,
+                  diff_added AS DiffAdded,
+                  diff_modified AS DiffModified,
+                  diff_deleted AS DiffDeleted,
+                  diff_net_bytes AS DiffNetBytes,
+                  diff_top_paths_json AS DiffTopPathsJson
                 FROM snapshots
                 WHERE external_id = @externalId
                 LIMIT 1;
@@ -519,7 +592,12 @@ DELETE FROM sqlite_sequence;";
                   project_id  AS ProjectId,
                   created_utc AS CreatedUtc,
                   file_count  AS FileCount,
-                  total_bytes AS TotalBytes
+                  total_bytes AS TotalBytes,
+                  diff_added AS DiffAdded,
+                  diff_modified AS DiffModified,
+                  diff_deleted AS DiffDeleted,
+                  diff_net_bytes AS DiffNetBytes,
+                  diff_top_paths_json AS DiffTopPathsJson
                 FROM snapshots
                 WHERE id = @id
                 LIMIT 1;
@@ -565,7 +643,12 @@ DELETE FROM sqlite_sequence;";
                   project_id  AS ProjectId,
                   created_utc AS CreatedUtc,
                   file_count  AS FileCount,
-                  total_bytes AS TotalBytes
+                  total_bytes AS TotalBytes,
+                  diff_added AS DiffAdded,
+                  diff_modified AS DiffModified,
+                  diff_deleted AS DiffDeleted,
+                  diff_net_bytes AS DiffNetBytes,
+                  diff_top_paths_json AS DiffTopPathsJson
                 FROM snapshots
                 WHERE project_id = @pid
                 ORDER BY created_utc DESC, id DESC
@@ -621,7 +704,12 @@ DELETE FROM sqlite_sequence;";
                   project_id as ProjectId,
                   created_utc as CreatedUtc,
                   file_count as FileCount,
-                  total_bytes as TotalBytes
+                  total_bytes as TotalBytes,
+                  diff_added as DiffAdded,
+                  diff_modified as DiffModified,
+                  diff_deleted as DiffDeleted,
+                  diff_net_bytes as DiffNetBytes,
+                  diff_top_paths_json as DiffTopPathsJson
                 FROM snapshots
                 ORDER BY created_utc DESC
                 """);
@@ -647,7 +735,12 @@ DELETE FROM sqlite_sequence;";
                   project_id as ProjectId,
                   created_utc as CreatedUtc,
                   file_count as FileCount,
-                  total_bytes as TotalBytes
+                  total_bytes as TotalBytes,
+                  diff_added as DiffAdded,
+                  diff_modified as DiffModified,
+                  diff_deleted as DiffDeleted,
+                  diff_net_bytes as DiffNetBytes,
+                  diff_top_paths_json as DiffTopPathsJson
                 FROM snapshots
                 WHERE project_id = (SELECT id FROM projects WHERE name=@name)
                 ORDER BY created_utc DESC, id DESC

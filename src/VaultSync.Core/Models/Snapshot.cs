@@ -8,4 +8,9 @@ public record Snapshot
     public DateTime CreatedUtc { get; init; } = DateTime.UtcNow;
     public long FileCount { get; init; }
     public long TotalBytes { get; init; }
+    public int DiffAdded { get; init; }
+    public int DiffModified { get; init; }
+    public int DiffDeleted { get; init; }
+    public long DiffNetBytes { get; init; }
+    public string DiffTopPathsJson { get; init; } = "[]";
 }

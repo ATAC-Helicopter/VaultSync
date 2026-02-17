@@ -907,7 +907,7 @@ public class ProjectsViewModel : ViewModelBase
 
                         var history = snapshotsFromDb
                             .Take(10)
-                            .Select(s => new ProjectSnapshotViewModel(s.CreatedUtc, s.TotalBytes));
+                            .Select(CreateProjectSnapshotViewModel);
 
                         SelectedProject.SetSnapshots(history);
                     }
@@ -1136,7 +1136,7 @@ public class ProjectsViewModel : ViewModelBase
                 var repo = new SqliteRepository(dbPath);
                 var snapshots = await repo.GetSnapshotsForProjectAsync(projectName);
                 return snapshots
-                    .Select(s => new ProjectSnapshotViewModel(s.CreatedUtc, s.TotalBytes))
+                    .Select(CreateProjectSnapshotViewModel)
                     .ToList();
             }
             catch
@@ -1205,6 +1205,19 @@ public class ProjectsViewModel : ViewModelBase
         vm.HealthTag = isRegistered
             ? L("Projects.Health.NoSnapshots", "No snapshots yet")
             : L("Projects.Health.NotAdded", "Not added");
+    }
+
+    private static ProjectSnapshotViewModel CreateProjectSnapshotViewModel(Snapshot snapshot)
+    {
+        var topPaths = SnapshotDiffSummary.ParseTopChangedPaths(snapshot.DiffTopPathsJson);
+        return new ProjectSnapshotViewModel(
+            snapshot.CreatedUtc,
+            snapshot.TotalBytes,
+            snapshot.DiffAdded,
+            snapshot.DiffModified,
+            snapshot.DiffDeleted,
+            snapshot.DiffNetBytes,
+            topPaths);
     }
 
     public void RefreshLocalization()
@@ -1940,14 +1953,31 @@ public sealed class EncryptionPolicyOption
 
 public sealed class ProjectSnapshotViewModel
 {
-    public ProjectSnapshotViewModel(DateTime timestamp, long sizeBytes)
+    public ProjectSnapshotViewModel(
+        DateTime timestamp,
+        long sizeBytes,
+        int diffAdded = 0,
+        int diffModified = 0,
+        int diffDeleted = 0,
+        long diffNetBytes = 0,
+        IReadOnlyList<SnapshotDiffPathStat>? topChangedPaths = null)
     {
         Timestamp = timestamp;
         SizeBytes = sizeBytes;
+        DiffAdded = Math.Max(0, diffAdded);
+        DiffModified = Math.Max(0, diffModified);
+        DiffDeleted = Math.Max(0, diffDeleted);
+        DiffNetBytes = diffNetBytes;
+        TopChangedPaths = topChangedPaths ?? Array.Empty<SnapshotDiffPathStat>();
     }
 
     public DateTime Timestamp { get; }
     public long SizeBytes { get; }
+    public int DiffAdded { get; }
+    public int DiffModified { get; }
+    public int DiffDeleted { get; }
+    public long DiffNetBytes { get; }
+    public IReadOnlyList<SnapshotDiffPathStat> TopChangedPaths { get; }
 
     // Mini-chart data
     public double RelativeSize { get; set; }
@@ -1971,6 +2001,46 @@ public sealed class ProjectSnapshotViewModel
     public string DateDisplay => Timestamp.ToString("dd/MM/yyyy - HH:mm", CultureInfo.CurrentCulture);
 
     public string SizeDisplay => FormatSize(SizeBytes);
+
+    public string DiffSummaryDisplay
+    {
+        get
+        {
+            var hasChanges = DiffAdded > 0 || DiffModified > 0 || DiffDeleted > 0;
+            if (!hasChanges && DiffNetBytes == 0)
+                return L("Projects.DiffSummary.NoChanges", "No file changes detected");
+
+            return Lf(
+                "Projects.DiffSummary.Compact",
+                "+{0} / ~{1} / -{2}  Δ {3}",
+                DiffAdded,
+                DiffModified,
+                DiffDeleted,
+                FormatSignedSize(DiffNetBytes));
+        }
+    }
+
+    public bool HasDiffTopPaths => TopChangedPaths.Count > 0;
+
+    public string DiffTopPathsDisplay
+    {
+        get
+        {
+            if (TopChangedPaths.Count == 0)
+                return L("Projects.DiffSummary.TopPaths.None", "Top paths: none");
+
+            var preview = string.Join(
+                ", ",
+                TopChangedPaths
+                    .Where(path => !string.IsNullOrWhiteSpace(path.Path))
+                    .Take(2)
+                    .Select(path => $"{path.Path} ({path.Changes})"));
+
+            return string.IsNullOrWhiteSpace(preview)
+                ? L("Projects.DiffSummary.TopPaths.None", "Top paths: none")
+                : Lf("Projects.DiffSummary.TopPaths.Compact", "Top paths: {0}", preview);
+        }
+    }
 
     // Used by tooltip: date + size in one string
     public string TooltipText => $"{DateDisplay}\n{SizeDisplay}";
@@ -1999,5 +2069,24 @@ public sealed class ProjectSnapshotViewModel
         }
 
         return $"{size:0.0} {unit}";
+    }
+
+    private static string FormatSignedSize(long value)
+    {
+        var abs = FormatSize(Math.Abs(value));
+        if (value > 0)
+            return $"+{abs}";
+        if (value < 0)
+            return $"-{abs}";
+        return abs;
+    }
+
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    private static string Lf(string key, string fallback, params object[] args)
+    {
+        var fmt = L(key, fallback);
+        return string.Format(CultureInfo.CurrentCulture, fmt, args);
     }
 }

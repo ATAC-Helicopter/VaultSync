@@ -24,6 +24,8 @@
 - [VS-1522] Added restore confirmation guidance block support (type-aware and encryption-aware).
 - [VS-1523] Updated README and docs terminology to document `Full` / `Incremental` / `Imported` backup types and restore guidance behavior.
 - [VS-1523] Backups summary cards now include compact utility meters (run mix, backup freshness, storage composition) to use empty card space with actionable context.
+- [VS-1540] Added snapshot diff-summary persistence fields (`added`, `modified`, `deleted`, `net size delta`, and `top changed paths`) to local and metadata snapshot schemas.
+- [VS-1542] Backups history now includes per-snapshot diff export actions (`text` and `JSON`) plus an in-app git-style diff preview dialog.
 - release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
 - phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
 - Backup history cards now show an explicit encryption status tag (`Encrypted` / `Plain`).
@@ -59,6 +61,9 @@
 - [VS-1520] Backups history type chips now use `Full`/`Incremental`/`Imported` terminology from per-backup mode metadata.
 - [VS-1521] Backup history cards now show retention outcome text (`eligible`, `protected`, `imported history`) and refresh it when Keep toggles.
 - [VS-1522] Restore requests now open a confirmation dialog with a "What happens next" block before starting restore.
+- [VS-1540] Snapshot creation now computes and stores diff summaries per snapshot, and metadata sync import/export now preserves those summary fields across devices.
+- [VS-1541] Projects and Backups history cards now surface compact snapshot diff summaries (`+`, `~`, `-`, signed net delta) with top-path previews and fallback states.
+- [VS-1542] Diff-summary export writes now use collision-safe filenames under `Documents/VaultSync/Exports/SnapshotDiff` and report actionable export success/failure notifications.
 - Settings quiet-hours inputs now use explicit side-by-side Start/End field groups for clearer overnight scheduling setup.
 - Backup history chips now separate mode and encryption context (`Mode: ...`, `Encryption: ...`) for faster scanning.
 - New backup summary/mode/encryption chip strings are now fully localization-key based (no hardcoded UI literals), and keys were added to all language packs.

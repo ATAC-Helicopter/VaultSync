@@ -5,16 +5,20 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Windows.Input;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using VaultSync.Core.Models;
 using VaultSync.Core.Config;
+using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
@@ -24,6 +28,12 @@ namespace VaultSync.UI.ViewModels
 {
     public class BackupsViewModel : ViewModelBase
     {
+        private enum SnapshotSummaryExportFormat
+        {
+            Text,
+            Json
+        }
+
         private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -479,6 +489,9 @@ namespace VaultSync.UI.ViewModels
         private string _verificationPopupMessage = string.Empty;
         private bool   _isVerificationPopupOpen;
         private string? _verificationFailedBackupId;
+        private bool _isDiffPreviewOpen;
+        private string _diffPreviewTitle = string.Empty;
+        private string _diffPreviewText = string.Empty;
 
         // Backup progress details (for long-running operations)
         private double _backupProgress;
@@ -585,6 +598,42 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public bool IsDiffPreviewOpen
+        {
+            get => _isDiffPreviewOpen;
+            set
+            {
+                if (SetProperty(ref _isDiffPreviewOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsDiffPreviewOpen));
+                }
+            }
+        }
+
+        public string DiffPreviewTitle
+        {
+            get => _diffPreviewTitle;
+            set
+            {
+                if (SetProperty(ref _diffPreviewTitle, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewTitle));
+                }
+            }
+        }
+
+        public string DiffPreviewText
+        {
+            get => _diffPreviewText;
+            set
+            {
+                if (SetProperty(ref _diffPreviewText, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewText));
+                }
+            }
+        }
+
         // Events that external code (e.g. view or parent VM) can subscribe to
         // in order to run real backup/restore logic and then refresh this VM.
         public event Action? CreateBackupForAllProjectsRequested;
@@ -602,6 +651,10 @@ namespace VaultSync.UI.ViewModels
         public ICommand DeleteBackupCommand { get; }
         public ICommand OpenBackupFolderCommand { get; }
         public ICommand ToggleBackupProtectionCommand { get; }
+        public ICommand ExportSnapshotSummaryTextCommand { get; }
+        public ICommand ExportSnapshotSummaryJsonCommand { get; }
+        public ICommand ShowSnapshotDiffPreviewCommand { get; }
+        public ICommand CloseSnapshotDiffPreviewCommand { get; }
 
         public ICommand BackupProjectCommand { get; }
         public ICommand ManageProjectEncryptionCommand { get; }
@@ -627,6 +680,10 @@ namespace VaultSync.UI.ViewModels
             DeleteBackupCommand  = new RelayCommand(p => DeleteBackup(p as BackupSnapshotItem));
             OpenBackupFolderCommand = new RelayCommand(p => OpenBackupFolder(p as BackupSnapshotItem));
             ToggleBackupProtectionCommand = new RelayCommand(p => ToggleBackupProtection(p as BackupSnapshotItem));
+            ExportSnapshotSummaryTextCommand = new RelayCommand(p => ExportSnapshotSummary(p as BackupSnapshotItem, SnapshotSummaryExportFormat.Text));
+            ExportSnapshotSummaryJsonCommand = new RelayCommand(p => ExportSnapshotSummary(p as BackupSnapshotItem, SnapshotSummaryExportFormat.Json));
+            ShowSnapshotDiffPreviewCommand = new RelayCommand(p => ShowSnapshotDiffPreview(p as BackupSnapshotItem));
+            CloseSnapshotDiffPreviewCommand = new RelayCommand(_ => CloseSnapshotDiffPreview());
 
             // Per-project actions
             BackupProjectCommand      = new RelayCommand(p => BackupProject(p as ProjectBackupItem));
@@ -713,6 +770,172 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             OpenBackupFolderRequested?.Invoke(snapshot);
+        }
+
+        private async void ExportSnapshotSummary(BackupSnapshotItem? snapshot, SnapshotSummaryExportFormat format)
+        {
+            if (snapshot is null)
+                return;
+
+            try
+            {
+                var path = await Task.Run(() => WriteSnapshotSummaryExport(snapshot, format));
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    ShowNotification(
+                        L("Backups.DiffSummary.ExportFailed", "Failed to export snapshot diff summary."),
+                        "Warning");
+                    return;
+                }
+
+                ShowNotification(
+                    Lf("Backups.DiffSummary.ExportSuccess", "Diff summary exported to {0}", path),
+                    "Info");
+            }
+            catch (Exception ex)
+            {
+                ShowNotification(
+                    Lf("Backups.DiffSummary.ExportFailedWithReason", "Failed to export snapshot diff summary: {0}", ex.Message),
+                    "Error");
+            }
+        }
+
+        private string WriteSnapshotSummaryExport(BackupSnapshotItem snapshot, SnapshotSummaryExportFormat format)
+        {
+            var exportDir = GetSnapshotSummaryExportDirectory();
+            Directory.CreateDirectory(exportDir);
+
+            var baseName = BuildSnapshotSummaryFileName(snapshot);
+            var extension = format == SnapshotSummaryExportFormat.Json ? ".json" : ".txt";
+            var path = EnsureUniqueExportPath(Path.Combine(exportDir, $"{baseName}{extension}"));
+            var payload = BuildSnapshotSummaryExportPayload(snapshot);
+
+            if (format == SnapshotSummaryExportFormat.Json)
+            {
+                var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                return path;
+            }
+
+            var text = BuildGitStyleDiffText(payload);
+            File.WriteAllText(path, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            return path;
+        }
+
+        private void ShowSnapshotDiffPreview(BackupSnapshotItem? snapshot)
+        {
+            if (snapshot is null)
+                return;
+
+            var payload = BuildSnapshotSummaryExportPayload(snapshot);
+            DiffPreviewTitle = Lf(
+                "Backups.DiffSummary.PreviewTitle",
+                "Diff summary - {0}",
+                payload.ProjectName);
+            DiffPreviewText = BuildGitStyleDiffText(payload);
+            IsDiffPreviewOpen = true;
+        }
+
+        private void CloseSnapshotDiffPreview()
+        {
+            IsDiffPreviewOpen = false;
+            DiffPreviewTitle = string.Empty;
+            DiffPreviewText = string.Empty;
+        }
+
+        private SnapshotSummaryExportPayload BuildSnapshotSummaryExportPayload(BackupSnapshotItem snapshot)
+        {
+            var projectId = int.TryParse(snapshot.ProjectId, out var pid) ? pid : 0;
+            var projectName = ProjectBackups
+                .FirstOrDefault(project => string.Equals(project.Id, snapshot.ProjectId, StringComparison.OrdinalIgnoreCase))
+                ?.Name ?? L("Backups.Section.Group.Unknown", "Unknown project");
+
+            var topPaths = SnapshotDiffSummary.ParseTopChangedPaths(snapshot.DiffTopPathsJson)
+                .Select(path => new SnapshotDiffPathExport(path.Path, path.Changes, path.ChangedBytes))
+                .ToList();
+
+            return new SnapshotSummaryExportPayload(
+                snapshot.Id,
+                projectId,
+                projectName,
+                snapshot.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture),
+                snapshot.Timestamp.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+                snapshot.DestinationDisplay,
+                snapshot.Type,
+                snapshot.TypeLabel,
+                snapshot.IsImported,
+                snapshot.IsEncrypted,
+                snapshot.DiffAdded,
+                snapshot.DiffModified,
+                snapshot.DiffDeleted,
+                snapshot.DiffNetBytes,
+                topPaths);
+        }
+
+        private static string GetSnapshotSummaryExportDirectory()
+        {
+            var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            if (string.IsNullOrWhiteSpace(documents))
+                documents = Path.GetTempPath();
+
+            return Path.Combine(documents, "VaultSync", "Exports", "SnapshotDiff");
+        }
+
+        private static string BuildSnapshotSummaryFileName(BackupSnapshotItem snapshot)
+        {
+            var projectToken = string.IsNullOrWhiteSpace(snapshot.ProjectId) ? "global" : snapshot.ProjectId;
+            var ts = snapshot.Timestamp.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+            return $"snapshot-diff-{projectToken}-backup-{snapshot.Id}-{ts}";
+        }
+
+        private static string EnsureUniqueExportPath(string path)
+        {
+            if (!File.Exists(path))
+                return path;
+
+            var directory = Path.GetDirectoryName(path) ?? string.Empty;
+            var fileName = Path.GetFileNameWithoutExtension(path);
+            var extension = Path.GetExtension(path);
+
+            for (var i = 1; i <= 999; i++)
+            {
+                var candidate = Path.Combine(directory, $"{fileName}-{i}{extension}");
+                if (!File.Exists(candidate))
+                    return candidate;
+            }
+
+            return Path.Combine(directory, $"{fileName}-{Guid.NewGuid():N}{extension}");
+        }
+
+        private string BuildGitStyleDiffText(SnapshotSummaryExportPayload payload)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("# VaultSync Snapshot Diff Summary");
+            sb.AppendLine($"backup_id: {payload.BackupId}");
+            sb.AppendLine($"project: {payload.ProjectName} (id: {payload.ProjectId})");
+            sb.AppendLine($"timestamp_local: {payload.TimestampLocal}");
+            sb.AppendLine($"timestamp_utc: {payload.TimestampUtc}");
+            sb.AppendLine($"destination: {payload.Destination}");
+            sb.AppendLine($"trigger: {payload.TriggerType} | mode: {payload.ModeLabel}");
+            sb.AppendLine($"imported: {payload.IsImported} | encrypted: {payload.IsEncrypted}");
+            sb.AppendLine();
+            sb.AppendLine("diff");
+            sb.AppendLine($"+ added    {payload.DiffAdded}");
+            sb.AppendLine($"~ modified {payload.DiffModified}");
+            sb.AppendLine($"- deleted  {payload.DiffDeleted}");
+            sb.AppendLine($"Δ net      {FormatSignedSize(payload.DiffNetBytes)}");
+
+            if (payload.TopPaths.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("top_paths");
+                foreach (var path in payload.TopPaths.Take(10))
+                {
+                    sb.AppendLine($"~ {path.Path}  (changes: {path.Changes}, bytes: {BackupSnapshotItem.FormatSize(path.ChangedBytes)})");
+                }
+            }
+
+            return sb.ToString().TrimEnd();
         }
 
         private void ToggleBackupProtection(BackupSnapshotItem? item)
@@ -2144,6 +2367,7 @@ namespace VaultSync.UI.ViewModels
                 }
             }
             var backupList = dedupBackups.Values.ToList();
+            var snapshotById = LoadSnapshotLookup(config, backupList);
             var projectSignature = ComputeProjectSignature(projectList);
             var backupSignature = ComputeBackupSignature(backupList);
             var autoSignature = ComputeAutoBackupSignature(autoBackupDisabledProjects);
@@ -2210,6 +2434,8 @@ namespace VaultSync.UI.ViewModels
             foreach (var backup in backupList)
             {
                 projectLookup.TryGetValue(backup.ProjectId, out var project);
+                snapshotById.TryGetValue(backup.SnapshotId, out var snapshotInfo);
+                var (diffTopPathsDisplay, hasDiffTopPaths) = BuildSnapshotDiffTopPathsDisplay(snapshotInfo);
 
                 var destinationDisplay = string.IsNullOrWhiteSpace(backup.DestinationAlias)
                     ? backup.DestinationPath
@@ -2257,7 +2483,15 @@ namespace VaultSync.UI.ViewModels
                         : L("Backups.Snapshot.Label.Manual", "On-demand backup"),
                     ProjectId = project?.Id.ToString(),
                     IsProtected = backup.IsProtected,
-                    DestinationDisplay = destinationDisplay
+                    DestinationDisplay = destinationDisplay,
+                    DiffAdded = snapshotInfo?.DiffAdded ?? 0,
+                    DiffModified = snapshotInfo?.DiffModified ?? 0,
+                    DiffDeleted = snapshotInfo?.DiffDeleted ?? 0,
+                    DiffNetBytes = snapshotInfo?.DiffNetBytes ?? 0,
+                    DiffTopPathsJson = snapshotInfo?.DiffTopPathsJson ?? "[]",
+                    DiffSummaryDisplay = BuildSnapshotDiffSummaryDisplay(snapshotInfo),
+                    DiffTopPathsDisplay = diffTopPathsDisplay,
+                    HasDiffTopPaths = hasDiffTopPaths
                 };
 
                 _allSnapshots.Add(uiItem);
@@ -2323,6 +2557,83 @@ namespace VaultSync.UI.ViewModels
                 }
                 return hash;
             }
+        }
+
+        private static Dictionary<int, Snapshot> LoadSnapshotLookup(AppConfig config, IReadOnlyList<Backup> backups)
+        {
+            var snapshotIds = backups
+                .Select(backup => backup.SnapshotId)
+                .Where(id => id > 0)
+                .Distinct()
+                .ToHashSet();
+
+            if (snapshotIds.Count == 0)
+                return new Dictionary<int, Snapshot>();
+
+            try
+            {
+                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                    ? config.DbPath
+                    : AppConfigStore.GetDefaultDbPath();
+                var repo = new SqliteRepository(dbPath);
+                return repo.GetAllSnapshots()
+                    .Where(snapshot => snapshotIds.Contains(snapshot.Id))
+                    .ToDictionary(snapshot => snapshot.Id);
+            }
+            catch
+            {
+                return new Dictionary<int, Snapshot>();
+            }
+        }
+
+        private static string BuildSnapshotDiffSummaryDisplay(Snapshot? snapshot)
+        {
+            if (snapshot is null)
+                return L("Backups.DiffSummary.Unavailable", "Diff summary unavailable");
+
+            var hasChanges = snapshot.DiffAdded > 0 || snapshot.DiffModified > 0 || snapshot.DiffDeleted > 0;
+            if (!hasChanges && snapshot.DiffNetBytes == 0)
+                return L("Backups.DiffSummary.NoChanges", "No file changes detected");
+
+            return Lf(
+                "Backups.DiffSummary.Compact",
+                "+{0} / ~{1} / -{2}  Δ {3}",
+                snapshot.DiffAdded,
+                snapshot.DiffModified,
+                snapshot.DiffDeleted,
+                FormatSignedSize(snapshot.DiffNetBytes));
+        }
+
+        private static (string Display, bool HasPaths) BuildSnapshotDiffTopPathsDisplay(Snapshot? snapshot)
+        {
+            if (snapshot is null)
+                return (string.Empty, false);
+
+            var topPaths = SnapshotDiffSummary.ParseTopChangedPaths(snapshot.DiffTopPathsJson);
+            if (topPaths.Count == 0)
+                return (string.Empty, false);
+
+            var preview = string.Join(
+                ", ",
+                topPaths
+                    .Where(path => !string.IsNullOrWhiteSpace(path.Path))
+                    .Take(2)
+                    .Select(path => $"{path.Path} ({path.Changes})"));
+
+            if (string.IsNullOrWhiteSpace(preview))
+                return (string.Empty, false);
+
+            return (Lf("Backups.DiffSummary.TopPaths.Compact", "Top paths: {0}", preview), true);
+        }
+
+        private static string FormatSignedSize(long bytes)
+        {
+            var absolute = BackupSnapshotItem.FormatSize(Math.Abs(bytes));
+            if (bytes > 0)
+                return $"+{absolute}";
+            if (bytes < 0)
+                return $"-{absolute}";
+            return absolute;
         }
 
         private static int ComputeAutoBackupSignature(ISet<int>? disabledProjects)
@@ -2492,6 +2803,28 @@ namespace VaultSync.UI.ViewModels
                 UpdateProjectEncryptionDisplay(project, config);
             }
         }
+
+        private sealed record SnapshotSummaryExportPayload(
+            string BackupId,
+            int ProjectId,
+            string ProjectName,
+            string TimestampLocal,
+            string TimestampUtc,
+            string Destination,
+            string TriggerType,
+            string ModeLabel,
+            bool IsImported,
+            bool IsEncrypted,
+            int DiffAdded,
+            int DiffModified,
+            int DiffDeleted,
+            long DiffNetBytes,
+            IReadOnlyList<SnapshotDiffPathExport> TopPaths);
+
+        private sealed record SnapshotDiffPathExport(
+            string Path,
+            int Changes,
+            long ChangedBytes);
     }
 
     // ---------- Models ----------
@@ -2527,6 +2860,14 @@ namespace VaultSync.UI.ViewModels
 
         /// <summary>Destination endpoint that stored this backup.</summary>
         public string DestinationDisplay { get; set; } = string.Empty;
+        public string DiffSummaryDisplay { get; set; } = string.Empty;
+        public string DiffTopPathsDisplay { get; set; } = string.Empty;
+        public bool HasDiffTopPaths { get; set; }
+        public int DiffAdded { get; set; }
+        public int DiffModified { get; set; }
+        public int DiffDeleted { get; set; }
+        public long DiffNetBytes { get; set; }
+        public string DiffTopPathsJson { get; set; } = "[]";
 
         public string SizeFormatted => FormatSize(SizeBytes);
 

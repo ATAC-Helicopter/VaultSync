@@ -318,7 +318,13 @@ public sealed class MetadataSyncService
                 projectId,
                 metaSnapshot.CreatedUtc,
                 metaSnapshot.FileCount,
-                metaSnapshot.TotalBytes);
+                metaSnapshot.TotalBytes,
+                new SnapshotDiffSummary(
+                    metaSnapshot.DiffAdded,
+                    metaSnapshot.DiffModified,
+                    metaSnapshot.DiffDeleted,
+                    metaSnapshot.DiffNetBytes,
+                    SnapshotDiffSummary.ParseTopChangedPaths(metaSnapshot.DiffTopPathsJson)));
 
             snapshotMap[metaSnapshot.ExternalId] = id;
             importedSnapshots++;
@@ -1120,7 +1126,12 @@ public sealed class MetadataSyncService
                     ProjectExternalId = projectExternalId,
                     CreatedUtc = snapshot.CreatedUtc,
                     FileCount = snapshot.FileCount,
-                    TotalBytes = snapshot.TotalBytes
+                    TotalBytes = snapshot.TotalBytes,
+                    DiffAdded = snapshot.DiffAdded,
+                    DiffModified = snapshot.DiffModified,
+                    DiffDeleted = snapshot.DiffDeleted,
+                    DiffNetBytes = snapshot.DiffNetBytes,
+                    DiffTopPathsJson = string.IsNullOrWhiteSpace(snapshot.DiffTopPathsJson) ? "[]" : snapshot.DiffTopPathsJson
                 });
                 var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
                 store.UpsertBackup(new MetaBackup
@@ -1425,7 +1436,12 @@ public sealed class MetadataSyncService
                 ProjectExternalId = projectExternalId,
                 CreatedUtc = snap.CreatedUtc,
                 FileCount = snap.FileCount,
-                TotalBytes = snap.TotalBytes
+                TotalBytes = snap.TotalBytes,
+                DiffAdded = snap.DiffAdded,
+                DiffModified = snap.DiffModified,
+                DiffDeleted = snap.DiffDeleted,
+                DiffNetBytes = snap.DiffNetBytes,
+                DiffTopPathsJson = string.IsNullOrWhiteSpace(snap.DiffTopPathsJson) ? "[]" : snap.DiffTopPathsJson
             });
         }
 
@@ -1450,7 +1466,12 @@ public sealed class MetadataSyncService
                     ProjectExternalId = projectExternalId,
                     CreatedUtc = snap.CreatedUtc,
                     FileCount = snap.FileCount,
-                    TotalBytes = snap.TotalBytes
+                    TotalBytes = snap.TotalBytes,
+                    DiffAdded = snap.DiffAdded,
+                    DiffModified = snap.DiffModified,
+                    DiffDeleted = snap.DiffDeleted,
+                    DiffNetBytes = snap.DiffNetBytes,
+                    DiffTopPathsJson = string.IsNullOrWhiteSpace(snap.DiffTopPathsJson) ? "[]" : snap.DiffTopPathsJson
                 });
             }
 

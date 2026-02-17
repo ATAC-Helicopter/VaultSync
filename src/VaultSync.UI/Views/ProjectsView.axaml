@@ -755,19 +755,25 @@
                                   Background="{DynamicResource CardBackgroundBrush}"
                                   Margin="0,4,0,0"
                                   Padding="{DynamicResource CardPaddingSmall}">
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                              <Border Width="6"
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  RowDefinitions="Auto,Auto,Auto"
+                                  ColumnSpacing="10"
+                                  RowSpacing="4">
+                              <Border Grid.RowSpan="3"
+                                      Width="6"
                                       CornerRadius="3"
                                       Background="{DynamicResource AccentBrush}"
                                       Opacity="0.6" />
                               <TextBlock
+                                Grid.Row="0"
                                 Grid.Column="1"
                                 Text="{Binding DateDisplay}"
                                 FontSize="12"
                                 Foreground="{DynamicResource TextSecondaryBrush}"
                                 TextTrimming="CharacterEllipsis"
                                 TextWrapping="NoWrap" />
-                              <Border Grid.Column="2"
+                              <Border Grid.Row="0"
+                                      Grid.Column="2"
                                       CornerRadius="999"
                                       Background="{DynamicResource InputBackgroundBrush}"
                                       Padding="{DynamicResource StatPillPadding}">
@@ -779,6 +785,25 @@
                                   TextTrimming="CharacterEllipsis"
                                   TextWrapping="NoWrap" />
                               </Border>
+                              <TextBlock Grid.Row="1"
+                                         Grid.Column="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding DiffSummaryDisplay}"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                         TextWrapping="Wrap"
+                                         TextTrimming="CharacterEllipsis"
+                                         MaxLines="2" />
+                              <TextBlock Grid.Row="2"
+                                         Grid.Column="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding DiffTopPathsDisplay}"
+                                         FontSize="10"
+                                         Foreground="{DynamicResource TextMutedBrush}"
+                                         TextWrapping="Wrap"
+                                         TextTrimming="CharacterEllipsis"
+                                         MaxLines="2"
+                                         IsVisible="{Binding HasDiffTopPaths}" />
                             </Grid>
                           </Border>
                         </DataTemplate>
