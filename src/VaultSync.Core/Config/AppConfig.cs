@@ -48,6 +48,26 @@ namespace VaultSync.Core.Config
         public bool   EnableMetadataSync    { get; set; } = true;
         public bool   AutoImportMetadata    { get; set; } = true;
         public bool   PromptRestoreAfterImport { get; set; } = true;
+        /// <summary>
+        /// When enabled, backup transfer speed is capped to reduce bandwidth impact.
+        /// </summary>
+        public bool EnableBandwidthLimit { get; set; } = false;
+        /// <summary>
+        /// Maximum transfer bandwidth in megabits per second (Mbps) when the limit is enabled.
+        /// </summary>
+        public int MaxBandwidthMbps { get; set; } = 100;
+        /// <summary>
+        /// When enabled, automatic backups follow the quiet-hours schedule.
+        /// </summary>
+        public bool EnableQuietHours { get; set; } = false;
+        /// <summary>
+        /// Quiet-hours start time in 24h HH:mm format.
+        /// </summary>
+        public string QuietHoursStart { get; set; } = "23:00";
+        /// <summary>
+        /// Quiet-hours end time in 24h HH:mm format.
+        /// </summary>
+        public string QuietHoursEnd { get; set; } = "07:00";
         // New canonical backup root path used by UI + snapshot service
         public string? BackupRoot { get; set; } = string.Empty;
 
@@ -126,6 +146,32 @@ namespace VaultSync.Core.Config
         /// When empty, BackupRoot is used for legacy compatibility.
         /// </summary>
         public List<BackupDestination> Destinations { get; set; } = new();
+
+        /// <summary>
+        /// Global backup encryption policy and non-secret key/material references.
+        /// </summary>
+        public BackupEncryptionConfig Encryption { get; set; } = new();
+    }
+
+    public sealed class BackupEncryptionConfig
+    {
+        public bool Enabled { get; set; } = false;
+        /// <summary>
+        /// Reference to secure-store entry; no plaintext password is persisted in config.
+        /// </summary>
+        public string KeyRef { get; set; } = string.Empty;
+        public string Algorithm { get; set; } = "aes-256-cbc-hmac-sha256-v1";
+        public string KdfProfile { get; set; } = "pbkdf2-sha256-v1";
+        public string KdfParamRef { get; set; } = "pbkdf2-iter-210000";
+        /// <summary>
+        /// When true, in-memory session fallback can be offered if secure-store save fails.
+        /// Explicit user confirmation is still required by runtime flows.
+        /// </summary>
+        public bool AllowSessionFallback { get; set; } = false;
+        /// <summary>
+        /// Minutes before encrypted "Open folder" session unlock expires and temp content is auto-locked.
+        /// </summary>
+        public int OpenUnlockTimeoutMinutes { get; set; } = 10;
     }
 
     // -------- Storage --------

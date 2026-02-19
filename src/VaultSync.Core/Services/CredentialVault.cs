@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -39,10 +40,10 @@ public sealed class CredentialVault
         return $"cred-{slug}-{Guid.NewGuid():N}";
     }
 
-        public string? GetSecret(string? keyRef, string username, bool preferKeychain, string? fallbackPlaintext = null)
-        {
-            if (string.IsNullOrWhiteSpace(keyRef))
-                return fallbackPlaintext;
+    public string? GetSecret(string? keyRef, string username, bool preferKeychain, string? fallbackPlaintext = null)
+    {
+        if (string.IsNullOrWhiteSpace(keyRef))
+            return fallbackPlaintext;
 
         lock (_sync)
         {
@@ -52,13 +53,19 @@ public sealed class CredentialVault
             {
                 var kc = TryReadFromKeychain(keyRef, username);
                 if (!string.IsNullOrEmpty(kc))
+                {
+                    TouchSecretIfNeeded(map, keyRef);
                     return kc;
+                }
             }
             else if (OperatingSystem.IsLinux() && preferKeychain)
             {
                 var sec = TryReadFromSecretService(keyRef, username);
                 if (!string.IsNullOrEmpty(sec))
+                {
+                    TouchSecretIfNeeded(map, keyRef);
                     return sec;
+                }
             }
 
             if (!map.TryGetValue(keyRef, out var record))
@@ -68,20 +75,29 @@ public sealed class CredentialVault
             {
                 var kc = TryReadFromKeychain(keyRef, record.Username ?? username);
                 if (!string.IsNullOrEmpty(kc))
+                {
+                    TouchSecretIfNeeded(map, keyRef);
                     return kc;
+                }
             }
             if (record.StoredInKeychain && OperatingSystem.IsLinux())
             {
                 var sec = TryReadFromSecretService(keyRef, record.Username ?? username);
                 if (!string.IsNullOrEmpty(sec))
+                {
+                    TouchSecretIfNeeded(map, keyRef);
                     return sec;
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(record.ProtectedSecret))
             {
                 var secret = TryUnprotect(record.ProtectedSecret, record.ProtectedWithDpapi);
                 if (!string.IsNullOrEmpty(secret))
+                {
+                    TouchSecretIfNeeded(map, keyRef);
                     return secret;
+                }
             }
         }
 
@@ -101,6 +117,8 @@ public sealed class CredentialVault
                 : new StoredSecret();
 
             record.Username = username;
+            record.CreatedUtc ??= DateTime.UtcNow;
+            record.LastAccessUtc = DateTime.UtcNow;
 
             if (preferKeychain && OperatingSystem.IsMacOS())
             {
@@ -162,6 +180,64 @@ public sealed class CredentialVault
         }
     }
 
+    public int CleanupUnusedSecrets(IEnumerable<string> activeKeyRefs, TimeSpan staleAge)
+    {
+        var activeSet = new HashSet<string>(
+            activeKeyRefs
+                .Where(k => !string.IsNullOrWhiteSpace(k))
+                .Select(k => k.Trim()),
+            StringComparer.OrdinalIgnoreCase);
+        var activeFamilies = new HashSet<string>(
+            activeSet
+                .Select(GetKeyFamily)
+                .Where(f => !string.IsNullOrWhiteSpace(f))
+                .Select(f => f!),
+            StringComparer.OrdinalIgnoreCase);
+
+        lock (_sync)
+        {
+            var map = Load();
+            if (map.Count == 0)
+                return 0;
+
+            var now = DateTime.UtcNow;
+            var removed = 0;
+            foreach (var key in map.Keys.ToList())
+            {
+                if (activeSet.Contains(key))
+                    continue;
+
+                if (!map.TryGetValue(key, out var record))
+                    continue;
+
+                // If a credential was re-created for the same logical profile/project
+                // (same "cred-<family>-<guid>" prefix), remove old unreferenced entries immediately.
+                var family = GetKeyFamily(key);
+                var forcePruneDuplicate = !string.IsNullOrWhiteSpace(family) && activeFamilies.Contains(family);
+
+                if (!forcePruneDuplicate)
+                {
+                    var lastSeen = record.LastAccessUtc ?? record.CreatedUtc;
+                    if (lastSeen.HasValue && now - lastSeen.Value < staleAge)
+                        continue;
+                }
+
+                map.Remove(key);
+                removed++;
+
+                if (OperatingSystem.IsMacOS())
+                {
+                    TryDeleteFromKeychain(key, record.Username ?? string.Empty);
+                }
+            }
+
+            if (removed > 0)
+                Save(map);
+
+            return removed;
+        }
+    }
+
     private static void StoreProtected(StoredSecret record, string secret, bool requireProtection)
     {
         if (TryProtect(secret, out var protectedSecret))
@@ -198,6 +274,36 @@ public sealed class CredentialVault
     {
         var json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_storePath, json);
+    }
+
+    private void TouchSecretIfNeeded(Dictionary<string, StoredSecret> map, string keyRef)
+    {
+        if (!map.TryGetValue(keyRef, out var record))
+            return;
+
+        var now = DateTime.UtcNow;
+        if (record.LastAccessUtc.HasValue && now - record.LastAccessUtc.Value < TimeSpan.FromHours(12))
+            return;
+
+        record.LastAccessUtc = now;
+        record.CreatedUtc ??= now;
+        Save(map);
+    }
+
+    private static string? GetKeyFamily(string keyRef)
+    {
+        if (string.IsNullOrWhiteSpace(keyRef) || !keyRef.StartsWith("cred-", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var lastDash = keyRef.LastIndexOf('-');
+        if (lastDash <= 5 || lastDash >= keyRef.Length - 1)
+            return null;
+
+        var suffix = keyRef[(lastDash + 1)..];
+        if (suffix.Length != 32 || !suffix.All(ch => Uri.IsHexDigit(ch)))
+            return null;
+
+        return keyRef[..lastDash];
     }
 
     private static bool TryProtect(string secret, out string protectedSecret)
@@ -424,5 +530,7 @@ public sealed class CredentialVault
         public bool ProtectedWithDpapi { get; set; }
         public bool StoredInKeychain { get; set; }
         public string? LegacyPlaintext { get; set; }
+        public DateTime? CreatedUtc { get; set; }
+        public DateTime? LastAccessUtc { get; set; }
     }
 }

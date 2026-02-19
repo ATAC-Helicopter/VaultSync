@@ -34,21 +34,16 @@
   </a>
 </p>
 
-<p align="center">
-<!-- Launch Badge - Embed this badge and get a dofollow backlink! -->
-<a href="https://trylaunch.ai/launch/vaultsync" target="_blank" rel="dofollow" style="display: inline-block; padding: 8px 12px; background: #1A1A1A; border: 1px solid #333333; border-radius: 8px; text-decoration: none; transition: all 0.2s; ">
-  <img src="https://trylaunch.ai/badges/badge-white.svg" alt="Launch" height="36" style="display: block; height: 36px; width: auto;" />
-</a>
-</p>
-
 > [!WARNING]
 > VaultSync is currently **unsigned**.
 >
 > **Windows**
-> - SmartScreen will flag the installer  
+>
+> - SmartScreen will flag the installer
 > - Click **More info → Run anyway**
 >
 > **macOS**
+>
 > 1. Open the downloaded `.dmg`
 > 2. **Drag the VaultSync app into the Applications folder**
 > 3. Close the disk image
@@ -58,11 +53,13 @@
 > If Gatekeeper still blocks it, clear quarantine manually:
 >
 > **Apple Silicon (ARM64):**
+>
 > ```sh
 > xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app
 > ```
 >
 > **Intel (x64):**
+>
 > ```sh
 > xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app
 > ```
@@ -77,8 +74,8 @@
 
 </p>
 
+# VaultSync
 
-# VaultSync  
 ### Snapshot | Backup | Sync | Verify - for Projects & Workspaces
 
 VaultSync is a cross-platform backup and snapshot manager built for developers, creators, and power-users working with large project folders.  
@@ -87,6 +84,7 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 ---
 
 ## Docs & Links
+
 - Documentation overview: [DOCUMENTATION.md](DOCUMENTATION.md)
 - Wiki (how-to guides): [docs/wiki/Home.md](docs/wiki/Home.md)
 - Roadmap: [ROADMAP.md](ROADMAP.md)
@@ -98,27 +96,30 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 
 ## Features
 
-### CLI 
-- Create snapshots of any project folder  
-- Sync using **rsync** (macOS/Linux) or **robocopy** (Windows)  
-- Hash-based file verification  
-- Watch mode for automatic syncing  
-- JSON output for scripting  
-- Customizable preset rules per project  
-- Works headless for servers or automation scripts  
+### CLI
 
+- Create snapshots of any project folder
+- Sync using **rsync** (macOS/Linux) or **robocopy** (Windows)
+- Hash-based file verification
+- Watch mode for automatic syncing
+- JSON output for scripting
+- Customizable preset rules per project
+- Works headless for servers or automation scripts
 
-### Desktop UI   
-- One-click snapshots and backups (auto + manual)  
-- Live progress overlays and per-project status cards  
-- Backup history with "Keep" (protected) backups that bypass retention  
-- Disk health (best-effort SMART) and backup retention controls  
-- Cross-machine history sync via `.vaultsync/meta/` metadata  
+### Desktop UI
+
+- One-click snapshots and backups (auto + manual)
+- Live progress overlays and per-project status cards
+- Backup history with "Keep" (protected) backups that bypass retention
+- Disk health (best-effort SMART) and backup retention controls
+- Cross-machine history sync via `.vaultsync/meta/` metadata
 - Cross-platform: macOS, Windows, Linux
 
 ### Smart Presets
+
 Presets define what gets included/excluded (like `.gitignore`).  
 Common presets included:
+
 - Unity
 - .NET / C#
 - Game engines (Godot, Unreal, GameMaker)
@@ -129,21 +130,29 @@ Common presets included:
 or choose **No preset** if no presets apply or you want no file exclusion.
 
 ### Snapshot System
-- Fast directory scanner with filtering  
-- Tracks added / modified / deleted / unchanged files  
-- Stores snapshots in SQLite  
-- View snapshot history per project  
+
+- Fast directory scanner with filtering
+- Tracks added / modified / deleted / unchanged files
+- Stores snapshots in SQLite
+- View snapshot history per project
 
 ### Backup System
-- Backup any snapshot to local or external storage  
-- Timestamped folders (e.g., 2025-11-16_20-41-43)  
-- Per-project or "backup all"  
-- Automatic backups (optional)  
-- Progress, file count, and failure handling (NAS sleep detection)  
-- Retention: keep the newest N backups per project; protected ("Keep") backups are never pruned  
+
+- Backup any snapshot to local or external storage
+- Timestamped folders (e.g., 2025-11-16_20-41-43)
+- Per-project or "backup all"
+- Automatic backups (optional)
+- Progress, file count, and failure handling (NAS sleep detection)
+- Retention: keep the newest N backups per project; protected ("Keep") backups are never pruned
 - Integrated snapshot creation: every backup captures a fresh snapshot; orphan snapshots are cleaned up when backups are pruned
+- Backup history terminology:
+  - `Full`: complete backup payload
+  - `Incremental`: backup created using incremental copy mode
+  - `Imported`: history discovered/imported from metadata sync or destination scan
+- Restore flow now shows a "What happens next" confirmation block before running restore.
 
 ### Network shares (SMB/NFS)
+
 - SMB auto-mount is supported on Windows and macOS using credential profiles.
 - NFS auto-mount is **not** supported on macOS (requires admin privileges). Pre-mount the share and set the destination
   to the local mount path with **Pre-mounted** enabled and **Auto-mount** disabled.
@@ -163,6 +172,7 @@ dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vau
 ```
 
 Update:
+
 ```sh
 dotnet tool update --global vaultsync.cli
 ```
@@ -192,21 +202,23 @@ vaultsync verify Demo ~/Backup/Demo --full
 ## Useful CLI Commands
 
 ### Core
-| Command | Description |
-|--------|-------------|
-| `vaultsync init` | Initialize config + database |
-| `vaultsync add-project <name> <path>` | Register a new project |
-| `vaultsync list-projects` | Show all tracked projects |
-| `vaultsync snapshot <name>` | Create snapshot |
-| `vaultsync sync <name> <dest>` | Mirror project to destination |
-| `vaultsync verify <name> <dest>` | Hash-compare project vs backup |
-| `vaultsync history <name>` | Show snapshots |
-| `vaultsync diff <name>` | Compare two snapshots |
-| `vaultsync prune <name>` | Remove old snapshots |
-| `vaultsync restore <name> <dest>` | Restore a previous snapshot |
-| `vaultsync doctor` | Check environment |
+
+| Command                               | Description                    |
+| ------------------------------------- | ------------------------------ |
+| `vaultsync init`                      | Initialize config + database   |
+| `vaultsync add-project <name> <path>` | Register a new project         |
+| `vaultsync list-projects`             | Show all tracked projects      |
+| `vaultsync snapshot <name>`           | Create snapshot                |
+| `vaultsync sync <name> <dest>`        | Mirror project to destination  |
+| `vaultsync verify <name> <dest>`      | Hash-compare project vs backup |
+| `vaultsync history <name>`            | Show snapshots                 |
+| `vaultsync diff <name>`               | Compare two snapshots          |
+| `vaultsync prune <name>`              | Remove old snapshots           |
+| `vaultsync restore <name> <dest>`     | Restore a previous snapshot    |
+| `vaultsync doctor`                    | Check environment              |
 
 ### Watch Mode
+
 ```sh
 vaultsync watch Game --dest /Backups/Game --sync --verify --debounce-ms 2500
 ```
@@ -214,8 +226,13 @@ vaultsync watch Game --dest /Backups/Game --sync --verify --debounce-ms 2500
 ---
 
 ## License
+
 Licensed under the MIT License.  
 See the full license here: [LICENSE](LICENSE).
+
+<img width="1280" height="709" alt="VaultSync_MM1" src="https://github.com/user-attachments/assets/57368d4d-6cd5-4743-ba15-054de5034f7c" />
+<img width="1280" height="709" alt="VaultSync_MM2" src="https://github.com/user-attachments/assets/32e4d684-9a46-4e9d-a90f-d13dfb644c21" />
+<img width="1280" height="709" alt="VaultSync_MM3" src="https://github.com/user-attachments/assets/dca44d74-62f1-4ba4-a334-4b9166630756" />
 
 ## Credits
 

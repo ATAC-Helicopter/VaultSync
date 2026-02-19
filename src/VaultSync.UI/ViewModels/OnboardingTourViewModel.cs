@@ -338,6 +338,24 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             autoAdvance: false);
 
         AddSettingsStep(
+            L("Onboarding.Tour.Step26.Title", "Bandwidth and quiet hours"),
+            L("Onboarding.Tour.Step26.Body", "Set transfer limits and quiet hours so automatic backups pause/defer at the right time without stopping active runs."),
+            "SettingsQuietHoursWindowCard",
+            autoAdvance: false);
+
+        AddSettingsStep(
+            L("Onboarding.Tour.Step20.Title", "Global encryption"),
+            L("Onboarding.Tour.Step20.Body", "Encryption is off by default. Enable it here when you want new backups encrypted by default, then review secure password status."),
+            "SettingsEncryptionCard",
+            autoAdvance: false);
+
+        AddSettingsStep(
+            L("Onboarding.Tour.Step21.Title", "Set backup encryption password"),
+            L("Onboarding.Tour.Step21.Body", "Set or clear the global encryption password used by projects that inherit global protection."),
+            "SettingsEncryptionPasswordInput",
+            autoAdvance: false);
+
+        AddSettingsStep(
             L("Onboarding.Tour.Step13.Title", "Appearance settings"),
             L("Onboarding.Tour.Step13.Body", "Control theme, compact layout, and project avatars."),
             "SettingsAppearanceCard",
@@ -367,6 +385,30 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             "ProjectSnapshotButton",
             "Projects",
             () => _app.ProjectsViewModel.Projects.Any(p => p.IsRegistered));
+
+        AddStep(
+            L("Onboarding.Tour.Step22.Title", "Project encryption policy"),
+            L("Onboarding.Tour.Step22.Body", "Set the per-project encryption policy from the Backups page so each project can inherit global protection, force encryption, or stay plain."),
+            "BackupsProjectEncryptionPolicyCombo",
+            "Backups",
+            () => true,
+            autoAdvance: false);
+
+        AddStep(
+            L("Onboarding.Tour.Step23.Title", "Project encryption password"),
+            L("Onboarding.Tour.Step23.Body", "Set or clear the project-specific encryption password from the Backups page."),
+            "BackupsProjectEncryptionPasswordButton",
+            "Backups",
+            () => true,
+            autoAdvance: false);
+
+        AddStep(
+            L("Onboarding.Tour.Step27.Title", "Snapshot diff summaries"),
+            L("Onboarding.Tour.Step27.Body", "Each backup now shows diff stats (added, changed, deleted, net size) with preview and export actions."),
+            "BackupsHistorySection",
+            "Backups",
+            () => true,
+            autoAdvance: false);
 
         AddStep(
             L("Onboarding.Tour.Step18.Title", "Enable auto backups"),
@@ -527,8 +569,13 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         return true;
     }
 
-    private static string L(string key, string fallback) =>
-        LocalizationProvider.Service?.GetString(key) ?? fallback;
+    private static string L(string key, string fallback)
+    {
+        var value = LocalizationProvider.Service?.GetString(key);
+        if (string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal))
+            return fallback;
+        return value;
+    }
 
     private static string Lf(string key, string fallback, params object[] args)
     {

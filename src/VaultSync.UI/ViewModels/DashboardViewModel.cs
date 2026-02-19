@@ -212,6 +212,7 @@ namespace VaultSync.UI.ViewModels
 
         // Donut bindings
         public ISeries[] StorageSeries { get; private set; } = Array.Empty<ISeries>();
+        public bool HasStorageSeries => StorageSeries is { Length: > 0 };
         public IEnumerable<LegendItem> StorageLegend { get; private set; } = Array.Empty<LegendItem>();
 
         // Activity items, populated from real data.
@@ -412,7 +413,6 @@ namespace VaultSync.UI.ViewModels
                 SnapshotCount = data.BackupCount;
                 _backupsThisWeekCount = data.BackupsThisWeekCount;
                 SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
-                UpdateBackupSummaryPills();
 
                 _activeProjectsCount = data.StorageSlices.Count;
                 StorageUsed = FormatBytes(data.TotalLatestBytes);
@@ -522,6 +522,9 @@ namespace VaultSync.UI.ViewModels
                     _importedCountsByDay[i] = data.ImportedCounts[i];
                 }
 
+                // Compute textual summary after chart arrays are populated.
+                UpdateBackupSummaryPills();
+
                 BuildSnapshotSeries();
                 BuildWeeklyActivity();
                 BuildStorageDonut(data.StorageSlices);
@@ -585,21 +588,21 @@ namespace VaultSync.UI.ViewModels
         {
             WeeklySnapshotActivity.Clear();
 
-            const double chartHeight = 180;
-            const double barBase = 20;
-            const double barRange = chartHeight - 36;
-            WeeklyChartHeight = chartHeight;
-
             var max = _snapshotCountsByDay.DefaultIfEmpty(0d).Max();
             if (max < 1)
             {
                 max = 1;
             }
 
+            var chartHeight = max <= 2 ? 150d : (max <= 4 ? 170d : 188d);
+            const double barBase = 14;
+            var barRange = chartHeight - 30;
+            WeeklyChartHeight = chartHeight;
+
             var avg = _snapshotCountsByDay.Length == 0 ? 0d : _snapshotCountsByDay.Average();
             var avgNormalized = avg / max;
             var avgHeight = avg <= 0 ? 0 : barBase + avgNormalized * barRange;
-            const double labelOffset = 12;
+            const double labelOffset = 10;
             WeeklyAverageLineOffset = labelOffset + avgHeight;
             WeeklyAverageLabel = Lf("Dashboard.Chart.AvgLabel", "Avg {0:0.0}", avg);
 
@@ -664,6 +667,7 @@ namespace VaultSync.UI.ViewModels
                 StorageSeries = Array.Empty<ISeries>();
                 StorageLegend = Array.Empty<LegendItem>();
                 OnPropertyChanged(nameof(StorageSeries));
+                OnPropertyChanged(nameof(HasStorageSeries));
                 OnPropertyChanged(nameof(StorageLegend));
                 return;
             }
@@ -674,6 +678,7 @@ namespace VaultSync.UI.ViewModels
                 StorageSeries = Array.Empty<ISeries>();
                 StorageLegend = Array.Empty<LegendItem>();
                 OnPropertyChanged(nameof(StorageSeries));
+                OnPropertyChanged(nameof(HasStorageSeries));
                 OnPropertyChanged(nameof(StorageLegend));
                 return;
             }
@@ -687,8 +692,13 @@ namespace VaultSync.UI.ViewModels
                 if (bytes <= 0) continue;
 
                 var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
-                var color = SKColor.Parse(colorHex);
+                var color = SKColors.DodgerBlue;
+                if (!SKColor.TryParse(colorHex, out color))
+                {
+                    color = SKColors.DodgerBlue;
+                }
                 var projectName = project.Name;
+                var displayProjectName = TrimForTooltip(projectName, 28);
                 var sliceBytes = bytes;
 
                 series.Add(new PieSeries<double>
@@ -697,20 +707,30 @@ namespace VaultSync.UI.ViewModels
                     Name        = projectName,
                     InnerRadius = 90,
                     Stroke      = null,
-                    Fill        = new SolidColorPaint(color),
-                    ToolTipLabelFormatter = point =>
-                        $"{projectName} {FormatBytes(sliceBytes)}"
+                    Fill        = new SolidColorPaint(color)
                 });
 
                 legend.Add(new LegendItem(
+                    $"{displayProjectName} {FormatBytes(bytes)}",
                     $"{projectName} {FormatBytes(bytes)}",
                     new ImmutableSolidColorBrush(Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue))));
+            }
+
+            if (series.Count == 0)
+            {
+                StorageSeries = Array.Empty<ISeries>();
+                StorageLegend = Array.Empty<LegendItem>();
+                OnPropertyChanged(nameof(StorageSeries));
+                OnPropertyChanged(nameof(HasStorageSeries));
+                OnPropertyChanged(nameof(StorageLegend));
+                return;
             }
 
             StorageSeries = series.ToArray();
             StorageLegend = legend;
 
             OnPropertyChanged(nameof(StorageSeries));
+            OnPropertyChanged(nameof(HasStorageSeries));
             OnPropertyChanged(nameof(StorageLegend));
         }
 
@@ -1584,10 +1604,11 @@ namespace VaultSync.UI.ViewModels
             {
                 SnapshotActivitySummary = Lf(
                     "Backups.Summary.ActivityTotals",
-                    "{0} backups total - {1} auto - {2} manual",
+                    "{0} backups total - {1} auto - {2} manual - {3} imported",
                     weekTotal,
                     autoWeek,
-                    manualWeek);
+                    manualWeek,
+                    importedWeek);
             }
         }
 
@@ -1604,6 +1625,21 @@ namespace VaultSync.UI.ViewModels
                 r[i] = sum / count;
             }
             return r;
+        }
+
+        private static string TrimForTooltip(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            if (maxLength < 4 || value!.Length <= maxLength)
+            {
+                return value!;
+            }
+
+            return value!.Substring(0, maxLength - 3) + "...";
         }
 
         private static string L(string key, string fallback)
@@ -1665,7 +1701,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         // Bindables
-        public record LegendItem(string Label, IBrush Brush);
+        public record LegendItem(string Label, string Tooltip, IBrush Brush);
         public record BackupUsageSegment(string Label, double SizeBytes, IBrush Brush);
 
         public enum Dot { Green, Blue, Purple, Gray }

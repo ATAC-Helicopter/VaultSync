@@ -10,13 +10,17 @@ using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.UI.Views;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.Media;
+using Avalonia.Layout;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
@@ -28,6 +32,9 @@ namespace VaultSync.UI;
 
 public partial class App : Application
 {
+    // Test hook: keep disabled in normal builds so onboarding appears only for new installs.
+    private static bool ForceOnboardingAtStartupForTesting = false;
+
     public static bool IsShuttingDown { get; private set; }
     public static bool IsCrashing { get; private set; }
 
@@ -63,6 +70,9 @@ public partial class App : Application
     private static readonly FontFamily ArabicMacFontFamily = new(
         $"avares://VaultSync.UI/Assets/Fonts/#Noto Sans Arabic, avares://VaultSync.UI/Assets/Fonts/#Noto Sans, " +
         "Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial");
+    private static readonly TimeSpan EncryptedOpenTempRetention = TimeSpan.FromMinutes(30);
+    private const int DefaultEncryptedOpenTimeoutMinutes = 10;
+    private static int _encryptedOpenInFlight;
     private static long _uiHeartbeatTicks;
     private static int _uiHangReported;
     private static Timer? _uiWatchdogTimer;
@@ -159,6 +169,8 @@ public partial class App : Application
                     TryShowWhatsNew(desktop);
                 }
             });
+            _ = Task.Run(CleanupStaleEncryptedOpenTempFolders);
+            _ = HandleInitialActivationArgsAsync(desktop);
 
             // Small always-on-top widget that lights up for tray-started backups.
             var backupWidgetService = new BackupWidgetService(
@@ -345,7 +357,7 @@ public partial class App : Application
         };
 
         _trayMenu = new NativeMenu();
-        PopulateTrayMenu(_trayMenu, desktop);
+        PopulateTrayMenu(_trayMenu, desktop, policySummary: AppViewModelInstance?.GetBackupPolicyTraySummary());
 
         // macOS prefers the native menu; custom tray panels can fail to open.
         if (OperatingSystem.IsMacOS())
@@ -414,13 +426,17 @@ public partial class App : Application
             return false;
 
         var cfg = AppConfigStore.Load();
-        if (cfg.Advanced.HasSeenOnboarding)
+        var showForTesting = IsOnboardingAlwaysEnabledForTesting();
+        if (!showForTesting && cfg.Advanced.HasSeenOnboarding)
             return false;
 
         void Finish()
         {
             AppViewModelInstance.OnboardingTour.TourCompleted -= Finish;
-            cfg.Advanced.HasSeenOnboarding = true;
+            if (!showForTesting)
+            {
+                cfg.Advanced.HasSeenOnboarding = true;
+            }
             AppConfigStore.Save(cfg);
             TryShowWhatsNew(desktop);
         }
@@ -428,6 +444,18 @@ public partial class App : Application
         AppViewModelInstance.OnboardingTour.TourCompleted += Finish;
         AppViewModelInstance.OnboardingTour.Start();
         return true;
+    }
+
+    private static bool IsOnboardingAlwaysEnabledForTesting()
+    {
+        if (ForceOnboardingAtStartupForTesting)
+            return true;
+
+        // Optional override for local/manual testing without code changes.
+        var raw = Environment.GetEnvironmentVariable("VAULTSYNC_FORCE_ONBOARDING");
+        return string.Equals(raw, "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(raw, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<WhatsNewSection> LoadWhatsNewSections(string currentVersion)
@@ -542,7 +570,8 @@ public partial class App : Application
     private void PopulateTrayMenu(
         NativeMenu menu,
         IClassicDesktopStyleApplicationLifetime desktop,
-        IReadOnlyList<AppViewModel.TrayProjectBackups>? recentBackups = null)
+        IReadOnlyList<AppViewModel.TrayProjectBackups>? recentBackups = null,
+        string? policySummary = null)
     {
         // Build a small context menu: header / Open / Backup / Snapshot / Recent backups / Quit.
         menu.Items.Clear();
@@ -559,6 +588,10 @@ public partial class App : Application
             GetDestinationStatus(destinationSummaries, configuredDestinations);
 
         menu.Items.Add(new NativeMenuItem($"{destinationsTitle} - {destinationsStatus}") { IsEnabled = false });
+        if (!string.IsNullOrWhiteSpace(policySummary))
+        {
+            menu.Items.Add(new NativeMenuItem(policySummary) { IsEnabled = false });
+        }
         menu.Items.Add(new NativeMenuItemSeparator());
 
         var openItem = BuildOpenTrayItem(desktop);
@@ -1002,12 +1035,14 @@ public partial class App : Application
             desktop.Exit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"Desktop exit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
             };
 
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
             };
         }
@@ -1095,11 +1130,14 @@ public partial class App : Application
                                 ?? Array.Empty<AppViewModel.TrayProjectBackups>();
             var destinations = viewModel?.GetDestinationProbeSummaries()
                                ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
-            var signatureValue = BuildTrayMenuSignature(recentBackups, destinations);
-            return (Recent: recentBackups, Signature: signatureValue);
+            var policySummary = viewModel?.GetBackupPolicyTraySummary() ?? string.Empty;
+            var policySignature = viewModel?.GetBackupPolicySignatureForTray() ?? string.Empty;
+            var signatureValue = BuildTrayMenuSignature(recentBackups, destinations, policySignature, policySummary);
+            return (Recent: recentBackups, Signature: signatureValue, PolicySummary: policySummary);
         });
         var recent = trayResult.Recent;
         var signature = trayResult.Signature;
+        var policySummary = trayResult.PolicySummary;
 
         Dispatcher.UIThread.Post(() =>
         {
@@ -1111,7 +1149,7 @@ public partial class App : Application
                 }
 
                 var newMenu = new NativeMenu();
-                PopulateTrayMenu(newMenu, desktop, recent);
+                PopulateTrayMenu(newMenu, desktop, recent, policySummary);
                 _trayMenu = newMenu;
                 _trayIcon.Menu = newMenu;
                 _trayMenuSignature = signature;
@@ -1148,13 +1186,17 @@ public partial class App : Application
 
     private static string BuildTrayMenuSignature(
         IReadOnlyList<AppViewModel.TrayProjectBackups> recent,
-        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations)
+        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations,
+        string policySignature,
+        string policySummary)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append(_trayRecentLatestOnly ? "latest=1;" : "latest=0;");
         sb.Append(_cachedDriveHealthStatus).Append(';')
           .Append(_cachedDriveHealthLabel).Append(';')
-          .Append(_cachedDriveHealthIsNetwork).Append(';');
+          .Append(_cachedDriveHealthIsNetwork).Append(';')
+          .Append(policySignature ?? string.Empty).Append(';')
+          .Append(policySummary ?? string.Empty).Append(';');
 
         foreach (var dest in destinations.OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase))
         {
@@ -1200,11 +1242,479 @@ public partial class App : Application
 
     public static void ActivateMainWindowFromSignal()
     {
+        ActivateFromSignal("activate");
+    }
+
+    public static void ActivateFromSignal(string? payload)
+    {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
-        DiagnosticsLogger.Record("Activation signal received; bringing window to front.");
-        Dispatcher.UIThread.Post(() => BringMainWindowToFront(desktop));
+        var payloadKind = payload is { Length: > 0 } && payload.StartsWith("open-vse|", StringComparison.Ordinal)
+            ? "open-vse"
+            : "activate";
+        DiagnosticsLogger.Record($"Activation signal received; payloadKind='{payloadKind}'.");
+        Dispatcher.UIThread.Post(async () =>
+        {
+            BringMainWindowToFront(desktop);
+            await HandleActivationPayloadAsync(desktop, payload).ConfigureAwait(false);
+        });
+    }
+
+    private static async Task HandleInitialActivationArgsAsync(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        var args = desktop.Args ?? Array.Empty<string>();
+        if (args.Length == 0)
+            return;
+
+        var encryptedArchivePath = args.FirstOrDefault(IsEncryptedArchivePath);
+        if (string.IsNullOrWhiteSpace(encryptedArchivePath))
+            return;
+
+        await HandleEncryptedArchiveOpenRequestAsync(desktop, encryptedArchivePath).ConfigureAwait(false);
+    }
+
+    private static async Task HandleActivationPayloadAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload) || string.Equals(payload, "activate", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (!payload.StartsWith("open-vse|", StringComparison.Ordinal))
+            return;
+
+        var encodedPath = payload["open-vse|".Length..];
+        if (string.IsNullOrWhiteSpace(encodedPath))
+            return;
+
+        string archivePath;
+        try
+        {
+            archivePath = Encoding.UTF8.GetString(Convert.FromBase64String(encodedPath));
+        }
+        catch
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(archivePath))
+            await HandleEncryptedArchiveOpenRequestAsync(desktop, archivePath).ConfigureAwait(false);
+    }
+
+    private static async Task HandleEncryptedArchiveOpenRequestAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string archivePath)
+    {
+        if (Interlocked.Exchange(ref _encryptedOpenInFlight, 1) == 1)
+            return;
+
+        try
+        {
+        if (!File.Exists(archivePath))
+        {
+            await ShowInfoDialogAsync(
+                desktop,
+                L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                Lf("Backups.OpenEncrypted.MissingFile", "The selected encrypted backup was not found: {0}", archivePath))
+                .ConfigureAwait(false);
+            return;
+        }
+
+        while (true)
+        {
+            var prompt = await PromptEncryptedArchivePasswordAsync(desktop, archivePath).ConfigureAwait(false);
+            if (!prompt.Confirmed)
+                return;
+
+            if (string.IsNullOrWhiteSpace(prompt.Password))
+            {
+                await ShowInfoDialogAsync(
+                    desktop,
+                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."))
+                    .ConfigureAwait(false);
+                continue;
+            }
+
+            try
+            {
+                var extractedDir = await Task.Run(() => ExtractEncryptedArchive(archivePath, prompt.Password)).ConfigureAwait(false);
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = extractedDir,
+                    UseShellExecute = true
+                });
+                ScheduleEncryptedOpenTempCleanup(extractedDir);
+                return;
+            }
+            catch (Exception ex) when (string.Equals(ex.Message, BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, StringComparison.Ordinal))
+            {
+                await ShowInfoDialogAsync(
+                    desktop,
+                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted."))
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await ShowInfoDialogAsync(
+                    desktop,
+                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    ex.Message)
+                    .ConfigureAwait(false);
+                return;
+            }
+        }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _encryptedOpenInFlight, 0);
+        }
+    }
+
+    private static async Task<(bool Confirmed, string Password)> PromptEncryptedArchivePasswordAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string archivePath)
+    {
+        var owner = desktop.MainWindow;
+        if (owner is null)
+            return (false, string.Empty);
+
+        var tcs = new TaskCompletionSource<(bool Confirmed, string Password)>();
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var title = new TextBlock
+            {
+                Text = L("Backups.Restore.EncryptedPasswordTitle", "Encrypted backup password"),
+                FontSize = 18,
+                FontWeight = FontWeight.SemiBold
+            };
+
+            var prompt = new TextBlock
+            {
+                Text = Lf("Backups.OpenEncrypted.PasswordPrompt", "Enter the password to open '{0}'.", Path.GetFileName(archivePath)),
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            var passwordLabel = new TextBlock
+            {
+                Text = L("Backups.Restore.EncryptedPasswordLabel", "Password"),
+                FontWeight = FontWeight.SemiBold,
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+
+            var passwordBox = new TextBox
+            {
+                Width = 320,
+                PasswordChar = '●'
+            };
+
+            var buttonRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Spacing = 10
+            };
+
+            var cancelButton = new Button
+            {
+                Content = L("Common.Cancel", "Cancel"),
+                MinWidth = 120
+            };
+            cancelButton.Classes.Add("action-ghost");
+
+            var openButton = new Button
+            {
+                Content = L("Common.Open", "Open"),
+                MinWidth = 140
+            };
+            openButton.Classes.Add("action-primary");
+
+            Window? window = null;
+            var confirmed = false;
+            cancelButton.Click += (_, _) => window?.Close();
+            openButton.Click += (_, _) =>
+            {
+                confirmed = true;
+                window?.Close();
+            };
+
+            buttonRow.Children.Add(cancelButton);
+            buttonRow.Children.Add(openButton);
+
+            var content = new StackPanel { Spacing = 10 };
+            content.Children.Add(title);
+            content.Children.Add(prompt);
+            content.Children.Add(passwordLabel);
+            content.Children.Add(passwordBox);
+            content.Children.Add(buttonRow);
+
+            var card = new Border
+            {
+                Padding = new Thickness(18),
+                Margin = new Thickness(16)
+            };
+            card.Classes.Add("card");
+            card.Child = content;
+
+            window = new Window
+            {
+                Title = L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                Content = card,
+                CanResize = false,
+                Width = 540,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Icon = owner.Icon
+            };
+
+            await window.ShowDialog(owner);
+            tcs.TrySetResult((confirmed, passwordBox.Text ?? string.Empty));
+        });
+
+        return await tcs.Task.ConfigureAwait(false);
+    }
+
+    private static async Task ShowInfoDialogAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string title,
+        string message)
+    {
+        var owner = desktop.MainWindow;
+        if (owner is null)
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var messageBlock = new TextBlock
+            {
+                Text = message,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+
+            var okButton = new Button
+            {
+                Content = L("Common.Ok", "OK"),
+                MinWidth = 120,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            okButton.Classes.Add("action-primary");
+
+            Window? window = null;
+            okButton.Click += (_, _) => window?.Close();
+
+            var stack = new StackPanel { Spacing = 10 };
+            stack.Children.Add(messageBlock);
+            stack.Children.Add(okButton);
+
+            var card = new Border
+            {
+                Padding = new Thickness(18),
+                Margin = new Thickness(16)
+            };
+            card.Classes.Add("card");
+            card.Child = stack;
+
+            window = new Window
+            {
+                Title = title,
+                Content = card,
+                CanResize = false,
+                Width = 520,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Icon = owner.Icon
+            };
+
+            await window.ShowDialog(owner);
+        });
+    }
+
+    private static string ExtractEncryptedArchive(string archivePath, string password)
+    {
+        var sourceArchivePath = archivePath;
+        var sourceDir = Path.GetDirectoryName(archivePath);
+        if (string.IsNullOrWhiteSpace(sourceDir))
+            throw new InvalidOperationException("Unable to resolve archive source directory.");
+
+        string? copiedSourceRoot = null;
+        if (!string.Equals(Path.GetFileName(archivePath), BackupArchiveCryptoService.EncryptedArchiveFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            copiedSourceRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-open-src-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(copiedSourceRoot);
+            var copiedSourcePath = Path.Combine(copiedSourceRoot, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            File.Copy(archivePath, copiedSourcePath, overwrite: true);
+            sourceArchivePath = copiedSourcePath;
+            sourceDir = copiedSourceRoot;
+        }
+
+        var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-open-{Guid.NewGuid():N}");
+        var stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
+        var extractDir = Path.Combine(stagingRoot, "content");
+
+        try
+        {
+            Directory.CreateDirectory(extractDir);
+            if (!File.Exists(sourceArchivePath))
+                throw new FileNotFoundException("Encrypted backup archive not found.", sourceArchivePath);
+
+            var cryptoService = new BackupArchiveCryptoService();
+            cryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
+            ZipFile.ExtractToDirectory(stagingArchive, extractDir, overwriteFiles: true);
+            return extractDir;
+        }
+        catch
+        {
+            if (Directory.Exists(stagingRoot))
+            {
+                try { Directory.Delete(stagingRoot, recursive: true); }
+                catch { }
+            }
+            throw;
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(copiedSourceRoot) && Directory.Exists(copiedSourceRoot))
+            {
+                try { Directory.Delete(copiedSourceRoot, recursive: true); }
+                catch { }
+            }
+        }
+    }
+
+    private static void CleanupStaleEncryptedOpenTempFolders()
+    {
+        try
+        {
+            var tempRoot = Path.GetTempPath();
+            var now = DateTime.UtcNow;
+            var dirs = Directory.GetDirectories(tempRoot, "vaultsync-open-*", SearchOption.TopDirectoryOnly);
+            foreach (var dir in dirs)
+            {
+                try
+                {
+                    var createdUtc = Directory.GetCreationTimeUtc(dir);
+                    var modifiedUtc = Directory.GetLastWriteTimeUtc(dir);
+                    var referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
+                    if ((now - referenceUtc) < EncryptedOpenTempRetention)
+                        continue;
+
+                    Directory.Delete(dir, recursive: true);
+                }
+                catch
+                {
+                    // Best effort cleanup; skip locked folders.
+                }
+            }
+        }
+        catch
+        {
+            // Best effort cleanup only.
+        }
+    }
+
+    private static void CleanupAllEncryptedOpenTempFolders()
+    {
+        try
+        {
+            var tempRoot = Path.GetTempPath();
+            var dirs = Directory.GetDirectories(tempRoot, "vaultsync-open-*", SearchOption.TopDirectoryOnly);
+            foreach (var dir in dirs)
+            {
+                try
+                {
+                    Directory.Delete(dir, recursive: true);
+                }
+                catch
+                {
+                    // Best effort cleanup; skip locked folders.
+                }
+            }
+        }
+        catch
+        {
+            // Best effort cleanup only.
+        }
+    }
+
+    private static void ScheduleEncryptedOpenTempCleanup(string extractedDir)
+    {
+        var stagingRoot = ResolveEncryptedOpenStagingRoot(extractedDir);
+        if (string.IsNullOrWhiteSpace(stagingRoot))
+            return;
+        var delay = GetEncryptedOpenAutoCleanupDelay();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(delay).ConfigureAwait(false);
+                if (Directory.Exists(stagingRoot))
+                    Directory.Delete(stagingRoot, recursive: true);
+            }
+            catch
+            {
+                // Best effort cleanup only.
+            }
+        });
+    }
+
+    private static string? ResolveEncryptedOpenStagingRoot(string extractedDir)
+    {
+        if (string.IsNullOrWhiteSpace(extractedDir))
+            return null;
+
+        try
+        {
+            var full = Path.GetFullPath(extractedDir);
+            var tempRoot = Path.GetFullPath(Path.GetTempPath());
+            if (!full.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var current = new DirectoryInfo(full);
+            while (current is not null)
+            {
+                if (current.Name.StartsWith("vaultsync-open-", StringComparison.OrdinalIgnoreCase))
+                    return current.FullName;
+                current = current.Parent;
+            }
+        }
+        catch
+        {
+            // Best effort path validation.
+        }
+
+        return null;
+    }
+
+    private static TimeSpan GetEncryptedOpenAutoCleanupDelay()
+    {
+        try
+        {
+            var cfg = AppConfigStore.Load();
+            var minutes = Math.Clamp(
+                cfg?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes,
+                1,
+                240);
+            return TimeSpan.FromMinutes(minutes);
+        }
+        catch
+        {
+            return TimeSpan.FromMinutes(DefaultEncryptedOpenTimeoutMinutes);
+        }
+    }
+
+    private static bool IsEncryptedArchivePath(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        if (value.StartsWith("-", StringComparison.Ordinal))
+            return false;
+
+        return value.EndsWith(".vse", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void BringMainWindowToFront(IClassicDesktopStyleApplicationLifetime desktop)

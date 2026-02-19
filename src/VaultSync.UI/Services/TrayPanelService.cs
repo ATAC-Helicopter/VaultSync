@@ -178,28 +178,40 @@ public sealed class TrayPanelService : IDisposable
             }
         }
 
-        var summaryText = BuildDestinationSummary(items);
+        var summaryText = BuildDestinationSummary(items, appVm.GetBackupPolicyTraySummary());
         viewModel.LoadDestinations(items, summaryText);
     }
 
-    private static string BuildDestinationSummary(IReadOnlyCollection<TrayPanelViewModel.TrayDestinationItem> items)
+    private static string BuildDestinationSummary(
+        IReadOnlyCollection<TrayPanelViewModel.TrayDestinationItem> items,
+        string policySummary)
     {
+        var baseSummary = string.Empty;
         if (items.Count == 0)
         {
-            return LocalizationProvider.Service?.GetString("Tray.Destinations.None")
+            baseSummary = LocalizationProvider.Service?.GetString("Tray.Destinations.None")
                    ?? "No destinations configured";
         }
-
-        var reachable = items.Count(i => i.Reachable);
-        if (reachable == items.Count)
+        else
         {
-            return LocalizationProvider.Service?.GetString("Tray.Destinations.Ready")
-                   ?? "Ready";
+            var reachable = items.Count(i => i.Reachable);
+            if (reachable == items.Count)
+            {
+                baseSummary = LocalizationProvider.Service?.GetString("Tray.Destinations.Ready")
+                       ?? "Ready";
+            }
+            else
+            {
+                var status = LocalizationProvider.Service?.GetString("Tray.Destinations.Unreachable")
+                         ?? "Unreachable";
+                baseSummary = $"{reachable}/{items.Count} {status}";
+            }
         }
 
-        var status = LocalizationProvider.Service?.GetString("Tray.Destinations.Unreachable")
-                     ?? "Unreachable";
-        return $"{reachable}/{items.Count} {status}";
+        if (string.IsNullOrWhiteSpace(policySummary))
+            return baseSummary;
+
+        return $"{baseSummary} - {policySummary}";
     }
 
     private void LoadRecentBackups(TrayPanelViewModel viewModel, AppViewModel appVm)

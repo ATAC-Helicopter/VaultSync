@@ -21,7 +21,6 @@ public partial class OnboardingTourOverlay : UserControl
     private bool _isScrolling;
     private bool _hasScrolledForTarget;
     private string _currentTargetName = string.Empty;
-    private Vector _lastScrollOffset;
 
     public OnboardingTourOverlay()
     {
@@ -208,7 +207,7 @@ public partial class OnboardingTourOverlay : UserControl
         if (_target is null)
             return;
 
-        var scrollViewer = _target.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
+        var scrollViewer = ResolveScrollViewerForTarget(_target);
         if (scrollViewer is null || scrollViewer.Bounds.Height <= 0)
             return;
 
@@ -237,19 +236,9 @@ public partial class OnboardingTourOverlay : UserControl
             return;
         }
 
-        if (_hasScrolledForTarget && (now - _lastScrollAt).TotalMilliseconds < 2000)
-            return;
-
         var desiredY = ComputeTargetScrollY(scrollViewer, targetRect);
         var maxY = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
         var targetY = Math.Clamp(desiredY, 0, maxY);
-
-        if (_hasScrolledForTarget)
-        {
-            var offsetDelta = Math.Abs(scrollViewer.Offset.Y - _lastScrollOffset.Y);
-            if (offsetDelta > 2)
-                return;
-        }
 
         if (Math.Abs(targetY - scrollViewer.Offset.Y) < 1)
         {
@@ -257,10 +246,15 @@ public partial class OnboardingTourOverlay : UserControl
             return;
         }
 
+        if (_hasScrolledForTarget && viewportSafe.Contains(targetRect) && centerDelta < 36)
+        {
+            return;
+        }
+
         var targetName = _target.Name ?? string.Empty;
         if (string.Equals(targetName, _lastScrollTarget, StringComparison.Ordinal) &&
             !double.IsNaN(_lastScrollY) &&
-            Math.Abs(_lastScrollY - targetY) < 8)
+            Math.Abs(_lastScrollY - targetY) < 4)
         {
             return;
         }
@@ -268,11 +262,29 @@ public partial class OnboardingTourOverlay : UserControl
         _lastScrollAt = now;
         _lastScrollTarget = targetName;
         _lastScrollY = targetY;
-        _hasScrolledForTarget = true;
-        _lastScrollOffset = scrollViewer.Offset;
         _scrollCts?.Cancel();
         _scrollCts = new CancellationTokenSource();
         _ = AnimateScrollAsync(scrollViewer, targetY, _scrollCts.Token);
+    }
+
+    private static ScrollViewer? ResolveScrollViewerForTarget(Control target)
+    {
+        var candidates = target.GetVisualAncestors()
+            .OfType<ScrollViewer>()
+            .ToList();
+
+        if (candidates.Count == 0)
+            return null;
+
+        var scrollable = candidates
+            .Where(s => s.Extent.Height > (s.Viewport.Height + 1))
+            .ToList();
+
+        if (scrollable.Count == 0)
+            return candidates.LastOrDefault();
+
+        // Prefer the outermost scroll host so the highlighted area centers in the page.
+        return scrollable.LastOrDefault();
     }
 
     private static double ComputeTargetScrollY(ScrollViewer scrollViewer, Rect targetRect)
@@ -286,10 +298,13 @@ public partial class OnboardingTourOverlay : UserControl
 
         if (targetRect.Height >= safeHeight && safeHeight > 0)
         {
-            return targetRect.Top - safeMargin;
+            return scrollViewer.Offset.Y + targetRect.Top - safeMargin;
         }
 
-        return targetRect.Top + (targetRect.Height / 2) - (viewportHeight / 2);
+        var targetCenterInViewport = targetRect.Top + (targetRect.Height / 2);
+        var viewportCenter = viewportHeight / 2;
+        var deltaToCenter = targetCenterInViewport - viewportCenter;
+        return scrollViewer.Offset.Y + deltaToCenter;
     }
 
     private async Task AnimateScrollAsync(ScrollViewer scrollViewer, double targetY, CancellationToken token)
@@ -318,6 +333,12 @@ public partial class OnboardingTourOverlay : UserControl
                 var y = startY + (delta * eased);
                 scrollViewer.Offset = new Vector(start.X, y);
                 await Task.Delay(delayMs, token);
+            }
+
+            if (!token.IsCancellationRequested)
+            {
+                scrollViewer.Offset = new Vector(start.X, targetY);
+                _hasScrolledForTarget = true;
             }
         }
         finally

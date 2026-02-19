@@ -1,0 +1,22 @@
+# Build outputs
+bin/
+obj/
+dist/
+build/
+
+# Dependency/cache folders
+node_modules/
+.cache/
+
+# Repo/runtime artifacts
+.git/
+.vs/
+.vscode/
+.safety/
+
+# Generated/packaged outputs
+*.nupkg
+*.snupkg
+*.zip
+*.tar
+*.gz

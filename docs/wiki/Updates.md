@@ -2,11 +2,11 @@
 
 VaultSync supports patch updates and full installer updates for macOS, Windows, and Linux.
 
-## 1.4.1 highlights
-- Destination status cards now appear in the sidebar and Backups page.
-- Backup delete can prompt for credentials when NAS permissions block removal.
-- Metadata import now cleans up missing backups and orphan snapshots.
-- Snapshot trend labels collapse by day for cleaner timelines.
+## 1.5.0 highlights
+- Backup encryption with global and per-project policy controls is now available.
+- Backup bandwidth limits and quiet-hours scheduling were added.
+- Backup history now shows `Full` / `Incremental` / `Imported` labels and retention outcomes.
+- Snapshot diff summaries now include preview and export actions.
 
 ## Patch updates
 - Smaller and faster when available.

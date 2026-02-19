@@ -175,13 +175,18 @@
 
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
                     <!-- Name + last snapshot short + size + avatar -->
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="Auto,*,Auto,Auto"
+                          ColumnSpacing="8"
+                          MinHeight="40"
+                          VerticalAlignment="Center">
                       <Grid Grid.Column="0"
                             Width="36"
                             Height="36"
                             Margin="0,0,4,0"
+                            VerticalAlignment="Center"
                             IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <Border CornerRadius="18" Background="{Binding AvatarColor}"/>
                         <Image Source="{Binding AvatarImagePath}"
@@ -202,6 +207,7 @@
                         Text="{Binding Name}"
                         FontSize="{DynamicResource SectionHeaderFontSize}"
                         FontWeight="Bold"
+                        VerticalAlignment="Center"
                         Foreground="{DynamicResource TextPrimaryBrush}"
                         TextWrapping="NoWrap"
                         TextTrimming="CharacterEllipsis" />
@@ -242,9 +248,30 @@
                       <Run Text="{Binding PreferredDestinationDisplay}" />
                     </TextBlock>
 
+                    <StackPanel Grid.Row="3"
+                                Grid.ColumnSpan="2"
+                                Margin="0,4,0,0"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{infra:LocalizedString Key=Projects.List.EncryptionPrefix}"
+                                 Foreground="{DynamicResource TextMutedBrush}"
+                                 FontSize="{DynamicResource PageSubtitleFontSize}" />
+                      <Border CornerRadius="999"
+                              Padding="8,2"
+                              Background="{Binding EncryptionBadgeBackground}">
+                        <TextBlock Text="{Binding EncryptionBadgeText}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding EncryptionBadgeForeground}"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis" />
+                      </Border>
+                    </StackPanel>
+
                     <!-- Health pill bar -->
                     <Border
-                      Grid.Row="3"
+                      Grid.Row="4"
                       Grid.ColumnSpan="2"
                       Margin="0,10,0,0"
                       CornerRadius="999"
@@ -256,7 +283,7 @@
                         Text="{Binding HealthTag}"
                         FontSize="11"
                         FontWeight="SemiBold"
-                        Foreground="{DynamicResource TextOnPillBrush}" />
+                        Foreground="{Binding HealthForeground}" />
                     </Border>
                   </Grid>
                 </DataTemplate>
@@ -275,7 +302,7 @@
               DataContext="{Binding SelectedItem, ElementName=ProjectList}">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="16">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
           <!-- Header: avatar + name + path -->
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <Grid Width="48"
@@ -298,7 +325,7 @@
                          Foreground="White"/>
             </Grid>
 
-            <StackPanel Grid.Column="1">
+            <StackPanel Grid.Column="1" Spacing="6">
               <TextBlock
                 Text="{Binding Name}"
                 FontSize="{DynamicResource PageTitleFontSize}"
@@ -307,7 +334,6 @@
                 TextWrapping="NoWrap"
                 TextTrimming="CharacterEllipsis" />
                   <TextBlock
-                    Margin="0,4,0,0"
                     FontSize="12"
                     Foreground="{DynamicResource TextMutedBrush}"
                     TextWrapping="NoWrap"
@@ -316,48 +342,64 @@
                     <Run Text=" " />
                     <Run Text="{Binding Path}" />
                   </TextBlock>
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Classes="stat-pill sm info"
+                            ToolTip.Tip="{infra:LocalizedString Key=Projects.Stat.LastSnapshotLabel}">
+                      <TextBlock Text="{Binding LastSnapshotSummary}"
+                                 FontSize="11"
+                                 TextTrimming="CharacterEllipsis"
+                                 MaxWidth="220" />
+                    </Border>
+                    <Border Classes="stat-pill sm info"
+                            ToolTip.Tip="{infra:LocalizedString Key=Projects.Stat.ProjectSize}">
+                      <TextBlock Text="{Binding SizeDisplay}"
+                                 FontSize="11" />
+                    </Border>
+                  </StackPanel>
             </StackPanel>
           </Grid>
 
           <!-- Actions: open folder + snapshot -->
 
-          <StackPanel Grid.Row="1"
-                      Orientation="Horizontal"
-                      HorizontalAlignment="Left"
-                      Spacing="8">
-            <Button Padding="{DynamicResource ButtonPillPadding}"
-                    CornerRadius="999"
-                    Background="{DynamicResource InputBackgroundBrush}"
-                    Foreground="{DynamicResource TextPrimaryBrush}"
+          <WrapPanel Grid.Row="1"
+                     ItemSpacing="8"
+                     LineSpacing="8"
+                     HorizontalAlignment="Left">
+            <Button Classes="action-ghost"
+                    Padding="14,8"
+                    CornerRadius="10"
                     Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}">
               <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.OpenFolder}" />
             </Button>
             <Button x:Name="ProjectSnapshotButton"
-                    Padding="{DynamicResource ButtonPillPadding}"
-                    CornerRadius="999"
-                    Background="{DynamicResource AccentBrush}"
-                    Foreground="{DynamicResource ButtonForegroundBrush}"
+                    Classes="action-primary"
+                    Padding="14,8"
+                    CornerRadius="10"
                     Command="{Binding DataContext.TakeSnapshotCommand, ElementName=Root}"
                     Content="{Binding DataContext.SnapshotActionLabel, ElementName=Root}" />
-            <Button Padding="{DynamicResource ButtonPillPadding}"
+            <Button
+                    Classes="action-ghost action-danger"
+                    Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
-                    Background="{DynamicResource InputBackgroundBrush}"
-                    Foreground="{DynamicResource TextPrimaryBrush}"
                     Command="{Binding DataContext.RemoveProjectCommand, ElementName=Root}">
               <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.RemoveProject}" />
             </Button>
-          </StackPanel>
+          </WrapPanel>
 
-          <!-- Stat badges row -->
-          <WrapPanel Grid.Row="2"
-                     Orientation="Horizontal"
-                     ItemWidth="220"
-                     ItemHeight="78">
+          <!-- Project controls + key stats -->
+          <Grid Grid.Row="2"
+                ColumnDefinitions="*,*,*,*"
+                RowDefinitions="Auto"
+                ColumnSpacing="12"
+                RowSpacing="12">
             <!-- Preset -->
-            <Border CornerRadius="14"
+            <Border x:Name="ProjectEncryptionCard"
+                    Grid.Column="0"
+                    Grid.Row="0"
+                    CornerRadius="14"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
+                    Margin="0">
               <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
@@ -376,9 +418,11 @@
 
             <!-- Destination -->
             <Border CornerRadius="14"
+                    Grid.Column="1"
+                    Grid.Row="0"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
+                    Margin="0">
               <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
                            FontSize="11"
@@ -401,11 +445,76 @@
               </Grid>
             </Border>
 
-            <!-- Health -->
+            <!-- Encryption policy -->
             <Border CornerRadius="14"
+                    Grid.Column="2"
+                    Grid.Row="0"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
+                    Margin="0">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" />
+                <ComboBox x:Name="ProjectEncryptionPolicyCombo"
+                    Grid.Row="1"
+                    Classes="preset-combo"
+                    ItemsSource="{Binding DataContext.EncryptionPolicyOptions, ElementName=Root}"
+                    SelectedItem="{Binding EncryptionPolicyOption, Mode=TwoWay}"
+                    HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <WrapPanel Grid.Row="2"
+                           Orientation="Horizontal"
+                           ItemSpacing="8"
+                           VerticalAlignment="Center">
+                  <TextBlock Text="{Binding EffectiveEncryptionDisplay}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}"
+                             TextWrapping="NoWrap"
+                             TextTrimming="CharacterEllipsis" />
+                  <Border CornerRadius="999"
+                          Padding="8,2"
+                          Background="{Binding EncryptionBadgeBackground}">
+                    <TextBlock Text="{Binding EncryptionBadgeText}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{Binding EncryptionBadgeForeground}"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis" />
+                  </Border>
+                </WrapPanel>
+                <Button x:Name="ProjectEncryptionPasswordButton"
+                        Grid.Row="3"
+                        Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
+                        Classes="action-ghost"
+                        Padding="10,4"
+                        HorizontalAlignment="Left"
+                        Command="{Binding DataContext.ManageProjectEncryptionCommand, ElementName=Root}"
+                        CommandParameter="{Binding}" />
+                <TextBlock Grid.Row="4"
+                           Text="{Binding EncryptionSecretStatus}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           TextTrimming="CharacterEllipsis" />
+              </Grid>
+            </Border>
+
+            <!-- Health -->
+            <Border CornerRadius="14"
+                    Grid.Column="3"
+                    Grid.Row="0"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    Padding="{DynamicResource CardPaddingSmall}"
+                    Margin="0">
               <StackPanel Spacing="4">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectHealth}"
                            FontSize="11"
@@ -418,7 +527,7 @@
                   <TextBlock Text="{Binding HealthTag}"
                              FontSize="12"
                              FontWeight="SemiBold"
-                             Foreground="{DynamicResource TextOnPillBrush}"
+                             Foreground="{Binding HealthForeground}"
                              HorizontalAlignment="Center"
                              TextWrapping="NoWrap"
                              TextTrimming="CharacterEllipsis" />
@@ -426,48 +535,11 @@
               </StackPanel>
             </Border>
 
-            <!-- Last snapshot -->
-            <Border CornerRadius="14"
-                    Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
-              <StackPanel Spacing="2">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.LastSnapshotLabel}"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           TextTrimming="None" />
-                <TextBlock Text="{Binding LastSnapshotSummary}"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-            </Border>
-
-            <!-- Size -->
-            <Border CornerRadius="14"
-                    Background="{DynamicResource CardBackgroundBrush}"
-                    Padding="{DynamicResource CardPaddingSmall}"
-                    Margin="0,0,12,12">
-              <StackPanel Spacing="2">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.ProjectSize}"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           TextTrimming="None" />
-                <TextBlock Text="{Binding SizeDisplay}"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}" />
-              </StackPanel>
-            </Border>
-          </WrapPanel>
+          </Grid>
 
           <!-- Stats card -->
-          <Border Grid.Row="3"
-                  Margin="0,4,0,0"
+          <Border Grid.Row="2"
+                  Margin="0,2,0,0"
                   CornerRadius="18"
                   Background="{DynamicResource CardBackgroundBrush}"
                   Padding="{DynamicResource CardPaddingMedium}">
@@ -480,7 +552,8 @@
                     ColumnSpacing="12">
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
-                        Padding="{DynamicResource CardPaddingSmall}">
+                        Padding="{DynamicResource CardPaddingSmall}"
+                        MinHeight="64">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TotalSnapshots}"
                                FontSize="11"
@@ -497,6 +570,7 @@
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
                         Padding="{DynamicResource CardPaddingSmall}"
+                        MinHeight="64"
                         Grid.Column="1">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotStorage}"
@@ -514,6 +588,7 @@
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
                         Padding="{DynamicResource CardPaddingSmall}"
+                        MinHeight="64"
                         Grid.Column="2">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.AverageSnapshot}"
@@ -531,6 +606,7 @@
                 <Border CornerRadius="10"
                         Background="{DynamicResource CardRaisedBackgroundBrush}"
                         Padding="{DynamicResource CardPaddingSmall}"
+                        MinHeight="64"
                         Grid.Column="3">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.TimeSinceLast}"
@@ -685,19 +761,25 @@
                                   Background="{DynamicResource CardBackgroundBrush}"
                                   Margin="0,4,0,0"
                                   Padding="{DynamicResource CardPaddingSmall}">
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                              <Border Width="6"
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  RowDefinitions="Auto,Auto,Auto"
+                                  ColumnSpacing="10"
+                                  RowSpacing="4">
+                              <Border Grid.RowSpan="3"
+                                      Width="6"
                                       CornerRadius="3"
                                       Background="{DynamicResource AccentBrush}"
                                       Opacity="0.6" />
                               <TextBlock
+                                Grid.Row="0"
                                 Grid.Column="1"
                                 Text="{Binding DateDisplay}"
                                 FontSize="12"
                                 Foreground="{DynamicResource TextSecondaryBrush}"
                                 TextTrimming="CharacterEllipsis"
                                 TextWrapping="NoWrap" />
-                              <Border Grid.Column="2"
+                              <Border Grid.Row="0"
+                                      Grid.Column="2"
                                       CornerRadius="999"
                                       Background="{DynamicResource InputBackgroundBrush}"
                                       Padding="{DynamicResource StatPillPadding}">
@@ -709,6 +791,25 @@
                                   TextTrimming="CharacterEllipsis"
                                   TextWrapping="NoWrap" />
                               </Border>
+                              <TextBlock Grid.Row="1"
+                                         Grid.Column="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding DiffSummaryDisplay}"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                         TextWrapping="Wrap"
+                                         TextTrimming="CharacterEllipsis"
+                                         MaxLines="2" />
+                              <TextBlock Grid.Row="2"
+                                         Grid.Column="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding DiffTopPathsDisplay}"
+                                         FontSize="10"
+                                         Foreground="{DynamicResource TextMutedBrush}"
+                                         TextWrapping="Wrap"
+                                         TextTrimming="CharacterEllipsis"
+                                         MaxLines="2"
+                                         IsVisible="{Binding HasDiffTopPaths}" />
                             </Grid>
                           </Border>
                         </DataTemplate>

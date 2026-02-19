@@ -14,6 +14,11 @@ public record Backup
     public string Type      { get; init; } = string.Empty;
 
     /// <summary>
+    /// Backup data mode: "full" or "incremental".
+    /// </summary>
+    public string BackupMode { get; init; } = BackupModes.Full;
+
+    /// <summary>
     /// Size of the backup archive on disk (folder or zip), in bytes.
     /// </summary>
     public long TotalBytes  { get; init; }
@@ -32,6 +37,16 @@ public record Backup
     /// When true, this backup was imported from another machine.
     /// </summary>
     public bool IsImported { get; init; }
+
+    /// <summary>
+    /// When true, backup payload was written as encrypted artifact.
+    /// </summary>
+    public bool IsEncrypted { get; init; }
+
+    /// <summary>
+    /// Non-secret crypto descriptor JSON for metadata sync/export.
+    /// </summary>
+    public string CryptoDescriptorJson { get; init; } = BackupCryptoDescriptor.PlainMetadataJson;
 
     /// <summary>
     /// Absolute path to the destination root that stored this backup.

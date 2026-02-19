@@ -122,6 +122,20 @@
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                IsVisible="{Binding HasDestinationDisplay}" />
+                    <Border Background="{DynamicResource Surface2}"
+                            BorderBrush="{DynamicResource BorderSoft}"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="8,2"
+                            HorizontalAlignment="Left"
+                            IsVisible="{Binding HasPolicyText}">
+                      <TextBlock Text="{Binding PolicyText}"
+                                 FontSize="10"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 TextTrimming="CharacterEllipsis"
+                                 MaxWidth="220" />
+                    </Border>
 
         <ProgressBar Height="5"
                      CornerRadius="3"

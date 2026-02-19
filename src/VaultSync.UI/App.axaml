@@ -137,6 +137,7 @@
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinHeight" Value="34" />
             <Setter Property="MinWidth" Value="0" />
         </Style>
         <Style Selector="Button.action-ghost:pointerover">
@@ -155,6 +156,7 @@
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinHeight" Value="34" />
             <Setter Property="MinWidth" Value="0" />
         </Style>
         <Style Selector="Button.action-primary:pointerover">
@@ -163,6 +165,121 @@
         </Style>
         <Style Selector="Button.action-primary:pressed">
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        </Style>
+        <Style Selector="Button.action-danger">
+            <Setter Property="Background" Value="#4A2B2B" />
+            <Setter Property="BorderBrush" Value="#8E4B4B" />
+            <Setter Property="Foreground" Value="#F4D9D9" />
+        </Style>
+        <Style Selector="Button.action-danger:pointerover">
+            <Setter Property="Background" Value="#5A3333" />
+        </Style>
+
+        <!-- Shared pills/tags -->
+        <Style Selector="Border.stat-pill">
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="{DynamicResource StatPillPadding}" />
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="MaxWidth" Value="280" />
+        </Style>
+        <Style Selector="Border.stat-pill.sm">
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="MinHeight" Value="22" />
+        </Style>
+        <Style Selector="Border.stat-pill.md">
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="MinHeight" Value="28" />
+        </Style>
+        <Style Selector="Border.stat-pill.info">
+            <Setter Property="Background" Value="#1F3559" />
+            <Setter Property="BorderBrush" Value="#345F96" />
+        </Style>
+        <Style Selector="Border.stat-pill.success">
+            <Setter Property="Background" Value="#1E4C3D" />
+            <Setter Property="BorderBrush" Value="#2F8D70" />
+        </Style>
+        <Style Selector="Border.stat-pill.warning">
+            <Setter Property="Background" Value="#5C4420" />
+            <Setter Property="BorderBrush" Value="#B98833" />
+        </Style>
+        <Style Selector="Border.stat-pill.danger">
+            <Setter Property="Background" Value="#5A2A2A" />
+            <Setter Property="BorderBrush" Value="#A54A4A" />
+        </Style>
+        <Style Selector="Border.stat-pill TextBlock">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+        </Style>
+
+        <Style Selector="Border.backup-tag">
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="{DynamicResource BackupTagPadding}" />
+            <Setter Property="Margin" Value="{DynamicResource BackupTagMargin}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="MaxWidth" Value="280" />
+        </Style>
+        <Style Selector="Border.backup-tag.sm">
+            <Setter Property="Padding" Value="8,2" />
+        </Style>
+        <Style Selector="Border.backup-tag.md">
+            <Setter Property="Padding" Value="10,4" />
+        </Style>
+        <Style Selector="Border.backup-tag.info">
+            <Setter Property="Background" Value="#1F3559" />
+            <Setter Property="BorderBrush" Value="#345F96" />
+        </Style>
+        <Style Selector="Border.backup-tag.success">
+            <Setter Property="Background" Value="#1E4C3D" />
+            <Setter Property="BorderBrush" Value="#2F8D70" />
+        </Style>
+        <Style Selector="Border.backup-tag.warning">
+            <Setter Property="Background" Value="#5C4420" />
+            <Setter Property="BorderBrush" Value="#B98833" />
+        </Style>
+        <Style Selector="Border.backup-tag.danger">
+            <Setter Property="Background" Value="#5A2A2A" />
+            <Setter Property="BorderBrush" Value="#A54A4A" />
+        </Style>
+        <Style Selector="Border.backup-tag TextBlock">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+        </Style>
+
+        <Style Selector="Button.small-pill, ToggleButton.small-pill">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="{DynamicResource SmallPillPadding}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+        <Style Selector="Button.small-pill:pointerover, ToggleButton.small-pill:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
+        <Style Selector="Button.small-pill:pressed, ToggleButton.small-pill:pressed">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
+        <Style Selector="ToggleButton.small-pill:checked">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="TextBlock.pill-icon">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Opacity" Value="0.9" />
         </Style>
 
         <!-- Shell brand banner -->

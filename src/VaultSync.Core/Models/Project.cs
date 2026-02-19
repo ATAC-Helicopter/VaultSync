@@ -11,4 +11,6 @@ public record Project
     public DateTime CreatedUtc { get; init; } = DateTime.UtcNow;
     public bool NeedsRestore { get; init; }
     public string? PreferredDestinationId { get; init; }
+    public string EncryptionPolicy { get; init; } = ProjectEncryptionPolicy.Inherit;
+    public string? EncryptionKeyRef { get; init; }
 }

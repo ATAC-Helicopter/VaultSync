@@ -214,10 +214,14 @@ public sealed class MetadataSyncService
             if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
                 continue;
 
+            var parsedSettings = ParseProjectSettings(metaProject.SettingsJson);
             TryApplyProjectColor(metaProject);
 
-            if (projectMap.ContainsKey(metaProject.ExternalId))
+            if (projectMap.TryGetValue(metaProject.ExternalId, out var mappedProjectId))
+            {
+                ApplyImportedProjectSecuritySettings(mappedProjectId, parsedSettings);
                 continue;
+            }
 
             var existingByName = localProjects.FirstOrDefault(p =>
                 string.Equals(p.Name, metaProject.Name, StringComparison.OrdinalIgnoreCase));
@@ -229,6 +233,7 @@ public sealed class MetadataSyncService
                     _repo.UpdateProjectExternalId(existingByName.Id, metaProject.ExternalId);
                 }
 
+                ApplyImportedProjectSecuritySettings(existingByName.Id, parsedSettings);
                 projectMap[metaProject.ExternalId] = existingByName.Id;
                 continue;
             }
@@ -247,7 +252,13 @@ public sealed class MetadataSyncService
                 RootPath = projectRoot,
                 Preset = metaProject.Preset,
                 CreatedUtc = metaProject.CreatedUtc,
-                NeedsRestore = false
+                NeedsRestore = false,
+                EncryptionPolicy = parsedSettings.HasEncryptionPolicy
+                    ? parsedSettings.EncryptionPolicy
+                    : ProjectEncryptionPolicy.Inherit,
+                EncryptionKeyRef = parsedSettings.HasEncryptionKeyRef
+                    ? parsedSettings.EncryptionKeyRef
+                    : null
             };
 
             var newId = _repo.AddProject(project);
@@ -307,7 +318,13 @@ public sealed class MetadataSyncService
                 projectId,
                 metaSnapshot.CreatedUtc,
                 metaSnapshot.FileCount,
-                metaSnapshot.TotalBytes);
+                metaSnapshot.TotalBytes,
+                new SnapshotDiffSummary(
+                    metaSnapshot.DiffAdded,
+                    metaSnapshot.DiffModified,
+                    metaSnapshot.DiffDeleted,
+                    metaSnapshot.DiffNetBytes,
+                    SnapshotDiffSummary.ParseTopChangedPaths(metaSnapshot.DiffTopPathsJson)));
 
             snapshotMap[metaSnapshot.ExternalId] = id;
             importedSnapshots++;
@@ -355,7 +372,10 @@ public sealed class MetadataSyncService
                 metaBackup.DestinationAlias,
                 metaBackup.IsProtected,
                 isImported: true,
-                originMachineName: metaBackup.OriginMachineName);
+                backupMode: metaBackup.BackupMode,
+                originMachineName: metaBackup.OriginMachineName,
+                isEncrypted: metaBackup.IsEncrypted,
+                cryptoDescriptorJson: metaBackup.KdfParamsJson);
             importedBackups++;
             affectedProjectIds.Add(projectId);
         }
@@ -1106,8 +1126,14 @@ public sealed class MetadataSyncService
                     ProjectExternalId = projectExternalId,
                     CreatedUtc = snapshot.CreatedUtc,
                     FileCount = snapshot.FileCount,
-                    TotalBytes = snapshot.TotalBytes
+                    TotalBytes = snapshot.TotalBytes,
+                    DiffAdded = snapshot.DiffAdded,
+                    DiffModified = snapshot.DiffModified,
+                    DiffDeleted = snapshot.DiffDeleted,
+                    DiffNetBytes = snapshot.DiffNetBytes,
+                    DiffTopPathsJson = string.IsNullOrWhiteSpace(snapshot.DiffTopPathsJson) ? "[]" : snapshot.DiffTopPathsJson
                 });
+                var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
                 store.UpsertBackup(new MetaBackup
                 {
                     ExternalId = backupExternalId,
@@ -1115,13 +1141,14 @@ public sealed class MetadataSyncService
                     SnapshotExternalId = snapshotExternalId,
                     CreatedUtc = backup.CreatedUtc,
                     Type = backup.Type,
+                    BackupMode = BackupModes.Normalize(backup.BackupMode),
                     TotalBytes = backup.TotalBytes,
                     PathRel = backup.Path,
                     DestinationAlias = backup.DestinationAlias ?? string.Empty,
                     OriginMachineName = machineId,
                     IsProtected = backup.IsProtected,
-                    IsEncrypted = false,
-                    KdfParamsJson = "{}"
+                    IsEncrypted = backup.IsEncrypted,
+                    KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
                 });
                 exportedBackups = 1;
             }
@@ -1409,7 +1436,12 @@ public sealed class MetadataSyncService
                 ProjectExternalId = projectExternalId,
                 CreatedUtc = snap.CreatedUtc,
                 FileCount = snap.FileCount,
-                TotalBytes = snap.TotalBytes
+                TotalBytes = snap.TotalBytes,
+                DiffAdded = snap.DiffAdded,
+                DiffModified = snap.DiffModified,
+                DiffDeleted = snap.DiffDeleted,
+                DiffNetBytes = snap.DiffNetBytes,
+                DiffTopPathsJson = string.IsNullOrWhiteSpace(snap.DiffTopPathsJson) ? "[]" : snap.DiffTopPathsJson
             });
         }
 
@@ -1434,11 +1466,17 @@ public sealed class MetadataSyncService
                     ProjectExternalId = projectExternalId,
                     CreatedUtc = snap.CreatedUtc,
                     FileCount = snap.FileCount,
-                    TotalBytes = snap.TotalBytes
+                    TotalBytes = snap.TotalBytes,
+                    DiffAdded = snap.DiffAdded,
+                    DiffModified = snap.DiffModified,
+                    DiffDeleted = snap.DiffDeleted,
+                    DiffNetBytes = snap.DiffNetBytes,
+                    DiffTopPathsJson = string.IsNullOrWhiteSpace(snap.DiffTopPathsJson) ? "[]" : snap.DiffTopPathsJson
                 });
             }
 
             var backupExternalId = EnsureBackupExternalId(backup);
+            var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
             store.UpsertBackup(new MetaBackup
             {
                 ExternalId = backupExternalId,
@@ -1446,13 +1484,14 @@ public sealed class MetadataSyncService
                 SnapshotExternalId = snapshotExternalId,
                 CreatedUtc = backup.CreatedUtc,
                 Type = backup.Type,
+                BackupMode = BackupModes.Normalize(backup.BackupMode),
                 TotalBytes = backup.TotalBytes,
                 PathRel = backup.Path,
                 DestinationAlias = backup.DestinationAlias ?? string.Empty,
                 OriginMachineName = machineId,
                 IsProtected = backup.IsProtected,
-                IsEncrypted = false,
-                KdfParamsJson = "{}"
+                IsEncrypted = backup.IsEncrypted,
+                KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
             });
             exportedBackups++;
         }
@@ -1517,18 +1556,113 @@ public sealed class MetadataSyncService
         try
         {
             var color = ProjectColorResolver?.Invoke(project);
-            if (string.IsNullOrWhiteSpace(color))
-                return "{}";
-
-            return JsonSerializer.Serialize(new Dictionary<string, string>
+            var settings = new Dictionary<string, object?>();
+            if (!string.IsNullOrWhiteSpace(color))
             {
-                ["avatarColor"] = color
-            });
+                settings["avatarColor"] = color;
+            }
+
+            settings["encryptionPolicy"] = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy);
+            settings["encryptionKeyRef"] = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
+                ? null
+                : project.EncryptionKeyRef;
+
+            return settings.Count == 0 ? "{}" : JsonSerializer.Serialize(settings);
         }
         catch
         {
             return "{}";
         }
+    }
+
+    private readonly record struct ParsedProjectSettings(
+        string EncryptionPolicy,
+        string? EncryptionKeyRef,
+        bool HasEncryptionPolicy,
+        bool HasEncryptionKeyRef);
+
+    private static ParsedProjectSettings ParseProjectSettings(string? settingsJson)
+    {
+        if (string.IsNullOrWhiteSpace(settingsJson))
+        {
+            return new ParsedProjectSettings(
+                ProjectEncryptionPolicy.Inherit,
+                null,
+                HasEncryptionPolicy: false,
+                HasEncryptionKeyRef: false);
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(settingsJson);
+            var policy = ProjectEncryptionPolicy.Inherit;
+            string? keyRef = null;
+            var hasPolicy = false;
+            var hasKeyRef = false;
+
+            if (doc.RootElement.TryGetProperty("encryptionPolicy", out var policyProp))
+            {
+                policy = ProjectEncryptionPolicy.Normalize(policyProp.GetString());
+                hasPolicy = true;
+            }
+
+            if (doc.RootElement.TryGetProperty("encryptionKeyRef", out var keyRefProp))
+            {
+                var rawKeyRef = keyRefProp.GetString();
+                keyRef = string.IsNullOrWhiteSpace(rawKeyRef) ? null : rawKeyRef;
+                hasKeyRef = true;
+            }
+
+            return new ParsedProjectSettings(
+                policy,
+                keyRef,
+                HasEncryptionPolicy: hasPolicy,
+                HasEncryptionKeyRef: hasKeyRef);
+        }
+        catch
+        {
+            return new ParsedProjectSettings(
+                ProjectEncryptionPolicy.Inherit,
+                null,
+                HasEncryptionPolicy: false,
+                HasEncryptionKeyRef: false);
+        }
+    }
+
+    private void ApplyImportedProjectSecuritySettings(int projectId, ParsedProjectSettings parsedSettings)
+    {
+        if (!parsedSettings.HasEncryptionPolicy && !parsedSettings.HasEncryptionKeyRef)
+            return;
+
+        var current = _repo.GetProjectById(projectId);
+        if (current is null)
+            return;
+
+        var currentPolicy = ProjectEncryptionPolicy.Normalize(current.EncryptionPolicy);
+        var incomingPolicy = parsedSettings.HasEncryptionPolicy
+            ? ProjectEncryptionPolicy.Normalize(parsedSettings.EncryptionPolicy)
+            : currentPolicy;
+
+        // Do not downgrade an explicit local policy to "inherit" from stale metadata.
+        var applyPolicy = parsedSettings.HasEncryptionPolicy
+            && !string.Equals(incomingPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase)
+            && !(string.Equals(incomingPolicy, ProjectEncryptionPolicy.Inherit, StringComparison.OrdinalIgnoreCase)
+                 && !string.Equals(currentPolicy, ProjectEncryptionPolicy.Inherit, StringComparison.OrdinalIgnoreCase));
+
+        var nextPolicy = applyPolicy ? incomingPolicy : currentPolicy;
+        var nextKeyRef = parsedSettings.HasEncryptionKeyRef
+            ? parsedSettings.EncryptionKeyRef
+            : current.EncryptionKeyRef;
+
+        var currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
+        var normalizedNextKeyRef = string.IsNullOrWhiteSpace(nextKeyRef) ? null : nextKeyRef;
+        if (string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(normalizedNextKeyRef, currentKeyRef, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, normalizedNextKeyRef);
     }
 
     private static void TryApplyProjectColor(MetaProject metaProject)

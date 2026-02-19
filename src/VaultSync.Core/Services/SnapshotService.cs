@@ -55,6 +55,7 @@ public class SnapshotService
 
             // Load previous snapshot (if any) to enable incremental behavior
             var prev = _repo.GetLatestSnapshot(project.Id);
+            var previousTotalBytes = prev?.TotalBytes ?? 0L;
             var prevFiles = prev != null
                 ? _repo.GetFilesForSnapshot(prev.Id).ToDictionary(f => f.RelPath, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, FileEntry>(StringComparer.OrdinalIgnoreCase);
@@ -94,6 +95,10 @@ public class SnapshotService
 
             // Index by relative path for faster lookups
             var currMetaByRel = currMeta.ToDictionary(m => m.Rel, StringComparer.OrdinalIgnoreCase);
+            var currentFilesByRel = currMetaByRel.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Entry,
+                StringComparer.OrdinalIgnoreCase);
 
             // Determine changes
             var added     = new List<string>();
@@ -150,7 +155,20 @@ public class SnapshotService
                     snapshotTotalBytes += meta.Entry.Size;
                 }
 
-                var snapshotId = _repo.CreateSnapshot(project.Id, snapshotEntries.Count, snapshotTotalBytes);
+                var diffSummary = BuildSnapshotDiffSummary(
+                    added,
+                    modified,
+                    deleted,
+                    currentFilesByRel,
+                    prevFiles,
+                    snapshotTotalBytes,
+                    previousTotalBytes);
+
+                var snapshotId = _repo.CreateSnapshot(
+                    project.Id,
+                    snapshotEntries.Count,
+                    snapshotTotalBytes,
+                    diffSummary);
                 _repo.InsertFiles(snapshotId, snapshotEntries.OrderBy(e => e.RelPath, StringComparer.OrdinalIgnoreCase));
 
                 if (maxSnapshotsToKeep.HasValue && maxSnapshotsToKeep.Value > 0)
@@ -210,9 +228,11 @@ public class SnapshotService
             }
 
             // Added + Modified (and everything if fullHash)
+            var changedRel = new HashSet<string>(added, StringComparer.OrdinalIgnoreCase);
+            changedRel.UnionWith(modified);
             var toHash = fullHash
                 ? currMeta
-                : currMeta.Where(m => added.Contains(m.Rel) || modified.Contains(m.Rel)).ToList();
+                : currMeta.Where(m => changedRel.Contains(m.Rel)).ToList();
 
             Console.WriteLine($"[SnapshotService] toHash = {toHash.Count}, fullHash={fullHash}, added={added.Count}, modified={modified.Count}, unchanged={unchanged.Count}, deleted={deleted.Count}");
 
@@ -291,8 +311,21 @@ public class SnapshotService
 
             ct.ThrowIfCancellationRequested();
 
+            var diffSummaryWithHashes = BuildSnapshotDiffSummary(
+                added,
+                modified,
+                deleted,
+                currentFilesByRel,
+                prevFiles,
+                totalBytes,
+                previousTotalBytes);
+
             // Create snapshot record
-            var snapId = _repo.CreateSnapshot(project.Id, entries.Count, totalBytes);
+            var snapId = _repo.CreateSnapshot(
+                project.Id,
+                entries.Count,
+                totalBytes,
+                diffSummaryWithHashes);
 
             // Persist files in a stable order
             _repo.InsertFiles(snapId, entries.OrderBy(e => e.RelPath, StringComparer.OrdinalIgnoreCase));
@@ -512,6 +545,98 @@ public class SnapshotService
             return true;
 
         return false;
+    }
+
+    private static SnapshotDiffSummary BuildSnapshotDiffSummary(
+        IReadOnlyCollection<string> added,
+        IReadOnlyCollection<string> modified,
+        IReadOnlyCollection<string> deleted,
+        IReadOnlyDictionary<string, FileEntry> currentByRel,
+        IReadOnlyDictionary<string, FileEntry> previousByRel,
+        long currentTotalBytes,
+        long previousTotalBytes)
+    {
+        if (added.Count == 0 && modified.Count == 0 && deleted.Count == 0)
+            return SnapshotDiffSummary.Empty;
+
+        var pathStats = new Dictionary<string, (int Changes, long ChangedBytes)>(StringComparer.OrdinalIgnoreCase);
+
+        static void AddPathStat(
+            IDictionary<string, (int Changes, long ChangedBytes)> stats,
+            string bucket,
+            long changedBytes)
+        {
+            if (string.IsNullOrWhiteSpace(bucket))
+                return;
+
+            if (stats.TryGetValue(bucket, out var current))
+            {
+                stats[bucket] = (current.Changes + 1, current.ChangedBytes + changedBytes);
+                return;
+            }
+
+            stats[bucket] = (1, changedBytes);
+        }
+
+        foreach (var rel in added)
+        {
+            if (!currentByRel.TryGetValue(rel, out var current))
+                continue;
+
+            AddPathStat(pathStats, ToChangedPathBucket(rel), Math.Max(0L, current.Size));
+        }
+
+        foreach (var rel in modified)
+        {
+            if (!currentByRel.TryGetValue(rel, out var current))
+                continue;
+
+            previousByRel.TryGetValue(rel, out var old);
+            var oldSize = old?.Size ?? 0L;
+            var newSize = current.Size;
+            var changedBytes = Math.Max(oldSize, newSize);
+            AddPathStat(pathStats, ToChangedPathBucket(rel), Math.Max(0L, changedBytes));
+        }
+
+        foreach (var rel in deleted)
+        {
+            if (!previousByRel.TryGetValue(rel, out var old))
+                continue;
+
+            AddPathStat(pathStats, ToChangedPathBucket(rel), Math.Max(0L, old.Size));
+        }
+
+        var topPaths = pathStats
+            .OrderByDescending(kvp => kvp.Value.Changes)
+            .ThenByDescending(kvp => kvp.Value.ChangedBytes)
+            .ThenBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .Select(kvp => new SnapshotDiffPathStat(kvp.Key, kvp.Value.Changes, kvp.Value.ChangedBytes))
+            .ToArray();
+
+        return new SnapshotDiffSummary(
+            Added: added.Count,
+            Modified: modified.Count,
+            Deleted: deleted.Count,
+            NetSizeBytes: currentTotalBytes - previousTotalBytes,
+            TopChangedPaths: topPaths);
+    }
+
+    private static string ToChangedPathBucket(string relPath)
+    {
+        if (string.IsNullOrWhiteSpace(relPath))
+            return "(root)";
+
+        var normalized = relPath.Replace('\\', '/').Trim('/');
+        if (normalized.Length == 0)
+            return "(root)";
+
+        var slash = normalized.IndexOf('/');
+        if (slash < 0)
+            return normalized;
+
+        var secondSlash = normalized.IndexOf('/', slash + 1);
+        return secondSlash < 0 ? normalized[..slash] : normalized[..secondSlash];
     }
 
     // simple store for most recent outcome in-process

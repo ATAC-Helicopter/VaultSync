@@ -21,6 +21,7 @@ using VaultSync.UI.Services;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Models;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels.Notifications;
@@ -57,7 +58,20 @@ namespace VaultSync.UI
         private bool _enableMetadataSync = true;
         private bool _autoImportMetadata = true;
         private bool _promptRestoreAfterImport = true;
+        private bool _enableBandwidthLimit = false;
+        private int _maxBandwidthMbps = 100;
+        private bool _enableQuietHours = false;
+        private string _quietHoursStart = "23:00";
+        private string _quietHoursEnd = "07:00";
         private string _backupLocationStatus = string.Empty;
+        private bool _backupEncryptionEnabled = false;
+        private bool _backupEncryptionAllowSessionFallback = false;
+        private int _backupEncryptionOpenUnlockTimeoutMinutes = 10;
+        private string _backupEncryptionKeyRef = string.Empty;
+        private string _backupEncryptionPasswordInput = string.Empty;
+        private bool _backupEncryptionShowPassword = false;
+        private string _backupEncryptionSecretStatus = string.Empty;
+        private bool _backupEncryptionHasSecret = false;
 
         private bool _preferExternalDrives = true;
         private bool _showDriveHealthWarnings = true;
@@ -95,8 +109,10 @@ namespace VaultSync.UI
         private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
+        private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
         private bool _showLegacyBackupLocation = true;
+        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
 
         private bool _isInitialized;
         private bool _isSaving;
@@ -106,6 +122,9 @@ namespace VaultSync.UI
         public event Action? OpenLogConsoleRequested;
         public event Action? UpdateCheckRequested;
         public event Action? RefreshHistoryRequested;
+        public event Action? RotateEncryptedBackupsRequested;
+        public event Action? EnrollProjectEncryptionRequested;
+        public event Action? LockEncryptedOpenWorkspacesRequested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -142,6 +161,19 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(SelectedLanguage));
                 RefreshUpdateCheckStatus();
                 RefreshRsyncStatusHint();
+                OnPropertyChanged(nameof(EnrollProjectEncryptionPasswordLabel));
+                OnPropertyChanged(nameof(EncryptionOpenTimeoutLabel));
+                OnPropertyChanged(nameof(EncryptionOpenTimeoutDescription));
+                OnPropertyChanged(nameof(LockEncryptedOpenNowLabel));
+                OnPropertyChanged(nameof(BandwidthLimitLabel));
+                OnPropertyChanged(nameof(BandwidthLimitDescription));
+                OnPropertyChanged(nameof(BandwidthLimitValueLabel));
+                OnPropertyChanged(nameof(QuietHoursLabel));
+                OnPropertyChanged(nameof(QuietHoursDescription));
+                OnPropertyChanged(nameof(QuietHoursStartLabel));
+                OnPropertyChanged(nameof(QuietHoursEndLabel));
+                OnPropertyChanged(nameof(QuietHoursWindowLabel));
+                OnPropertyChanged(nameof(QuietHoursWindowPreview));
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -172,6 +204,11 @@ namespace VaultSync.UI
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
+            SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
+            ClearBackupEncryptionPasswordCommand = new RelayCommand(_ => ClearBackupEncryptionPassword());
+            RotateEncryptedBackupsCommand = new RelayCommand(_ => RotateEncryptedBackupsRequested?.Invoke());
+            EnrollProjectEncryptionPasswordCommand = new RelayCommand(_ => EnrollProjectEncryptionRequested?.Invoke());
+            LockEncryptedOpenWorkspacesCommand = new RelayCommand(_ => LockEncryptedOpenWorkspacesRequested?.Invoke());
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
@@ -239,6 +276,21 @@ namespace VaultSync.UI
             _enableMetadataSync        = cfg.Backups.EnableMetadataSync;
             _autoImportMetadata        = cfg.Backups.AutoImportMetadata;
             _promptRestoreAfterImport  = cfg.Backups.PromptRestoreAfterImport;
+            _enableBandwidthLimit      = cfg.Backups.EnableBandwidthLimit;
+            _maxBandwidthMbps          = ClampInt(cfg.Backups.MaxBandwidthMbps, 1, 5000, 100);
+            _enableQuietHours          = cfg.Backups.EnableQuietHours;
+            _quietHoursStart           = NormalizeTimeOfDay(cfg.Backups.QuietHoursStart, "23:00");
+            _quietHoursEnd             = NormalizeTimeOfDay(cfg.Backups.QuietHoursEnd, "07:00");
+            _backupEncryptionEnabled   = cfg.Backups.Encryption.Enabled;
+            _backupEncryptionAllowSessionFallback = cfg.Backups.Encryption.AllowSessionFallback;
+            _backupEncryptionOpenUnlockTimeoutMinutes = ClampInt(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes, 1, 240, 10);
+            _backupEncryptionKeyRef = cfg.Backups.Encryption.KeyRef ?? string.Empty;
+            _backupEncryptionHasSecret = !string.IsNullOrWhiteSpace(
+                _backupEncryptionSecretService.GetSecret(_backupEncryptionKeyRef, BackupEncryptionSecretUsername));
+            _backupEncryptionPasswordInput = string.Empty;
+            _backupEncryptionSecretStatus = _backupEncryptionHasSecret
+                ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+                : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
 
             _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
@@ -362,6 +414,10 @@ namespace VaultSync.UI
             {
                 return;
             }
+            if (!ValidateTransferPolicy(notifyOnValidationError))
+            {
+                return;
+            }
 
             // Keep name + object selection aligned before taking snapshots.
             foreach (var dest in Destinations)
@@ -443,6 +499,17 @@ namespace VaultSync.UI
             cfg.Backups.EnableMetadataSync          = EnableMetadataSync;
             cfg.Backups.AutoImportMetadata          = AutoImportMetadata;
             cfg.Backups.PromptRestoreAfterImport    = PromptRestoreAfterImport;
+            cfg.Backups.EnableBandwidthLimit        = EnableBandwidthLimit;
+            cfg.Backups.MaxBandwidthMbps            = ClampInt(MaxBandwidthMbps, 1, 5000, 100);
+            cfg.Backups.EnableQuietHours            = EnableQuietHours;
+            cfg.Backups.QuietHoursStart             = NormalizeTimeOfDay(QuietHoursStart, "23:00");
+            cfg.Backups.QuietHoursEnd               = NormalizeTimeOfDay(QuietHoursEnd, "07:00");
+            cfg.Backups.Encryption.Enabled          = BackupEncryptionEnabled;
+            cfg.Backups.Encryption.AllowSessionFallback = BackupEncryptionAllowSessionFallback;
+            cfg.Backups.Encryption.OpenUnlockTimeoutMinutes = ClampInt(BackupEncryptionOpenUnlockTimeoutMinutes, 1, 240, 10);
+            cfg.Backups.Encryption.KeyRef = string.IsNullOrWhiteSpace(_backupEncryptionKeyRef)
+                ? string.Empty
+                : _backupEncryptionKeyRef;
             cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
@@ -571,6 +638,32 @@ namespace VaultSync.UI
                     return false;
                 }
 
+            }
+
+            return true;
+        }
+
+        private bool ValidateTransferPolicy(bool notifyOnError)
+        {
+            if (EnableBandwidthLimit && (MaxBandwidthMbps < 1 || MaxBandwidthMbps > 5000))
+            {
+                if (notifyOnError)
+                {
+                    SaveStatus = "Bandwidth limit must be between 1 and 5000 Mbps.";
+                }
+
+                return false;
+            }
+
+            if (EnableQuietHours &&
+                (!TryParseTimeOfDay(QuietHoursStart, out _) || !TryParseTimeOfDay(QuietHoursEnd, out _)))
+            {
+                if (notifyOnError)
+                {
+                    SaveStatus = "Quiet hours must use HH:mm format (24h).";
+                }
+
+                return false;
             }
 
             return true;
@@ -906,6 +999,90 @@ namespace VaultSync.UI
         {
             get => _promptRestoreAfterImport;
             set => SetField(ref _promptRestoreAfterImport, value);
+        }
+
+        public bool EnableBandwidthLimit
+        {
+            get => _enableBandwidthLimit;
+            set => SetField(ref _enableBandwidthLimit, value);
+        }
+
+        public int MaxBandwidthMbps
+        {
+            get => _maxBandwidthMbps;
+            set => SetField(ref _maxBandwidthMbps, ClampInt(value, 1, 5000, 100));
+        }
+
+        public bool EnableQuietHours
+        {
+            get => _enableQuietHours;
+            set => SetField(ref _enableQuietHours, value);
+        }
+
+        public string QuietHoursStart
+        {
+            get => _quietHoursStart;
+            set
+            {
+                if (SetField(ref _quietHoursStart, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(QuietHoursWindowPreview));
+                }
+            }
+        }
+
+        public string QuietHoursEnd
+        {
+            get => _quietHoursEnd;
+            set
+            {
+                if (SetField(ref _quietHoursEnd, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(QuietHoursWindowPreview));
+                }
+            }
+        }
+
+        public bool BackupEncryptionEnabled
+        {
+            get => _backupEncryptionEnabled;
+            set => SetField(ref _backupEncryptionEnabled, value);
+        }
+
+        public bool BackupEncryptionAllowSessionFallback
+        {
+            get => _backupEncryptionAllowSessionFallback;
+            set => SetField(ref _backupEncryptionAllowSessionFallback, value);
+        }
+
+        public int BackupEncryptionOpenUnlockTimeoutMinutes
+        {
+            get => _backupEncryptionOpenUnlockTimeoutMinutes;
+            set => SetField(ref _backupEncryptionOpenUnlockTimeoutMinutes, ClampInt(value, 1, 240, 10));
+        }
+
+        public string BackupEncryptionPasswordInput
+        {
+            get => _backupEncryptionPasswordInput;
+            set => SetField(ref _backupEncryptionPasswordInput, value);
+        }
+
+        public bool BackupEncryptionShowPassword
+        {
+            get => _backupEncryptionShowPassword;
+            set => SetField(ref _backupEncryptionShowPassword, value);
+        }
+
+        public string BackupEncryptionSecretStatus
+        {
+            get => _backupEncryptionSecretStatus;
+            private set => SetField(ref _backupEncryptionSecretStatus, value);
+        }
+
+        public bool BackupEncryptionHasSecret
+        {
+            get => _backupEncryptionHasSecret;
+            private set => SetField(ref _backupEncryptionHasSecret, value);
         }
 
         public bool PreferExternalDrives
@@ -1249,6 +1426,25 @@ namespace VaultSync.UI
                 : value;
         }
 
+        private static bool TryParseTimeOfDay(string? value, out TimeSpan result)
+        {
+            return TimeSpan.TryParseExact(
+                value ?? string.Empty,
+                @"hh\:mm",
+                CultureInfo.InvariantCulture,
+                out result);
+        }
+
+        private static string NormalizeTimeOfDay(string? value, string fallback)
+        {
+            if (TryParseTimeOfDay(value, out var parsed))
+            {
+                return $"{parsed.Hours:00}:{parsed.Minutes:00}";
+            }
+
+            return fallback;
+        }
+
         private static string? TryFindRsyncOnPath()
         {
             var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
@@ -1413,6 +1609,81 @@ namespace VaultSync.UI
         public ICommand ExportLogConsoleCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
         public ICommand RefreshHistoryCommand { get; }
+        public ICommand SetBackupEncryptionPasswordCommand { get; }
+        public ICommand ClearBackupEncryptionPasswordCommand { get; }
+        public ICommand RotateEncryptedBackupsCommand { get; }
+        public ICommand EnrollProjectEncryptionPasswordCommand { get; }
+        public ICommand LockEncryptedOpenWorkspacesCommand { get; }
+        public string EnrollProjectEncryptionPasswordLabel =>
+            $"{L("Settings.Encryption.SetPassword", "Set password")} ({L("Nav.Projects", "Projects")})";
+        public string BandwidthLimitLabel => L("Settings.Backups.BandwidthLimit", "Bandwidth limit");
+        public string BandwidthLimitDescription => L("Settings.Backups.BandwidthLimitDescription", "Cap backup transfer speed to reduce network impact.");
+        public string BandwidthLimitValueLabel => L("Settings.Backups.BandwidthLimitValue", "Max Mbps");
+        public string QuietHoursLabel => L("Settings.Backups.QuietHours", "Quiet hours");
+        public string QuietHoursDescription => L("Settings.Backups.QuietHoursDescription", "Pause/defer automatic backups during this time window.");
+        public string QuietHoursStartLabel => L("Settings.Backups.QuietHoursStart", "Start (HH:mm)");
+        public string QuietHoursEndLabel => L("Settings.Backups.QuietHoursEnd", "End (HH:mm)");
+        public string QuietHoursWindowLabel => L("Settings.Backups.QuietHoursWindow", "Active window");
+        public string QuietHoursWindowPreview =>
+            $"{NormalizeTimeOfDay(QuietHoursStart, "23:00")} -> {NormalizeTimeOfDay(QuietHoursEnd, "07:00")}";
+        public string EncryptionOpenTimeoutLabel =>
+            L("Settings.Encryption.OpenTimeoutLabel", "Encrypted open timeout (minutes)");
+        public string EncryptionOpenTimeoutDescription =>
+            L("Settings.Encryption.OpenTimeoutDescription", "Auto-lock decrypted open-folder sessions and temp content after this many minutes.");
+        public string LockEncryptedOpenNowLabel =>
+            L("Settings.Encryption.LockNow", "Lock now (close decrypted open folders)");
+
+        private void SetBackupEncryptionPassword()
+        {
+            if (string.IsNullOrWhiteSpace(BackupEncryptionPasswordInput))
+            {
+                BackupEncryptionSecretStatus = L(
+                    "Settings.Encryption.SecretStatusMissing",
+                    "No encryption password enrolled yet.");
+                return;
+            }
+
+            try
+            {
+                _backupEncryptionKeyRef = _backupEncryptionSecretService.EnsureSecretRef(
+                    _backupEncryptionKeyRef,
+                    "backup-encryption-global");
+
+                var storageMode = _backupEncryptionSecretService.SaveSecret(
+                    _backupEncryptionKeyRef,
+                    BackupEncryptionSecretUsername,
+                    BackupEncryptionPasswordInput,
+                    allowSessionFallback: BackupEncryptionAllowSessionFallback,
+                    fallbackConfirmed: BackupEncryptionAllowSessionFallback);
+
+                BackupEncryptionPasswordInput = string.Empty;
+                BackupEncryptionHasSecret = true;
+                BackupEncryptionSecretStatus = storageMode == EncryptionSecretStorageMode.SecureStore
+                    ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+                    : L("Settings.Encryption.SecretStatusSession", "Password is stored in this app session only.");
+
+                TriggerAutoSave();
+            }
+            catch (Exception ex)
+            {
+                BackupEncryptionSecretStatus = L("Settings.Encryption.SecretStatusSaveFailed", "Failed to store encryption password.");
+                GlobalNotificationCenter.Instance.Show(
+                    $"{BackupEncryptionSecretStatus} {ex.Message}",
+                    NotificationSeverity.Error,
+                    L("Settings.Encryption.Title", "Backup encryption"));
+            }
+        }
+
+        private void ClearBackupEncryptionPassword()
+        {
+            _backupEncryptionSecretService.DeleteSecret(_backupEncryptionKeyRef, BackupEncryptionSecretUsername);
+            BackupEncryptionHasSecret = false;
+            BackupEncryptionPasswordInput = string.Empty;
+            BackupEncryptionSecretStatus = L(
+                "Settings.Encryption.SecretStatusMissing",
+                "No encryption password enrolled yet.");
+            TriggerAutoSave();
+        }
 
         private async void BrowseProjectsRoot()
         {

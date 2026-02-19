@@ -89,6 +89,8 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           external_id TEXT NOT NULL DEFAULT '',
           needs_restore INTEGER NOT NULL DEFAULT 0,
           preferred_destination_id TEXT,
+          encryption_policy TEXT NOT NULL DEFAULT 'inherit',
+          encryption_key_ref TEXT,
           name TEXT NOT NULL UNIQUE,
           root_path TEXT NOT NULL,
           preset TEXT NOT NULL,
@@ -103,6 +105,11 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           created_utc TEXT NOT NULL,
           file_count INTEGER NOT NULL,
           total_bytes INTEGER NOT NULL,
+          diff_added INTEGER NOT NULL DEFAULT 0,
+          diff_modified INTEGER NOT NULL DEFAULT 0,
+          diff_deleted INTEGER NOT NULL DEFAULT 0,
+          diff_net_bytes INTEGER NOT NULL DEFAULT 0,
+          diff_top_paths_json TEXT NOT NULL DEFAULT '[]',
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
         );
 
@@ -125,11 +132,14 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           snapshot_id INTEGER NOT NULL,
           created_utc TEXT NOT NULL,
           type TEXT NOT NULL,
+          backup_mode TEXT NOT NULL DEFAULT 'full',
           total_bytes INTEGER NOT NULL,
           path TEXT NOT NULL,
           destination_path TEXT NOT NULL DEFAULT '',
           destination_alias TEXT NOT NULL DEFAULT '',
           origin_machine_name TEXT NOT NULL DEFAULT '',
+          is_encrypted INTEGER NOT NULL DEFAULT 0,
+          crypto_descriptor_json TEXT NOT NULL DEFAULT '{}',
           is_imported INTEGER NOT NULL DEFAULT 0,
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
@@ -142,10 +152,20 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("backups", "is_encrypted", "ALTER TABLE backups ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("backups", "crypto_descriptor_json", "ALTER TABLE backups ADD COLUMN crypto_descriptor_json TEXT NOT NULL DEFAULT '{}';");
+    EnsureColumnExists("backups", "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
     EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
     EnsureColumnExists("projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
+    EnsureColumnExists("projects", "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
+    EnsureColumnExists("projects", "encryption_key_ref", "ALTER TABLE projects ADD COLUMN encryption_key_ref TEXT;");
     EnsureColumnExists("snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+    EnsureColumnExists("snapshots", "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
+    EnsureColumnExists("snapshots", "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
     EnsureColumnExists("backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
 
     // Indexes (idempotent)
@@ -237,7 +257,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
                 new { name });
         }
 
@@ -245,7 +265,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
                 new { id });
         }
 
@@ -275,7 +295,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.Query<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
         }
 
         /// <summary>
@@ -304,8 +324,8 @@ DELETE FROM sqlite_sequence;";
                 : p.ExternalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, name, root_path, preset, created_utc)
-                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @Name, @RootPath, @Preset, @CreatedUtc);
+                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, encryption_policy, encryption_key_ref, name, root_path, preset, created_utc)
+                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @EncryptionPolicy, @EncryptionKeyRef, @Name, @RootPath, @Preset, @CreatedUtc);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -313,6 +333,8 @@ DELETE FROM sqlite_sequence;";
                     ExternalId = externalId,
                     NeedsRestore = p.NeedsRestore ? 1 : 0,
                     PreferredDestinationId = string.IsNullOrWhiteSpace(p.PreferredDestinationId) ? null : p.PreferredDestinationId,
+                    EncryptionPolicy = ProjectEncryptionPolicy.Normalize(p.EncryptionPolicy),
+                    EncryptionKeyRef = string.IsNullOrWhiteSpace(p.EncryptionKeyRef) ? null : p.EncryptionKeyRef,
                     p.Name,
                     p.RootPath,
                     p.Preset,
@@ -340,6 +362,31 @@ DELETE FROM sqlite_sequence;";
                 });
         }
 
+        public void UpdateProjectEncryptionPolicy(int projectId, string? encryptionPolicy)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET encryption_policy = @policy WHERE id = @id;",
+                new
+                {
+                    policy = ProjectEncryptionPolicy.Normalize(encryptionPolicy),
+                    id = projectId
+                });
+        }
+
+        public void UpdateProjectEncryptionSettings(int projectId, string? encryptionPolicy, string? encryptionKeyRef)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET encryption_policy = @policy, encryption_key_ref = @keyRef WHERE id = @id;",
+                new
+                {
+                    policy = ProjectEncryptionPolicy.Normalize(encryptionPolicy),
+                    keyRef = string.IsNullOrWhiteSpace(encryptionKeyRef) ? null : encryptionKeyRef,
+                    id = projectId
+                });
+        }
+
         public Project? GetProjectByExternalId(string externalId)
         {
             if (string.IsNullOrWhiteSpace(externalId))
@@ -348,7 +395,7 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
                 """
-                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
+                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
                 FROM projects
                 WHERE external_id = @externalId
                 LIMIT 1;
@@ -407,15 +454,36 @@ DELETE FROM sqlite_sequence;";
         }
 
         // ---------- Snapshots ----------
-        public int CreateSnapshot(int projectId, long fileCount, long totalBytes)
+        public int CreateSnapshot(int projectId, long fileCount, long totalBytes, SnapshotDiffSummary? diffSummary = null)
         {
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
             var externalId = NewExternalId();
+            var summary = diffSummary ?? SnapshotDiffSummary.Empty;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO snapshots(external_id, project_id, created_utc, file_count, total_bytes)
-                VALUES(@ExternalId, @ProjectId, @CreatedUtc, @FileCount, @TotalBytes);
+                INSERT INTO snapshots(
+                  external_id,
+                  project_id,
+                  created_utc,
+                  file_count,
+                  total_bytes,
+                  diff_added,
+                  diff_modified,
+                  diff_deleted,
+                  diff_net_bytes,
+                  diff_top_paths_json)
+                VALUES(
+                  @ExternalId,
+                  @ProjectId,
+                  @CreatedUtc,
+                  @FileCount,
+                  @TotalBytes,
+                  @DiffAdded,
+                  @DiffModified,
+                  @DiffDeleted,
+                  @DiffNetBytes,
+                  @DiffTopPathsJson);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -424,19 +492,51 @@ DELETE FROM sqlite_sequence;";
                     ProjectId = projectId,
                     CreatedUtc = created,
                     FileCount = fileCount,
-                    TotalBytes = totalBytes
+                    TotalBytes = totalBytes,
+                    DiffAdded = summary.Added,
+                    DiffModified = summary.Modified,
+                    DiffDeleted = summary.Deleted,
+                    DiffNetBytes = summary.NetSizeBytes,
+                    DiffTopPathsJson = summary.TopChangedPathsJson
                 });
         }
 
-        public int CreateSnapshotFromMetadata(string externalId, int projectId, DateTime createdUtc, long fileCount, long totalBytes)
+        public int CreateSnapshotFromMetadata(
+            string externalId,
+            int projectId,
+            DateTime createdUtc,
+            long fileCount,
+            long totalBytes,
+            SnapshotDiffSummary? diffSummary = null)
         {
             using var c = Open();
             var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
             var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
+            var summary = diffSummary ?? SnapshotDiffSummary.Empty;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO snapshots(external_id, project_id, created_utc, file_count, total_bytes)
-                VALUES(@ExternalId, @ProjectId, @CreatedUtc, @FileCount, @TotalBytes);
+                INSERT INTO snapshots(
+                  external_id,
+                  project_id,
+                  created_utc,
+                  file_count,
+                  total_bytes,
+                  diff_added,
+                  diff_modified,
+                  diff_deleted,
+                  diff_net_bytes,
+                  diff_top_paths_json)
+                VALUES(
+                  @ExternalId,
+                  @ProjectId,
+                  @CreatedUtc,
+                  @FileCount,
+                  @TotalBytes,
+                  @DiffAdded,
+                  @DiffModified,
+                  @DiffDeleted,
+                  @DiffNetBytes,
+                  @DiffTopPathsJson);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -445,7 +545,12 @@ DELETE FROM sqlite_sequence;";
                     ProjectId = projectId,
                     CreatedUtc = created,
                     FileCount = fileCount,
-                    TotalBytes = totalBytes
+                    TotalBytes = totalBytes,
+                    DiffAdded = summary.Added,
+                    DiffModified = summary.Modified,
+                    DiffDeleted = summary.Deleted,
+                    DiffNetBytes = summary.NetSizeBytes,
+                    DiffTopPathsJson = summary.TopChangedPathsJson
                 });
         }
 
@@ -463,7 +568,12 @@ DELETE FROM sqlite_sequence;";
                   project_id  AS ProjectId,
                   created_utc AS CreatedUtc,
                   file_count  AS FileCount,
-                  total_bytes AS TotalBytes
+                  total_bytes AS TotalBytes,
+                  diff_added AS DiffAdded,
+                  diff_modified AS DiffModified,
+                  diff_deleted AS DiffDeleted,
+                  diff_net_bytes AS DiffNetBytes,
+                  diff_top_paths_json AS DiffTopPathsJson
                 FROM snapshots
                 WHERE external_id = @externalId
                 LIMIT 1;
@@ -482,7 +592,12 @@ DELETE FROM sqlite_sequence;";
                   project_id  AS ProjectId,
                   created_utc AS CreatedUtc,
                   file_count  AS FileCount,
-                  total_bytes AS TotalBytes
+                  total_bytes AS TotalBytes,
+                  diff_added AS DiffAdded,
+                  diff_modified AS DiffModified,
+                  diff_deleted AS DiffDeleted,
+                  diff_net_bytes AS DiffNetBytes,
+                  diff_top_paths_json AS DiffTopPathsJson
                 FROM snapshots
                 WHERE id = @id
                 LIMIT 1;
@@ -528,7 +643,12 @@ DELETE FROM sqlite_sequence;";
                   project_id  AS ProjectId,
                   created_utc AS CreatedUtc,
                   file_count  AS FileCount,
-                  total_bytes AS TotalBytes
+                  total_bytes AS TotalBytes,
+                  diff_added AS DiffAdded,
+                  diff_modified AS DiffModified,
+                  diff_deleted AS DiffDeleted,
+                  diff_net_bytes AS DiffNetBytes,
+                  diff_top_paths_json AS DiffTopPathsJson
                 FROM snapshots
                 WHERE project_id = @pid
                 ORDER BY created_utc DESC, id DESC
@@ -584,7 +704,12 @@ DELETE FROM sqlite_sequence;";
                   project_id as ProjectId,
                   created_utc as CreatedUtc,
                   file_count as FileCount,
-                  total_bytes as TotalBytes
+                  total_bytes as TotalBytes,
+                  diff_added as DiffAdded,
+                  diff_modified as DiffModified,
+                  diff_deleted as DiffDeleted,
+                  diff_net_bytes as DiffNetBytes,
+                  diff_top_paths_json as DiffTopPathsJson
                 FROM snapshots
                 ORDER BY created_utc DESC
                 """);
@@ -610,7 +735,12 @@ DELETE FROM sqlite_sequence;";
                   project_id as ProjectId,
                   created_utc as CreatedUtc,
                   file_count as FileCount,
-                  total_bytes as TotalBytes
+                  total_bytes as TotalBytes,
+                  diff_added as DiffAdded,
+                  diff_modified as DiffModified,
+                  diff_deleted as DiffDeleted,
+                  diff_net_bytes as DiffNetBytes,
+                  diff_top_paths_json as DiffTopPathsJson
                 FROM snapshots
                 WHERE project_id = (SELECT id FROM projects WHERE name=@name)
                 ORDER BY created_utc DESC, id DESC
@@ -707,17 +837,30 @@ DELETE FROM sqlite_sequence;";
         }
         // ---------- Backups ----------
 
-        public int CreateBackup(int projectId, int snapshotId, string type, long totalBytes, string relativePath, string destinationPath, string destinationAlias, bool isProtected = false)
+        public int CreateBackup(
+            int projectId,
+            int snapshotId,
+            string type,
+            long totalBytes,
+            string relativePath,
+            string destinationPath,
+            string destinationAlias,
+            string backupMode = BackupModes.Full,
+            bool isProtected = false,
+            bool isEncrypted = false,
+            string? cryptoDescriptorJson = null)
         {
             using var c = Open();
             var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
             var externalId = NewExternalId();
             var originMachineName = Environment.MachineName;
+            var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
+            var descriptorJson = descriptor.ToMetadataJson(isEncrypted);
 
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_imported)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsImported);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, backup_mode, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @BackupMode, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsEncrypted, @CryptoDescriptorJson, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -727,12 +870,15 @@ DELETE FROM sqlite_sequence;";
                     SnapshotId      = snapshotId,
                     CreatedUtc      = created,
                     Type            = type,
+                    BackupMode      = BackupModes.Normalize(backupMode),
                     TotalBytes      = totalBytes,
                     Path            = relativePath,
                     DestinationPath = destinationPath ?? string.Empty,
                     DestinationAlias = destinationAlias ?? string.Empty,
                     OriginMachineName = originMachineName,
                     IsProtected     = isProtected ? 1 : 0,
+                    IsEncrypted     = isEncrypted ? 1 : 0,
+                    CryptoDescriptorJson = descriptorJson,
                     IsImported      = 0
                 });
         }
@@ -749,15 +895,20 @@ DELETE FROM sqlite_sequence;";
             string destinationAlias,
             bool isProtected,
             bool isImported,
-            string originMachineName = "")
+            string backupMode = BackupModes.Full,
+            string originMachineName = "",
+            bool isEncrypted = false,
+            string? cryptoDescriptorJson = null)
         {
             using var c = Open();
             var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
             var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
+            var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
+            var descriptorJson = descriptor.ToMetadataJson(isEncrypted);
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_imported)
-                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsImported);
+                INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, backup_mode, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
+                VALUES(@ExternalId, @ProjectId, @SnapshotId, @CreatedUtc, @Type, @BackupMode, @TotalBytes, @Path, @DestinationPath, @DestinationAlias, @OriginMachineName, @IsProtected, @IsEncrypted, @CryptoDescriptorJson, @IsImported);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -767,12 +918,15 @@ DELETE FROM sqlite_sequence;";
                     SnapshotId      = snapshotId,
                     CreatedUtc      = created,
                     Type            = type,
+                    BackupMode      = BackupModes.Normalize(backupMode),
                     TotalBytes      = totalBytes,
                     Path            = relativePath ?? string.Empty,
                     DestinationPath = destinationPath ?? string.Empty,
                     DestinationAlias = destinationAlias ?? string.Empty,
                     OriginMachineName = originMachineName ?? string.Empty,
                     IsProtected     = isProtected ? 1 : 0,
+                    IsEncrypted     = isEncrypted ? 1 : 0,
+                    CryptoDescriptorJson = descriptorJson,
                     IsImported      = isImported ? 1 : 0
                 });
         }
@@ -792,12 +946,15 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM backups
                 WHERE external_id = @externalId
@@ -828,6 +985,27 @@ DELETE FROM sqlite_sequence;";
                 new { externalId, id = backupId });
         }
 
+        public void UpdateBackupEncryptionMetadata(int backupId, bool isEncrypted, string? cryptoDescriptorJson, long totalBytes)
+        {
+            using var c = Open();
+            var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
+            c.Execute(
+                """
+                UPDATE backups
+                SET is_encrypted = @isEncrypted,
+                    crypto_descriptor_json = @descriptorJson,
+                    total_bytes = @totalBytes
+                WHERE id = @id;
+                """,
+                new
+                {
+                    id = backupId,
+                    isEncrypted = isEncrypted ? 1 : 0,
+                    descriptorJson = descriptor.ToMetadataJson(isEncrypted),
+                    totalBytes = Math.Max(0, totalBytes)
+                });
+        }
+
         public Backup? GetLatestBackupForProject(int projectId)
         {
             using var c = Open();
@@ -840,12 +1018,15 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM backups
                 WHERE project_id = @pid
@@ -867,12 +1048,15 @@ DELETE FROM sqlite_sequence;";
                     b.snapshot_id as SnapshotId,
                     b.created_utc as CreatedUtc,
                     b.type,
+                    b.backup_mode as BackupMode,
                     b.total_bytes as TotalBytes,
                     b.path,
                     b.destination_path as DestinationPath,
                     b.destination_alias as DestinationAlias,
                     b.origin_machine_name as OriginMachineName,
                     b.is_protected as IsProtected,
+                    b.is_encrypted as IsEncrypted,
+                    b.crypto_descriptor_json as CryptoDescriptorJson,
                     b.is_imported as IsImported
                   FROM backups b
                 INNER JOIN (
@@ -897,12 +1081,15 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM backups
                 WHERE id = @id
@@ -926,12 +1113,15 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM (
                     SELECT
@@ -957,12 +1147,15 @@ DELETE FROM sqlite_sequence;";
                     snapshot_id as SnapshotId,
                     created_utc as CreatedUtc,
                     type,
+                    backup_mode as BackupMode,
                     total_bytes as TotalBytes,
                     path,
                     destination_path as DestinationPath,
                     destination_alias as DestinationAlias,
                     origin_machine_name as OriginMachineName,
                     is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
                     is_imported as IsImported
                   FROM backups
                   WHERE project_id = @pid
@@ -1005,12 +1198,15 @@ DELETE FROM sqlite_sequence;";
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
                   type,
+                  backup_mode as BackupMode,
                   total_bytes as TotalBytes,
                   path,
                   destination_path as DestinationPath,
                   destination_alias as DestinationAlias,
                   origin_machine_name as OriginMachineName,
                   is_protected as IsProtected,
+                  is_encrypted as IsEncrypted,
+                  crypto_descriptor_json as CryptoDescriptorJson,
                   is_imported as IsImported
                 FROM backups
                 WHERE created_utc >= @from AND created_utc <= @to
@@ -1044,12 +1240,15 @@ DELETE FROM sqlite_sequence;";
                   snapshot_id as SnapshotId,
                   created_utc as CreatedUtc,
                   type,
+                  backup_mode as BackupMode,
                   total_bytes as TotalBytes,
                   path,
                   destination_path as DestinationPath,
                   destination_alias as DestinationAlias,
                   origin_machine_name as OriginMachineName,
                   is_protected as IsProtected,
+                  is_encrypted as IsEncrypted,
+                  crypto_descriptor_json as CryptoDescriptorJson,
                   is_imported as IsImported
                 FROM backups
                 ORDER BY created_utc DESC

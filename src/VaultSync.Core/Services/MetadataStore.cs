@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Services;
 
@@ -49,7 +51,12 @@ public sealed class MetadataStore
               project_external_id TEXT NOT NULL,
               created_utc TEXT NOT NULL,
               file_count INTEGER NOT NULL,
-              total_bytes INTEGER NOT NULL
+              total_bytes INTEGER NOT NULL,
+              diff_added INTEGER NOT NULL DEFAULT 0,
+              diff_modified INTEGER NOT NULL DEFAULT 0,
+              diff_deleted INTEGER NOT NULL DEFAULT 0,
+              diff_net_bytes INTEGER NOT NULL DEFAULT 0,
+              diff_top_paths_json TEXT NOT NULL DEFAULT '[]'
             );
 
             CREATE TABLE IF NOT EXISTS backups(
@@ -58,6 +65,7 @@ public sealed class MetadataStore
               snapshot_external_id TEXT NOT NULL,
               created_utc TEXT NOT NULL,
               type TEXT NOT NULL,
+              backup_mode TEXT NOT NULL DEFAULT 'full',
               total_bytes INTEGER NOT NULL,
               path_rel TEXT NOT NULL,
               destination_alias TEXT NOT NULL,
@@ -83,6 +91,87 @@ public sealed class MetadataStore
         try
         {
             c.Execute("ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN enc_flag INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN kdf_params_json TEXT NOT NULL DEFAULT '{}';");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch
+        {
+            // Column exists; ignore.
+        }
+
+        try
+        {
+            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
         }
         catch
         {
@@ -157,13 +246,38 @@ public sealed class MetadataStore
         using var c = Open(write: true);
         c.Execute(
             """
-            INSERT INTO snapshots(external_id, project_external_id, created_utc, file_count, total_bytes)
-            VALUES(@ExternalId, @ProjectExternalId, @CreatedUtc, @FileCount, @TotalBytes)
+            INSERT INTO snapshots(
+              external_id,
+              project_external_id,
+              created_utc,
+              file_count,
+              total_bytes,
+              diff_added,
+              diff_modified,
+              diff_deleted,
+              diff_net_bytes,
+              diff_top_paths_json)
+            VALUES(
+              @ExternalId,
+              @ProjectExternalId,
+              @CreatedUtc,
+              @FileCount,
+              @TotalBytes,
+              @DiffAdded,
+              @DiffModified,
+              @DiffDeleted,
+              @DiffNetBytes,
+              @DiffTopPathsJson)
             ON CONFLICT(external_id) DO UPDATE SET
               project_external_id = excluded.project_external_id,
               created_utc = excluded.created_utc,
               file_count = excluded.file_count,
-              total_bytes = excluded.total_bytes;
+              total_bytes = excluded.total_bytes,
+              diff_added = excluded.diff_added,
+              diff_modified = excluded.diff_modified,
+              diff_deleted = excluded.diff_deleted,
+              diff_net_bytes = excluded.diff_net_bytes,
+              diff_top_paths_json = excluded.diff_top_paths_json;
             """,
             new
             {
@@ -171,22 +285,31 @@ public sealed class MetadataStore
                 snapshot.ProjectExternalId,
                 CreatedUtc = ToUtcString(snapshot.CreatedUtc),
                 snapshot.FileCount,
-                snapshot.TotalBytes
+                snapshot.TotalBytes,
+                snapshot.DiffAdded,
+                snapshot.DiffModified,
+                snapshot.DiffDeleted,
+                snapshot.DiffNetBytes,
+                snapshot.DiffTopPathsJson
             });
     }
 
     public void UpsertBackup(MetaBackup backup)
     {
+        var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.KdfParamsJson);
+        var descriptorJson = descriptor.ToMetadataJson(backup.IsEncrypted);
+
         using var c = Open(write: true);
         c.Execute(
             """
-            INSERT INTO backups(external_id, project_external_id, snapshot_external_id, created_utc, type, total_bytes, path_rel, destination_alias, origin_machine_name, is_protected, enc_flag, kdf_params_json)
-            VALUES(@ExternalId, @ProjectExternalId, @SnapshotExternalId, @CreatedUtc, @Type, @TotalBytes, @PathRel, @DestinationAlias, @OriginMachineName, @IsProtected, @EncFlag, @KdfParamsJson)
+            INSERT INTO backups(external_id, project_external_id, snapshot_external_id, created_utc, type, backup_mode, total_bytes, path_rel, destination_alias, origin_machine_name, is_protected, enc_flag, kdf_params_json)
+            VALUES(@ExternalId, @ProjectExternalId, @SnapshotExternalId, @CreatedUtc, @Type, @BackupMode, @TotalBytes, @PathRel, @DestinationAlias, @OriginMachineName, @IsProtected, @EncFlag, @KdfParamsJson)
             ON CONFLICT(external_id) DO UPDATE SET
               project_external_id = excluded.project_external_id,
               snapshot_external_id = excluded.snapshot_external_id,
               created_utc = excluded.created_utc,
               type = excluded.type,
+              backup_mode = excluded.backup_mode,
               total_bytes = excluded.total_bytes,
               path_rel = excluded.path_rel,
               destination_alias = excluded.destination_alias,
@@ -202,13 +325,14 @@ public sealed class MetadataStore
                 backup.SnapshotExternalId,
                 CreatedUtc = ToUtcString(backup.CreatedUtc),
                 backup.Type,
+                BackupMode = BackupModes.Normalize(backup.BackupMode),
                 backup.TotalBytes,
                 backup.PathRel,
                 backup.DestinationAlias,
                 backup.OriginMachineName,
                 IsProtected = backup.IsProtected ? 1 : 0,
                 EncFlag = backup.IsEncrypted ? 1 : 0,
-                backup.KdfParamsJson
+                KdfParamsJson = descriptorJson
             });
     }
 
@@ -276,17 +400,42 @@ public sealed class MetadataStore
     public IEnumerable<MetaSnapshot> ListSnapshots()
     {
         using var c = TryOpenRead();
-        return SafeQuery<MetaSnapshot>(
-            c,
-            """
+        if (c is null)
+            return Array.Empty<MetaSnapshot>();
+
+        var snapshotColumns = GetTableColumns(c, "snapshots");
+        var diffAddedProjection = snapshotColumns.Contains("diff_added")
+            ? "diff_added as DiffAdded"
+            : "0 as DiffAdded";
+        var diffModifiedProjection = snapshotColumns.Contains("diff_modified")
+            ? "diff_modified as DiffModified"
+            : "0 as DiffModified";
+        var diffDeletedProjection = snapshotColumns.Contains("diff_deleted")
+            ? "diff_deleted as DiffDeleted"
+            : "0 as DiffDeleted";
+        var diffNetBytesProjection = snapshotColumns.Contains("diff_net_bytes")
+            ? "diff_net_bytes as DiffNetBytes"
+            : "0 as DiffNetBytes";
+        var diffTopPathsProjection = snapshotColumns.Contains("diff_top_paths_json")
+            ? "diff_top_paths_json as DiffTopPathsJson"
+            : "'[]' as DiffTopPathsJson";
+
+        var sql = $"""
             SELECT
               external_id as ExternalId,
               project_external_id as ProjectExternalId,
               created_utc as CreatedUtc,
               file_count as FileCount,
-              total_bytes as TotalBytes
+              total_bytes as TotalBytes,
+              {diffAddedProjection},
+              {diffModifiedProjection},
+              {diffDeletedProjection},
+              {diffNetBytesProjection},
+              {diffTopPathsProjection}
             FROM snapshots;
-            """);
+            """;
+
+        return SafeQuery<MetaSnapshot>(c, sql);
     }
 
     public IEnumerable<MetaSnapshotRef> ListSnapshotRefs()
@@ -305,47 +454,45 @@ public sealed class MetadataStore
     public IEnumerable<MetaBackup> ListBackups()
     {
         using var c = TryOpenRead();
-        try
-        {
-            return SafeQuery<MetaBackup>(
-                c,
-                """
-                SELECT
-                  external_id as ExternalId,
-                  project_external_id as ProjectExternalId,
-                  snapshot_external_id as SnapshotExternalId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path_rel as PathRel,
-                  destination_alias as DestinationAlias,
-                  origin_machine_name as OriginMachineName,
-                  is_protected as IsProtected,
-                  enc_flag as IsEncrypted,
-                  kdf_params_json as KdfParamsJson
-                FROM backups;
-                """);
-        }
-        catch
-        {
-            return SafeQuery<MetaBackup>(
-                c,
-                """
-                SELECT
-                  external_id as ExternalId,
-                  project_external_id as ProjectExternalId,
-                  snapshot_external_id as SnapshotExternalId,
-                  created_utc as CreatedUtc,
-                  type,
-                  total_bytes as TotalBytes,
-                  path_rel as PathRel,
-                  destination_alias as DestinationAlias,
-                  is_protected as IsProtected,
-                  enc_flag as IsEncrypted,
-                  kdf_params_json as KdfParamsJson
-                FROM backups;
-                """);
-        }
+        if (c is null)
+            return Array.Empty<MetaBackup>();
+
+        var backupColumns = GetTableColumns(c, "backups");
+        var originMachineProjection = backupColumns.Contains("origin_machine_name")
+            ? "origin_machine_name as OriginMachineName"
+            : "'' as OriginMachineName";
+        var protectedProjection = backupColumns.Contains("is_protected")
+            ? "is_protected as IsProtected"
+            : "0 as IsProtected";
+        var encryptedProjection = backupColumns.Contains("enc_flag")
+            ? "enc_flag as IsEncrypted"
+            : "0 as IsEncrypted";
+        var descriptorProjection = backupColumns.Contains("kdf_params_json")
+            ? "kdf_params_json as KdfParamsJson"
+            : "'{}' as KdfParamsJson";
+        var backupModeProjection = backupColumns.Contains("backup_mode")
+            ? "backup_mode as BackupMode"
+            : "'full' as BackupMode";
+
+        var sql = $"""
+            SELECT
+              external_id as ExternalId,
+              project_external_id as ProjectExternalId,
+              snapshot_external_id as SnapshotExternalId,
+              created_utc as CreatedUtc,
+              type,
+              {backupModeProjection},
+              total_bytes as TotalBytes,
+              path_rel as PathRel,
+              destination_alias as DestinationAlias,
+              {originMachineProjection},
+              {protectedProjection},
+              {encryptedProjection},
+              {descriptorProjection}
+            FROM backups;
+            """;
+
+        return SafeQuery<MetaBackup>(c, sql);
     }
 
     public IEnumerable<MetaBackupRef> ListBackupRefs()
@@ -544,6 +691,22 @@ public sealed class MetadataStore
         }
     }
 
+    private static HashSet<string> GetTableColumns(SqliteConnection connection, string tableName)
+    {
+        try
+        {
+            return connection
+                .Query<TableColumnInfo>($"PRAGMA table_info({tableName});")
+                .Select(c => c.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
     private void ConfigureConnection(SqliteConnection conn, bool write)
     {
         if (!write)
@@ -587,6 +750,11 @@ public sealed class MetadataStore
 
     private static string ToUtcString(DateTime utc) =>
         utc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
+
+    private sealed class TableColumnInfo
+    {
+        public string Name { get; set; } = string.Empty;
+    }
 }
 
 public sealed class MetaInfo
@@ -616,6 +784,11 @@ public sealed class MetaSnapshot
     public DateTime CreatedUtc { get; set; }
     public long FileCount { get; set; }
     public long TotalBytes { get; set; }
+    public int DiffAdded { get; set; }
+    public int DiffModified { get; set; }
+    public int DiffDeleted { get; set; }
+    public long DiffNetBytes { get; set; }
+    public string DiffTopPathsJson { get; set; } = "[]";
 }
 
 public sealed class MetaBackup
@@ -625,6 +798,7 @@ public sealed class MetaBackup
     public string SnapshotExternalId { get; set; } = string.Empty;
     public DateTime CreatedUtc { get; set; }
     public string Type { get; set; } = string.Empty;
+    public string BackupMode { get; set; } = BackupModes.Full;
     public long TotalBytes { get; set; }
     public string PathRel { get; set; } = string.Empty;
     public string DestinationAlias { get; set; } = string.Empty;

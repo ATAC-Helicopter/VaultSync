@@ -1,5 +1,137 @@
 ﻿# Changelog
-## [1.4.1] - Unreleased
+## [1.5.0] - 19.02.2026
+### Added
+- [VS-1501] Versioned backup crypto descriptor contract for metadata (`formatVersion`, `algorithm`, `kdfProfile`, `kdfParamRef`).
+- [VS-1504] `BackupEncryptionSecretService` with secure-store writes and explicit session-memory fallback workflow.
+- [VS-1504] Global backup encryption config contract with non-secret key reference fields (`KeyRef`, algorithm/KDF parameters).
+- [VS-1502] `BackupArchiveCryptoService` for encrypted archive artifacts (`data.vse`) with per-backup salt/IV envelope metadata.
+- [VS-1530] Global backup encryption settings UI with secure password enrollment and explicit clear/reset action.
+- [VS-1531] Per-project encryption policy selector (`inherit global`, `encrypted`, `plain`) in Projects view with effective-state display.
+- [VS-1532] Per-project encryption key reference persistence (`encryption_key_ref`) with migration-safe defaults in the projects schema.
+- [VS-1533] `BackupEncryptionPolicyResolver` to compute effective encryption mode/key source per project at backup runtime.
+- [VS-1535] Explorer/open-file activation for `.vse` encrypted archives now routes into VaultSync with a password prompt flow.
+- [VS-1536] `BackupKeyRotationService` with explicit user-triggered rotation flow for existing encrypted backups (global scope or single-project filter).
+- [VS-1537] Per-project encryption password management action is now available in both Projects and Backups pages.
+- [VS-1539] Settings > Encryption now includes a proactive "Set password (Projects)" flow to enroll project passwords on a new machine before restore/open.
+- [VS-1539] Settings > Encryption now includes a `Lock now` action to immediately close/decrypt-open temp workspaces.
+- [VS-1510] Settings now includes backup bandwidth cap and quiet-hours controls with persisted config fields.
+- [VS-1511] Added shared transfer policy helper and automated unit tests for bandwidth conversion/throttling math.
+- [VS-1512] Added shared quiet-hours policy helper and automated unit tests for overnight/daytime schedule evaluation.
+- [VS-1513] Active backup cards now show runtime transfer-policy chips (`Throttled`, `Quiet hours`) in both the Backups page and backup widget.
+- [VS-1513] Tray native menu and tray panel summary now show the active transfer-policy state when applicable.
+- [VS-1520] Added persisted backup mode metadata (`full`/`incremental`) on backups and metadata sync records.
+- [VS-1521] Added retention outcome line metadata on backup history card items.
+- [VS-1522] Added restore confirmation guidance block support (type-aware and encryption-aware).
+- [VS-1523] Updated README and docs terminology to document `Full` / `Incremental` / `Imported` backup types and restore guidance behavior.
+- [VS-1523] Backups summary cards now include compact utility meters (run mix, backup freshness, storage composition) to use empty card space with actionable context.
+- [VS-1540] Added snapshot diff-summary persistence fields (`added`, `modified`, `deleted`, `net size delta`, and `top changed paths`) to local and metadata snapshot schemas.
+- [VS-1542] Backups history now includes per-snapshot diff export actions (`text` and `JSON`) plus an in-app git-style diff preview dialog.
+- release execution backlog with `VS-xxxx` work-item IDs, dependency links, and acceptance criteria in the roadmap.
+- phase plan (`A` security backbone, `B` controls, `C` UX/insights, `D` stabilization) with explicit release-gate policy.
+- Backup history cards now show an explicit encryption status tag (`Encrypted` / `Plain`).
+- Project cards now show an explicit encryption status tag (`Encrypted` / `Plain`) for quick visibility.
+### Changed
+- [VS-1501] Metadata backup writes now normalize crypto descriptor payloads and persist only non-secret fields.
+- [VS-1501] Metadata sync export paths now use the shared plain-descriptor contract value for backward-safe plain backups.
+- [VS-1504] Encryption secret fallback now requires explicit confirmation before keeping secrets in session memory.
+- [VS-1502] Backup runs now support encrypted archive write mode and persist encrypted descriptor metadata in backup records.
+- [VS-1502] Metadata sync import/export now preserves encryption flags and descriptor payloads for encrypted backups.
+- [VS-1503] Restore flow now prompts for an encryption password only for encrypted backups and uses staged decrypt/extract before applying files.
+- [VS-1505] Metadata sync import/export now stays compatible with mixed encrypted/plain history across legacy metadata-store schemas.
+- [VS-1530] Settings persistence now stores only non-secret backup-encryption refs (`Enabled`, `KeyRef`, fallback policy) while password material stays in secure storage/session memory.
+- [VS-1531] Backup runtime now resolves encryption mode per project using policy precedence (`project override` > `global`) before deciding archive encryption.
+- [VS-1531] Projects repository schema now persists per-project encryption policy with migration-safe default `inherit`.
+- [VS-1532] Metadata sync project settings import/export now preserves non-secret encryption fields (`encryptionPolicy`, `encryptionKeyRef`) across devices.
+- [VS-1533] Backup encryption now resolves key source in order: project key reference first, then global key reference, while honoring project policy overrides.
+- [VS-1533] Backup runs now fail fast with explicit errors when encryption is required but no key reference/secret is available.
+- [VS-1534] Encrypted restore now attempts secure-store keys in order (project key reference first, then global key reference) before prompting for manual password entry.
+- [VS-1534] Restore key fallback now prompts only when no stored key succeeds, preserving plain-backup restore behavior unchanged.
+- [VS-1535] Single-instance activation now forwards file-open payloads so opening `.vse` while VaultSync is running reuses the current app session.
+- [VS-1536] Settings encryption panel now includes a rotation action that prompts for old/new passwords and can target all projects or one project by name.
+- [VS-1536] Backup records now update encrypted descriptor metadata/size after successful key rotation.
+- [VS-1537] Projects and Backups per-project cards now share one password-edit flow, using a single app-level handler to prevent cross-page mismatch.
+- Projects and Backups encryption sections now show a dedicated status pill (`Encrypted`, `Not protected`, or missing-password warning).
+- [VS-1538] Backups `Open folder` now detects encrypted backups, prompts for password (stored keys first), decrypts to a temp workspace, and opens decrypted content directly.
+- [VS-1539] Encrypted open-folder auto-lock timeout is now configurable in Settings and shared by in-app and external `.vse` open flows.
+- [VS-1543] Encrypted open-folder now reuses a per-project in-memory session unlock within the configured timeout, then re-prompts after expiry.
+- [VS-1511] Native backup copy path now enforces configured bandwidth caps in `rsync` (`--bwlimit`) and robocopy (`/IPG`).
+- [VS-1512] Auto-backup timer now defers backup starts during configured quiet-hours windows with deterministic resume timing.
+- [VS-1512] Quiet-hours policy is applied to new auto-backup starts only; active in-flight backups are allowed to complete.
+- [VS-1513] Backup policy transitions are now emitted as informational `[Policy]` log entries (no warning/error noise) and trigger tray status refresh when state changes.
+- [VS-1520] Backups history type chips now use `Full`/`Incremental`/`Imported` terminology from per-backup mode metadata.
+- [VS-1521] Backup history cards now show retention outcome text (`eligible`, `protected`, `imported history`) and refresh it when Keep toggles.
+- [VS-1522] Restore requests now open a confirmation dialog with a "What happens next" block before starting restore.
+- [VS-1540] Snapshot creation now computes and stores diff summaries per snapshot, and metadata sync import/export now preserves those summary fields across devices.
+- [VS-1541] Projects and Backups history cards now surface compact snapshot diff summaries (`+`, `~`, `-`, signed net delta) with top-path previews and fallback states.
+- [VS-1542] Diff-summary export writes now use collision-safe filenames under `Documents/VaultSync/Exports/SnapshotDiff` and report actionable export success/failure notifications.
+- Settings quiet-hours inputs now use explicit side-by-side Start/End field groups for clearer overnight scheduling setup.
+- Backup history chips now separate mode and encryption context (`Mode: ...`, `Encryption: ...`) for faster scanning.
+- New backup summary/mode/encryption chip strings are now fully localization-key based (no hardcoded UI literals), and keys were added to all language packs.
+- Backup freshness summary now shows localized state + relative age, with a localized threshold tooltip and state-based color coding.
+- Backups page pills now use semantic/size variants (`info/success/warning`, `sm/md`) and long pill text now truncates safely with tooltips to avoid clipping in windowed layouts.
+- Pill styling is now centralized in app-wide styles so Backups and Dashboard share the same visual behavior.
+- Backups history type filters now use active-state toggle pills for clearer selected filter feedback.
+- Quiet hours settings UI was redesigned with a compact window preview card and clearer start/end time inputs.
+- Dashboard weekly activity graph now avoids stretch-to-row behavior, with thicker bars and adaptive chart height so low-activity weeks don't look sparse.
+- Backups activity mini-chart now uses adaptive height and thicker bar segments for better readability at low counts.
+- Backups per-project cards were reworked into a denser two-column layout (stats, destination, encryption, and actions grouped more cleanly).
+- Dashboard weekly chart header now separates legend and summary rows to prevent overlap/clutter in windowed layouts.
+- Project health warning strip now uses higher-contrast foreground text, and out-of-date copy is clearer.
+- Projects details panel now uses a denser layout with key snapshot/size info pulled into the header and reduced empty middle spacing.
+- Projects detail controls now use a structured 4-column grid to improve alignment of preset/destination/encryption/health sections.
+- Settings destinations cards were reflowed with cleaner grouping (header, path actions, credentials, and two-column options) for better windowed readability.
+- Settings quiet-hours window card was compacted with centered start/end controls and reduced horizontal dead space.
+- Backups per-project cards were further tightened to prevent overlap between toggle/stat pills/actions on narrower widths.
+- Dashboard and Backups weekly activity bars now use fixed centered segment widths to prevent stretch/overlap artifacts at low activity.
+- [VS-1539] Project encryption enrollment/edit dialogs were extracted from `AppViewModel` into a dedicated `ProjectEncryptionEnrollmentService` while preserving existing metadata export + UI refresh behavior.
+- Backup orchestration support methods (`destination prep`, `backup-all prep`, aggregate progress update, NAS temp-root migration helpers) were extracted from
+  `AppViewModel` into a dedicated partial class file to reduce main view-model complexity without changing runtime behavior.
+- Manual backup and backup-all handler implementations were extracted from `AppViewModel` into a dedicated partial file to isolate orchestration flow from
+  unrelated UI/update logic while keeping behavior unchanged.
+- Backup history workflows (`delete`, `restore`, encrypted open-folder/decrypt prompts, and related preparation helpers) were extracted from
+  `AppViewModel` into a dedicated partial file to keep history operations isolated from startup/navigation/update logic.
+- Runtime operations (`NAS monitor`, destination probing/status summaries, metadata sync import/export/refresh flow, and encryption-rotation settings workflow)
+  were extracted from `AppViewModel` into a dedicated partial file to reduce central view-model coupling.
+- Tray/menu workflows (backup/snapshot trigger surface, recent-backups tray actions, open-folder-from-tray, and encrypted-open cleanup helpers) were extracted
+  from `AppViewModel` into a dedicated partial file for clearer operational boundaries.
+- Update/startup-check workflow (`manual/auto update checks`, `retry/timer state`, `patch + installer download/launch`, and related UI status methods) was extracted
+  from `AppViewModel` into a dedicated partial file to isolate release/update flow.
+- Added repository-level Prettier configuration (`.prettierrc.json`) and ignore rules (`.prettierignore`) for consistent formatting of supported text assets.
+- Added repository-level `.editorconfig` with C# and text formatting defaults so .NET/C# formatters apply consistent style in IDE and CLI.
+- Backup support helpers (`post-hash`, verification, drive-health evaluation/notifications, restore advisories, and project-root fallback checks) were extracted
+  from `AppViewModel` into a dedicated partial file for clearer backup-domain boundaries.
+- Navigation/view-state members (`CurrentView`, header state, initial route guard, and shell navigation commands) were extracted from `AppViewModel`
+  into a dedicated partial file to keep routing concerns isolated.
+- Startup/bootstrap orchestration (constructor service wiring, initial config/runtime setup, and lazy Backups view-model composition) was extracted from
+  `AppViewModel` into a dedicated partial file while preserving startup behavior.
+- Shared helper methods (progress label computation, localization helpers, system-language resolution, download status updates, and backup skip notifications)
+  were extracted from `AppViewModel` into a dedicated partial file to reduce core file coupling.
+- `CONTRIBUTING.md` fully restructured with the default `VS-xxxx` planning model and contribution flow.
+- Core test suite rewritten to match current metadata-sync and destination behavior contracts.
+- Dashboard weekly analytics card was fully redesigned with a split insight rail + chart stage, updated lighter surface layering, and a capsule/lollipop activity graph style.
+- Dashboard charts row was rebalanced so the storage card remains visible at large widths, and storage usage now uses a side-by-side donut + legend layout with a bottom capacity strip.
+- Projects detail action row now wraps responsively so `Open folder` / `Snapshot now` / `Remove from VaultSync` actions do not clip or overlap in windowed layouts.
+- Dashboard storage donut now uses explicit visibility toggling against `HasStorageSeries` to avoid stale empty-chart presentation when data arrives after initial layout.
+- Added `1.4` <-> `1.5` compatibility matrix runbook (`CM-1501`..`CM-1508`) under `docs/wiki/Compatibility-Matrix-1.5.md` to drive `VS-1591` release-gate validation.
+### Fixed
+- [VS-1501] Legacy plain backup crypto metadata (`{}`) now parses through the typed descriptor compatibility path.
+- [VS-1504] Secure-store failures no longer require plaintext secret persistence in config as fallback path.
+- [VS-1502] Destination scans and backup-size probes now recognize encrypted archive artifacts alongside plain archives.
+- [VS-1503] Encrypted restore now fails with an explicit invalid-password/corruption error and leaves no partial restored output on wrong-password attempts.
+- [VS-1503] `NeedsRestore` flags are now cleared only after a successful restore completion.
+- [VS-1505] Import/preview from older metadata stores (missing `origin_machine_name` and encryption columns) no longer fails and defaults backups to plain compatibility values.
+- Dashboard storage donut now force-invalidates measure/visual on `StorageSeries` updates so the pie reliably appears after async data refreshes.
+- [VS-1536] Rotation failures now preserve original encrypted backup artifacts via rollback-safe swap logic (no corruption on failure/interruption).
+- Windows startup/debug runs no longer attempt to execute `/bin/ps` for parent-process info logging.
+- Metadata sync tests now reflect current import rules for existing/missing backup paths.
+- Windows installer now registers `.vse` file association so encrypted backup files open directly in VaultSync.
+- [VS-1538] In-app `Open folder` no longer sends encrypted backups to the raw backup folder path that could trigger OS "Open with" on `.vse`.
+- Build no longer picks up generated `artifacts/tmpobj` sources as compile inputs, fixing duplicate assembly attribute errors (`CS0579`) in local builds.
+- Dashboard weekly summary labels now compute after day-series arrays are populated, so summary text matches the rendered weekly chart.
+- Dashboard activity summary now includes imported-run counts for parity with the weekly graph breakdown.
+- Dashboard storage donut hover labels now truncate long project names to prevent tooltip overlay overflow in windowed layouts.
+
+## [1.4.1] - 06.02.2026
 ### Added
 - Startup load deferral safeguards to reduce early UI stalls.
 ### Changed
@@ -65,7 +197,7 @@
 - Backups and dashboard view models now load config off the UI thread.
 - Onboarding tour now refreshes cached config off the UI thread.
 
-## [1.4.0] - Unreleased
+## [1.4.0] - 04.02.2026
 ### Added
 - Backup estimate UI now shows size/time previews and capacity warnings.
 - Backup preflight API for size/time estimates.
