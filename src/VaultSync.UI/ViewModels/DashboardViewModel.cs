@@ -212,6 +212,7 @@ namespace VaultSync.UI.ViewModels
 
         // Donut bindings
         public ISeries[] StorageSeries { get; private set; } = Array.Empty<ISeries>();
+        public bool HasStorageSeries => StorageSeries is { Length: > 0 };
         public IEnumerable<LegendItem> StorageLegend { get; private set; } = Array.Empty<LegendItem>();
 
         // Activity items, populated from real data.
@@ -666,6 +667,7 @@ namespace VaultSync.UI.ViewModels
                 StorageSeries = Array.Empty<ISeries>();
                 StorageLegend = Array.Empty<LegendItem>();
                 OnPropertyChanged(nameof(StorageSeries));
+                OnPropertyChanged(nameof(HasStorageSeries));
                 OnPropertyChanged(nameof(StorageLegend));
                 return;
             }
@@ -676,6 +678,7 @@ namespace VaultSync.UI.ViewModels
                 StorageSeries = Array.Empty<ISeries>();
                 StorageLegend = Array.Empty<LegendItem>();
                 OnPropertyChanged(nameof(StorageSeries));
+                OnPropertyChanged(nameof(HasStorageSeries));
                 OnPropertyChanged(nameof(StorageLegend));
                 return;
             }
@@ -689,8 +692,13 @@ namespace VaultSync.UI.ViewModels
                 if (bytes <= 0) continue;
 
                 var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
-                var color = SKColor.Parse(colorHex);
+                var color = SKColors.DodgerBlue;
+                if (!SKColor.TryParse(colorHex, out color))
+                {
+                    color = SKColors.DodgerBlue;
+                }
                 var projectName = project.Name;
+                var displayProjectName = TrimForTooltip(projectName, 28);
                 var sliceBytes = bytes;
 
                 series.Add(new PieSeries<double>
@@ -699,20 +707,30 @@ namespace VaultSync.UI.ViewModels
                     Name        = projectName,
                     InnerRadius = 90,
                     Stroke      = null,
-                    Fill        = new SolidColorPaint(color),
-                    ToolTipLabelFormatter = point =>
-                        $"{projectName} {FormatBytes(sliceBytes)}"
+                    Fill        = new SolidColorPaint(color)
                 });
 
                 legend.Add(new LegendItem(
+                    $"{displayProjectName} {FormatBytes(bytes)}",
                     $"{projectName} {FormatBytes(bytes)}",
                     new ImmutableSolidColorBrush(Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue))));
+            }
+
+            if (series.Count == 0)
+            {
+                StorageSeries = Array.Empty<ISeries>();
+                StorageLegend = Array.Empty<LegendItem>();
+                OnPropertyChanged(nameof(StorageSeries));
+                OnPropertyChanged(nameof(HasStorageSeries));
+                OnPropertyChanged(nameof(StorageLegend));
+                return;
             }
 
             StorageSeries = series.ToArray();
             StorageLegend = legend;
 
             OnPropertyChanged(nameof(StorageSeries));
+            OnPropertyChanged(nameof(HasStorageSeries));
             OnPropertyChanged(nameof(StorageLegend));
         }
 
@@ -1609,6 +1627,21 @@ namespace VaultSync.UI.ViewModels
             return r;
         }
 
+        private static string TrimForTooltip(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            if (maxLength < 4 || value!.Length <= maxLength)
+            {
+                return value!;
+            }
+
+            return value!.Substring(0, maxLength - 3) + "...";
+        }
+
         private static string L(string key, string fallback)
         {
             var loc = LocalizationProvider.Service;
@@ -1668,7 +1701,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         // Bindables
-        public record LegendItem(string Label, IBrush Brush);
+        public record LegendItem(string Label, string Tooltip, IBrush Brush);
         public record BackupUsageSegment(string Label, double SizeBytes, IBrush Brush);
 
         public enum Dot { Green, Blue, Purple, Gray }

@@ -492,6 +492,15 @@ namespace VaultSync.UI.ViewModels
         private bool _isDiffPreviewOpen;
         private string _diffPreviewTitle = string.Empty;
         private string _diffPreviewText = string.Empty;
+        private string _diffPreviewMetaLine = string.Empty;
+        private string _diffPreviewTrigger = string.Empty;
+        private string _diffPreviewMode = string.Empty;
+        private string _diffPreviewImportedDisplay = string.Empty;
+        private string _diffPreviewEncryptionDisplay = string.Empty;
+        private int _diffPreviewAdded;
+        private int _diffPreviewModified;
+        private int _diffPreviewDeleted;
+        private string _diffPreviewNet = string.Empty;
 
         // Backup progress details (for long-running operations)
         private double _backupProgress;
@@ -633,6 +642,117 @@ namespace VaultSync.UI.ViewModels
                 }
             }
         }
+
+        public string DiffPreviewMetaLine
+        {
+            get => _diffPreviewMetaLine;
+            set
+            {
+                if (SetProperty(ref _diffPreviewMetaLine, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewMetaLine));
+                }
+            }
+        }
+
+        public string DiffPreviewTrigger
+        {
+            get => _diffPreviewTrigger;
+            set
+            {
+                if (SetProperty(ref _diffPreviewTrigger, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewTrigger));
+                }
+            }
+        }
+
+        public string DiffPreviewMode
+        {
+            get => _diffPreviewMode;
+            set
+            {
+                if (SetProperty(ref _diffPreviewMode, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewMode));
+                }
+            }
+        }
+
+        public string DiffPreviewImportedDisplay
+        {
+            get => _diffPreviewImportedDisplay;
+            set
+            {
+                if (SetProperty(ref _diffPreviewImportedDisplay, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewImportedDisplay));
+                }
+            }
+        }
+
+        public string DiffPreviewEncryptionDisplay
+        {
+            get => _diffPreviewEncryptionDisplay;
+            set
+            {
+                if (SetProperty(ref _diffPreviewEncryptionDisplay, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewEncryptionDisplay));
+                }
+            }
+        }
+
+        public int DiffPreviewAdded
+        {
+            get => _diffPreviewAdded;
+            set
+            {
+                if (SetProperty(ref _diffPreviewAdded, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewAdded));
+                }
+            }
+        }
+
+        public int DiffPreviewModified
+        {
+            get => _diffPreviewModified;
+            set
+            {
+                if (SetProperty(ref _diffPreviewModified, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewModified));
+                }
+            }
+        }
+
+        public int DiffPreviewDeleted
+        {
+            get => _diffPreviewDeleted;
+            set
+            {
+                if (SetProperty(ref _diffPreviewDeleted, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewDeleted));
+                }
+            }
+        }
+
+        public string DiffPreviewNet
+        {
+            get => _diffPreviewNet;
+            set
+            {
+                if (SetProperty(ref _diffPreviewNet, value))
+                {
+                    OnPropertyChanged(nameof(DiffPreviewNet));
+                }
+            }
+        }
+
+        public ObservableCollection<DiffPreviewPathItem> DiffPreviewTopPaths { get; } = new();
+        public bool HasDiffPreviewTopPaths => DiffPreviewTopPaths.Count > 0;
 
         // Events that external code (e.g. view or parent VM) can subscribe to
         // in order to run real backup/restore logic and then refresh this VM.
@@ -832,6 +952,32 @@ namespace VaultSync.UI.ViewModels
                 "Backups.DiffSummary.PreviewTitle",
                 "Diff summary - {0}",
                 payload.ProjectName);
+            DiffPreviewMetaLine = Lf(
+                "Backups.DiffSummary.PreviewMeta",
+                "{0} · {1}",
+                payload.TimestampLocal,
+                payload.Destination);
+            DiffPreviewTrigger = payload.TriggerType;
+            DiffPreviewMode = payload.ModeLabel;
+            DiffPreviewImportedDisplay = payload.IsImported
+                ? L("Backups.Section.TypeImported", "Imported")
+                : L("Backups.Summary.LocalLabel", "Local");
+            DiffPreviewEncryptionDisplay = payload.IsEncrypted
+                ? L("Backups.Section.Encryption.Encrypted", "Encrypted")
+                : L("Backups.Section.Encryption.Plain", "Plain");
+            DiffPreviewAdded = payload.DiffAdded;
+            DiffPreviewModified = payload.DiffModified;
+            DiffPreviewDeleted = payload.DiffDeleted;
+            DiffPreviewNet = FormatSignedSize(payload.DiffNetBytes);
+            DiffPreviewTopPaths.Clear();
+            foreach (var path in payload.TopPaths.Take(8))
+            {
+                DiffPreviewTopPaths.Add(new DiffPreviewPathItem(
+                    path.Path,
+                    path.Changes,
+                    BackupSnapshotItem.FormatSize(path.ChangedBytes)));
+            }
+            OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
             DiffPreviewText = BuildGitStyleDiffText(payload);
             IsDiffPreviewOpen = true;
         }
@@ -841,6 +987,17 @@ namespace VaultSync.UI.ViewModels
             IsDiffPreviewOpen = false;
             DiffPreviewTitle = string.Empty;
             DiffPreviewText = string.Empty;
+            DiffPreviewMetaLine = string.Empty;
+            DiffPreviewTrigger = string.Empty;
+            DiffPreviewMode = string.Empty;
+            DiffPreviewImportedDisplay = string.Empty;
+            DiffPreviewEncryptionDisplay = string.Empty;
+            DiffPreviewAdded = 0;
+            DiffPreviewModified = 0;
+            DiffPreviewDeleted = 0;
+            DiffPreviewNet = string.Empty;
+            DiffPreviewTopPaths.Clear();
+            OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
         }
 
         private SnapshotSummaryExportPayload BuildSnapshotSummaryExportPayload(BackupSnapshotItem snapshot)
@@ -1605,11 +1762,12 @@ namespace VaultSync.UI.ViewModels
 
             var grouped = filtered
                 .GroupBy(s => s.ProjectId ?? string.Empty)
-                .OrderBy(g =>
+                .OrderByDescending(g => g.Max(s => s.Timestamp))
+                .ThenBy(g =>
                 {
                     if (!string.IsNullOrWhiteSpace(g.Key) && projectLookup.TryGetValue(g.Key, out var nameSource))
                         return nameSource.Name;
-                    return "zzzz_" + g.Key; // unknown/global go at the end
+                    return "zzzz_" + g.Key;
                 });
 
             var latestOverall = filtered
@@ -2402,7 +2560,15 @@ namespace VaultSync.UI.ViewModels
                 projectStats[backup.ProjectId] = stats;
             }
 
-            foreach (var project in projectList)
+            var orderedProjects = projectList
+                .OrderByDescending(project =>
+                    projectStats.TryGetValue(project.Id, out var stats)
+                        ? stats.LastBackupTime ?? DateTime.MinValue
+                        : DateTime.MinValue)
+                .ThenBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var project in orderedProjects)
             {
                 projectStats.TryGetValue(project.Id, out var stats);
 
@@ -2491,7 +2657,12 @@ namespace VaultSync.UI.ViewModels
                     DiffTopPathsJson = snapshotInfo?.DiffTopPathsJson ?? "[]",
                     DiffSummaryDisplay = BuildSnapshotDiffSummaryDisplay(snapshotInfo),
                     DiffTopPathsDisplay = diffTopPathsDisplay,
-                    HasDiffTopPaths = hasDiffTopPaths
+                    HasDiffTopPaths = hasDiffTopPaths,
+                    CanOpenDiffDetails = (snapshotInfo?.DiffAdded ?? 0) > 0
+                        || (snapshotInfo?.DiffModified ?? 0) > 0
+                        || (snapshotInfo?.DiffDeleted ?? 0) > 0
+                        || (snapshotInfo?.DiffNetBytes ?? 0) != 0
+                        || hasDiffTopPaths
                 };
 
                 _allSnapshots.Add(uiItem);
@@ -2593,7 +2764,7 @@ namespace VaultSync.UI.ViewModels
 
             var hasChanges = snapshot.DiffAdded > 0 || snapshot.DiffModified > 0 || snapshot.DiffDeleted > 0;
             if (!hasChanges && snapshot.DiffNetBytes == 0)
-                return L("Backups.DiffSummary.NoChanges", "No file changes detected");
+                return L("Backups.DiffSummary.NoChanges", "No file changes detected or diff data is unavailable for this backup");
 
             return Lf(
                 "Backups.DiffSummary.Compact",
@@ -2829,6 +3000,20 @@ namespace VaultSync.UI.ViewModels
 
     // ---------- Models ----------
 
+        public sealed class DiffPreviewPathItem
+        {
+            public DiffPreviewPathItem(string path, int changes, string changedBytes)
+            {
+                Path = path;
+                Changes = changes;
+                ChangedBytes = changedBytes;
+            }
+
+            public string Path { get; }
+            public int Changes { get; }
+            public string ChangedBytes { get; }
+        }
+
         public class BackupSnapshotItem : INotifyPropertyChanged
         {
             public event PropertyChangedEventHandler? PropertyChanged;
@@ -2863,6 +3048,7 @@ namespace VaultSync.UI.ViewModels
         public string DiffSummaryDisplay { get; set; } = string.Empty;
         public string DiffTopPathsDisplay { get; set; } = string.Empty;
         public bool HasDiffTopPaths { get; set; }
+        public bool CanOpenDiffDetails { get; set; }
         public int DiffAdded { get; set; }
         public int DiffModified { get; set; }
         public int DiffDeleted { get; set; }

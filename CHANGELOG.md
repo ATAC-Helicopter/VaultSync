@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.5.0] - Unreleased
+## [1.5.0] - 19.02.2026
 ### Added
 - [VS-1501] Versioned backup crypto descriptor contract for metadata (`formatVersion`, `algorithm`, `kdfProfile`, `kdfParamRef`).
 - [VS-1504] `BackupEncryptionSecretService` with secure-store writes and explicit session-memory fallback workflow.
@@ -111,6 +111,8 @@
 - Dashboard weekly analytics card was fully redesigned with a split insight rail + chart stage, updated lighter surface layering, and a capsule/lollipop activity graph style.
 - Dashboard charts row was rebalanced so the storage card remains visible at large widths, and storage usage now uses a side-by-side donut + legend layout with a bottom capacity strip.
 - Projects detail action row now wraps responsively so `Open folder` / `Snapshot now` / `Remove from VaultSync` actions do not clip or overlap in windowed layouts.
+- Dashboard storage donut now uses explicit visibility toggling against `HasStorageSeries` to avoid stale empty-chart presentation when data arrives after initial layout.
+- Added `1.4` <-> `1.5` compatibility matrix runbook (`CM-1501`..`CM-1508`) under `docs/wiki/Compatibility-Matrix-1.5.md` to drive `VS-1591` release-gate validation.
 ### Fixed
 - [VS-1501] Legacy plain backup crypto metadata (`{}`) now parses through the typed descriptor compatibility path.
 - [VS-1504] Secure-store failures no longer require plaintext secret persistence in config as fallback path.
@@ -118,6 +120,7 @@
 - [VS-1503] Encrypted restore now fails with an explicit invalid-password/corruption error and leaves no partial restored output on wrong-password attempts.
 - [VS-1503] `NeedsRestore` flags are now cleared only after a successful restore completion.
 - [VS-1505] Import/preview from older metadata stores (missing `origin_machine_name` and encryption columns) no longer fails and defaults backups to plain compatibility values.
+- Dashboard storage donut now force-invalidates measure/visual on `StorageSeries` updates so the pie reliably appears after async data refreshes.
 - [VS-1536] Rotation failures now preserve original encrypted backup artifacts via rollback-safe swap logic (no corruption on failure/interruption).
 - Windows startup/debug runs no longer attempt to execute `/bin/ps` for parent-process info logging.
 - Metadata sync tests now reflect current import rules for existing/missing backup paths.
@@ -126,6 +129,7 @@
 - Build no longer picks up generated `artifacts/tmpobj` sources as compile inputs, fixing duplicate assembly attribute errors (`CS0579`) in local builds.
 - Dashboard weekly summary labels now compute after day-series arrays are populated, so summary text matches the rendered weekly chart.
 - Dashboard activity summary now includes imported-run counts for parity with the weekly graph breakdown.
+- Dashboard storage donut hover labels now truncate long project names to prevent tooltip overlay overflow in windowed layouts.
 
 ## [1.4.1] - 06.02.2026
 ### Added

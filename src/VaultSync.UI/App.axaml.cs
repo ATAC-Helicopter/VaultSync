@@ -32,6 +32,9 @@ namespace VaultSync.UI;
 
 public partial class App : Application
 {
+    // Test hook: keep disabled in normal builds so onboarding appears only for new installs.
+    private static bool ForceOnboardingAtStartupForTesting = false;
+
     public static bool IsShuttingDown { get; private set; }
     public static bool IsCrashing { get; private set; }
 
@@ -445,7 +448,14 @@ public partial class App : Application
 
     private static bool IsOnboardingAlwaysEnabledForTesting()
     {
-        return false;
+        if (ForceOnboardingAtStartupForTesting)
+            return true;
+
+        // Optional override for local/manual testing without code changes.
+        var raw = Environment.GetEnvironmentVariable("VAULTSYNC_FORCE_ONBOARDING");
+        return string.Equals(raw, "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(raw, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<WhatsNewSection> LoadWhatsNewSections(string currentVersion)

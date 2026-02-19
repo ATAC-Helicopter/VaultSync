@@ -318,7 +318,8 @@
                                 IsEnabled="{Binding EnableMetadataSync}" />
                 </Grid>
 
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid x:Name="SettingsPromptRestoreRow"
+                      ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PromptRestore}" />
@@ -332,7 +333,8 @@
                                 IsEnabled="{Binding EnableMetadataSync}" />
                 </Grid>
 
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid x:Name="SettingsBandwidthLimitRow"
+                      ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{Binding BandwidthLimitLabel}" />
@@ -346,7 +348,8 @@
                                 IsChecked="{Binding EnableBandwidthLimit, Mode=TwoWay}" />
                 </Grid>
 
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid x:Name="SettingsQuietHoursToggleRow"
+                      ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <TextBlock Grid.Column="0"
                              VerticalAlignment="Center"
@@ -373,7 +376,8 @@
                                 IsChecked="{Binding EnableQuietHours, Mode=TwoWay}" />
                 </Grid>
 
-                <Border Classes="card"
+                <Border x:Name="SettingsQuietHoursWindowCard"
+                        Classes="card"
                         Margin="0,6,0,0"
                         Padding="10"
                         IsEnabled="{Binding EnableQuietHours}">
@@ -948,7 +952,8 @@
                                     Grid.Row="3"
                                     ColumnDefinitions="*,*"
                                     ColumnSpacing="16">
-                                <StackPanel Grid.Column="0"
+                                <StackPanel x:Name="DestinationMountOptionsRow"
+                                            Grid.Column="0"
                                             Spacing="4">
                                   <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.PreMounted}"
                                             ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.PreMountedTooltip}"
@@ -960,7 +965,8 @@
                                             ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
                                             IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="1"
+                                <StackPanel x:Name="DestinationHistoryOptionsRow"
+                                            Grid.Column="1"
                                             Spacing="4">
                                   <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.SyncHistory}"
                                             IsChecked="{Binding EnableMetadataSync, Mode=TwoWay}" />

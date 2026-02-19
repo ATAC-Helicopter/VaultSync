@@ -382,6 +382,17 @@
                       Height="360"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Top">
+                  <!-- Fallback when no storage slices are available -->
+                  <Border Width="350"
+                          Height="350"
+                          CornerRadius="175"
+                          BorderBrush="{DynamicResource DividerBrush}"
+                          BorderThickness="14"
+                          Background="Transparent"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Top"
+                          IsVisible="{Binding HasStorageSeries, Converter={StaticResource BoolInvertConverter}}" />
+
                   <lvc:PieChart
                       x:Name="StorageDonutChart"
                       Series="{Binding StorageSeries}"
@@ -390,6 +401,8 @@
                       ClipToBounds="True"
                       Width="350"
                       Height="350"
+                      IsVisible="{Binding HasStorageSeries}"
+                      IsHitTestVisible="False"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Top"/>
 
@@ -421,6 +434,8 @@
                         <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Brush}" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1"
                                    Text="{Binding Label}"
+                                   ToolTip.Tip="{Binding Tooltip}"
+                                   MaxWidth="260"
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis" />
                       </Grid>

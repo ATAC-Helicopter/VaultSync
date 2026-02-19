@@ -2008,7 +2008,7 @@ public sealed class ProjectSnapshotViewModel
         {
             var hasChanges = DiffAdded > 0 || DiffModified > 0 || DiffDeleted > 0;
             if (!hasChanges && DiffNetBytes == 0)
-                return L("Projects.DiffSummary.NoChanges", "No file changes detected");
+                return L("Projects.DiffSummary.NoChanges", "No file changes detected or diff data is unavailable for this snapshot");
 
             return Lf(
                 "Projects.DiffSummary.Compact",

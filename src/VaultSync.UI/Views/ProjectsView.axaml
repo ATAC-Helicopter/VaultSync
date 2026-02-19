@@ -177,11 +177,16 @@
               <DataTemplate>
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
                     <!-- Name + last snapshot short + size + avatar -->
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="Auto,*,Auto,Auto"
+                          ColumnSpacing="8"
+                          MinHeight="40"
+                          VerticalAlignment="Center">
                       <Grid Grid.Column="0"
                             Width="36"
                             Height="36"
                             Margin="0,0,4,0"
+                            VerticalAlignment="Center"
                             IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <Border CornerRadius="18" Background="{Binding AvatarColor}"/>
                         <Image Source="{Binding AvatarImagePath}"
@@ -202,6 +207,7 @@
                         Text="{Binding Name}"
                         FontSize="{DynamicResource SectionHeaderFontSize}"
                         FontWeight="Bold"
+                        VerticalAlignment="Center"
                         Foreground="{DynamicResource TextPrimaryBrush}"
                         TextWrapping="NoWrap"
                         TextTrimming="CharacterEllipsis" />
@@ -360,15 +366,15 @@
                      LineSpacing="8"
                      HorizontalAlignment="Left">
             <Button Classes="action-ghost"
-                    Padding="{DynamicResource ButtonPillPadding}"
-                    CornerRadius="999"
+                    Padding="14,8"
+                    CornerRadius="10"
                     Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}">
               <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.OpenFolder}" />
             </Button>
             <Button x:Name="ProjectSnapshotButton"
                     Classes="action-primary"
-                    Padding="{DynamicResource ButtonPillPadding}"
-                    CornerRadius="999"
+                    Padding="14,8"
+                    CornerRadius="10"
                     Command="{Binding DataContext.TakeSnapshotCommand, ElementName=Root}"
                     Content="{Binding DataContext.SnapshotActionLabel, ElementName=Root}" />
             <Button

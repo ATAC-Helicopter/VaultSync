@@ -7,6 +7,7 @@
 - Backups
   - [Backups overview](Backups)
   - [Backup pipeline](Backup-Pipeline)
+  - [1.5 compatibility matrix](Compatibility-Matrix-1.5)
   - [Destinations](Destinations)
   - [Network shares](Network-Shares)
   - [Snapshots](Snapshots)

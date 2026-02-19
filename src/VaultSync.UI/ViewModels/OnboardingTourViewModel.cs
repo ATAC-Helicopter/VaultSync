@@ -338,6 +338,12 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             autoAdvance: false);
 
         AddSettingsStep(
+            L("Onboarding.Tour.Step26.Title", "Bandwidth and quiet hours"),
+            L("Onboarding.Tour.Step26.Body", "Set transfer limits and quiet hours so automatic backups pause/defer at the right time without stopping active runs."),
+            "SettingsQuietHoursWindowCard",
+            autoAdvance: false);
+
+        AddSettingsStep(
             L("Onboarding.Tour.Step20.Title", "Global encryption"),
             L("Onboarding.Tour.Step20.Body", "Encryption is off by default. Enable it here when you want new backups encrypted by default, then review secure password status."),
             "SettingsEncryptionCard",
@@ -382,32 +388,24 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
         AddStep(
             L("Onboarding.Tour.Step22.Title", "Project encryption policy"),
-            L("Onboarding.Tour.Step22.Body", "Set a per-project encryption policy so this project can inherit, force encrypted backups, or stay plain."),
-            "ProjectEncryptionPolicyCombo",
-            "Projects",
-            () => true,
-            autoAdvance: false);
-
-        AddStep(
-            L("Onboarding.Tour.Step23.Title", "Project encryption password"),
-            L("Onboarding.Tour.Step23.Body", "Set a project-specific encryption password from the project card."),
-            "ProjectEncryptionPasswordButton",
-            "Projects",
-            () => true,
-            autoAdvance: false);
-
-        AddStep(
-            L("Onboarding.Tour.Step24.Title", "Backup page encryption controls"),
-            L("Onboarding.Tour.Step24.Body", "The same per-project encryption controls are also available on the Backups page and stay synchronized."),
+            L("Onboarding.Tour.Step22.Body", "Set the per-project encryption policy from the Backups page so each project can inherit global protection, force encryption, or stay plain."),
             "BackupsProjectEncryptionPolicyCombo",
             "Backups",
             () => true,
             autoAdvance: false);
 
         AddStep(
-            L("Onboarding.Tour.Step25.Title", "Backup page password action"),
-            L("Onboarding.Tour.Step25.Body", "Use this action to manage the same project password from the Backups page."),
+            L("Onboarding.Tour.Step23.Title", "Project encryption password"),
+            L("Onboarding.Tour.Step23.Body", "Set or clear the project-specific encryption password from the Backups page."),
             "BackupsProjectEncryptionPasswordButton",
+            "Backups",
+            () => true,
+            autoAdvance: false);
+
+        AddStep(
+            L("Onboarding.Tour.Step27.Title", "Snapshot diff summaries"),
+            L("Onboarding.Tour.Step27.Body", "Each backup now shows diff stats (added, changed, deleted, net size) with preview and export actions."),
+            "BackupsHistorySection",
             "Backups",
             () => true,
             autoAdvance: false);

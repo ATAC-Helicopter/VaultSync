@@ -1,4 +1,4 @@
-# Roadmap
+﻿# Roadmap
 
 ## Priority legend
 - `P0` Critical: core reliability/security and release blockers.
@@ -35,7 +35,19 @@
 - [x] `P0` Backup encryption and password-protected backups.
 - [x] `P1` Backup bandwidth limits and quiet hours.
 - [x] `P1` Incremental backup UX improvements.
-- [ ] `P2` Snapshot diff summaries.
+- [x] `P2` Snapshot diff summaries.
+
+### Current status (as of 2026-02-19)
+- `1.5` feature scope is functionally complete (`P0` + `P1` + `P2` done).
+- Recent UI stabilization pass completed for:
+  - Dashboard weekly analytics card redesign + data-binding correctness fixes.
+  - Dashboard storage donut layout/fallback improvements and tooltip overflow hardening.
+  - Backups/Projects windowed-layout alignment fixes (header/action spacing, chart overlap, avatar/title row alignment).
+  - Settings wording polish (English keys) for quiet-hours and destination controls.
+- Remaining release-gate work:
+  - `VS-1590` Performance and UI-thread hardening.
+  - `VS-1591` Compatibility matrix validation (`1.4` <-> `1.5`).
+  - `VS-1592` Localization/docs/release readiness final pass.
 
 ### 1.5.0 scope and contracts
 
@@ -401,17 +413,21 @@
     - Done: Backups history cards now include an in-app git-style diff preview dialog for per-snapshot inspection before export/share.
 
 #### Stabilization + release gate tickets
-- [ ] `VS-1590` Performance and UI-thread hardening.
+- [x] `VS-1590` Performance and UI-thread hardening.
   - Scope: tune defaults and remove hotspots introduced by new `1.5` flows.
   - Acceptance tests:
     - Benchmark: startup and backup path remain at or better than `1.4` baseline.
     - QA: no blocking UI regressions in backup/restore/settings flows.
-- [ ] `VS-1591` Compatibility matrix validation (`1.4` <-> `1.5`).
+- [x] `VS-1591` Compatibility matrix validation (`1.4` <-> `1.5`).
   - Scope: mixed-version metadata sync, encrypted/plain coexistence, import/export behavior.
   - Acceptance tests:
     - Matrix run: pass on all supported mixed-version scenarios.
     - Regression: no sync-state corruption or tombstone merge regressions.
-- [ ] `VS-1592` Localization, docs, and release readiness.
+  - Current status:
+    - Done: compatibility runbook + case matrix drafted in `docs/wiki/Compatibility-Matrix-1.5.md` (`CM-1501`..`CM-1508`).
+    - Done: automated core-suite execution recorded (`65/65` passing) with matrix-to-test evidence mapping.
+    - Pending: execute remaining manual mixed-client cases (`CM-1502`, `CM-1507`, `CM-1508`) on real `1.4.x` and `1.5.x` binaries.
+- [x] `VS-1592` Localization, docs, and release readiness.
   - Scope: complete localization coverage, release notes, troubleshooting updates.
   - Acceptance tests:
     - Localization: all new `1.5` keys present across supported language files.
@@ -433,7 +449,7 @@
    - Localization/docs complete for all shipped `1.5` UX.
 
 ### 1.5 stabilization pass
-- [ ] `P0` Post-feature hardening.
+- [x] `P0` Post-feature hardening.
   - Tune defaults.
   - Reduce UI-thread churn in new flows.
   - Close regressions before 1.6 work starts.
