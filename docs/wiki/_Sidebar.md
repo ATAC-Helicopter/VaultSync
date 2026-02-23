@@ -1,26 +1,32 @@
-# VaultSync Wiki
+﻿# VaultSync Wiki
 
 - [Home](Home)
-- Getting started
+
+- Getting Started
   - [Installation](Installation)
   - [Quick start](Quick-Start)
-- Backups
+  - [Configuration](Configuration)
+
+- Backups and Storage
   - [Backups overview](Backups)
   - [Backup pipeline](Backup-Pipeline)
-  - [1.5 compatibility matrix](Compatibility-Matrix-1.5)
   - [Destinations](Destinations)
   - [Network shares](Network-Shares)
   - [Snapshots](Snapshots)
-- App features
-  - [Updates](Updates)
   - [Tray menu](Tray)
-  - [Configuration](Configuration)
-- Help
-  - [Reporting bugs](Reporting-Bugs)
+
+- Updates
+  - [Updates](Updates)
+
+- Support
   - [Troubleshooting](Troubleshooting)
   - [FAQ](FAQ)
-- Repository docs
-  - [README](../../README.md)
+  - [Reporting bugs](Reporting-Bugs)
+
+- Repository Docs
+  - [Docs index](../README.md)
   - [Documentation](../../DOCUMENTATION.md)
   - [Roadmap](../../ROADMAP.md)
   - [Changelog](../../CHANGELOG.md)
+  - [Contributing](../../CONTRIBUTING.md)
+  - [Security](../../SECURITY.md)

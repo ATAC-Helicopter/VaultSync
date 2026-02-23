@@ -212,6 +212,7 @@
         <Style Selector="Border.stat-pill TextBlock">
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
         <Style Selector="Border.backup-tag">
@@ -249,6 +250,7 @@
         <Style Selector="Border.backup-tag TextBlock">
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
         <Style Selector="Button.small-pill, ToggleButton.small-pill">
@@ -279,6 +281,8 @@
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="Width" Value="10" />
             <Setter Property="Opacity" Value="0.9" />
         </Style>
 

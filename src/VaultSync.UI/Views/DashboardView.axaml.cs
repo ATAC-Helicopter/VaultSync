@@ -17,6 +17,7 @@ public partial class DashboardView : UserControl
     {
         InitializeComponent();
         ApplyChartTooltipStyle();
+        AttachedToVisualTree += OnAttachedToVisualTree;
         DataContextChanged += OnDataContextChanged;
         DetachedFromVisualTree += (_, _) => DetachVmNotifier();
         StorageDonutChart.ActualThemeVariantChanged += (_, _) => ApplyChartTooltipStyle();
@@ -54,6 +55,8 @@ public partial class DashboardView : UserControl
             _currentVmNotifier = notifier;
             notifier.PropertyChanged += OnVmPropertyChanged;
         }
+
+        ForceDonutRefresh();
     }
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -80,5 +83,25 @@ public partial class DashboardView : UserControl
 
         _currentVmNotifier.PropertyChanged -= OnVmPropertyChanged;
         _currentVmNotifier = null;
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        ForceDonutRefresh();
+    }
+
+    private void ForceDonutRefresh()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            StorageDonutChart.InvalidateMeasure();
+            StorageDonutChart.InvalidateVisual();
+        }, DispatcherPriority.Render);
+
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            StorageDonutChart.InvalidateMeasure();
+            StorageDonutChart.InvalidateVisual();
+        }, DispatcherPriority.Background);
     }
 }

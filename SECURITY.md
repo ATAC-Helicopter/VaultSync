@@ -1,15 +1,29 @@
-# Security Policy
+﻿# Security Policy
 
-## Reporting a vulnerability
-Please report security issues privately.
+## Reporting a Vulnerability
+Report security issues privately.
 
-Use one of the following methods:
-- GitHub Security Advisories: create a private report for this repository.
-- GitHub Discussions (if you do not have access to advisories): create a thread
-  and mark it as "Security" if possible.
+Preferred channel:
+- GitHub Security Advisory (private report)
 
-We will acknowledge the report and provide a timeline as soon as possible.
+Fallback channel:
+- GitHub issue/discussion with minimal sensitive details, requesting private follow-up
 
-## Supported versions
-Security fixes are provided for the latest stable release. If the fix applies
-cleanly to a previous release, we may backport it.
+Please include:
+- affected version
+- reproduction steps
+- impact summary
+- any suggested mitigation
+
+## Response Policy
+- We acknowledge valid reports as soon as possible.
+- We triage severity and provide an estimated remediation window.
+- We publish fixes in release notes after remediation.
+
+## Supported Versions
+Security fixes target the latest stable release.
+Backports to older versions are best-effort and depend on risk and implementation cost.
+
+## Scope Notes
+- Do not post exploit details publicly before a fix is available.
+- Non-security bugs should be reported through `docs/wiki/Reporting-Bugs.md`.

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VaultSync.UI"
              xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
@@ -351,9 +351,15 @@
                 <Grid x:Name="SettingsQuietHoursToggleRow"
                       ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
-                  <TextBlock Grid.Column="0"
-                             VerticalAlignment="Center"
-                             Text="{Binding BandwidthLimitValueLabel}" />
+                  <StackPanel Grid.Column="0"
+                              Spacing="2">
+                    <TextBlock VerticalAlignment="Center"
+                               Text="{Binding BandwidthLimitValueLabel}" />
+                    <TextBlock Text="{Binding BandwidthLimitValueDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
                   <TextBox Grid.Column="1"
                            Width="80"
                            HorizontalContentAlignment="Center"
@@ -379,12 +385,14 @@
                 <Border x:Name="SettingsQuietHoursWindowCard"
                         Classes="card"
                         Margin="0,6,0,0"
-                        Padding="10"
+                        Padding="12"
                         IsEnabled="{Binding EnableQuietHours}">
-                  <StackPanel Spacing="8">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="8"
-                                VerticalAlignment="Center">
+                  <Grid RowDefinitions="Auto,Auto"
+                        RowSpacing="10">
+                    <WrapPanel Grid.Row="0"
+                               ItemSpacing="8"
+                               LineSpacing="6"
+                               VerticalAlignment="Center">
                       <Border Classes="stat-pill sm info">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                           <TextBlock Classes="pill-icon" Text="◴" />
@@ -395,17 +403,19 @@
                         <TextBlock Text="{Binding QuietHoursWindowPreview}"
                                    ToolTip.Tip="{Binding QuietHoursWindowPreview}" />
                       </Border>
-                    </StackPanel>
+                    </WrapPanel>
 
-                    <Grid ColumnDefinitions="Auto,Auto,Auto"
-                          ColumnSpacing="12"
-                          HorizontalAlignment="Center">
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="*,Auto,*"
+                          ColumnSpacing="10"
+                          HorizontalAlignment="Stretch">
                       <StackPanel Grid.Column="0"
                                   Spacing="4">
                         <TextBlock Text="{Binding QuietHoursStartLabel}"
                                    FontSize="11"
                                    Foreground="{StaticResource TextSecondary}" />
-                        <TextBox Width="92"
+                        <TextBox Width="96"
+                                 HorizontalAlignment="Left"
                                  HorizontalContentAlignment="Center"
                                  Watermark="HH:mm"
                                  Text="{Binding QuietHoursStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -415,23 +425,24 @@
                       <TextBlock Grid.Column="1"
                                  Text="→"
                                  FontSize="14"
-                                 VerticalAlignment="Bottom"
-                                 Margin="0,0,0,10"
+                                 VerticalAlignment="Center"
                                  Foreground="{StaticResource TextSecondary}" />
 
                       <StackPanel Grid.Column="2"
-                                  Spacing="4">
+                                  Spacing="4"
+                                  HorizontalAlignment="Right">
                         <TextBlock Text="{Binding QuietHoursEndLabel}"
                                    FontSize="11"
                                    Foreground="{StaticResource TextSecondary}" />
-                        <TextBox Width="92"
+                        <TextBox Width="96"
+                                 HorizontalAlignment="Right"
                                  HorizontalContentAlignment="Center"
                                  Watermark="HH:mm"
                                  Text="{Binding QuietHoursEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding EnableQuietHours}" />
                       </StackPanel>
                     </Grid>
-                  </StackPanel>
+                  </Grid>
                 </Border>
 
                 <Grid ColumnDefinitions="*,Auto"

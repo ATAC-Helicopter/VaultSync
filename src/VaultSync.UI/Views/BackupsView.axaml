@@ -963,10 +963,10 @@
                   RowSpacing="8">
 
               <!-- Section header -->
-              <StackPanel Grid.Row="0"
-                          Orientation="Horizontal"
-                          HorizontalAlignment="Stretch">
-                <StackPanel>
+              <Grid Grid.Row="0"
+                    ColumnDefinitions="*,Auto"
+                    ColumnSpacing="10">
+                <StackPanel Grid.Column="0">
                   <TextBlock Text="{infra:LocalizedString Key=Backups.Section.PerProjectTitle}"
                              FontSize="14"
                              FontWeight="SemiBold" />
@@ -974,7 +974,20 @@
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                 </StackPanel>
-              </StackPanel>
+
+                <ComboBox Grid.Column="1"
+                          Classes="preset-combo"
+                          Width="170"
+                          VerticalAlignment="Top"
+                          ItemsSource="{Binding ProjectSortOptions}"
+                          SelectedItem="{Binding SelectedProjectSortOption, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
 
               <!-- Per-project list -->
               <ListBox x:Name="PerProjectList"
@@ -1416,7 +1429,7 @@
                                       <Grid ColumnDefinitions="6,*,Auto"
                                             ColumnSpacing="12"
                                             RowDefinitions="Auto,Auto,Auto,Auto"
-                                            RowSpacing="8">
+                                            RowSpacing="10">
                                         <Border Grid.RowSpan="4"
                                                 Grid.Column="0"
                                                 Background="{Binding TagBackground}"
@@ -1519,11 +1532,11 @@
                                                    Text="{Binding RetentionOutcomeLabel}"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   HorizontalAlignment="Right"
+                                                   HorizontalAlignment="Left"
                                                    VerticalAlignment="Center"
                                                    TextWrapping="Wrap"
-                                                   MaxWidth="230"
-                                                   TextAlignment="Right" />
+                                                   MaxWidth="220"
+                                                   TextAlignment="Left" />
 
                                         <StackPanel x:Name="BackupsDiffSummarySection"
                                                     Grid.Row="2"
@@ -1546,6 +1559,7 @@
                                         <WrapPanel Grid.Row="3"
                                                    Grid.Column="1"
                                                    Grid.ColumnSpan="2"
+                                                   Margin="0,2,0,0"
                                                    ItemSpacing="8">
                                           <CheckBox Content="{infra:LocalizedString Key=Backups.Section.Keep}"
                                                     VerticalAlignment="Center"

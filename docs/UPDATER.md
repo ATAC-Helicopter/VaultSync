@@ -1,14 +1,38 @@
-# Patch-based Updater
+﻿# Patch-Based Updater
 
-VaultSync tracks the `stable` branch via GitHub Releases, but the UI no longer forces a full installer download on every push. Instead, we deliver _delta patches_ that touch only the binaries and assets that changed between releases, keep the user data/config untouched, and hand off the apply step to a built-in patch helper.  
+VaultSync uses GitHub Releases for update discovery and supports patch assets to avoid full-installer downloads on every update.
 
-When the new **Beta channel** toggle under Settings → Advanced is enabled, the updater prefers releases whose `target_commitish` is `dev` and no longer filters out prereleases, so you can test the latest dev builds while still reusing the same delta/installer workflow.  
-This toggle is labeled **BETA** because dev-branch prereleases may be unstable—expect issues and keep backups handy while the channel is active.
+## Channels
+- Stable: latest non-prerelease release.
+- Beta/Dev: prerelease-capable flow for `dev` branch builds (when enabled in app settings).
 
-## Release assets
-- Patch manifest: `vaultsync-patch-<platform>.json`
-- Patch archive: `vaultsync-patch-<platform>.zip`
-  - macOS uses arch-specific assets first: `vaultsync-patch-macos-apple-silicon.*` or `vaultsync-patch-macos-intel.*` (falls back to `vaultsync-patch-macos.*`).
-- Windows installer: `.exe` (Inno Setup)
-- macOS release asset: unsigned `.dmg` containing the `.app` bundle (right-click → Open on first launch).
-- Linux installer: `.AppImage` or `.tar.gz`
+## Required Release Assets
+- Patch manifest:
+  - `vaultsync-patch-<platform>.json`
+- Patch archive:
+  - `vaultsync-patch-<platform>.zip`
+- Windows installer:
+  - `VaultSyncInstaller.exe`
+- macOS bundles:
+  - architecture-specific DMGs
+
+macOS can use architecture-specific patch names:
+- `vaultsync-patch-macos-apple-silicon.*`
+- `vaultsync-patch-macos-intel.*`
+
+## Runtime Expectations
+- Updater checks according to Settings policy.
+- Patch apply does not replace user config/data.
+- Installer fallback is used when patch update is not viable.
+
+## Release Validation
+After publishing assets, verify:
+- manifest resolves correctly
+- patch downloads succeed
+- patch apply succeeds on target platform
+- installer fallback remains functional
+
+## Related Docs
+- `docs/RELEASING.md`
+- `docs/wiki/Updates.md`
+- `CHANGELOG.md`

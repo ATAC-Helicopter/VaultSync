@@ -16,7 +16,7 @@
     <!-- Search box: keep focus visuals clean -->
     <Style Selector="TextBox#ProjectSearch">
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
       <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="Focusable" Value="True" />
     </Style>

@@ -1,29 +1,32 @@
-# VaultSync Wiki
+﻿# VaultSync Wiki
 
-VaultSync is a snapshot-first backup app built to make project backups fast, verifiable, and easy to manage.
-This wiki explains how the app works, how to configure it, and how to troubleshoot issues.
+Use this wiki for user-facing workflows and troubleshooting.
 
-## Start here
+## Getting Started
 - [Quick start](Quick-Start)
 - [Installation](Installation)
-- [Backups overview](Backups)
-- [Destinations](Destinations)
-
-## In depth
-- [Backup pipeline](Backup-Pipeline)
-- [Snapshots](Snapshots)
-- [Network shares](Network-Shares)
-- [Updates](Updates)
-- [Tray menu](Tray)
 - [Configuration](Configuration)
 
-## Help
-- [Reporting bugs](Reporting-Bugs)
+## Backups and Storage
+- [Backups overview](Backups)
+- [Backup pipeline](Backup-Pipeline)
+- [Destinations](Destinations)
+- [Network shares](Network-Shares)
+- [Snapshots](Snapshots)
+- [Tray menu](Tray)
+
+## Updates
+- [Updates](Updates)
+
+## Support
 - [Troubleshooting](Troubleshooting)
 - [FAQ](FAQ)
+- [Reporting bugs](Reporting-Bugs)
 
-## Repository docs
-- [README](../../README.md)
-- [Documentation overview](../../DOCUMENTATION.md)
+## Repository Docs
+- [Documentation index](../README.md)
+- [Documentation hub](../../DOCUMENTATION.md)
 - [Roadmap](../../ROADMAP.md)
 - [Changelog](../../CHANGELOG.md)
+- [Contributing](../../CONTRIBUTING.md)
+- [Security](../../SECURITY.md)

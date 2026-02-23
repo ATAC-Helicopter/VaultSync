@@ -162,6 +162,8 @@ namespace VaultSync.UI.ViewModels
         // Per-project backup status
         public ObservableCollection<ProjectBackupItem> ProjectBackups { get; } =
             new ObservableCollection<ProjectBackupItem>();
+        public ObservableCollection<BackupsProjectSortOption> ProjectSortOptions { get; } =
+            new ObservableCollection<BackupsProjectSortOption>();
         public ObservableCollection<DestinationOption> DestinationOptions { get; } =
             new ObservableCollection<DestinationOption>();
         public ObservableCollection<EncryptionPolicyOption> EncryptionPolicyOptions { get; } =
@@ -203,6 +205,8 @@ namespace VaultSync.UI.ViewModels
         }
 
         private bool _isActiveView;
+        private string _projectSortMode = "latest";
+        private BackupsProjectSortOption? _selectedProjectSortOption;
         public bool IsActiveView
         {
             get => _isActiveView;
@@ -212,6 +216,25 @@ namespace VaultSync.UI.ViewModels
                 {
                     OnPropertyChanged(nameof(IsActiveView));
                 }
+            }
+        }
+
+        public BackupsProjectSortOption? SelectedProjectSortOption
+        {
+            get => _selectedProjectSortOption;
+            set
+            {
+                if (!SetProperty(ref _selectedProjectSortOption, value))
+                    return;
+
+                OnPropertyChanged(nameof(SelectedProjectSortOption));
+
+                var nextMode = value?.Id ?? "latest";
+                if (string.Equals(_projectSortMode, nextMode, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                _projectSortMode = nextMode;
+                SortProjectBackups();
             }
         }
 
@@ -831,6 +854,7 @@ namespace VaultSync.UI.ViewModels
 
             InitializeLocalizationDefaults();
             RefreshEncryptionPolicyOptions();
+            RefreshProjectSortOptions();
         }
 
         private void UpdateActiveBackupTimer()
@@ -1164,6 +1188,60 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(HistoryFilterProjectLabel));
             OnPropertyChanged(nameof(BackupDiskDriveLabel));
             OnPropertyChanged(nameof(BackupDiskHealthText));
+            RefreshProjectSortOptions();
+        }
+
+        private void RefreshProjectSortOptions()
+        {
+            ProjectSortOptions.Clear();
+            ProjectSortOptions.Add(new BackupsProjectSortOption("latest",
+                L("Backups.Sort.LatestBackup", "Latest backup")));
+            ProjectSortOptions.Add(new BackupsProjectSortOption("name",
+                L("Backups.Sort.Name", "Project name")));
+            ProjectSortOptions.Add(new BackupsProjectSortOption("size",
+                L("Backups.Sort.TotalSize", "Total size")));
+            ProjectSortOptions.Add(new BackupsProjectSortOption("count",
+                L("Backups.Sort.BackupCount", "Backup count")));
+
+            SelectedProjectSortOption = ProjectSortOptions.FirstOrDefault(o =>
+                                           string.Equals(o.Id, _projectSortMode, StringComparison.OrdinalIgnoreCase))
+                                       ?? ProjectSortOptions.FirstOrDefault();
+
+            OnPropertyChanged(nameof(ProjectSortOptions));
+        }
+
+        private void SortProjectBackups()
+        {
+            if (ProjectBackups.Count <= 1)
+                return;
+
+            IEnumerable<ProjectBackupItem> ordered = _projectSortMode switch
+            {
+                "name" => ProjectBackups
+                    .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase),
+                "size" => ProjectBackups
+                    .OrderByDescending(p => p.TotalSizeBytes)
+                    .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase),
+                "count" => ProjectBackups
+                    .OrderByDescending(p => p.SnapshotCount)
+                    .ThenByDescending(p => p.LastBackupTime ?? DateTime.MinValue)
+                    .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase),
+                _ => ProjectBackups
+                    .OrderByDescending(p => p.LastBackupTime ?? DateTime.MinValue)
+                    .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
+            };
+
+            var selectedId = SelectedProject?.Id;
+            var orderedList = ordered.ToList();
+            ProjectBackups.Clear();
+            foreach (var item in orderedList)
+                ProjectBackups.Add(item);
+
+            if (!string.IsNullOrWhiteSpace(selectedId))
+            {
+                SelectedProject = ProjectBackups.FirstOrDefault(p =>
+                    string.Equals(p.Id, selectedId, StringComparison.OrdinalIgnoreCase));
+            }
         }
 
         private void RefreshEncryptionPolicyOptions()
@@ -1620,7 +1698,7 @@ namespace VaultSync.UI.ViewModels
                 // Only reset the label to "All projects" if we are not scoped to a project.
                 if (string.IsNullOrWhiteSpace(_currentProjectIdFilter))
                 {
-                    HistoryFilterProjectLabel = "All projects";
+                    HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
                     OnPropertyChanged(nameof(HistoryFilterProjectLabel));
                 }
             }
@@ -2593,6 +2671,7 @@ namespace VaultSync.UI.ViewModels
                 UpdateProjectEncryptionDisplay(projectItem, config);
                 ProjectBackups.Add(projectItem);
             }
+            SortProjectBackups();
 
             // Map individual backups into the history list model
             var projectLookup = projectList.ToDictionary(p => p.Id);
@@ -3148,6 +3227,20 @@ namespace VaultSync.UI.ViewModels
 
         public ObservableCollection<BackupSnapshotItem> Snapshots { get; } =
             new ObservableCollection<BackupSnapshotItem>();
+    }
+
+    public sealed class BackupsProjectSortOption
+    {
+        public BackupsProjectSortOption(string id, string label)
+        {
+            Id = id;
+            Label = label;
+        }
+
+        public string Id { get; }
+        public string Label { get; }
+
+        public override string ToString() => Label;
     }
 
     public class ProjectBackupItem : INotifyPropertyChanged

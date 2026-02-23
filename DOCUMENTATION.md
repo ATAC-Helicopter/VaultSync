@@ -1,89 +1,84 @@
 ﻿# VaultSync Documentation
 
-VaultSync is a cross-platform snapshot, backup, sync, and verification toolkit for developers, creators, and power users managing large project folders. This document mirrors the README content but presents it as a standalone reference page so you can link directly to a clean feature overview, CLI cheatsheet, and operational guidance.
+This file is the canonical documentation hub for VaultSync.
 
-## Key Concepts
+For a quick file index, see `docs/README.md`.
 
-- **Snapshot | Backup | Sync | Verify** â€“ Each project snapshot captures file state with hashes, backups mirror those snapshots to destinations, sync pushes file changes, and verify compares hashes between source and backup.
-- **Smart presets** â€“ Presets act like `.gitignore` filters (Unity, .NET/C#, game engines, language stacks, creative tools, etc.) so VaultSync only tracks relevant artifacts. You can also opt for **No preset** to keep everything.
-- **Cross-platform** â€“ One-click snapshots/backups, progress overlays, per-project status cards, backup history with â€œKeepâ€ protection, SMART-style disk health, and retention controls are all available on macOS, Windows, and Linux.
-- **History sync** â€“ Portable metadata in `.vaultsync/meta/` lets multiple machines merge project history across destinations.
-- **Channels** â€“ Stable uses the latest non-prerelease GitHub release, Beta surfaces prereleases (or falls back to stable when there are none). Badge links in the README jump directly to each channel.
+## 1. Product Summary
+VaultSync is a cross-platform snapshot and backup app for project folders.
 
-## Quick CLI Reference
+Core pillars:
+- Snapshot: capture project state.
+- Backup: write snapshot content to one or more destinations.
+- Verify: validate backup integrity.
+- Sync metadata: merge backup history across machines.
 
-| Command | Description |
-| --- | --- |
-| `vaultsync init` | Create config + SQLite database. |
-| `vaultsync add-project <name> <path>` | Register a project path with optional preset. |
-| `vaultsync list-projects` | Show tracked projects with destination summaries. |
-| `vaultsync snapshot <name>` | Capture a new snapshot (hash storage + delta). |
-| `vaultsync sync <name> <dest>` | Mirror files to `dest` using `rsync` (macOS/Linux) or `robocopy` (Windows). |
-| `vaultsync verify <name> <dest>` | Hash-compare project vs backup folder; `--full` forces complete verification. |
-| `vaultsync history <name>` | List snapshots/backups with timestamps. |
-| `vaultsync diff <name>` | Compare two snapshots and show changes (added/modified/deleted). |
-| `vaultsync prune <name>` | Remove old snapshots/backups per retention rules. |
-| `vaultsync restore <name> <dest>` | Restore a previous snapshot to `dest`. |
-| `vaultsync doctor` | Validate environment: binaries, DB path, permissions, etc. |
+## 2. Documentation Structure
 
-### Watch Mode
+### 2.1 Top-level docs
+- `README.md`: public product overview and install entry point.
+- `ROADMAP.md`: planned and completed work by release.
+- `CHANGELOG.md`: shipped and unreleased change history.
+- `CONTRIBUTING.md`: contribution, planning, and quality gates.
+- `SECURITY.md`: vulnerability reporting and supported versions.
 
-`vaultsync watch <project>` automates snapshot + sync cycles:
+### 2.2 Operational docs
+- `docs/HELP.md`: in-app help target and concise user guidance.
+- `docs/RELEASING.md`: release packaging/publishing flow.
+- `docs/UPDATER.md`: patch asset contract and update flow.
+- `docs/WHATS_NEW.md`: user-facing release highlights.
 
-- Use `--dest` to supply a backup location, `--sync`/`--verify` to toggle operations.
-- `--debounce-ms` (ex: `2500`) controls how long VaultSync waits after changes before syncing.
-- Watch mode serializes operations via `SemaphoreSlim` so there are no overlapping runs.
-- Cancellation tokens, graceful handling of high-frequency file churn, and NAS sleep detection keep long-running watches stable.
+### 2.3 Wiki docs
+- `docs/wiki/Home.md`: wiki entry page.
+- `docs/wiki/*`: task and feature guides (installation, backups, destinations, troubleshooting, etc.).
 
-## Snapshot & Backup Details
+## 3. Work-Item and ID Conventions
+Primary planning IDs use `VS-xxxx`.
 
-- Snapshots track added / modified / deleted / unchanged files and store metadata in SQLite tables for projects, snapshots, and files.
-- Backup folders are timestamped (`YYYY-MM-DD_HH-MM-SS`) and can be per-project or â€œbackup allâ€.
-- Automatic backups can be enabled from the desktop UI; VaultSync compares snapshots before running and skips when nothing has changed, reporting skips separately.
-- Protected backups (â€œKeepâ€) bypass retention heuristics so you can always preserve critical states.
-- Orphaned snapshots are removed when their associated backups are pruned.
-- Backup history labels:
-  - `Full`: complete backup payload.
-  - `Incremental`: backup produced via incremental copy mode.
-  - `Imported`: history imported/discovered from metadata sync or destination scans.
-- Restore confirmation includes a "What happens next" guidance section before execution.
+Additional prefixes can be used in changelog triage blocks when needed:
+- `ISS-xxxx`: issue bundle (cross-cutting UX/doc/cleanup work)
+- `BUG-xxxx`: bug fix tracking item
+- `REL-xxxx`: release-gate follow-up item
 
-## Desktop UI Highlights
+Rules:
+- `VS-xxxx` remains the default for roadmap planning and implementation tracking.
+- If `ISS/BUG/REL` is used in changelog entries, define the scope clearly in the same release section.
+- Do not mix unrelated scopes under one ID.
 
-- One-click snapshot + backup buttons with live progress overlays.
-- Dashboard cards show each projectâ€™s latest snapshot, backup health, and destination status.
-- Backup history includes retention controls and disk health hints (best-effort SMART data).
-- Translations (Localization folder) power language selectors in Settings â†’ Advanced.
-- â€œBeta channelâ€ toggle in Settings â†’ Advanced opts into the `dev` branch (checks for prereleases using `target_commitish = dev`).
-- Clipboard and mount tooling run hidden to avoid flickering consoles, and SMB mounts automatically handle error 1219 by disconnecting existing sessions before retrying.
+## 4. Update Policy for Docs
+When changing behavior, update all relevant artifacts in the same PR:
+1. User docs (`docs/wiki/*` and/or `docs/HELP.md`)
+2. Release notes (`CHANGELOG.md`, `docs/WHATS_NEW.md`)
+3. Planning state (`ROADMAP.md`) when scope/status changed
+4. Localization keys if UI text changed
 
-## Installation & Updates
+## 5. Role-Based Reading Paths
 
-- Clone or download the repo, build installers via `dotnet pack` (CLI) or `installer/VaultSyncInstaller.iss` (Windows).
-- Desktop updates poll the `stable` GitHub release channel on startup when â€œCheck for updatesâ€ is enabled. The UI compares release metadata, warns when a newer version exists, and lets users choose to install.
-- CLI updates happen via `dotnet tool update --global vaultsync.cli` after a release is published.
-- macOS currently ships unsigned `.dmg` images of the `.app` bundle on GitHub Releases; macOS/Linux updates use delta patches produced by the updater. See `docs/UPDATER.md` for the step-by-step flow and patch packaging instructions.
+### Maintainer release flow
+1. `ROADMAP.md`
+2. `CHANGELOG.md`
+3. `docs/RELEASING.md`
+4. `docs/UPDATER.md`
 
-## Release Channels
+### Contributor feature flow
+1. `CONTRIBUTING.md`
+2. `ROADMAP.md`
+3. relevant wiki page under `docs/wiki/`
+4. `CHANGELOG.md`
 
-- **Stable** â€“ Latest release with `prerelease = false`.
-- **Beta/Dev** â€“ Releases marked as prerelease (or the `dev` branch); the README badges fall back to the stable release if no prerelease exists.
-- Badges on the README header link to `%github%/releases/tag/...` for direct download.
-- Desktop â€œBeta channelâ€ toggle listens to `target_commitish == dev` and includes prereleases.
+### End user help flow
+1. `docs/HELP.md`
+2. `docs/wiki/Quick-Start.md`
+3. `docs/wiki/Troubleshooting.md`
+4. `docs/wiki/FAQ.md`
 
-## Troubleshooting & Notes
+## 6. Quality Checklist (Docs)
+Before merging documentation updates:
+- Links resolve to existing files.
+- Terms are consistent (Snapshot, Backup, Destination, Keep, Imported, Full, Incremental).
+- New settings/UI labels referenced in docs match localization keys in `Localization/strings.en.json`.
+- Versioned notes align with `CHANGELOG.md`.
 
-- **Unsigned builds** trigger Windows SmartScreen: click **More info** â†’ **Run anyway** once you trust VaultSync.
-- **macOS NFS**: auto-mount is not supported (requires admin privileges). Pre-mount the share (sudo `mount_nfs`) and
-  set the destination to the local mount path with **Pre-mounted** enabled and **Auto-mount** disabled.
-- Check the `Localization/` folder for strings and help translate additional languages.
-- `docs/UPDATER.md` documents delta patch generation, updater helpers, and platform-specific behaviors.
-- Need help? Use GitHub Discussions (`/discussions`) or open an issue on the repo.
-
-## Supporting Resources
-
-- Screenshots and flow descriptions live in the README (search for â€œVaultSync_MM1â€, etc.).
-- Use this documentation as the canonical reference when sharing release news, onboarding teammates, or pointing customers to CLI cheatsheets.
-- Keep the badges/links at the top of the README as the entry points to Stable/Beta, discussions, and documentation (this file).
-- Roadmap and changelog live at [ROADMAP.md](ROADMAP.md) and [CHANGELOG.md](CHANGELOG.md).
-
+## 7. Related References
+- Full docs index: `docs/README.md`
+- Wiki sidebar: `docs/wiki/_Sidebar.md`

@@ -1,79 +1,68 @@
-# VaultSync Help
+﻿# VaultSync Help
 
 ## Overview
-- Cross-platform backup/snapshot manager (macOS, Windows, Linux) with UI + CLI.
-- Tracks projects, creates snapshots, runs backups (local, external, NAS), verifies, and retains history.
-- UI built with Avalonia; data stored in SQLite; app config lives in `~/.vaultsync/appsettings.json`.
+VaultSync is a cross-platform snapshot and backup app (Windows, macOS, Linux) with UI and CLI workflows.
 
-## Install & Run
-- Build UI: `dotnet run --project src/VaultSync.UI --framework net8.0` (macOS/Linux) or use the `net8.0-windows10.0.19041.0` target on Windows.
-- CLI tool: `dotnet pack src/VaultSync.CLI -c Release` then `dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli`.
-- Secrets are stored in keychain/DPAPI where possible (referenced via `KeyRef`), not in plaintext config.
+Core actions:
+- Track projects
+- Create snapshots
+- Run backups to local/external/network destinations
+- Restore and verify backup integrity
+- Sync metadata history across machines
+
+## Install and Run
+- UI (Windows target):
+  - `dotnet run -f net8.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
+- CLI tool build/install:
+  - `dotnet pack src/VaultSync.CLI -c Release`
+  - `dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli`
 
 ## UI Primer
-- **Dashboard**: quick stats, recent backups, disk health.
-- **Projects**: add/edit projects, choose preset filters, trigger snapshots.
-- **Backups**: per-project cards, history, start/stop backups, view/keep/delete snapshots.
-- **Settings**: backups, destinations, credentials, notifications, appearance, and language.
-- Tray/menu bar: quick snapshot/backup actions; respects "Show window on tray actions" in Settings.
+- Dashboard: global status, storage, recent activity.
+- Projects: project list, snapshot controls, per-project details.
+- Backups: per-project backup controls and backup history.
+- Settings: destinations, encryption, retention, update options, localization.
 
-- **Advanced updates**: the same Settings → Advanced card that lets you choose a language now contains a “Beta channel” toggle. It mirrors the normal update flow (“Check for updates on startup” still applies) but switches the updater to prefer `dev`-branch releases and accept prereleases so you can try work-in-progress builds before they are promoted to `stable`.
-- **Beta warning**: the toggle is marked **BETA**—dev branch builds are prereleases and can break unexpectedly. Keep extra backups and switch back to the stable channel if you hit issues.
+## Destination Modes
+VaultSync supports two destination modes:
+- Simple mode: one backup location.
+- Advanced mode: multiple destinations (NAS/USB/network) with per-destination options and credentials.
 
-## Backups: Simple vs Advanced
-VaultSync supports two destination modes (Settings -> Storage -> "Backup destinations mode"):
-- **Simple (recommended to start)**: one backup folder path (the legacy fallback).
-  - Set the path under Settings -> Backups -> Backup location.
-  - VaultSync backs up to that single path.
-- **Advanced**: multiple destinations (NAS/USB) with per-destination behavior and credentials.
-  - Configure destinations under Settings -> Storage -> Destinations.
-  - One destination writes metadata/history; additional destinations can mirror the same snapshot content.
+## Destination Options (Advanced)
+Per destination:
+- Active
+- Pre-mounted/guest
+- Auto-mount
+- Auto-unmount
+- Credential profile
 
-## Destinations & Credentials (Advanced)
-Each destination has:
-- **Path**: local/external path or network share (Windows UNC like `\\host\share`).
-- **Active**: included in runs.
-- **Pre-mounted/guest**: use as-is; skip mount/credentials (share already connected).
-- **Auto-mount**: try to mount/login if unreachable (uses the selected credential).
-- **Auto-unmount**: disconnect after the run if VaultSync mounted it.
-- **Credential**: optional profile used for Auto-mount.
+Use `Test` to verify reachability and write access.
 
-Use the **Test** button to check reachability/writability and confirm mount/login behavior.
+## Cross-Machine Metadata Sync
+- Metadata is stored under `.vaultsync/meta/` on destinations.
+- VaultSync can import and merge metadata from reachable destinations.
+- Optional auto-import is available in Settings.
 
-### macOS NFS note
-- NFS auto-mount is not supported on macOS (requires admin privileges).
-- Pre-mount the share with `mount_nfs`, set the destination to the local mount path, enable **Pre-mounted**, and
-  disable **Auto-mount**.
+## Encryption Summary
+- Supports global and per-project encryption policy.
+- Secrets are stored via OS secure storage when available.
+- Encrypted open sessions can be auto-locked by timeout and manually locked from Settings.
 
-## Cross-machine history sync
-- VaultSync can store portable history metadata in `.vaultsync/meta/` on destinations.
-- When a destination is discovered, history is imported into the local DB and merged.
-- Manual refresh shows a review dialog with counts of records to add/link/delete before applying.
-- If a project was auto-imported, VaultSync prompts to restore the latest backup before new snapshots/backups.
-- Read-only destinations can be imported from, but history updates are not written back.
-- Use "Force full history export" per destination in Settings to backfill a project's full history into the metadata store.
+## Troubleshooting (Quick)
+- Mount/auth failures: verify path, credentials, and destination options.
+- Backups skipped: verify active destination and disk-space thresholds.
+- Build errors with locked outputs: stop running app and rebuild.
 
-## Projects & Snapshots
-- Add a project (Projects page) with name + root path, select a preset filter.
-- Snapshots capture file state into SQLite; "Keep" prevents retention pruning.
+See full troubleshooting page: `docs/wiki/Troubleshooting.md`.
 
-## Auto-backup & Power
-- Auto-backup interval is set in Settings; per-project opt-out is in Backups page.
-- Backups can pause on battery if enabled.
+## Where Data Lives
+- Config: `~/.vaultsync/appsettings.json`
+- DB (Windows): `%AppData%/VaultSync/vaultsync.db`
+- DB (macOS): `~/Library/Application Support/VaultSync/vaultsync.db`
 
-## Troubleshooting
-- Auto-mount fails: confirm credential username/password, correct share path, and that Auto-mount is enabled (unless Pre-mounted/guest).
-- Windows error 1219 during Test/Auto-mount: Windows already has an existing connection to the same server with different credentials. Disconnect existing connections to that server (e.g. `net use \\host /delete`) and try again.
-- Backups skipped: check low-disk warnings and that at least one destination is Active (Advanced) or that backup location is set (Simple).
-- UI build errors: if the app is running under the debugger, `dotnet build` may fail due to locked binaries; stop the running app and rebuild.
-
-## Where data lives
-- Config: `~/.vaultsync/appsettings.json`.
-- Database: `~/Library/Application Support/VaultSync/vaultsync.db` (macOS) or `%AppData%\\VaultSync\\vaultsync.db` (Windows).
-- Local avatar/cache: `LocalApplicationData/VaultSync`.
-
-## More docs
-- Documentation overview: `DOCUMENTATION.md`
+## More Docs
+- Docs index: `docs/README.md`
+- Documentation hub: `DOCUMENTATION.md`
+- Wiki home: `docs/wiki/Home.md`
 - Roadmap: `ROADMAP.md`
 - Changelog: `CHANGELOG.md`
-- Wiki: `docs/wiki/Home.md`

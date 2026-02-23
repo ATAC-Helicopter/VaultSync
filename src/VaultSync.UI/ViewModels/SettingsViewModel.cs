@@ -168,6 +168,7 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(BandwidthLimitLabel));
                 OnPropertyChanged(nameof(BandwidthLimitDescription));
                 OnPropertyChanged(nameof(BandwidthLimitValueLabel));
+                OnPropertyChanged(nameof(BandwidthLimitValueDescription));
                 OnPropertyChanged(nameof(QuietHoursLabel));
                 OnPropertyChanged(nameof(QuietHoursDescription));
                 OnPropertyChanged(nameof(QuietHoursStartLabel));
@@ -649,7 +650,9 @@ namespace VaultSync.UI
             {
                 if (notifyOnError)
                 {
-                    SaveStatus = "Bandwidth limit must be between 1 and 5000 Mbps.";
+                    SaveStatus = L(
+                        "Settings.Validation.BandwidthLimitRange",
+                        "Bandwidth limit must be between 1 and 5000 Mbps.");
                 }
 
                 return false;
@@ -660,7 +663,9 @@ namespace VaultSync.UI
             {
                 if (notifyOnError)
                 {
-                    SaveStatus = "Quiet hours must use HH:mm format (24h).";
+                    SaveStatus = L(
+                        "Settings.Validation.QuietHoursFormat",
+                        "Quiet hours must use HH:mm format (24h).");
                 }
 
                 return false;
@@ -1618,7 +1623,10 @@ namespace VaultSync.UI
             $"{L("Settings.Encryption.SetPassword", "Set password")} ({L("Nav.Projects", "Projects")})";
         public string BandwidthLimitLabel => L("Settings.Backups.BandwidthLimit", "Bandwidth limit");
         public string BandwidthLimitDescription => L("Settings.Backups.BandwidthLimitDescription", "Cap backup transfer speed to reduce network impact.");
-        public string BandwidthLimitValueLabel => L("Settings.Backups.BandwidthLimitValue", "Max Mbps");
+        public string BandwidthLimitValueLabel => L("Settings.Backups.BandwidthLimitValue", "Transfer cap (Mbps)");
+        public string BandwidthLimitValueDescription => L(
+            "Settings.Backups.BandwidthLimitValueDescription",
+            "Maximum transfer speed in megabits per second. Leave disabled for no cap.");
         public string QuietHoursLabel => L("Settings.Backups.QuietHours", "Quiet hours");
         public string QuietHoursDescription => L("Settings.Backups.QuietHoursDescription", "Pause/defer automatic backups during this time window.");
         public string QuietHoursStartLabel => L("Settings.Backups.QuietHoursStart", "Start (HH:mm)");
@@ -2111,32 +2119,76 @@ namespace VaultSync.UI
 
         public void OpenHelp()
         {
+            string? lastError = null;
+
+            bool TryOpen(string target)
+            {
+                try
+                {
+                    if (OperatingSystem.IsWindows())
+                    {
+                        Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+                    }
+                    else if (OperatingSystem.IsMacOS())
+                    {
+                        Process.Start("open", target);
+                    }
+                    else
+                    {
+                        Process.Start("xdg-open", target);
+                    }
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex.Message;
+                    return false;
+                }
+            }
+
             try
             {
                 var root = AppContext.BaseDirectory;
-                var path = Path.Combine(root, "docs", "HELP.md");
-                if (!File.Exists(path))
+                var candidatePaths = new[]
                 {
-                    // fallback to repo relative when running from source
-                    var repoPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "docs", "HELP.md"));
-                    if (File.Exists(repoPath))
-                        path = repoPath;
+                    Path.Combine(root, "docs", "HELP.md"),
+                    Path.Combine(root, "docs", "wiki", "FAQ.md"),
+                    Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "docs", "HELP.md")),
+                    Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "docs", "wiki", "FAQ.md"))
+                };
+
+                foreach (var path in candidatePaths)
+                {
+                    if (!File.Exists(path))
+                        continue;
+
+                    if (TryOpen(path))
+                    {
+                        SaveStatus = L("Settings.Destinations.OpenHelpSuccess", "Help guide opened.");
+                        return;
+                    }
                 }
 
-                if (File.Exists(path))
+                var onlineFallback = "https://github.com/flaviorame/vaultsync/tree/main/docs/wiki";
+                if (TryOpen(onlineFallback))
                 {
-                    if (OperatingSystem.IsMacOS())
-                        Process.Start("open", path);
-                    else if (OperatingSystem.IsWindows())
-                        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-                    else
-                        Process.Start("xdg-open", path);
+                    SaveStatus = L("Settings.Destinations.OpenHelpSuccess", "Help guide opened.");
+                    return;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore failures
+                lastError = ex.Message;
             }
+
+            SaveStatus = L("Settings.Destinations.OpenHelpFailed", "Could not open help guide.");
+            GlobalNotificationCenter.Instance.Show(
+                string.IsNullOrWhiteSpace(lastError)
+                    ? SaveStatus
+                    : $"{SaveStatus} {lastError}",
+                NotificationSeverity.Warning,
+                L("Settings.Destinations.Title", "Backup destinations"));
         }
 
         private void ExportTelemetry()

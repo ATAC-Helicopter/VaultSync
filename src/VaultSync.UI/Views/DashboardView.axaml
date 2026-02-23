@@ -391,7 +391,7 @@
                           Background="Transparent"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Top"
-                          IsVisible="{Binding HasStorageSeries, Converter={StaticResource BoolInvertConverter}}" />
+                          Opacity="0.35" />
 
                   <lvc:PieChart
                       x:Name="StorageDonutChart"
@@ -401,7 +401,6 @@
                       ClipToBounds="True"
                       Width="350"
                       Height="350"
-                      IsVisible="{Binding HasStorageSeries}"
                       IsHitTestVisible="False"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Top"/>
@@ -470,19 +469,21 @@
         <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}" Margin="4,12,4,0" Grid.Row="5">
           <Grid RowDefinitions="Auto,*">
             <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.RecentActivity}" Classes="section-title" Margin="0,0,0,8"/>
-            <ListBox Grid.Row="1"
-                     ItemsSource="{Binding ActivityItems}"
-                     SelectionMode="Single"
-                     Background="Transparent"
-                     BorderThickness="0">
-              <ListBox.ItemsPanel>
+            <ItemsControl Grid.Row="1"
+                          ItemsSource="{Binding ActivityItems}">
+              <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <StackPanel/>
+                  <StackPanel />
                 </ItemsPanelTemplate>
-              </ListBox.ItemsPanel>
-              <ListBox.ItemTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="{DynamicResource ItemBg}" CornerRadius="12" Margin="0,6,0,6" Padding="10">
+                  <Border Background="{DynamicResource ItemBg}"
+                          BorderBrush="{DynamicResource BorderSoft}"
+                          BorderThickness="1"
+                          CornerRadius="12"
+                          Margin="0,6,0,6"
+                          Padding="10">
                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
                       <Ellipse Width="10" Height="10" Fill="{Binding DotBrush}" VerticalAlignment="Center"/>
                       <StackPanel Grid.Column="1" Margin="8,0,0,0">
@@ -493,8 +494,8 @@
                     </Grid>
                   </Border>
                 </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </Grid>
         </Border>
       </Grid>

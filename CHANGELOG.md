@@ -1,4 +1,24 @@
 ﻿# Changelog
+## [1.5.1] - Unreleased
+### Added
+- [ISS-5101] Added Backups-page per-project sort control (Latest backup, Name, Total size, Backup count) to improve project list navigation.
+- [ISS-5102] Added new localization keys for transfer policy, encryption open-timeout/lock labels, validation copy, and backup sort labels.
+- [ISS-5103] Added startup-safe dashboard donut refresh hooks to reduce first-load no-render states.
+### Changed
+- [ISS-5104] Settings transfer policy section was redesigned for clearer Bandwidth limit and Quiet hours editing with compact window preview and better field grouping.
+- [ISS-5105] Open help action now attempts local docs first, then online docs, and reports success/failure in-app instead of failing silently.
+- [ISS-5106] Dashboard Recent activity rendering moved to a simpler item layout to avoid list selection/highlight artifacts.
+- [ISS-5107] Pill/text alignment and project-search input styling were adjusted for more consistent visual centering and contrast.
+- [ISS-5108] Backups per-project header and history-card spacing were tightened to reduce overlap/clipping in windowed layouts.
+### Fixed
+- [BUG-5101] Pie/donut chart now re-renders more reliably after async startup data load and late layout passes.
+- [BUG-5102] Lock now and encrypted open-timeout labels now bind through localization keys instead of hardcoded literals.
+- [BUG-5103] Bandwidth limit, Max Mbps labeling, and quiet-hours validation copy now use localization-key-backed text.
+- [BUG-5104] Backups-page project search no longer shows the incorrect dark background artifact.
+- [BUG-5105] Recent-activity card no longer shows unintended selected-row highlight styling.
+### Follow-up
+- [REL-5101] Validate localization coverage for newly added 1.5.1 keys across all non-English language packs.
+- [REL-5102] Run a startup/render smoke matrix (cold start, resume, language switch) focused on dashboard donut reliability.
 ## [1.5.0] - 19.02.2026
 ### Added
 - [VS-1501] Versioned backup crypto descriptor contract for metadata (`formatVersion`, `algorithm`, `kdfProfile`, `kdfParamRef`).
@@ -112,7 +132,7 @@
 - Dashboard charts row was rebalanced so the storage card remains visible at large widths, and storage usage now uses a side-by-side donut + legend layout with a bottom capacity strip.
 - Projects detail action row now wraps responsively so `Open folder` / `Snapshot now` / `Remove from VaultSync` actions do not clip or overlap in windowed layouts.
 - Dashboard storage donut now uses explicit visibility toggling against `HasStorageSeries` to avoid stale empty-chart presentation when data arrives after initial layout.
-- Added `1.4` <-> `1.5` compatibility matrix runbook (`CM-1501`..`CM-1508`) under `docs/wiki/Compatibility-Matrix-1.5.md` to drive `VS-1591` release-gate validation.
+- Added `1.4` <-> `1.5` compatibility matrix runbook (`CM-1501`..`CM-1508`) to drive `VS-1591` release-gate validation.
 ### Fixed
 - [VS-1501] Legacy plain backup crypto metadata (`{}`) now parses through the typed descriptor compatibility path.
 - [VS-1504] Secure-store failures no longer require plaintext secret persistence in config as fallback path.
@@ -673,3 +693,4 @@
 ---
 
 ? 2026 VaultSync Project. MIT Licensed.
+

@@ -424,7 +424,7 @@
     - Matrix run: pass on all supported mixed-version scenarios.
     - Regression: no sync-state corruption or tombstone merge regressions.
   - Current status:
-    - Done: compatibility runbook + case matrix drafted in `docs/wiki/Compatibility-Matrix-1.5.md` (`CM-1501`..`CM-1508`).
+    - Done: compatibility runbook + case matrix drafted (`CM-1501`..`CM-1508`).
     - Done: automated core-suite execution recorded (`65/65` passing) with matrix-to-test evidence mapping.
     - Pending: execute remaining manual mixed-client cases (`CM-1502`, `CM-1507`, `CM-1508`) on real `1.4.x` and `1.5.x` binaries.
 - [x] `VS-1592` Localization, docs, and release readiness.
