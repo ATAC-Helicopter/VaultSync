@@ -50,3 +50,5 @@ artifacts/
 
 # Local safety snapshots
 .safety/*.bundle
+
+.wiki-sync-*
