@@ -23,7 +23,12 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
-        private async void OnDeleteBackupRequested(BackupSnapshotItem? snapshot)
+        private void OnDeleteBackupRequested(BackupSnapshotItem? snapshot)
+        {
+            RunDetached(() => OnDeleteBackupRequestedAsync(snapshot), nameof(OnDeleteBackupRequestedAsync));
+        }
+
+        private async Task OnDeleteBackupRequestedAsync(BackupSnapshotItem? snapshot)
         {
             if (snapshot is null)
                 return;
@@ -1292,7 +1297,12 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        private async void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
+        private void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
+        {
+            RunDetached(() => OnRestoreBackupRequestedAsync(snapshot), nameof(OnRestoreBackupRequestedAsync));
+        }
+
+        private async Task OnRestoreBackupRequestedAsync(BackupSnapshotItem? snapshot)
         {
             if (snapshot is null)
                 return;

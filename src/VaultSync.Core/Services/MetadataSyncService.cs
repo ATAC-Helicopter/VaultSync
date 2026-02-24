@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Text.Json;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -29,10 +30,15 @@ public sealed class MetadataSyncService
 
     public MetadataSyncResult ImportFromStore(string rootPath, MetadataSyncOptions? options = null)
     {
-        MetadataIoGate.Wait();
+        return ImportFromStoreAsync(rootPath, options, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    public async Task<MetadataSyncResult> ImportFromStoreAsync(string rootPath, MetadataSyncOptions? options = null, CancellationToken ct = default)
+    {
+        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            WaitForNetworkReady(rootPath);
+            await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
             var opts = options ?? MetadataSyncOptions.Default;
 
             if (string.IsNullOrWhiteSpace(rootPath))
@@ -90,10 +96,15 @@ public sealed class MetadataSyncService
 
     public MetadataSyncPreview PreviewImportFromStore(string rootPath, MetadataSyncOptions? options = null)
     {
-        MetadataIoGate.Wait();
+        return PreviewImportFromStoreAsync(rootPath, options, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    public async Task<MetadataSyncPreview> PreviewImportFromStoreAsync(string rootPath, MetadataSyncOptions? options = null, CancellationToken ct = default)
+    {
+        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            WaitForNetworkReady(rootPath);
+            await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
             var opts = options ?? MetadataSyncOptions.Default;
 
             if (string.IsNullOrWhiteSpace(rootPath))
@@ -975,10 +986,22 @@ public sealed class MetadataSyncService
 
     public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill = false)
     {
-        MetadataIoGate.Wait();
+        return ExportBackupToStoreAsync(rootPath, backupId, appVersion, machineId, forceBackfill, CancellationToken.None)
+            .GetAwaiter().GetResult();
+    }
+
+    public async Task<MetadataSyncResult> ExportBackupToStoreAsync(
+        string rootPath,
+        int backupId,
+        string appVersion,
+        string machineId,
+        bool forceBackfill = false,
+        CancellationToken ct = default)
+    {
+        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            WaitForNetworkReady(rootPath);
+            await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
             var retryDelays = new[]
             {
                 TimeSpan.FromMilliseconds(200),
@@ -1002,7 +1025,7 @@ public sealed class MetadataSyncService
 
                     var delay = retryDelays[attempt];
                     Console.WriteLine($"[MetadataSync] Export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
-                    Thread.Sleep(delay);
+                    await Task.Delay(delay, ct).ConfigureAwait(false);
                 }
             }
 
@@ -1187,13 +1210,24 @@ public sealed class MetadataSyncService
 
     public void ExportBackupTombstoneToStore(string rootPath, string backupExternalId, string appVersion, string machineId)
     {
+        ExportBackupTombstoneToStoreAsync(rootPath, backupExternalId, appVersion, machineId, CancellationToken.None)
+            .GetAwaiter().GetResult();
+    }
+
+    public async Task ExportBackupTombstoneToStoreAsync(
+        string rootPath,
+        string backupExternalId,
+        string appVersion,
+        string machineId,
+        CancellationToken ct = default)
+    {
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
             return;
 
-        MetadataIoGate.Wait();
+        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            WaitForNetworkReady(rootPath);
+            await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
             var retryDelays = new[]
             {
                 TimeSpan.FromMilliseconds(200),
@@ -1218,7 +1252,7 @@ public sealed class MetadataSyncService
 
                     var delay = retryDelays[attempt];
                     Console.WriteLine($"[MetadataSync] Tombstone store locked; retrying in {delay.TotalMilliseconds:0}ms.");
-                    Thread.Sleep(delay);
+                    await Task.Delay(delay, ct).ConfigureAwait(false);
                 }
             }
         }
@@ -1308,17 +1342,18 @@ public sealed class MetadataSyncService
         return Path.Combine(Path.GetTempPath(), "vaultsync-meta-export", hash.ToLowerInvariant());
     }
 
-    private static void WaitForNetworkReady(string rootPath)
+    private static async Task WaitForNetworkReadyAsync(string rootPath, CancellationToken ct)
     {
         if (!IsLikelyNetworkPath(rootPath))
             return;
 
         for (var attempt = 0; attempt < 3; attempt++)
         {
+            ct.ThrowIfCancellationRequested();
             if (Directory.Exists(rootPath))
                 return;
 
-            Thread.Sleep(200 * (attempt + 1));
+            await Task.Delay(200 * (attempt + 1), ct).ConfigureAwait(false);
         }
     }
 

@@ -76,6 +76,8 @@ namespace VaultSync.UI.ViewModels
         // Internal full list for summary + filtering
         private readonly List<BackupSnapshotItem> _allSnapshots = new();
         private readonly List<BackupSnapshotItem> _filteredSnapshots = new();
+        private readonly Dictionary<string, ProjectBackupItem> _projectLookupById =
+            new Dictionary<string, ProjectBackupItem>(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, PendingBackupUpdate> _pendingActiveBackupUpdates = new();
         private readonly DispatcherTimer _activeBackupFlushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
 
@@ -916,7 +918,12 @@ namespace VaultSync.UI.ViewModels
             OpenBackupFolderRequested?.Invoke(snapshot);
         }
 
-        private async void ExportSnapshotSummary(BackupSnapshotItem? snapshot, SnapshotSummaryExportFormat format)
+        private void ExportSnapshotSummary(BackupSnapshotItem? snapshot, SnapshotSummaryExportFormat format)
+        {
+            _ = ExportSnapshotSummaryAsync(snapshot, format);
+        }
+
+        private async Task ExportSnapshotSummaryAsync(BackupSnapshotItem? snapshot, SnapshotSummaryExportFormat format)
         {
             if (snapshot is null)
                 return;
@@ -1833,17 +1840,12 @@ namespace VaultSync.UI.ViewModels
             if (filtered.Count == 0)
                 return;
 
-            // Map project id -> name from the per-project list on the left
-            var projectLookup = ProjectBackups
-                .GroupBy(p => p.Id)
-                .ToDictionary(g => g.Key, g => g.First());
-
             var grouped = filtered
                 .GroupBy(s => s.ProjectId ?? string.Empty)
                 .OrderByDescending(g => g.Max(s => s.Timestamp))
                 .ThenBy(g =>
                 {
-                    if (!string.IsNullOrWhiteSpace(g.Key) && projectLookup.TryGetValue(g.Key, out var nameSource))
+                    if (!string.IsNullOrWhiteSpace(g.Key) && _projectLookupById.TryGetValue(g.Key, out var nameSource))
                         return nameSource.Name;
                     return "zzzz_" + g.Key;
                 });
@@ -1870,7 +1872,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     projectName = L("Backups.Section.Group.Global", "Global snapshots");
                 }
-                else if (!projectLookup.TryGetValue(key, out var nameSource))
+                else if (!_projectLookupById.TryGetValue(key, out var nameSource))
                 {
                     projectName = L("Backups.Section.Group.Unknown", "Unknown project");
                 }
@@ -1885,7 +1887,7 @@ namespace VaultSync.UI.ViewModels
                 var summaryFallback = ordered.Count == 1 ? "{0} backup" : "{0} backups";
 
                 var accentBrush = GetAccentBrush("#33405A");
-                if (!string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out var colorSource))
+                if (!string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out var colorSource))
                 {
                     accentBrush = GetAccentBrush(colorSource.AvatarColor);
                 }
@@ -2621,6 +2623,7 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             ProjectBackups.Clear();
+            _projectLookupById.Clear();
             _allSnapshots.Clear();
 
             // Map per-project aggregates in a single pass.
@@ -2670,6 +2673,7 @@ namespace VaultSync.UI.ViewModels
                 UpdateProjectDestinationDisplay(projectItem, config);
                 UpdateProjectEncryptionDisplay(projectItem, config);
                 ProjectBackups.Add(projectItem);
+                _projectLookupById[projectItem.Id] = projectItem;
             }
             SortProjectBackups();
 
@@ -2826,8 +2830,7 @@ namespace VaultSync.UI.ViewModels
                     ? config.DbPath
                     : AppConfigStore.GetDefaultDbPath();
                 var repo = new SqliteRepository(dbPath);
-                return repo.GetAllSnapshots()
-                    .Where(snapshot => snapshotIds.Contains(snapshot.Id))
+                return repo.GetSnapshotsByIds(snapshotIds)
                     .ToDictionary(snapshot => snapshot.Id);
             }
             catch

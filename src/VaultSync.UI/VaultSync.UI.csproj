@@ -100,6 +100,12 @@
     <AvaloniaResource Include="Assets/Fonts/NotoSansArabic-Bold.ttf" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Assets/vaultsync-tray.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <!-- Windows notifications -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.19041.0'">
     <PackageReference Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />

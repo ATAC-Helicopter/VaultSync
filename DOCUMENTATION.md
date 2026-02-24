@@ -42,6 +42,14 @@ Additional prefixes can be used in changelog triage blocks when needed:
 
 Rules:
 - `VS-xxxx` remains the default for roadmap planning and implementation tracking.
+- In changelog entries, prefer `VS-xxxx` for all `Added` items (including backfilled/non-roadmap additions).
+- For changelog-only `ISS/BUG/REL` IDs, use version-family numbering:
+  - `1.0.x` -> `10xxx` (example: `ISS-10001`)
+  - `1.1.x` -> `11xxx`
+  - `1.2.x` -> `12xxx`
+  - `1.3.x` -> `13xxx`
+  - `1.4.x` -> `14xxx`
+  - `1.5.x` -> `15xxx`
 - If `ISS/BUG/REL` is used in changelog entries, define the scope clearly in the same release section.
 - Do not mix unrelated scopes under one ID.
 

@@ -11,9 +11,11 @@ ID model:
 - `ISS-xxxx` (optional): grouped issue/UX cleanup batches in changelog-only tracking
 - `BUG-xxxx` (optional): explicit bug-fix IDs in changelog tracking
 - `REL-xxxx` (optional): release-gate follow-up tracking
+  - changelog version-family numbering: `1.0.x -> 10xxx`, `1.1.x -> 11xxx`, ... `1.5.x -> 15xxx`
 
 Rules:
 - For planned feature work, always create/use `VS-xxxx` in `ROADMAP.md`.
+- In `CHANGELOG.md`, use `VS-xxxx` for `Added` entries by default (even when backfilling historical non-roadmap additions).
 - Keep one primary scope per ID.
 - Reuse the same ID in PR description, validation notes, and changelog entry when applicable.
 

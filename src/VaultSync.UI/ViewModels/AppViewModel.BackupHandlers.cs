@@ -16,7 +16,12 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
-        private async void OnBackupProjectRequested(ProjectBackupItem? item)
+        private void OnBackupProjectRequested(ProjectBackupItem? item)
+        {
+            RunDetached(() => OnBackupProjectRequestedAsync(item), nameof(OnBackupProjectRequestedAsync));
+        }
+
+        private async Task OnBackupProjectRequestedAsync(ProjectBackupItem? item)
         {
             var trayRun = _trayInitiatedBackup;
             _trayInitiatedBackup = false;
@@ -626,7 +631,12 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private async void OnCreateBackupForAllProjectsRequested()
+        private void OnCreateBackupForAllProjectsRequested()
+        {
+            RunDetached(OnCreateBackupForAllProjectsRequestedAsync, nameof(OnCreateBackupForAllProjectsRequestedAsync));
+        }
+
+        private async Task OnCreateBackupForAllProjectsRequestedAsync()
         {
             var trayRun = _trayInitiatedBackup;
             _trayInitiatedBackup = false;

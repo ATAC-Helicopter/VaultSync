@@ -963,7 +963,14 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        private async void OnPreferredDestinationChanged(int projectId, string preferredDestinationId)
+        private void OnPreferredDestinationChanged(int projectId, string preferredDestinationId)
+        {
+            RunDetached(
+                () => OnPreferredDestinationChangedAsync(projectId, preferredDestinationId),
+                nameof(OnPreferredDestinationChangedAsync));
+        }
+
+        private async Task OnPreferredDestinationChangedAsync(int projectId, string preferredDestinationId)
         {
             try
             {
@@ -976,7 +983,14 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private async void OnProjectEncryptionPolicyChanged(int projectId, string encryptionPolicy)
+        private void OnProjectEncryptionPolicyChanged(int projectId, string encryptionPolicy)
+        {
+            RunDetached(
+                () => OnProjectEncryptionPolicyChangedAsync(projectId, encryptionPolicy),
+                nameof(OnProjectEncryptionPolicyChangedAsync));
+        }
+
+        private async Task OnProjectEncryptionPolicyChangedAsync(int projectId, string encryptionPolicy)
         {
             try
             {

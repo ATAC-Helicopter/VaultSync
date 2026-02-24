@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace VaultSync.UI.Notifications
 {
@@ -21,6 +22,10 @@ namespace VaultSync.UI.Notifications
 
                 var escapedTitle   = EscapeAppleScriptString(title);
                 var escapedMessage = EscapeAppleScriptString(message);
+                var iconPath = ResolveNotificationIconPath();
+
+                if (TryShowWithTerminalNotifier(title, message, iconPath))
+                    return;
 
                 var script =
                     $"display notification \"{escapedMessage}\" with title \"{escapedTitle}\"";
@@ -41,6 +46,93 @@ namespace VaultSync.UI.Notifications
             }
             catch (Exception ex)
             {
+            }
+        }
+
+        private static bool TryShowWithTerminalNotifier(string title, string message, string? iconPath)
+        {
+            try
+            {
+                var notifierPath = FindExecutablePath("terminal-notifier");
+                if (string.IsNullOrWhiteSpace(notifierPath))
+                    return false;
+
+                var psi = new ProcessStartInfo
+                {
+                    FileName = notifierPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = false,
+                    RedirectStandardError = false,
+                    CreateNoWindow = true
+                };
+
+                psi.ArgumentList.Add("-title");
+                psi.ArgumentList.Add(title);
+                psi.ArgumentList.Add("-message");
+                psi.ArgumentList.Add(message);
+                psi.ArgumentList.Add("-group");
+                psi.ArgumentList.Add("VaultSync");
+
+                if (!string.IsNullOrWhiteSpace(iconPath) && File.Exists(iconPath))
+                {
+                    psi.ArgumentList.Add("-appIcon");
+                    psi.ArgumentList.Add(iconPath);
+                }
+
+                using var process = Process.Start(psi);
+                return process is not null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string? FindExecutablePath(string executableName)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "/usr/bin/which",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                psi.ArgumentList.Add(executableName);
+
+                using var process = Process.Start(psi);
+                if (process is null)
+                    return null;
+
+                var output = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit(1000);
+                return process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output)
+                    ? output
+                    : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string? ResolveNotificationIconPath()
+        {
+            try
+            {
+                var baseDir = AppContext.BaseDirectory;
+                var candidate = Path.Combine(baseDir, "Assets", "vaultsync-tray.png");
+                if (File.Exists(candidate))
+                    return candidate;
+
+                var flatCandidate = Path.Combine(baseDir, "vaultsync-tray.png");
+                return File.Exists(flatCandidate) ? flatCandidate : null;
+            }
+            catch
+            {
+                return null;
             }
         }
 

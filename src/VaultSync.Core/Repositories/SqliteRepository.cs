@@ -309,11 +309,15 @@ DELETE FROM sqlite_sequence;";
 
         /// <summary>
         /// Async helper for retrieving all projects without blocking the caller thread.
-        /// Intended for UI code; it simply wraps the existing synchronous method.
+        /// Intended for UI code; uses true async DB access.
         /// </summary>
-        public Task<List<Project>> GetAllProjectsAsync(CancellationToken ct = default)
+        public async Task<List<Project>> GetAllProjectsAsync(CancellationToken ct = default)
         {
-            return Task.Run(() => GetAllProjects().ToList(), ct);
+            const string sql =
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name";
+            using var c = Open();
+            var rows = await c.QueryAsync<Project>(new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
+            return rows.ToList();
         }
 
         public int AddProject(Project p)
@@ -715,13 +719,65 @@ DELETE FROM sqlite_sequence;";
                 """);
         }
 
+        public IEnumerable<Snapshot> GetSnapshotsByIds(IEnumerable<int> snapshotIds)
+        {
+            if (snapshotIds is null)
+                throw new ArgumentNullException(nameof(snapshotIds));
+
+            var ids = snapshotIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray();
+            if (ids.Length == 0)
+                return Enumerable.Empty<Snapshot>();
+
+            using var c = Open();
+            return c.Query<Snapshot>(
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id as ProjectId,
+                  created_utc as CreatedUtc,
+                  file_count as FileCount,
+                  total_bytes as TotalBytes,
+                  diff_added as DiffAdded,
+                  diff_modified as DiffModified,
+                  diff_deleted as DiffDeleted,
+                  diff_net_bytes as DiffNetBytes,
+                  diff_top_paths_json as DiffTopPathsJson
+                FROM snapshots
+                WHERE id IN @ids
+                """,
+                new { ids });
+        }
+
         /// <summary>
         /// Async helper for retrieving all snapshots without blocking the UI thread.
-        /// Wraps the existing synchronous implementation.
+        /// Uses true async DB access.
         /// </summary>
-        public Task<List<Snapshot>> GetAllSnapshotsAsync(CancellationToken ct = default)
+        public async Task<List<Snapshot>> GetAllSnapshotsAsync(CancellationToken ct = default)
         {
-            return Task.Run(() => GetAllSnapshots().ToList(), ct);
+            const string sql =
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id as ProjectId,
+                  created_utc as CreatedUtc,
+                  file_count as FileCount,
+                  total_bytes as TotalBytes,
+                  diff_added as DiffAdded,
+                  diff_modified as DiffModified,
+                  diff_deleted as DiffDeleted,
+                  diff_net_bytes as DiffNetBytes,
+                  diff_top_paths_json as DiffTopPathsJson
+                FROM snapshots
+                ORDER BY created_utc DESC
+                """;
+            using var c = Open();
+            var rows = await c.QueryAsync<Snapshot>(new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
+            return rows.ToList();
         }
 
         public IEnumerable<Snapshot> GetSnapshotsForProject(string projectName)
@@ -750,11 +806,32 @@ DELETE FROM sqlite_sequence;";
 
         /// <summary>
         /// Async helper for retrieving all snapshots for a given project name.
-        /// Safe to call from UI code; internally uses the existing sync method.
+        /// Safe to call from UI code; uses true async DB access.
         /// </summary>
-        public Task<List<Snapshot>> GetSnapshotsForProjectAsync(string projectName, CancellationToken ct = default)
+        public async Task<List<Snapshot>> GetSnapshotsForProjectAsync(string projectName, CancellationToken ct = default)
         {
-            return Task.Run(() => GetSnapshotsForProject(projectName).ToList(), ct);
+            const string sql =
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id as ProjectId,
+                  created_utc as CreatedUtc,
+                  file_count as FileCount,
+                  total_bytes as TotalBytes,
+                  diff_added as DiffAdded,
+                  diff_modified as DiffModified,
+                  diff_deleted as DiffDeleted,
+                  diff_net_bytes as DiffNetBytes,
+                  diff_top_paths_json as DiffTopPathsJson
+                FROM snapshots
+                WHERE project_id = (SELECT id FROM projects WHERE name=@name)
+                ORDER BY created_utc DESC, id DESC
+                """;
+            using var c = Open();
+            var rows = await c.QueryAsync<Snapshot>(
+                new CommandDefinition(sql, new { name = projectName }, cancellationToken: ct)).ConfigureAwait(false);
+            return rows.ToList();
         }
 
         public IEnumerable<FileEntry> GetFilesForSnapshot(int snapshotId)
@@ -776,21 +853,26 @@ DELETE FROM sqlite_sequence;";
 
         /// <summary>
         /// Async helper that materializes all file entries for a snapshot into a list
-        /// on a background thread. This is safe to call from UI code without blocking
-        /// the UI thread, and uses the existing synchronous implementation internally.
+        /// using async DB access.
         /// </summary>
-        public Task<List<FileEntry>> GetFilesForSnapshotAsync(int snapshotId, CancellationToken ct = default)
+        public async Task<List<FileEntry>> GetFilesForSnapshotAsync(int snapshotId, CancellationToken ct = default)
         {
-            return Task.Run(() =>
+            const string sql =
+                "SELECT rel_path as RelPath, size as Size, mtime_utc as MTimeUtc, hash_sha256 as HashSha256 FROM files WHERE snapshot_id=@sid";
+            using var c = Open();
+            var rows = await c.QueryAsync<(string RelPath, long Size, string MTimeUtc, string HashSha256)>(
+                new CommandDefinition(sql, new { sid = snapshotId }, cancellationToken: ct)).ConfigureAwait(false);
+            var styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
+            var list = new List<FileEntry>();
+            foreach (var entry in rows)
             {
-                var list = new List<FileEntry>();
-                foreach (var entry in GetFilesForSnapshot(snapshotId))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    list.Add(entry);
-                }
-                return list;
-            }, ct);
+                ct.ThrowIfCancellationRequested();
+                if (!DateTime.TryParse(entry.MTimeUtc, CultureInfo.InvariantCulture, styles, out var mtime))
+                    mtime = DateTime.SpecifyKind(DateTime.Parse(entry.MTimeUtc), DateTimeKind.Utc);
+                list.Add(new FileEntry(entry.RelPath, entry.Size, mtime, entry.HashSha256));
+            }
+
+            return list;
         }
 
         public void InsertFiles(int snapshotId, IEnumerable<FileEntry> files)
@@ -1175,11 +1257,37 @@ DELETE FROM sqlite_sequence;";
 
         /// <summary>
         /// Async helper for retrieving all backups for a given project id.
-        /// Safe to call from UI code; internally uses the existing sync method.
+        /// Safe to call from UI code; uses true async DB access.
         /// </summary>
-        public Task<List<Backup>> GetBackupsForProjectAsync(int projectId, CancellationToken ct = default)
+        public async Task<List<Backup>> GetBackupsForProjectAsync(int projectId, CancellationToken ct = default)
         {
-            return Task.Run(() => GetBackupsForProject(projectId).ToList(), ct);
+            const string sql =
+                """
+                  SELECT
+                    id,
+                    external_id as ExternalId,
+                    project_id  as ProjectId,
+                    snapshot_id as SnapshotId,
+                    created_utc as CreatedUtc,
+                    type,
+                    backup_mode as BackupMode,
+                    total_bytes as TotalBytes,
+                    path,
+                    destination_path as DestinationPath,
+                    destination_alias as DestinationAlias,
+                    origin_machine_name as OriginMachineName,
+                    is_protected as IsProtected,
+                    is_encrypted as IsEncrypted,
+                    crypto_descriptor_json as CryptoDescriptorJson,
+                    is_imported as IsImported
+                  FROM backups
+                  WHERE project_id = @pid
+                ORDER BY created_utc DESC;
+                """;
+            using var c = Open();
+            var rows = await c.QueryAsync<Backup>(
+                new CommandDefinition(sql, new { pid = projectId }, cancellationToken: ct)).ConfigureAwait(false);
+            return rows.ToList();
         }
 
         /// <summary>
@@ -1221,11 +1329,44 @@ DELETE FROM sqlite_sequence;";
 
         /// <summary>
         /// Async helper for retrieving backups in a date range without blocking the UI thread.
-        /// Wraps the existing synchronous implementation.
+        /// Uses true async DB access.
         /// </summary>
-        public Task<List<Backup>> GetBackupsInRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
+        public async Task<List<Backup>> GetBackupsInRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
         {
-            return Task.Run(() => GetBackupsInRange(fromUtc, toUtc).ToList(), ct);
+            const string sql =
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  backup_mode as BackupMode,
+                  total_bytes as TotalBytes,
+                  path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  origin_machine_name as OriginMachineName,
+                  is_protected as IsProtected,
+                  is_encrypted as IsEncrypted,
+                  crypto_descriptor_json as CryptoDescriptorJson,
+                  is_imported as IsImported
+                FROM backups
+                WHERE created_utc >= @from AND created_utc <= @to
+                ORDER BY created_utc DESC;
+                """;
+            using var c = Open();
+            var rows = await c.QueryAsync<Backup>(
+                new CommandDefinition(
+                    sql,
+                    new
+                    {
+                        from = fromUtc.ToString("u", CultureInfo.InvariantCulture),
+                        to = toUtc.ToString("u", CultureInfo.InvariantCulture)
+                    },
+                    cancellationToken: ct)).ConfigureAwait(false);
+            return rows.ToList();
         }
 
         public Backup? GetLastBackup()

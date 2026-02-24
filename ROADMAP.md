@@ -49,6 +49,36 @@
   - `VS-1591` Compatibility matrix validation (`1.4` <-> `1.5`).
   - `VS-1592` Localization/docs/release readiness final pass.
 
+### 1.5.1 stabilization backlog (bugs, glitches, optimization)
+- [ ] `P0` `VS-1565` Remove `async void` from backup/history runtime handlers and route through `Task` + centralized exception/log handling.
+  - Scope: `AppViewModel.*` backup/history/runtime/tray handlers and `BackupsViewModel` export action.
+  - Acceptance: no unobserved task exceptions; no behavior regressions in backup/restore/delete/open-folder flows.
+  - Current status:
+    - In progress: backup/history/runtime handler entry points now use `void` wrappers with `Task` implementations and centralized detached-operation exception logging.
+    - In progress: Backups diff export action no longer uses `async void`.
+    - In progress: tray open-folder + lock-now handlers and project settings change handlers now run through detached `Task` wrappers.
+- [ ] `P1` `VS-1566` Backups history performance pass: reduce full-list/group rebuild churn on filter and refresh updates.
+  - Scope: optimize `BackupsViewModel.RefreshSnapshotsView` / grouping path, avoid unnecessary collection clears/rebuilds.
+  - Acceptance: smoother filter toggles and lower UI thread time on large history sets.
+  - Current status:
+    - In progress: group rebuild now uses a cached project lookup map instead of rebuilding dictionary/group mappings each refresh.
+    - In progress: snapshot metadata lookup now queries only required snapshot IDs (instead of loading all snapshots) when shaping backup history cards.
+- [x] `P1` `VS-1567` Convert hot repository reads from `Task.Run` wrappers to true async DB calls.
+  - Scope: `SqliteRepository` high-frequency read APIs used by Dashboard/Projects/Backups.
+  - Acceptance: reduced thread-pool pressure during refresh/auto-refresh; no query-result regressions.
+  - Current status:
+    - Done: `SqliteRepository` async read helpers for projects/snapshots/files/backups now use Dapper async query APIs (`CommandDefinition` + cancellation tokens) instead of `Task.Run` wrappers.
+- [ ] `P1` `VS-1568` macOS notification icon parity: use VaultSync app icon instead of default Avalonia icon.
+  - Scope: `MacSystemNotificationService` notification payload/icon path wiring.
+  - Acceptance: macOS system notifications display VaultSync branding icon consistently.
+  - Current status:
+    - In progress: macOS notifications now prefer `terminal-notifier` (when installed) and pass VaultSync icon path; fallback remains AppleScript notification.
+- [ ] `P2` `VS-1569` Replace blocking retry sleeps with async backoff in config/metadata I/O paths.
+  - Scope: `AppConfigStore`, `MetadataStore`, `MetadataSyncService`.
+  - Acceptance: cancellation-aware retries; no UI stalls from blocking waits.
+  - Current status:
+    - In progress: metadata sync import/preview/export/tombstone flows now have async APIs, use `SemaphoreSlim.WaitAsync`, and use cancellation-aware `Task.Delay` backoff in retry loops.
+
 ### 1.5.0 scope and contracts
 
 #### `P0` Backup encryption and password-protected backups

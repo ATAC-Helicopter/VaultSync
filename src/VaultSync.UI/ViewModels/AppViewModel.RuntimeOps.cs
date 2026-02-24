@@ -211,7 +211,12 @@ namespace VaultSync.UI.ViewModels
             BackupsViewModel.UpdateDestinationStatus(id, message, severity);
         }
 
-        private async void OnRefreshHistoryRequested()
+        private void OnRefreshHistoryRequested()
+        {
+            RunDetached(OnRefreshHistoryRequestedAsync, nameof(OnRefreshHistoryRequestedAsync));
+        }
+
+        private async Task OnRefreshHistoryRequestedAsync()
         {
             try
             {
@@ -409,7 +414,12 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        private async void OnRotateEncryptedBackupsRequested()
+        private void OnRotateEncryptedBackupsRequested()
+        {
+            RunDetached(OnRotateEncryptedBackupsRequestedAsync, nameof(OnRotateEncryptedBackupsRequestedAsync));
+        }
+
+        private async Task OnRotateEncryptedBackupsRequestedAsync()
         {
             if (Volatile.Read(ref _backupAllInProgress) == 1 || Volatile.Read(ref _manualBackupInFlightCount) > 0)
             {
@@ -560,11 +570,11 @@ namespace VaultSync.UI.ViewModels
                 var options = new MetadataSyncOptions(
                     AllowCreateProjects: true,
                     MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport);
-                var preview = await Task.Run(() => _metadataSyncService.PreviewImportFromStore(cfg.ProjectsRoot, options));
+                var preview = await _metadataSyncService.PreviewImportFromStoreAsync(cfg.ProjectsRoot, options);
                 var label = L("MetadataSync.Review.SourceProjectsRoot", "Projects root");
                     if (await ConfirmMetadataImportAsync(preview, label))
                     {
-                        var result = await Task.Run(() => _metadataSyncService.ImportFromStore(cfg.ProjectsRoot, options));
+                        var result = await _metadataSyncService.ImportFromStoreAsync(cfg.ProjectsRoot, options);
                         Console.WriteLine($"[MetadataSync] Manual refresh (projects root) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
                         _ = Task.Run(() => ApplyRetentionAfterMetadataImport(cfg.ProjectsRoot, result));
                         refreshNeeded |= result.Status == MetadataSyncStatus.Success &&
@@ -595,12 +605,12 @@ namespace VaultSync.UI.ViewModels
                     var options = new MetadataSyncOptions(
                         AllowCreateProjects: true,
                         MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport);
-                    var preview = await Task.Run(() => _metadataSyncService.PreviewImportFromStore(resolution.EffectivePath, options));
+                    var preview = await _metadataSyncService.PreviewImportFromStoreAsync(resolution.EffectivePath, options);
                     var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
                     var label = Lf("MetadataSync.Review.SourceDestination", "Destination: {0}", name);
                     if (await ConfirmMetadataImportAsync(preview, label))
                     {
-                        var result = await Task.Run(() => _metadataSyncService.ImportFromStore(resolution.EffectivePath, options));
+                        var result = await _metadataSyncService.ImportFromStoreAsync(resolution.EffectivePath, options);
                         Console.WriteLine($"[MetadataSync] Manual refresh ({name}) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
                         _ = Task.Run(() => ApplyRetentionAfterMetadataImport(resolution.EffectivePath, result));
                         refreshNeeded |= result.Status == MetadataSyncStatus.Success &&
@@ -1180,12 +1190,12 @@ namespace VaultSync.UI.ViewModels
             var machineId = Environment.MachineName;
             var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
             var forceBackfill = forceBackfillOverride ?? dest.ForceMetadataBackfill;
-            _ = Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
                     Console.WriteLine($"[MetadataSync] Export started for backup {backupId} -> '{name}'.");
-                    var result = _metadataSyncService.ExportBackupToStore(
+                    var result = await _metadataSyncService.ExportBackupToStoreAsync(
                         effectivePath,
                         backupId,
                         _currentVersionString,

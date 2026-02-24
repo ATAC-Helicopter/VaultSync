@@ -259,7 +259,12 @@ namespace VaultSync.UI.ViewModels
             OpenBackupFolder(backupId);
         }
 
-        private async void OnLockEncryptedOpenWorkspacesRequested()
+        private void OnLockEncryptedOpenWorkspacesRequested()
+        {
+            RunDetached(OnLockEncryptedOpenWorkspacesRequestedAsync, nameof(OnLockEncryptedOpenWorkspacesRequestedAsync));
+        }
+
+        private async Task OnLockEncryptedOpenWorkspacesRequestedAsync()
         {
             try
             {
@@ -277,7 +282,12 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private async void OpenBackupFolder(int backupId)
+        private void OpenBackupFolder(int backupId)
+        {
+            RunDetached(() => OpenBackupFolderAsync(backupId), nameof(OpenBackupFolderAsync));
+        }
+
+        private async Task OpenBackupFolderAsync(int backupId)
         {
             var openCardId = $"open-{backupId}";
             string? extractedDirForCleanup = null;
