@@ -94,6 +94,12 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 - Security: [SECURITY.md](SECURITY.md)
 - Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
+## App screenshots
+
+![Dashboard page](docs\images\Dashboard.png)
+![Projects page](docs\images\Projects_Page.png)
+![Backups page](docs\images\Backup_Page.png)
+
 ## Features
 
 ### CLI
@@ -108,12 +114,16 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 
 ### Desktop UI
 
-- One-click snapshots and backups (auto + manual)
-- Live progress overlays and per-project status cards
-- Backup history with "Keep" (protected) backups that bypass retention
-- Disk health (best-effort SMART) and backup retention controls
-- Cross-machine history sync via `.vaultsync/meta/` metadata
-- Cross-platform: macOS, Windows, Linux
+- One-click snapshots and backups (manual + scheduled)
+- Per-project destination routing (`Auto`, specific destination, multi-destination support)
+- Global and per-project encryption policies with secure credential-store integration
+- Password-gated encrypted backup open/restore flow with auto-lock timeout and manual `Lock now`
+- Backup history with type and encryption context (`Full`, `Incremental`, `Imported`, `Encrypted/Plain`)
+- Snapshot diff summaries (`added`, `modified`, `deleted`, net size, top changed paths) with export (`text` / `JSON`)
+- Backup policy controls (bandwidth limit + quiet hours) with policy state shown in cards/tray/logs
+- Metadata sync across machines (`.vaultsync/meta`) with source-machine tracking on imported backups
+- Retention with protected (`Keep`) backups and integrated cleanup behavior
+- Cross-platform desktop support: macOS, Windows, Linux
 
 ### Smart Presets
 
@@ -143,6 +153,7 @@ or choose **No preset** if no presets apply or you want no file exclusion.
 - Per-project or "backup all"
 - Automatic backups (optional)
 - Progress, file count, and failure handling (NAS sleep detection)
+- Adaptive archive compression policy for better speed/ratio balance by file type
 - Retention: keep the newest N backups per project; protected ("Keep") backups are never pruned
 - Integrated snapshot creation: every backup captures a fresh snapshot; orphan snapshots are cleaned up when backups are pruned
 - Backup history terminology:
@@ -229,10 +240,6 @@ vaultsync watch Game --dest /Backups/Game --sync --verify --debounce-ms 2500
 
 Licensed under the MIT License.  
 See the full license here: [LICENSE](LICENSE).
-
-<img width="1280" height="709" alt="VaultSync_MM1" src="https://github.com/user-attachments/assets/57368d4d-6cd5-4743-ba15-054de5034f7c" />
-<img width="1280" height="709" alt="VaultSync_MM2" src="https://github.com/user-attachments/assets/32e4d684-9a46-4e9d-a90f-d13dfb644c21" />
-<img width="1280" height="709" alt="VaultSync_MM3" src="https://github.com/user-attachments/assets/dca44d74-62f1-4ba4-a334-4b9166630756" />
 
 ## Credits
 
