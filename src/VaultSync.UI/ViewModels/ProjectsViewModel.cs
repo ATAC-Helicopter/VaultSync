@@ -816,7 +816,12 @@ public class ProjectsViewModel : ViewModelBase
         RefreshSelectedProjectRegistration();
     }
 
-    private async void TakeSnapshot()
+    private void TakeSnapshot()
+    {
+        _ = RunDetachedAsync(TakeSnapshotCoreAsync, nameof(TakeSnapshotCoreAsync));
+    }
+
+    private async Task TakeSnapshotCoreAsync()
     {
         if (SelectedProject is null)
             return;
@@ -961,7 +966,7 @@ public class ProjectsViewModel : ViewModelBase
             // Temporarily select the project so existing code works.
             SelectedProject = project;
 
-            // Fire the existing snapshot pipeline (async void).
+            // Fire the existing snapshot pipeline via detached task wrapper.
             TakeSnapshot();
         }
         finally
@@ -1113,6 +1118,19 @@ public class ProjectsViewModel : ViewModelBase
         catch (Exception ex)
         {
             Console.WriteLine($"[Projects] Failed to persist project settings for '{vm.Name}': {ex.Message}");
+        }
+    }
+
+    private static async Task RunDetachedAsync(Func<Task> operation, string operationName)
+    {
+        try
+        {
+            await operation().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record(
+                $"Projects detached operation failed ({operationName}): {ex.GetType().Name} - {ex.Message}");
         }
     }
 

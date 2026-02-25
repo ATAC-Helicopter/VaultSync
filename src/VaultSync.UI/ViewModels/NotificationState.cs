@@ -120,7 +120,12 @@ namespace VaultSync.UI.ViewModels.Notifications
             IsVisible = false;
         }
 
-        private async void StartAutoDismiss(TimeSpan duration)
+        private void StartAutoDismiss(TimeSpan duration)
+        {
+            _ = StartAutoDismissAsync(duration);
+        }
+
+        private async Task StartAutoDismissAsync(TimeSpan duration)
         {
             _cts?.Cancel();
             _cts = new CancellationTokenSource();

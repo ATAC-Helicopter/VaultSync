@@ -40,6 +40,23 @@ public sealed class BackupService
     private static readonly ConcurrentDictionary<string, (DateTime TimestampUtc, int TotalFiles, long TotalBytes)> StatsCache = new();
     private const int PreflightCacheLimit = 128;
     private const int StatsCacheLimit = 128;
+    private static readonly HashSet<string> ArchiveNoCompressionExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".zip", ".7z", ".rar", ".gz", ".bz2", ".xz", ".zst", ".cab", ".iso",
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif", ".avif", ".tif", ".tiff",
+        ".mp3", ".aac", ".ogg", ".flac", ".m4a", ".wav",
+        ".mp4", ".mkv", ".mov", ".avi", ".wmv", ".webm",
+        ".pdf", ".docx", ".xlsx", ".pptx", ".odt", ".ods", ".odp",
+        ".sqlite", ".db", ".parquet", ".feather"
+    };
+    private static readonly HashSet<string> ArchiveOptimalCompressionExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".txt", ".md", ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+        ".csv", ".tsv", ".log", ".sql",
+        ".cs", ".fs", ".vb", ".js", ".ts", ".jsx", ".tsx", ".py", ".java", ".kt", ".swift",
+        ".cpp", ".cc", ".cxx", ".c", ".h", ".hpp", ".hh", ".rs", ".go", ".php", ".rb", ".sh",
+        ".html", ".css", ".scss", ".less"
+    };
 
     public BackupService(
         SqliteRepository repo,
@@ -1358,7 +1375,8 @@ public sealed class BackupService
                     ct.ThrowIfCancellationRequested();
 
                     var relative = Path.GetRelativePath(sourceDir, filePath);
-                    var entry = zip.CreateEntry(relative, CompressionLevel.Fastest);
+                    var compressionLevel = ResolveArchiveCompressionLevel(filePath);
+                    var entry = zip.CreateEntry(relative, compressionLevel);
 
                     try
                     {
@@ -1655,6 +1673,21 @@ public sealed class BackupService
                 // ignore cleanup errors
             }
         }
+    }
+
+    private static CompressionLevel ResolveArchiveCompressionLevel(string filePath)
+    {
+        var ext = Path.GetExtension(filePath);
+        if (string.IsNullOrWhiteSpace(ext))
+            return CompressionLevel.Fastest;
+
+        if (ArchiveNoCompressionExtensions.Contains(ext))
+            return CompressionLevel.NoCompression;
+
+        if (ArchiveOptimalCompressionExtensions.Contains(ext))
+            return CompressionLevel.Optimal;
+
+        return CompressionLevel.Fastest;
     }
 
     private static async Task UploadArchiveParallelAsync(

@@ -2,13 +2,14 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace VaultSync.Core.Config
 {
     public static class AppConfigStore
     {
-        private static readonly object SaveLock = new();
+        private static readonly SemaphoreSlim SaveGate = new(1, 1);
         private static readonly string ConfigDir =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync");
 
@@ -78,7 +79,14 @@ namespace VaultSync.Core.Config
         {
             Directory.CreateDirectory(ConfigDir);
             var json = JsonSerializer.Serialize(config, JsonOptions);
-            WriteConfigWithRetry(json);
+            WriteConfigWithRetryAsync(json, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        public static async Task SaveAsync(AppConfig config, CancellationToken ct = default)
+        {
+            Directory.CreateDirectory(ConfigDir);
+            var json = JsonSerializer.Serialize(config, JsonOptions);
+            await WriteConfigWithRetryAsync(json, ct).ConfigureAwait(false);
         }
 
         public static string GetDefaultDbPath()
@@ -89,12 +97,13 @@ namespace VaultSync.Core.Config
             return Path.Combine(dir, "vaultsync.db");
         }
 
-        private static void WriteConfigWithRetry(string json)
+        private static async Task WriteConfigWithRetryAsync(string json, CancellationToken ct)
         {
             const int maxAttempts = 5;
             var delay = 40;
 
-            lock (SaveLock)
+            await SaveGate.WaitAsync(ct).ConfigureAwait(false);
+            try
             {
                 for (var attempt = 1; attempt <= maxAttempts; attempt++)
                 {
@@ -108,13 +117,17 @@ namespace VaultSync.Core.Config
                     }
                     catch (IOException) when (attempt < maxAttempts)
                     {
-                        Thread.Sleep(delay);
+                        await Task.Delay(delay, ct).ConfigureAwait(false);
                         delay *= 2;
                     }
                 }
 
                 // Last attempt: allow exception to surface for diagnostics.
                 File.WriteAllText(ConfigFilePath, json);
+            }
+            finally
+            {
+                SaveGate.Release();
             }
         }
     }

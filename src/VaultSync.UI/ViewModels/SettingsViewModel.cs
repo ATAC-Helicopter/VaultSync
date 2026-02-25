@@ -600,7 +600,7 @@ namespace VaultSync.UI
                 _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(launchOnLogin));
             }
 
-            AppConfigStore.Save(cfg);
+            await AppConfigStore.SaveAsync(cfg);
 
             SaveStatus = credentialSave.hadPlaintextFallback
                 ? $"Saved (with credential fallback) at {DateTime.Now:HH:mm:ss}"
@@ -735,7 +735,12 @@ namespace VaultSync.UI
             TriggerAutoSave();
         }
 
-        private async void TriggerAutoSave()
+        private void TriggerAutoSave()
+        {
+            _ = RunDetachedAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
+        }
+
+        private async Task TriggerAutoSaveAsync()
         {
             if (!_isInitialized)
                 return;
@@ -763,7 +768,7 @@ namespace VaultSync.UI
                 if (_savePending)
                 {
                     _savePending = false;
-                    TriggerAutoSave();
+                    _ = RunDetachedAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
                 }
             }
         }
@@ -1693,7 +1698,12 @@ namespace VaultSync.UI
             TriggerAutoSave();
         }
 
-        private async void BrowseProjectsRoot()
+        private void BrowseProjectsRoot()
+        {
+            _ = RunDetachedAsync(BrowseProjectsRootAsync, nameof(BrowseProjectsRootAsync));
+        }
+
+        private async Task BrowseProjectsRootAsync()
         {
             var storageProvider = GetStorageProvider();
             if (storageProvider is null)
@@ -1710,24 +1720,26 @@ namespace VaultSync.UI
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
-            _ = Task.Run(() =>
+            try
             {
-                try
-                {
-                    var config = AppConfigStore.Load();
-                    config.ProjectsRoot = path;
-                    AppConfigStore.Save(config);
-                }
-                catch
-                {
-                    // Best effort
-                }
-            });
+                var config = await Task.Run(AppConfigStore.Load);
+                config.ProjectsRoot = path;
+                await AppConfigStore.SaveAsync(config);
+            }
+            catch
+            {
+                // Best effort
+            }
 
             ProjectsRootPath = path;
         }
 
-        private async void BrowseBackupLocation()
+        private void BrowseBackupLocation()
+        {
+            _ = RunDetachedAsync(BrowseBackupLocationAsync, nameof(BrowseBackupLocationAsync));
+        }
+
+        private async Task BrowseBackupLocationAsync()
         {
             var storageProvider = GetStorageProvider();
             if (storageProvider is null)
@@ -1748,7 +1760,12 @@ namespace VaultSync.UI
             ValidateBackupLocation(path);
         }
 
-        private async void BrowseDestination(BackupDestinationViewModel? dest)
+        private void BrowseDestination(BackupDestinationViewModel? dest)
+        {
+            _ = RunDetachedAsync(() => BrowseDestinationAsync(dest), nameof(BrowseDestinationAsync));
+        }
+
+        private async Task BrowseDestinationAsync(BackupDestinationViewModel? dest)
         {
             if (dest is null)
                 return;
@@ -1848,7 +1865,12 @@ namespace VaultSync.UI
             ValidateBackupLocation(BackupLocationPath, notifyOnSuccess: false);
         }
 
-        private async void TestDestination(BackupDestinationViewModel? dest)
+        private void TestDestination(BackupDestinationViewModel? dest)
+        {
+            _ = RunDetachedAsync(() => TestDestinationAsync(dest), nameof(TestDestinationAsync));
+        }
+
+        private async Task TestDestinationAsync(BackupDestinationViewModel? dest)
         {
             if (dest is null)
                 return;
@@ -1973,6 +1995,18 @@ namespace VaultSync.UI
 
                 await ClipboardHelper.TryCopyAsync(snippet);
             });
+        }
+
+        private static async Task RunDetachedAsync(Func<Task> operation, string operationName)
+        {
+            try
+            {
+                await operation().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[SettingsViewModel] Detached operation failed ({operationName}): {ex}");
+            }
         }
 
         private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)

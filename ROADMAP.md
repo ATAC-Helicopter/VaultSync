@@ -37,7 +37,7 @@
 - [x] `P1` Incremental backup UX improvements.
 - [x] `P2` Snapshot diff summaries.
 
-### Current status (as of 2026-02-19)
+### Current status (as of 2026-02-25)
 - `1.5` feature scope is functionally complete (`P0` + `P1` + `P2` done).
 - Recent UI stabilization pass completed for:
   - Dashboard weekly analytics card redesign + data-binding correctness fixes.
@@ -50,13 +50,14 @@
   - `VS-1592` Localization/docs/release readiness final pass.
 
 ### 1.5.1 stabilization backlog (bugs, glitches, optimization)
-- [ ] `P0` `VS-1565` Remove `async void` from backup/history runtime handlers and route through `Task` + centralized exception/log handling.
+- [x] `P0` `VS-1565` Remove `async void` from backup/history runtime handlers and route through `Task` + centralized exception/log handling.
   - Scope: `AppViewModel.*` backup/history/runtime/tray handlers and `BackupsViewModel` export action.
   - Acceptance: no unobserved task exceptions; no behavior regressions in backup/restore/delete/open-folder flows.
   - Current status:
-    - In progress: backup/history/runtime handler entry points now use `void` wrappers with `Task` implementations and centralized detached-operation exception logging.
-    - In progress: Backups diff export action no longer uses `async void`.
-    - In progress: tray open-folder + lock-now handlers and project settings change handlers now run through detached `Task` wrappers.
+    - Done: backup/history/runtime handler entry points now use `void` wrappers with `Task` implementations and centralized detached-operation exception logging.
+    - Done: Backups diff export action no longer uses `async void`.
+    - Done: tray open-folder + lock-now handlers and project/settings handlers now run through detached `Task` wrappers.
+    - Done: no `async void` handlers remain in `src/` (checked via repository scan).
 - [ ] `P1` `VS-1566` Backups history performance pass: reduce full-list/group rebuild churn on filter and refresh updates.
   - Scope: optimize `BackupsViewModel.RefreshSnapshotsView` / grouping path, avoid unnecessary collection clears/rebuilds.
   - Acceptance: smoother filter toggles and lower UI thread time on large history sets.
@@ -77,7 +78,20 @@
   - Scope: `AppConfigStore`, `MetadataStore`, `MetadataSyncService`.
   - Acceptance: cancellation-aware retries; no UI stalls from blocking waits.
   - Current status:
+    - In progress: `AppConfigStore` now provides `SaveAsync` with cancellation-aware backoff (`Task.Delay`) and Settings async save path now uses it.
     - In progress: metadata sync import/preview/export/tombstone flows now have async APIs, use `SemaphoreSlim.WaitAsync`, and use cancellation-aware `Task.Delay` backoff in retry loops.
+- [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
+  - Scope: archive backup creation path in `BackupService`.
+  - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.
+  - Current status:
+    - Done: archive compression now selects per-file level (`NoCompression` for already-compressed/media, `Optimal` for text/code, `Fastest` fallback).
+    - Done: full solution build + core tests pass after change.
+- [x] `P2` `VS-1571` README feature/status refresh and screenshot placeholders.
+  - Scope: top-level repo README content and screenshot scaffolding.
+  - Acceptance: README reflects current 1.5.x capabilities and has clear placeholder locations for app screenshots.
+  - Current status:
+    - Done: outdated feature wording refreshed for current 1.5.x behavior.
+    - Done: placeholder SVGs added for Dashboard/Projects/Backups/Settings screenshots under `docs/images/placeholders/`.
 
 ### 1.5.0 scope and contracts
 

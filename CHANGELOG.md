@@ -14,6 +14,10 @@
 - [ISS-15010] Repository async read paths now use true Dapper async queries (projects/snapshots/files/backups) instead of `Task.Run` wrappers.
 - [ISS-15011] Backups history snapshot lookup now queries only referenced snapshot IDs instead of scanning/loading all snapshots.
 - [ISS-15012] Metadata sync import/preview/export paths now expose async APIs and use cancellation-aware retry backoff instead of blocking sleep loops.
+- [ISS-15013] Archive backup compression now uses an adaptive per-file strategy (`NoCompression` for already-compressed media/archives, `Optimal` for text/code, `Fastest` fallback) to improve throughput/ratio balance without changing backup format or restore compatibility.
+- [ISS-15014] Config persistence now exposes async save with cancellation-aware retry backoff, and Settings save paths now use the async flow to reduce blocking waits.
+- [ISS-15015] Main README was refreshed for the current 1.5.x feature set and outdated wording was cleaned up.
+- [ISS-15016] README now includes dedicated app screenshot placeholders (`Dashboard`, `Projects`, `Backups`, `Settings`) under `docs/images/placeholders/`.
 ### Fixed
 - [BUG-15001] Pie/donut chart now re-renders more reliably after async startup data load and late layout passes.
 - [BUG-15002] Lock now and encrypted open-timeout labels now bind through localization keys instead of hardcoded literals.
@@ -23,6 +27,7 @@
 - [BUG-15006] macOS system notifications now prefer `terminal-notifier` with VaultSync icon wiring (with AppleScript fallback when unavailable).
 - [BUG-15007] Backup/history/runtime async entry points no longer rely on `async void`; handlers now run as `Task` flows with centralized detached-operation exception logging.
 - [BUG-15008] Tray encrypted-open lock/open handlers and project destination/encryption change handlers now use detached `Task` wrappers instead of `async void`.
+- [BUG-15009] Notification auto-dismiss, project snapshot action, settings browse/test commands, and tray refresh no longer use `async void` handlers.
 ### Follow-up
 - [REL-15001] Validate localization coverage for newly added 1.5.1 keys across all non-English language packs.
 - [REL-15002] Run a startup/render smoke matrix (cold start, resume, language switch) focused on dashboard donut reliability.

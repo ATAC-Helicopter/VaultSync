@@ -1096,7 +1096,12 @@ public partial class App : Application
         }
     }
 
-    public async void RefreshTrayMenu()
+    public void RefreshTrayMenu()
+    {
+        _ = RefreshTrayMenuAsync();
+    }
+
+    public async Task RefreshTrayMenuAsync()
     {
         if (_trayIcon is null)
             return;
@@ -1177,7 +1182,7 @@ public partial class App : Application
                     _ = Task.Run(async () =>
                     {
                         await Task.Delay(200).ConfigureAwait(false);
-                        RefreshTrayMenu();
+                        await RefreshTrayMenuAsync().ConfigureAwait(false);
                     });
                 }
             }
