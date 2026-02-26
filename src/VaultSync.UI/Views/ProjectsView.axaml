@@ -85,6 +85,10 @@
     </Style>
   </UserControl.Styles>
 
+  <UserControl.Resources>
+    <controls:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+  </UserControl.Resources>
+
   <Border Padding="{DynamicResource PagePadding}">
     <Grid RowDefinitions="Auto,*"
           RowSpacing="{DynamicResource PageRowSpacing}"
@@ -400,7 +404,7 @@
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
                     Margin="0">
-              <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
                            FontWeight="SemiBold"
@@ -413,6 +417,21 @@
                           ItemsSource="{Binding DataContext.AvailablePresets, ElementName=Root}"
                           SelectedItem="{Binding Preset, Mode=TwoWay}"
                           HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="2"
+                           Margin="0,2,0,0"
+                           Text="{Binding PresetDescription}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap" />
+                <TextBlock Grid.Row="3"
+                           IsVisible="{Binding PresetExample, Converter={StaticResource StringNotEmptyConverter}}"
+                           TextWrapping="Wrap"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}">
+                  <Run Text="{infra:LocalizedString Key=Projects.Preset.ExampleLabel}" />
+                  <Run Text=" " />
+                  <Run Text="{Binding PresetExample}" />
+                </TextBlock>
               </Grid>
             </Border>
 

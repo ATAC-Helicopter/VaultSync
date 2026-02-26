@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace VaultSync.Core.Services;
 
@@ -8,8 +9,10 @@ public class FilterService
     private readonly List<string> _patterns;
     private readonly List<Regex> _compiledPatterns;
     private static readonly ConcurrentDictionary<string, CachedLines> s_linesCache = new();
+    private static readonly ConcurrentDictionary<string, CachedPresetIndex> s_presetIndexCache = new();
 
     private sealed record CachedLines(DateTime LastWriteUtc, IReadOnlyList<string> Lines);
+    private sealed record CachedPresetIndex(DateTime LastWriteUtc, Dictionary<string, string> ById);
 
     /// <summary>
     /// True when this filter has at least one ignore rule.
@@ -40,10 +43,10 @@ public class FilterService
         // Load preset file if present
         if (!string.IsNullOrWhiteSpace(presetName))
         {
-            var presetFile = Path.Combine(presetsDir, $"{presetName}.vaultsyncignore");
-            Console.WriteLine($"[FilterService] Looking for preset file '{presetFile}'");
+            var presetFile = ResolvePresetFile(presetsDir, presetName);
+            Console.WriteLine($"[FilterService] Looking for preset file '{presetFile ?? "(not found)"}'");
 
-            if (File.Exists(presetFile))
+            if (!string.IsNullOrWhiteSpace(presetFile) && File.Exists(presetFile))
             {
                 var presetLines = ReadLinesCached(presetFile);
                 Console.WriteLine($"[FilterService] Loaded {presetLines.Count} rules from preset file.");
@@ -67,6 +70,62 @@ public class FilterService
         Console.WriteLine($"[FilterService] Total rules in combined filter: {patterns.Count}");
 
         return new FilterService(patterns);
+    }
+
+    private static string? ResolvePresetFile(string presetsDir, string presetName)
+    {
+        var directPath = Path.Combine(presetsDir, $"{presetName}.vaultsyncignore");
+        if (File.Exists(directPath))
+            return directPath;
+
+        // Use the index mapping when preset IDs and file names differ
+        // (for example `cpp` -> `c_cpp.vaultsyncignore`).
+        var mappedFile = ResolvePresetFileFromIndex(presetsDir, presetName);
+        if (!string.IsNullOrWhiteSpace(mappedFile))
+            return mappedFile;
+
+        return null;
+    }
+
+    private static string? ResolvePresetFileFromIndex(string presetsDir, string presetName)
+    {
+        try
+        {
+            var indexPath = Path.Combine(presetsDir, "presets.index.json");
+            if (!File.Exists(indexPath))
+                return null;
+
+            var lastWrite = File.GetLastWriteTimeUtc(indexPath);
+            if (!s_presetIndexCache.TryGetValue(indexPath, out var cached) || cached.LastWriteUtc != lastWrite)
+            {
+                var json = File.ReadAllText(indexPath);
+                var index = JsonSerializer.Deserialize<PresetIndex>(json);
+                var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (index?.Presets != null)
+                {
+                    foreach (var preset in index.Presets)
+                    {
+                        if (string.IsNullOrWhiteSpace(preset.Id) || string.IsNullOrWhiteSpace(preset.File))
+                            continue;
+
+                        map[preset.Id] = preset.File;
+                    }
+                }
+
+                cached = new CachedPresetIndex(lastWrite, map);
+                s_presetIndexCache[indexPath] = cached;
+            }
+
+            if (!cached.ById.TryGetValue(presetName, out var fileName) || string.IsNullOrWhiteSpace(fileName))
+                return null;
+
+            var mappedPath = Path.Combine(presetsDir, fileName);
+            return File.Exists(mappedPath) ? mappedPath : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static string ResolvePresetsDir(string? presetsDir)
@@ -148,5 +207,16 @@ public class FilterService
             .Replace(@"\*", "[^/]*")
             .Replace(@"\?", ".") + "$";
         return new Regex(rx, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private sealed class PresetIndex
+    {
+        public List<PresetInfo> Presets { get; set; } = new();
+    }
+
+    private sealed class PresetInfo
+    {
+        public string Id { get; set; } = string.Empty;
+        public string File { get; set; } = string.Empty;
     }
 }

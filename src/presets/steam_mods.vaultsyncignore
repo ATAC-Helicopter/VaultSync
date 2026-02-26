@@ -1,0 +1,24 @@
+# Steam mods backup preset:
+# Keep installed mods/config, exclude workshop cache/temp/log artefacts.
+
+**/steamapps/workshop/downloads/
+**/steamapps/downloading/
+**/steamapps/temp/
+**/steamapps/shadercache/
+**/steamapps/common/*/Logs/
+**/steamapps/common/*/CrashDumps/
+
+*.tmp
+*.temp
+*.log
+*.dmp
+*.mdmp
+*.crash
+
+**/.cache/
+**/cache/
+**/tmp/
+
+.DS_Store
+Thumbs.db
+desktop.ini

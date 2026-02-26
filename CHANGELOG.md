@@ -4,6 +4,7 @@
 - [VS-15001] Added Backups-page per-project sort control (Latest backup, Name, Total size, Backup count) to improve project list navigation.
 - [VS-15002] Added new localization keys for transfer policy, encryption open-timeout/lock labels, validation copy, and backup sort labels.
 - [VS-15003] Added startup-safe dashboard donut refresh hooks to reduce first-load no-render states.
+- [VS-1572] Added consumer-friendly preset coverage (`Photos`, `Documents`, `Steam mods`, `Creative suites`) with Projects-page preset description/example hints and index-safe preset file mapping.
 ### Changed
 - [ISS-15004] Settings transfer policy section was redesigned for clearer Bandwidth limit and Quiet hours editing with compact window preview and better field grouping.
 - [ISS-15005] Open help action now attempts local docs first, then online docs, and reports success/failure in-app instead of failing silently.

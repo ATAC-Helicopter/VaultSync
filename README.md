@@ -96,9 +96,9 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 
 ## App screenshots
 
-![Dashboard page](docs\images\Dashboard.png)
-![Projects page](docs\images\Projects_Page.png)
-![Backups page](docs\images\Backup_Page.png)
+![Dashboard page](docs/images/Dashboard.png)
+![Projects page](docs/images/Projects_Page.png)
+![Backups page](docs/images/Backup_Page.png)
 
 ## Features
 
@@ -135,9 +135,12 @@ Common presets included:
 - Game engines (Godot, Unreal, GameMaker)
 - Common programming stacks (Node, Python, Rust, Java, Go)
 - Creative tools (Blender, Video Editing, Music DAWs)
+- Consumer-friendly presets (Photos Library, Documents Library, Steam Mods, Creative Suites)
 - General development presets (VSCode, JetBrains, Docker, etc.)
 
 or choose **No preset** if no presets apply or you want no file exclusion.
+
+In the Projects page, selecting a preset now also shows a short description and an example usage hint.
 
 ### Snapshot System
 

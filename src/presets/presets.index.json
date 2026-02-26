@@ -142,7 +142,41 @@
       "name": "Generic Video Project",
       "category": "3D / Creative",
       "file": "video.vaultsyncignore",
-      "description": "General video-production cache, proxy, and temp exclusions."
+      "description": "General video-production cache, proxy, and temp exclusions.",
+      "example": "Video editing project folder with source media and render cache."
+    },
+
+    {
+      "id": "photos",
+      "name": "Photos Library",
+      "category": "Consumer",
+      "file": "photos.vaultsyncignore",
+      "description": "Keeps source photos while excluding thumbnails, temp downloads, and OS junk files.",
+      "example": "Family photos folder synced from phone/cloud export."
+    },
+    {
+      "id": "documents",
+      "name": "Documents Library",
+      "category": "Consumer",
+      "file": "documents.vaultsyncignore",
+      "description": "Keeps documents and office files while excluding temporary, lock, autosave, and cache files.",
+      "example": "Personal documents folder with PDF, Office, and text files."
+    },
+    {
+      "id": "steam_mods",
+      "name": "Steam Mods",
+      "category": "Consumer",
+      "file": "steam_mods.vaultsyncignore",
+      "description": "Keeps installed mods and configs while excluding workshop download cache, logs, and temp files.",
+      "example": "Steam workshop/mod manager folder for game mods."
+    },
+    {
+      "id": "creative_suite",
+      "name": "Creative Suites",
+      "category": "Consumer",
+      "file": "creative_suite.vaultsyncignore",
+      "description": "General creative-app preset for Adobe/Affinity style projects; excludes previews, caches, and autosave temp data.",
+      "example": "Mixed Photoshop/Illustrator/Affinity project workspace."
     },
 
     {

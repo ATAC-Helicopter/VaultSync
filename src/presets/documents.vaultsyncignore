@@ -1,0 +1,28 @@
+# Consumer documents backup preset:
+# Keep documents, exclude temp/autosave/cache files.
+
+~$*
+*.tmp
+*.temp
+*.bak
+*.old
+*.cache
+*.crdownload
+*.part
+*.download
+
+*.autosave
+*.asd
+*.wbk
+*.xlk
+*.pptx.tmp
+
+**/.cache/
+**/cache/
+**/tmp/
+**/temp/
+**/.Trash/
+
+.DS_Store
+Thumbs.db
+desktop.ini

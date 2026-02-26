@@ -23,6 +23,15 @@ Core actions:
 - Backups: per-project backup controls and backup history.
 - Settings: destinations, encryption, retention, update options, localization.
 
+## Smart Presets
+- Presets apply `.vaultsyncignore` rules to project backups.
+- Consumer-friendly presets are available for:
+  - Photos libraries
+  - Documents libraries
+  - Steam mods
+  - Creative suite workspaces
+- Projects now show a short preset description and an example usage hint under the preset selector.
+
 ## Destination Modes
 VaultSync supports two destination modes:
 - Simple mode: one backup location.

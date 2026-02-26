@@ -7,6 +7,7 @@
 
 ## Planning convention
 - Use `VS-xxxx` IDs as the default planning unit for roadmap items, implementation tasks, and release work.
+- Pre-`2.0` planning uses explicit `1.x` release streams (for example: `1.5.x`, `1.6.x`, `1.7.x`, `1.8.x`, `1.9.x`) instead of a generic long-term bucket.
 - ID pattern:
   - `VS` = VaultSync work item.
   - First two digits map to release family (`15xx` for `1.5`, `16xx` for `1.6`, etc.).
@@ -19,6 +20,17 @@
   - Use `VS-xxxx` IDs for actual feature entries.
   - Cleanup/doc-only/test-only notes may omit IDs unless they map to a planned roadmap item.
 - If a task spans releases, split it into release-specific IDs to keep scope and acceptance criteria explicit.
+
+## Roadmap sync format (project automation)
+- Keep execution tickets in this canonical format so scripts can sync to GitHub Project reliably:
+  - `- [ ] \`VS-xxxx\` Title`
+  - Optional details/acceptance criteria stay as indented bullets below the ticket.
+- Use release sections as routing signals:
+  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## 1.8.x`, `## 1.9.x`
+- For new work, always include:
+  - ID (`VS-xxxx`)
+  - Priority marker (`P0/P1/P2`) at the start of the ticket line when relevant.
+  - Clear one-line scope so title can become an issue/project item title without rewriting.
 
 ## Completed (highlights)
 - [x] Updater stabilization: relaunch fixes, clearer status, patch compatibility guardrails.
@@ -92,6 +104,13 @@
   - Current status:
     - Done: outdated feature wording refreshed for current 1.5.x behavior.
     - Done: placeholder SVGs added for Dashboard/Projects/Backups/Settings screenshots under `docs/images/placeholders/`.
+- [x] `P2` `VS-1572` Consumer-friendly preset catalog + preset guidance in Projects UI.
+  - Scope: add consumer presets (Photos/Documents/Steam mods/Creative suites), harden preset file-resolution via index mapping, and show preset description/examples in the Projects card.
+  - Acceptance: preset IDs can safely differ from file names, new presets appear in selector, and selected preset guidance text is visible in-app/docs.
+  - Current status:
+    - Done: added new preset definitions/files (`photos`, `documents`, `steam_mods`, `creative_suite`) with descriptions/examples in `presets.index.json`.
+    - Done: Core preset resolution paths now use index-aware fallback when `id` != file stem.
+    - Done: Projects UI now renders selected preset description + example hint; docs updated.
 
 ### 1.5.0 scope and contracts
 
@@ -511,24 +530,26 @@
 - Support risk: quiet-hours/throttling can appear as random pauses if status is not clear.
 
 ## 1.6.x
-- [ ] `P1` Richer restore flows (selective restore, dry-run previews, conflict prompts).
-- [ ] `P1` Restore point browser with compare + timeline.
-- [ ] `P1` Smarter storage usage reporting (per-project deltas, change summaries).
-- [ ] `P2` Custom preset editor for filter/ignore rules.
-- [ ] `P2` Backup health timeline (success/failure trends).
-- [ ] `P2` Exportable config bundle for migration/support.
+- [ ] `VS-1601` `P1` Richer restore flows (selective restore, dry-run previews, conflict prompts).
+- [ ] `VS-1602` `P1` Restore point browser with compare + timeline.
+- [ ] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
+- [ ] `VS-1604` `P2` Custom preset editor for filter/ignore rules.
+- [ ] `VS-1605` `P2` Backup health timeline (success/failure trends).
+- [ ] `VS-1606` `P2` Exportable config bundle for migration/support.
 
 ## 1.7.x
-- [ ] `P1` Project tagging + bulk actions (pause/backup/snapshot by tag).
-- [ ] `P1` Per-destination retry policy with backoff + user status summary.
-- [ ] `P2` Destination quotas + cleanup suggestions.
-- [ ] `P2` Team workflows (shared vaults, access control, audit trails).
+- [ ] `VS-1701` `P1` Project tagging + bulk actions (pause/backup/snapshot by tag).
+- [ ] `VS-1702` `P1` Per-destination retry policy with backoff + user status summary.
+- [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
+- [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).
 
-## Long-term
-- [ ] Multi-destination health scoring and auto-failover.
-- [ ] Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
-- [ ] Automation hooks (webhooks/scripts on backup/restore events).
-- [ ] CLI parity with all major UI features.
-- [ ] Per-project verification policies (always/scheduled/manual).
-- [ ] App signing for trusted distribution.
-- [ ] Background integrity audits with alerts.
+## 1.8.x
+- [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.
+- [ ] `VS-1802` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
+- [ ] `VS-1803` `P2` Automation hooks (webhooks/scripts on backup/restore events).
+- [ ] `VS-1804` `P2` CLI parity with all major UI features.
+
+## 1.9.x
+- [ ] `VS-1901` `P1` Per-project verification policies (always/scheduled/manual).
+- [ ] `VS-1902` `P1` App signing for trusted distribution.
+- [ ] `VS-1903` `P2` Background integrity audits with alerts.

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -20,6 +21,9 @@ namespace VaultSync.Core.Services
     {
         public string Name => "robocopy";
         private readonly bool _isNetworkDestination;
+        private static readonly Dictionary<string, (DateTime LastWriteUtc, Dictionary<string, string> Map)> s_presetIndexCache
+            = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly object s_presetIndexLock = new();
 
         public RobocopyRunner(bool isNetworkDestination = false)
         {
@@ -350,14 +354,15 @@ namespace VaultSync.Core.Services
             var envDir = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
             if (!string.IsNullOrWhiteSpace(envDir))
             {
-                var candidate = Path.Combine(envDir, $"{presetName}.vaultsyncignore");
-                if (File.Exists(candidate))
+                var candidate = ResolvePresetFileInDirectory(envDir, presetName);
+                if (!string.IsNullOrWhiteSpace(candidate))
                     return candidate;
             }
 
             // 2) App-installed presets folder: <app>/presets
-            var appPreset = Path.Combine(AppContext.BaseDirectory, "presets", $"{presetName}.vaultsyncignore");
-            if (File.Exists(appPreset))
+            var appDir = Path.Combine(AppContext.BaseDirectory, "presets");
+            var appPreset = ResolvePresetFileInDirectory(appDir, presetName);
+            if (!string.IsNullOrWhiteSpace(appPreset))
                 return appPreset;
 
             // 3) Dev tree: walk up to find src/presets
@@ -365,8 +370,8 @@ namespace VaultSync.Core.Services
             for (int i = 0; i < 6; i++)
             {
                 var candidateDir = Path.Combine(dir, "src", "presets");
-                var candidate    = Path.Combine(candidateDir, $"{presetName}.vaultsyncignore");
-                if (File.Exists(candidate))
+                var candidate = ResolvePresetFileInDirectory(candidateDir, presetName);
+                if (!string.IsNullOrWhiteSpace(candidate))
                     return candidate;
 
                 var parent = Directory.GetParent(dir)?.FullName;
@@ -378,11 +383,76 @@ namespace VaultSync.Core.Services
 
             // 4) User presets: ~/.vaultsync/presets
             var home       = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var userPreset = Path.Combine(home, ".vaultsync", "presets", $"{presetName}.vaultsyncignore");
-            if (File.Exists(userPreset))
+            var userDir = Path.Combine(home, ".vaultsync", "presets");
+            var userPreset = ResolvePresetFileInDirectory(userDir, presetName);
+            if (!string.IsNullOrWhiteSpace(userPreset))
                 return userPreset;
 
             return null;
+        }
+
+        private static string? ResolvePresetFileInDirectory(string? directory, string presetName)
+        {
+            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+                return null;
+
+            var direct = Path.Combine(directory, $"{presetName}.vaultsyncignore");
+            if (File.Exists(direct))
+                return direct;
+
+            var mapped = ResolvePresetFileFromIndex(directory, presetName);
+            if (!string.IsNullOrWhiteSpace(mapped))
+                return mapped;
+
+            return null;
+        }
+
+        private static string? ResolvePresetFileFromIndex(string directory, string presetName)
+        {
+            try
+            {
+                var indexPath = Path.Combine(directory, "presets.index.json");
+                if (!File.Exists(indexPath))
+                    return null;
+
+                Dictionary<string, string> map;
+                lock (s_presetIndexLock)
+                {
+                    var lastWrite = File.GetLastWriteTimeUtc(indexPath);
+                    if (!s_presetIndexCache.TryGetValue(indexPath, out var cached) || cached.LastWriteUtc != lastWrite)
+                    {
+                        var json = File.ReadAllText(indexPath);
+                        var index = JsonSerializer.Deserialize<PresetIndex>(json);
+                        var parsed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                        if (index?.Presets != null)
+                        {
+                            foreach (var preset in index.Presets)
+                            {
+                                if (string.IsNullOrWhiteSpace(preset.Id) || string.IsNullOrWhiteSpace(preset.File))
+                                    continue;
+
+                                parsed[preset.Id] = preset.File;
+                            }
+                        }
+
+                        cached = (lastWrite, parsed);
+                        s_presetIndexCache[indexPath] = cached;
+                    }
+
+                    map = cached.Map;
+                }
+
+                if (!map.TryGetValue(presetName, out var fileName) || string.IsNullOrWhiteSpace(fileName))
+                    return null;
+
+                var candidate = Path.Combine(directory, fileName);
+                return File.Exists(candidate) ? candidate : null;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static string NormalizeRobocopyGlob(string pattern)
@@ -471,6 +541,17 @@ namespace VaultSync.Core.Services
             }
 
             return null;
+        }
+
+        private sealed class PresetIndex
+        {
+            public List<PresetInfo> Presets { get; set; } = new();
+        }
+
+        private sealed class PresetInfo
+        {
+            public string Id { get; set; } = string.Empty;
+            public string File { get; set; } = string.Empty;
         }
 
         private static string TrimLog(StringBuilder sb, int maxChars = 4000)

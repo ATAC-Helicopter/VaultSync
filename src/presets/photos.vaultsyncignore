@@ -1,0 +1,22 @@
+# Consumer photos backup preset:
+# Keep source photos, exclude thumbnails/cache and temp/junk files.
+
+.thumbnails/
+**/.thumbnails/
+**/.cache/
+**/cache/
+**/thumbnails/
+**/.face/
+**/.tmp/
+
+*.tmp
+*.temp
+*.part
+*.crdownload
+*.download
+*.dwl
+*.dwl2
+
+.DS_Store
+Thumbs.db
+desktop.ini

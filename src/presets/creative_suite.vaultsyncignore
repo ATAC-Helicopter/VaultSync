@@ -1,0 +1,25 @@
+# Creative suites backup preset:
+# Works for mixed Adobe/Affinity style projects; removes cache/preview/temp artefacts.
+
+**/Cache/
+**/cache/
+**/Media Cache/
+**/Media Cache Files/
+**/Preview Files/
+**/Previews/
+**/Auto-Save/
+**/Autosave/
+**/Temp/
+**/tmp/
+**/Logs/
+
+*.tmp
+*.temp
+*.log
+*.bak
+*.old
+*.autosave
+
+.DS_Store
+Thumbs.db
+desktop.ini

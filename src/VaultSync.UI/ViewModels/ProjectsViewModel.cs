@@ -56,6 +56,8 @@ public class ProjectsViewModel : ViewModelBase
         new ObservableCollection<EncryptionPolicyOption>();
     public ObservableCollection<ProjectItemViewModel> Projects { get; } =
         new ObservableCollection<ProjectItemViewModel>();
+    private readonly Dictionary<string, PresetInfo> _presetCatalogById =
+        new(StringComparer.OrdinalIgnoreCase);
 
     private ProjectItemViewModel? _selectedProject;
     private int _selectedProjectRefreshToken;
@@ -391,6 +393,7 @@ public class ProjectsViewModel : ViewModelBase
             vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path), vm.ExternalId);
             UpdateProjectDestinationDisplay(vm, config);
             UpdateProjectEncryptionDisplay(vm, config);
+            UpdateProjectPresetDisplay(vm);
             vm.PropertyChanged += OnProjectItemPropertyChanged;
 
             // Populate snapshot history from DB if available; otherwise fall back to discovery values.
@@ -1072,6 +1075,7 @@ public class ProjectsViewModel : ViewModelBase
                     var cfg = AppConfigStore.Load();
                     UpdateProjectDestinationDisplay(SelectedProject, cfg);
                     UpdateProjectEncryptionDisplay(SelectedProject, cfg);
+                    UpdateProjectPresetDisplay(SelectedProject);
                 }
             });
         });
@@ -1082,8 +1086,12 @@ public class ProjectsViewModel : ViewModelBase
         if (sender is not ProjectItemViewModel vm)
             return;
 
+        var changedPreset = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.Preset), StringComparison.Ordinal);
         var changedDestination = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.PreferredDestinationId), StringComparison.Ordinal);
         var changedEncryption = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.EncryptionPolicy), StringComparison.Ordinal);
+        if (changedPreset)
+            UpdateProjectPresetDisplay(vm);
+
         if (!changedDestination && !changedEncryption)
             return;
 
@@ -1307,15 +1315,25 @@ public class ProjectsViewModel : ViewModelBase
         try
         {
             AvailablePresets.Clear();
+            _presetCatalogById.Clear();
 
-            foreach (var name in GetPresetNames())
+            foreach (var preset in GetPresetInfos())
             {
-                AvailablePresets.Add(name);
+                if (string.IsNullOrWhiteSpace(preset.Id))
+                    continue;
+
+                AvailablePresets.Add(preset.Id);
+                _presetCatalogById[preset.Id] = preset;
             }
 
             // Always offer an explicit "no preset" option.
             if (!AvailablePresets.Contains("no preset"))
                 AvailablePresets.Add("no preset");
+
+            foreach (var project in Projects)
+            {
+                UpdateProjectPresetDisplay(project);
+            }
         }
         catch (Exception ex)
         {
@@ -1327,12 +1345,14 @@ public class ProjectsViewModel : ViewModelBase
             AvailablePresets.Add("blender");
             AvailablePresets.Add("video");
             AvailablePresets.Add("no preset");
+            _presetCatalogById.Clear();
         }
     }
 
-    private static IEnumerable<string> GetPresetNames()
+    private static IEnumerable<PresetInfo> GetPresetInfos()
     {
-        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var presets = new List<PresetInfo>();
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var dir = ResolvePresetsDirForUi();
 
         if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
@@ -1351,11 +1371,22 @@ public class ProjectsViewModel : ViewModelBase
                         {
                             if (!string.IsNullOrWhiteSpace(p.Id))
                             {
-                                names.Add(p.Id);
+                                if (ids.Add(p.Id))
+                                {
+                                    presets.Add(p);
+                                }
                             }
                             else if (!string.IsNullOrWhiteSpace(p.File))
                             {
-                                names.Add(Path.GetFileNameWithoutExtension(p.File));
+                                var id = Path.GetFileNameWithoutExtension(p.File);
+                                if (ids.Add(id))
+                                {
+                                    presets.Add(new PresetInfo
+                                    {
+                                        Id = id,
+                                        File = p.File
+                                    });
+                                }
                             }
                         }
                     }
@@ -1366,8 +1397,14 @@ public class ProjectsViewModel : ViewModelBase
                     foreach (var file in Directory.EnumerateFiles(dir, "*.vaultsyncignore"))
                     {
                         var name = Path.GetFileNameWithoutExtension(file);
-                        if (!string.IsNullOrWhiteSpace(name))
-                            names.Add(name);
+                        if (!string.IsNullOrWhiteSpace(name) && ids.Add(name))
+                        {
+                            presets.Add(new PresetInfo
+                            {
+                                Id = name,
+                                File = Path.GetFileName(file)
+                            });
+                        }
                     }
                 }
             }
@@ -1376,7 +1413,33 @@ public class ProjectsViewModel : ViewModelBase
             }
         }
 
-        return names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
+        return presets.OrderBy(n => n.Id, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void UpdateProjectPresetDisplay(ProjectItemViewModel vm)
+    {
+        if (vm is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(vm.Preset) ||
+            string.Equals(vm.Preset, "no preset", StringComparison.OrdinalIgnoreCase))
+        {
+            vm.PresetDescription = L("Projects.Preset.NoPresetDescription", "No exclusion preset is active for this project.");
+            vm.PresetExample = string.Empty;
+            return;
+        }
+
+        if (_presetCatalogById.TryGetValue(vm.Preset, out var info))
+        {
+            vm.PresetDescription = string.IsNullOrWhiteSpace(info.Description)
+                ? L("Projects.Preset.DescriptionFallback", "Preset rules are applied from .vaultsyncignore patterns.")
+                : info.Description;
+            vm.PresetExample = info.Example ?? string.Empty;
+            return;
+        }
+
+        vm.PresetDescription = Lf("Projects.Preset.DescriptionUnknown", "Preset '{0}' is active.", vm.Preset);
+        vm.PresetExample = string.Empty;
     }
 
     private static string ResolvePresetsDirForUi()
@@ -1422,6 +1485,7 @@ public class ProjectsViewModel : ViewModelBase
         public string Category { get; set; } = string.Empty;
         public string File { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string Example { get; set; } = string.Empty;
     }
 
     private static string GetDefaultDbPath()
@@ -1564,6 +1628,20 @@ public class ProjectItemViewModel : ViewModelBase
     {
         get => _preset;
         set => SetProperty(ref _preset, value);
+    }
+
+    private string _presetDescription = string.Empty;
+    public string PresetDescription
+    {
+        get => _presetDescription;
+        set => SetProperty(ref _presetDescription, value ?? string.Empty);
+    }
+
+    private string _presetExample = string.Empty;
+    public string PresetExample
+    {
+        get => _presetExample;
+        set => SetProperty(ref _presetExample, value ?? string.Empty);
     }
 
     private string _preferredDestinationId = string.Empty;
