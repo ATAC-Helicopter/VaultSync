@@ -17,6 +17,10 @@ This document is the practical checklist for maintaining planning/release/projec
 - Bug IDs: `BUG-xxxxx`
 - Release-gate IDs: `REL-xxxxx`
 
+Issue-title convention:
+- Feature: `VS-xxxx: concise scope`
+- Bug-fix mapped to changelog bug IDs: `BUG-xxxxx / VS-xxxx: concise scope`
+
 Keep IDs stable once published in roadmap/changelog/project board.
 
 ## 2) Changelog Maintenance
