@@ -288,8 +288,19 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
+                if (path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("//", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
                 var root = Path.GetPathRoot(path);
                 if (string.IsNullOrWhiteSpace(root))
+                    return false;
+
+                // DriveInfo accepts drive roots like C:\ or C:
+                var normalizedRoot = root.TrimEnd('\\', '/');
+                if (normalizedRoot.Length != 2 || normalizedRoot[1] != ':')
                     return false;
 
                 var drive = new DriveInfo(root);

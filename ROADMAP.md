@@ -104,6 +104,12 @@
   - Current status:
     - Done: process runner now resolves executable paths from `PATH` (and `PATHEXT` on Windows) before `Process.Start`.
     - Done: `smartctl` path resolution now returns empty when unavailable instead of attempting direct launch.
+- [x] `P2` `VS-1576` Network-drive path guardrails for SMB/UNC detection.
+  - Scope: `AppViewModel.IsNetworkDrivePath` path-root validation before `DriveInfo` construction.
+  - Acceptance: no `ArgumentException` on UNC roots (`\\\\server\\share`) during manual backup startup path checks.
+  - Current status:
+    - Done: UNC paths are now treated as network upfront.
+    - Done: `DriveInfo` is now invoked only for drive-letter roots (`C:` / `C:\\`), avoiding invalid-root exceptions.
 - [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
   - Scope: archive backup creation path in `BackupService`.
   - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.
