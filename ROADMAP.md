@@ -92,6 +92,12 @@
   - Current status:
     - In progress: `AppConfigStore` now provides `SaveAsync` with cancellation-aware backoff (`Task.Delay`) and Settings async save path now uses it.
     - In progress: metadata sync import/preview/export/tombstone flows now have async APIs, use `SemaphoreSlim.WaitAsync`, and use cancellation-aware `Task.Delay` backoff in retry loops.
+- [x] `P2` `VS-1574` Metadata schema migration guardrails for idempotent startup.
+  - Scope: `MetadataStore.EnsureSchema` duplicate-column migration behavior on existing stores.
+  - Acceptance: startup schema checks are idempotent and do not throw duplicate-column SQLite exceptions during debug runs.
+  - Current status:
+    - Done: column migrations now use `PRAGMA table_info(...)` presence checks before `ALTER TABLE`.
+    - Done: avoids first-chance `duplicate column name` exceptions on already-migrated metadata stores.
 - [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
   - Scope: archive backup creation path in `BackupService`.
   - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.

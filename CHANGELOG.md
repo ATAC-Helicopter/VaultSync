@@ -30,6 +30,7 @@
 - [BUG-15008] Tray encrypted-open lock/open handlers and project destination/encryption change handlers now use detached `Task` wrappers instead of `async void`.
 - [BUG-15009] Notification auto-dismiss, project snapshot action, settings browse/test commands, and tray refresh no longer use `async void` handlers.
 - [VS-1573] Projects action buttons now re-evaluate command state on selection changes so `Open folder` / `Remove from VaultSync` no longer remain incorrectly disabled; notification auto-dismiss cancellation is now handled as expected flow to prevent debug-noise cancellation exceptions.
+- [BUG-15011] Metadata schema migration now checks column presence with `PRAGMA table_info(...)` before running `ALTER TABLE`, preventing duplicate-column SQLite exceptions (`origin_machine_name`) on already-migrated stores.
 ### Follow-up
 - [REL-15001] Validate localization coverage for newly added 1.5.1 keys across all non-English language packs.
 - [REL-15002] Run a startup/render smoke matrix (cold start, resume, language switch) focused on dashboard donut reliability.

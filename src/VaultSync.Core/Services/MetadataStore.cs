@@ -88,95 +88,42 @@ public sealed class MetadataStore
             CREATE INDEX IF NOT EXISTS idx_backups_project ON backups(project_external_id);
         """);
 
-        try
+        EnsureColumn(c, "backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+        EnsureColumn(c, "backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, "backups", "enc_flag", "ALTER TABLE backups ADD COLUMN enc_flag INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, "backups", "kdf_params_json", "ALTER TABLE backups ADD COLUMN kdf_params_json TEXT NOT NULL DEFAULT '{}';");
+        EnsureColumn(c, "backups", "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
+        EnsureColumn(c, "snapshots", "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, "snapshots", "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, "snapshots", "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, "snapshots", "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, "snapshots", "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
+    }
+
+    private static void EnsureColumn(SqliteConnection connection, string tableName, string columnName, string alterSql)
+    {
+        if (HasColumn(connection, tableName, columnName))
         {
-            c.Execute("ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
-        }
-        catch
-        {
-            // Column exists; ignore.
+            return;
         }
 
-        try
+        connection.Execute(alterSql);
+    }
+
+    private static bool HasColumn(SqliteConnection connection, string tableName, string columnName)
+    {
+        var escapedTable = tableName.Replace("'", "''", StringComparison.Ordinal);
+        var columns = connection.Query($"PRAGMA table_info('{escapedTable}');");
+        foreach (var column in columns)
         {
-            c.Execute("ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
-        }
-        catch
-        {
-            // Column exists; ignore.
+            var name = (string?)column.name;
+            if (string.Equals(name, columnName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
         }
 
-        try
-        {
-            c.Execute("ALTER TABLE backups ADD COLUMN enc_flag INTEGER NOT NULL DEFAULT 0;");
-        }
-        catch
-        {
-            // Column exists; ignore.
-        }
-
-        try
-        {
-            c.Execute("ALTER TABLE backups ADD COLUMN kdf_params_json TEXT NOT NULL DEFAULT '{}';");
-        }
-        catch
-        {
-            // Column exists; ignore.
-        }
-
-        try
-        {
-            c.Execute("ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
-        }
-        catch
-        {
-            // Column exists; ignore.
-        }
-
-        try
-        {
-            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
-        }
-        catch
-        {
-            // Column exists; ignore.
-        }
-
-        try
-        {
-            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
-        }
-        catch
-        {
-            // Column exists; ignore.
-        }
-
-        try
-        {
-            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
-        }
-        catch
-        {
-            // Column exists; ignore.
-        }
-
-        try
-        {
-            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
-        }
-        catch
-        {
-            // Column exists; ignore.
-        }
-
-        try
-        {
-            c.Execute("ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
-        }
-        catch
-        {
-            // Column exists; ignore.
-        }
+        return false;
     }
 
     public MetaInfo? GetMetaInfo()
