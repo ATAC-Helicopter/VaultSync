@@ -110,6 +110,12 @@
   - Current status:
     - Done: UNC paths are now treated as network upfront.
     - Done: `DriveInfo` is now invoked only for drive-letter roots (`C:` / `C:\\`), avoiding invalid-root exceptions.
+- [x] `P2` `VS-1577` Archive upload auto-tune timeout cancellation noise cleanup.
+  - Scope: `AppViewModel.RuntimeOps` archive probe timeout handling (`ProbeArchiveUploadBufferBytes` / `EnsureArchiveUploadBufferAsync`).
+  - Acceptance: timeout-based fallback does not throw `OperationCanceledException` during normal debug runs; explicit user cancellation still cancels backup flow.
+  - Current status:
+    - Done: timeout and user-cancel tokens are now handled separately in archive probe flow.
+    - Done: timeout path now returns a timed-out probe result and falls back cleanly without raising cancellation exceptions.
 - [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
   - Scope: archive backup creation path in `BackupService`.
   - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.

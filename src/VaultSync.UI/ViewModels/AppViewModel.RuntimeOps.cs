@@ -811,10 +811,18 @@ namespace VaultSync.UI.ViewModels
                 var display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
                 Console.WriteLine($"[DestinationProbe] Auto-tuning archive upload buffer for '{display}'.");
 
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var timeoutSeconds = IsSmbPath(dest.Path) || IsSmbPath(effectivePath) ? 8 : 3;
-                timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-                var result = await Task.Run(() => ProbeArchiveUploadBufferBytes(effectivePath, timeoutCts.Token), timeoutCts.Token);
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+                var result = await Task.Run(
+                    () => ProbeArchiveUploadBufferBytes(effectivePath, ct, timeoutCts.Token),
+                    ct);
+
+                if (result.TimedOut)
+                {
+                    Console.WriteLine($"[DestinationProbe] Auto-tune timed out for '{dest.Path}'. Falling back to default buffer.");
+                    return null;
+                }
+
                 SaveArchiveUploadBufferBytes(cfg, dest, result.BufferBytes);
 
                 var bufferMb = result.BufferBytes / (1024d * 1024d);
@@ -824,11 +832,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (OperationCanceledException)
             {
-                if (ct.IsCancellationRequested)
-                    throw;
-
-                Console.WriteLine($"[DestinationProbe] Auto-tune timed out for '{dest.Path}'. Falling back to default buffer.");
-                return null;
+                throw;
             }
             catch (Exception ex)
             {
@@ -869,7 +873,12 @@ namespace VaultSync.UI.ViewModels
             AppConfigStore.Save(cfg);
         }
 
-        private static (int BufferBytes, double Mbps) ProbeArchiveUploadBufferBytes(string effectivePath, CancellationToken ct)
+        private readonly record struct ArchiveProbeResult(int BufferBytes, double Mbps, bool TimedOut);
+
+        private static ArchiveProbeResult ProbeArchiveUploadBufferBytes(
+            string effectivePath,
+            CancellationToken operationCt,
+            CancellationToken timeoutCt)
         {
             const int probeSizeBytes = 64 * 1024 * 1024;
             const int chunkSizeBytes = 4 * 1024 * 1024;
@@ -901,7 +910,10 @@ namespace VaultSync.UI.ViewModels
                 {
                     while (remaining > 0)
                     {
-                        ct.ThrowIfCancellationRequested();
+                        operationCt.ThrowIfCancellationRequested();
+                        if (timeoutCt.IsCancellationRequested)
+                            return new ArchiveProbeResult(fallbackBytes, 0, TimedOut: true);
+
                         var toWrite = Math.Min(chunkSizeBytes, remaining);
                         fs.Write(buffer, 0, toWrite);
                         remaining -= toWrite;
@@ -914,7 +926,7 @@ namespace VaultSync.UI.ViewModels
                 var seconds = Math.Max(0.05, sw.Elapsed.TotalSeconds);
                 var mbps = (probeSizeBytes / seconds) / (1024d * 1024d);
                 var bufferBytes = SelectArchiveUploadBufferBytes(mbps);
-                return (bufferBytes, mbps);
+                return new ArchiveProbeResult(bufferBytes, mbps, TimedOut: false);
             }
             catch (OperationCanceledException)
             {
@@ -922,7 +934,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch
             {
-                return (fallbackBytes, 0);
+                return new ArchiveProbeResult(fallbackBytes, 0, TimedOut: false);
             }
             finally
             {

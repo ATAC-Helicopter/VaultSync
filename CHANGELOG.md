@@ -33,9 +33,8 @@
 - [BUG-15011] Metadata schema migration now checks column presence with `PRAGMA table_info(...)` before running `ALTER TABLE`, preventing duplicate-column SQLite exceptions (`origin_machine_name`) on already-migrated stores.
 - [BUG-15017] Drive health probing now resolves external tool paths before process launch; when `smartctl` is missing on Windows, manual backup no longer emits first-chance `Win32Exception` and cleanly falls back to `Unknown`.
 - [BUG-15018] SMB/UNC path detection no longer constructs `DriveInfo` from invalid UNC roots; manual backup startup checks now avoid `ArgumentException` (`Drive name must be a root directory...`) and classify UNC paths as network directly.
-### Follow-up
-- [REL-15001] Validate localization coverage for newly added 1.5.1 keys across all non-English language packs.
-- [REL-15002] Run a startup/render smoke matrix (cold start, resume, language switch) focused on dashboard donut reliability.
+- [BUG-15019] Archive upload auto-tune timeout now uses a non-exception fallback path; timeout-driven probe cancellation no longer raises debug-noise `OperationCanceledException` while explicit backup cancellation remains intact.
+
 ## [1.5.0] - 19.02.2026
 ### Added
 - [VS-1501] Versioned backup crypto descriptor contract for metadata (`formatVersion`, `algorithm`, `kdfProfile`, `kdfParamRef`).
