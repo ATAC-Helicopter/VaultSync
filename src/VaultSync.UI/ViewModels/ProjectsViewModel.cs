@@ -64,6 +64,8 @@ public class ProjectsViewModel : ViewModelBase
     private int _selectedProjectHistoryToken;
     private int _refreshInFlight;
     private int _refreshQueued;
+    private readonly RelayCommand _openFolderCommand;
+    private readonly RelayCommand _removeProjectCommand;
     public ProjectItemViewModel? SelectedProject
     {
         get => _selectedProject;
@@ -71,6 +73,8 @@ public class ProjectsViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedProject, value))
             {
+                _openFolderCommand.RaiseCanExecuteChanged();
+                _removeProjectCommand.RaiseCanExecuteChanged();
                 RefreshSelectedProjectRegistration();
                 LoadSnapshotHistoryForSelectedProject();
             }
@@ -148,8 +152,10 @@ public class ProjectsViewModel : ViewModelBase
     public ProjectsViewModel()
     {
         RefreshCommand = new RelayCommand(_ => Refresh());
-        OpenFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
-        RemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
+        _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
+        _removeProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
+        OpenFolderCommand = _openFolderCommand;
+        RemoveProjectCommand = _removeProjectCommand;
         SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
         ManageProjectEncryptionCommand = new RelayCommand(p => RequestProjectEncryptionPasswordEdit(p as ProjectItemViewModel ?? SelectedProject));
         ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());

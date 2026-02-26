@@ -1,0 +1,666 @@
+﻿[
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkSU",
+        "title":  "1.4.0 Per-project destination selection (All/Auto/Specific)",
+        "release":  "Long-term",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkSg",
+        "title":  "VS-1522: Restore guidance block by backup type",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkSw",
+        "title":  "1.4.0 Faster snapshot scanning (scan cache + aggressive mode + cadence safeguards)",
+        "release":  "Long-term",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkTU",
+        "title":  "VS-1534: Restore key resolution and prompt fallback",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkT8",
+        "title":  "Updater stabilization: relaunch fixes, clearer status, patch compatibility guardrails",
+        "release":  "Long-term",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkU4",
+        "title":  "Snapshot diff summaries",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkVQ",
+        "title":  "VS-1535: Explorer .vse open flow (password dialog helper)",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkVk",
+        "title":  "1.3.0 macOS support: bundled per-arch rsync + updater/patch flow validation",
+        "release":  "Long-term",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkVs",
+        "title":  "VS-1569: Replace blocking retry sleeps with async backoff in config/metadata I/O paths",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkWI",
+        "title":  "VS-1504: Secret handling and secure-store fallback policy",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkWc",
+        "title":  "VS-1536: Existing-backup key rotation job",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkXA",
+        "title":  "VS-1511: Transfer throttling enforcement",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkX8",
+        "title":  "VS-1505: Mixed encrypted/plain interop + metadata sync compatibility",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkZE",
+        "title":  "VS-1530: Global encryption settings UX + secure secret enrollment",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkZM",
+        "title":  "Team workflows (shared vaults, access control, audit trails)",
+        "release":  "1.7.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkZo",
+        "title":  "VS-1503: Password-gated restore/decrypt pipeline",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkaI",
+        "title":  "Destination quotas + cleanup suggestions",
+        "release":  "1.7.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkaY",
+        "title":  "VS-1591: Compatibility matrix validation (`1.4` \u003c-\u003e `1.5`)",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkaw",
+        "title":  "App signing for trusted distribution",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkbQ",
+        "title":  "VS-1592: Localization, docs, and release readiness",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkcM",
+        "title":  "VS-1538: Encrypted `Open folder` unlock entry flow",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkcw",
+        "title":  "VS-1539: Encrypted `Open folder` lock lifecycle + cleanup hardening",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkdE",
+        "title":  "VS-1521: Retention outcome surfacing in history/details",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkdo",
+        "title":  "Smarter storage usage reporting (per-project deltas, change summaries)",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkeA",
+        "title":  "Background integrity audits with alerts",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkek",
+        "title":  "VS-1502: Encrypted write pipeline",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkfU",
+        "title":  "VS-1590: Performance and UI-thread hardening",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkfk",
+        "title":  "Per-destination retry policy with backoff + user status summary",
+        "release":  "1.7.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkf8",
+        "title":  "`1.4.0` Dry-run backup estimates (size/time/capacity warnings + throughput-based ETA)",
+        "release":  "Long-term",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkgI",
+        "title":  "VS-1566: Backups history performance pass: reduce full-list/group rebuild churn on filter and refresh updates",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkgg",
+        "title":  "CLI parity with all major UI features",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkg4",
+        "title":  "VS-1523: Documentation and help parity",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkhU",
+        "title":  "VS-1565: Remove `async void` from backup/history runtime handlers and route through `Task` + centralized exception/log handling",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkho",
+        "title":  "Multi-destination health scoring and auto-failover",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkiA",
+        "title":  "VS-1540: Compute + persist diff summary statistics",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkio",
+        "title":  "VS-1501: Crypto format + metadata contract (schema/versioning)",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLki8",
+        "title":  "VS-1567: Convert hot repository reads from `Task.Run` wrappers to true async DB calls",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkj4",
+        "title":  "VS-1520: Terminology cleanup (`Full`, `Incremental`, `Imported`)",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkkM",
+        "title":  "VS-1570: Adaptive archive compression policy tuning",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkkc",
+        "title":  "Backup bandwidth limits and quiet hours",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkkk",
+        "title":  "VS-1512: Quiet-hours runtime policy engine",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLklI",
+        "title":  "VS-1531: Per-project encryption policy controls",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLklw",
+        "title":  "Richer restore flows (selective restore, dry-run previews, conflict prompts)",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkmQ",
+        "title":  "VS-1510: Config model + settings UI for caps and schedule",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkms",
+        "title":  "VS-1543: Session unlock cache + timed auto-relock for encrypted open flow",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLknI",
+        "title":  "VS-1542: Export summary action (text/JSON)",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLknU",
+        "title":  "Exportable config bundle for migration/support",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkoM",
+        "title":  "Post-feature hardening",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkoY",
+        "title":  "Incremental backup UX improvements",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkoo",
+        "title":  "Custom preset editor for filter/ignore rules",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkow",
+        "title":  "Automation hooks (webhooks/scripts on backup/restore events)",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkpo",
+        "title":  "Per-project verification policies (always/scheduled/manual)",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkp4",
+        "title":  "VS-1513: Policy visibility in cards, tray, and logs",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkqI",
+        "title":  "Backup health timeline (success/failure trends)",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkqc",
+        "title":  "VS-1533: Backup pipeline effective-key resolution",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkq4",
+        "title":  "VS-1541: Projects/Backups summary panel",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkrk",
+        "title":  "Restore point browser with compare + timeline",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkrs",
+        "title":  "Cloud targets (S3-compatible, Backblaze, etc.) with encryption",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLksA",
+        "title":  "`1.3.0` Cross-machine migration and metadata sync (import/merge/tombstones/safety checks)",
+        "release":  "Long-term",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLksY",
+        "title":  "VS-1571: README feature/status refresh and screenshot placeholders",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLks8",
+        "title":  "Project tagging + bulk actions (pause/backup/snapshot by tag)",
+        "release":  "1.7.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLktQ",
+        "title":  "Documentation refresh: expanded wiki for setup, usage, and troubleshooting.",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLktk",
+        "title":  "VS-1532: Per-project key reference model + migration",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkt4",
+        "title":  "VS-1568: macOS notification icon parity: use VaultSync app icon instead of default Avalonia icon.",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmLkuU",
+        "title":  "VS-1537: Per-project password management in Projects + Backups pages",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmL6U4",
+        "title":  "Backup encryption and password-protected backups",
+        "release":  "1.5.1",
+        "status":  "Done",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFGA",
+        "title":  "VS-1601: Richer restore flows (selective restore, dry-run previews, conflict prompts)",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFRE",
+        "title":  "VS-1602: Restore point browser with compare + timeline",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFTk",
+        "title":  "VS-1603: Smarter storage usage reporting (per-project deltas, change summaries)",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFX4",
+        "title":  "VS-1604: Custom preset editor for filter/ignore rules",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFb8",
+        "title":  "VS-1605: Backup health timeline (success/failure trends)",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFfs",
+        "title":  "VS-1606: Exportable config bundle for migration/support",
+        "release":  "1.6.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFic",
+        "title":  "VS-1701: Project tagging + bulk actions (pause/backup/snapshot by tag)",
+        "release":  "1.7.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFkg",
+        "title":  "VS-1702: Per-destination retry policy with backoff + user status summary",
+        "release":  "1.7.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFmI",
+        "title":  "VS-1703: Destination quotas + cleanup suggestions",
+        "release":  "1.7.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFnI",
+        "title":  "VS-1704: Team workflows (shared vaults, access control, audit trails)",
+        "release":  "1.7.x",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFoQ",
+        "title":  "VS-1801: Multi-destination health scoring and auto-failover",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFps",
+        "title":  "VS-1802: Cloud targets (S3-compatible, Backblaze, etc.) with encryption",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFrs",
+        "title":  "VS-1803: Automation hooks (webhooks/scripts on backup/restore events)",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFtA",
+        "title":  "VS-1804: CLI parity with all major UI features",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFtw",
+        "title":  "VS-1901: Per-project verification policies (always/scheduled/manual)",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFuo",
+        "title":  "VS-1902: App signing for trusted distribution",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    },
+    {
+        "id":  "PVTI_lADOD21Rw84BQLBMzgmOFvw",
+        "title":  "VS-1903: Background integrity audits with alerts",
+        "release":  "Long-term",
+        "status":  "Todo",
+        "owner":  "Flavio Giacchetti",
+        "team":  "Work"
+    }
+]

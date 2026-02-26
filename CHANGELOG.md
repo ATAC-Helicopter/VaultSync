@@ -29,6 +29,7 @@
 - [BUG-15007] Backup/history/runtime async entry points no longer rely on `async void`; handlers now run as `Task` flows with centralized detached-operation exception logging.
 - [BUG-15008] Tray encrypted-open lock/open handlers and project destination/encryption change handlers now use detached `Task` wrappers instead of `async void`.
 - [BUG-15009] Notification auto-dismiss, project snapshot action, settings browse/test commands, and tray refresh no longer use `async void` handlers.
+- [VS-1573] Projects action buttons now re-evaluate command state on selection changes so `Open folder` / `Remove from VaultSync` no longer remain incorrectly disabled; notification auto-dismiss cancellation is now handled as expected flow to prevent debug-noise cancellation exceptions.
 ### Follow-up
 - [REL-15001] Validate localization coverage for newly added 1.5.1 keys across all non-English language packs.
 - [REL-15002] Run a startup/render smoke matrix (cold start, resume, language switch) focused on dashboard donut reliability.

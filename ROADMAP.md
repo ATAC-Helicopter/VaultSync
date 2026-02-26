@@ -111,6 +111,13 @@
     - Done: added new preset definitions/files (`photos`, `documents`, `steam_mods`, `creative_suite`) with descriptions/examples in `presets.index.json`.
     - Done: Core preset resolution paths now use index-aware fallback when `id` != file stem.
     - Done: Projects UI now renders selected preset description + example hint; docs updated.
+- [x] `P1` `VS-1573` Projects action-state reliability and notification cancellation noise cleanup.
+  - Scope: keep project action buttons (`Open folder`, `Remove from VaultSync`) in sync with selection state and treat auto-dismiss cancellation as expected in notification flows.
+  - Acceptance: action buttons no longer remain incorrectly disabled after selection/state changes; no debug-noise cancellation exceptions from notification auto-dismiss during normal UI activity.
+  - Current status:
+    - Done: project action commands now raise `CanExecuteChanged` when `SelectedProject` changes, preventing stale disabled state.
+    - Done: notification auto-dismiss now uses race-safe CTS replacement/disposal and handles `OperationCanceledException` as normal superseded-flow behavior.
+    - Done: Projects detail row layout corrected so controls/stats do not overlap and hide preset/destination/encryption controls.
 
 ### 1.5.0 scope and contracts
 

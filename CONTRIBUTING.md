@@ -53,6 +53,36 @@ Use `docs/README.md` and `DOCUMENTATION.md` as structure references.
 - List compatibility/migration impact if any.
 - Include validation evidence (build, tests, manual checks).
 
+## 6.0) Repository Workflow Standard (PR-first)
+- Standard workflow is **PR-first** (feature/fix branches into `Dev` via PR).
+- Direct pushes are reserved for:
+  - emergency maintainer hotfixes
+  - metadata-only maintenance (for example: label/board sync scripts)
+  - explicit owner decision
+- Even for direct pushes, keep issue/roadmap/changelog links exactly as with PRs.
+
+## 6.1) Issue And PR Linking Rules
+Keep planning, implementation, and release tracking connected:
+- Every meaningful PR should link to at least one issue.
+- Preferred PR body footer:
+  - `Closes #123` for completed work that should close immediately on merge.
+  - `Refs #123` for partial/incremental work or release-gated work that should remain open until release.
+- If an issue does not exist yet, create it before opening the PR for non-trivial work.
+- Keep issue titles aligned with roadmap IDs when applicable:
+  - Example: `VS-1601: Richer restore flows ...`
+- Update issue metadata when opening/updating a PR:
+  - labels (`kind:*`, `priority:*`, `release:*`, `status:*`, optional human label `Feature/Improvement/Idea`)
+  - assignment and project status
+- When PR merges:
+  - issue should be closed (`Closes #...`) or explicitly left open with next-step notes
+  - project status should be updated (`Done` for closed; `In progress`/`Todo` otherwise)
+- Release-gated policy:
+  - For unreleased work (for example under `1.5.1 - Unreleased`), keep issue open and set project status `In progress` (or `Done` only when you intentionally track implementation-complete but unreleased in your process).
+  - Close the issue when the release cut/merge policy says the item is truly shipped.
+- CLI formatting rule:
+  - For `gh issue comment` and similar commands, use a PowerShell here-string (`@' ... '@`) or `--body-file`.
+  - Do not pass escaped newline text (`\\n`) in quoted one-liners, to avoid literal backslash-n output in GitHub comments.
+
 ## 7) Quality Gates
 Run before requesting review:
 - `dotnet build VaultSync.sln`
@@ -67,3 +97,48 @@ Run before requesting review:
 ## 9) Reporting Bugs
 Use `docs/wiki/Reporting-Bugs.md`.
 Security issues: follow `SECURITY.md`.
+
+## 10) Standard Project Operations
+These are the default procedures for everyone contributing to VaultSync.
+
+Source of truth:
+- Product planning: `ROADMAP.md`
+- Release notes: `CHANGELOG.md`
+- User-facing release summary: `docs/WHATS_NEW.md`
+- Project board: `Lavoro-Nostro` Project `#2` (`@VaultSync Roadmap`)
+
+Required workflow for changes:
+1. Implement code/docs changes.
+2. Update `CHANGELOG.md` in the active unreleased version section.
+3. If scope/priority/status changed, update `ROADMAP.md`.
+4. If release-facing UX changed, update `docs/WHATS_NEW.md` when preparing release notes.
+5. Keep project metadata aligned when needed:
+   - `Owner`: `Flavio Giacchetti`
+   - `Team`: `Work` (solo setup)
+   - Status/date policy:
+     - `Todo`: no start/completed dates
+     - `In progress`: start date required
+     - `Done`: completed date required
+
+Changelog/roadmap consistency rules:
+- Use IDs when available (`VS-xxxx`, `ISS-xxxxx`, `BUG-xxxxx`, `REL-xxxxx`).
+- Do not renumber existing roadmap IDs.
+- Keep changelog entries in the correct version block.
+- Keep roadmap priorities and status accurate.
+
+Project board rules:
+- Use one project board.
+- For issue-backed items, use native labels/repository linkage.
+- Prefer issue-backed roadmap items over drafts.
+- If drafts are temporarily used, convert them to issues once scope is execution-ready.
+- Keep fallback project fields aligned when needed:
+  - `Repository target`
+  - `Work labels`
+
+Commit/push defaults:
+- Default active branch: `Dev` (unless explicitly specified otherwise).
+- Do not push unless explicitly asked.
+- If asked to commit everything, include all modified/new files unless paths are excluded.
+
+Reference:
+- `docs/PROJECT_OPERATIONS.md`

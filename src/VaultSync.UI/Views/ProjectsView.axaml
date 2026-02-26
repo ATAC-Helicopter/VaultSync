@@ -306,7 +306,7 @@
               DataContext="{Binding SelectedItem, ElementName=ProjectList}">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
           <!-- Header: avatar + name + path -->
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <Grid Width="48"
@@ -557,7 +557,7 @@
           </Grid>
 
           <!-- Stats card -->
-          <Border Grid.Row="2"
+          <Border Grid.Row="3"
                   Margin="0,2,0,0"
                   CornerRadius="18"
                   Background="{DynamicResource CardBackgroundBrush}"

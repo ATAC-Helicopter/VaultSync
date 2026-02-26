@@ -127,21 +127,31 @@ namespace VaultSync.UI.ViewModels.Notifications
 
         private async Task StartAutoDismissAsync(TimeSpan duration)
         {
-            _cts?.Cancel();
-            _cts = new CancellationTokenSource();
-            var local = _cts;
+            var previous = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
+            previous?.Cancel();
+            previous?.Dispose();
+            var local = _cts!;
 
             try
             {
-                await Task.Delay(duration, local.Token);
+                await Task.Delay(duration, local.Token).ConfigureAwait(false);
                 if (local.IsCancellationRequested)
                     return;
 
                 Clear();
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException ex) when (ex.CancellationToken == local.Token || local.IsCancellationRequested)
             {
                 // ignored: superseded by newer notification
+            }
+            finally
+            {
+                // Dispose only if still current; avoid disposing a newer token source.
+                if (ReferenceEquals(_cts, local))
+                {
+                    local.Dispose();
+                    _cts = null;
+                }
             }
         }
     }
