@@ -217,9 +217,17 @@ internal static class DiagnosticsLogger
                     "diagnostics");
                 Directory.CreateDirectory(dir);
                 var output = Path.Combine(dir, $"hangdump-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.dmp");
+                var dotnetDump = ResolveExecutablePath("dotnet-dump");
+                if (string.IsNullOrWhiteSpace(dotnetDump))
+                {
+                    Record("dotnet-dump not found in PATH; skipping dump collection.");
+                    shouldSample = true;
+                    return;
+                }
+
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "dotnet-dump",
+                    FileName = dotnetDump,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -265,6 +273,49 @@ internal static class DiagnosticsLogger
                 TryCollectSample(reason);
             }
         });
+    }
+
+    private static string ResolveExecutablePath(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return string.Empty;
+
+        if (Path.IsPathRooted(fileName))
+            return File.Exists(fileName) ? fileName : string.Empty;
+
+        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var isWindows = OperatingSystem.IsWindows();
+        var hasExtension = Path.HasExtension(fileName);
+        var windowsExtensions = isWindows
+            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT;.COM")
+                .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            : Array.Empty<string>();
+
+        foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            try
+            {
+                var candidate = Path.Combine(dir, fileName);
+                if (File.Exists(candidate))
+                    return candidate;
+
+                if (!hasExtension && isWindows)
+                {
+                    foreach (var ext in windowsExtensions)
+                    {
+                        candidate = Path.Combine(dir, fileName + ext.ToLowerInvariant());
+                        if (File.Exists(candidate))
+                            return candidate;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore malformed PATH entries.
+            }
+        }
+
+        return string.Empty;
     }
 
     private static void TryCollectSample(string reason)

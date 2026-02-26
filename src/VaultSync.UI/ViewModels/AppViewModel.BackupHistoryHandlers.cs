@@ -150,8 +150,9 @@ namespace VaultSync.UI.ViewModels
                         {
                             if (Directory.Exists(fullPath))
                             {
-                                DeleteDirectoryRobust(fullPath);
-                                deleteSucceeded = !Directory.Exists(fullPath);
+                                deleteSucceeded = DeleteDirectoryRobust(fullPath, out var deleteFailure);
+                                if (!deleteSucceeded && string.IsNullOrWhiteSpace(deleteError))
+                                    deleteError = deleteFailure ?? L("Backups.Delete.Error", "Delete failed");
                             }
                             else if (File.Exists(fullPath))
                             {
@@ -673,14 +674,20 @@ namespace VaultSync.UI.ViewModels
         /// <summary>
         /// Deletes a directory tree, clearing read-only attributes to avoid UnauthorizedAccess on Windows.
         /// </summary>
-        private static void DeleteDirectoryRobust(string path)
+        private static bool DeleteDirectoryRobust(string path, out string? error)
         {
+            error = null;
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+                return true;
+
             // Clear read-only attributes on files and dirs before deletion.
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
             {
                 try
                 {
-                    File.SetAttributes(file, FileAttributes.Normal);
+                    var attrs = File.GetAttributes(file);
+                    if ((attrs & FileAttributes.ReadOnly) != 0)
+                        File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
                 }
                 catch
                 {
@@ -692,7 +699,9 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    File.SetAttributes(dir, FileAttributes.Directory);
+                    var attrs = File.GetAttributes(dir);
+                    if ((attrs & FileAttributes.ReadOnly) != 0)
+                        File.SetAttributes(dir, attrs & ~FileAttributes.ReadOnly);
                 }
                 catch
                 {
@@ -700,7 +709,16 @@ namespace VaultSync.UI.ViewModels
                 }
             }
 
-            Directory.Delete(path, recursive: true);
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return !Directory.Exists(path);
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
         }
 
         private static bool IsAccessDenied(Exception ex)
@@ -1577,7 +1595,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     try
                     {
-                        DeleteDirectoryRobust(stagingRoot);
+                        DeleteDirectoryRobust(stagingRoot, out _);
                     }
                     catch
                     {

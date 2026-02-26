@@ -1663,10 +1663,13 @@ public class ProjectItemViewModel : ViewModelBase
         get => _preferredDestinationOption;
         set
         {
+            // Ignore transient null selection events fired while option sources refresh.
+            // Real auto selection is represented by a non-null option with empty Id.
+            if (value is null)
+                return;
+
             if (SetProperty(ref _preferredDestinationOption, value))
-            {
-                PreferredDestinationId = value?.Id ?? string.Empty;
-            }
+                PreferredDestinationId = value.Id;
         }
     }
 

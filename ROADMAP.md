@@ -122,6 +122,13 @@
   - Current status:
     - Done: config reads now use shared-read stream mode with retry backoff.
     - Done: fallback behavior remains unchanged for unrecoverable read errors.
+- [x] `P2` `VS-1579` Backup delete resilience and debug-noise cleanup for tool/runtime probes.
+  - Scope: backup history robust delete flow, diagnostics dump-tool startup guard, and projects dropdown selection stability during option refresh.
+  - Acceptance: delete flow handles protected marker files without throwing UI-level exceptions; missing `dotnet-dump` no longer throws process-start exceptions; destination/encryption dropdowns do not collapse to blank transient null state.
+  - Current status:
+    - Done: robust directory delete now clears read-only only when needed and returns failure details without rethrowing.
+    - Done: diagnostics dump collection now checks `dotnet-dump` availability before process launch and logs a skip when unavailable.
+    - Done: projects destination selection now ignores transient null selection events during options source refresh.
 - [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
   - Scope: archive backup creation path in `BackupService`.
   - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.
