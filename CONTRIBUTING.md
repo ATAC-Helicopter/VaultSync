@@ -108,7 +108,7 @@ Source of truth:
 - Product planning: `ROADMAP.md`
 - Release notes: `CHANGELOG.md`
 - User-facing release summary: `docs/WHATS_NEW.md`
-- Project board: `Lavoro-Nostro` Project `#2` (`@VaultSync Roadmap`)
+- Project board: `ATAC-Helicopter` Project `#1` (`VaultSync 1.5.1 Stabilization`)
 
 Required workflow for changes:
 1. Implement code/docs changes.

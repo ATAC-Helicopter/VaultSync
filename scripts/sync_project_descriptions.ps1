@@ -1,6 +1,6 @@
 param(
-    [string]$Owner = 'Lavoro-Nostro',
-    [int]$ProjectNumber = 2,
+    [string]$Owner = 'ATAC-Helicopter',
+    [int]$ProjectNumber = 1,
     [string]$RoadmapPath = 'ROADMAP.md'
 )
 
