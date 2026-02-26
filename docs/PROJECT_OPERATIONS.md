@@ -50,7 +50,7 @@ Keep IDs stable once published in roadmap/changelog/project board.
 - Update current release status summary.
 - Move truly finished highlights into `Completed (highlights)` when requested.
 
-## 4) GitHub Project Board (`@VaultSync Roadmap`, org project #2)
+## 4) GitHub Project Board (`VaultSync 1.5.1 Stabilization`, org project #1)
 
 ### Solo operating model
 - `Owner`: `Flavio Giacchetti`
@@ -68,7 +68,7 @@ Keep IDs stable once published in roadmap/changelog/project board.
   - Use only when work is not execution-ready.
   - Convert to issue once scope is actionable.
   - Keep fallback fields filled while draft is used:
-    - `Repository target`: `Lavoro-Nostro/VaultSync`
+    - `Repository target`: `ATAC-Helicopter/VaultSync`
     - `Work labels`: normalized label string
 
 ## 4.1) Issue/PR Lifecycle
