@@ -98,6 +98,12 @@
   - Current status:
     - Done: column migrations now use `PRAGMA table_info(...)` presence checks before `ALTER TABLE`.
     - Done: avoids first-chance `duplicate column name` exceptions on already-migrated metadata stores.
+- [x] `P2` `VS-1575` Drive health probe executable resolution hardening on Windows.
+  - Scope: `DriveHealthService` process-launch path resolution for `smartctl` and other external probes.
+  - Acceptance: manual backup start does not throw first-chance `Win32Exception` when `smartctl` is not installed; missing probe tools degrade to `Unknown` cleanly.
+  - Current status:
+    - Done: process runner now resolves executable paths from `PATH` (and `PATHEXT` on Windows) before `Process.Start`.
+    - Done: `smartctl` path resolution now returns empty when unavailable instead of attempting direct launch.
 - [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
   - Scope: archive backup creation path in `BackupService`.
   - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.

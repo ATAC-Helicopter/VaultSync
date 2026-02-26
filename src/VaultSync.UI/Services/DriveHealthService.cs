@@ -326,6 +326,13 @@ namespace VaultSync.UI.Services
                         return string.Empty;
                     fileName = resolved;
                 }
+                else
+                {
+                    var resolved = ResolveExecutablePath(fileName);
+                    if (string.IsNullOrWhiteSpace(resolved))
+                        return string.Empty;
+                    fileName = resolved;
+                }
 
                 var psi = new ProcessStartInfo
                 {
@@ -363,7 +370,7 @@ namespace VaultSync.UI.Services
         private static string ResolveSmartctlPath()
         {
             if (OperatingSystem.IsWindows())
-                return "smartctl";
+                return ResolveExecutablePath("smartctl");
 
             var candidates = OperatingSystem.IsMacOS()
                 ? new[]
@@ -399,6 +406,49 @@ namespace VaultSync.UI.Services
                 catch
                 {
                     // ignore malformed PATH entries
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static string ResolveExecutablePath(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return string.Empty;
+
+            if (Path.IsPathRooted(fileName))
+                return File.Exists(fileName) ? fileName : string.Empty;
+
+            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            var isWindows = OperatingSystem.IsWindows();
+            var hasExtension = Path.HasExtension(fileName);
+            var windowsExtensions = isWindows
+                ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT;.COM")
+                    .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                : Array.Empty<string>();
+
+            foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    var candidate = Path.Combine(dir, fileName);
+                    if (File.Exists(candidate))
+                        return candidate;
+
+                    if (!hasExtension && isWindows)
+                    {
+                        foreach (var ext in windowsExtensions)
+                        {
+                            candidate = Path.Combine(dir, fileName + ext.ToLowerInvariant());
+                            if (File.Exists(candidate))
+                                return candidate;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore malformed PATH entries.
                 }
             }
 
