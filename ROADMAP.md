@@ -116,6 +116,12 @@
   - Current status:
     - Done: timeout and user-cancel tokens are now handled separately in archive probe flow.
     - Done: timeout path now returns a timed-out probe result and falls back cleanly without raising cancellation exceptions.
+- [x] `P2` `VS-1578` App config read retry on transient file-lock contention.
+  - Scope: `AppConfigStore.Load` config read path while export/save routines may hold a short file lock.
+  - Acceptance: transient lock on `appsettings.json` no longer causes immediate read failure in debug/runtime hot paths.
+  - Current status:
+    - Done: config reads now use shared-read stream mode with retry backoff.
+    - Done: fallback behavior remains unchanged for unrecoverable read errors.
 - [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
   - Scope: archive backup creation path in `BackupService`.
   - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.

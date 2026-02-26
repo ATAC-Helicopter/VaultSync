@@ -34,6 +34,7 @@
 - [BUG-15017] Drive health probing now resolves external tool paths before process launch; when `smartctl` is missing on Windows, manual backup no longer emits first-chance `Win32Exception` and cleanly falls back to `Unknown`.
 - [BUG-15018] SMB/UNC path detection no longer constructs `DriveInfo` from invalid UNC roots; manual backup startup checks now avoid `ArgumentException` (`Drive name must be a root directory...`) and classify UNC paths as network directly.
 - [BUG-15019] Archive upload auto-tune timeout now uses a non-exception fallback path; timeout-driven probe cancellation no longer raises debug-noise `OperationCanceledException` while explicit backup cancellation remains intact.
+- [BUG-15020] App config reads now retry with shared-read file access when `appsettings.json` is briefly locked by concurrent save/export work, reducing transient `IOException` lock failures.
 
 ## [1.5.0] - 19.02.2026
 ### Added

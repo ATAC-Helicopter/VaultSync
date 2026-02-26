@@ -69,7 +69,9 @@ Keep planning, implementation, and release tracking connected:
   - `Refs #123` for partial/incremental work or release-gated work that should remain open until release.
 - If an issue does not exist yet, create it before opening the PR for non-trivial work.
 - Keep issue titles aligned with roadmap IDs when applicable:
-  - Example: `VS-1601: Richer restore flows ...`
+  - Preferred format: `VS-xxxx (type): concise scope`
+  - Example (feature): `VS-1601 (feature): richer restore flows`
+  - Example (bug): `VS-1578 (bug): harden app config reads against transient file locks`
 - Update issue metadata when opening/updating a PR:
   - labels (`kind:*`, `priority:*`, `release:*`, `status:*`, optional human label `Feature/Improvement/Idea`)
   - assignment and project status

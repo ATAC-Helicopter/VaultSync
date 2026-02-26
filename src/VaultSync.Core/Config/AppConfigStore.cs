@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using System.Text.Json;
 using System.Threading;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 
@@ -34,7 +34,7 @@ namespace VaultSync.Core.Config
                 }
                 else
                 {
-                    var json = File.ReadAllText(ConfigFilePath);
+                    var json = ReadConfigWithRetry();
                     cfg = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
                 }
 
@@ -129,6 +129,34 @@ namespace VaultSync.Core.Config
             {
                 SaveGate.Release();
             }
+        }
+
+        private static string ReadConfigWithRetry()
+        {
+            const int maxAttempts = 5;
+            var delay = 25;
+
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    using var fs = new FileStream(
+                        ConfigFilePath,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.ReadWrite | FileShare.Delete);
+                    using var reader = new StreamReader(fs);
+                    return reader.ReadToEnd();
+                }
+                catch (IOException) when (attempt < maxAttempts)
+                {
+                    Thread.Sleep(delay);
+                    delay *= 2;
+                }
+            }
+
+            // Final read to surface useful diagnostics for fallback handling in Load().
+            return File.ReadAllText(ConfigFilePath);
         }
     }
 }
