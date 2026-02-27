@@ -1,0 +1,44 @@
+name: Metrics
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lowlighter/metrics@latest
+        with:
+          filename: docs/badges/metrics.svg
+          token: ${{ secrets.METRICS_TOKEN }}
+
+          # Base sections
+          base: header, activity, community, repositories
+
+          # Activity (pushes, commits)
+          plugin_activity: yes
+          plugin_activity_days: 30
+          plugin_activity_filter: all
+
+          # Issues & PR stats
+          plugin_followup: yes
+          plugin_followup_sections: repositories
+          plugin_followup_archived: no
+
+          # Contributors
+          plugin_people: yes
+          plugin_people_types: contributors
+          plugin_people_limit: 24
+
+          # Languages (optional but nice)
+          plugin_languages: yes
+          plugin_languages_sections: most-used
+          plugin_languages_details: bytes-size, percentage
+
+          # Repository metadata
+          repositories_forks: no
+          repositories_affiliations: owner
