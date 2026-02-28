@@ -856,6 +856,7 @@ namespace VaultSync.UI.ViewModels
 
             InitializeLocalizationDefaults();
             RefreshEncryptionPolicyOptions();
+            RefreshDestinationOptionsInternal(AppConfigStore.Load());
             RefreshProjectSortOptions();
         }
 
@@ -2593,7 +2594,7 @@ namespace VaultSync.UI.ViewModels
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             RefreshEncryptionPolicyOptions();
-            RefreshDestinationOptionsInternal(config);
+            RefreshDestinationOptions(config);
 
             var projectList = projects.ToList();
             var dedupBackups = new Dictionary<int, Backup>();

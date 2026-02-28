@@ -117,9 +117,10 @@ public partial class App : Application
             CrashHandler.RegisterAvalonia();
             WireGlobalExceptionHandlers();
             WireLifecycleBreadcrumbs(desktop);
-
+            InitializeLocalizationProviderEarly();
             AppViewModelInstance = new AppViewModel();
             DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={AppViewModelInstance.CurrentVersionDisplay}");
+
             if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out var fontResource))
             {
                 _defaultFontFamily = fontResource as FontFamily;
@@ -189,10 +190,6 @@ public partial class App : Application
                 {
                     UpdateTrayIconVisibility(desktop);
                 }
-                else if (e.PropertyName == nameof(SettingsViewModel.RunInBackground))
-                {
-                    // no-op here; MainWindow reads config on closing, so saving is enough.
-                }
             };
 
             // Wire a platform-aware system notification service; fall back to stub if unavailable.
@@ -231,6 +228,29 @@ public partial class App : Application
 
         base.OnFrameworkInitializationCompleted();
     }
+
+    private static void InitializeLocalizationProviderEarly()
+    {
+        if (LocalizationProvider.Service is not null)
+            return;
+
+        try
+        {
+            var localizationService = new LocalizationService();
+            var cfg = AppConfigStore.Load();
+            if (!string.IsNullOrWhiteSpace(cfg.Advanced.Language))
+            {
+                localizationService.SetLanguage(cfg.Advanced.Language);
+            }
+
+            LocalizationProvider.Initialize(localizationService);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Localization] Early bootstrap failed: {ex.Message}");
+        }
+    }
+
 
     private static void StartUiWatchdog()
     {
