@@ -1,38 +1,75 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
+about: Create a report to help me improve
+title: "[Bug]"
+labels: bug
+assignees: ATAC-Helicopter
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+### VaultSync Environment
+- VaultSync Version: [e.g. 1.5.0]
+- Install Type: [Installer / Portable]
+- OS: [Windows 10 / Windows 11 / Linux (distro) / macOS]
+- Architecture: [x64 / ARM64]
+- Running as Admin: [Yes / No]
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+---
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+### Project Context
+- Project Type: [Preset / No preset]
+- Backup Mode: [Snapshot / Full backup / Imported]
+- Encryption: [Encrypted (.vse) / Plain]
+- Storage Target: [Local / External Drive / Network Path]
+- Approximate Project Size: [e.g. 2.3 GB]
+- First backup or existing project: [First run / Existing history]
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+---
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+### What Happened
+Describe what went wrong.
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+---
 
-**Additional context**
-Add any other context about the problem here.
+### Steps to Reproduce
+1. Go to …
+2. Click on …
+3. Run …
+4. Observe …
+
+Be as specific as possible so the issue can be reproduced.
+
+---
+
+### Expected Behavior
+Describe what you expected to happen instead.
+
+---
+
+### Logs (Very Important)
+If possible, attach:
+- `vaultsync.log`
+- Any error dialog text
+- Console output (if applicable)
+
+If the issue involves restore or encryption, include whether:
+- The password was newly set or previously used
+- The backup was created on another machine
+
+---
+
+### Screenshots / Recording
+Attach screenshots or a short screen recording if helpful.
+
+---
+
+### Impact
+- Does this block backups?
+- Does this block restore?
+- Is data at risk?
+- Is this UI-only?
+
+---
+
+### Additional Context
+Anything else that might help diagnose the issue.
