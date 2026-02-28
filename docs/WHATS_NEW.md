@@ -1,35 +1,26 @@
 # What's New
 
-## [1.5.0]
+## [1.5.1]
 
-### Security and encryption
-- Added full backup encryption support with password-protected archives.
-- Added global and per-project encryption policies.
-- Added encrypted restore/open flows with secure password handling and session unlock timeout.
-- Added encrypted backup key rotation tools.
+### Stability and startup
+- Fixed backup project cards so destination and encryption selectors keep the saved value on startup.
+- Fixed startup fallback behavior so empty selector states now default to `Auto (active destinations)` and `Inherit global`.
+- Improved chart refresh timing and reduced first-load UI state issues.
 
-### Backup controls
-- Added bandwidth limiting for backup transfer paths.
-- Added quiet-hours scheduling for automatic backups.
-- Added policy visibility (`Throttled`, `Quiet hours`) in cards, tray, and logs.
+### Backup flow fixes
+- Fixed stale disabled states on project action buttons such as `Open folder` and `Remove from VaultSync`.
+- Hardened backup delete and diagnostics paths to reduce noisy exceptions on network shares and missing external tools.
+- Improved UNC/network path handling and config-read resilience during backup startup and metadata work.
 
-### Backup UX improvements
-- Standardized backup type labels to `Full`, `Incremental`, and `Imported`.
-- Added retention outcome messaging in backup history.
-- Added restore confirmation guidance ("what happens next") by backup type.
+### Transfer policy and settings polish
+- Refined bandwidth and quiet-hours settings copy and localization coverage.
+- Improved lock-timeout and `Lock now` localization bindings.
+- Removed the obsolete roadmap-sync GitHub workflow that was failing against the old project location.
 
-### Snapshot insights
-- Added snapshot diff summaries (added, modified, deleted, net size delta).
-- Added top changed paths in history details.
-- Added diff preview and export actions (`Text` and `JSON`).
-
-### Reliability and compatibility
-- Strengthened mixed `1.4`/`1.5` metadata compatibility for encrypted/plain history.
-- Improved destination and metadata-sync resilience across import/export flows.
-
-### UI and onboarding
-- Refreshed dashboard cards and weekly activity visuals.
-- Expanded onboarding tour to cover encryption, bandwidth/quiet-hours, and diff-summary workflows.
+### Presets and localization
+- Added consumer-friendly presets for Photos, Documents, Steam Mods, and Creative Suites.
+- Added preset description/example guidance in the Projects page.
+- Refreshed localization reports and normalized non-English locale key ordering.
 
 ### Updates
 - Release notes are available in the app. [Release notes](https://github.com/ATAC-Helicopter/VaultSync/releases)

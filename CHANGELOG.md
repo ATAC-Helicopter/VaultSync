@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.5.1] - Unreleased
+## [1.5.1] - 28.02.2026
 ### Added
 - [VS-15001] Added Backups-page per-project sort control (Latest backup, Name, Total size, Backup count) to improve project list navigation.
 - [VS-15002] Added new localization keys for transfer policy, encryption open-timeout/lock labels, validation copy, and backup sort labels.

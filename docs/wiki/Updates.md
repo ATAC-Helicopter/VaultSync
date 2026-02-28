@@ -2,6 +2,12 @@
 
 VaultSync supports patch updates and full installer updates for macOS, Windows, and Linux.
 
+## 1.5.1 highlights
+- Startup selector persistence on the Backups page was fixed so project cards reopen with the saved destination and encryption policy.
+- Backup action-state and deletion flows were hardened to reduce gray-button stalls and exception noise.
+- Consumer-friendly presets (`Photos`, `Documents`, `Steam mods`, `Creative suites`) were added with in-app guidance.
+- Localization coverage, release notes, and update-facing copy were refreshed for the release.
+
 ## 1.5.0 highlights
 - Backup encryption with global and per-project policy controls is now available.
 - Backup bandwidth limits and quiet-hours scheduling were added.
