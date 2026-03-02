@@ -129,6 +129,12 @@
     - Done: robust directory delete now clears read-only only when needed and returns failure details without rethrowing.
     - Done: diagnostics dump collection now checks `dotnet-dump` availability before process launch and logs a skip when unavailable.
     - Done: projects destination selection now ignores transient null selection events during options source refresh.
+- [x] `P0` `VS-1581` Windows elevated patch-helper argument parsing fix.
+  - Scope: `PatchInstallService` helper launch/parsing for Program Files installs that require elevation.
+  - Acceptance: elevated patch install keeps `InstallDir` clean, preserves `--restart` / `--waitpid`, and applies patches successfully on installed Windows builds.
+  - Current status:
+    - Done: helper launch now writes a patch-apply request file and passes only `--apply-patch-request <file>` through elevation.
+    - Done: restart and wait-pid settings are now loaded from the request payload instead of fragile elevated command-line quoting.
 - [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
   - Scope: archive backup creation path in `BackupService`.
   - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.

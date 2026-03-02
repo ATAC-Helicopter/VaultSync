@@ -51,6 +51,7 @@ namespace VaultSync.UI.Services
     internal static class PatchInstallService
     {
         private const string ApplyArg = "--apply-patch";
+        private const string ApplyRequestArg = "--apply-patch-request";
         private const string RestartArg = "--restart";
         private const string WaitPidArg = "--waitpid=";
 
@@ -66,6 +67,16 @@ namespace VaultSync.UI.Services
         public static bool TryParsePatchArgs(string[] args, out PatchApplyRequest? request)
         {
             request = null;
+
+            if (args.Length >= 2 && string.Equals(args[0], ApplyRequestArg, StringComparison.OrdinalIgnoreCase))
+            {
+                var requestPath = args[1];
+                if (!File.Exists(requestPath))
+                    return false;
+
+                request = JsonSerializer.Deserialize<PatchApplyRequest>(File.ReadAllText(requestPath));
+                return request is not null;
+            }
 
             if (args.Length < 4 || !string.Equals(args[0], ApplyArg, StringComparison.OrdinalIgnoreCase))
                 return false;
@@ -120,6 +131,14 @@ namespace VaultSync.UI.Services
                 var manifestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.manifest.json");
                 var manifestJson = JsonSerializer.Serialize(plan.Manifest);
                 File.WriteAllText(manifestPath, manifestJson, Encoding.UTF8);
+                var requestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.apply-request.json");
+                var request = new PatchApplyRequest(
+                    archivePath,
+                    manifestPath,
+                    installDir,
+                    restart: true,
+                    waitPid: Process.GetCurrentProcess().Id);
+                File.WriteAllText(requestPath, JsonSerializer.Serialize(request), Encoding.UTF8);
 
                 var needsElevation = NeedsElevation(installDir);
 
@@ -135,21 +154,13 @@ namespace VaultSync.UI.Services
                 if (needsElevation)
                 {
                     psi.Arguments = string.Join(" ",
-                        Quote(ApplyArg),
-                        Quote(archivePath),
-                        Quote(manifestPath),
-                        Quote(installDir),
-                        Quote(RestartArg),
-                        Quote($"{WaitPidArg}{Process.GetCurrentProcess().Id}"));
+                        Quote(ApplyRequestArg),
+                        Quote(requestPath));
                 }
                 else
                 {
-                    psi.ArgumentList.Add(ApplyArg);
-                    psi.ArgumentList.Add(archivePath);
-                    psi.ArgumentList.Add(manifestPath);
-                    psi.ArgumentList.Add(installDir);
-                    psi.ArgumentList.Add(RestartArg);
-                    psi.ArgumentList.Add($"{WaitPidArg}{Process.GetCurrentProcess().Id}");
+                    psi.ArgumentList.Add(ApplyRequestArg);
+                    psi.ArgumentList.Add(requestPath);
                 }
 
                 var started = Process.Start(psi);

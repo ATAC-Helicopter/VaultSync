@@ -36,6 +36,7 @@
 - [BUG-15019] Archive upload auto-tune timeout now uses a non-exception fallback path; timeout-driven probe cancellation no longer raises debug-noise `OperationCanceledException` while explicit backup cancellation remains intact.
 - [BUG-15020] App config reads now retry with shared-read file access when `appsettings.json` is briefly locked by concurrent save/export work, reducing transient `IOException` lock failures.
 - [BUG-15021] Backup delete robustness now avoids rethrowing marker-file attribute/delete failures on network shares, diagnostics dump collection skips cleanly when `dotnet-dump` is not installed, and project destination dropdowns ignore transient null refresh events so selections stay stable (`Auto`/`Inherit global` defaults preserved).
+- [BUG-15022] Windows elevated patch installs now pass a serialized apply-request file to the helper instead of flattening `InstallDir`, `--restart`, and `--waitpid` into one fragile UAC command line, fixing Program Files patch-apply failures.
 
 ## [1.5.0] - 19.02.2026
 ### Added
