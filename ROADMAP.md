@@ -129,6 +129,12 @@
     - Done: robust directory delete now clears read-only only when needed and returns failure details without rethrowing.
     - Done: diagnostics dump collection now checks `dotnet-dump` availability before process launch and logs a skip when unavailable.
     - Done: projects destination selection now ignores transient null selection events during options source refresh.
+- [x] `P0` `VS-1581` Windows elevated patch-helper argument parsing fix.
+  - Scope: `PatchInstallService` helper launch/parsing for Program Files installs that require elevation.
+  - Acceptance: elevated patch install keeps `InstallDir` clean, preserves `--restart` / `--waitpid`, and applies patches successfully on installed Windows builds.
+  - Current status:
+    - Done: helper launch now writes a patch-apply request file and passes only `--apply-patch-request <file>` through elevation.
+    - Done: restart and wait-pid settings are now loaded from the request payload instead of fragile elevated command-line quoting.
 - [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
   - Scope: archive backup creation path in `BackupService`.
   - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.
@@ -574,16 +580,138 @@
 - Support risk: quiet-hours/throttling can appear as random pauses if status is not clear.
 
 ## 1.6.x
-- [ ] `VS-1601` `P1` Richer restore flows (selective restore, dry-run previews, conflict prompts).
-- [ ] `VS-1602` `P1` Restore point browser with compare + timeline.
+
+### 1.6.0 direction
+- Theme: control, restore safety, and organization.
+- Product goal: make VaultSync feel safer to restore from, easier to organize at scale, and more user-controlled in everyday project setup.
+- Release shape:
+  - Restore confidence: safer/clearer restore planning and optional sandbox-first restore.
+  - Preset ownership: full preset editor instead of file-only preset maintenance.
+  - Project organization: tags, smart groups, and bulk operations for larger vaults.
+
+### 1.6.0 priorities
+- [ ] `P0` Restore planning and sandbox-first restore workflow.
+- [ ] `P0` Full preset editor with live preview and project assignment.
+- [ ] `P1` Project tags, smart groups, and bulk actions.
+- [ ] `P1` Verification and storage insight upgrades.
+
+### 1.6.0 scope and contracts
+
+#### `P0` Restore planning and sandbox-first restore
+- Core scope:
+  - Optional sandbox restore mode with per-project default and per-run override.
+  - Restore preview before commit (overwrite, add, delete, size impact, conflict list).
+  - Promote sandbox contents into final destination only after explicit confirmation.
+  - Cleanup/retry controls for sandbox workspaces.
+- UX contract:
+  - Direct restore remains supported and stays the default unless user/project chooses sandbox-first.
+  - Per-project restore mode can be configured, but restore dialog can override for the current run.
+  - Restore summary must clearly distinguish preview-only, sandboxed, and final-apply stages.
+- Acceptance:
+  - Sandbox restore can be enabled per project and overridden per restore.
+  - User can inspect sandbox output before committing into the final location.
+  - Canceling before final apply leaves original destination unchanged.
+
+#### `P0` Full preset editor
+- Core scope:
+  - Create, clone, rename, and delete presets.
+  - Edit include/exclude rules in-app.
+  - Live match preview against project paths.
+  - Import/export preset definitions.
+  - Assign a preset to a project directly from the editor.
+- UX contract:
+  - Built-in presets remain protected or explicitly clone-to-edit.
+  - Preview clearly shows matched, ignored, and uncertain paths.
+  - Editor works for both technical and consumer-friendly presets.
+- Acceptance:
+  - User can fully manage custom presets without editing files manually.
+  - Preview updates without noticeable UI blocking on common project sizes.
+  - Preset changes persist safely and remain compatible with existing preset resolution.
+
+#### `P1` Project organization and grouping
+- Core scope:
+  - Manual project tags.
+  - Smart groups for common states (`Needs backup`, `Encrypted`, `Unprotected`, `Large projects`, `Auto backup off`, `Recently active`).
+  - Bulk actions by tag/group (backup, snapshot, pause/resume auto backup where applicable).
+  - Shared filtering model between Projects and Backups pages.
+- Acceptance:
+  - User can organize projects beyond flat list order.
+  - Smart groups remain predictable and refresh from real project state.
+  - Bulk actions are keyboard-accessible and confirm destructive operations.
+
+#### `P1` Verification and storage insight upgrades
+- Core scope:
+  - Per-project verification policy controls.
+  - Backup health overview (`last backup`, `last verified`, destination state, restore-tested state when available).
+  - Storage growth/delta insights by project and destination.
+- Acceptance:
+  - Verification policy is configurable per project.
+  - Health/storage summaries improve backup trust without cluttering core screens.
+  - Metrics remain understandable for both technical and non-technical users.
+
+### 1.6 implementation order
+1. Restore preview model + sandbox workspace contract.
+2. Restore UX flow and confirmation/apply path.
+3. Full preset editor with live preview.
+4. Tags, smart groups, and shared filtering.
+5. Verification policy and storage/health insight surfaces.
+6. Stabilization pass and release hardening.
+
+### 1.6 ticket backlog (execution-ready)
+- [ ] `VS-1601` `P0` Richer restore flows (selective restore, dry-run previews, conflict prompts).
+  - Scope: add restore preview model, selective restore targets, and conflict classification before execution.
+  - Acceptance tests:
+    - UI: restore preview lists overwrite/add/delete/conflict counts before run.
+    - Integration: selective restore applies only chosen paths.
+    - Regression: standard direct restore still works unchanged when preview options are not used.
+- [ ] `VS-1602` `P0` Restore point browser with compare + timeline.
+  - Scope: timeline-style restore point browser with compare support between selected backups/snapshots.
+  - Acceptance tests:
+    - UI: user can navigate restore points chronologically and compare two points.
+    - UX: browser remains responsive on projects with long history.
 - [ ] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
-- [ ] `VS-1604` `P2` Custom preset editor for filter/ignore rules.
-- [ ] `VS-1605` `P2` Backup health timeline (success/failure trends).
+  - Scope: per-project growth metrics, top storage consumers, and clearer dashboard/backups storage summaries.
+  - Acceptance tests:
+    - UI: metrics align with stored backup/snapshot data.
+    - Perf: reporting does not cause blocking UI refresh on common data sets.
+- [ ] `VS-1604` `P0` Full preset editor with include/exclude rules, preview, clone, import/export.
+  - Scope: replace file-only preset maintenance with an in-app editor and preview workflow.
+  - Acceptance tests:
+    - UI: user can create/edit/clone/delete/import/export presets.
+    - Integration: saved presets are immediately assignable to projects and resolve correctly at snapshot/backup time.
+- [ ] `VS-1605` `P1` Backup health center and timeline (success/failure/verified trends).
+  - Scope: health summary model and timeline surfaces for backup freshness, verification, and failure visibility.
+  - Acceptance tests:
+    - UI: health state reflects real backup/verification history.
+    - UX: timeline/trend surfaces do not crowd primary actions.
 - [ ] `VS-1606` `P2` Exportable config bundle for migration/support.
+  - Scope: export redacted app config, diagnostics context, and selected metadata for support/migration workflows.
+  - Acceptance tests:
+    - Integration: exported bundle opens and contains the expected redacted data set.
+    - Security: no secrets/passwords/raw keys are included.
+- [ ] `VS-1607` `P0` Optional sandbox restore mode with per-project default and per-run override.
+  - Scope: sandbox workspace creation, review/apply path, cleanup options, and per-project restore-mode preference.
+  - Acceptance tests:
+    - Integration: sandbox restore leaves destination untouched until confirm/apply.
+    - UI: project default can be overridden at restore time.
+    - Regression: direct restore remains available for users who do not want sandbox mode.
+- [ ] `VS-1608` `P1` Preset recommendations for detected project/library types.
+  - Scope: suggest likely presets from observed folder structure/content when adding or editing a project.
+  - Acceptance tests:
+    - UI: recommendations appear only when confidence is high enough to be useful.
+    - Regression: manual preset selection always remains available.
+- [ ] `VS-1701` `P1` Project tagging + smart groups + bulk actions (pause/backup/snapshot by tag).
+  - Scope: manual tags, computed smart groups, shared group filters, and bulk actions in Projects/Backups.
+  - Current planning note:
+    - Pulled forward from the original `1.7.x` bucket because organization now has direct product value for medium/large vaults.
+- [ ] `VS-1702` `P2` Per-destination retry policy with backoff + user status summary.
+  - Scope: destination retry/backoff policy tuning and clearer retry status feedback for network/external targets.
+- [ ] `VS-1901` `P1` Per-project verification policies (always/scheduled/manual).
+  - Scope: verification mode per project, verification recency surfacing, and restore-confidence integration.
+  - Current planning note:
+    - Pulled forward from the original `1.9.x` bucket because verification policy directly supports restore trust in `1.6`.
 
 ## 1.7.x
-- [ ] `VS-1701` `P1` Project tagging + bulk actions (pause/backup/snapshot by tag).
-- [ ] `VS-1702` `P1` Per-destination retry policy with backoff + user status summary.
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
 - [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).
 
