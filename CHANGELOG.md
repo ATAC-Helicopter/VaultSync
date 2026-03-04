@@ -5,6 +5,7 @@
 ### Changed
 - [VS-1607] Restore flow now honors project restore mode: sandbox restores target an isolated preview folder while direct restores keep current project-path behavior.
 - [VS-1607] Restore confirmation now includes a per-run restore-mode override selector so users can switch between direct and sandbox restore at execution time.
+- [VS-1607] Sandbox restore completion now offers post-restore actions (keep, open sandbox, apply to project) and optional sandbox cleanup after apply.
 
 ## [1.5.1] - 28.02.2026
 ### Added

@@ -696,6 +696,7 @@
     - In progress: Backups per-project cards now expose restore-mode selection and persist it to project settings.
     - In progress: restore runtime now honors sandbox mode by restoring into an isolated preview folder and leaving direct mode unchanged.
     - In progress: restore confirmation now allows per-run restore-mode override (`Direct` / `Sandbox`) before execution.
+    - In progress: sandbox completion now provides post-restore actions (`Keep`, `Open sandbox`, `Apply to project`) with optional cleanup-after-apply.
   - Acceptance tests:
     - Integration: sandbox restore leaves destination untouched until confirm/apply.
     - UI: project default can be overridden at restore time.

@@ -1366,6 +1366,248 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
+        private enum SandboxPostRestoreAction
+        {
+            Keep,
+            Open,
+            Apply
+        }
+
+        private sealed record SandboxPostRestoreDecision(
+            SandboxPostRestoreAction Action,
+            bool DeleteAfterApply);
+
+        private async Task<SandboxPostRestoreDecision> ConfirmSandboxPostRestoreActionAsync(string projectName, string sandboxPath)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Restore.Sandbox.Post.Title", "Sandbox restore completed"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var prompt = new TextBlock
+                {
+                    Text = Lf(
+                        "Backups.Restore.Sandbox.Post.Prompt",
+                        "Review the restored files in sandbox for '{0}', then choose what to do next.",
+                        projectName),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var pathLine = new TextBlock
+                {
+                    Text = sandboxPath,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                if (GetBrush("TextSecondary") is { } secondary)
+                    pathLine.Foreground = secondary;
+
+                var deleteAfterApply = new CheckBox
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.DeleteAfterApply", "Delete sandbox folder after apply"),
+                    IsChecked = true
+                };
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var keepButton = new Button
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.Keep", "Keep for later"),
+                    MinWidth = 130
+                };
+                keepButton.Classes.Add("action-ghost");
+
+                var openButton = new Button
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.Open", "Open sandbox"),
+                    MinWidth = 130
+                };
+                openButton.Classes.Add("action-ghost");
+
+                var applyButton = new Button
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
+                    MinWidth = 150
+                };
+                applyButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var action = SandboxPostRestoreAction.Keep;
+                keepButton.Click += (_, _) =>
+                {
+                    action = SandboxPostRestoreAction.Keep;
+                    window?.Close();
+                };
+                openButton.Click += (_, _) =>
+                {
+                    action = SandboxPostRestoreAction.Open;
+                    window?.Close();
+                };
+                applyButton.Click += (_, _) =>
+                {
+                    action = SandboxPostRestoreAction.Apply;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(keepButton);
+                buttonRow.Children.Add(openButton);
+                buttonRow.Children.Add(applyButton);
+
+                var content = new StackPanel { Spacing = 12 };
+                content.Children.Add(title);
+                content.Children.Add(prompt);
+                content.Children.Add(pathLine);
+                content.Children.Add(deleteAfterApply);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Restore.Sandbox.Post.Title", "Sandbox restore completed"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 650,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return new SandboxPostRestoreDecision(
+                    action,
+                    deleteAfterApply.IsChecked == true);
+            });
+        }
+
+        private async Task ApplySandboxRestoreToProjectAsync(
+            Project project,
+            string projectName,
+            string sandboxPath,
+            bool deleteAfterApply)
+        {
+            if (!Directory.Exists(sandboxPath))
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Restore.Sandbox.ApplyMissing", "Sandbox folder no longer exists."),
+                    "Error");
+                return;
+            }
+
+            var targetPath = ResolveRestoreTarget(project, ProjectRestoreMode.Direct);
+            if (string.IsNullOrWhiteSpace(targetPath))
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    "Error");
+                return;
+            }
+
+            var applyCardId = $"sandbox-apply-{project.Id}";
+            BackupsViewModel.IsBusy = true;
+            BackupsViewModel.BusyMessage = L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...");
+            BackupsViewModel.UpdateActiveBackup(
+                applyCardId,
+                projectName,
+                0,
+                L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore..."),
+                string.Empty,
+                allowCancel: false);
+
+            var applySucceeded = false;
+            string? cleanupError = null;
+            try
+            {
+                await Task.Run(() =>
+                {
+                    CopyDirectoryWithProgress(sandboxPath, targetPath, 0, 100, (percent, file) =>
+                    {
+                        var label = string.IsNullOrWhiteSpace(file)
+                            ? L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...")
+                            : file;
+                        BackupsViewModel.UpdateActiveBackup(
+                            applyCardId,
+                            projectName,
+                            percent,
+                            label,
+                            string.Empty,
+                            allowCancel: false);
+                    });
+                });
+
+                _repo.UpdateProjectNeedsRestore(project.Id, false);
+                applySucceeded = true;
+
+                if (deleteAfterApply)
+                {
+                    if (!DeleteDirectoryRobust(sandboxPath, out cleanupError))
+                    {
+                        cleanupError ??= L("Backups.Restore.Sandbox.CleanupFailed", "Sandbox cleanup failed.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Restore] Failed to apply sandbox restore for '{projectName}': {ex.Message}");
+                BackupsViewModel.ShowNotification(
+                    Lf("Backups.Restore.Sandbox.ApplyFailed", "Failed to apply sandbox restore: {0}", ex.Message),
+                    "Error");
+            }
+            finally
+            {
+                BackupsViewModel.RemoveActiveBackup(applyCardId);
+                BackupsViewModel.IsBusy = false;
+                BackupsViewModel.BusyMessage = string.Empty;
+            }
+
+            if (!applySucceeded)
+                return;
+
+            if (string.IsNullOrWhiteSpace(cleanupError))
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Restore.Sandbox.ApplyCompleted", "Sandbox restore applied to project."),
+                    "Success");
+            }
+            else
+            {
+                BackupsViewModel.ShowNotification(
+                    Lf(
+                        "Backups.Restore.Sandbox.ApplyCompletedWithCleanupWarning",
+                        "Sandbox restore applied, but cleanup failed: {0}",
+                        cleanupError),
+                    "Warning");
+            }
+        }
+
         private void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
         {
             RunDetached(() => OnRestoreBackupRequestedAsync(snapshot), nameof(OnRestoreBackupRequestedAsync));
@@ -1538,12 +1780,35 @@ namespace VaultSync.UI.ViewModels
 
                     if (!isDirectRestore)
                     {
-                        BackupsViewModel.ShowNotification(
-                            Lf(
-                                "Backups.Restore.Sandbox.Completed",
-                                "Restore completed in sandbox folder:\n{0}",
-                                preparation.ProjectRoot),
-                            "Info");
+                        var sandboxPath = projectRoot;
+                        var decision = await ConfirmSandboxPostRestoreActionAsync(preparation.ProjectName, sandboxPath);
+                        if (decision.Action == SandboxPostRestoreAction.Open)
+                        {
+                            OpenPathInSystemFileManager(sandboxPath);
+                            BackupsViewModel.ShowNotification(
+                                Lf(
+                                    "Backups.Restore.Sandbox.Completed",
+                                    "Restore completed in sandbox folder:\n{0}",
+                                    sandboxPath),
+                                "Info");
+                        }
+                        else if (decision.Action == SandboxPostRestoreAction.Apply && restoredProject is not null)
+                        {
+                            await ApplySandboxRestoreToProjectAsync(
+                                restoredProject,
+                                preparation.ProjectName,
+                                sandboxPath,
+                                decision.DeleteAfterApply);
+                        }
+                        else
+                        {
+                            BackupsViewModel.ShowNotification(
+                                Lf(
+                                    "Backups.Restore.Sandbox.Completed",
+                                    "Restore completed in sandbox folder:\n{0}",
+                                    sandboxPath),
+                                "Info");
+                        }
                     }
                 }
                 BackupsViewModel.RemoveActiveBackup(restoreCardId);
