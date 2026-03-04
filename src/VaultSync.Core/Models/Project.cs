@@ -13,4 +13,5 @@ public record Project
     public string? PreferredDestinationId { get; init; }
     public string EncryptionPolicy { get; init; } = ProjectEncryptionPolicy.Inherit;
     public string? EncryptionKeyRef { get; init; }
+    public string RestoreMode { get; init; } = ProjectRestoreMode.Direct;
 }

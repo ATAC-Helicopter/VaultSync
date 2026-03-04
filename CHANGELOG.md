@@ -1,4 +1,10 @@
 ﻿# Changelog
+## [1.6.0] - Unreleased
+### Added
+- [VS-1607] Added per-project restore mode settings in Backups (Direct, Sandbox) and persisted restore_mode in project schema/model with migration-safe default direct.
+### Changed
+- [VS-1607] Restore flow now honors project restore mode: sandbox restores target an isolated preview folder while direct restores keep current project-path behavior.
+
 ## [1.5.1] - 28.02.2026
 ### Added
 - [VS-15001] Added Backups-page per-project sort control (Latest backup, Name, Total size, Backup count) to improve project list navigation.
@@ -712,4 +718,7 @@
 ---
 
 ? 2026 VaultSync Project. MIT Licensed.
+
+
+
 

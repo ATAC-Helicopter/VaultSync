@@ -936,7 +936,8 @@ namespace VaultSync.UI.ViewModels
                 return RestoreBackupPreparation.Failure;
             }
 
-            var projectRoot = ResolveRestoreTarget(project);
+            var restoreMode = ProjectRestoreMode.Normalize(project.RestoreMode);
+            var projectRoot = ResolveRestoreTarget(project, restoreMode);
             if (string.IsNullOrWhiteSpace(projectRoot))
                 return RestoreBackupPreparation.Failure;
 
@@ -949,6 +950,7 @@ namespace VaultSync.UI.ViewModels
                 projectRoot,
                 project.Id,
                 project.Name,
+                restoreMode,
                 isEncrypted,
                 backup.IsImported,
                 BackupModes.Normalize(backup.BackupMode));
@@ -960,6 +962,7 @@ namespace VaultSync.UI.ViewModels
             string ProjectRoot,
             int ProjectId,
             string ProjectName,
+            string RestoreMode,
             bool IsEncrypted,
             bool IsImported,
             string BackupMode)
@@ -970,6 +973,7 @@ namespace VaultSync.UI.ViewModels
                 string.Empty,
                 0,
                 string.Empty,
+                ProjectRestoreMode.Direct,
                 false,
                 false,
                 BackupModes.Full);
@@ -1002,8 +1006,28 @@ namespace VaultSync.UI.ViewModels
             return candidates;
         }
 
-        private string ResolveRestoreTarget(Project project)
+        private string ResolveRestoreTarget(Project project, string restoreMode)
         {
+            var mode = ProjectRestoreMode.Normalize(restoreMode);
+            if (string.Equals(mode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase))
+            {
+                var safeProjectName = string.Concat(project.Name.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch));
+                if (string.IsNullOrWhiteSpace(safeProjectName))
+                    safeProjectName = "Project";
+
+                var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+                var sandboxRoot = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "VaultSync",
+                    "restore-sandbox",
+                    safeProjectName,
+                    stamp);
+
+                Directory.CreateDirectory(sandboxRoot);
+                Console.WriteLine($"[Restore] Sandbox mode active. Using sandbox path '{sandboxRoot}'.");
+                return sandboxRoot;
+            }
+
             if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
                 return project.RootPath;
 
@@ -1211,10 +1235,14 @@ namespace VaultSync.UI.ViewModels
                     : string.Equals(preparation.BackupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase)
                         ? L("Backups.Snapshot.Type.Incremental", "Incremental")
                         : L("Backups.Snapshot.Type.Full", "Full");
+                var restoreModeLabel = string.Equals(preparation.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
+                    ? L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")
+                    : L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)");
 
                 var guidanceLines = new[]
                 {
                     Lf("Backups.Restore.GuidanceType", "Type: {0}", backupTypeLabel),
+                    Lf("Backups.Restore.GuidanceMode", "Mode: {0}", restoreModeLabel),
                     L("Backups.Restore.GuidanceOverwrite", "Files with matching paths are overwritten by restored files."),
                     L("Backups.Restore.GuidanceKeepExtra", "Files that exist only in the current project folder are kept."),
                     preparation.IsEncrypted
@@ -1459,9 +1487,20 @@ namespace VaultSync.UI.ViewModels
                 if (restoreSucceeded)
                 {
                     var restoredProject = _repo.GetProjectByName(preparation.ProjectName);
-                    if (restoredProject != null && restoredProject.NeedsRestore)
+                    var isDirectRestore = !string.Equals(preparation.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase);
+                    if (isDirectRestore && restoredProject != null && restoredProject.NeedsRestore)
                     {
                         _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
+                    }
+
+                    if (!isDirectRestore)
+                    {
+                        BackupsViewModel.ShowNotification(
+                            Lf(
+                                "Backups.Restore.Sandbox.Completed",
+                                "Restore completed in sandbox folder:\n{0}",
+                                preparation.ProjectRoot),
+                            "Info");
                     }
                 }
                 BackupsViewModel.RemoveActiveBackup(restoreCardId);

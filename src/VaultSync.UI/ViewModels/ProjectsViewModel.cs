@@ -2056,6 +2056,31 @@ public sealed class EncryptionPolicyOption
     }
 }
 
+public sealed class RestoreModeOption
+{
+    public string Id { get; }
+    public string Label { get; }
+
+    public RestoreModeOption(string id, string label)
+    {
+        Id = ProjectRestoreMode.Normalize(id);
+        Label = label ?? string.Empty;
+    }
+
+    public override string ToString() => Label;
+
+    public override bool Equals(object? obj)
+    {
+        return obj is RestoreModeOption other &&
+               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override int GetHashCode()
+    {
+        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
+    }
+}
+
 public sealed class ProjectSnapshotViewModel
 {
     public ProjectSnapshotViewModel(

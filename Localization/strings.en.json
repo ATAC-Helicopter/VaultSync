@@ -784,5 +784,10 @@
   "WhatsNew.Close": "Got it",
   "WhatsNew.Fallback": "This update includes improvements and fixes across VaultSync.",
   "WhatsNew.Section.General": "Highlights",
-  "WhatsNew.Title": "What's new"
+  "WhatsNew.Title": "What's new",
+  "Backups.Restore.Mode.Label": "Restore mode",
+  "Backups.Restore.Mode.Direct": "Direct (overwrite project path)",
+  "Backups.Restore.Mode.Sandbox": "Sandbox (restore to preview folder)",
+  "Backups.Restore.GuidanceMode": "Mode: {0}",
+  "Backups.Restore.Sandbox.Completed": "Restore completed in sandbox folder:\n{0}"
 }

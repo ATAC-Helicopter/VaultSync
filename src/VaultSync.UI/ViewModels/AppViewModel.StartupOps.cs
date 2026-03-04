@@ -149,6 +149,7 @@ namespace VaultSync.UI.ViewModels
             vm.DestinationActiveChanged += OnDestinationActiveChanged;
             vm.PreferredDestinationChanged += OnPreferredDestinationChanged;
             vm.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
+            vm.ProjectRestoreModeChanged += OnProjectRestoreModeChanged;
             vm.ManageProjectEncryptionRequested += OnProjectEncryptionRequestedFromBackups;
             vm.OpenSettingsRequested += OnOpenSettingsRequested;
             InitializeDestinationStatusOverview(vm);

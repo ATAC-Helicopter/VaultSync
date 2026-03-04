@@ -1011,6 +1011,27 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private void OnProjectRestoreModeChanged(int projectId, string restoreMode)
+        {
+            RunDetached(
+                () => OnProjectRestoreModeChangedAsync(projectId, restoreMode),
+                nameof(OnProjectRestoreModeChangedAsync));
+        }
+
+        private async Task OnProjectRestoreModeChangedAsync(int projectId, string restoreMode)
+        {
+            try
+            {
+                _repo.UpdateProjectRestoreMode(projectId, restoreMode);
+                await ExportMetadataForProjectSettingsChangeAsync(projectId);
+                await _projectsViewModel.RefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Projects] Failed to update restore mode for project {projectId}: {ex.Message}");
+            }
+        }
+
         private void OnProjectEncryptionRequestedFromBackups(int projectId)
         {
             _ = _projectEncryptionEnrollmentService.EditProjectEncryptionSecretAsync(projectId);

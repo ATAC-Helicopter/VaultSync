@@ -170,11 +170,14 @@ namespace VaultSync.UI.ViewModels
             new ObservableCollection<DestinationOption>();
         public ObservableCollection<EncryptionPolicyOption> EncryptionPolicyOptions { get; } =
             new ObservableCollection<EncryptionPolicyOption>();
+        public ObservableCollection<RestoreModeOption> RestoreModeOptions { get; } =
+            new ObservableCollection<RestoreModeOption>();
 
         public event Action<int, bool>? AutoBackupPreferenceChanged;
         public event Action<DestinationStatusItem, bool>? DestinationActiveChanged;
         public event Action<int, string>? PreferredDestinationChanged;
         public event Action<int, string>? ProjectEncryptionPolicyChanged;
+        public event Action<int, string>? ProjectRestoreModeChanged;
         public event Action<int>? ManageProjectEncryptionRequested;
 
         // Appearance
@@ -856,6 +859,7 @@ namespace VaultSync.UI.ViewModels
 
             InitializeLocalizationDefaults();
             RefreshEncryptionPolicyOptions();
+            RefreshRestoreModeOptions();
             RefreshDestinationOptionsInternal(AppConfigStore.Load());
             RefreshProjectSortOptions();
         }
@@ -1264,6 +1268,17 @@ namespace VaultSync.UI.ViewModels
             EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
                 ProjectEncryptionPolicy.Plain,
                 L("Projects.EncryptionPolicy.Plain", "Plain")));
+        }
+
+        private void RefreshRestoreModeOptions()
+        {
+            RestoreModeOptions.Clear();
+            RestoreModeOptions.Add(new RestoreModeOption(
+                ProjectRestoreMode.Direct,
+                L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)")));
+            RestoreModeOptions.Add(new RestoreModeOption(
+                ProjectRestoreMode.Sandbox,
+                L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")));
         }
 
         /// <summary>
@@ -2668,11 +2683,14 @@ namespace VaultSync.UI.ViewModels
                     PreferredDestinationChanged = OnPreferredDestinationChanged,
                     EncryptionPolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy),
                     EncryptionKeyRef = project.EncryptionKeyRef ?? string.Empty,
-                    EncryptionPolicyChanged = OnProjectEncryptionPolicyChanged
+                    EncryptionPolicyChanged = OnProjectEncryptionPolicyChanged,
+                    RestoreMode = ProjectRestoreMode.Normalize(project.RestoreMode),
+                    RestoreModeChanged = OnProjectRestoreModeChanged
                 };
                 projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath, project.ExternalId);
                 UpdateProjectDestinationDisplay(projectItem, config);
                 UpdateProjectEncryptionDisplay(projectItem, config);
+                UpdateProjectRestoreModeDisplay(projectItem);
                 ProjectBackups.Add(projectItem);
                 _projectLookupById[projectItem.Id] = projectItem;
             }
@@ -2792,6 +2810,7 @@ namespace VaultSync.UI.ViewModels
                     hash = (hash * 397) ^ (project.PreferredDestinationId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.EncryptionPolicy?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.EncryptionKeyRef?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.RestoreMode?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                 }
                 return hash;
             }
@@ -2968,6 +2987,14 @@ namespace VaultSync.UI.ViewModels
                 : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
         }
 
+        private void UpdateProjectRestoreModeDisplay(ProjectBackupItem item)
+        {
+            item.RestoreMode = ProjectRestoreMode.Normalize(item.RestoreMode);
+            var optionMatch = RestoreModeOptions.FirstOrDefault(o =>
+                string.Equals(o.Id, item.RestoreMode, StringComparison.OrdinalIgnoreCase));
+            item.SetRestoreModeOption(optionMatch ?? RestoreModeOptions.FirstOrDefault());
+        }
+
         private void UpdateProjectDestinationDisplay(ProjectBackupItem item, AppConfig config)
         {
             var id = item.PreferredDestinationId ?? string.Empty;
@@ -3048,6 +3075,18 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
+        private void OnProjectRestoreModeChanged(ProjectBackupItem item)
+        {
+            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+                return;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                UpdateProjectRestoreModeDisplay(item);
+                ProjectRestoreModeChanged?.Invoke(projectId, item.RestoreMode);
+            });
+        }
+
         public void RefreshDestinationOptions(AppConfig config)
         {
             RefreshDestinationOptionsInternal(config);
@@ -3055,6 +3094,7 @@ namespace VaultSync.UI.ViewModels
             {
                 UpdateProjectDestinationDisplay(project, config);
                 UpdateProjectEncryptionDisplay(project, config);
+                UpdateProjectRestoreModeDisplay(project);
             }
         }
 
@@ -3286,6 +3326,7 @@ namespace VaultSync.UI.ViewModels
         public Action<ProjectBackupItem>? AutoBackupChanged { get; set; }
         public Action<ProjectBackupItem>? PreferredDestinationChanged { get; set; }
         public Action<ProjectBackupItem>? EncryptionPolicyChanged { get; set; }
+        public Action<ProjectBackupItem>? RestoreModeChanged { get; set; }
 
         private string _preferredDestinationId = string.Empty;
         public string PreferredDestinationId
@@ -3377,6 +3418,39 @@ namespace VaultSync.UI.ViewModels
 
             _encryptionPolicyOption = option;
             OnPropertyChanged(nameof(EncryptionPolicyOption));
+        }
+
+        private string _restoreMode = ProjectRestoreMode.Direct;
+        public string RestoreMode
+        {
+            get => _restoreMode;
+            set => SetField(ref _restoreMode, ProjectRestoreMode.Normalize(value), nameof(RestoreMode));
+        }
+
+        private RestoreModeOption? _restoreModeOption;
+        public RestoreModeOption? RestoreModeOption
+        {
+            get => _restoreModeOption;
+            set
+            {
+                if (!SetField(ref _restoreModeOption, value, nameof(RestoreModeOption)))
+                    return;
+
+                if (value is null)
+                    return;
+
+                RestoreMode = value.Id;
+                RestoreModeChanged?.Invoke(this);
+            }
+        }
+
+        public void SetRestoreModeOption(RestoreModeOption? option)
+        {
+            if (ReferenceEquals(_restoreModeOption, option))
+                return;
+
+            _restoreModeOption = option;
+            OnPropertyChanged(nameof(RestoreModeOption));
         }
 
         private string _effectiveEncryptionDisplay = string.Empty;

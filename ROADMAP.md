@@ -691,6 +691,10 @@
     - Security: no secrets/passwords/raw keys are included.
 - [ ] `VS-1607` `P0` Optional sandbox restore mode with per-project default and per-run override.
   - Scope: sandbox workspace creation, review/apply path, cleanup options, and per-project restore-mode preference.
+  - Current status:
+    - In progress: project schema/model now persists `restore_mode` (`direct` / `sandbox`) with migration-safe default `direct`.
+    - In progress: Backups per-project cards now expose restore-mode selection and persist it to project settings.
+    - In progress: restore runtime now honors sandbox mode by restoring into an isolated preview folder and leaving direct mode unchanged.
   - Acceptance tests:
     - Integration: sandbox restore leaves destination untouched until confirm/apply.
     - UI: project default can be overridden at restore time.

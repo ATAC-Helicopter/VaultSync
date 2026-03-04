@@ -1103,7 +1103,7 @@
                             ColumnDefinitions="*,Auto"
                             ColumnSpacing="10">
                         <Grid Grid.Column="0"
-                              ColumnDefinitions="*,*"
+                              ColumnDefinitions="*,*,*"
                               ColumnSpacing="10"
                               RowDefinitions="Auto,Auto,Auto"
                               RowSpacing="4">
@@ -1143,6 +1143,24 @@
                             </ComboBox>
                           </StackPanel>
 
+                          <StackPanel Grid.Row="0" Grid.Column="2" Spacing="5">
+                            <TextBlock Text="{infra:LocalizedString Key=Backups.Restore.Mode.Label}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <ComboBox
+                                Classes="preset-combo"
+                                ItemsSource="{Binding DataContext.RestoreModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                SelectedItem="{Binding RestoreModeOption, Mode=TwoWay}"
+                                MaxWidth="420"
+                                HorizontalAlignment="Stretch">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                  <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
+                          </StackPanel>
+
                           <Border Grid.Row="1"
                                   Grid.Column="0"
                                   Classes="backup-tag sm info"
@@ -1164,7 +1182,7 @@
                                     CommandParameter="{Binding}" />
                           </StackPanel>
                           <TextBlock Grid.Row="2"
-                                     Grid.ColumnSpan="2"
+                                     Grid.ColumnSpan="3"
                                      Text="{Binding EncryptionSecretStatus}"
                                      FontSize="11"
                                      Foreground="{DynamicResource TextSecondaryBrush}"
