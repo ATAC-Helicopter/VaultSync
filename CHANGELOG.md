@@ -4,6 +4,7 @@
 - [VS-1607] Added per-project restore mode settings in Backups (Direct, Sandbox) and persisted restore_mode in project schema/model with migration-safe default direct.
 ### Changed
 - [VS-1607] Restore flow now honors project restore mode: sandbox restores target an isolated preview folder while direct restores keep current project-path behavior.
+- [VS-1607] Restore confirmation now includes a per-run restore-mode override selector so users can switch between direct and sandbox restore at execution time.
 
 ## [1.5.1] - 28.02.2026
 ### Added

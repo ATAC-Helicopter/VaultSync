@@ -1201,7 +1201,7 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        private async Task<bool> ConfirmRestoreBackupAsync(RestoreBackupPreparation preparation)
+        private async Task<(bool Confirmed, string RestoreMode)> ConfirmRestoreBackupAsync(RestoreBackupPreparation preparation)
         {
             return await Dispatcher.UIThread.InvokeAsync(async () =>
             {
@@ -1263,6 +1263,27 @@ namespace VaultSync.UI.ViewModels
                     guidancePanel.Children.Add(row);
                 }
 
+                var restoreModeOptions = new List<RestoreModeOption>
+                {
+                    new(ProjectRestoreMode.Direct, L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)")),
+                    new(ProjectRestoreMode.Sandbox, L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)"))
+                };
+                var restoreModeCombo = new ComboBox
+                {
+                    ItemsSource = restoreModeOptions,
+                    SelectedItem = restoreModeOptions.FirstOrDefault(o =>
+                        string.Equals(o.Id, preparation.RestoreMode, StringComparison.OrdinalIgnoreCase))
+                        ?? restoreModeOptions[0],
+                    MinWidth = 360
+                };
+                var restoreModeSelector = new StackPanel { Spacing = 5 };
+                restoreModeSelector.Children.Add(new TextBlock
+                {
+                    Text = L("Backups.Restore.Mode.Label", "Restore mode"),
+                    FontWeight = FontWeight.SemiBold
+                });
+                restoreModeSelector.Children.Add(restoreModeCombo);
+
                 var buttonRow = new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
@@ -1303,6 +1324,7 @@ namespace VaultSync.UI.ViewModels
                 content.Children.Add(question);
                 content.Children.Add(guidanceHeader);
                 content.Children.Add(guidancePanel);
+                content.Children.Add(restoreModeSelector);
                 content.Children.Add(buttonRow);
 
                 var card = new Border
@@ -1339,7 +1361,8 @@ namespace VaultSync.UI.ViewModels
                     window.Closed -= OnClosed;
                 }
 
-                return confirmed;
+                var selectedMode = (restoreModeCombo.SelectedItem as RestoreModeOption)?.Id ?? preparation.RestoreMode;
+                return (confirmed, ProjectRestoreMode.Normalize(selectedMode));
             });
         }
 
@@ -1367,11 +1390,31 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var restoreConfirmed = await ConfirmRestoreBackupAsync(preparation);
-            if (!restoreConfirmed)
+            var restoreDecision = await ConfirmRestoreBackupAsync(preparation);
+            if (!restoreDecision.Confirmed)
                 return;
 
-            var projectRoot   = preparation.ProjectRoot;
+            var selectedRestoreMode = ProjectRestoreMode.Normalize(restoreDecision.RestoreMode);
+            var restoreProject = _repo.GetProjectById(preparation.ProjectId);
+            if (restoreProject is null)
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    "Error");
+                Console.WriteLine($"[Restore] Project not found during restore execution for backupId={backupId}.");
+                return;
+            }
+
+            var projectRoot = ResolveRestoreTarget(restoreProject, selectedRestoreMode);
+            if (string.IsNullOrWhiteSpace(projectRoot))
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    "Error");
+                Console.WriteLine($"[Restore] Restore target resolution failed for backupId={backupId}.");
+                return;
+            }
+
             var backupFullPath = preparation.BackupFullPath;
             BackupsViewModel.IsBusy      = true;
             BackupsViewModel.BusyMessage = $"Restoring {preparation.ProjectName}...";
@@ -1487,7 +1530,7 @@ namespace VaultSync.UI.ViewModels
                 if (restoreSucceeded)
                 {
                     var restoredProject = _repo.GetProjectByName(preparation.ProjectName);
-                    var isDirectRestore = !string.Equals(preparation.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase);
+                    var isDirectRestore = !string.Equals(selectedRestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase);
                     if (isDirectRestore && restoredProject != null && restoredProject.NeedsRestore)
                     {
                         _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
