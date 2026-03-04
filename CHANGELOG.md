@@ -2,11 +2,16 @@
 ## [1.6.0] - Unreleased
 ### Added
 - [VS-1607] Added per-project restore mode settings in Backups (Direct, Sandbox) and persisted restore_mode in project schema/model with migration-safe default direct.
+- [VS-1608] Added preset recommendation detection for common project types (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) with cached per-path evaluation.
+- [VS-1609] Added per-project tag persistence (`projects.tags`) and editable tag field in Projects details (`comma-separated`).
 ### Changed
 - [VS-1607] Restore flow now honors project restore mode: sandbox restores target an isolated preview folder while direct restores keep current project-path behavior.
 - [VS-1607] Restore confirmation now includes a per-run restore-mode override selector so users can switch between direct and sandbox restore at execution time.
 - [VS-1607] Sandbox restore completion now offers post-restore actions (keep, open sandbox, apply to project) and optional sandbox cleanup after apply.
 - [VS-1607] Sandbox apply now includes a pre-apply summary (total/new/overwrite files and bytes) plus explicit confirmation before writing into the project path.
+- [VS-1608] Projects preset card now shows a localized recommendation reason and an `Apply recommendation` action while keeping manual preset selection fully available.
+- [VS-1609] Projects list now includes smart-group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) using project tags and lightweight preset/health signals.
+- [VS-1609] Projects smart-group selector now includes a bulk `Snapshot group` action for registered projects in the active group filter.
 
 ## [1.5.1] - 28.02.2026
 ### Added

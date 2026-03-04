@@ -113,7 +113,7 @@
               Background="{DynamicResource SurfaceCardBrush}"
               CornerRadius="24"
               Padding="{DynamicResource CardPaddingLarge}">
-        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource PageRowSpacing}">
+        <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="{DynamicResource PageRowSpacing}">
 
           <!-- Title + sort -->
           <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -164,8 +164,35 @@
             </Button>
           </Grid>
 
+          <Border Grid.Row="2"
+                  CornerRadius="12"
+                  Background="{DynamicResource InputBackgroundBrush}"
+                  BorderBrush="{DynamicResource DividerBrush}"
+                  BorderThickness="1"
+                  Padding="8,4">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+              <TextBlock VerticalAlignment="Center"
+                         Text="{infra:LocalizedString Key=Projects.Group.Label}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+              <ComboBox Grid.Column="1"
+                        Classes="preset-combo"
+                        ItemsSource="{Binding GroupOptions}"
+                        SelectedItem="{Binding SelectedGroup, Mode=TwoWay}" />
+              <Button Grid.Column="2"
+                      Padding="{DynamicResource ButtonTightPadding}"
+                      CornerRadius="10"
+                      Background="{DynamicResource Surface2}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
+                      Command="{Binding SnapshotGroupCommand}">
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Group.SnapshotAction}" />
+              </Button>
+            </Grid>
+          </Border>
+
           <!-- Projects list -->
-          <ScrollViewer Grid.Row="2"
+          <ScrollViewer Grid.Row="3"
                         VerticalScrollBarVisibility="Auto"
                         HorizontalScrollBarVisibility="Disabled"
                         Padding="0,0,0,8">
@@ -404,7 +431,7 @@
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
                     Margin="0">
-              <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
                            FontWeight="SemiBold"
@@ -432,6 +459,39 @@
                   <Run Text=" " />
                   <Run Text="{Binding PresetExample}" />
                 </TextBlock>
+                <TextBlock Grid.Row="4"
+                           IsVisible="{Binding RecommendedPreset, Converter={StaticResource StringNotEmptyConverter}}"
+                           TextWrapping="Wrap"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}">
+                  <Run Text="{infra:LocalizedString Key=Projects.Preset.Recommendation.Label}" />
+                  <Run Text=" " />
+                  <Run Text="{Binding RecommendedPreset}" />
+                  <Run Text=" - " />
+                  <Run Text="{Binding RecommendedPresetReason}" />
+                </TextBlock>
+                <Button Grid.Row="5"
+                        IsVisible="{Binding RecommendedPreset, Converter={StaticResource StringNotEmptyConverter}}"
+                        HorizontalAlignment="Left"
+                        Padding="{DynamicResource ButtonTightPadding}"
+                        CornerRadius="10"
+                        Background="{DynamicResource Surface2}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Command="{Binding DataContext.ApplyPresetRecommendationCommand, ElementName=Root}">
+                  <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Recommendation.Apply}" />
+                </Button>
+                <TextBlock Grid.Row="6"
+                           Text="{infra:LocalizedString Key=Projects.Tags.Label}"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBox Grid.Row="7"
+                         Text="{Binding TagsCsv, Mode=TwoWay}"
+                         Watermark="{infra:LocalizedString Key=Projects.Tags.Watermark}"
+                         Background="{DynamicResource InputBackgroundBrush}"
+                         BorderBrush="{DynamicResource DividerBrush}"
+                         BorderThickness="1"
+                         Padding="{DynamicResource InputPadding}" />
               </Grid>
             </Border>
 

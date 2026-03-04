@@ -704,16 +704,24 @@
     - Regression: direct restore remains available for users who do not want sandbox mode.
 - [ ] `VS-1608` `P1` Preset recommendations for detected project/library types.
   - Scope: suggest likely presets from observed folder structure/content when adding or editing a project.
+  - Current status:
+    - In progress: Projects page now computes high-signal preset recommendations from detected project markers (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) and caches results per project path.
+    - In progress: preset card now surfaces recommendation reason text with one-click `Apply recommendation` action; manual preset selection remains unchanged.
   - Acceptance tests:
     - UI: recommendations appear only when confidence is high enough to be useful.
     - Regression: manual preset selection always remains available.
-- [ ] `VS-1701` `P1` Project tagging + smart groups + bulk actions (pause/backup/snapshot by tag).
+- [ ] `VS-1609` `P1` Project tagging + smart groups + bulk actions (pause/backup/snapshot by tag).
   - Scope: manual tags, computed smart groups, shared group filters, and bulk actions in Projects/Backups.
   - Current planning note:
     - Pulled forward from the original `1.7.x` bucket because organization now has direct product value for medium/large vaults.
-- [ ] `VS-1702` `P2` Per-destination retry policy with backoff + user status summary.
+  - Current status:
+    - In progress: project schema/model now persists `tags` text on projects with migration-safe default empty value.
+    - In progress: Projects page now supports editable per-project tags (`comma-separated`) and persists updates to DB.
+    - In progress: Projects list now supports smart group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) driven by tags plus high-signal preset/health hints.
+    - In progress: Projects list group selector now includes `Snapshot group` bulk action for registered projects in the active smart-group filter.
+- [ ] `VS-1610` `P2` Per-destination retry policy with backoff + user status summary.
   - Scope: destination retry/backoff policy tuning and clearer retry status feedback for network/external targets.
-- [ ] `VS-1901` `P1` Per-project verification policies (always/scheduled/manual).
+- [ ] `VS-1611` `P1` Per-project verification policies (always/scheduled/manual).
   - Scope: verification mode per project, verification recency surfacing, and restore-confidence integration.
   - Current planning note:
     - Pulled forward from the original `1.9.x` bucket because verification policy directly supports restore trust in `1.6`.
@@ -729,6 +737,5 @@
 - [ ] `VS-1804` `P2` CLI parity with all major UI features.
 
 ## 1.9.x
-- [ ] `VS-1901` `P1` Per-project verification policies (always/scheduled/manual).
 - [ ] `VS-1902` `P1` App signing for trusted distribution.
 - [ ] `VS-1903` `P2` Background integrity audits with alerts.
