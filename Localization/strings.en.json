@@ -801,5 +801,14 @@
   "Backups.Restore.Sandbox.ApplyCompletedWithCleanupWarning": "Sandbox restore applied, but cleanup failed: {0}",
   "Backups.Restore.Sandbox.ApplyFailed": "Failed to apply sandbox restore: {0}",
   "Backups.Restore.Sandbox.ApplyMissing": "Sandbox folder no longer exists.",
-  "Backups.Restore.Sandbox.CleanupFailed": "Sandbox cleanup failed."
+  "Backups.Restore.Sandbox.CleanupFailed": "Sandbox cleanup failed.",
+  "Backups.Restore.Sandbox.ApplyConfirmTitle": "Apply sandbox restore to project?",
+  "Backups.Restore.Sandbox.ApplyConfirmPrompt": "Apply sandbox restore for '{0}' into:\n{1}",
+  "Backups.Restore.Sandbox.ApplySummaryHeader": "Apply summary",
+  "Backups.Restore.Sandbox.ApplySummaryTotalFiles": "Total files to copy: {0}",
+  "Backups.Restore.Sandbox.ApplySummaryNewFiles": "New files: {0}",
+  "Backups.Restore.Sandbox.ApplySummaryOverwriteFiles": "Files that overwrite existing project files: {0}",
+  "Backups.Restore.Sandbox.ApplySummaryTotalBytes": "Total data to write: {0}",
+  "Backups.Restore.Sandbox.ApplySummaryOverwriteBytes": "Data that overwrites existing files: {0}",
+  "Backups.Restore.Sandbox.ApplyConfirmWarning": "Existing files with matching paths will be overwritten."
 }

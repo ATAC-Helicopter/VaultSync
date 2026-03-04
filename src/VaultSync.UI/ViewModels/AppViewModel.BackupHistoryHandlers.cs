@@ -1531,6 +1531,11 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
+            var preview = await Task.Run(() => BuildSandboxApplyPreview(sandboxPath, targetPath));
+            var applyConfirmed = await ConfirmSandboxApplyAsync(projectName, targetPath, preview);
+            if (!applyConfirmed)
+                return;
+
             var applyCardId = $"sandbox-apply-{project.Id}";
             BackupsViewModel.IsBusy = true;
             BackupsViewModel.BusyMessage = L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...");
@@ -1606,6 +1611,179 @@ namespace VaultSync.UI.ViewModels
                         cleanupError),
                     "Warning");
             }
+        }
+
+        private sealed record SandboxApplyPreview(
+            int TotalFiles,
+            int NewFiles,
+            int OverwriteFiles,
+            long TotalBytes,
+            long OverwriteBytes);
+
+        private static SandboxApplyPreview BuildSandboxApplyPreview(string sandboxPath, string targetPath)
+        {
+            var totalFiles = 0;
+            var newFiles = 0;
+            var overwriteFiles = 0;
+            long totalBytes = 0;
+            long overwriteBytes = 0;
+
+            foreach (var sourceFile in Directory.EnumerateFiles(sandboxPath, "*", SearchOption.AllDirectories))
+            {
+                totalFiles++;
+                var fileInfo = new FileInfo(sourceFile);
+                totalBytes += fileInfo.Length;
+
+                var relativePath = Path.GetRelativePath(sandboxPath, sourceFile);
+                var destinationFile = Path.Combine(targetPath, relativePath);
+                if (File.Exists(destinationFile))
+                {
+                    overwriteFiles++;
+                    overwriteBytes += fileInfo.Length;
+                }
+                else
+                {
+                    newFiles++;
+                }
+            }
+
+            return new SandboxApplyPreview(totalFiles, newFiles, overwriteFiles, totalBytes, overwriteBytes);
+        }
+
+        private async Task<bool> ConfirmSandboxApplyAsync(string projectName, string targetPath, SandboxApplyPreview preview)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Restore.Sandbox.ApplyConfirmTitle", "Apply sandbox restore to project?"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var prompt = new TextBlock
+                {
+                    Text = Lf(
+                        "Backups.Restore.Sandbox.ApplyConfirmPrompt",
+                        "Apply sandbox restore for '{0}' into:\n{1}",
+                        projectName,
+                        targetPath),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var summaryHeader = new TextBlock
+                {
+                    Text = L("Backups.Restore.Sandbox.ApplySummaryHeader", "Apply summary"),
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var summaryLines = new[]
+                {
+                    Lf("Backups.Restore.Sandbox.ApplySummaryTotalFiles", "Total files to copy: {0}", preview.TotalFiles.ToString(CultureInfo.CurrentCulture)),
+                    Lf("Backups.Restore.Sandbox.ApplySummaryNewFiles", "New files: {0}", preview.NewFiles.ToString(CultureInfo.CurrentCulture)),
+                    Lf("Backups.Restore.Sandbox.ApplySummaryOverwriteFiles", "Files that overwrite existing project files: {0}", preview.OverwriteFiles.ToString(CultureInfo.CurrentCulture)),
+                    Lf("Backups.Restore.Sandbox.ApplySummaryTotalBytes", "Total data to write: {0}", BackupSnapshotItem.FormatSize(preview.TotalBytes)),
+                    Lf("Backups.Restore.Sandbox.ApplySummaryOverwriteBytes", "Data that overwrites existing files: {0}", BackupSnapshotItem.FormatSize(preview.OverwriteBytes))
+                };
+
+                var summaryPanel = new StackPanel { Spacing = 4 };
+                foreach (var line in summaryLines)
+                {
+                    var row = new TextBlock
+                    {
+                        Text = "• " + line,
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    if (GetBrush("TextSecondary") is { } secondary)
+                        row.Foreground = secondary;
+                    summaryPanel.Children.Add(row);
+                }
+
+                var warning = new TextBlock
+                {
+                    Text = L("Backups.Restore.Sandbox.ApplyConfirmWarning", "Existing files with matching paths will be overwritten."),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                if (GetBrush("TextSecondary") is { } warningBrush)
+                    warning.Foreground = warningBrush;
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var applyButton = new Button
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
+                    MinWidth = 150
+                };
+                applyButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                cancelButton.Click += (_, _) => window?.Close();
+                applyButton.Click += (_, _) =>
+                {
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(applyButton);
+
+                var content = new StackPanel { Spacing = 12 };
+                content.Children.Add(title);
+                content.Children.Add(prompt);
+                content.Children.Add(summaryHeader);
+                content.Children.Add(summaryPanel);
+                content.Children.Add(warning);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Restore.Sandbox.ApplyConfirmTitle", "Apply sandbox restore to project?"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 700,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return confirmed;
+            });
         }
 
         private void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
