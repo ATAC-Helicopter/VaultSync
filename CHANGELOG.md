@@ -19,6 +19,7 @@
 - [BUG-16001] Windowed history chips now trim long mode/import/encryption labels to keep spacing stable next to the size pill.
 - [BUG-16003] Restore active backup cards now report restore/decrypt stages (not generic backup stage labels) with live throughput and restored-bytes progress detail.
 - [BUG-16004] Diff imported-type chip no longer shows raw key text; English localization now includes `Backups.Section.TypeImported`.
+- [BUG-16005] Elevated patch helper now validates patch request paths and constrains manifest file targets to the staging/install roots, blocking absolute and traversal paths during verify/copy.
 
 ## [1.5.1] - 28.02.2026
 ### Added

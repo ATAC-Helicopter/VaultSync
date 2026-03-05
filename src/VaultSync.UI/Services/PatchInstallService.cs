@@ -74,8 +74,18 @@ namespace VaultSync.UI.Services
                 if (!File.Exists(requestPath))
                     return false;
 
-                request = JsonSerializer.Deserialize<PatchApplyRequest>(File.ReadAllText(requestPath));
-                return request is not null;
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<PatchApplyRequest>(File.ReadAllText(requestPath));
+                    if (!TryNormalizeRequest(parsed, out request, out _))
+                        return false;
+
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
             }
 
             if (args.Length < 4 || !string.Equals(args[0], ApplyArg, StringComparison.OrdinalIgnoreCase))
@@ -97,8 +107,10 @@ namespace VaultSync.UI.Services
                 }
             }
 
-            request = new PatchApplyRequest(archivePath, manifestPath, installDir, restart, waitPid);
-            return true;
+            return TryNormalizeRequest(
+                new PatchApplyRequest(archivePath, manifestPath, installDir, restart, waitPid),
+                out request,
+                out _);
         }
 
         public static Task<PatchApplyResult> ApplyPatchAsync(
@@ -249,6 +261,11 @@ namespace VaultSync.UI.Services
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                if (!TryNormalizeRequest(request, out var normalizedRequest, out var normalizeError))
+                    throw new InvalidOperationException($"Invalid patch apply request: {normalizeError}");
+
+                request = normalizedRequest!;
+
                 if (request.WaitPid is { } pid)
                 {
                     try
@@ -321,7 +338,7 @@ namespace VaultSync.UI.Services
         {
             foreach (var file in manifest.Files)
             {
-                var candidate = Path.Combine(stagingDir, file.RelativePath);
+                var candidate = CombineUnderRoot(stagingDir, file.RelativePath, "manifest file path");
                 if (!File.Exists(candidate))
                     throw new FileNotFoundException($"Patched file missing: {file.RelativePath}", candidate);
 
@@ -345,8 +362,8 @@ namespace VaultSync.UI.Services
         {
             foreach (var file in manifest.Files)
             {
-                var source = Path.Combine(stagingDir, file.RelativePath);
-                var target = Path.Combine(installDir, file.RelativePath);
+                var source = CombineUnderRoot(stagingDir, file.RelativePath, "manifest source path");
+                var target = CombineUnderRoot(installDir, file.RelativePath, "manifest target path");
                 var targetDir = Path.GetDirectoryName(target);
                 if (!string.IsNullOrWhiteSpace(targetDir))
                 {
@@ -421,6 +438,128 @@ namespace VaultSync.UI.Services
                 return $"\"{value}\"";
 
             return value;
+        }
+
+        private static bool TryNormalizeRequest(
+            PatchApplyRequest? request,
+            out PatchApplyRequest? normalized,
+            out string? error)
+        {
+            normalized = null;
+            error = null;
+
+            if (request is null)
+            {
+                error = "Request payload is empty.";
+                return false;
+            }
+
+            if (!TryNormalizeFilePath(request.ArchivePath, out var archivePath, out error))
+                return false;
+
+            if (!TryNormalizeFilePath(request.ManifestPath, out var manifestPath, out error))
+                return false;
+
+            if (!TryNormalizeDirectoryPath(request.InstallDir, out var installDir, out error))
+                return false;
+
+            if (request.WaitPid is <= 0)
+            {
+                error = "Invalid wait PID.";
+                return false;
+            }
+
+            normalized = new PatchApplyRequest(
+                archivePath!,
+                manifestPath!,
+                installDir!,
+                request.Restart,
+                request.WaitPid);
+            return true;
+        }
+
+        private static bool TryNormalizeFilePath(string? path, out string? normalized, out string? error)
+        {
+            normalized = null;
+            error = null;
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                error = "File path is missing.";
+                return false;
+            }
+
+            var trimmed = path.Trim();
+            try
+            {
+                var fullPath = Path.GetFullPath(trimmed);
+                if (!Path.IsPathFullyQualified(fullPath))
+                {
+                    error = "File path must be absolute.";
+                    return false;
+                }
+
+                normalized = fullPath;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TryNormalizeDirectoryPath(string? path, out string? normalized, out string? error)
+        {
+            normalized = null;
+            error = null;
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                error = "Install directory is missing.";
+                return false;
+            }
+
+            var trimmed = path.Trim();
+            try
+            {
+                var fullPath = Path.GetFullPath(trimmed);
+                if (!Path.IsPathFullyQualified(fullPath))
+                {
+                    error = "Install directory must be absolute.";
+                    return false;
+                }
+
+                normalized = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static string CombineUnderRoot(string root, string relativePath, string context)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+                throw new InvalidOperationException($"Invalid {context}: path is empty.");
+
+            var sanitizedRelative = relativePath.Replace('\\', Path.DirectorySeparatorChar)
+                .Replace('/', Path.DirectorySeparatorChar);
+
+            if (Path.IsPathFullyQualified(sanitizedRelative))
+                throw new InvalidOperationException($"Invalid {context}: absolute paths are not allowed ({relativePath}).");
+
+            var candidate = Path.GetFullPath(Path.Combine(root, sanitizedRelative));
+            var normalizedRoot = Path.GetFullPath(root)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+
+            if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Invalid {context}: path traversal detected ({relativePath}).");
+
+            return candidate;
         }
     }
 }

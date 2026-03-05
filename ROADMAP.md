@@ -743,11 +743,12 @@
   - Scope: tighten quiet-hours input composition for windowed mode and remove excessive edge spacing.
   - Done:
     - Quiet-hours start/end fields now use centered compact groups with consistent widths and spacing.
-- [ ] `VS-1616` `P0` Patch updater trust-boundary hardening.
+- [x] `VS-1616` `P0` Patch updater trust-boundary hardening.
   - Scope: harden patch helper input/manifest handling (path normalization, traversal guards, install-root constraints, argument validation) for elevated update flows.
-  - Acceptance tests:
-    - Reject manifests containing path traversal or absolute out-of-root targets.
-    - Elevated patch apply only writes under the validated install root.
+  - Done:
+    - Patch apply requests are now normalized/validated before execution (absolute paths only, invalid PID guardrails).
+    - Manifest file paths are resolved through strict `CombineUnderRoot` checks to block absolute/out-of-root traversal targets.
+    - Patch staging and install copy now enforce root-bounded file resolution for both verify and write phases.
 - [ ] `VS-1617` `P1` Network-share delete fallback and user-guided recovery flow.
   - Scope: make backup delete on SMB/NAS robust when marker files are protected/locked, with deterministic prompt/retry/skip behavior.
   - Acceptance tests:
