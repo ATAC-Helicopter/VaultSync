@@ -582,6 +582,8 @@
 ## 1.6.x
 
 ### 1.6.0 direction
+- Release target: **2026-03-09** (Monday).
+- Ship rule: only critical fixes and already in-progress `1.6.0` work should be pulled into this release window; all non-critical scope rolls forward.
 - Theme: control, restore safety, and organization.
 - Product goal: make VaultSync feel safer to restore from, easier to organize at scale, and more user-controlled in everyday project setup.
 - Release shape:
@@ -658,19 +660,30 @@
 6. Stabilization pass and release hardening.
 
 ### 1.6 ticket backlog (execution-ready)
-- [ ] `VS-1601` `P0` Richer restore flows (selective restore, dry-run previews, conflict prompts).
+- [x] `VS-1601` `P0` Richer restore flows (selective restore, dry-run previews, conflict prompts).
   - Scope: add restore preview model, selective restore targets, and conflict classification before execution.
+  - Done:
+    - Restore confirmation includes a pre-run preview summary for plain backups (files in backup, new files, overwrite count, potential conflicts, project-only files kept, total bytes).
+    - Encrypted backups surface an explicit preview-unavailable reason before decrypt starts.
+    - Restore confirmation now supports selective top-level restore targets for plain backups/archives.
+    - Restore execution applies only selected top-level targets while preserving direct/sandbox mode behavior.
   - Acceptance tests:
     - UI: restore preview lists overwrite/add/delete/conflict counts before run.
     - Integration: selective restore applies only chosen paths.
     - Regression: standard direct restore still works unchanged when preview options are not used.
-- [ ] `VS-1602` `P0` Restore point browser with compare + timeline.
+- [x] `VS-1602` `P0` Restore point browser with compare + timeline.
   - Scope: timeline-style restore point browser with compare support between selected backups/snapshots.
+  - Done:
+    - Backups history panel now exposes restore-point timeline selectors (`A` / `B`) bound to filtered chronological history.
+    - Added compare action that opens a structured compare summary (time range, elapsed interval, size delta, net-diff delta, and latest-point diff stats).
+    - Compare selection works with current history filters and project grouping without changing restore flow behavior.
   - Acceptance tests:
     - UI: user can navigate restore points chronologically and compare two points.
     - UX: browser remains responsive on projects with long history.
 - [ ] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
   - Scope: per-project growth metrics, top storage consumers, and clearer dashboard/backups storage summaries.
+  - Current status:
+    - In progress: Backups per-project cards now surface storage delta (`Δ`) versus the previous backup snapshot size for each project.
   - Acceptance tests:
     - UI: metrics align with stored backup/snapshot data.
     - Perf: reporting does not cause blocking UI refresh on common data sets.
@@ -684,45 +697,59 @@
   - Acceptance tests:
     - UI: health state reflects real backup/verification history.
     - UX: timeline/trend surfaces do not crowd primary actions.
-- [ ] `VS-1606` `P2` Exportable config bundle for migration/support.
+- [x] `VS-1606` `P2` Exportable config bundle for migration/support.
   - Scope: export redacted app config, diagnostics context, and selected metadata for support/migration workflows.
   - Acceptance tests:
     - Integration: exported bundle opens and contains the expected redacted data set.
     - Security: no secrets/passwords/raw keys are included.
-- [ ] `VS-1607` `P0` Optional sandbox restore mode with per-project default and per-run override.
+  - Done:
+    - Settings > Advanced now includes `Export support bundle` action that creates a shareable zip under `Documents/VaultSync/Exports/Support`.
+    - Bundle includes redacted config snapshot, local/destination metadata summaries, telemetry export zip, and recent diagnostics logs.
+    - Sensitive values (passwords, key refs, credential usernames/domains) are redacted in the exported report payload.
+- [x] `VS-1607` `P0` Optional sandbox restore mode with per-project default and per-run override.
   - Scope: sandbox workspace creation, review/apply path, cleanup options, and per-project restore-mode preference.
-  - Current status:
-    - In progress: project schema/model now persists `restore_mode` (`direct` / `sandbox`) with migration-safe default `direct`.
-    - In progress: Backups per-project cards now expose restore-mode selection and persist it to project settings.
-    - In progress: restore runtime now honors sandbox mode by restoring into an isolated preview folder and leaving direct mode unchanged.
-    - In progress: restore confirmation now allows per-run restore-mode override (`Direct` / `Sandbox`) before execution.
-    - In progress: sandbox completion now provides post-restore actions (`Keep`, `Open sandbox`, `Apply to project`) with optional cleanup-after-apply.
-    - In progress: sandbox apply path now shows a pre-apply summary (files/overwrite/bytes) with explicit confirm/cancel gate.
+  - Done:
+    - Project schema/model persists `restore_mode` (`direct` / `sandbox`) with migration-safe default `direct`.
+    - Backups per-project cards expose restore-mode selection and persist it to project settings.
+    - Restore runtime honors sandbox mode by restoring into an isolated preview folder while direct mode keeps existing behavior.
+    - Restore confirmation supports per-run restore-mode override (`Direct` / `Sandbox`) before execution.
+    - Sandbox completion provides post-restore actions (`Keep`, `Open sandbox`, `Apply to project`) with optional cleanup-after-apply.
+    - Sandbox apply path includes pre-apply summary (files/overwrite/bytes) with explicit confirm/cancel gate.
   - Acceptance tests:
     - Integration: sandbox restore leaves destination untouched until confirm/apply.
     - UI: project default can be overridden at restore time.
     - Regression: direct restore remains available for users who do not want sandbox mode.
-- [ ] `VS-1608` `P1` Preset recommendations for detected project/library types.
+- [x] `VS-1608` `P1` Preset recommendations for detected project/library types.
   - Scope: suggest likely presets from observed folder structure/content when adding or editing a project.
-  - Current status:
-    - In progress: Projects page now computes high-signal preset recommendations from detected project markers (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) and caches results per project path.
-    - In progress: preset card now surfaces recommendation reason text with one-click `Apply recommendation` action; manual preset selection remains unchanged.
+  - Done:
+    - Projects page computes high-signal preset recommendations from detected project markers (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) and caches results per project path.
+    - Preset card surfaces recommendation reason text with one-click `Apply recommendation` action; manual preset selection remains unchanged.
+    - Confidence gating was tightened for generic stacks (`Node`, `Python`, `.NET`) so recommendations are shown only when corroborating markers are present.
   - Acceptance tests:
     - UI: recommendations appear only when confidence is high enough to be useful.
     - Regression: manual preset selection always remains available.
-- [ ] `VS-1609` `P1` Project tagging + smart groups + bulk actions (pause/backup/snapshot by tag).
+- [x] `VS-1609` `P1` Project tagging + smart groups + bulk actions (pause/backup/snapshot by tag).
   - Scope: manual tags, computed smart groups, shared group filters, and bulk actions in Projects/Backups.
   - Current planning note:
     - Pulled forward from the original `1.7.x` bucket because organization now has direct product value for medium/large vaults.
-  - Current status:
-    - In progress: project schema/model now persists `tags` text on projects with migration-safe default empty value.
-    - In progress: Projects page now supports editable per-project tags (`comma-separated`) and persists updates to DB.
-    - In progress: Projects list now supports smart group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) driven by tags plus high-signal preset/health hints.
-    - In progress: Projects list group selector now includes `Snapshot group` bulk action for registered projects in the active smart-group filter.
-- [ ] `VS-1610` `P2` Per-destination retry policy with backoff + user status summary.
+  - Done:
+    - Project schema/model now persists `tags` text on projects with migration-safe default empty value.
+    - Projects page supports editable per-project tags (`comma-separated`) and persists updates to DB.
+    - Projects list supports smart group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) driven by tags plus high-signal preset/health hints.
+    - Projects group controls now include bulk actions for `Snapshot group`, `Back up group`, and `Enable/Disable auto backups` for all registered projects in the active group.
+- [x] `VS-1610` `P2` Per-destination retry policy with backoff + user status summary.
   - Scope: destination retry/backoff policy tuning and clearer retry status feedback for network/external targets.
-- [ ] `VS-1611` `P1` Per-project verification policies (always/scheduled/manual).
+  - Done:
+    - Backup destination settings now persist per-destination retry policy (`attempts`, `base backoff seconds`) with bounded validation.
+    - Manual and auto-backup flows now apply destination-scoped retry loops with exponential backoff and retry telemetry events.
+    - Backups UI now surfaces retry status messaging and exhausted-retry summaries for failed destinations.
+- [x] `VS-1611` `P1` Per-project verification policies (always/scheduled/manual).
   - Scope: verification mode per project, verification recency surfacing, and restore-confidence integration.
+  - Done:
+    - Projects schema/model now persists `verification_policy` with migration-safe default `always`.
+    - Backups per-project cards now expose verification-policy controls (`Always`, `Scheduled`, `Manual`) and persist updates live.
+    - Post-backup flow now evaluates project verification policy (`always` -> verify, `scheduled` -> auto runs, `manual` -> skip auto verify).
+    - Metadata sync project settings now export/import verification policy alongside encryption settings.
   - Current planning note:
     - Pulled forward from the original `1.9.x` bucket because verification policy directly supports restore trust in `1.6`.
 - [x] `VS-1612` `P1` Windowed backup-history card layout hardening.

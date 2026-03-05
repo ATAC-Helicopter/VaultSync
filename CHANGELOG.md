@@ -1,17 +1,29 @@
 ﻿# Changelog
-## [1.6.0] - Unreleased
+## [1.6.0] - Unreleased (target: 09.03.2026)
 ### Added
 - [VS-1607] Added per-project restore mode settings in Backups (Direct, Sandbox) and persisted restore_mode in project schema/model with migration-safe default direct.
 - [VS-1608] Added preset recommendation detection for common project types (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) with cached per-path evaluation.
 - [VS-1609] Added per-project tag persistence (`projects.tags`) and editable tag field in Projects details (`comma-separated`).
+- [VS-1606] Added exportable support bundle generation (redacted config + metadata summaries + diagnostics + telemetry) under `Documents/VaultSync/Exports/Support`.
+- [VS-1610] Added per-destination retry policy settings (`attempts`, `base backoff seconds`) with persistence in advanced backup destinations.
+- [VS-1611] Added per-project verification policy persistence (`always`, `scheduled`, `manual`) with metadata sync import/export coverage.
 ### Changed
 - [VS-1607] Restore flow now honors project restore mode: sandbox restores target an isolated preview folder while direct restores keep current project-path behavior.
 - [VS-1607] Restore confirmation now includes a per-run restore-mode override selector so users can switch between direct and sandbox restore at execution time.
 - [VS-1607] Sandbox restore completion now offers post-restore actions (keep, open sandbox, apply to project) and optional sandbox cleanup after apply.
 - [VS-1607] Sandbox apply now includes a pre-apply summary (total/new/overwrite files and bytes) plus explicit confirmation before writing into the project path.
+- [VS-1601] Restore confirmation now includes a pre-run preview for plain backups (files in backup, new files, overwrite count, potential conflicts, project-only files kept, total bytes).
+- [VS-1601] Restore confirmation now supports selective top-level restore targets, and restore execution applies only selected targets for plain backups/archives.
+- [VS-1602] Backups history now includes restore-point timeline compare selectors (`A` / `B`) with a compare summary dialog (range, elapsed, size delta, net-diff delta, latest-point diff stats).
 - [VS-1608] Projects preset card now shows a localized recommendation reason and an `Apply recommendation` action while keeping manual preset selection fully available.
+- [VS-1608] Preset recommendation confidence gating now requires corroborating markers for generic stacks (`Node`, `Python`, `.NET`) to reduce noisy/low-confidence suggestions.
 - [VS-1609] Projects list now includes smart-group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) using project tags and lightweight preset/health signals.
 - [VS-1609] Projects smart-group selector now includes a bulk `Snapshot group` action for registered projects in the active group filter.
+- [VS-1609] Projects smart-group controls now include `Back up group` and group-wide auto-backup toggles (`Disable auto`, `Enable auto`) to support pause/backup workflows by tag/group.
+- [VS-1603] Backups per-project cards now show storage delta (`Δ`) versus the previous backup size to surface per-project growth/shrink at a glance.
+- [VS-1610] Manual and auto-backup destination execution now uses destination-scoped retry loops with exponential backoff and retry telemetry/status feedback.
+- [VS-1611] Post-backup verification flow now follows per-project verification policy (`always` verifies every run, `scheduled` verifies auto-runs, `manual` skips automatic verification).
+- [VS-1606] Settings > Advanced now exposes an `Export support bundle` action that writes a redacted support zip and opens the export folder.
 - [ISS-16001] Quiet-hours editor now uses a compact centered start/end layout with consistent control widths in windowed mode.
 - [ISS-16002] App config load retry now uses async backoff/read operations instead of blocking sleep loops during transient file-lock contention.
 ### Fixed
@@ -24,6 +36,7 @@
 - [BUG-16006] Backup delete now enforces destination-root path containment and uses a manual fallback delete pass with explicit permission guidance for protected SMB/NAS files.
 - [BUG-16007] Elevated patch mode now binds request payload integrity via launcher-provided SHA-256 and re-validates patch archive hash/size in helper before extraction.
 - [BUG-16008] Retention cleanup, restore preparation, and tray backup-folder open flow now enforce destination-root path containment to reject out-of-root/traversal backup paths.
+- [BUG-16009] Backups page windowed layout now reflows the per-project and history panels (including per-project destination/encryption/restore controls) to prevent narrow-width collapse and overlap.
 
 ## [1.5.1] - 28.02.2026
 ### Added
