@@ -457,7 +457,7 @@
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
                     Margin="0">
-              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.SnapshotPreset}"
                            FontSize="11"
                            FontWeight="SemiBold"
@@ -518,6 +518,80 @@
                          BorderBrush="{DynamicResource DividerBrush}"
                          BorderThickness="1"
                          Padding="{DynamicResource InputPadding}" />
+                <Button Grid.Row="8"
+                        HorizontalAlignment="Left"
+                        Padding="{DynamicResource ButtonTightPadding}"
+                        CornerRadius="10"
+                        Background="{DynamicResource Surface2}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Command="{Binding DataContext.TogglePresetEditorCommand, ElementName=Root}"
+                        IsVisible="{Binding DataContext.HasPresetEditorTarget, ElementName=Root}">
+                  <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Toggle}" />
+                </Button>
+                <Border Grid.Row="9"
+                        IsVisible="{Binding DataContext.IsPresetEditorVisible, ElementName=Root}"
+                        CornerRadius="10"
+                        Background="{DynamicResource CardRaisedBackgroundBrush}"
+                        Padding="{DynamicResource CardPaddingSmall}">
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                        RowSpacing="6">
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Title}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Grid.Row="1"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               Text="{Binding DataContext.PresetEditorPath, ElementName=Root}"
+                               TextWrapping="Wrap"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="2" />
+                    <TextBox Grid.Row="2"
+                             AcceptsReturn="True"
+                             TextWrapping="NoWrap"
+                             FontFamily="Consolas, Menlo, monospace"
+                             MinHeight="140"
+                             MaxHeight="220"
+                             VerticalContentAlignment="Top"
+                             Text="{Binding DataContext.PresetEditorContent, ElementName=Root, Mode=TwoWay}"
+                             Background="{DynamicResource InputBackgroundBrush}"
+                             BorderBrush="{DynamicResource DividerBrush}"
+                             BorderThickness="1"
+                             Padding="{DynamicResource InputPadding}" />
+                    <StackPanel Grid.Row="3"
+                                Spacing="6">
+                      <WrapPanel ItemSpacing="6"
+                                 LineSpacing="6">
+                        <Button Padding="{DynamicResource ButtonTightPadding}"
+                                CornerRadius="10"
+                                Background="{DynamicResource Surface2}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Command="{Binding DataContext.ReloadPresetEditorCommand, ElementName=Root}">
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Reload}" />
+                        </Button>
+                        <Button Padding="{DynamicResource ButtonTightPadding}"
+                                CornerRadius="10"
+                                Background="{DynamicResource Surface2}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Command="{Binding DataContext.PreviewPresetEditorCommand, ElementName=Root}">
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Preview}" />
+                        </Button>
+                        <Button Padding="{DynamicResource ButtonTightPadding}"
+                                CornerRadius="10"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource ButtonForegroundBrush}"
+                                Command="{Binding DataContext.SavePresetEditorCommand, ElementName=Root}">
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Save}" />
+                        </Button>
+                      </WrapPanel>
+                      <TextBlock FontSize="10"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 Text="{Binding DataContext.PresetEditorStatus, ElementName=Root}"
+                                 TextWrapping="Wrap"
+                                 MaxLines="3" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
               </Grid>
             </Border>
 

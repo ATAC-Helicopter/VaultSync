@@ -71,6 +71,10 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _openFolderCommand;
     private readonly RelayCommand _removeProjectCommand;
     private readonly RelayCommand _applyPresetRecommendationCommand;
+    private readonly RelayCommand _togglePresetEditorCommand;
+    private readonly RelayCommand _reloadPresetEditorCommand;
+    private readonly RelayCommand _savePresetEditorCommand;
+    private readonly RelayCommand _previewPresetEditorCommand;
     private readonly RelayCommand _snapshotGroupCommand;
     private readonly RelayCommand _backupGroupCommand;
     private readonly RelayCommand _disableAutoBackupGroupCommand;
@@ -92,6 +96,7 @@ public class ProjectsViewModel : ViewModelBase
                 RefreshSelectedProjectRegistration();
                 UpdateProjectPresetRecommendation(value);
                 LoadSnapshotHistoryForSelectedProject();
+                LoadPresetEditorForSelectedProject();
             }
         }
     }
@@ -126,10 +131,48 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand TakeSnapshotCommand => SnapshotCommand;
     public ICommand ManageProjectEncryptionCommand { get; }
     public ICommand ApplyPresetRecommendationCommand { get; }
+    public ICommand TogglePresetEditorCommand { get; }
+    public ICommand ReloadPresetEditorCommand { get; }
+    public ICommand SavePresetEditorCommand { get; }
+    public ICommand PreviewPresetEditorCommand { get; }
     public ICommand ToggleSortCommand { get; }
     public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
     public event Action<int, string>? ProjectEncryptionPolicyChanged;
     public event Action<IReadOnlyList<int>>? BackupGroupRequested;
+    private string _presetEditorContent = string.Empty;
+    public string PresetEditorContent
+    {
+        get => _presetEditorContent;
+        set => SetProperty(ref _presetEditorContent, value ?? string.Empty);
+    }
+
+    private string _presetEditorStatus = string.Empty;
+    public string PresetEditorStatus
+    {
+        get => _presetEditorStatus;
+        set => SetProperty(ref _presetEditorStatus, value ?? string.Empty);
+    }
+
+    private string _presetEditorPath = string.Empty;
+    public string PresetEditorPath
+    {
+        get => _presetEditorPath;
+        set => SetProperty(ref _presetEditorPath, value ?? string.Empty);
+    }
+
+    private bool _hasPresetEditorTarget;
+    public bool HasPresetEditorTarget
+    {
+        get => _hasPresetEditorTarget;
+        set => SetProperty(ref _hasPresetEditorTarget, value);
+    }
+
+    private bool _isPresetEditorVisible;
+    public bool IsPresetEditorVisible
+    {
+        get => _isPresetEditorVisible;
+        set => SetProperty(ref _isPresetEditorVisible, value);
+    }
     public string SearchText
     {
         get => _searchText;
@@ -193,6 +236,10 @@ public class ProjectsViewModel : ViewModelBase
         _removeProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
         _applyPresetRecommendationCommand = new RelayCommand(_ => ApplyPresetRecommendation(), _ =>
             SelectedProject is { RecommendedPreset: { Length: > 0 } });
+        _togglePresetEditorCommand = new RelayCommand(_ => TogglePresetEditor(), _ => HasPresetEditorTarget);
+        _reloadPresetEditorCommand = new RelayCommand(_ => ReloadPresetEditor(), _ => HasPresetEditorTarget);
+        _savePresetEditorCommand = new RelayCommand(_ => SavePresetEditor(), _ => HasPresetEditorTarget);
+        _previewPresetEditorCommand = new RelayCommand(_ => PreviewPresetEditor(), _ => HasPresetEditorTarget);
         _snapshotGroupCommand = new RelayCommand(
             _ => _ = RunDetachedAsync(SnapshotSelectedGroupAsync, "snapshot-selected-group"),
             _ => CanSnapshotSelectedGroup());
@@ -208,6 +255,10 @@ public class ProjectsViewModel : ViewModelBase
         OpenFolderCommand = _openFolderCommand;
         RemoveProjectCommand = _removeProjectCommand;
         ApplyPresetRecommendationCommand = _applyPresetRecommendationCommand;
+        TogglePresetEditorCommand = _togglePresetEditorCommand;
+        ReloadPresetEditorCommand = _reloadPresetEditorCommand;
+        SavePresetEditorCommand = _savePresetEditorCommand;
+        PreviewPresetEditorCommand = _previewPresetEditorCommand;
         SnapshotGroupCommand = _snapshotGroupCommand;
         BackupGroupCommand = _backupGroupCommand;
         DisableAutoBackupGroupCommand = _disableAutoBackupGroupCommand;
@@ -1537,6 +1588,8 @@ public class ProjectsViewModel : ViewModelBase
         {
             UpdateProjectPresetDisplay(vm);
             UpdateProjectPresetRecommendation(vm);
+            if (ReferenceEquals(vm, SelectedProject))
+                LoadPresetEditorForSelectedProject();
         }
 
         if (changedRecommendedPreset && ReferenceEquals(vm, SelectedProject))
@@ -1898,6 +1951,180 @@ public class ProjectsViewModel : ViewModelBase
 
         vm.PresetDescription = Lf("Projects.Preset.DescriptionUnknown", "Preset '{0}' is active.", vm.Preset);
         vm.PresetExample = string.Empty;
+    }
+
+    private void TogglePresetEditor()
+    {
+        if (!HasPresetEditorTarget)
+            return;
+
+        IsPresetEditorVisible = !IsPresetEditorVisible;
+        if (IsPresetEditorVisible && string.IsNullOrWhiteSpace(PresetEditorContent))
+            ReloadPresetEditor();
+    }
+
+    private void ReloadPresetEditor()
+    {
+        if (!TryResolveSelectedPresetPath(out var presetPath, out _))
+            return;
+
+        try
+        {
+            PresetEditorContent = File.Exists(presetPath)
+                ? File.ReadAllText(presetPath)
+                : string.Empty;
+            PresetEditorStatus = File.Exists(presetPath)
+                ? L("Projects.Preset.Editor.Status.Reloaded", "Preset rules reloaded.")
+                : L("Projects.Preset.Editor.Status.NewFile", "Preset file does not exist yet. Save to create it.");
+        }
+        catch (Exception ex)
+        {
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ReloadFailed", "Failed to reload preset rules: {0}", ex.Message);
+        }
+    }
+
+    private void SavePresetEditor()
+    {
+        if (!TryResolveSelectedPresetPath(out var presetPath, out var presetId))
+            return;
+
+        try
+        {
+            var parent = Path.GetDirectoryName(presetPath);
+            if (!string.IsNullOrWhiteSpace(parent))
+                Directory.CreateDirectory(parent);
+
+            File.WriteAllText(presetPath, PresetEditorContent ?? string.Empty);
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.Saved", "Saved preset '{0}'.", presetId);
+        }
+        catch (Exception ex)
+        {
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.SaveFailed", "Failed to save preset rules: {0}", ex.Message);
+        }
+    }
+
+    private void PreviewPresetEditor()
+    {
+        var project = SelectedProject;
+        if (project is null || string.IsNullOrWhiteSpace(project.Path) || !Directory.Exists(project.Path))
+        {
+            PresetEditorStatus = L("Projects.Preset.Editor.Status.PreviewNoProject", "Select a valid project path to preview rules.");
+            return;
+        }
+
+        try
+        {
+            var lines = (PresetEditorContent ?? string.Empty)
+                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+                .Select(line => line.Trim())
+                .Where(line => line.Length > 0 && !line.StartsWith("#"))
+                .ToList();
+
+            var filter = new FilterService(lines);
+            const int maxFiles = 10000;
+            var scanned = 0;
+            var excluded = 0;
+            var included = 0;
+
+            foreach (var file in Directory.EnumerateFiles(project.Path, "*", SearchOption.AllDirectories))
+            {
+                scanned++;
+                if (filter.ShouldExclude(project.Path, file))
+                    excluded++;
+                else
+                    included++;
+
+                if (scanned >= maxFiles)
+                    break;
+            }
+
+            PresetEditorStatus = Lf(
+                "Projects.Preset.Editor.Status.PreviewResult",
+                "Preview: scanned {0} files - included {1}, excluded {2}.",
+                scanned,
+                included,
+                excluded);
+        }
+        catch (Exception ex)
+        {
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.PreviewFailed", "Preview failed: {0}", ex.Message);
+        }
+    }
+
+    private void LoadPresetEditorForSelectedProject()
+    {
+        var project = SelectedProject;
+        if (project is null)
+        {
+            HasPresetEditorTarget = false;
+            IsPresetEditorVisible = false;
+            PresetEditorContent = string.Empty;
+            PresetEditorPath = string.Empty;
+            PresetEditorStatus = string.Empty;
+            RaisePresetEditorCanExecuteChanged();
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(project.Preset) ||
+            string.Equals(project.Preset, "no preset", StringComparison.OrdinalIgnoreCase))
+        {
+            HasPresetEditorTarget = false;
+            IsPresetEditorVisible = false;
+            PresetEditorContent = string.Empty;
+            PresetEditorPath = string.Empty;
+            PresetEditorStatus = L("Projects.Preset.Editor.Status.NoPreset", "Select a preset to edit its rules.");
+            RaisePresetEditorCanExecuteChanged();
+            return;
+        }
+
+        if (!TryResolveSelectedPresetPath(out var presetPath, out var presetId))
+        {
+            HasPresetEditorTarget = false;
+            IsPresetEditorVisible = false;
+            PresetEditorContent = string.Empty;
+            PresetEditorPath = string.Empty;
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ResolveFailed", "Could not resolve preset file for '{0}'.", presetId);
+            RaisePresetEditorCanExecuteChanged();
+            return;
+        }
+
+        HasPresetEditorTarget = true;
+        PresetEditorPath = presetPath;
+        RaisePresetEditorCanExecuteChanged();
+        ReloadPresetEditor();
+    }
+
+    private bool TryResolveSelectedPresetPath(out string presetPath, out string presetId)
+    {
+        presetPath = string.Empty;
+        presetId = SelectedProject?.Preset?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(presetId) ||
+            string.Equals(presetId, "no preset", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var dir = ResolvePresetsDirForUi();
+        if (string.IsNullOrWhiteSpace(dir))
+            return false;
+
+        if (_presetCatalogById.TryGetValue(presetId, out var info))
+        {
+            var fileName = string.IsNullOrWhiteSpace(info.File)
+                ? $"{presetId}.vaultsyncignore"
+                : info.File;
+            presetPath = Path.Combine(dir, fileName);
+            return true;
+        }
+
+        presetPath = Path.Combine(dir, $"{presetId}.vaultsyncignore");
+        return true;
+    }
+
+    private void RaisePresetEditorCanExecuteChanged()
+    {
+        _togglePresetEditorCommand.RaiseCanExecuteChanged();
+        _reloadPresetEditorCommand.RaiseCanExecuteChanged();
+        _savePresetEditorCommand.RaiseCanExecuteChanged();
+        _previewPresetEditorCommand.RaiseCanExecuteChanged();
     }
 
     private static string ResolvePresetsDirForUi()

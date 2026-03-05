@@ -17,6 +17,7 @@
 - [VS-1602] Backups history now includes restore-point timeline compare selectors (`A` / `B`) with a compare summary dialog (range, elapsed, size delta, net-diff delta, latest-point diff stats).
 - [VS-1608] Projects preset card now shows a localized recommendation reason and an `Apply recommendation` action while keeping manual preset selection fully available.
 - [VS-1608] Preset recommendation confidence gating now requires corroborating markers for generic stacks (`Node`, `Python`, `.NET`) to reduce noisy/low-confidence suggestions.
+- [VS-1604] Projects details now includes an in-app preset rules editor (reload/save + preview include/exclude counts against the selected project path) for faster preset tuning without leaving the app.
 - [VS-1609] Projects list now includes smart-group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) using project tags and lightweight preset/health signals.
 - [VS-1609] Projects smart-group selector now includes a bulk `Snapshot group` action for registered projects in the active group filter.
 - [VS-1609] Projects smart-group controls now include `Back up group` and group-wide auto-backup toggles (`Disable auto`, `Enable auto`) to support pause/backup workflows by tag/group.

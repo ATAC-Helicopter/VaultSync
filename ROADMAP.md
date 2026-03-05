@@ -690,6 +690,9 @@
     - Perf: reporting does not cause blocking UI refresh on common data sets.
 - [ ] `VS-1604` `P0` Full preset editor with include/exclude rules, preview, clone, import/export.
   - Scope: replace file-only preset maintenance with an in-app editor and preview workflow.
+  - Current status:
+    - In progress: Projects details now includes a preset-rules editor (reload/save) for the selected preset file.
+    - In progress: Preset editor now includes live preview counts (included/excluded) against the selected project path.
   - Acceptance tests:
     - UI: user can create/edit/clone/delete/import/export presets.
     - Integration: saved presets are immediately assignable to projects and resolve correctly at snapshot/backup time.
