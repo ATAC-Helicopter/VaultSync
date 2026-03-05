@@ -20,6 +20,7 @@
 - [BUG-16003] Restore active backup cards now report restore/decrypt stages (not generic backup stage labels) with live throughput and restored-bytes progress detail.
 - [BUG-16004] Diff imported-type chip no longer shows raw key text; English localization now includes `Backups.Section.TypeImported`.
 - [BUG-16005] Elevated patch helper now validates patch request paths and constrains manifest file targets to the staging/install roots, blocking absolute and traversal paths during verify/copy.
+- [BUG-16006] Backup delete now enforces destination-root path containment and uses a manual fallback delete pass with explicit permission guidance for protected SMB/NAS files.
 
 ## [1.5.1] - 28.02.2026
 ### Added

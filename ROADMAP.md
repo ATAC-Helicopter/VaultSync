@@ -749,11 +749,12 @@
     - Patch apply requests are now normalized/validated before execution (absolute paths only, invalid PID guardrails).
     - Manifest file paths are resolved through strict `CombineUnderRoot` checks to block absolute/out-of-root traversal targets.
     - Patch staging and install copy now enforce root-bounded file resolution for both verify and write phases.
-- [ ] `VS-1617` `P1` Network-share delete fallback and user-guided recovery flow.
+- [x] `VS-1617` `P1` Network-share delete fallback and user-guided recovery flow.
   - Scope: make backup delete on SMB/NAS robust when marker files are protected/locked, with deterministic prompt/retry/skip behavior.
-  - Acceptance tests:
-    - Protected marker files do not cause silent partial failure loops.
-    - User gets one clear actionable recovery path when cleanup cannot complete automatically.
+  - Done:
+    - Backup delete path now enforces destination-root-bounded path resolution before file-system operations.
+    - Robust delete now performs a manual fallback pass after recursive delete failures and reports permission-denied outcomes explicitly.
+    - Failure notifications now add a clear permissions/credentials remediation hint when protected files block delete.
 
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.

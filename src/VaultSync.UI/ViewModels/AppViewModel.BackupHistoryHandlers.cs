@@ -142,7 +142,12 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     var relativePath = backup.Path ?? string.Empty;
-                    var fullPath     = Path.GetFullPath(Path.Combine(backupRoot, relativePath));
+                    if (!TryCombinePathUnderRoot(backupRoot, relativePath, out var fullPath, out var combineError))
+                    {
+                        deleteError = combineError ?? L("Backups.Delete.Error", "Delete failed");
+                        deleteSucceeded = false;
+                        return;
+                    }
 
                     await Task.Run(() =>
                     {
@@ -150,9 +155,11 @@ namespace VaultSync.UI.ViewModels
                         {
                             if (Directory.Exists(fullPath))
                             {
-                                deleteSucceeded = DeleteDirectoryRobust(fullPath, out var deleteFailure);
+                                deleteSucceeded = DeleteDirectoryRobust(fullPath, out var deleteFailure, out var deletePermissionDenied);
                                 if (!deleteSucceeded && string.IsNullOrWhiteSpace(deleteError))
                                     deleteError = deleteFailure ?? L("Backups.Delete.Error", "Delete failed");
+                                if (deletePermissionDenied)
+                                    permissionDenied = true;
                             }
                             else if (File.Exists(fullPath))
                             {
@@ -244,6 +251,12 @@ namespace VaultSync.UI.ViewModels
                 {
                     var title = L("Backups.Delete.FailedTitle", "Backup delete failed");
                     var msg = Lf("Backups.Delete.FailedMessage", "Could not delete backup '{0}'.", projectName);
+                    if (permissionDenied)
+                    {
+                        msg = $"{msg} " + L(
+                            "Backups.Delete.PermissionHint",
+                            "VaultSync could not remove one or more protected files on the destination. Verify destination permissions/credentials and retry.");
+                    }
                     if (!string.IsNullOrWhiteSpace(deleteError))
                     {
                         msg = $"{msg} {deleteError}";
@@ -675,8 +688,12 @@ namespace VaultSync.UI.ViewModels
         /// Deletes a directory tree, clearing read-only attributes to avoid UnauthorizedAccess on Windows.
         /// </summary>
         private static bool DeleteDirectoryRobust(string path, out string? error)
+            => DeleteDirectoryRobust(path, out error, out _);
+
+        private static bool DeleteDirectoryRobust(string path, out string? error, out bool permissionDenied)
         {
             error = null;
+            permissionDenied = false;
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
                 return true;
 
@@ -688,6 +705,10 @@ namespace VaultSync.UI.ViewModels
                     var attrs = File.GetAttributes(file);
                     if ((attrs & FileAttributes.ReadOnly) != 0)
                         File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    permissionDenied = true;
                 }
                 catch
                 {
@@ -703,6 +724,10 @@ namespace VaultSync.UI.ViewModels
                     if ((attrs & FileAttributes.ReadOnly) != 0)
                         File.SetAttributes(dir, attrs & ~FileAttributes.ReadOnly);
                 }
+                catch (UnauthorizedAccessException)
+                {
+                    permissionDenied = true;
+                }
                 catch
                 {
                     // ignore
@@ -713,6 +738,134 @@ namespace VaultSync.UI.ViewModels
             {
                 Directory.Delete(path, recursive: true);
                 return !Directory.Exists(path);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                permissionDenied = true;
+                if (TryDeleteDirectoryManually(path, ref permissionDenied, out var manualError))
+                    return true;
+
+                error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
+                return false;
+            }
+            catch (IOException ex)
+            {
+                if (TryDeleteDirectoryManually(path, ref permissionDenied, out var manualError))
+                    return true;
+
+                error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                if (IsAccessDenied(ex))
+                    permissionDenied = true;
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TryDeleteDirectoryManually(string path, ref bool permissionDenied, out string? error)
+        {
+            error = null;
+            if (!Directory.Exists(path))
+                return true;
+
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        permissionDenied = true;
+                    }
+                    catch
+                    {
+                        // best effort
+                    }
+
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        permissionDenied = true;
+                        error = ex.Message;
+                    }
+                    catch (Exception ex)
+                    {
+                        error = ex.Message;
+                    }
+                }
+
+                foreach (var dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
+                                             .OrderByDescending(d => d.Length))
+                {
+                    try
+                    {
+                        Directory.Delete(dir, recursive: false);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        permissionDenied = true;
+                        error = ex.Message;
+                    }
+                    catch (Exception ex)
+                    {
+                        error = ex.Message;
+                    }
+                }
+
+                if (Directory.Exists(path))
+                    Directory.Delete(path, recursive: false);
+
+                return !Directory.Exists(path);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                permissionDenied = true;
+                error = ex.Message;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TryCombinePathUnderRoot(string root, string relativePath, out string fullPath, out string? error)
+        {
+            fullPath = string.Empty;
+            error = null;
+
+            try
+            {
+                var normalizedRoot = Path.GetFullPath(root)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+
+                var safeRelative = string.IsNullOrWhiteSpace(relativePath) ? string.Empty : relativePath.Trim();
+                if (Path.IsPathFullyQualified(safeRelative))
+                {
+                    error = "Backup path is absolute and outside destination root.";
+                    return false;
+                }
+
+                var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, safeRelative));
+                if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    error = "Backup path resolves outside destination root.";
+                    return false;
+                }
+
+                fullPath = candidate;
+                return true;
             }
             catch (Exception ex)
             {
