@@ -768,75 +768,112 @@ namespace VaultSync.UI.ViewModels
                                         }
 
                                         var destLabel = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
+                                        var retryMaxAttempts = Math.Clamp(dest.RetryMaxAttempts, 1, 10);
+                                        var retryBaseDelaySeconds = Math.Clamp(dest.RetryBackoffSeconds, 1, 300);
 
                                         try
                                         {
-                                            var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
-                                                dest,
-                                                cfg,
-                                                resolution.EffectivePath,
-                                                useArchiveMode,
-                                                CancellationToken.None);
-                                            Interlocked.Increment(ref backupAttempts);
-                                            var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
-                                                || IsRemoteDestinationPath(dest.Path);
-                                            var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
-                                            var preferParallelUpload = allowParallelUpload && isRemoteDestination;
-                                            if (!allowParallelUpload)
+                                            var destinationSucceeded = false;
+                                            var noChangesDetected = false;
+                                            for (var attemptIndex = 1; attemptIndex <= retryMaxAttempts; attemptIndex++)
                                             {
-                                                Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{destLabel}'.");
-                                            }
-                                            var sw = Stopwatch.StartNew();
-                                            var backupResult = await _backupService.RunBackupAsync(
-                                                project,
-                                                resolution.EffectivePath,
-                                                isAuto: true,
-                                                progressCallback: null,
-                                                CancellationToken.None,
-                                                useArchiveMode: useArchiveMode,
-                                                fullSnapshotHash: _settingsViewModel.UseFullSnapshotHash,
-                                                maxSnapshotsToKeep: cfg.Backups.MaxSnapshotsPerProject,
-                                                minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
-                                                preferredFinalBackupRoot: null,
-                                                reuseSnapshotId: metadataWritten ? sharedSnapshotId : null,
-                                                writeMetadata: !metadataWritten,
-                                                destinationPath: resolution.EffectivePath,
-                                                destinationAlias: destLabel,
-                                                skipIfNoChanges: true,
-                                                useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
-                                                useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
-                                                archiveUploadBufferBytes: archiveUploadBufferBytes,
-                                                preferRunnerProgressOnly: isRemoteDestination,
-                                                preferParallelArchiveUpload: preferParallelUpload,
-                                                useScanCache: _settingsViewModel.EnableScanCache,
-                                                aggressiveScanCache: _settingsViewModel.AggressiveScanCache);
-                                            sw.Stop();
-
-                                            if (backupResult.SkippedForNoChanges)
-                                            {
-                                                Telemetry.Log("auto_backup_skipped", b => b
-                                                    .WithCode("reason", "no_changes")
-                                                    .WithHashedString("project", project.Name)
-                                                    .WithHashedString("destinationPath", dest.Path ?? string.Empty));
-                                                // Skip the remaining destinations for this project to avoid redundant work.
-                                                break;
-                                            }
-
-                                            if (!metadataWritten && backupResult.BackupId > 0)
-                                            {
-                                                metadataWritten = true;
-                                                if (!sharedSnapshotId.HasValue)
+                                                try
                                                 {
-                                                    var created = _repo.GetBackupById(backupResult.BackupId);
-                                                    sharedSnapshotId = created?.SnapshotId ?? sharedSnapshotId;
+                                                    var archiveUploadBufferBytes = await EnsureArchiveUploadBufferAsync(
+                                                        dest,
+                                                        cfg,
+                                                        resolution.EffectivePath,
+                                                        useArchiveMode,
+                                                        CancellationToken.None);
+                                                    Interlocked.Increment(ref backupAttempts);
+                                                    var isRemoteDestination = IsRemoteDestinationPath(resolution.EffectivePath)
+                                                        || IsRemoteDestinationPath(dest.Path);
+                                                    var allowParallelUpload = cfg.Backups.EnableParallelArchiveUpload;
+                                                    var preferParallelUpload = allowParallelUpload && isRemoteDestination;
+                                                    if (!allowParallelUpload)
+                                                    {
+                                                        Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{destLabel}'.");
+                                                    }
+                                                    var sw = Stopwatch.StartNew();
+                                                    var backupResult = await _backupService.RunBackupAsync(
+                                                        project,
+                                                        resolution.EffectivePath,
+                                                        isAuto: true,
+                                                        progressCallback: null,
+                                                        CancellationToken.None,
+                                                        useArchiveMode: useArchiveMode,
+                                                        fullSnapshotHash: _settingsViewModel.UseFullSnapshotHash,
+                                                        maxSnapshotsToKeep: cfg.Backups.MaxSnapshotsPerProject,
+                                                        minimumFreeSpacePercent: _settingsViewModel.MinimumFreeSpacePercent,
+                                                        preferredFinalBackupRoot: null,
+                                                        reuseSnapshotId: metadataWritten ? sharedSnapshotId : null,
+                                                        writeMetadata: !metadataWritten,
+                                                        destinationPath: resolution.EffectivePath,
+                                                        destinationAlias: destLabel,
+                                                        skipIfNoChanges: true,
+                                                        useRsyncDelta: _settingsViewModel?.UseRsyncDelta ?? false,
+                                                        useIncrementalBackups: _settingsViewModel?.UseIncrementalBackups ?? false,
+                                                        archiveUploadBufferBytes: archiveUploadBufferBytes,
+                                                        preferRunnerProgressOnly: isRemoteDestination,
+                                                        preferParallelArchiveUpload: preferParallelUpload,
+                                                        useScanCache: _settingsViewModel.EnableScanCache,
+                                                        aggressiveScanCache: _settingsViewModel.AggressiveScanCache);
+                                                    sw.Stop();
+
+                                                    if (backupResult.SkippedForNoChanges)
+                                                    {
+                                                        Telemetry.Log("auto_backup_skipped", b => b
+                                                            .WithCode("reason", "no_changes")
+                                                            .WithHashedString("project", project.Name)
+                                                            .WithHashedString("destinationPath", dest.Path ?? string.Empty));
+                                                        noChangesDetected = true;
+                                                        destinationSucceeded = true;
+                                                        break;
+                                                    }
+
+                                                    if (!metadataWritten && backupResult.BackupId > 0)
+                                                    {
+                                                        metadataWritten = true;
+                                                        if (!sharedSnapshotId.HasValue)
+                                                        {
+                                                            var created = _repo.GetBackupById(backupResult.BackupId);
+                                                            sharedSnapshotId = created?.SnapshotId ?? sharedSnapshotId;
+                                                        }
+                                                    }
+
+                                                    if (backupResult.BackupId > 0)
+                                                    {
+                                                        Interlocked.Increment(ref backupSucceeded);
+                                                        RecordBackupThroughput(backupResult.BackupId, sw.Elapsed, useArchiveMode);
+                                                        TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.BackupId);
+                                                        destinationSucceeded = true;
+                                                        break;
+                                                    }
+                                                }
+                                                catch (Exception ex) when (attemptIndex < retryMaxAttempts)
+                                                {
+                                                    Interlocked.Increment(ref backupFailed);
+                                                    var delaySeconds = Math.Min(300, retryBaseDelaySeconds * (1 << Math.Max(0, attemptIndex - 1)));
+                                                    Telemetry.Log("auto_backup_destination_retry", b => b
+                                                        .WithHashedString("project", project.Name)
+                                                        .WithHashedString("projectRoot", project.RootPath)
+                                                        .WithHashedString("destinationPath", dest.Path)
+                                                        .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
+                                                        .WithCount("attempt", attemptIndex + 1)
+                                                        .WithCount("maxAttempts", retryMaxAttempts)
+                                                        .WithFlag("useArchiveMode", useArchiveMode)
+                                                        .WithException(ex));
+                                                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), CancellationToken.None);
                                                 }
                                             }
 
-                                            if (backupResult.BackupId > 0)
+                                            if (!destinationSucceeded)
                                             {
-                                                Interlocked.Increment(ref backupSucceeded);
-                                                RecordBackupThroughput(backupResult.BackupId, sw.Elapsed, useArchiveMode);
-                                                TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, backupResult.BackupId);
+                                                Interlocked.Increment(ref backupFailed);
+                                            }
+                                            if (noChangesDetected)
+                                            {
+                                                break;
                                             }
                                         }
                                         catch (Exception ex)
@@ -862,7 +899,19 @@ namespace VaultSync.UI.ViewModels
 
                                 if (metadataWritten && sharedSnapshotId.HasValue)
                                 {
-                                    StartPostBackupHashingAsync(project, sharedSnapshotId.Value);
+                                    var latest = _repo.GetLatestBackupForProject(project.Id);
+                                    if (latest is not null && ShouldRunVerification(project, isAutoRun: true, cfg.Backups.VerifyAfterCreate))
+                                    {
+                                        var destinationRoot = ResolveDestinationRootForBackup(
+                                            latest,
+                                            GetAllDestinations(cfg),
+                                            cfg.Backups.BackupRoot);
+                                        StartVerificationAsync(project, latest, destinationRoot ?? string.Empty, "auto_backup_verify_failed");
+                                    }
+                                    else
+                                    {
+                                        StartPostBackupHashingAsync(project, sharedSnapshotId.Value);
+                                    }
                                 }
                             }
                             finally
@@ -1029,6 +1078,27 @@ namespace VaultSync.UI.ViewModels
             catch (Exception ex)
             {
                 Console.WriteLine($"[Projects] Failed to update restore mode for project {projectId}: {ex.Message}");
+            }
+        }
+
+        private void OnProjectVerificationPolicyChanged(int projectId, string verificationPolicy)
+        {
+            RunDetached(
+                () => OnProjectVerificationPolicyChangedAsync(projectId, verificationPolicy),
+                nameof(OnProjectVerificationPolicyChangedAsync));
+        }
+
+        private async Task OnProjectVerificationPolicyChangedAsync(int projectId, string verificationPolicy)
+        {
+            try
+            {
+                _repo.UpdateProjectVerificationPolicy(projectId, verificationPolicy);
+                await ExportMetadataForProjectSettingsChangeAsync(projectId);
+                await _projectsViewModel.RefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Projects] Failed to update verification policy for project {projectId}: {ex.Message}");
             }
         }
 

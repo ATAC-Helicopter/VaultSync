@@ -92,6 +92,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           encryption_policy TEXT NOT NULL DEFAULT 'inherit',
           encryption_key_ref TEXT,
           restore_mode TEXT NOT NULL DEFAULT 'direct',
+          verification_policy TEXT NOT NULL DEFAULT 'always',
           tags TEXT NOT NULL DEFAULT '',
           name TEXT NOT NULL UNIQUE,
           root_path TEXT NOT NULL,
@@ -163,6 +164,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
     EnsureColumnExists("projects", "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
     EnsureColumnExists("projects", "encryption_key_ref", "ALTER TABLE projects ADD COLUMN encryption_key_ref TEXT;");
     EnsureColumnExists("projects", "restore_mode", "ALTER TABLE projects ADD COLUMN restore_mode TEXT NOT NULL DEFAULT 'direct';");
+    EnsureColumnExists("projects", "verification_policy", "ALTER TABLE projects ADD COLUMN verification_policy TEXT NOT NULL DEFAULT 'always';");
     EnsureColumnExists("projects", "tags", "ALTER TABLE projects ADD COLUMN tags TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
     EnsureColumnExists("snapshots", "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
@@ -261,7 +263,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
                 new { name });
         }
 
@@ -269,7 +271,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
                 new { id });
         }
 
@@ -299,7 +301,7 @@ DELETE FROM sqlite_sequence;";
         {
             using var c = Open();
             return c.Query<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
         }
 
         /// <summary>
@@ -318,7 +320,7 @@ DELETE FROM sqlite_sequence;";
         public async Task<List<Project>> GetAllProjectsAsync(CancellationToken ct = default)
         {
             const string sql =
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name";
+                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name";
             using var c = Open();
             var rows = await c.QueryAsync<Project>(new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
             return rows.ToList();
@@ -332,8 +334,8 @@ DELETE FROM sqlite_sequence;";
                 : p.ExternalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, encryption_policy, encryption_key_ref, restore_mode, tags, name, root_path, preset, created_utc)
-                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @EncryptionPolicy, @EncryptionKeyRef, @RestoreMode, @Tags, @Name, @RootPath, @Preset, @CreatedUtc);
+                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, encryption_policy, encryption_key_ref, restore_mode, verification_policy, tags, name, root_path, preset, created_utc)
+                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @EncryptionPolicy, @EncryptionKeyRef, @RestoreMode, @VerificationPolicy, @Tags, @Name, @RootPath, @Preset, @CreatedUtc);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -344,6 +346,7 @@ DELETE FROM sqlite_sequence;";
                     EncryptionPolicy = ProjectEncryptionPolicy.Normalize(p.EncryptionPolicy),
                     EncryptionKeyRef = string.IsNullOrWhiteSpace(p.EncryptionKeyRef) ? null : p.EncryptionKeyRef,
                     RestoreMode = ProjectRestoreMode.Normalize(p.RestoreMode),
+                    VerificationPolicy = ProjectVerificationPolicy.Normalize(p.VerificationPolicy),
                     Tags = string.IsNullOrWhiteSpace(p.Tags) ? string.Empty : p.Tags,
                     p.Name,
                     p.RootPath,
@@ -409,6 +412,18 @@ DELETE FROM sqlite_sequence;";
                 });
         }
 
+        public void UpdateProjectVerificationPolicy(int projectId, string? verificationPolicy)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE projects SET verification_policy = @policy WHERE id = @id;",
+                new
+                {
+                    policy = ProjectVerificationPolicy.Normalize(verificationPolicy),
+                    id = projectId
+                });
+        }
+
         public void UpdateProjectTags(int projectId, string? tags)
         {
             using var c = Open();
@@ -429,7 +444,7 @@ DELETE FROM sqlite_sequence;";
             using var c = Open();
             return c.QueryFirstOrDefault<Project>(
                 """
-                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
+                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
                 FROM projects
                 WHERE external_id = @externalId
                 LIMIT 1;

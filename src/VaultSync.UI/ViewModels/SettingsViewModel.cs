@@ -111,6 +111,7 @@ namespace VaultSync.UI
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
+        private readonly SupportBundleService _supportBundleService = new();
         private bool _showLegacyBackupLocation = true;
         private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
 
@@ -136,7 +137,9 @@ namespace VaultSync.UI
             string? CredentialName,
             bool EnableMetadataSync,
             bool AutoImportMetadata,
-            bool ForceMetadataBackfill);
+            bool ForceMetadataBackfill,
+            int RetryMaxAttempts,
+            int RetryBackoffSeconds);
 
         private sealed record CredentialSnapshot(
             string Name,
@@ -203,6 +206,7 @@ namespace VaultSync.UI
             ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());
             OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
+            ExportSupportBundleCommand   = new RelayCommand(_ => ExportSupportBundle());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
@@ -338,7 +342,9 @@ namespace VaultSync.UI
                         PreMounted   = dest.PreMounted,
                         EnableMetadataSync = dest.EnableMetadataSync,
                         AutoImportMetadata = dest.AutoImportMetadata,
-                        ForceMetadataBackfill = dest.ForceMetadataBackfill
+                        ForceMetadataBackfill = dest.ForceMetadataBackfill,
+                        RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
+                        RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10)
                     };
 
                     vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
@@ -363,7 +369,9 @@ namespace VaultSync.UI
                     AutoUnmount = false,
                     EnableMetadataSync = true,
                     AutoImportMetadata = true,
-                    ForceMetadataBackfill = false
+                    ForceMetadataBackfill = false,
+                    RetryMaxAttempts = 1,
+                    RetryBackoffSeconds = 10
                 });
             }
             }
@@ -446,7 +454,9 @@ namespace VaultSync.UI
                     CredentialName: d.SelectedCredential?.Name ?? d.CredentialName,
                     EnableMetadataSync: d.EnableMetadataSync,
                     AutoImportMetadata: d.AutoImportMetadata,
-                    ForceMetadataBackfill: d.ForceMetadataBackfill))
+                    ForceMetadataBackfill: d.ForceMetadataBackfill,
+                    RetryMaxAttempts: ClampInt(d.RetryMaxAttempts, 1, 10, 1),
+                    RetryBackoffSeconds: ClampInt(d.RetryBackoffSeconds, 1, 300, 10)))
                 .ToList();
 
             var credentialSnapshot = CredentialProfiles
@@ -522,7 +532,9 @@ namespace VaultSync.UI
                 PreMounted     = d.PreMounted,
                 EnableMetadataSync = d.EnableMetadataSync,
                 AutoImportMetadata = d.AutoImportMetadata,
-                ForceMetadataBackfill = d.ForceMetadataBackfill
+                ForceMetadataBackfill = d.ForceMetadataBackfill,
+                RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
+                RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10)
             }).ToList();
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
@@ -1617,6 +1629,7 @@ namespace VaultSync.UI
         public ICommand ExportTelemetryCommand { get; }
         public ICommand OpenLogConsoleCommand { get; }
         public ICommand ExportLogConsoleCommand { get; }
+        public ICommand ExportSupportBundleCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
         public ICommand RefreshHistoryCommand { get; }
         public ICommand SetBackupEncryptionPasswordCommand { get; }
@@ -1900,7 +1913,9 @@ namespace VaultSync.UI
                 PreMounted     = dest.PreMounted,
                 AutoMount      = dest.AutoMount,
                 AutoUnmount    = dest.AutoUnmount,
-                CredentialName = dest.CredentialName
+                CredentialName = dest.CredentialName,
+                RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
+                RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10)
             };
 
             var result = await Task.Run(() =>
@@ -2121,7 +2136,9 @@ namespace VaultSync.UI
             {
                 Alias = $"Destination {Destinations.Count + 1}",
                 Active = true,
-                PreMounted = true
+                PreMounted = true,
+                RetryMaxAttempts = 1,
+                RetryBackoffSeconds = 10
             });
             RefreshLegacyVisibility();
         }
@@ -2294,6 +2311,48 @@ namespace VaultSync.UI
                 "Log export");
         }
 
+        private void ExportSupportBundle()
+        {
+            var result = _supportBundleService.Export();
+            if (!result.Success || string.IsNullOrWhiteSpace(result.ZipPath))
+            {
+                SaveStatus = string.IsNullOrWhiteSpace(result.Message)
+                    ? L("Settings.Advanced.SupportBundleFailed", "Support bundle export failed.")
+                    : result.Message;
+                GlobalNotificationCenter.Instance.Show(
+                    SaveStatus,
+                    NotificationSeverity.Warning,
+                    L("Settings.Advanced.SupportBundle", "Support bundle"));
+                return;
+            }
+
+            SaveStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                L("Settings.Advanced.SupportBundleExportedTo", "Support bundle exported to {0}"),
+                result.ZipPath);
+            GlobalNotificationCenter.Instance.Show(
+                L("Settings.Advanced.SupportBundleReady", "Support bundle ready. You can share the zip file."),
+                NotificationSeverity.Info,
+                L("Settings.Advanced.SupportBundle", "Support bundle"));
+
+            try
+            {
+                var folder = Path.GetDirectoryName(result.ZipPath);
+                if (!string.IsNullOrWhiteSpace(folder))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = folder,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch
+            {
+                // best-effort
+            }
+        }
+
     }
 
     public class BackupDestinationViewModel : VaultSync.UI.ViewModels.ViewModelBase
@@ -2413,6 +2472,20 @@ namespace VaultSync.UI
 
         private bool _forceMetadataBackfill;
         public bool ForceMetadataBackfill { get => _forceMetadataBackfill; set => SetField(ref _forceMetadataBackfill, value); }
+
+        private int _retryMaxAttempts = 1;
+        public int RetryMaxAttempts
+        {
+            get => _retryMaxAttempts;
+            set => SetField(ref _retryMaxAttempts, Math.Clamp(value, 1, 10));
+        }
+
+        private int _retryBackoffSeconds = 10;
+        public int RetryBackoffSeconds
+        {
+            get => _retryBackoffSeconds;
+            set => SetField(ref _retryBackoffSeconds, Math.Clamp(value, 1, 300));
+        }
 
         private string _lastTestStatus = string.Empty;
         public string LastTestStatus

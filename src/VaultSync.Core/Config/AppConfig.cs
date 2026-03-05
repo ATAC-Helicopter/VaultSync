@@ -217,6 +217,14 @@ namespace VaultSync.Core.Config
         public bool AutoImportMetadata { get; set; } = true;
         public bool ForceMetadataBackfill { get; set; } = false;
         /// <summary>
+        /// Total attempts for backup work on this destination (initial try included).
+        /// </summary>
+        public int RetryMaxAttempts { get; set; } = 1;
+        /// <summary>
+        /// Base backoff in seconds between retries for this destination.
+        /// </summary>
+        public int RetryBackoffSeconds { get; set; } = 10;
+        /// <summary>
         /// Auto-tuned archive upload buffer size for this destination.
         /// When null, VaultSync will probe before the first archive upload and cache the result.
         /// </summary>

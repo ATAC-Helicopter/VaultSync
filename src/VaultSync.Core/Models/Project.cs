@@ -14,5 +14,6 @@ public record Project
     public string EncryptionPolicy { get; init; } = ProjectEncryptionPolicy.Inherit;
     public string? EncryptionKeyRef { get; init; }
     public string RestoreMode { get; init; } = ProjectRestoreMode.Direct;
+    public string VerificationPolicy { get; init; } = ProjectVerificationPolicy.Always;
     public string Tags { get; init; } = string.Empty;
 }

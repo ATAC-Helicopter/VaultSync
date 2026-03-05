@@ -269,7 +269,10 @@ public sealed class MetadataSyncService
                     : ProjectEncryptionPolicy.Inherit,
                 EncryptionKeyRef = parsedSettings.HasEncryptionKeyRef
                     ? parsedSettings.EncryptionKeyRef
-                    : null
+                    : null,
+                VerificationPolicy = parsedSettings.HasVerificationPolicy
+                    ? parsedSettings.VerificationPolicy
+                    : ProjectVerificationPolicy.Always
             };
 
             var newId = _repo.AddProject(project);
@@ -1601,6 +1604,7 @@ public sealed class MetadataSyncService
             settings["encryptionKeyRef"] = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
                 ? null
                 : project.EncryptionKeyRef;
+            settings["verificationPolicy"] = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
 
             return settings.Count == 0 ? "{}" : JsonSerializer.Serialize(settings);
         }
@@ -1613,8 +1617,10 @@ public sealed class MetadataSyncService
     private readonly record struct ParsedProjectSettings(
         string EncryptionPolicy,
         string? EncryptionKeyRef,
+        string VerificationPolicy,
         bool HasEncryptionPolicy,
-        bool HasEncryptionKeyRef);
+        bool HasEncryptionKeyRef,
+        bool HasVerificationPolicy);
 
     private static ParsedProjectSettings ParseProjectSettings(string? settingsJson)
     {
@@ -1623,8 +1629,10 @@ public sealed class MetadataSyncService
             return new ParsedProjectSettings(
                 ProjectEncryptionPolicy.Inherit,
                 null,
+                ProjectVerificationPolicy.Always,
                 HasEncryptionPolicy: false,
-                HasEncryptionKeyRef: false);
+                HasEncryptionKeyRef: false,
+                HasVerificationPolicy: false);
         }
 
         try
@@ -1632,8 +1640,10 @@ public sealed class MetadataSyncService
             using var doc = JsonDocument.Parse(settingsJson);
             var policy = ProjectEncryptionPolicy.Inherit;
             string? keyRef = null;
+            var verificationPolicy = ProjectVerificationPolicy.Always;
             var hasPolicy = false;
             var hasKeyRef = false;
+            var hasVerificationPolicy = false;
 
             if (doc.RootElement.TryGetProperty("encryptionPolicy", out var policyProp))
             {
@@ -1648,25 +1658,37 @@ public sealed class MetadataSyncService
                 hasKeyRef = true;
             }
 
+            if (doc.RootElement.TryGetProperty("verificationPolicy", out var verificationProp))
+            {
+                verificationPolicy = ProjectVerificationPolicy.Normalize(verificationProp.GetString());
+                hasVerificationPolicy = true;
+            }
+
             return new ParsedProjectSettings(
                 policy,
                 keyRef,
+                verificationPolicy,
                 HasEncryptionPolicy: hasPolicy,
-                HasEncryptionKeyRef: hasKeyRef);
+                HasEncryptionKeyRef: hasKeyRef,
+                HasVerificationPolicy: hasVerificationPolicy);
         }
         catch
         {
             return new ParsedProjectSettings(
                 ProjectEncryptionPolicy.Inherit,
                 null,
+                ProjectVerificationPolicy.Always,
                 HasEncryptionPolicy: false,
-                HasEncryptionKeyRef: false);
+                HasEncryptionKeyRef: false,
+                HasVerificationPolicy: false);
         }
     }
 
     private void ApplyImportedProjectSecuritySettings(int projectId, ParsedProjectSettings parsedSettings)
     {
-        if (!parsedSettings.HasEncryptionPolicy && !parsedSettings.HasEncryptionKeyRef)
+        if (!parsedSettings.HasEncryptionPolicy &&
+            !parsedSettings.HasEncryptionKeyRef &&
+            !parsedSettings.HasVerificationPolicy)
             return;
 
         var current = _repo.GetProjectById(projectId);
@@ -1688,16 +1710,22 @@ public sealed class MetadataSyncService
         var nextKeyRef = parsedSettings.HasEncryptionKeyRef
             ? parsedSettings.EncryptionKeyRef
             : current.EncryptionKeyRef;
+        var currentVerificationPolicy = ProjectVerificationPolicy.Normalize(current.VerificationPolicy);
+        var nextVerificationPolicy = parsedSettings.HasVerificationPolicy
+            ? ProjectVerificationPolicy.Normalize(parsedSettings.VerificationPolicy)
+            : currentVerificationPolicy;
 
         var currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
         var normalizedNextKeyRef = string.IsNullOrWhiteSpace(nextKeyRef) ? null : nextKeyRef;
         if (string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(normalizedNextKeyRef, currentKeyRef, StringComparison.Ordinal))
+            string.Equals(normalizedNextKeyRef, currentKeyRef, StringComparison.Ordinal) &&
+            string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
         _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, normalizedNextKeyRef);
+        _repo.UpdateProjectVerificationPolicy(projectId, nextVerificationPolicy);
     }
 
     private static void TryApplyProjectColor(MetaProject metaProject)
