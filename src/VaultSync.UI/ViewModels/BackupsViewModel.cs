@@ -413,6 +413,15 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<StorageConsumerItem> TopStorageConsumers { get; } =
             new ObservableCollection<StorageConsumerItem>();
         public bool HasTopStorageConsumers => TopStorageConsumers.Count > 0;
+        public int HealthHealthyProjects { get; private set; }
+        public int HealthAgingProjects { get; private set; }
+        public int HealthStaleProjects { get; private set; }
+        public int HealthNoBackupProjects { get; private set; }
+        public double HealthHealthyPercent { get; private set; }
+        public double HealthAgingPercent { get; private set; }
+        public double HealthStalePercent { get; private set; }
+        public double HealthNoBackupPercent { get; private set; }
+        public string BackupHealthSummaryLine { get; private set; } = string.Empty;
 
         // Mini backup storage card (for Backups page)
         private double _backupDiskUsedPercent;
@@ -1310,6 +1319,7 @@ namespace VaultSync.UI.ViewModels
             TotalStoredImportedLine = Lf("Backups.Summary.ImportedTotal", "Imported total: {0}", "0 B");
             TotalStoredImportedValueFormatted = "0 B";
             HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
+            BackupHealthSummaryLine = L("Backups.Health.Center.Empty", "No project health data yet.");
 
             var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", L("DriveHealth.UnknownDrive", "drive"));
             BackupDiskDriveLabel = driveLabel;
@@ -1323,6 +1333,7 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(TotalStoredLocalLine));
             OnPropertyChanged(nameof(TotalStoredImportedLine));
             OnPropertyChanged(nameof(HistoryFilterProjectLabel));
+            OnPropertyChanged(nameof(BackupHealthSummaryLine));
             OnPropertyChanged(nameof(BackupDiskDriveLabel));
             OnPropertyChanged(nameof(BackupDiskHealthText));
             TopStorageConsumers.Clear();
@@ -2570,6 +2581,7 @@ namespace VaultSync.UI.ViewModels
             }
 
             RebuildTopStorageConsumers();
+            RebuildBackupHealthCenter(now);
             RebuildSnapshotActivity(now);
 
             // Notify UI that summary properties changed
@@ -2604,6 +2616,15 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(StorageLocalPercent));
             OnPropertyChanged(nameof(StorageImportedPercent));
             OnPropertyChanged(nameof(HasTopStorageConsumers));
+            OnPropertyChanged(nameof(HealthHealthyProjects));
+            OnPropertyChanged(nameof(HealthAgingProjects));
+            OnPropertyChanged(nameof(HealthStaleProjects));
+            OnPropertyChanged(nameof(HealthNoBackupProjects));
+            OnPropertyChanged(nameof(HealthHealthyPercent));
+            OnPropertyChanged(nameof(HealthAgingPercent));
+            OnPropertyChanged(nameof(HealthStalePercent));
+            OnPropertyChanged(nameof(HealthNoBackupPercent));
+            OnPropertyChanged(nameof(BackupHealthSummaryLine));
         }
 
         public void UpdateSummaryLayout(double width)
@@ -2673,6 +2694,59 @@ namespace VaultSync.UI.ViewModels
                     BackupSnapshotItem.FormatSize(entry.TotalBytes),
                     sharePercent));
             }
+        }
+
+        private void RebuildBackupHealthCenter(DateTime now)
+        {
+            var healthy = 0;
+            var aging = 0;
+            var stale = 0;
+            var noBackup = 0;
+
+            foreach (var project in ProjectBackups)
+            {
+                if (!project.LastBackupTime.HasValue)
+                {
+                    noBackup++;
+                    continue;
+                }
+
+                var age = now - project.LastBackupTime.Value;
+                if (age.TotalHours < 24)
+                    healthy++;
+                else if (age.TotalHours <= 72)
+                    aging++;
+                else
+                    stale++;
+            }
+
+            HealthHealthyProjects = healthy;
+            HealthAgingProjects = aging;
+            HealthStaleProjects = stale;
+            HealthNoBackupProjects = noBackup;
+
+            var total = Math.Max(0, healthy + aging + stale + noBackup);
+            if (total == 0)
+            {
+                HealthHealthyPercent = 0;
+                HealthAgingPercent = 0;
+                HealthStalePercent = 0;
+                HealthNoBackupPercent = 0;
+                BackupHealthSummaryLine = L("Backups.Health.Center.Empty", "No project health data yet.");
+                return;
+            }
+
+            HealthHealthyPercent = healthy * 100d / total;
+            HealthAgingPercent = aging * 100d / total;
+            HealthStalePercent = stale * 100d / total;
+            HealthNoBackupPercent = noBackup * 100d / total;
+            BackupHealthSummaryLine = Lf(
+                "Backups.Health.Center.Summary",
+                "Healthy {0} · Aging {1} · Stale {2} · No backup {3}",
+                healthy.ToString(CultureInfo.CurrentCulture),
+                aging.ToString(CultureInfo.CurrentCulture),
+                stale.ToString(CultureInfo.CurrentCulture),
+                noBackup.ToString(CultureInfo.CurrentCulture));
         }
 
         // ---------- Weekly activity mini-chart ----------

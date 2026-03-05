@@ -631,6 +631,70 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </StackPanel>
+
+                <StackPanel Spacing="6"
+                            Margin="0,4,0,0">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Health.Center.Title}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <TextBlock Text="{Binding BackupHealthSummaryLine}"
+                             FontSize="10"
+                             Foreground="{DynamicResource TextMutedBrush}" />
+                  <Grid ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto,Auto"
+                        ColumnSpacing="8"
+                        RowSpacing="4">
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Health.Center.Healthy}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding HealthHealthyPercent}"
+                                 Height="5"
+                                 Foreground="#22CC88"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="1"
+                               Text="{infra:LocalizedString Key=Backups.Health.Center.Aging}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="1"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding HealthAgingPercent}"
+                                 Height="5"
+                                 Foreground="#FFB84C"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="2"
+                               Text="{infra:LocalizedString Key=Backups.Health.Center.Stale}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="2"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding HealthStalePercent}"
+                                 Height="5"
+                                 Foreground="#F56A5A"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="3"
+                               Text="{infra:LocalizedString Key=Backups.Health.Center.NoBackup}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="3"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding HealthNoBackupPercent}"
+                                 Height="5"
+                                 Foreground="#7F8FA8"
+                                 Background="{DynamicResource Surface2}" />
+                  </Grid>
+                </StackPanel>
               </StackPanel>
             </Border>
           </Grid>

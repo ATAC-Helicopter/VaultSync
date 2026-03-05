@@ -22,6 +22,7 @@
 - [VS-1609] Projects smart-group controls now include `Back up group` and group-wide auto-backup toggles (`Disable auto`, `Enable auto`) to support pause/backup workflows by tag/group.
 - [VS-1603] Backups per-project cards now show storage delta (`Δ`) versus the previous backup size to surface per-project growth/shrink at a glance.
 - [VS-1603] Backups summary now surfaces top local storage consumers (top projects by backup storage share) for faster capacity triage.
+- [VS-1605] Backups summary now includes a health center mix (healthy/aging/stale/no-backup projects) based on per-project backup freshness.
 - [VS-1610] Manual and auto-backup destination execution now uses destination-scoped retry loops with exponential backoff and retry telemetry/status feedback.
 - [VS-1611] Post-backup verification flow now follows per-project verification policy (`always` verifies every run, `scheduled` verifies auto-runs, `manual` skips automatic verification).
 - [VS-1606] Settings > Advanced now exposes an `Export support bundle` action that writes a redacted support zip and opens the export folder.

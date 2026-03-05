@@ -695,6 +695,8 @@
     - Integration: saved presets are immediately assignable to projects and resolve correctly at snapshot/backup time.
 - [ ] `VS-1605` `P1` Backup health center and timeline (success/failure/verified trends).
   - Scope: health summary model and timeline surfaces for backup freshness, verification, and failure visibility.
+  - Current status:
+    - In progress: Backups summary now includes a health center mix (healthy/aging/stale/no-backup project distribution) derived from project backup freshness.
   - Acceptance tests:
     - UI: health state reflects real backup/verification history.
     - UX: timeline/trend surfaces do not crowd primary actions.
