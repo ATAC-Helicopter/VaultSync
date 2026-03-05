@@ -583,7 +583,48 @@
                                 Command="{Binding DataContext.SavePresetEditorCommand, ElementName=Root}">
                           <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Save}" />
                         </Button>
+                        <Button Padding="{DynamicResource ButtonTightPadding}"
+                                CornerRadius="10"
+                                Background="{DynamicResource Surface2}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Command="{Binding DataContext.ExportPresetEditorCommand, ElementName=Root}">
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Export}" />
+                        </Button>
                       </WrapPanel>
+                      <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="6">
+                        <TextBox Text="{Binding DataContext.PresetEditorImportPath, ElementName=Root, Mode=TwoWay}"
+                                 Watermark="{infra:LocalizedString Key=Projects.Preset.Editor.ImportPathWatermark}"
+                                 Background="{DynamicResource InputBackgroundBrush}"
+                                 BorderBrush="{DynamicResource DividerBrush}"
+                                 BorderThickness="1"
+                                 Padding="{DynamicResource InputPadding}" />
+                        <Button Grid.Column="1"
+                                Padding="{DynamicResource ButtonTightPadding}"
+                                CornerRadius="10"
+                                Background="{DynamicResource Surface2}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Command="{Binding DataContext.ImportPresetEditorCommand, ElementName=Root}">
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Import}" />
+                        </Button>
+                      </Grid>
+                      <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="6">
+                        <TextBox Text="{Binding DataContext.PresetEditorCloneId, ElementName=Root, Mode=TwoWay}"
+                                 Watermark="{infra:LocalizedString Key=Projects.Preset.Editor.CloneIdWatermark}"
+                                 Background="{DynamicResource InputBackgroundBrush}"
+                                 BorderBrush="{DynamicResource DividerBrush}"
+                                 BorderThickness="1"
+                                 Padding="{DynamicResource InputPadding}" />
+                        <Button Grid.Column="1"
+                                Padding="{DynamicResource ButtonTightPadding}"
+                                CornerRadius="10"
+                                Background="{DynamicResource Surface2}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Command="{Binding DataContext.ClonePresetEditorCommand, ElementName=Root}">
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Clone}" />
+                        </Button>
+                      </Grid>
                       <TextBlock FontSize="10"
                                  Foreground="{DynamicResource TextSecondaryBrush}"
                                  Text="{Binding DataContext.PresetEditorStatus, ElementName=Root}"

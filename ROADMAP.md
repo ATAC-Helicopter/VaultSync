@@ -693,6 +693,7 @@
   - Current status:
     - In progress: Projects details now includes a preset-rules editor (reload/save) for the selected preset file.
     - In progress: Preset editor now includes live preview counts (included/excluded) against the selected project path.
+    - In progress: Preset editor now supports clone/import/export flows (clone to new preset id, import from file path, export to Documents preset exports).
   - Acceptance tests:
     - UI: user can create/edit/clone/delete/import/export presets.
     - Integration: saved presets are immediately assignable to projects and resolve correctly at snapshot/backup time.

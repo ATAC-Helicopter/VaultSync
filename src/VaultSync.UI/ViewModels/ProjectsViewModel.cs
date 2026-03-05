@@ -75,6 +75,9 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _reloadPresetEditorCommand;
     private readonly RelayCommand _savePresetEditorCommand;
     private readonly RelayCommand _previewPresetEditorCommand;
+    private readonly RelayCommand _clonePresetEditorCommand;
+    private readonly RelayCommand _exportPresetEditorCommand;
+    private readonly RelayCommand _importPresetEditorCommand;
     private readonly RelayCommand _snapshotGroupCommand;
     private readonly RelayCommand _backupGroupCommand;
     private readonly RelayCommand _disableAutoBackupGroupCommand;
@@ -135,6 +138,9 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand ReloadPresetEditorCommand { get; }
     public ICommand SavePresetEditorCommand { get; }
     public ICommand PreviewPresetEditorCommand { get; }
+    public ICommand ClonePresetEditorCommand { get; }
+    public ICommand ExportPresetEditorCommand { get; }
+    public ICommand ImportPresetEditorCommand { get; }
     public ICommand ToggleSortCommand { get; }
     public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
     public event Action<int, string>? ProjectEncryptionPolicyChanged;
@@ -172,6 +178,20 @@ public class ProjectsViewModel : ViewModelBase
     {
         get => _isPresetEditorVisible;
         set => SetProperty(ref _isPresetEditorVisible, value);
+    }
+
+    private string _presetEditorCloneId = string.Empty;
+    public string PresetEditorCloneId
+    {
+        get => _presetEditorCloneId;
+        set => SetProperty(ref _presetEditorCloneId, value ?? string.Empty);
+    }
+
+    private string _presetEditorImportPath = string.Empty;
+    public string PresetEditorImportPath
+    {
+        get => _presetEditorImportPath;
+        set => SetProperty(ref _presetEditorImportPath, value ?? string.Empty);
     }
     public string SearchText
     {
@@ -240,6 +260,9 @@ public class ProjectsViewModel : ViewModelBase
         _reloadPresetEditorCommand = new RelayCommand(_ => ReloadPresetEditor(), _ => HasPresetEditorTarget);
         _savePresetEditorCommand = new RelayCommand(_ => SavePresetEditor(), _ => HasPresetEditorTarget);
         _previewPresetEditorCommand = new RelayCommand(_ => PreviewPresetEditor(), _ => HasPresetEditorTarget);
+        _clonePresetEditorCommand = new RelayCommand(_ => ClonePresetEditor(), _ => HasPresetEditorTarget);
+        _exportPresetEditorCommand = new RelayCommand(_ => ExportPresetEditor(), _ => HasPresetEditorTarget);
+        _importPresetEditorCommand = new RelayCommand(_ => ImportPresetEditor());
         _snapshotGroupCommand = new RelayCommand(
             _ => _ = RunDetachedAsync(SnapshotSelectedGroupAsync, "snapshot-selected-group"),
             _ => CanSnapshotSelectedGroup());
@@ -259,6 +282,9 @@ public class ProjectsViewModel : ViewModelBase
         ReloadPresetEditorCommand = _reloadPresetEditorCommand;
         SavePresetEditorCommand = _savePresetEditorCommand;
         PreviewPresetEditorCommand = _previewPresetEditorCommand;
+        ClonePresetEditorCommand = _clonePresetEditorCommand;
+        ExportPresetEditorCommand = _exportPresetEditorCommand;
+        ImportPresetEditorCommand = _importPresetEditorCommand;
         SnapshotGroupCommand = _snapshotGroupCommand;
         BackupGroupCommand = _backupGroupCommand;
         DisableAutoBackupGroupCommand = _disableAutoBackupGroupCommand;
@@ -2051,6 +2077,114 @@ public class ProjectsViewModel : ViewModelBase
         }
     }
 
+    private void ClonePresetEditor()
+    {
+        if (!HasPresetEditorTarget)
+            return;
+
+        var cloneId = (PresetEditorCloneId ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(cloneId))
+        {
+            PresetEditorStatus = L("Projects.Preset.Editor.Status.CloneIdRequired", "Enter a preset id before cloning.");
+            return;
+        }
+
+        if (!IsValidPresetId(cloneId))
+        {
+            PresetEditorStatus = L("Projects.Preset.Editor.Status.CloneIdInvalid", "Preset id can contain letters, numbers, '-', '_' and '.'.");
+            return;
+        }
+
+        var presetsDir = ResolvePresetsDirForUi();
+        if (string.IsNullOrWhiteSpace(presetsDir))
+        {
+            PresetEditorStatus = L("Projects.Preset.Editor.Status.PresetsDirMissing", "Could not resolve presets directory.");
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(presetsDir);
+            var clonePath = Path.Combine(presetsDir, $"{cloneId}.vaultsyncignore");
+            File.WriteAllText(clonePath, PresetEditorContent ?? string.Empty);
+
+            if (!_presetCatalogById.ContainsKey(cloneId))
+            {
+                _presetCatalogById[cloneId] = new PresetInfo
+                {
+                    Id = cloneId,
+                    File = $"{cloneId}.vaultsyncignore",
+                    Description = Lf("Projects.Preset.DescriptionUnknown", "Preset '{0}' is active.", cloneId),
+                    Example = string.Empty
+                };
+            }
+
+            if (!AvailablePresets.Any(p => string.Equals(p, cloneId, StringComparison.OrdinalIgnoreCase)))
+                AvailablePresets.Add(cloneId);
+
+            if (SelectedProject is not null)
+            {
+                SelectedProject.Preset = cloneId;
+                UpdateProjectPresetDisplay(SelectedProject);
+                UpdateProjectPresetRecommendation(SelectedProject);
+            }
+
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.Cloned", "Cloned preset as '{0}' and selected it for this project.", cloneId);
+        }
+        catch (Exception ex)
+        {
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.CloneFailed", "Failed to clone preset: {0}", ex.Message);
+        }
+    }
+
+    private void ExportPresetEditor()
+    {
+        if (!TryResolveSelectedPresetPath(out _, out var presetId))
+            return;
+
+        try
+        {
+            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var exportDir = Path.Combine(docs, "VaultSync", "Exports", "Presets");
+            Directory.CreateDirectory(exportDir);
+            var safeId = SanitizePresetIdForFileName(string.IsNullOrWhiteSpace(presetId) ? "preset" : presetId);
+            var fileName = $"{safeId}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.vaultsyncignore";
+            var exportPath = Path.Combine(exportDir, fileName);
+            File.WriteAllText(exportPath, PresetEditorContent ?? string.Empty);
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.Exported", "Exported preset rules to '{0}'.", exportPath);
+        }
+        catch (Exception ex)
+        {
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ExportFailed", "Failed to export preset rules: {0}", ex.Message);
+        }
+    }
+
+    private void ImportPresetEditor()
+    {
+        var importPath = (PresetEditorImportPath ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(importPath))
+        {
+            PresetEditorStatus = L("Projects.Preset.Editor.Status.ImportPathRequired", "Enter a file path to import preset rules.");
+            return;
+        }
+
+        try
+        {
+            if (!File.Exists(importPath))
+            {
+                PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ImportMissing", "Preset file not found: {0}", importPath);
+                return;
+            }
+
+            PresetEditorContent = File.ReadAllText(importPath);
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.Imported", "Imported preset rules from '{0}'.", importPath);
+        }
+        catch (Exception ex)
+        {
+            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ImportFailed", "Failed to import preset rules: {0}", ex.Message);
+        }
+    }
+
     private void LoadPresetEditorForSelectedProject()
     {
         var project = SelectedProject;
@@ -2125,6 +2259,31 @@ public class ProjectsViewModel : ViewModelBase
         _reloadPresetEditorCommand.RaiseCanExecuteChanged();
         _savePresetEditorCommand.RaiseCanExecuteChanged();
         _previewPresetEditorCommand.RaiseCanExecuteChanged();
+        _clonePresetEditorCommand.RaiseCanExecuteChanged();
+        _exportPresetEditorCommand.RaiseCanExecuteChanged();
+    }
+
+    private static bool IsValidPresetId(string id)
+    {
+        foreach (var ch in id)
+        {
+            if (char.IsLetterOrDigit(ch))
+                continue;
+            if (ch is '-' or '_' or '.')
+                continue;
+            return false;
+        }
+
+        return true;
+    }
+
+    private static string SanitizePresetIdForFileName(string value)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = value
+            .Select(ch => invalid.Contains(ch) ? '-' : ch)
+            .ToArray();
+        return new string(chars);
     }
 
     private static string ResolvePresetsDirForUi()
