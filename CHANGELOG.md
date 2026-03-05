@@ -13,6 +13,7 @@
 - [VS-1609] Projects list now includes smart-group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) using project tags and lightweight preset/health signals.
 - [VS-1609] Projects smart-group selector now includes a bulk `Snapshot group` action for registered projects in the active group filter.
 - [ISS-16001] Quiet-hours editor now uses a compact centered start/end layout with consistent control widths in windowed mode.
+- [ISS-16002] App config load retry now uses async backoff/read operations instead of blocking sleep loops during transient file-lock contention.
 ### Fixed
 - [BUG-16001] Backups history cards in windowed mode no longer overlap snapshot chips, retention text, and action controls.
 - [BUG-16002] History snapshot size pill now keeps a stable adaptive shape instead of collapsing into a circular badge on narrow widths.

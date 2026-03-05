@@ -767,8 +767,10 @@
     - Retention cleanup now rejects out-of-root backup paths before deletion attempts.
     - Restore preparation now rejects backup paths that resolve outside destination roots.
     - Tray backup-folder resolution/open flow now uses root-containment checks before filesystem access.
-- [ ] `VS-1620` `P2` Config read retry async cleanup.
+- [x] `VS-1620` `P2` Config read retry async cleanup.
   - Scope: remove blocking sleep from config read retry path to reduce UI-thread contention under lock races.
+  - Done:
+    - Config load retry now uses async backoff/read flow (`Task.Delay`, async stream/file reads) instead of blocking `Thread.Sleep` loops.
 
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.

@@ -34,7 +34,7 @@ namespace VaultSync.Core.Config
                 }
                 else
                 {
-                    var json = ReadConfigWithRetry();
+                    var json = ReadConfigWithRetryAsync(CancellationToken.None).GetAwaiter().GetResult();
                     cfg = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
                 }
 
@@ -131,13 +131,14 @@ namespace VaultSync.Core.Config
             }
         }
 
-        private static string ReadConfigWithRetry()
+        private static async Task<string> ReadConfigWithRetryAsync(CancellationToken ct)
         {
             const int maxAttempts = 5;
             var delay = 25;
 
             for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
+                ct.ThrowIfCancellationRequested();
                 try
                 {
                     using var fs = new FileStream(
@@ -146,17 +147,17 @@ namespace VaultSync.Core.Config
                         FileAccess.Read,
                         FileShare.ReadWrite | FileShare.Delete);
                     using var reader = new StreamReader(fs);
-                    return reader.ReadToEnd();
+                    return await reader.ReadToEndAsync(ct).ConfigureAwait(false);
                 }
                 catch (IOException) when (attempt < maxAttempts)
                 {
-                    Thread.Sleep(delay);
+                    await Task.Delay(delay, ct).ConfigureAwait(false);
                     delay *= 2;
                 }
             }
 
             // Final read to surface useful diagnostics for fallback handling in Load().
-            return File.ReadAllText(ConfigFilePath);
+            return await File.ReadAllTextAsync(ConfigFilePath, ct).ConfigureAwait(false);
         }
     }
 }
