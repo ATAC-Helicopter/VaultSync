@@ -15,6 +15,7 @@
 - [VS-1601] Restore confirmation now includes a pre-run preview for plain backups (files in backup, new files, overwrite count, potential conflicts, project-only files kept, total bytes).
 - [VS-1601] Restore confirmation now supports selective top-level restore targets, and restore execution applies only selected targets for plain backups/archives.
 - [VS-1602] Backups history now includes restore-point timeline compare selectors (`A` / `B`) with a compare summary dialog (range, elapsed, size delta, net-diff delta, latest-point diff stats).
+- [VS-1602] Restore-point compare copy now explains selection order (`older` on the left, `newer` on the right) directly in the UI.
 - [VS-1608] Projects preset card now shows a localized recommendation reason and an `Apply recommendation` action while keeping manual preset selection fully available.
 - [VS-1608] Preset recommendation confidence gating now requires corroborating markers for generic stacks (`Node`, `Python`, `.NET`) to reduce noisy/low-confidence suggestions.
 - [VS-1604] Projects details now includes an in-app preset rules editor (reload/save + preview include/exclude counts against the selected project path) for faster preset tuning without leaving the app.
@@ -23,6 +24,12 @@
 - [VS-1609] Projects list now includes smart-group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) using project tags and lightweight preset/health signals.
 - [VS-1609] Projects smart-group selector now includes a bulk `Snapshot group` action for registered projects in the active group filter.
 - [VS-1609] Projects smart-group controls now include `Back up group` and group-wide auto-backup toggles (`Disable auto`, `Enable auto`) to support pause/backup workflows by tag/group.
+- [VS-1609] Projects tags now use pill-based editing (Enter/comma to commit, double-click pill to edit, remove button per tag) so partial typing does not immediately overwrite project tags.
+- [VS-1609] Tag pills are now color-coded, reusable tag suggestions are clickable, and group actions now support apply/remove by tag for all projects in the active view.
+- [VS-1609] Projects now pre-seed reusable tags (`Work`, `Games`, `Media`, `Critical`, `Archive`) so group tagging works immediately on first use.
+- [VS-1609] Project tags are now visible in Backups per-project cards, Backups history group headers, and Dashboard recent activity entries.
+- [VS-1609] Backups per-project sorting now includes a `Tags` mode.
+- [VS-1609] Metadata sync now round-trips project tags, preferred destination routing, and restore mode so per-project behavior stays aligned across machines.
 - [VS-1603] Backups per-project cards now show storage delta (`Δ`) versus the previous backup size to surface per-project growth/shrink at a glance.
 - [VS-1603] Backups summary now surfaces top local storage consumers (top projects by backup storage share) for faster capacity triage.
 - [VS-1605] Backups summary now includes a health center mix (healthy/aging/stale/no-backup projects) based on per-project backup freshness.
@@ -43,6 +50,13 @@
 - [BUG-16008] Retention cleanup, restore preparation, and tray backup-folder open flow now enforce destination-root path containment to reject out-of-root/traversal backup paths.
 - [BUG-16009] Backups page windowed layout now reflows the per-project and history panels (including per-project destination/encryption/restore controls) to prevent narrow-width collapse and overlap.
 - [BUG-16010] Projects group selector now renders readable option labels in the dropdown instead of fallback "View not found for ProjectGroupOption" text.
+- [BUG-16011] Group auto-backup actions now immediately sync per-project toggle state on the Backups page by refreshing from the same `AutoBackupDisabledProjects` setting source.
+- [BUG-16012] Backups page left per-project panel no longer uses a hard list-height cap, avoiding visibly shorter column height versus the right history panel.
+- [BUG-16013] Top storage consumers now aggregate total backup storage (including imported history) so names/sizes are consistent with total-storage summaries.
+- [BUG-16014] Dashboard storage legend and backups top-consumer rows now use centered vertical alignment for cleaner name/dot/value layout.
+- [BUG-16015] Projects list cards now show project tags in the All projects panel (`TagsDisplay`) to match tagging visibility across the app.
+- [BUG-16016] Dashboard weekly backups-per-day buckets now use local-day window boundaries (converted to UTC for query) to reduce day-label/count drift.
+- [BUG-16017] Dropdown popups were restyled app-wide for readability (clean hover/selected states, rounded popup panel, consistent item spacing) and Projects/Backups selected rows no longer use harsh filled highlight.
 
 ## [1.5.1] - 28.02.2026
 ### Added
