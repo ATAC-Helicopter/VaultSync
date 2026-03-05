@@ -743,6 +743,16 @@
   - Scope: tighten quiet-hours input composition for windowed mode and remove excessive edge spacing.
   - Done:
     - Quiet-hours start/end fields now use centered compact groups with consistent widths and spacing.
+- [ ] `VS-1616` `P0` Patch updater trust-boundary hardening.
+  - Scope: harden patch helper input/manifest handling (path normalization, traversal guards, install-root constraints, argument validation) for elevated update flows.
+  - Acceptance tests:
+    - Reject manifests containing path traversal or absolute out-of-root targets.
+    - Elevated patch apply only writes under the validated install root.
+- [ ] `VS-1617` `P1` Network-share delete fallback and user-guided recovery flow.
+  - Scope: make backup delete on SMB/NAS robust when marker files are protected/locked, with deterministic prompt/retry/skip behavior.
+  - Acceptance tests:
+    - Protected marker files do not cause silent partial failure loops.
+    - User gets one clear actionable recovery path when cleanup cannot complete automatically.
 
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
