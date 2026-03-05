@@ -16,6 +16,7 @@
 ### Fixed
 - [BUG-16001] Backups history cards in windowed mode no longer overlap snapshot chips, retention text, and action controls.
 - [BUG-16002] History snapshot size pill now keeps a stable adaptive shape instead of collapsing into a circular badge on narrow widths.
+- [BUG-16001] Windowed history chips now trim long mode/import/encryption labels to keep spacing stable next to the size pill.
 - [BUG-16003] Restore active backup cards now report restore/decrypt stages (not generic backup stage labels) with live throughput and restored-bytes progress detail.
 - [BUG-16004] Diff imported-type chip no longer shows raw key text; English localization now includes `Backups.Section.TypeImported`.
 

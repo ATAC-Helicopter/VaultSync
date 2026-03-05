@@ -1469,6 +1469,9 @@
                                               <TextBlock Classes="pill-icon" Text="●" />
                                               <TextBlock Text="{Binding ModeChipLabel}"
                                                          FontSize="11"
+                                                         TextTrimming="CharacterEllipsis"
+                                                         TextWrapping="NoWrap"
+                                                         MaxWidth="180"
                                                          ToolTip.Tip="{Binding ModeChipLabel}" />
                                             </StackPanel>
                                           </Border>
@@ -1479,6 +1482,9 @@
                                               <TextBlock Classes="pill-icon" Text="⇄" />
                                               <TextBlock Text="{Binding ImportedLabel}"
                                                          FontSize="11"
+                                                         TextTrimming="CharacterEllipsis"
+                                                         TextWrapping="NoWrap"
+                                                         MaxWidth="180"
                                                          ToolTip.Tip="{Binding ImportedLabel}" />
                                             </StackPanel>
                                           </Border>
@@ -1488,6 +1494,9 @@
                                               <TextBlock Classes="pill-icon" Text="⌁" />
                                               <TextBlock Text="{Binding EncryptionChipLabel}"
                                                          FontSize="11"
+                                                         TextTrimming="CharacterEllipsis"
+                                                         TextWrapping="NoWrap"
+                                                         MaxWidth="180"
                                                          ToolTip.Tip="{Binding EncryptionChipLabel}" />
                                             </StackPanel>
                                           </Border>
