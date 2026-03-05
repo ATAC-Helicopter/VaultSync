@@ -170,7 +170,10 @@
                   BorderBrush="{DynamicResource DividerBrush}"
                   BorderThickness="1"
                   Padding="8,4">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                  ColumnSpacing="8"
+                  RowSpacing="4">
               <TextBlock VerticalAlignment="Center"
                          Text="{infra:LocalizedString Key=Projects.Group.Label}"
                          Foreground="{DynamicResource TextSecondaryBrush}"
@@ -179,7 +182,13 @@
               <ComboBox Grid.Column="1"
                         Classes="preset-combo"
                         ItemsSource="{Binding GroupOptions}"
-                        SelectedItem="{Binding SelectedGroup, Mode=TwoWay}" />
+                        SelectedItem="{Binding SelectedGroup, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
               <Button Grid.Column="2"
                       Padding="{DynamicResource ButtonTightPadding}"
                       CornerRadius="10"
@@ -214,6 +223,13 @@
                   <TextBlock Text="{infra:LocalizedString Key=Projects.Group.EnableAuto}" />
                 </Button>
               </StackPanel>
+              <TextBlock Grid.Row="1"
+                         Grid.Column="0"
+                         Grid.ColumnSpan="5"
+                         Text="{infra:LocalizedString Key=Projects.Group.Help}"
+                         FontSize="11"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         TextWrapping="Wrap" />
             </Grid>
           </Border>
 
@@ -542,7 +558,8 @@
                     <TextBlock Grid.Row="1"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}"
-                               Text="{Binding DataContext.PresetEditorPath, ElementName=Root}"
+                               ToolTip.Tip="{Binding DataContext.PresetEditorPath, ElementName=Root}"
+                               Text="{Binding DataContext.PresetEditorPathDisplay, ElementName=Root}"
                                TextWrapping="Wrap"
                                TextTrimming="CharacterEllipsis"
                                MaxLines="2" />
@@ -560,6 +577,11 @@
                              Padding="{DynamicResource InputPadding}" />
                     <StackPanel Grid.Row="3"
                                 Spacing="6">
+                      <TextBlock FontSize="10"
+                                 Foreground="{DynamicResource TextMutedBrush}"
+                                 Text="{infra:LocalizedString Key=Projects.Preset.Editor.Help}"
+                                 TextWrapping="Wrap"
+                                 MaxLines="2" />
                       <WrapPanel ItemSpacing="6"
                                  LineSpacing="6">
                         <Button Padding="{DynamicResource ButtonTightPadding}"

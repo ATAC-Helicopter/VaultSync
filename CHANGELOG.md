@@ -19,6 +19,7 @@
 - [VS-1608] Preset recommendation confidence gating now requires corroborating markers for generic stacks (`Node`, `Python`, `.NET`) to reduce noisy/low-confidence suggestions.
 - [VS-1604] Projects details now includes an in-app preset rules editor (reload/save + preview include/exclude counts against the selected project path) for faster preset tuning without leaving the app.
 - [VS-1604] Preset editor now supports clone/import/export flows (`Clone` to a new preset id, `Import` from file path, `Export` to `Documents/VaultSync/Exports/Presets`).
+- [VS-1604] Projects preset editor copy/layout was refined for clarity (clearer action labels, usage guidance, concise preset file display with full-path tooltip).
 - [VS-1609] Projects list now includes smart-group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) using project tags and lightweight preset/health signals.
 - [VS-1609] Projects smart-group selector now includes a bulk `Snapshot group` action for registered projects in the active group filter.
 - [VS-1609] Projects smart-group controls now include `Back up group` and group-wide auto-backup toggles (`Disable auto`, `Enable auto`) to support pause/backup workflows by tag/group.
@@ -41,6 +42,7 @@
 - [BUG-16007] Elevated patch mode now binds request payload integrity via launcher-provided SHA-256 and re-validates patch archive hash/size in helper before extraction.
 - [BUG-16008] Retention cleanup, restore preparation, and tray backup-folder open flow now enforce destination-root path containment to reject out-of-root/traversal backup paths.
 - [BUG-16009] Backups page windowed layout now reflows the per-project and history panels (including per-project destination/encryption/restore controls) to prevent narrow-width collapse and overlap.
+- [BUG-16010] Projects group selector now renders readable option labels in the dropdown instead of fallback "View not found for ProjectGroupOption" text.
 
 ## [1.5.1] - 28.02.2026
 ### Added

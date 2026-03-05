@@ -166,6 +166,13 @@ public class ProjectsViewModel : ViewModelBase
         set => SetProperty(ref _presetEditorPath, value ?? string.Empty);
     }
 
+    private string _presetEditorPathDisplay = string.Empty;
+    public string PresetEditorPathDisplay
+    {
+        get => _presetEditorPathDisplay;
+        set => SetProperty(ref _presetEditorPathDisplay, value ?? string.Empty);
+    }
+
     private bool _hasPresetEditorTarget;
     public bool HasPresetEditorTarget
     {
@@ -2194,6 +2201,7 @@ public class ProjectsViewModel : ViewModelBase
             IsPresetEditorVisible = false;
             PresetEditorContent = string.Empty;
             PresetEditorPath = string.Empty;
+            PresetEditorPathDisplay = string.Empty;
             PresetEditorStatus = string.Empty;
             RaisePresetEditorCanExecuteChanged();
             return;
@@ -2206,6 +2214,7 @@ public class ProjectsViewModel : ViewModelBase
             IsPresetEditorVisible = false;
             PresetEditorContent = string.Empty;
             PresetEditorPath = string.Empty;
+            PresetEditorPathDisplay = string.Empty;
             PresetEditorStatus = L("Projects.Preset.Editor.Status.NoPreset", "Select a preset to edit its rules.");
             RaisePresetEditorCanExecuteChanged();
             return;
@@ -2217,6 +2226,7 @@ public class ProjectsViewModel : ViewModelBase
             IsPresetEditorVisible = false;
             PresetEditorContent = string.Empty;
             PresetEditorPath = string.Empty;
+            PresetEditorPathDisplay = string.Empty;
             PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ResolveFailed", "Could not resolve preset file for '{0}'.", presetId);
             RaisePresetEditorCanExecuteChanged();
             return;
@@ -2224,6 +2234,7 @@ public class ProjectsViewModel : ViewModelBase
 
         HasPresetEditorTarget = true;
         PresetEditorPath = presetPath;
+        PresetEditorPathDisplay = $"{presetId}.vaultsyncignore";
         RaisePresetEditorCanExecuteChanged();
         ReloadPresetEditor();
     }
