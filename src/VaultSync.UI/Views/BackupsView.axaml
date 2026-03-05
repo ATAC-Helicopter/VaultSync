@@ -1446,9 +1446,9 @@
                                             Margin="0,4,0,10">
                                       <Grid ColumnDefinitions="6,*,Auto"
                                             ColumnSpacing="12"
-                                            RowDefinitions="Auto,Auto,Auto,Auto"
+                                            RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                                             RowSpacing="10">
-                                        <Border Grid.RowSpan="4"
+                                        <Border Grid.RowSpan="5"
                                                 Grid.Column="0"
                                                 Background="{Binding TagBackground}"
                                                 CornerRadius="3"
@@ -1500,7 +1500,8 @@
                                                 Background="{DynamicResource Surface3}"
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Center"
-                                                Width="96"
+                                                MinWidth="90"
+                                                MaxWidth="140"
                                                 MinHeight="30">
                                           <TextBlock Text="{Binding SizeFormatted}"
                                                      FontSize="11"
@@ -1509,7 +1510,7 @@
                                                      TextTrimming="CharacterEllipsis"
                                                      HorizontalAlignment="Center"
                                                      VerticalAlignment="Center"
-                                                     MaxWidth="84" />
+                                                     MaxWidth="128" />
                                         </Border>
 
                                         <WrapPanel Grid.Row="1"
@@ -1545,19 +1546,20 @@
                                           </Border>
                                         </WrapPanel>
 
-                                        <TextBlock Grid.Row="1"
-                                                   Grid.Column="2"
+                                        <TextBlock Grid.Row="2"
+                                                   Grid.Column="1"
+                                                   Grid.ColumnSpan="2"
                                                    Text="{Binding RetentionOutcomeLabel}"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    HorizontalAlignment="Left"
                                                    VerticalAlignment="Center"
                                                    TextWrapping="Wrap"
-                                                   MaxWidth="220"
+                                                   MaxWidth="420"
                                                    TextAlignment="Left" />
 
                                         <StackPanel x:Name="BackupsDiffSummarySection"
-                                                    Grid.Row="2"
+                                                    Grid.Row="3"
                                                     Grid.Column="1"
                                                     Grid.ColumnSpan="2"
                                                     Spacing="2">
@@ -1574,7 +1576,7 @@
                                                      MaxLines="2" />
                                         </StackPanel>
 
-                                        <WrapPanel Grid.Row="3"
+                                        <WrapPanel Grid.Row="4"
                                                    Grid.Column="1"
                                                    Grid.ColumnSpan="2"
                                                    Margin="0,2,0,0"

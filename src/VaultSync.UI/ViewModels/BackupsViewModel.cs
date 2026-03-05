@@ -3858,6 +3858,7 @@ namespace VaultSync.UI.ViewModels
                     "Completed" => L("Backups.Status.Completed", "Completed"),
                     "Cancelling" => L("Backups.Status.Cancelling", "Cancelling..."),
                     "Deleting" => L("Backups.Stage.Deleting", "Deleting"),
+                    "Restoring" => L("Backups.Status.Restoring", "Restoring backup..."),
                     "Compressing" => L("Backups.Stage.Compressing", "Compressing archive"),
                     "Uploading" => L("Backups.Stage.Uploading", "Uploading archive"),
                     "Hashing" => L("Backups.Stage.Hashing", "Hashing files"),
@@ -4094,6 +4095,12 @@ namespace VaultSync.UI.ViewModels
             if (ContainsToken(_etaText, "Copying"))
                 return "Copying";
 
+            if (ContainsToken(_etaText, "Restoring") ||
+                ContainsToken(_currentFile, "Restoring") ||
+                ContainsToken(_currentFile, "Decrypting") ||
+                ContainsToken(_currentFile, L("Backups.Status.Restoring", "Restoring backup...")))
+                return "Restoring";
+
             if (ContainsToken(_currentFile, L("Backups.Status.Deleting", "Deleting backup files...")) ||
                 ContainsToken(_currentFile, L("Backups.Stage.Deleting", "Deleting")))
                 return "Deleting";
@@ -4139,6 +4146,7 @@ namespace VaultSync.UI.ViewModels
                 "Uploading"   => StageUploadBrush,
                 "Hashing"     => StageHashBrush,
                 "Copying"     => StageCopyBrush,
+                "Restoring"   => StageCopyBrush,
                 "BackingUp"   => StageBackupBrush,
                 "Preparing"   => StagePrepareBrush,
                 _             => StagePrepareBrush

@@ -406,16 +406,16 @@
                     </WrapPanel>
 
                     <Grid Grid.Row="1"
-                          ColumnDefinitions="*,Auto,*"
-                          ColumnSpacing="10"
-                          HorizontalAlignment="Stretch">
+                          ColumnDefinitions="Auto,Auto,Auto"
+                          ColumnSpacing="12"
+                          HorizontalAlignment="Center">
                       <StackPanel Grid.Column="0"
                                   Spacing="4">
                         <TextBlock Text="{Binding QuietHoursStartLabel}"
                                    FontSize="11"
                                    Foreground="{StaticResource TextSecondary}" />
-                        <TextBox Width="96"
-                                 HorizontalAlignment="Left"
+                        <TextBox Width="110"
+                                 HorizontalAlignment="Center"
                                  HorizontalContentAlignment="Center"
                                  Watermark="HH:mm"
                                  Text="{Binding QuietHoursStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -424,18 +424,18 @@
 
                       <TextBlock Grid.Column="1"
                                  Text="→"
-                                 FontSize="14"
+                                 FontSize="16"
                                  VerticalAlignment="Center"
                                  Foreground="{StaticResource TextSecondary}" />
 
                       <StackPanel Grid.Column="2"
                                   Spacing="4"
-                                  HorizontalAlignment="Right">
+                                  HorizontalAlignment="Center">
                         <TextBlock Text="{Binding QuietHoursEndLabel}"
                                    FontSize="11"
                                    Foreground="{StaticResource TextSecondary}" />
-                        <TextBox Width="96"
-                                 HorizontalAlignment="Right"
+                        <TextBox Width="110"
+                                 HorizontalAlignment="Center"
                                  HorizontalContentAlignment="Center"
                                  Watermark="HH:mm"
                                  Text="{Binding QuietHoursEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"

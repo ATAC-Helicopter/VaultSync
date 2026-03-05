@@ -138,6 +138,7 @@
   "Backups.Section.PerProjectDescription": "Back up single projects and check their status.",
   "Backups.Section.PerProjectTitle": "Per-project backups",
   "Backups.Section.Restore": "Restore",
+  "Backups.Section.TypeImported": "Imported",
   "Backups.Section.SnapshotCount.Plural": "{0} backups",
   "Backups.Section.SnapshotCount.Singular": "{0} backup",
   "Backups.Section.SnapshotsActivity": "Backups per day (last 7 days)",

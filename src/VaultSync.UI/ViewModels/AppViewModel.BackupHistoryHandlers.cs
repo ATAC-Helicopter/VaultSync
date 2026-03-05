@@ -1553,15 +1553,15 @@ namespace VaultSync.UI.ViewModels
             {
                 await Task.Run(() =>
                 {
-                    CopyDirectoryWithProgress(sandboxPath, targetPath, 0, 100, (percent, file) =>
+                    CopyDirectoryWithProgress(sandboxPath, targetPath, 0, 100, update =>
                     {
-                        var label = string.IsNullOrWhiteSpace(file)
+                        var label = string.IsNullOrWhiteSpace(update.CurrentFile)
                             ? L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...")
-                            : file;
+                            : update.CurrentFile;
                         BackupsViewModel.UpdateActiveBackup(
                             applyCardId,
                             projectName,
-                            percent,
+                            update.Percent,
                             label,
                             string.Empty,
                             allowCancel: false);
@@ -1850,18 +1850,59 @@ namespace VaultSync.UI.ViewModels
             var restoreSucceeded = false;
             try
             {
-                void RunRestore(string? encryptionPassword) =>
-                    RestoreDirectory(backupFullPath, projectRoot, encryptionPassword, (percent, currentFile) =>
+                long lastProcessedBytes = 0;
+                var lastProgressSampleUtc = DateTime.UtcNow;
+                double smoothedBytesPerSecond = 0;
+
+                string BuildRestoreEtaLabel(RestoreProgressUpdate update)
+                {
+                    if (update.TotalBytes <= 0)
+                        return string.Empty;
+
+                    var nowUtc = DateTime.UtcNow;
+                    var elapsedSeconds = (nowUtc - lastProgressSampleUtc).TotalSeconds;
+                    if (elapsedSeconds >= 0.2 && update.ProcessedBytes >= lastProcessedBytes)
                     {
-                        var label = string.IsNullOrWhiteSpace(currentFile)
+                        var instantRate = (update.ProcessedBytes - lastProcessedBytes) / elapsedSeconds;
+                        if (instantRate >= 0)
+                        {
+                            smoothedBytesPerSecond = smoothedBytesPerSecond <= 0
+                                ? instantRate
+                                : (smoothedBytesPerSecond * 0.75) + (instantRate * 0.25);
+                        }
+
+                        lastProcessedBytes = update.ProcessedBytes;
+                        lastProgressSampleUtc = nowUtc;
+                    }
+
+                    var speedLabel = smoothedBytesPerSecond > 0
+                        ? $"{BackupSnapshotItem.FormatSize((long)smoothedBytesPerSecond)}/s"
+                        : L("Backups.Progress.Estimating", "Estimating...");
+
+                    var processedLabel = BackupSnapshotItem.FormatSize(Math.Max(0, update.ProcessedBytes));
+                    var totalLabel = BackupSnapshotItem.FormatSize(update.TotalBytes);
+                    var detailLabel = string.Format(
+                        CultureInfo.CurrentCulture,
+                        "Restoring ({0}/{1})",
+                        processedLabel,
+                        totalLabel);
+
+                    return $"{speedLabel} - {detailLabel}";
+                }
+
+                void RunRestore(string? encryptionPassword) =>
+                    RestoreDirectory(backupFullPath, projectRoot, encryptionPassword, update =>
+                    {
+                        var label = string.IsNullOrWhiteSpace(update.CurrentFile)
                             ? L("Backups.Status.Restoring", "Restoring backup...")
-                            : currentFile;
+                            : update.CurrentFile;
+                        var etaLabel = BuildRestoreEtaLabel(update);
                         BackupsViewModel.UpdateActiveBackup(
                             restoreCardId,
                             preparation.ProjectName,
-                            percent,
+                            update.Percent,
                             label,
-                            string.Empty,
+                            etaLabel,
                             allowCancel: false);
                     });
 
@@ -2013,7 +2054,23 @@ namespace VaultSync.UI.ViewModels
             return false;
         }
 
-        private static void RestoreDirectory(string sourceDir, string targetDir, string? encryptionPassword, Action<double, string>? progress)
+        private readonly struct RestoreProgressUpdate
+        {
+            public RestoreProgressUpdate(double percent, string currentFile, long processedBytes, long totalBytes)
+            {
+                Percent = percent;
+                CurrentFile = currentFile ?? string.Empty;
+                ProcessedBytes = processedBytes;
+                TotalBytes = totalBytes;
+            }
+
+            public double Percent { get; }
+            public string CurrentFile { get; }
+            public long ProcessedBytes { get; }
+            public long TotalBytes { get; }
+        }
+
+        private static void RestoreDirectory(string sourceDir, string targetDir, string? encryptionPassword, Action<RestoreProgressUpdate>? progress)
         {
             if (string.IsNullOrWhiteSpace(sourceDir))
                 throw new ArgumentException("Source directory is required.", nameof(sourceDir));
@@ -2059,11 +2116,13 @@ namespace VaultSync.UI.ViewModels
             CopyDirectoryWithProgress(sourceDir, targetDir, 0, 100, progress);
         }
 
-        private static void ExtractArchiveWithProgress(string archivePath, string targetDir, Action<double, string>? progress)
+        private static void ExtractArchiveWithProgress(string archivePath, string targetDir, Action<RestoreProgressUpdate>? progress)
         {
             using var archive = ZipFile.OpenRead(archivePath);
             var totalEntries = archive.Entries.Count;
             var processed = 0;
+            var totalBytes = archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)).Sum(e => Math.Max(0, e.Length));
+            long processedBytes = 0;
 
             foreach (var entry in archive.Entries)
             {
@@ -2082,7 +2141,14 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 processed++;
-                progress?.Invoke(totalEntries == 0 ? 100 : processed * 100d / totalEntries, entry.FullName);
+                if (!string.IsNullOrEmpty(entry.Name))
+                    processedBytes += Math.Max(0, entry.Length);
+
+                progress?.Invoke(new RestoreProgressUpdate(
+                    totalEntries == 0 ? 100 : processed * 100d / totalEntries,
+                    entry.FullName,
+                    processedBytes,
+                    totalBytes));
             }
         }
 
@@ -2090,7 +2156,7 @@ namespace VaultSync.UI.ViewModels
             string sourceDir,
             string targetDir,
             string password,
-            Action<double, string>? progress)
+            Action<RestoreProgressUpdate>? progress)
         {
             var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-restore-{Guid.NewGuid():N}");
             var stagingExtracted = Path.Combine(stagingRoot, "content");
@@ -2099,19 +2165,23 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 Directory.CreateDirectory(stagingExtracted);
-                progress?.Invoke(5, "Decrypting backup...");
+                progress?.Invoke(new RestoreProgressUpdate(5, "Decrypting backup...", 0, 0));
 
                 var cryptoService = new BackupArchiveCryptoService();
                 cryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
-                progress?.Invoke(30, "Decrypting backup...");
+                progress?.Invoke(new RestoreProgressUpdate(30, "Decrypting backup...", 0, 0));
 
-                ExtractArchiveWithProgress(stagingArchive, stagingExtracted, (percent, currentFile) =>
+                ExtractArchiveWithProgress(stagingArchive, stagingExtracted, update =>
                 {
-                    var mapped = 30 + (percent * 0.5);
-                    progress?.Invoke(Math.Clamp(mapped, 30, 80), currentFile);
+                    var mapped = 30 + (update.Percent * 0.5);
+                    progress?.Invoke(new RestoreProgressUpdate(
+                        Math.Clamp(mapped, 30, 80),
+                        update.CurrentFile,
+                        update.ProcessedBytes,
+                        update.TotalBytes));
                 });
 
-                progress?.Invoke(82, "Restoring backup...");
+                progress?.Invoke(new RestoreProgressUpdate(82, "Restoring backup...", 0, 0));
                 CopyDirectoryWithProgress(stagingExtracted, targetDir, 82, 100, progress);
             }
             finally
@@ -2135,13 +2205,18 @@ namespace VaultSync.UI.ViewModels
             string targetDir,
             double startPercent,
             double endPercent,
-            Action<double, string>? progress)
+            Action<RestoreProgressUpdate>? progress)
         {
             var files = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories);
             var totalFiles = files.Length;
+            var totalBytes = files
+                .Select(filePath => new FileInfo(filePath))
+                .Sum(fileInfo => Math.Max(0, fileInfo.Length));
+            long processedBytes = 0;
             var processed = 0;
             foreach (var filePath in files)
             {
+                var fileLength = Math.Max(0, new FileInfo(filePath).Length);
                 var relative = Path.GetRelativePath(sourceDir, filePath);
                 var target = Path.Combine(targetDir, relative);
 
@@ -2150,17 +2225,18 @@ namespace VaultSync.UI.ViewModels
                     Directory.CreateDirectory(parentDir);
 
                 File.Copy(filePath, target, overwrite: true);
+                processedBytes += fileLength;
                 processed++;
                 if (progress is not null)
                 {
                     var ratio = totalFiles == 0 ? 1d : processed / (double)totalFiles;
                     var value = startPercent + ((endPercent - startPercent) * ratio);
-                    progress(value, relative);
+                    progress(new RestoreProgressUpdate(value, relative, processedBytes, totalBytes));
                 }
             }
 
             if (totalFiles == 0)
-                progress?.Invoke(endPercent, string.Empty);
+                progress?.Invoke(new RestoreProgressUpdate(endPercent, string.Empty, 0, 0));
         }
 
     }

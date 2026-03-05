@@ -725,6 +725,24 @@
   - Scope: verification mode per project, verification recency surfacing, and restore-confidence integration.
   - Current planning note:
     - Pulled forward from the original `1.9.x` bucket because verification policy directly supports restore trust in `1.6`.
+- [x] `VS-1612` `P1` Windowed backup-history card layout hardening.
+  - Scope: prevent chip/pill overlap in narrow window widths and keep retention/status text readable without clipping.
+  - Done:
+    - Backups history item layout now reserves dedicated rows for retention and actions to avoid right-column collisions.
+    - Size pill now uses adaptive width bounds instead of a fixed circular capsule in constrained layouts.
+- [x] `VS-1613` `P1` Restore active-card stage and throughput parity.
+  - Scope: ensure restore operations report a restore-specific stage and live transfer detail instead of backup-stage fallbacks.
+  - Done:
+    - Restore progress now emits processed/total bytes with live speed label in the active card.
+    - Active backup stage detection now recognizes restoring/decrypting progress and shows restore-specific status text.
+- [x] `VS-1614` `P2` Diff imported-type localization key parity.
+  - Scope: add missing key used by diff preview/imported-type chips to prevent raw key rendering.
+  - Done:
+    - Added English localization key `Backups.Section.TypeImported` used by diff preview status chips.
+- [x] `VS-1615` `P2` Quiet-hours window editor compact layout pass.
+  - Scope: tighten quiet-hours input composition for windowed mode and remove excessive edge spacing.
+  - Done:
+    - Quiet-hours start/end fields now use centered compact groups with consistent widths and spacing.
 
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.

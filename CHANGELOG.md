@@ -12,6 +12,12 @@
 - [VS-1608] Projects preset card now shows a localized recommendation reason and an `Apply recommendation` action while keeping manual preset selection fully available.
 - [VS-1609] Projects list now includes smart-group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) using project tags and lightweight preset/health signals.
 - [VS-1609] Projects smart-group selector now includes a bulk `Snapshot group` action for registered projects in the active group filter.
+- [ISS-16001] Quiet-hours editor now uses a compact centered start/end layout with consistent control widths in windowed mode.
+### Fixed
+- [BUG-16001] Backups history cards in windowed mode no longer overlap snapshot chips, retention text, and action controls.
+- [BUG-16002] History snapshot size pill now keeps a stable adaptive shape instead of collapsing into a circular badge on narrow widths.
+- [BUG-16003] Restore active backup cards now report restore/decrypt stages (not generic backup stage labels) with live throughput and restored-bytes progress detail.
+- [BUG-16004] Diff imported-type chip no longer shows raw key text; English localization now includes `Backups.Section.TypeImported`.
 
 ## [1.5.1] - 28.02.2026
 ### Added
