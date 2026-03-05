@@ -17,6 +17,18 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
+        private bool ShouldRunVerification(Project project, bool isAutoRun, bool globalVerifyAfterCreate)
+        {
+            var policy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
+            return policy switch
+            {
+                ProjectVerificationPolicy.Always => true,
+                ProjectVerificationPolicy.Scheduled => isAutoRun,
+                ProjectVerificationPolicy.Manual => false,
+                _ => globalVerifyAfterCreate
+            };
+        }
+
         private void StartPostBackupHashingAsync(Project project, int snapshotId)
         {
             _ = Task.Run(async () =>

@@ -62,6 +62,7 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel = new ProjectsViewModel();
             _projectsViewModel.EditProjectEncryptionRequested += OnProjectEncryptionRequestedFromProjects;
             _projectsViewModel.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
+            _projectsViewModel.BackupGroupRequested += OnBackupGroupRequested;
             _backupsViewModel = null;
             _settingsViewModel = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
@@ -150,6 +151,7 @@ namespace VaultSync.UI.ViewModels
             vm.PreferredDestinationChanged += OnPreferredDestinationChanged;
             vm.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
             vm.ProjectRestoreModeChanged += OnProjectRestoreModeChanged;
+            vm.ProjectVerificationPolicyChanged += OnProjectVerificationPolicyChanged;
             vm.ManageProjectEncryptionRequested += OnProjectEncryptionRequestedFromBackups;
             vm.OpenSettingsRequested += OnOpenSettingsRequested;
             InitializeDestinationStatusOverview(vm);
