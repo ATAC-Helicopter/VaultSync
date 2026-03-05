@@ -58,8 +58,10 @@
     </Style>
 
     <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem:selected">
-      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <!-- Custom container template for project list items -->
@@ -170,7 +172,7 @@
                   BorderBrush="{DynamicResource DividerBrush}"
                   BorderThickness="1"
                   Padding="8,4">
-            <Grid RowDefinitions="Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                   ColumnDefinitions="Auto,*,Auto,Auto,Auto"
                   ColumnSpacing="8"
                   RowSpacing="4">
@@ -224,6 +226,70 @@
                 </Button>
               </StackPanel>
               <TextBlock Grid.Row="1"
+                         VerticalAlignment="Center"
+                         Text="{infra:LocalizedString Key=Projects.Group.TagLabel}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         FontSize="11"
+                         FontWeight="SemiBold" />
+              <TextBox Grid.Row="1"
+                       Grid.Column="1"
+                       Text="{Binding GroupTagInput, Mode=TwoWay}"
+                       Watermark="{infra:LocalizedString Key=Projects.Group.TagWatermark}"
+                       Background="{DynamicResource InputBackgroundBrush}"
+                       BorderBrush="{DynamicResource DividerBrush}"
+                       BorderThickness="1"
+                       Padding="{DynamicResource InputPadding}" />
+              <Button Grid.Row="1"
+                      Grid.Column="2"
+                      Padding="{DynamicResource ButtonTightPadding}"
+                      CornerRadius="10"
+                      Background="{DynamicResource Surface2}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
+                      Command="{Binding ApplyTagToGroupCommand}">
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Group.TagApply}" />
+              </Button>
+              <Button Grid.Row="1"
+                      Grid.Column="3"
+                      Padding="{DynamicResource ButtonTightPadding}"
+                      CornerRadius="10"
+                      Background="{DynamicResource Surface2}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
+                      Command="{Binding RemoveTagFromGroupCommand}">
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Group.TagRemove}" />
+              </Button>
+              <TextBlock Grid.Row="1"
+                         Grid.Column="4"
+                         VerticalAlignment="Center"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         FontSize="10"
+                         Text="{infra:LocalizedString Key=Projects.Group.TagHelp}" />
+              <ItemsControl Grid.Row="2"
+                            Grid.Column="1"
+                            Grid.ColumnSpan="4"
+                            ItemsSource="{Binding ReusableProjectTags}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Padding="8,2"
+                            CornerRadius="999"
+                            Background="{Binding Background}"
+                            BorderBrush="{Binding Border}"
+                            BorderThickness="1"
+                            Foreground="{Binding Foreground}"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Command="{Binding DataContext.SelectGroupTagCommand, ElementName=Root}"
+                            CommandParameter="{Binding Value}">
+                      <TextBlock Text="{Binding Value}" FontSize="10" FontWeight="Bold" TextAlignment="Center" />
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Grid.Row="3"
                          Grid.Column="0"
                          Grid.ColumnSpan="5"
                          Text="{infra:LocalizedString Key=Projects.Group.Help}"
@@ -248,7 +314,7 @@
 
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
                     <!-- Name + last snapshot short + size + avatar -->
                     <Grid Grid.Row="0"
                           ColumnDefinitions="Auto,*,Auto,Auto"
@@ -321,7 +387,36 @@
                       <Run Text="{Binding PreferredDestinationDisplay}" />
                     </TextBlock>
 
-                    <StackPanel Grid.Row="3"
+                    <ItemsControl Grid.Row="3"
+                                  Grid.ColumnSpan="2"
+                                  IsVisible="{Binding HasTags}"
+                                  ItemsSource="{Binding TagChips}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="999"
+                                  Padding="8,2"
+                                  HorizontalAlignment="Left"
+                                  Background="{Binding Background}"
+                                  BorderBrush="{Binding Border}"
+                                  BorderThickness="1">
+                            <TextBlock Text="{Binding Value}"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="{Binding Foreground}"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="160" />
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Grid.Row="4"
                                 Grid.ColumnSpan="2"
                                 Margin="0,4,0,0"
                                 Orientation="Horizontal"
@@ -344,7 +439,7 @@
 
                     <!-- Health pill bar -->
                     <Border
-                      Grid.Row="4"
+                      Grid.Row="5"
                       Grid.ColumnSpan="2"
                       Margin="0,10,0,0"
                       CornerRadius="999"
@@ -527,13 +622,90 @@
                            FontSize="11"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBox Grid.Row="7"
-                         Text="{Binding TagsCsv, Mode=TwoWay}"
-                         Watermark="{infra:LocalizedString Key=Projects.Tags.Watermark}"
-                         Background="{DynamicResource InputBackgroundBrush}"
-                         BorderBrush="{DynamicResource DividerBrush}"
-                         BorderThickness="1"
-                         Padding="{DynamicResource InputPadding}" />
+                <StackPanel Grid.Row="7" Spacing="6">
+                  <ItemsControl ItemsSource="{Binding DataContext.SelectedProjectTags, ElementName=Root}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border CornerRadius="999"
+                                Background="{Binding Background}"
+                                BorderBrush="{Binding Border}"
+                                BorderThickness="1"
+                                Padding="10,4"
+                                DoubleTapped="OnProjectTagPillDoubleTapped">
+                          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Value}"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Center"
+                                       Foreground="{Binding Foreground}" />
+                            <Button Content="x"
+                                    Classes="small-button"
+                                    Padding="4,0"
+                                    MinWidth="18"
+                                    MinHeight="18"
+                                    VerticalAlignment="Center"
+                                    Background="#00000000"
+                                    Foreground="{Binding Foreground}"
+                                    BorderThickness="0"
+                                    Command="{Binding DataContext.RemoveProjectTagCommand, ElementName=Root}"
+                                    CommandParameter="{Binding Value}" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBox Text="{Binding DataContext.ProjectTagInput, ElementName=Root, Mode=TwoWay}"
+                           Watermark="{infra:LocalizedString Key=Projects.Tags.Watermark}"
+                           Background="{DynamicResource InputBackgroundBrush}"
+                           BorderBrush="{DynamicResource DividerBrush}"
+                           BorderThickness="1"
+                           Padding="{DynamicResource InputPadding}">
+                    <TextBox.KeyBindings>
+                      <KeyBinding Gesture="Enter"
+                                  Command="{Binding DataContext.CommitProjectTagInputCommand, ElementName=Root}" />
+                    </TextBox.KeyBindings>
+                  </TextBox>
+
+                  <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Help}"
+                             FontSize="10"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             TextWrapping="Wrap" />
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.ReusableLabel}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ItemsControl ItemsSource="{Binding DataContext.ReusableProjectTags, ElementName=Root}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Button Padding="8,3"
+                                  CornerRadius="999"
+                                  Background="{Binding Background}"
+                                  BorderBrush="{Binding Border}"
+                                  BorderThickness="1"
+                                  Foreground="{Binding Foreground}"
+                                  HorizontalContentAlignment="Center"
+                                  VerticalContentAlignment="Center"
+                                  Command="{Binding DataContext.AddExistingTagToSelectedProjectCommand, ElementName=Root}"
+                                  CommandParameter="{Binding Value}">
+                            <TextBlock Text="{Binding Value}" FontSize="10" FontWeight="Bold" TextAlignment="Center" />
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </StackPanel>
                 <Button Grid.Row="8"
                         HorizontalAlignment="Left"
                         Padding="{DynamicResource ButtonTightPadding}"

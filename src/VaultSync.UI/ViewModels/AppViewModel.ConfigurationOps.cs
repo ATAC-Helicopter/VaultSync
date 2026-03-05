@@ -1002,12 +1002,38 @@ namespace VaultSync.UI.ViewModels
                     Dispatcher.UIThread.Post(() =>
                     {
                         _config.Backups.AutoBackupDisabledProjects = list;
+                        _backupsViewModel?.RefreshAutoBackupFlagsFromConfig();
                         ConfigureAutoBackupTimer();
                     });
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[AutoBackup] Failed to update preference: {ex.Message}");
+                }
+            });
+        }
+
+        private void OnAutoBackupGroupPreferenceChanged(IReadOnlyList<int>? projectIds, bool enabled)
+        {
+            _ = projectIds;
+            _ = enabled;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    var cfg = AppConfigStore.Load();
+                    var list = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _config.Backups.AutoBackupDisabledProjects = list;
+                        _backupsViewModel?.RefreshAutoBackupFlagsFromConfig();
+                        ConfigureAutoBackupTimer();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AutoBackup] Failed to sync grouped preference update: {ex.Message}");
                 }
             });
         }

@@ -63,6 +63,7 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel.EditProjectEncryptionRequested += OnProjectEncryptionRequestedFromProjects;
             _projectsViewModel.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
             _projectsViewModel.BackupGroupRequested += OnBackupGroupRequested;
+            _projectsViewModel.AutoBackupGroupPreferenceChanged += OnAutoBackupGroupPreferenceChanged;
             _backupsViewModel = null;
             _settingsViewModel = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;

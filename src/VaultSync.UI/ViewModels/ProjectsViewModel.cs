@@ -30,6 +30,7 @@ namespace VaultSync.UI.ViewModels;
 public class ProjectsViewModel : ViewModelBase
 {
     private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
+    private static readonly string[] DefaultReusableTags = { "Work", "Games", "Media", "Critical", "Archive" };
     private readonly IProjectDiscoveryService _discovery = new ProjectDiscoveryService();
     private IReadOnlyList<DiscoveredProject> _cachedDiscovery = Array.Empty<DiscoveredProject>();
     private string? _cachedDiscoveryRoot;
@@ -64,6 +65,7 @@ public class ProjectsViewModel : ViewModelBase
         new(StringComparer.OrdinalIgnoreCase);
 
     private ProjectItemViewModel? _selectedProject;
+    private string _lastSelectedProjectName = string.Empty;
     private int _selectedProjectRefreshToken;
     private int _selectedProjectHistoryToken;
     private int _refreshInFlight;
@@ -82,6 +84,12 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _backupGroupCommand;
     private readonly RelayCommand _disableAutoBackupGroupCommand;
     private readonly RelayCommand _enableAutoBackupGroupCommand;
+    private readonly RelayCommand _commitProjectTagInputCommand;
+    private readonly RelayCommand _removeProjectTagCommand;
+    private readonly RelayCommand _addExistingTagToSelectedProjectCommand;
+    private readonly RelayCommand _applyTagToGroupCommand;
+    private readonly RelayCommand _removeTagFromGroupCommand;
+    private readonly RelayCommand _selectGroupTagCommand;
     public ProjectItemViewModel? SelectedProject
     {
         get => _selectedProject;
@@ -89,6 +97,9 @@ public class ProjectsViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedProject, value))
             {
+                if (value is not null && !string.IsNullOrWhiteSpace(value.Name))
+                    _lastSelectedProjectName = value.Name;
+
                 _openFolderCommand.RaiseCanExecuteChanged();
                 _removeProjectCommand.RaiseCanExecuteChanged();
                 _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
@@ -96,10 +107,14 @@ public class ProjectsViewModel : ViewModelBase
                 _backupGroupCommand.RaiseCanExecuteChanged();
                 _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
                 _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
+                _commitProjectTagInputCommand.RaiseCanExecuteChanged();
+                _removeProjectTagCommand.RaiseCanExecuteChanged();
+                _addExistingTagToSelectedProjectCommand.RaiseCanExecuteChanged();
                 RefreshSelectedProjectRegistration();
                 UpdateProjectPresetRecommendation(value);
                 LoadSnapshotHistoryForSelectedProject();
                 LoadPresetEditorForSelectedProject();
+                RefreshSelectedProjectTags();
             }
         }
     }
@@ -131,6 +146,12 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand BackupGroupCommand { get; }
     public ICommand DisableAutoBackupGroupCommand { get; }
     public ICommand EnableAutoBackupGroupCommand { get; }
+    public ICommand CommitProjectTagInputCommand { get; }
+    public ICommand RemoveProjectTagCommand { get; }
+    public ICommand AddExistingTagToSelectedProjectCommand { get; }
+    public ICommand ApplyTagToGroupCommand { get; }
+    public ICommand RemoveTagFromGroupCommand { get; }
+    public ICommand SelectGroupTagCommand { get; }
     public ICommand TakeSnapshotCommand => SnapshotCommand;
     public ICommand ManageProjectEncryptionCommand { get; }
     public ICommand ApplyPresetRecommendationCommand { get; }
@@ -145,6 +166,35 @@ public class ProjectsViewModel : ViewModelBase
     public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
     public event Action<int, string>? ProjectEncryptionPolicyChanged;
     public event Action<IReadOnlyList<int>>? BackupGroupRequested;
+    public event Action<IReadOnlyList<int>, bool>? AutoBackupGroupPreferenceChanged;
+    public ObservableCollection<ProjectTagChip> SelectedProjectTags { get; } = new ObservableCollection<ProjectTagChip>();
+    public ObservableCollection<ProjectTagChip> ReusableProjectTags { get; } = new ObservableCollection<ProjectTagChip>();
+    private string _groupTagInput = string.Empty;
+    public string GroupTagInput
+    {
+        get => _groupTagInput;
+        set
+        {
+            if (!SetProperty(ref _groupTagInput, value ?? string.Empty))
+                return;
+
+            _applyTagToGroupCommand.RaiseCanExecuteChanged();
+            _removeTagFromGroupCommand.RaiseCanExecuteChanged();
+            _addExistingTagToSelectedProjectCommand.RaiseCanExecuteChanged();
+        }
+    }
+    private string _projectTagInput = string.Empty;
+    public string ProjectTagInput
+    {
+        get => _projectTagInput;
+        set
+        {
+            if (!SetProperty(ref _projectTagInput, value ?? string.Empty))
+                return;
+
+            ConsumeProjectTagInputDelimiters();
+        }
+    }
     private string _presetEditorContent = string.Empty;
     public string PresetEditorContent
     {
@@ -252,6 +302,8 @@ public class ProjectsViewModel : ViewModelBase
                 _backupGroupCommand.RaiseCanExecuteChanged();
                 _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
                 _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
+                _applyTagToGroupCommand.RaiseCanExecuteChanged();
+                _removeTagFromGroupCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -282,6 +334,19 @@ public class ProjectsViewModel : ViewModelBase
         _enableAutoBackupGroupCommand = new RelayCommand(
             _ => _ = RunDetachedAsync(() => SetAutoBackupForSelectedGroupAsync(true), "enable-auto-backup-selected-group"),
             _ => CanEnableAutoBackupForSelectedGroup());
+        _commitProjectTagInputCommand = new RelayCommand(_ => CommitProjectTagInput(), _ => SelectedProject is not null);
+        _removeProjectTagCommand = new RelayCommand(tag => RemoveProjectTag(tag as string), _ => SelectedProject is not null);
+        _addExistingTagToSelectedProjectCommand = new RelayCommand(
+            tag => AddExistingTagToSelectedProject(tag as string),
+            tag => SelectedProject is not null &&
+                   (!string.IsNullOrWhiteSpace(tag as string) || !string.IsNullOrWhiteSpace(GroupTagInput)));
+        _applyTagToGroupCommand = new RelayCommand(
+            _ => _ = RunDetachedAsync(() => SetTagForSelectedGroupAsync(add: true), "apply-tag-selected-group"),
+            _ => CanSetTagForSelectedGroup());
+        _removeTagFromGroupCommand = new RelayCommand(
+            _ => _ = RunDetachedAsync(() => SetTagForSelectedGroupAsync(add: false), "remove-tag-selected-group"),
+            _ => CanSetTagForSelectedGroup());
+        _selectGroupTagCommand = new RelayCommand(tag => SelectGroupTag(tag as string));
         OpenFolderCommand = _openFolderCommand;
         RemoveProjectCommand = _removeProjectCommand;
         ApplyPresetRecommendationCommand = _applyPresetRecommendationCommand;
@@ -296,6 +361,12 @@ public class ProjectsViewModel : ViewModelBase
         BackupGroupCommand = _backupGroupCommand;
         DisableAutoBackupGroupCommand = _disableAutoBackupGroupCommand;
         EnableAutoBackupGroupCommand = _enableAutoBackupGroupCommand;
+        CommitProjectTagInputCommand = _commitProjectTagInputCommand;
+        RemoveProjectTagCommand = _removeProjectTagCommand;
+        AddExistingTagToSelectedProjectCommand = _addExistingTagToSelectedProjectCommand;
+        ApplyTagToGroupCommand = _applyTagToGroupCommand;
+        RemoveTagFromGroupCommand = _removeTagFromGroupCommand;
+        SelectGroupTagCommand = _selectGroupTagCommand;
         SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
         ManageProjectEncryptionCommand = new RelayCommand(p => RequestProjectEncryptionPasswordEdit(p as ProjectItemViewModel ?? SelectedProject));
         ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());
@@ -303,6 +374,7 @@ public class ProjectsViewModel : ViewModelBase
         LoadAvailablePresets();
         RefreshEncryptionPolicyOptions();
         LoadGroupOptions();
+        RefreshReusableProjectTags();
 
         _ = RefreshAsync();
     }
@@ -387,6 +459,7 @@ public class ProjectsViewModel : ViewModelBase
             }
 
             ApplyFilterAndSort();
+            RefreshReusableProjectTags();
 
             if (SelectedProject != null && !Projects.Contains(SelectedProject))
             {
@@ -750,7 +823,7 @@ public class ProjectsViewModel : ViewModelBase
             : ProjectSortMode.LastSnapshot;
     }
 
-    private void ApplyFilterAndSort()
+    private void ApplyFilterAndSort(bool autoSelectIfNone = true)
     {
         IEnumerable<ProjectItemViewModel> filtered = _allProjects;
 
@@ -805,11 +878,22 @@ public class ProjectsViewModel : ViewModelBase
         // Keep selection valid
         if (SelectedProject != null && !Projects.Contains(SelectedProject))
         {
-            SelectedProject = Projects.Count > 0 ? Projects[0] : null;
+            SelectedProject = autoSelectIfNone && Projects.Count > 0 ? Projects[0] : null;
         }
-        else if (SelectedProject == null && Projects.Count > 0)
+        else if (SelectedProject == null)
         {
-            SelectedProject = Projects[0];
+            var restore = !string.IsNullOrWhiteSpace(_lastSelectedProjectName)
+                ? Projects.FirstOrDefault(p => string.Equals(p.Name, _lastSelectedProjectName, StringComparison.OrdinalIgnoreCase))
+                : null;
+
+            if (restore is not null)
+            {
+                SelectedProject = restore;
+            }
+            else if (autoSelectIfNone && Projects.Count > 0)
+            {
+                SelectedProject = Projects[0];
+            }
         }
     }
 
@@ -823,6 +907,160 @@ public class ProjectsViewModel : ViewModelBase
         GroupOptions.Add(new ProjectGroupOption("critical", L("Projects.Group.Critical", "Critical")));
         GroupOptions.Add(new ProjectGroupOption("archive", L("Projects.Group.Archive", "Archive")));
         SelectedGroup = GroupOptions.FirstOrDefault();
+    }
+
+    private void RefreshSelectedProjectTags()
+    {
+        SelectedProjectTags.Clear();
+        ProjectTagInput = string.Empty;
+        if (SelectedProject is null)
+            return;
+
+        foreach (var tag in ParseTags(SelectedProject.TagsCsv))
+            SelectedProjectTags.Add(ProjectTagChip.Create(tag));
+    }
+
+    private void RefreshReusableProjectTags()
+    {
+        var selected = GroupTagInput;
+        var allTags = DefaultReusableTags
+            .Concat(_allProjects
+            .SelectMany(p => ParseTags(p.TagsCsv))
+            )
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        ReusableProjectTags.Clear();
+        foreach (var tag in allTags)
+            ReusableProjectTags.Add(ProjectTagChip.Create(tag));
+
+        if (string.IsNullOrWhiteSpace(selected) ||
+            allTags.Any(t => string.Equals(t, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        GroupTagInput = string.Empty;
+    }
+
+    private void ConsumeProjectTagInputDelimiters()
+    {
+        if (SelectedProject is null)
+            return;
+
+        var input = ProjectTagInput;
+        if (string.IsNullOrWhiteSpace(input))
+            return;
+
+        var separators = new[] { ',', '\n', '\r', ';' };
+        if (input.IndexOfAny(separators) < 0)
+            return;
+
+        var trailingDelimiter = separators.Contains(input[^1]);
+        var parts = input.Split(separators, StringSplitOptions.None);
+        var completeCount = trailingDelimiter ? parts.Length : Math.Max(parts.Length - 1, 0);
+        var changed = false;
+
+        for (var i = 0; i < completeCount; i++)
+        {
+            var token = parts[i].Trim();
+            if (TryAddTagChip(token))
+                changed = true;
+        }
+
+        var remainder = trailingDelimiter ? string.Empty : parts.LastOrDefault()?.Trim() ?? string.Empty;
+        if (!string.Equals(ProjectTagInput, remainder, StringComparison.Ordinal))
+            ProjectTagInput = remainder;
+
+        if (changed)
+            SyncSelectedProjectTagsToProject();
+    }
+
+    private void CommitProjectTagInput()
+    {
+        if (SelectedProject is null)
+            return;
+
+        var token = (ProjectTagInput ?? string.Empty).Trim();
+        if (!TryAddTagChip(token))
+            return;
+
+        ProjectTagInput = string.Empty;
+        SyncSelectedProjectTagsToProject();
+    }
+
+    public void BeginEditProjectTag(string? tag)
+    {
+        if (SelectedProject is null || string.IsNullOrWhiteSpace(tag))
+            return;
+
+        RemoveProjectTag(tag, sync: false);
+        ProjectTagInput = tag.Trim();
+    }
+
+    private void RemoveProjectTag(string? tag)
+    {
+        RemoveProjectTag(tag, sync: true);
+    }
+
+    private void RemoveProjectTag(string? tag, bool sync)
+    {
+        if (SelectedProject is null || string.IsNullOrWhiteSpace(tag))
+            return;
+
+        var existing = SelectedProjectTags.FirstOrDefault(t =>
+            string.Equals(t.Value, tag, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+            return;
+
+        SelectedProjectTags.Remove(existing);
+        if (sync)
+            SyncSelectedProjectTagsToProject();
+    }
+
+    private bool TryAddTagChip(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+
+        token = token.Trim();
+        if (SelectedProjectTags.Any(t => string.Equals(t.Value, token, StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        SelectedProjectTags.Add(ProjectTagChip.Create(token));
+        return true;
+    }
+
+    private void SyncSelectedProjectTagsToProject()
+    {
+        if (SelectedProject is null)
+            return;
+
+        var csv = string.Join(", ", SelectedProjectTags
+            .Select(t => t.Value.Trim())
+            .Where(v => !string.IsNullOrWhiteSpace(v)));
+
+        if (!string.Equals(SelectedProject.TagsCsv, csv, StringComparison.Ordinal))
+            SelectedProject.TagsCsv = csv;
+    }
+
+    private void AddExistingTagToSelectedProject(string? tag)
+    {
+        var token = string.IsNullOrWhiteSpace(tag) ? GroupTagInput : tag;
+        if (SelectedProject is null || string.IsNullOrWhiteSpace(token))
+            return;
+
+        if (TryAddTagChip(token))
+            SyncSelectedProjectTagsToProject();
+    }
+
+    private void SelectGroupTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+            return;
+
+        GroupTagInput = tag.Trim();
     }
 
     private static bool ProjectMatchesGroup(ProjectItemViewModel project, string groupId)
@@ -867,6 +1105,12 @@ public class ProjectsViewModel : ViewModelBase
 
     private bool CanBackupSelectedGroup() => GetSelectedGroupRegisteredProjectIds().Count > 0;
 
+    private bool CanSetTagForSelectedGroup()
+    {
+        return GetSelectedGroupRegisteredProjectIds().Count > 0 &&
+               !string.IsNullOrWhiteSpace(GroupTagInput);
+    }
+
     private bool CanDisableAutoBackupForSelectedGroup()
     {
         var ids = GetSelectedGroupRegisteredProjectIds();
@@ -900,6 +1144,61 @@ public class ProjectsViewModel : ViewModelBase
             .Select(p => p.ProjectId)
             .Distinct()
             .ToList();
+    }
+
+    private async Task SetTagForSelectedGroupAsync(bool add)
+    {
+        var ids = GetSelectedGroupRegisteredProjectIds();
+        var tag = (GroupTagInput ?? string.Empty).Trim();
+        if (ids.Count == 0 || string.IsNullOrWhiteSpace(tag))
+            return;
+
+        await Task.Run(() =>
+        {
+            var config = AppConfigStore.Load();
+            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                ? config.DbPath
+                : GetDefaultDbPath();
+
+            var repo = new SqliteRepository(dbPath);
+            var projectsById = repo.GetAllProjects().ToDictionary(p => p.Id);
+            foreach (var projectId in ids)
+            {
+                if (!projectsById.TryGetValue(projectId, out var project))
+                    continue;
+
+                var tags = ParseTags(project.Tags);
+                if (add)
+                {
+                    if (tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+                        continue;
+                    tags.Add(tag);
+                }
+                else
+                {
+                    var removed = tags.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
+                    if (removed == 0)
+                        continue;
+                }
+
+                var csv = string.Join(", ", tags);
+                repo.UpdateProjectTags(projectId, csv);
+                var vm = _allProjects.FirstOrDefault(p => p.ProjectId == projectId);
+                if (vm is not null)
+                    vm.TagsCsv = csv;
+            }
+        }).ConfigureAwait(false);
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            RefreshReusableProjectTags();
+            ApplyFilterAndSort(autoSelectIfNone: false);
+            ShowNotification(
+                add
+                    ? Lf("Projects.Group.TagApplied", "Applied tag '{0}' to {1} projects.", tag, ids.Count)
+                    : Lf("Projects.Group.TagRemoved", "Removed tag '{0}' from {1} projects.", tag, ids.Count),
+                NotificationSeverity.Info);
+        });
     }
 
     private async Task SnapshotSelectedGroupAsync()
@@ -1035,6 +1334,7 @@ public class ProjectsViewModel : ViewModelBase
                 NotificationSeverity.Info);
             _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
             _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
+            AutoBackupGroupPreferenceChanged?.Invoke(ids, enabled);
         });
     }
 
@@ -1662,7 +1962,10 @@ public class ProjectsViewModel : ViewModelBase
             if (changedTags)
             {
                 repo.UpdateProjectTags(project.Id, vm.TagsCsv);
-                ApplyFilterAndSort();
+                RefreshReusableProjectTags();
+                ApplyFilterAndSort(autoSelectIfNone: false);
+                if (ReferenceEquals(vm, SelectedProject))
+                    RefreshSelectedProjectTags();
             }
         }
         catch (Exception ex)
@@ -2505,8 +2808,38 @@ public class ProjectItemViewModel : ViewModelBase
     public string TagsCsv
     {
         get => _tagsCsv;
-        set => SetProperty(ref _tagsCsv, value ?? string.Empty);
+        set
+        {
+            if (!SetProperty(ref _tagsCsv, value ?? string.Empty))
+                return;
+
+            RebuildTagChips();
+            OnPropertyChanged(nameof(TagsDisplay));
+            OnPropertyChanged(nameof(HasTags));
+        }
     }
+
+    public string TagsDisplay
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(TagsCsv))
+                return string.Empty;
+
+            var tags = TagsCsv
+                .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(3)
+                .ToArray();
+
+            return tags.Length == 0 ? string.Empty : string.Join(" - ", tags);
+        }
+    }
+
+    public bool HasTags => !string.IsNullOrWhiteSpace(TagsDisplay);
+    public ObservableCollection<ProjectTagChip> TagChips { get; } = new ObservableCollection<ProjectTagChip>();
 
     private string _recommendedPreset = string.Empty;
     public string RecommendedPreset
@@ -2869,6 +3202,24 @@ public class ProjectItemViewModel : ViewModelBase
         return trimmed.Substring(0, 1).ToUpperInvariant();
     }
 
+    private void RebuildTagChips()
+    {
+        TagChips.Clear();
+
+        if (string.IsNullOrWhiteSpace(TagsCsv))
+            return;
+
+        var tags = TagsCsv
+            .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(4);
+
+        foreach (var tag in tags)
+            TagChips.Add(ProjectTagChip.Create(tag));
+    }
+
     private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
     {
         if (Equals(storage, value)) return false;
@@ -2927,6 +3278,40 @@ public sealed class ProjectGroupOption
     {
         return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
     }
+}
+
+public sealed class ProjectTagChip
+{
+    private static readonly (string Background, string Foreground, string Border)[] Palette =
+    {
+        ("#243A5A", "#D6E9FF", "#32598A"),
+        ("#2A4A3A", "#D9FDE9", "#3E7A5F"),
+        ("#4A3528", "#FFEAD6", "#8A5F3F"),
+        ("#3A2C4A", "#ECDDFF", "#6A4E8A"),
+        ("#3F2F2F", "#FFDCDC", "#8A5252"),
+        ("#2E414D", "#D8F0FF", "#4B7083"),
+    };
+
+    public static ProjectTagChip Create(string value)
+    {
+        var safe = (value ?? string.Empty).Trim();
+        var idx = Math.Abs(StringComparer.OrdinalIgnoreCase.GetHashCode(safe)) % Palette.Length;
+        var (background, foreground, border) = Palette[idx];
+        return new ProjectTagChip(safe, background, foreground, border);
+    }
+
+    private ProjectTagChip(string value, string background, string foreground, string border)
+    {
+        Value = value ?? string.Empty;
+        Background = background;
+        Foreground = foreground;
+        Border = border;
+    }
+
+    public string Value { get; }
+    public string Background { get; }
+    public string Foreground { get; }
+    public string Border { get; }
 }
 
 public sealed class EncryptionPolicyOption
