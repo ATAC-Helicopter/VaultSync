@@ -2237,9 +2237,14 @@ public sealed class BackupService
                         .Replace('\\', Path.DirectorySeparatorChar)
                         .Replace('/', Path.DirectorySeparatorChar)
                         .TrimStart(Path.DirectorySeparatorChar);
-                var fullPath = string.IsNullOrWhiteSpace(baseRoot)
-                    ? string.Empty
-                    : Path.Combine(baseRoot, relativePath);
+                var fullPath = string.Empty;
+                if (!string.IsNullOrWhiteSpace(baseRoot) &&
+                    !TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
+                {
+                    Console.WriteLine(
+                        $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}).");
+                    continue;
+                }
 
                 if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
                 {
@@ -2309,6 +2314,28 @@ public sealed class BackupService
             }
         }
     }
+
+    private static bool TryCombinePathUnderRoot(string root, string relativePath, out string fullPath)
+    {
+        fullPath = string.Empty;
+        try
+        {
+            var normalizedRoot = Path.GetFullPath(root)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath ?? string.Empty));
+            if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            fullPath = candidate;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static (long totalBytes, long freeBytes)? TryGetDiskSpace(string path)
     {
         try

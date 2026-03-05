@@ -1075,7 +1075,11 @@ namespace VaultSync.UI.ViewModels
                 return RestoreBackupPreparation.Failure;
             }
 
-            var backupFullPath = Path.Combine(backupRoot, backup.Path);
+            if (!TryCombinePathUnderRoot(backupRoot, backup.Path, out var backupFullPath, out var backupPathError))
+            {
+                Console.WriteLine($"[Restore] Backup path rejected for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', error='{backupPathError}'.");
+                return RestoreBackupPreparation.Failure;
+            }
             if (!Directory.Exists(backupFullPath))
             {
                 Console.WriteLine($"[Restore] Backup path missing for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', full='{backupFullPath}'.");

@@ -761,11 +761,12 @@
     - Elevated helper now requires request-file SHA-256 passed by launcher and rejects tampered request payloads.
     - Request/manifest temp paths are constrained to trusted VaultSync temp roots in helper mode.
     - Archive hash/size are re-validated against manifest in helper before extraction.
-- [ ] `VS-1619` `P1` Backup path root-containment hardening for retention/restore/tray open flows.
+- [x] `VS-1619` `P1` Backup path root-containment hardening for retention/restore/tray open flows.
   - Scope: enforce destination-root containment when resolving backup paths in retention cleanup, restore preparation, and tray open-folder flow.
-  - Acceptance tests:
-    - Relative paths with traversal segments are rejected.
-    - Existing valid backups still resolve/open/restore correctly.
+  - Done:
+    - Retention cleanup now rejects out-of-root backup paths before deletion attempts.
+    - Restore preparation now rejects backup paths that resolve outside destination roots.
+    - Tray backup-folder resolution/open flow now uses root-containment checks before filesystem access.
 - [ ] `VS-1620` `P2` Config read retry async cleanup.
   - Scope: remove blocking sleep from config read retry path to reduce UI-thread contention under lock races.
 
