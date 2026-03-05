@@ -72,6 +72,9 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _removeProjectCommand;
     private readonly RelayCommand _applyPresetRecommendationCommand;
     private readonly RelayCommand _snapshotGroupCommand;
+    private readonly RelayCommand _backupGroupCommand;
+    private readonly RelayCommand _disableAutoBackupGroupCommand;
+    private readonly RelayCommand _enableAutoBackupGroupCommand;
     public ProjectItemViewModel? SelectedProject
     {
         get => _selectedProject;
@@ -83,6 +86,9 @@ public class ProjectsViewModel : ViewModelBase
                 _removeProjectCommand.RaiseCanExecuteChanged();
                 _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
                 _snapshotGroupCommand.RaiseCanExecuteChanged();
+                _backupGroupCommand.RaiseCanExecuteChanged();
+                _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
+                _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
                 RefreshSelectedProjectRegistration();
                 UpdateProjectPresetRecommendation(value);
                 LoadSnapshotHistoryForSelectedProject();
@@ -114,12 +120,16 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand RemoveProjectCommand { get; }
     public ICommand SnapshotCommand { get; }
     public ICommand SnapshotGroupCommand { get; }
+    public ICommand BackupGroupCommand { get; }
+    public ICommand DisableAutoBackupGroupCommand { get; }
+    public ICommand EnableAutoBackupGroupCommand { get; }
     public ICommand TakeSnapshotCommand => SnapshotCommand;
     public ICommand ManageProjectEncryptionCommand { get; }
     public ICommand ApplyPresetRecommendationCommand { get; }
     public ICommand ToggleSortCommand { get; }
     public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
     public event Action<int, string>? ProjectEncryptionPolicyChanged;
+    public event Action<IReadOnlyList<int>>? BackupGroupRequested;
     public string SearchText
     {
         get => _searchText;
@@ -169,6 +179,9 @@ public class ProjectsViewModel : ViewModelBase
             {
                 ApplyFilterAndSort();
                 _snapshotGroupCommand.RaiseCanExecuteChanged();
+                _backupGroupCommand.RaiseCanExecuteChanged();
+                _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
+                _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -183,10 +196,22 @@ public class ProjectsViewModel : ViewModelBase
         _snapshotGroupCommand = new RelayCommand(
             _ => _ = RunDetachedAsync(SnapshotSelectedGroupAsync, "snapshot-selected-group"),
             _ => CanSnapshotSelectedGroup());
+        _backupGroupCommand = new RelayCommand(
+            _ => _ = RunDetachedAsync(BackupSelectedGroupAsync, "backup-selected-group"),
+            _ => CanBackupSelectedGroup());
+        _disableAutoBackupGroupCommand = new RelayCommand(
+            _ => _ = RunDetachedAsync(() => SetAutoBackupForSelectedGroupAsync(false), "disable-auto-backup-selected-group"),
+            _ => CanDisableAutoBackupForSelectedGroup());
+        _enableAutoBackupGroupCommand = new RelayCommand(
+            _ => _ = RunDetachedAsync(() => SetAutoBackupForSelectedGroupAsync(true), "enable-auto-backup-selected-group"),
+            _ => CanEnableAutoBackupForSelectedGroup());
         OpenFolderCommand = _openFolderCommand;
         RemoveProjectCommand = _removeProjectCommand;
         ApplyPresetRecommendationCommand = _applyPresetRecommendationCommand;
         SnapshotGroupCommand = _snapshotGroupCommand;
+        BackupGroupCommand = _backupGroupCommand;
+        DisableAutoBackupGroupCommand = _disableAutoBackupGroupCommand;
+        EnableAutoBackupGroupCommand = _enableAutoBackupGroupCommand;
         SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
         ManageProjectEncryptionCommand = new RelayCommand(p => RequestProjectEncryptionPasswordEdit(p as ProjectItemViewModel ?? SelectedProject));
         ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());
@@ -753,11 +778,44 @@ public class ProjectsViewModel : ViewModelBase
 
     private bool CanSnapshotSelectedGroup()
     {
+        return GetSelectedGroupRegisteredProjectIds().Count > 0;
+    }
+
+    private bool CanBackupSelectedGroup() => GetSelectedGroupRegisteredProjectIds().Count > 0;
+
+    private bool CanDisableAutoBackupForSelectedGroup()
+    {
+        var ids = GetSelectedGroupRegisteredProjectIds();
+        if (ids.Count == 0)
+            return false;
+
+        var cfg = AppConfigStore.Load();
+        var disabled = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+        return ids.Any(id => !disabled.Contains(id));
+    }
+
+    private bool CanEnableAutoBackupForSelectedGroup()
+    {
+        var ids = GetSelectedGroupRegisteredProjectIds();
+        if (ids.Count == 0)
+            return false;
+
+        var cfg = AppConfigStore.Load();
+        var disabled = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+        return ids.Any(disabled.Contains);
+    }
+
+    private List<int> GetSelectedGroupRegisteredProjectIds()
+    {
         var selectedGroupId = SelectedGroup?.Id ?? ProjectGroupOption.AllId;
-        return _allProjects.Any(p =>
-            p.IsRegistered &&
-            (string.Equals(selectedGroupId, ProjectGroupOption.AllId, StringComparison.OrdinalIgnoreCase) ||
-             ProjectMatchesGroup(p, selectedGroupId)));
+        return _allProjects
+            .Where(p =>
+                p.IsRegistered &&
+                (string.Equals(selectedGroupId, ProjectGroupOption.AllId, StringComparison.OrdinalIgnoreCase) ||
+                 ProjectMatchesGroup(p, selectedGroupId)))
+            .Select(p => p.ProjectId)
+            .Distinct()
+            .ToList();
     }
 
     private async Task SnapshotSelectedGroupAsync()
@@ -852,6 +910,50 @@ public class ProjectsViewModel : ViewModelBase
         }
     }
 
+    private async Task BackupSelectedGroupAsync()
+    {
+        var ids = GetSelectedGroupRegisteredProjectIds();
+        if (ids.Count == 0)
+            return;
+
+        BackupGroupRequested?.Invoke(ids);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            ShowNotification(
+                Lf("Projects.Group.BackupQueued", "Queued backup for {0} projects.", ids.Count),
+                NotificationSeverity.Info);
+        });
+    }
+
+    private async Task SetAutoBackupForSelectedGroupAsync(bool enabled)
+    {
+        var ids = GetSelectedGroupRegisteredProjectIds();
+        if (ids.Count == 0)
+            return;
+
+        await Task.Run(() =>
+        {
+            var cfg = AppConfigStore.Load();
+            var disabled = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            disabled = enabled
+                ? disabled.Except(ids).Distinct().ToList()
+                : disabled.Concat(ids).Distinct().ToList();
+            cfg.Backups.AutoBackupDisabledProjects = disabled;
+            AppConfigStore.Save(cfg);
+        }).ConfigureAwait(false);
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            ShowNotification(
+                enabled
+                    ? Lf("Projects.Group.AutoBackupEnabled", "Enabled auto backups for {0} projects.", ids.Count)
+                    : Lf("Projects.Group.AutoBackupDisabled", "Disabled auto backups for {0} projects.", ids.Count),
+                NotificationSeverity.Info);
+            _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
+            _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
+        });
+    }
+
     private string? DetectPreset(string projectPath)
     {
         return DetectPresetRecommendation(projectPath)?.PresetId;
@@ -942,6 +1044,17 @@ public class ProjectsViewModel : ViewModelBase
             }
         }
 
+        bool HasAnyPath(params string[] relativePaths)
+        {
+            foreach (var path in relativePaths)
+            {
+                if (Has(path))
+                    return true;
+            }
+
+            return false;
+        }
+
         PresetRecommendation? Build(string presetName, string reasonKey, string reasonFallback)
         {
             var availablePreset = PresetAvailable(presetName);
@@ -983,20 +1096,24 @@ public class ProjectsViewModel : ViewModelBase
                 "Detected Rust project marker (Cargo.toml).");
         }
 
-        if (Has("package.json"))
+        var hasNodeMarker = Has("package.json");
+        var hasNodeConfidence = HasAnyPath("package-lock.json", "yarn.lock", "pnpm-lock.yaml", "tsconfig.json", "vite.config.ts", "vite.config.js");
+        if (hasNodeMarker && hasNodeConfidence)
         {
             return Build(
                 "node",
                 "Projects.Preset.Recommendation.Reason.Node",
-                "Detected JavaScript/Node project marker (package.json).");
+                "Detected JavaScript/Node project markers (package.json + lock/build config).");
         }
 
-        if (Has("pyproject.toml") || Has("requirements.txt"))
+        var hasPythonMarker = Has("pyproject.toml") || Has("requirements.txt");
+        var hasPythonConfidence = HasAnyPath("setup.py", "poetry.lock", "Pipfile", "tox.ini");
+        if (hasPythonMarker && hasPythonConfidence)
         {
             return Build(
                 "python",
                 "Projects.Preset.Recommendation.Reason.Python",
-                "Detected Python project markers (pyproject.toml or requirements.txt).");
+                "Detected Python project markers (dependency file + project config).");
         }
 
         if (HasAny("*.axaml"))
@@ -1007,7 +1124,9 @@ public class ProjectsViewModel : ViewModelBase
                 "Detected Avalonia UI files (*.axaml).");
         }
 
-        if (HasAny("*.csproj") || HasAny("*.sln"))
+        var hasDotNetMarker = HasAny("*.csproj") || HasAny("*.sln");
+        var hasDotNetConfidence = HasAnyPath("global.json", "Directory.Build.props", "Directory.Packages.props") || HasAny("*.cs");
+        if (hasDotNetMarker && hasDotNetConfidence)
         {
             return Build(
                 "dotnet",
@@ -2454,6 +2573,31 @@ public sealed class RestoreModeOption
     public override bool Equals(object? obj)
     {
         return obj is RestoreModeOption other &&
+               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override int GetHashCode()
+    {
+        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
+    }
+}
+
+public sealed class VerificationPolicyOption
+{
+    public string Id { get; }
+    public string Label { get; }
+
+    public VerificationPolicyOption(string id, string label)
+    {
+        Id = ProjectVerificationPolicy.Normalize(id);
+        Label = label ?? string.Empty;
+    }
+
+    public override string ToString() => Label;
+
+    public override bool Equals(object? obj)
+    {
+        return obj is VerificationPolicyOption other &&
                string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
     }
 
