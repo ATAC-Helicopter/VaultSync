@@ -52,12 +52,13 @@ namespace VaultSync.UI.Services
     {
         private const string ApplyArg = "--apply-patch";
         private const string ApplyRequestArg = "--apply-patch-request";
+        private const string RequestHashArg = "--request-sha256=";
         private const string RestartArg = "--restart";
         private const string WaitPidArg = "--waitpid=";
 
         public static bool TryHandlePatchArgs(string[] args)
         {
-            if (!TryParsePatchArgs(args, out var request))
+            if (!TryParsePatchArgs(args, out var request, out _))
                 return false;
 
             _ = ApplyPatch(request, null, CancellationToken.None);
@@ -65,8 +66,12 @@ namespace VaultSync.UI.Services
         }
 
         public static bool TryParsePatchArgs(string[] args, out PatchApplyRequest? request)
+            => TryParsePatchArgs(args, out request, out _);
+
+        private static bool TryParsePatchArgs(string[] args, out PatchApplyRequest? request, out string? expectedRequestHash)
         {
             request = null;
+            expectedRequestHash = null;
 
             if (args.Length >= 2 && string.Equals(args[0], ApplyRequestArg, StringComparison.OrdinalIgnoreCase))
             {
@@ -74,10 +79,29 @@ namespace VaultSync.UI.Services
                 if (!File.Exists(requestPath))
                     return false;
 
+                var requestHashArg = args.FirstOrDefault(a => a.StartsWith(RequestHashArg, StringComparison.OrdinalIgnoreCase));
+                if (string.IsNullOrWhiteSpace(requestHashArg))
+                    return false;
+
+                expectedRequestHash = requestHashArg.Substring(RequestHashArg.Length).Trim();
+                if (expectedRequestHash.Length != 64)
+                    return false;
+
+                if (!IsUnderTrustedPatchTempRoot(requestPath))
+                    return false;
+
                 try
                 {
-                    var parsed = JsonSerializer.Deserialize<PatchApplyRequest>(File.ReadAllText(requestPath));
+                    var requestBytes = File.ReadAllBytes(requestPath);
+                    var actualHash = ComputeSha256(requestBytes);
+                    if (!actualHash.Equals(expectedRequestHash, StringComparison.OrdinalIgnoreCase))
+                        return false;
+
+                    var parsed = JsonSerializer.Deserialize<PatchApplyRequest>(requestBytes);
                     if (!TryNormalizeRequest(parsed, out request, out _))
+                        return false;
+
+                    if (!IsUnderTrustedPatchTempRoot(request.ManifestPath))
                         return false;
 
                     return true;
@@ -150,7 +174,9 @@ namespace VaultSync.UI.Services
                     installDir,
                     restart: true,
                     waitPid: Process.GetCurrentProcess().Id);
-                File.WriteAllText(requestPath, JsonSerializer.Serialize(request), Encoding.UTF8);
+                var requestBytes = JsonSerializer.SerializeToUtf8Bytes(request);
+                File.WriteAllBytes(requestPath, requestBytes);
+                var requestHash = ComputeSha256(requestBytes);
 
                 var needsElevation = NeedsElevation(installDir);
 
@@ -167,12 +193,14 @@ namespace VaultSync.UI.Services
                 {
                     psi.Arguments = string.Join(" ",
                         Quote(ApplyRequestArg),
-                        Quote(requestPath));
+                        Quote(requestPath),
+                        Quote(RequestHashArg + requestHash));
                 }
                 else
                 {
                     psi.ArgumentList.Add(ApplyRequestArg);
                     psi.ArgumentList.Add(requestPath);
+                    psi.ArgumentList.Add(RequestHashArg + requestHash);
                 }
 
                 var started = Process.Start(psi);
@@ -293,6 +321,7 @@ namespace VaultSync.UI.Services
                 var manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(request.ManifestPath));
                 if (manifest is null)
                     throw new InvalidOperationException("Unable to parse patch manifest.");
+                VerifyArchivePreflight(request.ArchivePath, manifest);
 
                 var stagingDir = Path.Combine(Path.GetTempPath(), "VaultSync", $"patch-{Guid.NewGuid():N}");
                 Directory.CreateDirectory(stagingDir);
@@ -407,6 +436,51 @@ namespace VaultSync.UI.Services
             using var sha = SHA256.Create();
             var bytes = sha.ComputeHash(stream);
             return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
+        private static string ComputeSha256(byte[] payload)
+        {
+            using var sha = SHA256.Create();
+            var bytes = sha.ComputeHash(payload);
+            return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
+        private static void VerifyArchivePreflight(string archivePath, PatchManifest manifest)
+        {
+            var info = new FileInfo(archivePath);
+            if (!info.Exists)
+                throw new FileNotFoundException("Patch archive not found.", archivePath);
+
+            if (manifest.ArchiveSize > 0 && info.Length != manifest.ArchiveSize)
+            {
+                throw new InvalidOperationException(
+                    $"Patch archive size mismatch. Expected {manifest.ArchiveSize}, got {info.Length}.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(manifest.ArchiveSha256))
+            {
+                var actual = ComputeSha256(archivePath);
+                var expected = manifest.ArchiveSha256.Trim();
+                if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Patch archive checksum mismatch.");
+            }
+        }
+
+        private static bool IsUnderTrustedPatchTempRoot(string path)
+        {
+            try
+            {
+                var normalizedPath = Path.GetFullPath(path);
+                var root = Path.Combine(Path.GetTempPath(), "VaultSync");
+                var normalizedRoot = Path.GetFullPath(root)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+                return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool NeedsElevation(string installDir)
