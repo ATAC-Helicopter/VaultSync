@@ -230,7 +230,7 @@ public sealed class MetadataSyncService
 
             if (projectMap.TryGetValue(metaProject.ExternalId, out var mappedProjectId))
             {
-                ApplyImportedProjectSecuritySettings(mappedProjectId, parsedSettings);
+                ApplyImportedProjectSettings(mappedProjectId, parsedSettings);
                 continue;
             }
 
@@ -244,7 +244,7 @@ public sealed class MetadataSyncService
                     _repo.UpdateProjectExternalId(existingByName.Id, metaProject.ExternalId);
                 }
 
-                ApplyImportedProjectSecuritySettings(existingByName.Id, parsedSettings);
+                ApplyImportedProjectSettings(existingByName.Id, parsedSettings);
                 projectMap[metaProject.ExternalId] = existingByName.Id;
                 continue;
             }
@@ -272,7 +272,16 @@ public sealed class MetadataSyncService
                     : null,
                 VerificationPolicy = parsedSettings.HasVerificationPolicy
                     ? parsedSettings.VerificationPolicy
-                    : ProjectVerificationPolicy.Always
+                    : ProjectVerificationPolicy.Always,
+                PreferredDestinationId = parsedSettings.HasPreferredDestinationId
+                    ? parsedSettings.PreferredDestinationId
+                    : string.Empty,
+                RestoreMode = parsedSettings.HasRestoreMode
+                    ? parsedSettings.RestoreMode
+                    : ProjectRestoreMode.Direct,
+                Tags = parsedSettings.HasTags
+                    ? parsedSettings.Tags
+                    : string.Empty
             };
 
             var newId = _repo.AddProject(project);
@@ -1604,7 +1613,14 @@ public sealed class MetadataSyncService
             settings["encryptionKeyRef"] = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
                 ? null
                 : project.EncryptionKeyRef;
+            settings["preferredDestinationId"] = string.IsNullOrWhiteSpace(project.PreferredDestinationId)
+                ? null
+                : project.PreferredDestinationId;
+            settings["restoreMode"] = ProjectRestoreMode.Normalize(project.RestoreMode);
             settings["verificationPolicy"] = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
+            settings["tags"] = string.IsNullOrWhiteSpace(project.Tags)
+                ? string.Empty
+                : project.Tags.Trim();
 
             return settings.Count == 0 ? "{}" : JsonSerializer.Serialize(settings);
         }
@@ -1617,10 +1633,16 @@ public sealed class MetadataSyncService
     private readonly record struct ParsedProjectSettings(
         string EncryptionPolicy,
         string? EncryptionKeyRef,
+        string PreferredDestinationId,
+        string RestoreMode,
         string VerificationPolicy,
+        string Tags,
         bool HasEncryptionPolicy,
         bool HasEncryptionKeyRef,
-        bool HasVerificationPolicy);
+        bool HasPreferredDestinationId,
+        bool HasRestoreMode,
+        bool HasVerificationPolicy,
+        bool HasTags);
 
     private static ParsedProjectSettings ParseProjectSettings(string? settingsJson)
     {
@@ -1629,10 +1651,16 @@ public sealed class MetadataSyncService
             return new ParsedProjectSettings(
                 ProjectEncryptionPolicy.Inherit,
                 null,
+                string.Empty,
+                ProjectRestoreMode.Direct,
                 ProjectVerificationPolicy.Always,
+                string.Empty,
                 HasEncryptionPolicy: false,
                 HasEncryptionKeyRef: false,
-                HasVerificationPolicy: false);
+                HasPreferredDestinationId: false,
+                HasRestoreMode: false,
+                HasVerificationPolicy: false,
+                HasTags: false);
         }
 
         try
@@ -1640,10 +1668,16 @@ public sealed class MetadataSyncService
             using var doc = JsonDocument.Parse(settingsJson);
             var policy = ProjectEncryptionPolicy.Inherit;
             string? keyRef = null;
+            var preferredDestinationId = string.Empty;
+            var restoreMode = ProjectRestoreMode.Direct;
             var verificationPolicy = ProjectVerificationPolicy.Always;
+            var tags = string.Empty;
             var hasPolicy = false;
             var hasKeyRef = false;
+            var hasPreferredDestinationId = false;
+            var hasRestoreMode = false;
             var hasVerificationPolicy = false;
+            var hasTags = false;
 
             if (doc.RootElement.TryGetProperty("encryptionPolicy", out var policyProp))
             {
@@ -1664,31 +1698,65 @@ public sealed class MetadataSyncService
                 hasVerificationPolicy = true;
             }
 
+            if (doc.RootElement.TryGetProperty("preferredDestinationId", out var destinationProp))
+            {
+                preferredDestinationId = NormalizePreferredDestinationId(destinationProp.GetString());
+                hasPreferredDestinationId = true;
+            }
+
+            if (doc.RootElement.TryGetProperty("restoreMode", out var restoreModeProp))
+            {
+                restoreMode = ProjectRestoreMode.Normalize(restoreModeProp.GetString());
+                hasRestoreMode = true;
+            }
+
+            if (doc.RootElement.TryGetProperty("tags", out var tagsProp))
+            {
+                var rawTags = tagsProp.GetString();
+                tags = string.IsNullOrWhiteSpace(rawTags) ? string.Empty : rawTags.Trim();
+                hasTags = true;
+            }
+
             return new ParsedProjectSettings(
                 policy,
                 keyRef,
+                preferredDestinationId,
+                restoreMode,
                 verificationPolicy,
+                tags,
                 HasEncryptionPolicy: hasPolicy,
                 HasEncryptionKeyRef: hasKeyRef,
-                HasVerificationPolicy: hasVerificationPolicy);
+                HasPreferredDestinationId: hasPreferredDestinationId,
+                HasRestoreMode: hasRestoreMode,
+                HasVerificationPolicy: hasVerificationPolicy,
+                HasTags: hasTags);
         }
         catch
         {
             return new ParsedProjectSettings(
                 ProjectEncryptionPolicy.Inherit,
                 null,
+                string.Empty,
+                ProjectRestoreMode.Direct,
                 ProjectVerificationPolicy.Always,
+                string.Empty,
                 HasEncryptionPolicy: false,
                 HasEncryptionKeyRef: false,
-                HasVerificationPolicy: false);
+                HasPreferredDestinationId: false,
+                HasRestoreMode: false,
+                HasVerificationPolicy: false,
+                HasTags: false);
         }
     }
 
-    private void ApplyImportedProjectSecuritySettings(int projectId, ParsedProjectSettings parsedSettings)
+    private void ApplyImportedProjectSettings(int projectId, ParsedProjectSettings parsedSettings)
     {
         if (!parsedSettings.HasEncryptionPolicy &&
             !parsedSettings.HasEncryptionKeyRef &&
-            !parsedSettings.HasVerificationPolicy)
+            !parsedSettings.HasPreferredDestinationId &&
+            !parsedSettings.HasRestoreMode &&
+            !parsedSettings.HasVerificationPolicy &&
+            !parsedSettings.HasTags)
             return;
 
         var current = _repo.GetProjectById(projectId);
@@ -1714,18 +1782,47 @@ public sealed class MetadataSyncService
         var nextVerificationPolicy = parsedSettings.HasVerificationPolicy
             ? ProjectVerificationPolicy.Normalize(parsedSettings.VerificationPolicy)
             : currentVerificationPolicy;
+        var currentPreferredDestinationId = NormalizePreferredDestinationId(current.PreferredDestinationId);
+        var nextPreferredDestinationId = parsedSettings.HasPreferredDestinationId
+            ? NormalizePreferredDestinationId(parsedSettings.PreferredDestinationId)
+            : currentPreferredDestinationId;
+        var currentRestoreMode = ProjectRestoreMode.Normalize(current.RestoreMode);
+        var nextRestoreMode = parsedSettings.HasRestoreMode
+            ? ProjectRestoreMode.Normalize(parsedSettings.RestoreMode)
+            : currentRestoreMode;
+        var currentTags = current.Tags?.Trim() ?? string.Empty;
+        var nextTags = parsedSettings.HasTags
+            ? (parsedSettings.Tags?.Trim() ?? string.Empty)
+            : currentTags;
 
         var currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
         var normalizedNextKeyRef = string.IsNullOrWhiteSpace(nextKeyRef) ? null : nextKeyRef;
         if (string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(normalizedNextKeyRef, currentKeyRef, StringComparison.Ordinal) &&
-            string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase))
+            string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(nextTags, currentTags, StringComparison.Ordinal))
         {
             return;
         }
 
+        _repo.UpdateProjectPreferredDestination(projectId, nextPreferredDestinationId);
+        _repo.UpdateProjectRestoreMode(projectId, nextRestoreMode);
         _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, normalizedNextKeyRef);
         _repo.UpdateProjectVerificationPolicy(projectId, nextVerificationPolicy);
+        _repo.UpdateProjectTags(projectId, nextTags);
+    }
+
+    private static string NormalizePreferredDestinationId(string? preferredDestinationId)
+    {
+        var raw = preferredDestinationId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        return string.Equals(raw, "auto", StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : raw;
     }
 
     private static void TryApplyProjectColor(MetaProject metaProject)
