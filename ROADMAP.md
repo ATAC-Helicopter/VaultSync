@@ -755,6 +755,18 @@
     - Backup delete path now enforces destination-root-bounded path resolution before file-system operations.
     - Robust delete now performs a manual fallback pass after recursive delete failures and reports permission-denied outcomes explicitly.
     - Failure notifications now add a clear permissions/credentials remediation hint when protected files block delete.
+- [ ] `VS-1618` `P0` Updater request integrity binding and archive preflight validation.
+  - Scope: bind elevated helper request file to launcher-provided integrity metadata and verify archive hash/size again before extraction.
+  - Acceptance tests:
+    - Tampered request JSON is rejected before patch apply starts.
+    - Archive hash/size mismatches fail closed before extraction/copy.
+- [ ] `VS-1619` `P1` Backup path root-containment hardening for retention/restore/tray open flows.
+  - Scope: enforce destination-root containment when resolving backup paths in retention cleanup, restore preparation, and tray open-folder flow.
+  - Acceptance tests:
+    - Relative paths with traversal segments are rejected.
+    - Existing valid backups still resolve/open/restore correctly.
+- [ ] `VS-1620` `P2` Config read retry async cleanup.
+  - Scope: remove blocking sleep from config read retry path to reduce UI-thread contention under lock races.
 
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
