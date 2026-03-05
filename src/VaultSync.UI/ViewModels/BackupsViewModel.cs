@@ -1352,6 +1352,8 @@ namespace VaultSync.UI.ViewModels
                 L("Backups.Sort.TotalSize", "Total size")));
             ProjectSortOptions.Add(new BackupsProjectSortOption("count",
                 L("Backups.Sort.BackupCount", "Backup count")));
+            ProjectSortOptions.Add(new BackupsProjectSortOption("tags",
+                L("Backups.Sort.Tags", "Tags")));
 
             SelectedProjectSortOption = ProjectSortOptions.FirstOrDefault(o =>
                                            string.Equals(o.Id, _projectSortMode, StringComparison.OrdinalIgnoreCase))
@@ -1375,6 +1377,9 @@ namespace VaultSync.UI.ViewModels
                 "count" => ProjectBackups
                     .OrderByDescending(p => p.SnapshotCount)
                     .ThenByDescending(p => p.LastBackupTime ?? DateTime.MinValue)
+                    .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase),
+                "tags" => ProjectBackups
+                    .OrderBy(p => p.PrimaryTagSortKey, StringComparer.CurrentCultureIgnoreCase)
                     .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase),
                 _ => ProjectBackups
                     .OrderByDescending(p => p.LastBackupTime ?? DateTime.MinValue)
@@ -2070,6 +2075,9 @@ namespace VaultSync.UI.ViewModels
                 {
                     ProjectId          = key,
                     ProjectName        = projectName,
+                    ProjectTagsDisplay = !string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out var tagSource)
+                        ? tagSource.ProjectTagsDisplay
+                        : string.Empty,
                     Summary            = Lf(summaryKey, summaryFallback, ordered.Count),
                     TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes),
                     LatestBackupDisplay = latest == DateTime.MinValue ? "-" : latest.ToString("yyyy-MM-dd HH:mm"),
@@ -2637,8 +2645,10 @@ namespace VaultSync.UI.ViewModels
 
             ShowSummaryCharts = showCharts;
             ShowActivityPanel = showActivity;
-            ActivityColumnWidth = showActivity ? new GridLength(360) : new GridLength(0);
-            SummaryColumnSpacing = showActivity ? 12 : 0;
+            ActivityColumnWidth = showActivity
+                ? new GridLength(1, GridUnitType.Star)
+                : new GridLength(0);
+            SummaryColumnSpacing = showActivity ? 14 : 0;
         }
 
         private static string FormatRelative(TimeSpan span)
@@ -2662,7 +2672,6 @@ namespace VaultSync.UI.ViewModels
                 .ToDictionary(project => project.Id, project => project.Name, StringComparer.OrdinalIgnoreCase);
 
             var totalsByProject = _allSnapshots
-                .Where(snapshot => !snapshot.IsImported)
                 .GroupBy(snapshot => string.IsNullOrWhiteSpace(snapshot.ProjectId) ? "__unknown__" : snapshot.ProjectId!)
                 .Select(group => new
                 {
@@ -2949,11 +2958,16 @@ namespace VaultSync.UI.ViewModels
             {
                 projectStats.TryGetValue(project.Id, out var stats);
 
+                var projectName = string.IsNullOrWhiteSpace(project.Name)
+                    ? L("Backups.Section.Group.Unknown", "Unknown project")
+                    : project.Name.Trim();
+
                 var projectItem = new ProjectBackupItem
                 {
                     Id                = project.Id.ToString(),
-                    Name              = project.Name,
+                    Name              = projectName,
                     ExternalId        = project.ExternalId ?? string.Empty,
+                    ProjectTagsCsv    = project.Tags ?? string.Empty,
                     LastBackupTime    = stats.LastBackupTime,
                     SnapshotCount     = stats.Count,
                     TotalSizeBytes    = stats.TotalBytes,
@@ -2972,7 +2986,7 @@ namespace VaultSync.UI.ViewModels
                         ? deltaBytes
                         : null
                 };
-                projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath, project.ExternalId);
+                projectItem.SetAvatarFromNameAndStore(projectName, project.RootPath, project.ExternalId);
                 UpdateProjectDestinationDisplay(projectItem, config);
                 UpdateProjectEncryptionDisplay(projectItem, config);
                 UpdateProjectRestoreModeDisplay(projectItem);
@@ -3219,6 +3233,27 @@ namespace VaultSync.UI.ViewModels
             {
                 var parsed = int.TryParse(item.Id, out var projectId) ? projectId : -1;
                 item.AutoBackupEnabled = parsed > 0 && !disabled.Contains(parsed);
+            }
+        }
+
+        public void RefreshAutoBackupFlagsFromConfig()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(RefreshAutoBackupFlagsFromConfig);
+                return;
+            }
+
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
+                UpdateAutoBackupFlags(disabled);
+                _lastAutoBackupSignature = ComputeAutoBackupSignature(disabled);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Backups] Failed to refresh auto-backup flags: {ex.Message}");
             }
         }
 
@@ -3588,6 +3623,8 @@ namespace VaultSync.UI.ViewModels
     {
         public string? ProjectId { get; set; }
         public string ProjectName { get; set; } = string.Empty;
+        public string ProjectTagsDisplay { get; set; } = string.Empty;
+        public bool HasProjectTags => !string.IsNullOrWhiteSpace(ProjectTagsDisplay);
         public string Summary { get; set; } = string.Empty;
         public string TotalSizeFormatted { get; set; } = string.Empty;
         public string LatestBackupDisplay { get; set; } = string.Empty;
@@ -3631,6 +3668,26 @@ namespace VaultSync.UI.ViewModels
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string ExternalId { get; set; } = string.Empty;
+        private string _projectTagsCsv = string.Empty;
+        public string ProjectTagsCsv
+        {
+            get => _projectTagsCsv;
+            set
+            {
+                if (!SetField(ref _projectTagsCsv, value ?? string.Empty, nameof(ProjectTagsCsv)))
+                    return;
+
+                RebuildProjectTags();
+                OnPropertyChanged(nameof(HasProjectTags));
+                OnPropertyChanged(nameof(ProjectTagsDisplay));
+                OnPropertyChanged(nameof(PrimaryTagSortKey));
+            }
+        }
+
+        public ObservableCollection<string> ProjectTags { get; } = new ObservableCollection<string>();
+        public bool HasProjectTags => ProjectTags.Count > 0;
+        public string ProjectTagsDisplay => string.Join(", ", ProjectTags);
+        public string PrimaryTagSortKey => ProjectTags.FirstOrDefault() ?? string.Empty;
 
         public DateTime? LastBackupTime { get; set; }
         public int       SnapshotCount  { get; set; }
@@ -3884,6 +3941,19 @@ namespace VaultSync.UI.ViewModels
                 var sign = value >= 0 ? "+" : "-";
                 return $"Δ {sign}{BackupSnapshotItem.FormatSize(Math.Abs(value))}";
             }
+        }
+
+        private void RebuildProjectTags()
+        {
+            ProjectTags.Clear();
+            var tags = (_projectTagsCsv ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(tag => tag.Trim())
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tag in tags)
+                ProjectTags.Add(tag);
         }
     }
 

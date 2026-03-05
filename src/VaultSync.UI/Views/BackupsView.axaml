@@ -71,8 +71,10 @@
     </Style>
 
     <Style Selector="ComboBox.preset-combo /template/ Popup ListBoxItem:selected">
-      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
     </Style>
 
 
@@ -611,21 +613,30 @@
                                 IsVisible="{Binding HasTopStorageConsumers}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Grid ColumnDefinitions="*,Auto,Auto"
-                              ColumnSpacing="8">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="10">
                           <TextBlock Text="{Binding ProjectName}"
                                      FontSize="10"
+                                     FontWeight="SemiBold"
+                                     HorizontalAlignment="Left"
+                                     VerticalAlignment="Center"
                                      TextTrimming="CharacterEllipsis"
                                      MaxWidth="190"
                                      Foreground="{DynamicResource TextSecondaryBrush}" />
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding TotalSize}"
-                                     FontSize="10"
-                                     FontWeight="SemiBold" />
-                          <TextBlock Grid.Column="2"
-                                     Text="{Binding SharePercentLabel}"
-                                     FontSize="10"
-                                     Foreground="{DynamicResource TextMutedBrush}" />
+                          <StackPanel Grid.Column="1"
+                                      Orientation="Horizontal"
+                                      Spacing="8"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Center">
+                            <TextBlock Text="{Binding TotalSize}"
+                                       FontSize="10"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding SharePercentLabel}"
+                                       FontSize="10"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextMutedBrush}" />
+                          </StackPanel>
                         </Grid>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -1055,7 +1066,7 @@
                   Padding="14"
                   MinWidth="0"
                   Grid.Column="0"
-                  VerticalAlignment="Top">
+                  VerticalAlignment="Stretch">
 
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="8">
@@ -1097,8 +1108,8 @@
                        BorderThickness="0"
                        AutoScrollToSelectedItem="False"
                        ScrollViewer.VerticalScrollBarVisibility="Auto"
-                       VerticalAlignment="Top"
-                       MaxHeight="640">
+                       VerticalAlignment="Stretch"
+                       MaxHeight="680">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Border Classes="card project-card"
@@ -1155,6 +1166,22 @@
                                    FontSize="14"
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" />
+                        <ItemsControl ItemsSource="{Binding ProjectTags}"
+                                      IsVisible="{Binding HasProjectTags}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                              <Border Classes="stat-pill sm info"
+                                      Padding="{DynamicResource StatPillPadding}">
+                                <TextBlock Text="{Binding}" FontSize="10" />
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                       </StackPanel>
 
                       <!-- Last backup + stats -->
@@ -1486,7 +1513,7 @@
 
                 <Grid ColumnDefinitions="*,*,Auto"
                       ColumnSpacing="8"
-                      RowDefinitions="Auto,Auto"
+                      RowDefinitions="Auto,Auto,Auto"
                       RowSpacing="6"
                       Margin="0,4,0,0">
                   <TextBlock Grid.Row="0"
@@ -1527,13 +1554,20 @@
                           Content="{infra:LocalizedString Key=Backups.Compare.Button}"
                           Classes="small-button"
                           Command="{Binding CompareSelectedSnapshotsCommand}" />
+
+                  <TextBlock Grid.Row="2"
+                             Grid.ColumnSpan="3"
+                             Text="{infra:LocalizedString Key=Backups.Compare.Help}"
+                             FontSize="10"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             TextWrapping="Wrap" />
                 </Grid>
 
                 <Border Height="1"
                         Background="{DynamicResource DividerBrush}" />
 
                   <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                MaxHeight="520"
+                                MaxHeight="680"
                                 Margin="0,2,0,0">
                     <ItemsControl ItemsSource="{Binding SnapshotGroups}">
                       <ItemsControl.ItemsPanel>
@@ -1568,6 +1602,16 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            TextTrimming="CharacterEllipsis" />
+                                <Border Classes="backup-tag sm info"
+                                        IsVisible="{Binding HasProjectTags}"
+                                        HorizontalAlignment="Left"
+                                        MaxWidth="360"
+                                        ToolTip.Tip="{Binding ProjectTagsDisplay}">
+                                  <TextBlock Text="{Binding ProjectTagsDisplay}"
+                                             FontSize="10"
+                                             TextTrimming="CharacterEllipsis"
+                                             TextWrapping="NoWrap" />
+                                </Border>
                               </StackPanel>
                               <StackPanel Grid.Row="1"
                                           Grid.Column="1"

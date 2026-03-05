@@ -316,9 +316,11 @@ namespace VaultSync.UI.ViewModels
                     var projects = repo.GetAllProjects().ToList();
                     var backupCount = repo.GetBackupCount();
 
-                    var startDate = DateTime.UtcNow.Date.AddDays(-6);
-                    var endDate = DateTime.UtcNow;
-                    var backupCountsByDay = repo.GetBackupCountsByDayBreakdown(startDate, endDate);
+                    var localStartDate = DateTime.Now.Date.AddDays(-6);
+                    var localEndDate = DateTime.Now.Date.AddDays(1).AddTicks(-1);
+                    var backupCountsByDay = repo.GetBackupCountsByDayBreakdown(
+                        localStartDate.ToUniversalTime(),
+                        localEndDate.ToUniversalTime());
 
                     // Storage slices: total backups per project (incl. imported)
                     long totalLatestBytes = 0;
@@ -344,7 +346,7 @@ namespace VaultSync.UI.ViewModels
                     var dayLabels = new string[_days.Length];
                     for (var i = 0; i < dayLabels.Length; i++)
                     {
-                        var d = startDate.AddDays(i);
+                        var d = localStartDate.AddDays(i);
                         dayLabels[i] = d.ToString("ddd");
                     }
 
@@ -354,8 +356,9 @@ namespace VaultSync.UI.ViewModels
                     var importedCounts = new int[_snapshotCountsByDay.Length];
                     for (var i = 0; i < counts.Length; i++)
                     {
-                        var d = startDate.AddDays(i);
-                        if (backupCountsByDay.TryGetValue(d, out var breakdown))
+                        var localDay = localStartDate.AddDays(i).Date;
+                        var utcBucket = localDay.ToUniversalTime().Date;
+                        if (backupCountsByDay.TryGetValue(utcBucket, out var breakdown))
                         {
                             autoCounts[i] = breakdown.AutoCount;
                             manualCounts[i] = breakdown.ManualCount;
@@ -469,6 +472,19 @@ namespace VaultSync.UI.ViewModels
                         "manual"   => L("Dashboard.Activity.ManualBackup", "Manual backup created"),
                         _          => L("Dashboard.Activity.SnapshotCreated", "Snapshot created")
                     };
+                    var tagsDisplay = string.Empty;
+                    if (project is not null)
+                    {
+                        var tags = (project.Tags ?? string.Empty)
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(t => t.Trim())
+                            .Where(t => !string.IsNullOrWhiteSpace(t))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .Take(3)
+                            .ToArray();
+                        if (tags.Length > 0)
+                            tagsDisplay = string.Join(" - ", tags);
+                    }
                     var when = a.WhenUtc.ToLocalTime().ToString("g");
 
                     IBrush dotBrush;
@@ -487,7 +503,7 @@ namespace VaultSync.UI.ViewModels
                         dotBrush = GetBrush(Colors.Gray);
                     }
 
-                    activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush));
+                    activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush, tagsDisplay));
                 }
 
                 ActivityItems.Clear();
@@ -1714,12 +1730,13 @@ namespace VaultSync.UI.ViewModels
             private static readonly IBrush DotGrayBrush = new ImmutableSolidColorBrush(Colors.Gray);
 
             // New constructor: allow passing an explicit brush (used when we want per-project colors).
-            public ActivityItem(string title, string subtitle, string when, IBrush dotBrush)
+            public ActivityItem(string title, string subtitle, string when, IBrush dotBrush, string projectTagsDisplay = "")
             {
                 Title    = title;
                 Subtitle = subtitle;
                 When     = when;
                 DotBrush = dotBrush;
+                ProjectTagsDisplay = projectTagsDisplay ?? string.Empty;
             }
 
             // Backwards-compatible constructor for simple fixed dots.
@@ -1732,7 +1749,8 @@ namespace VaultSync.UI.ViewModels
                         Dot.Purple => DotPurpleBrush,
                         Dot.Gray   => DotGrayBrush,
                         _          => DotGrayBrush
-                    })
+                    },
+                    string.Empty)
             {
             }
 
@@ -1740,6 +1758,8 @@ namespace VaultSync.UI.ViewModels
             public string Subtitle { get; }
             public string When { get; }
             public IBrush DotBrush { get; }
+            public string ProjectTagsDisplay { get; }
+            public bool HasProjectTags => !string.IsNullOrWhiteSpace(ProjectTagsDisplay);
         }
     }
 }
