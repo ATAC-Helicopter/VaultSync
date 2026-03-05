@@ -597,6 +597,40 @@
                                  Background="{DynamicResource Surface2}" />
                   </Grid>
                 </StackPanel>
+
+                <StackPanel Spacing="6"
+                            Margin="0,4,0,0">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.TopConsumersLabel}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.TopConsumersEmpty}"
+                             FontSize="10"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             IsVisible="{Binding HasTopStorageConsumers, Converter={StaticResource BoolInvertConverter}}" />
+                  <ItemsControl ItemsSource="{Binding TopStorageConsumers}"
+                                IsVisible="{Binding HasTopStorageConsumers}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto,Auto"
+                              ColumnSpacing="8">
+                          <TextBlock Text="{Binding ProjectName}"
+                                     FontSize="10"
+                                     TextTrimming="CharacterEllipsis"
+                                     MaxWidth="190"
+                                     Foreground="{DynamicResource TextSecondaryBrush}" />
+                          <TextBlock Grid.Column="1"
+                                     Text="{Binding TotalSize}"
+                                     FontSize="10"
+                                     FontWeight="SemiBold" />
+                          <TextBlock Grid.Column="2"
+                                     Text="{Binding SharePercentLabel}"
+                                     FontSize="10"
+                                     Foreground="{DynamicResource TextMutedBrush}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
               </StackPanel>
             </Border>
           </Grid>

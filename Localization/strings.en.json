@@ -223,6 +223,8 @@
   "Backups.Summary.Total": "Backups",
   "Backups.Summary.TotalLabel": "Total",
   "Backups.Summary.TotalStored": "Total stored",
+  "Backups.Summary.TopConsumersLabel": "Top storage consumers",
+  "Backups.Summary.TopConsumersEmpty": "No project storage data yet.",
   "Backups.Summary.YesterdayAverage": "{0} yesterday - avg {1}",
   "Backups.Summary.YesterdayLabel": "Yesterday",
   "Backups.Verification.Delete": "Delete backup",

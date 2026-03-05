@@ -410,6 +410,9 @@ namespace VaultSync.UI.ViewModels
         public double ThisWeekImportedPercent { get; private set; }
         public double StorageLocalPercent { get; private set; }
         public double StorageImportedPercent { get; private set; }
+        public ObservableCollection<StorageConsumerItem> TopStorageConsumers { get; } =
+            new ObservableCollection<StorageConsumerItem>();
+        public bool HasTopStorageConsumers => TopStorageConsumers.Count > 0;
 
         // Mini backup storage card (for Backups page)
         private double _backupDiskUsedPercent;
@@ -1322,6 +1325,8 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(HistoryFilterProjectLabel));
             OnPropertyChanged(nameof(BackupDiskDriveLabel));
             OnPropertyChanged(nameof(BackupDiskHealthText));
+            TopStorageConsumers.Clear();
+            OnPropertyChanged(nameof(HasTopStorageConsumers));
             RefreshProjectSortOptions();
         }
 
@@ -2564,6 +2569,7 @@ namespace VaultSync.UI.ViewModels
                 StorageImportedPercent = safeImported * 100d / totalStorage;
             }
 
+            RebuildTopStorageConsumers();
             RebuildSnapshotActivity(now);
 
             // Notify UI that summary properties changed
@@ -2597,6 +2603,7 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(ThisWeekImportedPercent));
             OnPropertyChanged(nameof(StorageLocalPercent));
             OnPropertyChanged(nameof(StorageImportedPercent));
+            OnPropertyChanged(nameof(HasTopStorageConsumers));
         }
 
         public void UpdateSummaryLayout(double width)
@@ -2625,6 +2632,47 @@ namespace VaultSync.UI.ViewModels
                 return Lf("Backups.Relative.DaysAgo", "{0} days ago", (int)span.TotalDays);
 
             return L("Backups.Relative.OverAWeek", "Over a week ago");
+        }
+
+        private void RebuildTopStorageConsumers()
+        {
+            var projectNameById = ProjectBackups
+                .Where(project => !string.IsNullOrWhiteSpace(project.Id))
+                .ToDictionary(project => project.Id, project => project.Name, StringComparer.OrdinalIgnoreCase);
+
+            var totalsByProject = _allSnapshots
+                .Where(snapshot => !snapshot.IsImported)
+                .GroupBy(snapshot => string.IsNullOrWhiteSpace(snapshot.ProjectId) ? "__unknown__" : snapshot.ProjectId!)
+                .Select(group => new
+                {
+                    ProjectId = group.Key,
+                    TotalBytes = group.Sum(item => Math.Max(0, item.SizeBytes))
+                })
+                .Where(entry => entry.TotalBytes > 0)
+                .OrderByDescending(entry => entry.TotalBytes)
+                .Take(5)
+                .ToList();
+
+            TopStorageConsumers.Clear();
+            if (totalsByProject.Count == 0)
+                return;
+
+            var totalBytes = totalsByProject.Sum(entry => entry.TotalBytes);
+            foreach (var entry in totalsByProject)
+            {
+                var projectName = projectNameById.TryGetValue(entry.ProjectId, out var foundName)
+                    ? foundName
+                    : L("Backups.Section.Group.Unknown", "Unknown project");
+
+                var sharePercent = totalBytes <= 0
+                    ? 0
+                    : entry.TotalBytes * 100d / totalBytes;
+
+                TopStorageConsumers.Add(new StorageConsumerItem(
+                    projectName,
+                    BackupSnapshotItem.FormatSize(entry.TotalBytes),
+                    sharePercent));
+            }
         }
 
         // ---------- Weekly activity mini-chart ----------
@@ -3308,6 +3356,21 @@ namespace VaultSync.UI.ViewModels
     }
 
     // ---------- Models ----------
+
+        public sealed class StorageConsumerItem
+        {
+            public StorageConsumerItem(string projectName, string totalSize, double sharePercent)
+            {
+                ProjectName = projectName;
+                TotalSize = totalSize;
+                SharePercent = sharePercent;
+            }
+
+            public string ProjectName { get; }
+            public string TotalSize { get; }
+            public double SharePercent { get; }
+            public string SharePercentLabel => $"{SharePercent:0}%";
+        }
 
         public sealed class DiffPreviewPathItem
         {

@@ -684,6 +684,7 @@
   - Scope: per-project growth metrics, top storage consumers, and clearer dashboard/backups storage summaries.
   - Current status:
     - In progress: Backups per-project cards now surface storage delta (`Δ`) versus the previous backup snapshot size for each project.
+    - In progress: Backups summary now includes top storage consumers (top projects by local backup storage share).
   - Acceptance tests:
     - UI: metrics align with stored backup/snapshot data.
     - Perf: reporting does not cause blocking UI refresh on common data sets.
