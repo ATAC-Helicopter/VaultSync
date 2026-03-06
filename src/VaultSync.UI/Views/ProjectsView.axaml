@@ -666,12 +666,8 @@
                            Background="{DynamicResource InputBackgroundBrush}"
                            BorderBrush="{DynamicResource DividerBrush}"
                            BorderThickness="1"
-                           Padding="{DynamicResource InputPadding}">
-                    <TextBox.KeyBindings>
-                      <KeyBinding Gesture="Enter"
-                                  Command="{Binding DataContext.CommitProjectTagInputCommand, ElementName=Root}" />
-                    </TextBox.KeyBindings>
-                  </TextBox>
+                           Padding="{DynamicResource InputPadding}"
+                           KeyDown="OnProjectTagInputKeyDown" />
 
                   <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Help}"
                              FontSize="10"

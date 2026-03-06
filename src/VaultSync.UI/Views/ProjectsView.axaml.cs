@@ -28,5 +28,20 @@ namespace VaultSync.UI.Views
             vm.BeginEditProjectTag(chip.Value);
             e.Handled = true;
         }
+
+        private void OnProjectTagInputKeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+                return;
+
+            if (DataContext is not ProjectsViewModel vm)
+                return;
+
+            if (!vm.CommitProjectTagInputCommand.CanExecute(null))
+                return;
+
+            vm.CommitProjectTagInputCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 }
