@@ -14,6 +14,7 @@
     <!-- Expand the layout to fill the available width while capping at 2200px for readability. -->
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
+          MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
           RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
           RowSpacing="{DynamicResource PageRowSpacing}">
 
@@ -144,7 +145,7 @@
         </Grid>
 
         <!-- Charts row -->
-        <Grid Grid.Row="4" ColumnDefinitions="11*,9*" ColumnSpacing="16" Margin="4,12,4,0">
+        <Grid Grid.Row="4" ColumnDefinitions="12*,10*" ColumnSpacing="16" Margin="4,12,4,0">
           <!-- Trend -->
           <Border Classes="card"
                   Background="{DynamicResource Surface2}"
@@ -160,7 +161,7 @@
                 </Border>
               </Grid>
 
-              <Grid Grid.Row="1" ColumnDefinitions="260,*" ColumnSpacing="12">
+              <Grid Grid.Row="1" ColumnDefinitions="5*,7*" ColumnSpacing="12">
                 <Border Grid.Column="0"
                         Background="#24304A"
                         CornerRadius="12"
@@ -237,7 +238,7 @@
                         Background="#1E293D"
                         CornerRadius="12"
                         Padding="12"
-                        MinHeight="360"
+                        MinHeight="300"
                         VerticalAlignment="Stretch">
                   <Grid RowDefinitions="*,Auto,Auto" RowSpacing="8">
                     <Grid Grid.Row="0">

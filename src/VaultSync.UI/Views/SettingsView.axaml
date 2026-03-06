@@ -65,6 +65,7 @@
     <!-- Allow the form to stretch across the viewport while capping width for readability. -->
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
+          MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
           RowDefinitions="Auto,Auto"
           RowSpacing="{DynamicResource PageRowSpacing}">
 
@@ -1293,18 +1294,22 @@
                                   IsEnabled="{Binding EnableVerboseLogging}" />
                   </Grid>
 
-                  <Grid ColumnDefinitions="*,Auto"
+                  <Grid ColumnDefinitions="*"
+                        RowDefinitions="Auto,Auto"
                         Margin="0,6,0,0">
-                    <StackPanel Grid.Column="0" Spacing="2">
+                    <StackPanel Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LogConsole}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LogConsoleDescription}"
                                  Foreground="{StaticResource TextSecondary}"
-                                 FontSize="11" />
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                Spacing="8"
-                                VerticalAlignment="Center">
+                    <WrapPanel Grid.Row="1"
+                               Margin="0,8,0,0"
+                               Orientation="Horizontal"
+                               ItemSpacing="8"
+                               LineSpacing="8"
+                               VerticalAlignment="Center">
                       <Button Content="{infra:LocalizedString Key=Settings.Advanced.LogConsoleOpen}"
                               Classes="action-primary"
                               Command="{Binding OpenLogConsoleCommand}" />
@@ -1315,7 +1320,7 @@
                       <Button Content="{infra:LocalizedString Key=Settings.Advanced.SupportBundleExport}"
                               Classes="action-ghost"
                               Command="{Binding ExportSupportBundleCommand}" />
-                    </StackPanel>
+                    </WrapPanel>
                   </Grid>
 
                 <Grid ColumnDefinitions="*,Auto"
@@ -1347,15 +1352,19 @@
                            IsEnabled="{Binding CheckForUpdatesOnStartup}" />
                 </Grid>
 
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid ColumnDefinitions="*"
+                      RowDefinitions="Auto,Auto"
                       Margin="0,4,0,0">
-                  <StackPanel Grid.Column="0" Spacing="2">
+                  <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNowDescription}"
                                Foreground="{StaticResource TextSecondary}"
-                               FontSize="11" />
+                               FontSize="11"
+                               TextWrapping="Wrap" />
                   </StackPanel>
-                  <Button Grid.Column="1"
+                  <Button Grid.Row="1"
+                          Margin="0,8,0,0"
+                          HorizontalAlignment="Left"
                           Classes="action-primary"
                           Command="{Binding CheckUpdatesNowCommand}">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
