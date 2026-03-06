@@ -3938,6 +3938,9 @@ namespace VaultSync.UI.ViewModels
                     return "Δ -";
 
                 var value = StorageDeltaBytes.Value;
+                if (Math.Abs(value) < 1024)
+                    return "Δ ~0 B";
+
                 var sign = value >= 0 ? "+" : "-";
                 return $"Δ {sign}{BackupSnapshotItem.FormatSize(Math.Abs(value))}";
             }

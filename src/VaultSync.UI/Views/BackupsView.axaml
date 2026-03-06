@@ -245,9 +245,11 @@
                   BringIntoViewOnFocusChange="False">
       <!-- Stretch to the full available width with a soft cap for readability. -->
       <Grid MaxWidth="2200"
-            HorizontalAlignment="Stretch">
+            HorizontalAlignment="Stretch"
+            MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
         <StackPanel Margin="{DynamicResource PageStackMargin}"
-                    Spacing="{DynamicResource PageRowSpacing}">
+                    Spacing="{DynamicResource PageRowSpacing}"
+                    HorizontalAlignment="Stretch">
 
         <!-- HEADER -->
         <Grid ColumnDefinitions="*,Auto"
@@ -266,7 +268,8 @@
                       Orientation="Horizontal"
                       Spacing="8"
                       HorizontalAlignment="Right"
-                      VerticalAlignment="Center">
+                      VerticalAlignment="Bottom"
+                      Margin="0,6,0,0">
             <Button x:Name="BackupAllButton"
                     Content="{infra:LocalizedString Key=Backups.Action.BackupAll}"
                     Classes="action-primary"
@@ -292,7 +295,8 @@
 
             <!-- Total snapshots -->
             <Border Classes="card"
-                    Padding="{DynamicResource CardPaddingMedium}">
+                    Padding="{DynamicResource CardPaddingMedium}"
+                    VerticalAlignment="Top">
               <StackPanel Spacing="10">
                 <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.Total}"
                            FontSize="12"
@@ -424,7 +428,8 @@
             <!-- Last backup -->
             <Border Classes="card"
                     Padding="{DynamicResource CardPaddingMedium}"
-                    Grid.Column="1">
+                    Grid.Column="1"
+                    VerticalAlignment="Top">
               <StackPanel Spacing="10">
                 <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.Last}"
                            FontSize="12"
@@ -508,7 +513,8 @@
             <!-- Total backup size -->
             <Border Classes="card"
                     Padding="16"
-                    Grid.Column="2">
+                    Grid.Column="2"
+                    VerticalAlignment="Top">
               <StackPanel Spacing="10">
                 <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.TotalStored}"
                            FontSize="12"
@@ -1057,7 +1063,7 @@
         </Expander>
 
         <!-- MAIN AREA: per-project (left) + history (right) -->
-        <Grid ColumnDefinitions="*,*"
+        <Grid ColumnDefinitions="3*,2*"
               ColumnSpacing="16">
 
           <!-- PER-PROJECT BACKUPS -->
@@ -1106,10 +1112,11 @@
                        SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
                        SelectionMode="Single"
                        BorderThickness="0"
+                       Padding="0"
                        AutoScrollToSelectedItem="False"
                        ScrollViewer.VerticalScrollBarVisibility="Auto"
                        VerticalAlignment="Stretch"
-                       MaxHeight="680">
+                       MinHeight="0">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Border Classes="card project-card"
@@ -1204,13 +1211,17 @@
                                      ToolTip.Tip="{Binding LastBackupDisplay}"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <StackPanel Grid.Column="1"
-                                    Orientation="Horizontal"
-                                    Spacing="8"
-                                    HorizontalAlignment="Right">
+                        <WrapPanel Grid.Column="1"
+                                   Orientation="Horizontal"
+                                   ItemSpacing="8"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center">
                           <Border Classes="stat-pill sm warning"
                                   IsVisible="{Binding HasStorageDelta}">
-                            <TextBlock Text="{Binding StorageDeltaFormatted}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding StorageDeltaFormatted}"
+                                       FontWeight="SemiBold"
+                                       MaxWidth="140"
+                                       TextTrimming="CharacterEllipsis" />
                           </Border>
                           <Border Classes="stat-pill sm info">
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -1224,7 +1235,7 @@
                               <TextBlock Text="{Binding TotalSizeFormatted}" FontWeight="SemiBold" />
                             </StackPanel>
                           </Border>
-                        </StackPanel>
+                        </WrapPanel>
                       </Grid>
 
                       <!-- Destination + Encryption -->
@@ -1234,12 +1245,14 @@
                             RowSpacing="6">
                         <WrapPanel Grid.Row="0"
                                    Orientation="Horizontal"
+                                   ItemSpacing="8"
+                                   LineSpacing="8"
                                    ItemHeight="56"
                                    HorizontalAlignment="Stretch">
                           <StackPanel Spacing="5"
-                                      Width="210"
-                                      MinWidth="170"
-                                      MaxWidth="320"
+                                      Width="190"
+                                      MinWidth="160"
+                                      MaxWidth="260"
                                       Margin="0,0,8,6">
                             <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
                                        FontSize="11"
@@ -1258,9 +1271,9 @@
                           </StackPanel>
 
                           <StackPanel Spacing="5"
-                                      Width="210"
-                                      MinWidth="170"
-                                      MaxWidth="320"
+                                      Width="190"
+                                      MinWidth="160"
+                                      MaxWidth="260"
                                       Margin="0,0,8,6">
                             <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}"
                                        FontSize="11"
@@ -1279,9 +1292,9 @@
                           </StackPanel>
 
                           <StackPanel Spacing="5"
-                                      Width="210"
-                                      MinWidth="170"
-                                      MaxWidth="320"
+                                      Width="190"
+                                      MinWidth="160"
+                                      MaxWidth="260"
                                       Margin="0,0,0,6">
                             <TextBlock Text="{infra:LocalizedString Key=Backups.Restore.Mode.Label}"
                                        FontSize="11"
@@ -1300,9 +1313,9 @@
                           </StackPanel>
 
                           <StackPanel Spacing="5"
-                                      Width="210"
-                                      MinWidth="170"
-                                      MaxWidth="320"
+                                      Width="190"
+                                      MinWidth="160"
+                                      MaxWidth="260"
                                       Margin="0,0,0,6">
                             <TextBlock Text="{infra:LocalizedString Key=Backups.Verification.Policy.Label}"
                                        FontSize="11"
@@ -1567,7 +1580,6 @@
                         Background="{DynamicResource DividerBrush}" />
 
                   <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                MaxHeight="680"
                                 Margin="0,2,0,0">
                     <ItemsControl ItemsSource="{Binding SnapshotGroups}">
                       <ItemsControl.ItemsPanel>
