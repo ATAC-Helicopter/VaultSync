@@ -284,7 +284,8 @@
 
 
         <!-- SUMMARY + ACTIVITY -->
-        <Grid ColumnSpacing="{Binding SummaryColumnSpacing}">
+        <Grid ColumnSpacing="{Binding SummaryColumnSpacing}"
+              RowDefinitions="Auto">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="{Binding ActivityColumnWidth}" />
@@ -721,6 +722,7 @@
                   CornerRadius="18"
                   Padding="16"
                   Grid.Column="1"
+                  VerticalAlignment="Top"
                   IsVisible="{Binding ShowActivityPanel}">
             <StackPanel Spacing="10">
               <Grid RowDefinitions="Auto,Auto">
