@@ -1009,7 +1009,7 @@
                             Background="{DynamicResource Surface2}"
                             BorderBrush="{DynamicResource BorderSoft}"
                             BorderThickness="1">
-                      <Grid ColumnDefinitions="Auto,*,Auto"
+                      <Grid ColumnDefinitions="Auto,*"
                             RowDefinitions="Auto,Auto,Auto"
                             ColumnSpacing="10"
                             RowSpacing="8">
@@ -1048,31 +1048,54 @@
                         </Grid>
                       </StackPanel>
 
-                      <!-- Name -->
-                      <StackPanel Grid.Row="0"
-                                  Grid.Column="1"
-                                  Spacing="2">
-                        <TextBlock Text="{Binding Name}"
-                                   FontSize="14"
-                                   FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
-                        <ItemsControl ItemsSource="{Binding ProjectTags}"
-                                      IsVisible="{Binding HasProjectTags}">
-                          <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                              <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4" />
-                            </ItemsPanelTemplate>
-                          </ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                              <Border Classes="stat-pill sm info"
-                                      Padding="{DynamicResource StatPillPadding}">
-                                <TextBlock Text="{Binding}" FontSize="10" />
-                              </Border>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
+                      <!-- Name + auto backup toggle -->
+                      <Grid Grid.Row="0"
+                            Grid.Column="1"
+                            ColumnDefinitions="*,Auto"
+                            ColumnSpacing="10">
+                        <StackPanel Grid.Column="0"
+                                    Spacing="2">
+                          <TextBlock Text="{Binding Name}"
+                                     FontSize="14"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <ItemsControl ItemsSource="{Binding ProjectTags}"
+                                        IsVisible="{Binding HasProjectTags}">
+                            <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4" />
+                              </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate>
+                                <Border Classes="stat-pill sm info"
+                                        Padding="{DynamicResource StatPillPadding}">
+                                  <TextBlock Text="{Binding}" FontSize="10" />
+                                </Border>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1"
+                                    Spacing="4"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top">
+                          <TextBlock Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}"
+                                     FontSize="11"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextSecondaryBrush}"
+                                     HorizontalAlignment="Right" />
+                          <ToggleSwitch x:Name="AutoBackupToggle"
+                                        IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
+                                        OffContent=""
+                                        OnContent=""
+                                        FontSize="11"
+                                        VerticalAlignment="Center"
+                                        MinWidth="0"
+                                        HorizontalAlignment="Right"
+                                        ToolTip.Tip="{infra:LocalizedString Key=Backups.Section.AutoBackupsTooltip}" />
+                        </StackPanel>
+                      </Grid>
 
                       <!-- Last backup + stats -->
                       <StackPanel Grid.Row="1"
@@ -1130,7 +1153,6 @@
                                    ItemHeight="56"
                                    HorizontalAlignment="Stretch">
                           <StackPanel Spacing="5"
-                                      Width="190"
                                       MinWidth="160"
                                       MaxWidth="260"
                                       Margin="0,0,8,6">
@@ -1151,7 +1173,6 @@
                           </StackPanel>
 
                           <StackPanel Spacing="5"
-                                      Width="190"
                                       MinWidth="160"
                                       MaxWidth="260"
                                       Margin="0,0,8,6">
@@ -1172,7 +1193,6 @@
                           </StackPanel>
 
                           <StackPanel Spacing="5"
-                                      Width="190"
                                       MinWidth="160"
                                       MaxWidth="260"
                                       Margin="0,0,0,6">
@@ -1193,7 +1213,6 @@
                           </StackPanel>
 
                           <StackPanel Spacing="5"
-                                      Width="190"
                                       MinWidth="160"
                                       MaxWidth="260"
                                       Margin="0,0,0,6">
@@ -1255,26 +1274,6 @@
                                   CommandParameter="{Binding}" />
                         </Grid>
                       </Grid>
-
-                      <!-- Auto backup toggle -->
-                      <StackPanel Grid.Row="0"
-                                  Grid.Column="2"
-                                  Spacing="4"
-                                  HorizontalAlignment="Right">
-                        <TextBlock Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <ToggleSwitch x:Name="AutoBackupToggle"
-                                    IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
-                                    OffContent=""
-                                    OnContent=""
-                                    FontSize="11"
-                                    VerticalAlignment="Center"
-                                    MinWidth="0"
-                                      HorizontalAlignment="Right"
-                                      ToolTip.Tip="{infra:LocalizedString Key=Backups.Section.AutoBackupsTooltip}" />
-                      </StackPanel>
 
                     </Grid>
                     </Border>
@@ -1558,7 +1557,7 @@
                                             CornerRadius="14"
                                             Padding="{DynamicResource CardPaddingSmall}"
                                             Margin="0,4,0,10">
-                                      <Grid ColumnDefinitions="6,*,Auto"
+                                      <Grid ColumnDefinitions="6,*"
                                             ColumnSpacing="12"
                                             RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                                             RowSpacing="10">
@@ -1573,7 +1572,6 @@
                                                    ItemSpacing="8"
                                                    Orientation="Horizontal"
                                                    HorizontalAlignment="Left"
-                                                   MaxWidth="420"
                                                    VerticalAlignment="Center">
                                           <TextBlock Text="{Binding Label}"
                                                      FontSize="13"
@@ -1618,26 +1616,6 @@
                                           </Border>
                                         </WrapPanel>
 
-                                        <Border Grid.Row="1"
-                                                Grid.Column="2"
-                                                CornerRadius="999"
-                                                Padding="10,4"
-                                                Background="{DynamicResource Surface3}"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Center"
-                                                MinWidth="90"
-                                                MaxWidth="140"
-                                                MinHeight="30">
-                                          <TextBlock Text="{Binding SizeFormatted}"
-                                                     FontSize="11"
-                                                     FontWeight="SemiBold"
-                                                     TextWrapping="NoWrap"
-                                                     TextTrimming="CharacterEllipsis"
-                                                     HorizontalAlignment="Center"
-                                                     VerticalAlignment="Center"
-                                                     MaxWidth="128" />
-                                        </Border>
-
                                         <WrapPanel Grid.Row="1"
                                                    Grid.Column="1"
                                                    ItemSpacing="6">
@@ -1668,6 +1646,21 @@
                                                          MaxWidth="260"
                                                          ToolTip.Tip="{Binding DestinationDisplay}" />
                                             </StackPanel>
+                                          </Border>
+                                          <Border CornerRadius="999"
+                                                  Padding="10,4"
+                                                  Background="{DynamicResource Surface3}"
+                                                  MinWidth="90"
+                                                  MaxWidth="140"
+                                                  MinHeight="30">
+                                            <TextBlock Text="{Binding SizeFormatted}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       TextWrapping="NoWrap"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       MaxWidth="128" />
                                           </Border>
                                         </WrapPanel>
 
