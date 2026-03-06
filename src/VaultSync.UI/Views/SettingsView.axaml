@@ -1320,6 +1320,9 @@
                       <Button Content="{infra:LocalizedString Key=Settings.Advanced.SupportBundleExport}"
                               Classes="action-ghost"
                               Command="{Binding ExportSupportBundleCommand}" />
+                      <Button Content="{infra:LocalizedString Key=Settings.Advanced.SupportBundleImport}"
+                              Classes="action-ghost"
+                              Command="{Binding ImportSupportBundleCommand}" />
                     </WrapPanel>
                   </Grid>
 

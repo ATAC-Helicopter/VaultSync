@@ -6,11 +6,13 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -207,6 +209,7 @@ namespace VaultSync.UI
             OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
             ExportSupportBundleCommand   = new RelayCommand(_ => ExportSupportBundle());
+            ImportSupportBundleCommand   = new RelayCommand(_ => ImportSupportBundle());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
@@ -1630,6 +1633,7 @@ namespace VaultSync.UI
         public ICommand OpenLogConsoleCommand { get; }
         public ICommand ExportLogConsoleCommand { get; }
         public ICommand ExportSupportBundleCommand { get; }
+        public ICommand ImportSupportBundleCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
         public ICommand RefreshHistoryCommand { get; }
         public ICommand SetBackupEncryptionPasswordCommand { get; }
@@ -2351,6 +2355,195 @@ namespace VaultSync.UI
             {
                 // best-effort
             }
+        }
+
+        private void ImportSupportBundle()
+        {
+            _ = RunDetachedAsync(ImportSupportBundleAsync, nameof(ImportSupportBundleAsync));
+        }
+
+        private async Task ImportSupportBundleAsync()
+        {
+            var storageProvider = GetStorageProvider();
+            if (storageProvider is null)
+                return;
+
+            var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = L("Settings.Advanced.SupportBundleImport", "Import support bundle"),
+                AllowMultiple = false,
+                FileTypeFilter = new List<FilePickerFileType>
+                {
+                    new("Zip archive") { Patterns = new[] { "*.zip" } }
+                }
+            });
+
+            var file = files?.FirstOrDefault();
+            var zipPath = file?.TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(zipPath) || !File.Exists(zipPath))
+                return;
+
+            var result = await Task.Run(() => TryApplySupportBundleSettings(zipPath));
+            if (!result.success)
+            {
+                SaveStatus = result.message;
+                GlobalNotificationCenter.Instance.Show(
+                    result.message,
+                    NotificationSeverity.Warning,
+                    L("Settings.Advanced.SupportBundle", "Support bundle"));
+                return;
+            }
+
+            SaveStatus = result.message;
+            LoadFromConfig();
+            GlobalNotificationCenter.Instance.Show(
+                result.message,
+                NotificationSeverity.Info,
+                L("Settings.Advanced.SupportBundle", "Support bundle"));
+        }
+
+        private (bool success, string message) TryApplySupportBundleSettings(string zipPath)
+        {
+            try
+            {
+                using var archive = ZipFile.OpenRead(zipPath);
+                var reportEntry = archive.Entries.FirstOrDefault(e =>
+                    string.Equals(e.FullName, "support-report.json", StringComparison.OrdinalIgnoreCase));
+                if (reportEntry is null)
+                {
+                    return (false, L("Settings.Advanced.SupportBundleImportMissingReport", "Support bundle is missing support-report.json."));
+                }
+
+                using var stream = reportEntry.Open();
+                using var reader = new StreamReader(stream);
+                var json = reader.ReadToEnd();
+                using var doc = JsonDocument.Parse(json);
+
+                if (!doc.RootElement.TryGetProperty("redactedConfig", out var redactedConfig))
+                {
+                    return (false, L("Settings.Advanced.SupportBundleImportMissingConfig", "Support bundle does not contain importable settings."));
+                }
+
+                var cfg = AppConfigStore.Load();
+                ApplyImportableSettings(redactedConfig, cfg);
+                AppConfigStore.Save(cfg);
+                return (true, L("Settings.Advanced.SupportBundleImportApplied", "Support bundle settings imported (diagnostics ignored)."));
+            }
+            catch (Exception ex)
+            {
+                return (false, string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.SupportBundleImportFailed", "Support bundle import failed: {0}"),
+                    ex.Message));
+            }
+        }
+
+        private static void ApplyImportableSettings(JsonElement redactedConfig, AppConfig cfg)
+        {
+            if (redactedConfig.TryGetProperty("backups", out var backups))
+            {
+                cfg.Backups.EnableAutoBackups = ReadBool(backups, nameof(cfg.Backups.EnableAutoBackups), cfg.Backups.EnableAutoBackups);
+                cfg.Backups.IntervalMinutes = ClampInt(ReadInt(backups, nameof(cfg.Backups.IntervalMinutes), cfg.Backups.IntervalMinutes), 1, 10080, 30);
+                cfg.Backups.MaxSnapshotsPerProject = ClampInt(ReadInt(backups, nameof(cfg.Backups.MaxSnapshotsPerProject), cfg.Backups.MaxSnapshotsPerProject), 1, 10000, 20);
+                cfg.Backups.EnableMetadataSync = ReadBool(backups, nameof(cfg.Backups.EnableMetadataSync), cfg.Backups.EnableMetadataSync);
+                cfg.Backups.AutoImportMetadata = ReadBool(backups, nameof(cfg.Backups.AutoImportMetadata), cfg.Backups.AutoImportMetadata);
+                cfg.Backups.PromptRestoreAfterImport = ReadBool(backups, nameof(cfg.Backups.PromptRestoreAfterImport), cfg.Backups.PromptRestoreAfterImport);
+                cfg.Backups.EnableBandwidthLimit = ReadBool(backups, nameof(cfg.Backups.EnableBandwidthLimit), cfg.Backups.EnableBandwidthLimit);
+                cfg.Backups.MaxBandwidthMbps = ClampInt(ReadInt(backups, nameof(cfg.Backups.MaxBandwidthMbps), cfg.Backups.MaxBandwidthMbps), 1, 100000, 100);
+                cfg.Backups.EnableQuietHours = ReadBool(backups, nameof(cfg.Backups.EnableQuietHours), cfg.Backups.EnableQuietHours);
+                cfg.Backups.QuietHoursStart = ReadString(backups, nameof(cfg.Backups.QuietHoursStart), cfg.Backups.QuietHoursStart);
+                cfg.Backups.QuietHoursEnd = ReadString(backups, nameof(cfg.Backups.QuietHoursEnd), cfg.Backups.QuietHoursEnd);
+                cfg.Backups.UseAdvancedDestinations = ReadBool(backups, nameof(cfg.Backups.UseAdvancedDestinations), cfg.Backups.UseAdvancedDestinations);
+                cfg.Backups.UseCompression = ReadBool(backups, nameof(cfg.Backups.UseCompression), cfg.Backups.UseCompression);
+                cfg.Backups.UseRsyncDelta = ReadBool(backups, nameof(cfg.Backups.UseRsyncDelta), cfg.Backups.UseRsyncDelta);
+                cfg.Backups.UseIncrementalBackups = ReadBool(backups, nameof(cfg.Backups.UseIncrementalBackups), cfg.Backups.UseIncrementalBackups);
+                cfg.Backups.UseFullSnapshotHash = ReadBool(backups, nameof(cfg.Backups.UseFullSnapshotHash), cfg.Backups.UseFullSnapshotHash);
+                cfg.Backups.EnableScanCache = ReadBool(backups, nameof(cfg.Backups.EnableScanCache), cfg.Backups.EnableScanCache);
+                cfg.Backups.AggressiveScanCache = ReadBool(backups, nameof(cfg.Backups.AggressiveScanCache), cfg.Backups.AggressiveScanCache);
+                cfg.Backups.EnableArchiveUploadAutoTune = ReadBool(backups, nameof(cfg.Backups.EnableArchiveUploadAutoTune), cfg.Backups.EnableArchiveUploadAutoTune);
+                cfg.Backups.EnableParallelArchiveUpload = ReadBool(backups, nameof(cfg.Backups.EnableParallelArchiveUpload), cfg.Backups.EnableParallelArchiveUpload);
+                cfg.Backups.VerifyAfterCreate = ReadBool(backups, nameof(cfg.Backups.VerifyAfterCreate), cfg.Backups.VerifyAfterCreate);
+                cfg.Backups.PauseOnBattery = ReadBool(backups, nameof(cfg.Backups.PauseOnBattery), cfg.Backups.PauseOnBattery);
+
+                if (backups.TryGetProperty("encryption", out var enc))
+                {
+                    cfg.Backups.Encryption.Enabled = ReadBool(enc, nameof(cfg.Backups.Encryption.Enabled), cfg.Backups.Encryption.Enabled);
+                    cfg.Backups.Encryption.Algorithm = ReadString(enc, nameof(cfg.Backups.Encryption.Algorithm), cfg.Backups.Encryption.Algorithm);
+                    cfg.Backups.Encryption.KdfProfile = ReadString(enc, nameof(cfg.Backups.Encryption.KdfProfile), cfg.Backups.Encryption.KdfProfile);
+                    cfg.Backups.Encryption.KdfParamRef = ReadString(enc, nameof(cfg.Backups.Encryption.KdfParamRef), cfg.Backups.Encryption.KdfParamRef);
+                    cfg.Backups.Encryption.AllowSessionFallback = ReadBool(enc, nameof(cfg.Backups.Encryption.AllowSessionFallback), cfg.Backups.Encryption.AllowSessionFallback);
+                    cfg.Backups.Encryption.OpenUnlockTimeoutMinutes = ClampInt(ReadInt(enc, nameof(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes), cfg.Backups.Encryption.OpenUnlockTimeoutMinutes), 1, 1440, 10);
+                }
+            }
+
+            if (redactedConfig.TryGetProperty("storage", out var storage))
+            {
+                cfg.Storage.PreferExternalDrives = ReadBool(storage, nameof(cfg.Storage.PreferExternalDrives), cfg.Storage.PreferExternalDrives);
+                cfg.Storage.ShowDriveWarnings = ReadBool(storage, nameof(cfg.Storage.ShowDriveWarnings), cfg.Storage.ShowDriveWarnings);
+                cfg.Storage.MinFreeSpacePercent = ClampInt(ReadInt(storage, nameof(cfg.Storage.MinFreeSpacePercent), cfg.Storage.MinFreeSpacePercent), 1, 99, 10);
+            }
+
+            if (redactedConfig.TryGetProperty("appearance", out var appearance))
+            {
+                cfg.Appearance.Theme = ReadString(appearance, nameof(cfg.Appearance.Theme), cfg.Appearance.Theme);
+                cfg.Appearance.CompactLayout = ReadBool(appearance, nameof(cfg.Appearance.CompactLayout), cfg.Appearance.CompactLayout);
+                cfg.Appearance.ShowProjectAvatars = ReadBool(appearance, nameof(cfg.Appearance.ShowProjectAvatars), cfg.Appearance.ShowProjectAvatars);
+            }
+
+            if (redactedConfig.TryGetProperty("notifications", out var notifications))
+            {
+                cfg.Notifications.OnBackupSuccess = ReadBool(notifications, nameof(cfg.Notifications.OnBackupSuccess), cfg.Notifications.OnBackupSuccess);
+                cfg.Notifications.OnBackupFailure = ReadBool(notifications, nameof(cfg.Notifications.OnBackupFailure), cfg.Notifications.OnBackupFailure);
+                cfg.Notifications.OnSnapshotSuccess = ReadBool(notifications, nameof(cfg.Notifications.OnSnapshotSuccess), cfg.Notifications.OnSnapshotSuccess);
+                cfg.Notifications.OnSnapshotFailure = ReadBool(notifications, nameof(cfg.Notifications.OnSnapshotFailure), cfg.Notifications.OnSnapshotFailure);
+                cfg.Notifications.OnLowDisk = ReadBool(notifications, nameof(cfg.Notifications.OnLowDisk), cfg.Notifications.OnLowDisk);
+                cfg.Notifications.UseOsNotifications = ReadBool(notifications, nameof(cfg.Notifications.UseOsNotifications), cfg.Notifications.UseOsNotifications);
+                cfg.Notifications.OnlyWhenInactive = ReadBool(notifications, nameof(cfg.Notifications.OnlyWhenInactive), cfg.Notifications.OnlyWhenInactive);
+            }
+
+            if (redactedConfig.TryGetProperty("advanced", out var advanced))
+            {
+                cfg.Advanced.VerboseLogging = ReadBool(advanced, nameof(cfg.Advanced.VerboseLogging), cfg.Advanced.VerboseLogging);
+                cfg.Advanced.SaveVerboseLogs = ReadBool(advanced, nameof(cfg.Advanced.SaveVerboseLogs), cfg.Advanced.SaveVerboseLogs);
+                cfg.Advanced.CheckUpdates = ReadBool(advanced, nameof(cfg.Advanced.CheckUpdates), cfg.Advanced.CheckUpdates);
+                cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(ReadInt(advanced, nameof(cfg.Advanced.UpdateCheckIntervalMinutes), cfg.Advanced.UpdateCheckIntervalMinutes), 15, 1440, 120);
+                cfg.Advanced.BetaChannelEnabled = ReadBool(advanced, nameof(cfg.Advanced.BetaChannelEnabled), cfg.Advanced.BetaChannelEnabled);
+                cfg.Advanced.Language = ReadString(advanced, nameof(cfg.Advanced.Language), cfg.Advanced.Language);
+                cfg.Advanced.HasSeenOnboarding = ReadBool(advanced, nameof(cfg.Advanced.HasSeenOnboarding), cfg.Advanced.HasSeenOnboarding);
+            }
+
+            if (redactedConfig.TryGetProperty("behavior", out var behavior))
+            {
+                cfg.Behavior.RunInBackground = ReadBool(behavior, nameof(cfg.Behavior.RunInBackground), cfg.Behavior.RunInBackground);
+                cfg.Behavior.ShowWindowOnTrayActions = ReadBool(behavior, nameof(cfg.Behavior.ShowWindowOnTrayActions), cfg.Behavior.ShowWindowOnTrayActions);
+                cfg.Behavior.ShowTrayIcon = ReadBool(behavior, nameof(cfg.Behavior.ShowTrayIcon), cfg.Behavior.ShowTrayIcon);
+                cfg.Behavior.ShowBackupWidget = ReadBool(behavior, nameof(cfg.Behavior.ShowBackupWidget), cfg.Behavior.ShowBackupWidget);
+                cfg.Behavior.EnableSystemNotifications = ReadBool(behavior, nameof(cfg.Behavior.EnableSystemNotifications), cfg.Behavior.EnableSystemNotifications);
+                cfg.Behavior.MinimizeToTray = ReadBool(behavior, nameof(cfg.Behavior.MinimizeToTray), cfg.Behavior.MinimizeToTray);
+                cfg.Behavior.LaunchOnLogin = ReadBool(behavior, nameof(cfg.Behavior.LaunchOnLogin), cfg.Behavior.LaunchOnLogin);
+                cfg.Behavior.ConfirmDeleteBackup = ReadBool(behavior, nameof(cfg.Behavior.ConfirmDeleteBackup), cfg.Behavior.ConfirmDeleteBackup);
+            }
+        }
+
+        private static bool ReadBool(JsonElement parent, string propertyName, bool fallback)
+        {
+            if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                return fallback;
+            return value.GetBoolean();
+        }
+
+        private static int ReadInt(JsonElement parent, string propertyName, int fallback)
+        {
+            if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var result))
+                return fallback;
+            return result;
+        }
+
+        private static string ReadString(JsonElement parent, string propertyName, string fallback)
+        {
+            if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.String)
+                return fallback;
+            return value.GetString() ?? fallback;
         }
 
     }
