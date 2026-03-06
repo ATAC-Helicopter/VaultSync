@@ -92,6 +92,10 @@ namespace VaultSync.UI.ViewModels
         private GridLength _activityColumnWidth = new GridLength(360);
         private double _summaryColumnSpacing = 12;
         private double _lastSummaryViewportWidth = 1400;
+        private GridLength _mainAreaLeftColumnWidth = new GridLength(3, GridUnitType.Star);
+        private GridLength _mainAreaRightColumnWidth = new GridLength(2, GridUnitType.Star);
+        private int _mainAreaRightPanelColumn = 1;
+        private int _mainAreaRightPanelRow = 0;
 
         private sealed record PendingBackupUpdate(
             string ProjectId,
@@ -383,6 +387,54 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _summaryColumnSpacing, value))
                 {
                     OnPropertyChanged(nameof(SummaryColumnSpacing));
+                }
+            }
+        }
+
+        public GridLength MainAreaLeftColumnWidth
+        {
+            get => _mainAreaLeftColumnWidth;
+            private set
+            {
+                if (SetProperty(ref _mainAreaLeftColumnWidth, value))
+                {
+                    OnPropertyChanged(nameof(MainAreaLeftColumnWidth));
+                }
+            }
+        }
+
+        public GridLength MainAreaRightColumnWidth
+        {
+            get => _mainAreaRightColumnWidth;
+            private set
+            {
+                if (SetProperty(ref _mainAreaRightColumnWidth, value))
+                {
+                    OnPropertyChanged(nameof(MainAreaRightColumnWidth));
+                }
+            }
+        }
+
+        public int MainAreaRightPanelColumn
+        {
+            get => _mainAreaRightPanelColumn;
+            private set
+            {
+                if (SetProperty(ref _mainAreaRightPanelColumn, value))
+                {
+                    OnPropertyChanged(nameof(MainAreaRightPanelColumn));
+                }
+            }
+        }
+
+        public int MainAreaRightPanelRow
+        {
+            get => _mainAreaRightPanelRow;
+            private set
+            {
+                if (SetProperty(ref _mainAreaRightPanelRow, value))
+                {
+                    OnPropertyChanged(nameof(MainAreaRightPanelRow));
                 }
             }
         }
@@ -2640,6 +2692,7 @@ namespace VaultSync.UI.ViewModels
         {
             const double chartThreshold = 1180;
             const double activityThreshold = 1460;
+            const double twoColumnThreshold = 1650;
 
             var showCharts = width >= chartThreshold;
             var showActivity = width >= activityThreshold;
@@ -2650,6 +2703,16 @@ namespace VaultSync.UI.ViewModels
                 ? new GridLength(1, GridUnitType.Star)
                 : new GridLength(0);
             SummaryColumnSpacing = showActivity ? 14 : 0;
+
+            var twoColumns = width >= twoColumnThreshold;
+            MainAreaLeftColumnWidth = twoColumns
+                ? new GridLength(3, GridUnitType.Star)
+                : new GridLength(1, GridUnitType.Star);
+            MainAreaRightColumnWidth = twoColumns
+                ? new GridLength(2, GridUnitType.Star)
+                : new GridLength(0);
+            MainAreaRightPanelColumn = twoColumns ? 1 : 0;
+            MainAreaRightPanelRow = twoColumns ? 0 : 1;
 
             if (Math.Abs(_lastSummaryViewportWidth - width) > 8)
             {

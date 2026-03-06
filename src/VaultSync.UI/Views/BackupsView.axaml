@@ -939,15 +939,21 @@
           </Border>
         </Expander>
 
-        <!-- MAIN AREA: stack per-project and history to avoid narrow-width overlap -->
+        <!-- MAIN AREA: two columns on wide windows, stacked on narrower windows -->
         <Grid RowDefinitions="Auto,Auto"
-              RowSpacing="16">
+              RowSpacing="16"
+              ColumnSpacing="16">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{Binding MainAreaLeftColumnWidth}" />
+            <ColumnDefinition Width="{Binding MainAreaRightColumnWidth}" />
+          </Grid.ColumnDefinitions>
 
           <!-- PER-PROJECT BACKUPS -->
           <Border Classes="card"
                   CornerRadius="18"
                   Padding="14"
                   MinWidth="0"
+                  Grid.Column="0"
                   Grid.Row="0"
                   VerticalAlignment="Stretch">
 
@@ -1280,7 +1286,8 @@
           </Border>
 
           <!-- RIGHT PANEL: destinations + history -->
-          <Grid Grid.Row="1"
+          <Grid Grid.Column="{Binding MainAreaRightPanelColumn}"
+                Grid.Row="{Binding MainAreaRightPanelRow}"
                 RowDefinitions="Auto,Auto"
                 RowSpacing="12">
 
