@@ -60,6 +60,7 @@
 - [BUG-16018] Backups, Dashboard, and Settings pages now stretch to full `ScrollViewer` viewport width in windowed mode (while keeping max-width readability caps) instead of rendering as narrow centered columns.
 - [BUG-16019] Backups page now removes hard per-panel list height caps and rebalances per-project/history columns to better use available windowed space without collapse.
 - [BUG-16020] Projects details and Settings Advanced controls now reflow/wrap in windowed mode, and near-zero per-project storage deltas render as neutral `Δ ~0 B`.
+- [BUG-16021] Backups summary activity card now sizes to content in windowed mode (top-aligned, auto-height row) so the chart no longer leaves a large empty block under the bars.
 
 ## [1.5.1] - 28.02.2026
 ### Added

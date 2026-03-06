@@ -821,6 +821,11 @@
     - Projects details control panel now uses a 2x2 responsive grid for destination/encryption/health blocks.
     - Settings Advanced action rows now wrap buttons and copy in narrow widths.
     - Near-zero storage delta now displays neutral `Δ ~0 B` for sub-1KB changes.
+- [x] `VS-1624` `P2` Backups activity chart card empty-space collapse.
+  - Scope: remove oversized empty space under the Backups 7-day bars in windowed mode.
+  - Done:
+    - Summary/activity row now uses explicit auto row sizing.
+    - Activity card is top-aligned so it keeps chart content height instead of stretching to adjacent summary card height.
 
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
