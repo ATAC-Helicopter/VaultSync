@@ -57,6 +57,9 @@
 - [BUG-16015] Projects list cards now show project tags in the All projects panel (`TagsDisplay`) to match tagging visibility across the app.
 - [BUG-16016] Dashboard weekly backups-per-day buckets now use local-day window boundaries (converted to UTC for query) to reduce day-label/count drift.
 - [BUG-16017] Dropdown popups were restyled app-wide for readability (clean hover/selected states, rounded popup panel, consistent item spacing) and Projects/Backups selected rows no longer use harsh filled highlight.
+- [BUG-16018] Backups, Dashboard, and Settings pages now stretch to full `ScrollViewer` viewport width in windowed mode (while keeping max-width readability caps) instead of rendering as narrow centered columns.
+- [BUG-16019] Backups page now removes hard per-panel list height caps and rebalances per-project/history columns to better use available windowed space without collapse.
+- [BUG-16020] Projects details and Settings Advanced controls now reflow/wrap in windowed mode, and near-zero per-project storage deltas render as neutral `Δ ~0 B`.
 
 ## [1.5.1] - 28.02.2026
 ### Added

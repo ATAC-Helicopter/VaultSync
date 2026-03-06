@@ -805,6 +805,22 @@
   - Scope: remove blocking sleep from config read retry path to reduce UI-thread contention under lock races.
   - Done:
     - Config load retry now uses async backoff/read flow (`Task.Delay`, async stream/file reads) instead of blocking `Thread.Sleep` loops.
+- [x] `VS-1621` `P1` Windowed viewport-width fill for primary pages.
+  - Scope: ensure Backups/Dashboard/Settings root content stretches to available `ScrollViewer` viewport width while preserving readability max-width caps.
+  - Done:
+    - Backups, Dashboard, and Settings roots now bind `MinWidth` to the containing `ScrollViewer` viewport width.
+    - Windowed layouts now use available horizontal space instead of collapsing to narrow centered columns.
+- [x] `VS-1622` `P1` Backups windowed panel and list-height normalization.
+  - Scope: remove hard vertical caps that caused uneven left/right panel heights and rebalance panel split for narrower windows.
+  - Done:
+    - Removed Backups per-project/history hard `MaxHeight` constraints that clipped panel utilization.
+    - Backups main area now uses a `3*:2*` split and tighter control widths/wrap behavior for per-project card fields.
+- [x] `VS-1623` `P2` Projects/Settings windowed control overflow cleanup.
+  - Scope: reflow dense control rows in Projects details and Settings Advanced to prevent truncation/overflow in windowed mode.
+  - Done:
+    - Projects details control panel now uses a 2x2 responsive grid for destination/encryption/health blocks.
+    - Settings Advanced action rows now wrap buttons and copy in narrow widths.
+    - Near-zero storage delta now displays neutral `Δ ~0 B` for sub-1KB changes.
 
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
