@@ -7,6 +7,7 @@
     x:Class="VaultSync.UI.MainWindow"
     x:DataType="vm:AppViewModel"
     Width="1200" Height="800"
+    MinWidth="1180" MinHeight="720"
     Title="{infra:LocalizedString Key=Shell.Title}">
 
   <Window.Styles>

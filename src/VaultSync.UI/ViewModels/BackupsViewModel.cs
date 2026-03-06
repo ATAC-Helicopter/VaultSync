@@ -91,6 +91,7 @@ namespace VaultSync.UI.ViewModels
         private bool _showActivityPanel = true;
         private GridLength _activityColumnWidth = new GridLength(360);
         private double _summaryColumnSpacing = 12;
+        private double _lastSummaryViewportWidth = 1400;
 
         private sealed record PendingBackupUpdate(
             string ProjectId,
@@ -2638,7 +2639,7 @@ namespace VaultSync.UI.ViewModels
         public void UpdateSummaryLayout(double width)
         {
             const double chartThreshold = 1180;
-            const double activityThreshold = 1400;
+            const double activityThreshold = 1460;
 
             var showCharts = width >= chartThreshold;
             var showActivity = width >= activityThreshold;
@@ -2649,6 +2650,12 @@ namespace VaultSync.UI.ViewModels
                 ? new GridLength(1, GridUnitType.Star)
                 : new GridLength(0);
             SummaryColumnSpacing = showActivity ? 14 : 0;
+
+            if (Math.Abs(_lastSummaryViewportWidth - width) > 8)
+            {
+                _lastSummaryViewportWidth = width;
+                RebuildSnapshotActivity(DateTime.Now);
+            }
         }
 
         private static string FormatRelative(TimeSpan span)
@@ -2800,6 +2807,11 @@ namespace VaultSync.UI.ViewModels
                 maxTotal = 1; // avoid divide-by-zero
 
             var chartHeight = maxTotal <= 2 ? 150d : (maxTotal <= 4 ? 172d : 192d);
+            // Keep the activity chart proportionate on wide windowed layouts.
+            var widthBoost = ShowActivityPanel
+                ? Math.Clamp((_lastSummaryViewportWidth - 1380d) * 0.05d, 0d, 52d)
+                : 0d;
+            chartHeight += widthBoost;
             const double barBase = 12;
             var barRange = chartHeight - 36;
             SnapshotActivityChartHeight = chartHeight;
