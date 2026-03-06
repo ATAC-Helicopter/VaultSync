@@ -172,10 +172,10 @@
                   BorderBrush="{DynamicResource DividerBrush}"
                   BorderThickness="1"
                   Padding="8,4">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
-                  ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                  ColumnDefinitions="Auto,*"
                   ColumnSpacing="8"
-                  RowSpacing="4">
+                  RowSpacing="6">
               <TextBlock VerticalAlignment="Center"
                          Text="{infra:LocalizedString Key=Projects.Group.Label}"
                          Foreground="{DynamicResource TextSecondaryBrush}"
@@ -191,25 +191,25 @@
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
               </ComboBox>
-              <Button Grid.Column="2"
-                      Padding="{DynamicResource ButtonTightPadding}"
-                      CornerRadius="10"
-                      Background="{DynamicResource Surface2}"
-                      Foreground="{DynamicResource TextPrimaryBrush}"
-                      Command="{Binding SnapshotGroupCommand}">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Group.SnapshotAction}" />
-              </Button>
-              <Button Grid.Column="3"
-                      Padding="{DynamicResource ButtonTightPadding}"
-                      CornerRadius="10"
-                      Background="{DynamicResource Surface2}"
-                      Foreground="{DynamicResource TextPrimaryBrush}"
-                      Command="{Binding BackupGroupCommand}">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Group.BackupAction}" />
-              </Button>
-              <StackPanel Grid.Column="4"
-                          Orientation="Horizontal"
-                          Spacing="6">
+              <WrapPanel Grid.Row="1"
+                         Grid.ColumnSpan="2"
+                         Orientation="Horizontal"
+                         ItemSpacing="6"
+                         LineSpacing="6">
+                <Button Padding="{DynamicResource ButtonTightPadding}"
+                        CornerRadius="10"
+                        Background="{DynamicResource Surface2}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Command="{Binding SnapshotGroupCommand}">
+                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.SnapshotAction}" />
+                </Button>
+                <Button Padding="{DynamicResource ButtonTightPadding}"
+                        CornerRadius="10"
+                        Background="{DynamicResource Surface2}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Command="{Binding BackupGroupCommand}">
+                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.BackupAction}" />
+                </Button>
                 <Button Padding="{DynamicResource ButtonTightPadding}"
                         CornerRadius="10"
                         Background="{DynamicResource Surface2}"
@@ -224,14 +224,14 @@
                         Command="{Binding EnableAutoBackupGroupCommand}">
                   <TextBlock Text="{infra:LocalizedString Key=Projects.Group.EnableAuto}" />
                 </Button>
-              </StackPanel>
-              <TextBlock Grid.Row="1"
+              </WrapPanel>
+              <TextBlock Grid.Row="2"
                          VerticalAlignment="Center"
                          Text="{infra:LocalizedString Key=Projects.Group.TagLabel}"
                          Foreground="{DynamicResource TextSecondaryBrush}"
                          FontSize="11"
                          FontWeight="SemiBold" />
-              <TextBox Grid.Row="1"
+              <TextBox Grid.Row="2"
                        Grid.Column="1"
                        Text="{Binding GroupTagInput, Mode=TwoWay}"
                        Watermark="{infra:LocalizedString Key=Projects.Group.TagWatermark}"
@@ -239,33 +239,32 @@
                        BorderBrush="{DynamicResource DividerBrush}"
                        BorderThickness="1"
                        Padding="{DynamicResource InputPadding}" />
-              <Button Grid.Row="1"
-                      Grid.Column="2"
-                      Padding="{DynamicResource ButtonTightPadding}"
-                      CornerRadius="10"
-                      Background="{DynamicResource Surface2}"
-                      Foreground="{DynamicResource TextPrimaryBrush}"
-                      Command="{Binding ApplyTagToGroupCommand}">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Group.TagApply}" />
-              </Button>
-              <Button Grid.Row="1"
-                      Grid.Column="3"
-                      Padding="{DynamicResource ButtonTightPadding}"
-                      CornerRadius="10"
-                      Background="{DynamicResource Surface2}"
-                      Foreground="{DynamicResource TextPrimaryBrush}"
-                      Command="{Binding RemoveTagFromGroupCommand}">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Group.TagRemove}" />
-              </Button>
-              <TextBlock Grid.Row="1"
-                         Grid.Column="4"
-                         VerticalAlignment="Center"
-                         Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="10"
-                         Text="{infra:LocalizedString Key=Projects.Group.TagHelp}" />
-              <ItemsControl Grid.Row="2"
-                            Grid.Column="1"
-                            Grid.ColumnSpan="4"
+              <WrapPanel Grid.Row="3"
+                         Grid.ColumnSpan="2"
+                         Orientation="Horizontal"
+                         ItemSpacing="6"
+                         LineSpacing="6">
+                <Button Padding="{DynamicResource ButtonTightPadding}"
+                        CornerRadius="10"
+                        Background="{DynamicResource Surface2}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Command="{Binding ApplyTagToGroupCommand}">
+                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.TagApply}" />
+                </Button>
+                <Button Padding="{DynamicResource ButtonTightPadding}"
+                        CornerRadius="10"
+                        Background="{DynamicResource Surface2}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Command="{Binding RemoveTagFromGroupCommand}">
+                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.TagRemove}" />
+                </Button>
+                <TextBlock VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="10"
+                           Text="{infra:LocalizedString Key=Projects.Group.TagHelp}" />
+              </WrapPanel>
+              <ItemsControl Grid.Row="4"
+                            Grid.ColumnSpan="2"
                             ItemsSource="{Binding ReusableProjectTags}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
@@ -289,9 +288,9 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Grid.Row="3"
+              <TextBlock Grid.Row="5"
                          Grid.Column="0"
-                         Grid.ColumnSpan="5"
+                         Grid.ColumnSpan="2"
                          Text="{infra:LocalizedString Key=Projects.Group.Help}"
                          FontSize="11"
                          Foreground="{DynamicResource TextMutedBrush}"
