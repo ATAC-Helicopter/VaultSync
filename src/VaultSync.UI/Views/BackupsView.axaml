@@ -283,11 +283,8 @@
         <controls:NotificationCard DataContext="{Binding Notification}" />
 
 
-        <!-- SUMMARY + ACTIVITY -->
-        <Grid RowDefinitions="Auto,Auto"
-              RowSpacing="14">
-          <Grid Grid.Row="0"
-                ColumnDefinitions="*,*,*"
+        <!-- SUMMARY -->
+        <Grid ColumnDefinitions="*,*,*"
                 ColumnSpacing="16">
 
             <!-- Total snapshots -->
@@ -711,124 +708,6 @@
                 </StackPanel>
               </StackPanel>
             </Border>
-          </Grid>
-
-          <!-- ACTIVITY -->
-          <Border Classes="card"
-                  CornerRadius="18"
-                  Padding="16"
-                  Grid.Row="1"
-                  VerticalAlignment="Top"
-                  IsVisible="{Binding ShowActivityPanel}">
-            <StackPanel Spacing="10">
-              <Grid RowDefinitions="Auto,Auto">
-                <TextBlock Grid.Row="0"
-                           Text="{infra:LocalizedString Key=Backups.Section.SnapshotsActivity}"
-                           FontSize="12"
-                           FontWeight="SemiBold" />
-                <WrapPanel Grid.Row="1"
-                           Margin="0,6,0,0"
-                           Orientation="Horizontal">
-                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0" VerticalAlignment="Center">
-                    <Border Width="8" Height="8" CornerRadius="4" Background="#3A7AFE"
-                            VerticalAlignment="Center" />
-                    <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAuto}"
-                               FontSize="10"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0" VerticalAlignment="Center">
-                    <Border Width="8" Height="8" CornerRadius="4" Background="#22CC88"
-                            VerticalAlignment="Center" />
-                    <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterManual}"
-                               FontSize="10"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Border Width="8" Height="8" CornerRadius="4" Background="#FFB84C"
-                            VerticalAlignment="Center" />
-                    <TextBlock Text="{infra:LocalizedString Key=Backups.Snapshot.Type.Imported}"
-                               FontSize="10"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
-                  </StackPanel>
-                </WrapPanel>
-              </Grid>
-
-            <Border Height="{Binding SnapshotActivityChartHeight}"
-                    Background="{DynamicResource Surface1}"
-                    CornerRadius="12"
-                    Padding="14,12,14,12">
-              <Grid RowDefinitions="*,Auto" RowSpacing="8">
-                <Grid Grid.Row="0">
-                  <Border Height="1"
-                          VerticalAlignment="Bottom"
-                          Background="{DynamicResource DividerBrush}"
-                          Opacity="0.2"/>
-                  <ItemsControl ItemsSource="{Binding SnapshotActivity}"
-                                HorizontalAlignment="Stretch"
-                                Margin="4,0,4,0">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate>
-                        <UniformGrid Columns="7" />
-                      </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Border HorizontalAlignment="Stretch"
-                                Margin="2,0"
-                                ToolTip.Tip="{Binding TooltipText}">
-                          <StackPanel HorizontalAlignment="Stretch"
-                                      VerticalAlignment="Bottom"
-                                      Spacing="4">
-                            <Border Height="{Binding ImportedHeight}"
-                                    HorizontalAlignment="Stretch"
-                                    Background="{Binding ImportedBrush}"
-                                    CornerRadius="6"
-                                    IsVisible="{Binding HasImported}" />
-                            <Border Height="{Binding ManualHeight}"
-                                    HorizontalAlignment="Stretch"
-                                    Background="{Binding ManualBrush}"
-                                    CornerRadius="6"
-                                    IsVisible="{Binding HasManual}" />
-                            <Border Height="{Binding AutoHeight}"
-                                    HorizontalAlignment="Stretch"
-                                    Background="{Binding AutoBrush}"
-                                    CornerRadius="6"
-                                    IsVisible="{Binding HasAuto}" />
-                            <Border Height="{Binding EmptyHeight}"
-                                    HorizontalAlignment="Stretch"
-                                    MinHeight="8"
-                                    Background="{Binding EmptyBrush}"
-                                    CornerRadius="6"
-                                    IsVisible="{Binding IsEmpty}" />
-                          </StackPanel>
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </Grid>
-                <ItemsControl Grid.Row="1" ItemsSource="{Binding SnapshotActivity}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <UniformGrid Columns="7" />
-                    </ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding DayLabel}"
-                                 IsVisible="{Binding ShowLabel}"
-                                 FontSize="10"
-                                 HorizontalAlignment="Center"
-                                 Foreground="{DynamicResource TextSecondaryBrush}" />
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </Grid>
-            </Border>
-            </StackPanel>
-          </Border>
         </Grid>
 
         <!-- MINI BACKUP STORAGE CARD (Backups page) -->
