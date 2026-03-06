@@ -939,16 +939,16 @@
           </Border>
         </Expander>
 
-        <!-- MAIN AREA: per-project (left) + history (right) -->
-        <Grid ColumnDefinitions="3*,2*"
-              ColumnSpacing="16">
+        <!-- MAIN AREA: stack per-project and history to avoid narrow-width overlap -->
+        <Grid RowDefinitions="Auto,Auto"
+              RowSpacing="16">
 
           <!-- PER-PROJECT BACKUPS -->
           <Border Classes="card"
                   CornerRadius="18"
                   Padding="14"
                   MinWidth="0"
-                  Grid.Column="0"
+                  Grid.Row="0"
                   VerticalAlignment="Stretch">
 
             <Grid RowDefinitions="Auto,*"
@@ -1069,13 +1069,11 @@
                       </StackPanel>
 
                       <!-- Last backup + stats -->
-                      <Grid Grid.Row="1"
-                            Grid.Column="1"
-                            ColumnDefinitions="*,Auto"
-                            ColumnSpacing="8"
-                            VerticalAlignment="Center">
-                        <StackPanel Grid.Column="0"
-                                    Orientation="Horizontal"
+                      <StackPanel Grid.Row="1"
+                                  Grid.Column="1"
+                                  Spacing="6"
+                                  VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal"
                                     Spacing="6"
                                     VerticalAlignment="Center">
                           <TextBlock Text="{infra:LocalizedString Key=Backups.Section.LastBackupLabel}"
@@ -1088,10 +1086,9 @@
                                      ToolTip.Tip="{Binding LastBackupDisplay}"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <WrapPanel Grid.Column="1"
-                                   Orientation="Horizontal"
+                        <WrapPanel Orientation="Horizontal"
                                    ItemSpacing="8"
-                                   HorizontalAlignment="Right"
+                                   HorizontalAlignment="Left"
                                    VerticalAlignment="Center">
                           <Border Classes="stat-pill sm warning"
                                   IsVisible="{Binding HasStorageDelta}">
@@ -1113,7 +1110,7 @@
                             </StackPanel>
                           </Border>
                         </WrapPanel>
-                      </Grid>
+                      </StackPanel>
 
                       <!-- Destination + Encryption -->
                       <Grid Grid.Row="2"
@@ -1282,9 +1279,9 @@
             </Grid>
           </Border>
 
-          <!-- RIGHT PANEL: destinations + history + activity -->
-          <Grid Grid.Column="1"
-                RowDefinitions="Auto,Auto,Auto"
+          <!-- RIGHT PANEL: destinations + history -->
+          <Grid Grid.Row="1"
+                RowDefinitions="Auto,Auto"
                 RowSpacing="12">
 
             <!-- DESTINATIONS -->
@@ -1568,6 +1565,8 @@
                                                    Grid.Column="1"
                                                    ItemSpacing="8"
                                                    Orientation="Horizontal"
+                                                   HorizontalAlignment="Left"
+                                                   MaxWidth="420"
                                                    VerticalAlignment="Center">
                                           <TextBlock Text="{Binding Label}"
                                                      FontSize="13"
@@ -1612,7 +1611,7 @@
                                           </Border>
                                         </WrapPanel>
 
-                                        <Border Grid.Row="0"
+                                        <Border Grid.Row="1"
                                                 Grid.Column="2"
                                                 CornerRadius="999"
                                                 Padding="10,4"
