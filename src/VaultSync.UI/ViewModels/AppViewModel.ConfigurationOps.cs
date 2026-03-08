@@ -561,7 +561,9 @@ namespace VaultSync.UI.ViewModels
                 return true;
             }
 
-            return !TryWriteProbeFile(backupFolder);
+            // Avoid startup write probes on potentially protected/network locations.
+            // Treat non-writable folders as protected using a non-throwing heuristic.
+            return !IsLikelyWritableDirectory(backupFolder);
         }
 
         private static bool TryParseBackupTimestamp(string? folderName, out DateTime createdUtc)

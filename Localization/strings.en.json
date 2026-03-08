@@ -537,6 +537,8 @@
   "Projects.Preset.Recommendation.Reason.Video": "Detected video editing project files (*.prproj).",
   "Projects.Preset.Required": "Please select a preset (or 'no preset') before adding this project.",
   "Projects.Preset.Editor.Toggle": "Open preset editor",
+  "Projects.Preset.Editor.ToggleOpen": "Open preset editor",
+  "Projects.Preset.Editor.ToggleClose": "Close preset editor",
   "Projects.Preset.Editor.Title": "Preset rules (exclude patterns)",
   "Projects.Preset.Editor.Help": "One rule per line. Lines starting with # are comments. Example: node_modules/, *.tmp, /bin/**",
   "Projects.Preset.Editor.Reload": "Reload",

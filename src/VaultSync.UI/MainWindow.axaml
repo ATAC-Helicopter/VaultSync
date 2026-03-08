@@ -4,6 +4,7 @@
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
     xmlns:viewsControls="clr-namespace:VaultSync.UI.Views.Controls"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+    xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
     x:Class="VaultSync.UI.MainWindow"
     x:DataType="vm:AppViewModel"
     Width="1200" Height="800"
@@ -37,12 +38,30 @@
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="Auto,*" ColumnDefinitions="260,*">
+  <Grid x:Name="RootGrid" RowDefinitions="Auto,*" ColumnDefinitions="260,*">
 
-    <Border Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
+    <Border x:Name="SidebarRoot" Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
       <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="4,10,4,16">
-        <Border Classes="shell-banner">
+        <StackPanel x:Name="SidebarTopSection"
+                    DockPanel.Dock="Top"
+                    Spacing="8"
+                    Margin="4,10,4,16">
+          <Button x:Name="SidebarToggleButton"
+                  Classes="sidebar-toggle"
+                  Click="OnToggleSidebar"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  Margin="0,0,0,2"
+                  ToolTip.Tip="Collapse sidebar">
+            <TextBlock x:Name="SidebarToggleGlyph"
+                       Text="&#xE700;"
+                       FontFamily="Segoe MDL2 Assets"
+                       FontSize="11"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+          </Button>
+
+        <Border x:Name="ShellBanner" Classes="shell-banner">
           <StackPanel Spacing="4">
             <TextBlock Text="{infra:LocalizedString Key=Shell.Title}"
                        Foreground="{DynamicResource ShellHeaderTextBrush}"
@@ -53,13 +72,15 @@
                          FontSize="12"/>
             </StackPanel>
           </Border>
-          <TextBlock Text="{infra:LocalizedString Key=Shell.Navigation}"
+          <TextBlock x:Name="NavigationHeader"
+                     Text="{infra:LocalizedString Key=Shell.Navigation}"
                      Foreground="{StaticResource TextSecondary}"
                      Margin="2,2,0,0"
                      FontSize="12" />
         </StackPanel>
 
-        <Border DockPanel.Dock="Bottom"
+        <Border x:Name="SidebarFooter"
+                DockPanel.Dock="Bottom"
                 Margin="0,16,0,0"
                 Padding="12,14,12,10"
                 BorderBrush="{DynamicResource BorderSoft}"
@@ -76,7 +97,8 @@
           </StackPanel>
         </Border>
 
-        <Border DockPanel.Dock="Bottom"
+        <Border x:Name="SidebarDestinations"
+                DockPanel.Dock="Bottom"
                 Margin="0,8,0,4"
                 Padding="6"
                 CornerRadius="12"
@@ -103,21 +125,61 @@
           </StackPanel>
         </Border>
 
-        <StackPanel Spacing="4" Margin="0,0,0,10">
-          <Button x:Name="NavDashboardButton" Classes="nav" Command="{CompiledBinding NavigateDashboard}">
-            <TextBlock Text="{infra:LocalizedString Key=Nav.Dashboard}"/>
+        <StackPanel x:Name="NavButtonsPanel" Spacing="4" Margin="0,0,0,10">
+          <Button x:Name="NavDashboardButton" Classes="nav" Command="{CompiledBinding NavigateDashboard}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Dashboard}">
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+              <Border x:Name="NavDashboardIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform">
+                  <shapes:Path Data="M10,2.5 L17.5,9 V17 H12.75 V12 H7.25 V17 H2.5 V9 Z"
+                               Stroke="{DynamicResource TextPrimaryBrush}"
+                               StrokeThickness="1.6"
+                               Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavDashboardText" Text="{infra:LocalizedString Key=Nav.Dashboard}"/>
+            </StackPanel>
           </Button>
 
-          <Button x:Name="NavProjectsButton" Classes="nav" Command="{CompiledBinding NavigateProjects}">
-            <TextBlock Text="{infra:LocalizedString Key=Nav.Projects}"/>
+          <Button x:Name="NavProjectsButton" Classes="nav" Command="{CompiledBinding NavigateProjects}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Projects}">
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+              <Border x:Name="NavProjectsIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform">
+                  <shapes:Path Data="M2.5,6.5 H8 L10,8.5 H17.5 V15.5 C17.5,16.33 16.83,17 16,17 H4 C3.17,17 2.5,16.33 2.5,15.5 Z M2.5,6.5 C2.5,5.67 3.17,5 4,5 H7.25 C7.65,5 8.03,5.16 8.31,5.44 L9.56,6.69"
+                               Stroke="{DynamicResource TextPrimaryBrush}"
+                               StrokeThickness="1.6"
+                               Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavProjectsText" Text="{infra:LocalizedString Key=Nav.Projects}"/>
+            </StackPanel>
           </Button>
 
-          <Button x:Name="NavBackupsButton" Classes="nav" Command="{CompiledBinding NavigateBackups}">
-            <TextBlock Text="{infra:LocalizedString Key=Nav.Backups}"/>
+          <Button x:Name="NavBackupsButton" Classes="nav" Command="{CompiledBinding NavigateBackups}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Backups}">
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+              <Border x:Name="NavBackupsIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform">
+                  <shapes:Path Data="M3,5.5 H17 V9.25 H3 Z M4,9.25 H16 V16.25 H4 Z M10,10.5 V14.25 M10,14.25 L7.75,12 M10,14.25 L12.25,12"
+                               Stroke="{DynamicResource TextPrimaryBrush}"
+                               StrokeThickness="1.6"
+                               Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavBackupsText" Text="{infra:LocalizedString Key=Nav.Backups}"/>
+            </StackPanel>
           </Button>
 
-          <Button x:Name="NavSettingsButton" Classes="nav" Command="{CompiledBinding NavigateSettings}">
-            <TextBlock Text="{infra:LocalizedString Key=Nav.Settings}"/>
+          <Button x:Name="NavSettingsButton" Classes="nav" Command="{CompiledBinding NavigateSettings}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Settings}">
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+              <Border x:Name="NavSettingsIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform">
+                  <shapes:Path Data="M3,5.5 H17 M3,10 H17 M3,14.5 H17 M6.5,5.5 A1.5,1.5 0 1 1 6.5,5.49 M12,10 A1.5,1.5 0 1 1 12,9.99 M8.5,14.5 A1.5,1.5 0 1 1 8.5,14.49"
+                               Stroke="{DynamicResource TextPrimaryBrush}"
+                               StrokeThickness="1.6"
+                               Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavSettingsText" Text="{infra:LocalizedString Key=Nav.Settings}"/>
+            </StackPanel>
           </Button>
         </StackPanel>
 

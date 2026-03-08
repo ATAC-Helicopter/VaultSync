@@ -2249,7 +2249,7 @@ public sealed class BackupService
                 if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
                 {
                     Console.WriteLine($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
-                    Directory.Delete(fullPath, recursive: true);
+                    TryDeleteBackupFolder(fullPath, backup.Id);
                 }
                 else
                 {
@@ -2278,6 +2278,137 @@ public sealed class BackupService
                 }
             }
         }
+    }
+
+    private void TryDeleteBackupFolder(string fullPath, int backupId)
+    {
+        try
+        {
+            ClearAttributesRecursive(fullPath);
+            DeleteKnownMarkerFiles(fullPath);
+            Directory.Delete(fullPath, recursive: true);
+        }
+        catch (Exception firstEx)
+        {
+            Console.WriteLine($"[BackupService] Retention recursive delete failed for '{fullPath}' (backupId={backupId}), attempting fallback delete: {firstEx.Message}");
+            try
+            {
+                FallbackDeleteDirectory(fullPath);
+            }
+            catch (Exception fallbackEx)
+            {
+                Console.WriteLine($"[BackupService] Retention fallback delete failed for '{fullPath}' (backupId={backupId}): {fallbackEx}");
+                throw;
+            }
+        }
+    }
+
+    private static void DeleteKnownMarkerFiles(string rootPath)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+            return;
+
+        var markerFiles = new[]
+        {
+            Path.Combine(rootPath, InProgressMarkerFileName),
+            Path.Combine(rootPath, CompletedMarkerFileName),
+            Path.Combine(rootPath, ".vaultsync_keep"),
+        };
+
+        foreach (var markerPath in markerFiles)
+        {
+            try
+            {
+                if (!File.Exists(markerPath))
+                    continue;
+
+                File.SetAttributes(markerPath, FileAttributes.Normal);
+                File.Delete(markerPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BackupService] Retention could not remove marker file '{markerPath}': {ex.Message}");
+            }
+        }
+    }
+
+    private static void ClearAttributesRecursive(string rootPath)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+            return;
+
+        try
+        {
+            File.SetAttributes(rootPath, FileAttributes.Normal);
+        }
+        catch
+        {
+            // Best effort; continue with children.
+        }
+
+        foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
+        {
+            try
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+            }
+            catch
+            {
+                // Best effort; delete phase will handle failures.
+            }
+        }
+
+        foreach (var dir in Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories))
+        {
+            try
+            {
+                File.SetAttributes(dir, FileAttributes.Normal);
+            }
+            catch
+            {
+                // Best effort; delete phase will handle failures.
+            }
+        }
+    }
+
+    private static void FallbackDeleteDirectory(string rootPath)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+            return;
+
+        foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
+        {
+            try
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+                File.Delete(file);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BackupService] Retention fallback file delete failed for '{file}': {ex.Message}");
+            }
+        }
+
+        var allDirs = Directory
+            .EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories)
+            .OrderByDescending(path => path.Length)
+            .ToList();
+
+        foreach (var dir in allDirs)
+        {
+            try
+            {
+                File.SetAttributes(dir, FileAttributes.Normal);
+                Directory.Delete(dir, recursive: false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BackupService] Retention fallback directory delete failed for '{dir}': {ex.Message}");
+            }
+        }
+
+        File.SetAttributes(rootPath, FileAttributes.Normal);
+        Directory.Delete(rootPath, recursive: false);
     }
 
     private sealed class RunnerProgressState

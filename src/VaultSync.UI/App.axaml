@@ -111,21 +111,72 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="{DynamicResource NavButtonPadding}" />
-            <Setter Property="Margin" Value="{DynamicResource NavButtonMargin}" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,4,0,0" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
             <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="MinHeight" Value="52" />
         </Style>
 
         <Style Selector="Button.nav:pointerover">
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="Background" Value="#182033" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style Selector="Button.nav:pressed">
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="Background" Value="#1D2940" />
+        </Style>
+
+        <Style Selector="Button.nav.compact">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Button.sidebar-toggle">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="#172034" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button.sidebar-toggle:pointerover">
+            <Setter Property="Background" Value="#1C2740" />
+        </Style>
+
+        <Style Selector="Border.nav-icon-badge">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="CornerRadius" Value="11" />
+            <Setter Property="Background" Value="#172034" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Border.nav-icon-badge.compact">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="#172034" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button.nav.compact:pointerover Border.nav-icon-badge.compact">
+            <Setter Property="Background" Value="#1F2C48" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="Button.nav.compact:pressed Border.nav-icon-badge.compact">
+            <Setter Property="Background" Value="#233252" />
         </Style>
 
         <!-- Action buttons -->

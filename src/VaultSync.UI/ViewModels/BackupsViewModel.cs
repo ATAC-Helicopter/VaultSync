@@ -2692,7 +2692,6 @@ namespace VaultSync.UI.ViewModels
         {
             const double chartThreshold = 1180;
             const double activityThreshold = 1460;
-            const double twoColumnThreshold = 1650;
 
             var showCharts = width >= chartThreshold;
             var showActivity = width >= activityThreshold;
@@ -2704,15 +2703,11 @@ namespace VaultSync.UI.ViewModels
                 : new GridLength(0);
             SummaryColumnSpacing = showActivity ? 14 : 0;
 
-            var twoColumns = width >= twoColumnThreshold;
-            MainAreaLeftColumnWidth = twoColumns
-                ? new GridLength(3, GridUnitType.Star)
-                : new GridLength(1, GridUnitType.Star);
-            MainAreaRightColumnWidth = twoColumns
-                ? new GridLength(2, GridUnitType.Star)
-                : new GridLength(0);
-            MainAreaRightPanelColumn = twoColumns ? 1 : 0;
-            MainAreaRightPanelRow = twoColumns ? 0 : 1;
+            // Keep both main panels visible at all viewport sizes and keep equal split.
+            MainAreaLeftColumnWidth = new GridLength(1, GridUnitType.Star);
+            MainAreaRightColumnWidth = new GridLength(1, GridUnitType.Star);
+            MainAreaRightPanelColumn = 1;
+            MainAreaRightPanelRow = 0;
 
             if (Math.Abs(_lastSummaryViewportWidth - width) > 8)
             {

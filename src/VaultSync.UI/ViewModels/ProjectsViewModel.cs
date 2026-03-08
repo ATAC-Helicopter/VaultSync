@@ -234,8 +234,19 @@ public class ProjectsViewModel : ViewModelBase
     public bool IsPresetEditorVisible
     {
         get => _isPresetEditorVisible;
-        set => SetProperty(ref _isPresetEditorVisible, value);
+        set
+        {
+            if (!SetProperty(ref _isPresetEditorVisible, value))
+                return;
+
+            OnPropertyChanged(nameof(PresetEditorToggleLabel));
+        }
     }
+
+    public string PresetEditorToggleLabel =>
+        IsPresetEditorVisible
+            ? L("Projects.Preset.Editor.ToggleClose", "Close preset editor")
+            : L("Projects.Preset.Editor.ToggleOpen", "Open preset editor");
 
     private string _presetEditorCloneId = string.Empty;
     public string PresetEditorCloneId
@@ -527,6 +538,8 @@ public class ProjectsViewModel : ViewModelBase
 
     private List<ProjectItemViewModel> BuildProjectItems(AppConfig config, IReadOnlyList<DiscoveredProject> discovered)
     {
+        var hiddenPaths = GetHiddenProjectPathSet(config);
+
         // Try to open the shared DB so we can enrich projects with real snapshot data.
         SqliteRepository? repo = null;
         Dictionary<string, Project>? projectsByName = null;
@@ -557,6 +570,10 @@ public class ProjectsViewModel : ViewModelBase
         var items = new List<ProjectItemViewModel>();
         foreach (var p in discovered)
         {
+            var normalizedPath = NormalizeProjectPath(p.Path);
+            if (!string.IsNullOrWhiteSpace(normalizedPath) && hiddenPaths.Contains(normalizedPath))
+                continue;
+
             DateTime? lastSnapshotTime = p.LastSnapshotTime;
             long? lastSnapshotBytes = p.LastSnapshotSizeBytes;
             List<ProjectSnapshotViewModel>? snapshotVms = null;
@@ -1591,6 +1608,7 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         var removedProjectName = SelectedProject.Name;
+        var removedProjectPath = SelectedProject.Path;
 
         _ = Task.Run(() =>
         {
@@ -1605,12 +1623,15 @@ public class ProjectsViewModel : ViewModelBase
                 var existing = repo.GetProjectByName(removedProjectName);
                 if (existing is null)
                 {
-                    Dispatcher.UIThread.Post(() =>
-                        ShowNotification(Lf("Projects.Notification.RemoveMissing", "Project '{0}' was not registered in the backup database.", removedProjectName), NotificationSeverity.Warning));
+                    HideProjectPathInConfig(removedProjectPath);
+                    Dispatcher.UIThread.Post(() => ShowNotification(
+                        Lf("Projects.Notification.RemoveMissing", "Project '{0}' was not registered in the backup database.", removedProjectName),
+                        NotificationSeverity.Warning));
                 }
                 else
                 {
                     repo.RemoveProject(existing.Id);
+                    HideProjectPathInConfig(removedProjectPath);
                     Dispatcher.UIThread.Post(() =>
                         ShowNotification(Lf("Projects.Notification.RemoveSuccess", "Removed project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Info));
                 }
@@ -1635,7 +1656,8 @@ public class ProjectsViewModel : ViewModelBase
 
         // After removing from DB, keep the project visible in the list but mark it as unregistered
         // so the primary action becomes "Add project" again.
-        RefreshSelectedProjectRegistration();
+        RemoveProjectFromCurrentList(removedProjectPath);
+        _ = RefreshAsync(forceDiscovery: false);
     }
 
     private void TakeSnapshot()
@@ -1686,6 +1708,7 @@ public class ProjectsViewModel : ViewModelBase
                 };
 
                 var id = repo.AddProject(project);
+                UnhideProjectPathInConfig(project.RootPath);
                 ShowNotification(Lf("Projects.Notification.Registered", "Project '{0}' registered. Next click will create a snapshot.", project.Name), NotificationSeverity.Info);
 
                 // Update UI label so next click becomes a real snapshot.
@@ -1770,6 +1793,91 @@ public class ProjectsViewModel : ViewModelBase
 
         // Refresh label/state after the operation.
         RefreshSelectedProjectRegistration();
+    }
+
+    private static string NormalizeProjectPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        try
+        {
+            var full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return full;
+        }
+        catch
+        {
+            return path.Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+    }
+
+    private static HashSet<string> GetHiddenProjectPathSet(AppConfig config)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var values = config.Behavior.HiddenProjectPaths ?? new List<string>();
+        foreach (var value in values)
+        {
+            var normalized = NormalizeProjectPath(value);
+            if (!string.IsNullOrWhiteSpace(normalized))
+                set.Add(normalized);
+        }
+
+        return set;
+    }
+
+    private static void HideProjectPathInConfig(string? projectPath)
+    {
+        var normalized = NormalizeProjectPath(projectPath);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return;
+
+        var cfg = AppConfigStore.Load();
+        cfg.Behavior.HiddenProjectPaths ??= new List<string>();
+        var exists = cfg.Behavior.HiddenProjectPaths
+            .Any(path => string.Equals(NormalizeProjectPath(path), normalized, StringComparison.OrdinalIgnoreCase));
+        if (exists)
+            return;
+
+        cfg.Behavior.HiddenProjectPaths.Add(normalized);
+        AppConfigStore.Save(cfg);
+    }
+
+    private static void UnhideProjectPathInConfig(string? projectPath)
+    {
+        var normalized = NormalizeProjectPath(projectPath);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return;
+
+        var cfg = AppConfigStore.Load();
+        cfg.Behavior.HiddenProjectPaths ??= new List<string>();
+        var originalCount = cfg.Behavior.HiddenProjectPaths.Count;
+        cfg.Behavior.HiddenProjectPaths = cfg.Behavior.HiddenProjectPaths
+            .Where(path => !string.Equals(NormalizeProjectPath(path), normalized, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (cfg.Behavior.HiddenProjectPaths.Count == originalCount)
+            return;
+
+        AppConfigStore.Save(cfg);
+    }
+
+    private void RemoveProjectFromCurrentList(string? projectPath)
+    {
+        var normalized = NormalizeProjectPath(projectPath);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return;
+
+        var removed = _allProjects.RemoveAll(project =>
+            string.Equals(NormalizeProjectPath(project.Path), normalized, StringComparison.OrdinalIgnoreCase));
+
+        if (removed == 0)
+            return;
+
+        ApplyFilterAndSort();
+        if (SelectedProject is not null &&
+            string.Equals(NormalizeProjectPath(SelectedProject.Path), normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            SelectedProject = Projects.FirstOrDefault();
+        }
     }
 
     /// <summary>
@@ -2506,6 +2614,7 @@ public class ProjectsViewModel : ViewModelBase
             PresetEditorPath = string.Empty;
             PresetEditorPathDisplay = string.Empty;
             PresetEditorStatus = string.Empty;
+            OnPropertyChanged(nameof(PresetEditorToggleLabel));
             RaisePresetEditorCanExecuteChanged();
             return;
         }
@@ -2519,6 +2628,7 @@ public class ProjectsViewModel : ViewModelBase
             PresetEditorPath = string.Empty;
             PresetEditorPathDisplay = string.Empty;
             PresetEditorStatus = L("Projects.Preset.Editor.Status.NoPreset", "Select a preset to edit its rules.");
+            OnPropertyChanged(nameof(PresetEditorToggleLabel));
             RaisePresetEditorCanExecuteChanged();
             return;
         }
@@ -2531,6 +2641,7 @@ public class ProjectsViewModel : ViewModelBase
             PresetEditorPath = string.Empty;
             PresetEditorPathDisplay = string.Empty;
             PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ResolveFailed", "Could not resolve preset file for '{0}'.", presetId);
+            OnPropertyChanged(nameof(PresetEditorToggleLabel));
             RaisePresetEditorCanExecuteChanged();
             return;
         }
@@ -2538,6 +2649,7 @@ public class ProjectsViewModel : ViewModelBase
         HasPresetEditorTarget = true;
         PresetEditorPath = presetPath;
         PresetEditorPathDisplay = $"{presetId}.vaultsyncignore";
+        OnPropertyChanged(nameof(PresetEditorToggleLabel));
         RaisePresetEditorCanExecuteChanged();
         ReloadPresetEditor();
     }

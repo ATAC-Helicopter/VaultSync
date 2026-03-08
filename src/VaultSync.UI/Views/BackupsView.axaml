@@ -242,6 +242,7 @@
   </UserControl.Styles>
   <Grid>
     <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
                   BringIntoViewOnFocusChange="False">
       <!-- Stretch to the full available width with a soft cap for readability. -->
       <Grid MaxWidth="2200"

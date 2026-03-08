@@ -680,27 +680,27 @@
   - Acceptance tests:
     - UI: user can navigate restore points chronologically and compare two points.
     - UX: browser remains responsive on projects with long history.
-- [ ] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
+- [x] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
   - Scope: per-project growth metrics, top storage consumers, and clearer dashboard/backups storage summaries.
   - Current status:
-    - In progress: Backups per-project cards now surface storage delta (`Δ`) versus the previous backup snapshot size for each project.
-    - In progress: Backups summary now includes top storage consumers (top projects by local backup storage share).
+    - Done: Backups per-project cards now surface storage delta (`Δ`) versus the previous backup snapshot size for each project.
+    - Done: Backups summary now includes top storage consumers (top projects by local backup storage share).
   - Acceptance tests:
     - UI: metrics align with stored backup/snapshot data.
     - Perf: reporting does not cause blocking UI refresh on common data sets.
-- [ ] `VS-1604` `P0` Full preset editor with include/exclude rules, preview, clone, import/export.
+- [x] `VS-1604` `P0` Full preset editor with include/exclude rules, preview, clone, import/export.
   - Scope: replace file-only preset maintenance with an in-app editor and preview workflow.
   - Current status:
-    - In progress: Projects details now includes a preset-rules editor (reload/save) for the selected preset file.
-    - In progress: Preset editor now includes live preview counts (included/excluded) against the selected project path.
-    - In progress: Preset editor now supports clone/import/export flows (clone to new preset id, import from file path, export to Documents preset exports).
+    - Done: Projects details now includes a preset-rules editor (reload/save) for the selected preset file.
+    - Done: Preset editor now includes live preview counts (included/excluded) against the selected project path.
+    - Done: Preset editor now supports clone/import/export flows (clone to new preset id, import from file path, export to Documents preset exports).
   - Acceptance tests:
     - UI: user can create/edit/clone/delete/import/export presets.
     - Integration: saved presets are immediately assignable to projects and resolve correctly at snapshot/backup time.
-- [ ] `VS-1605` `P1` Backup health center and timeline (success/failure/verified trends).
+- [x] `VS-1605` `P1` Backup health center and timeline (success/failure/verified trends).
   - Scope: health summary model and timeline surfaces for backup freshness, verification, and failure visibility.
   - Current status:
-    - In progress: Backups summary now includes a health center mix (healthy/aging/stale/no-backup project distribution) derived from project backup freshness.
+    - Done: Backups summary now includes a health center mix (healthy/aging/stale/no-backup project distribution) derived from project backup freshness.
   - Acceptance tests:
     - UI: health state reflects real backup/verification history.
     - UX: timeline/trend surfaces do not crowd primary actions.
