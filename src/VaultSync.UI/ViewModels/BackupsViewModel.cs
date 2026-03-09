@@ -91,6 +91,11 @@ namespace VaultSync.UI.ViewModels
         private bool _showActivityPanel = true;
         private GridLength _activityColumnWidth = new GridLength(360);
         private double _summaryColumnSpacing = 12;
+        private double _lastSummaryViewportWidth = 1400;
+        private GridLength _mainAreaLeftColumnWidth = new GridLength(3, GridUnitType.Star);
+        private GridLength _mainAreaRightColumnWidth = new GridLength(2, GridUnitType.Star);
+        private int _mainAreaRightPanelColumn = 1;
+        private int _mainAreaRightPanelRow = 0;
 
         private sealed record PendingBackupUpdate(
             string ProjectId,
@@ -103,6 +108,7 @@ namespace VaultSync.UI.ViewModels
             string PolicyText);
 
         private BackupSnapshotItem? _selectedSnapshotA;
+        private RelayCommand? _compareSelectedSnapshotsRelayCommand;
         public BackupSnapshotItem? SelectedSnapshotA
         {
             get => _selectedSnapshotA;
@@ -111,6 +117,8 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _selectedSnapshotA, value))
                 {
                     OnPropertyChanged(nameof(SelectedSnapshotA));
+                    OnPropertyChanged(nameof(CanCompareSelectedSnapshots));
+                    _compareSelectedSnapshotsRelayCommand?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -124,6 +132,8 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _selectedSnapshotB, value))
                 {
                     OnPropertyChanged(nameof(SelectedSnapshotB));
+                    OnPropertyChanged(nameof(CanCompareSelectedSnapshots));
+                    _compareSelectedSnapshotsRelayCommand?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -170,11 +180,17 @@ namespace VaultSync.UI.ViewModels
             new ObservableCollection<DestinationOption>();
         public ObservableCollection<EncryptionPolicyOption> EncryptionPolicyOptions { get; } =
             new ObservableCollection<EncryptionPolicyOption>();
+        public ObservableCollection<RestoreModeOption> RestoreModeOptions { get; } =
+            new ObservableCollection<RestoreModeOption>();
+        public ObservableCollection<VerificationPolicyOption> VerificationPolicyOptions { get; } =
+            new ObservableCollection<VerificationPolicyOption>();
 
         public event Action<int, bool>? AutoBackupPreferenceChanged;
         public event Action<DestinationStatusItem, bool>? DestinationActiveChanged;
         public event Action<int, string>? PreferredDestinationChanged;
         public event Action<int, string>? ProjectEncryptionPolicyChanged;
+        public event Action<int, string>? ProjectRestoreModeChanged;
+        public event Action<int, string>? ProjectVerificationPolicyChanged;
         public event Action<int>? ManageProjectEncryptionRequested;
 
         // Appearance
@@ -375,6 +391,54 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public GridLength MainAreaLeftColumnWidth
+        {
+            get => _mainAreaLeftColumnWidth;
+            private set
+            {
+                if (SetProperty(ref _mainAreaLeftColumnWidth, value))
+                {
+                    OnPropertyChanged(nameof(MainAreaLeftColumnWidth));
+                }
+            }
+        }
+
+        public GridLength MainAreaRightColumnWidth
+        {
+            get => _mainAreaRightColumnWidth;
+            private set
+            {
+                if (SetProperty(ref _mainAreaRightColumnWidth, value))
+                {
+                    OnPropertyChanged(nameof(MainAreaRightColumnWidth));
+                }
+            }
+        }
+
+        public int MainAreaRightPanelColumn
+        {
+            get => _mainAreaRightPanelColumn;
+            private set
+            {
+                if (SetProperty(ref _mainAreaRightPanelColumn, value))
+                {
+                    OnPropertyChanged(nameof(MainAreaRightPanelColumn));
+                }
+            }
+        }
+
+        public int MainAreaRightPanelRow
+        {
+            get => _mainAreaRightPanelRow;
+            private set
+            {
+                if (SetProperty(ref _mainAreaRightPanelRow, value))
+                {
+                    OnPropertyChanged(nameof(MainAreaRightPanelRow));
+                }
+            }
+        }
+
         public string LastBackupDisplay { get; private set; } =
             L("Backups.Summary.NoBackups", "No backups yet");
         public string LastBackupRelative { get; private set; } = "-";
@@ -399,6 +463,18 @@ namespace VaultSync.UI.ViewModels
         public double ThisWeekImportedPercent { get; private set; }
         public double StorageLocalPercent { get; private set; }
         public double StorageImportedPercent { get; private set; }
+        public ObservableCollection<StorageConsumerItem> TopStorageConsumers { get; } =
+            new ObservableCollection<StorageConsumerItem>();
+        public bool HasTopStorageConsumers => TopStorageConsumers.Count > 0;
+        public int HealthHealthyProjects { get; private set; }
+        public int HealthAgingProjects { get; private set; }
+        public int HealthStaleProjects { get; private set; }
+        public int HealthNoBackupProjects { get; private set; }
+        public double HealthHealthyPercent { get; private set; }
+        public double HealthAgingPercent { get; private set; }
+        public double HealthStalePercent { get; private set; }
+        public double HealthNoBackupPercent { get; private set; }
+        public string BackupHealthSummaryLine { get; private set; } = string.Empty;
 
         // Mini backup storage card (for Backups page)
         private double _backupDiskUsedPercent;
@@ -799,6 +875,7 @@ namespace VaultSync.UI.ViewModels
         public ICommand ExportSnapshotSummaryTextCommand { get; }
         public ICommand ExportSnapshotSummaryJsonCommand { get; }
         public ICommand ShowSnapshotDiffPreviewCommand { get; }
+        public ICommand CompareSelectedSnapshotsCommand { get; }
         public ICommand CloseSnapshotDiffPreviewCommand { get; }
 
         public ICommand BackupProjectCommand { get; }
@@ -812,6 +889,10 @@ namespace VaultSync.UI.ViewModels
         public bool IsTypeFilterAll => string.Equals(_currentTypeFilter, "All", StringComparison.OrdinalIgnoreCase);
         public bool IsTypeFilterAuto => string.Equals(_currentTypeFilter, "Auto", StringComparison.OrdinalIgnoreCase);
         public bool IsTypeFilterManual => string.Equals(_currentTypeFilter, "Manual", StringComparison.OrdinalIgnoreCase);
+        public bool CanCompareSelectedSnapshots =>
+            SelectedSnapshotA is not null &&
+            SelectedSnapshotB is not null &&
+            !string.Equals(SelectedSnapshotA.Id, SelectedSnapshotB.Id, StringComparison.Ordinal);
 
         public BackupsViewModel()
         {
@@ -828,6 +909,8 @@ namespace VaultSync.UI.ViewModels
             ExportSnapshotSummaryTextCommand = new RelayCommand(p => ExportSnapshotSummary(p as BackupSnapshotItem, SnapshotSummaryExportFormat.Text));
             ExportSnapshotSummaryJsonCommand = new RelayCommand(p => ExportSnapshotSummary(p as BackupSnapshotItem, SnapshotSummaryExportFormat.Json));
             ShowSnapshotDiffPreviewCommand = new RelayCommand(p => ShowSnapshotDiffPreview(p as BackupSnapshotItem));
+            _compareSelectedSnapshotsRelayCommand = new RelayCommand(_ => CompareSelectedSnapshots(), _ => CanCompareSelectedSnapshots);
+            CompareSelectedSnapshotsCommand = _compareSelectedSnapshotsRelayCommand;
             CloseSnapshotDiffPreviewCommand = new RelayCommand(_ => CloseSnapshotDiffPreview());
 
             // Per-project actions
@@ -856,6 +939,8 @@ namespace VaultSync.UI.ViewModels
 
             InitializeLocalizationDefaults();
             RefreshEncryptionPolicyOptions();
+            RefreshRestoreModeOptions();
+            RefreshVerificationPolicyOptions();
             RefreshDestinationOptionsInternal(AppConfigStore.Load());
             RefreshProjectSortOptions();
         }
@@ -1012,6 +1097,112 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
             DiffPreviewText = BuildGitStyleDiffText(payload);
             IsDiffPreviewOpen = true;
+        }
+
+        private void CompareSelectedSnapshots()
+        {
+            var pointA = SelectedSnapshotA;
+            var pointB = SelectedSnapshotB;
+            if (pointA is null || pointB is null)
+                return;
+            if (string.Equals(pointA.Id, pointB.Id, StringComparison.Ordinal))
+                return;
+
+            var newer = pointA.Timestamp >= pointB.Timestamp ? pointA : pointB;
+            var older = ReferenceEquals(newer, pointA) ? pointB : pointA;
+            var elapsed = newer.Timestamp - older.Timestamp;
+            var sizeDelta = newer.SizeBytes - older.SizeBytes;
+            var netDelta = newer.DiffNetBytes - older.DiffNetBytes;
+            var projectName = ResolveCompareProjectName(newer, older);
+
+            DiffPreviewTitle = Lf(
+                "Backups.Compare.Title",
+                "Restore point compare - {0}",
+                projectName);
+            DiffPreviewMetaLine = Lf(
+                "Backups.Compare.Range",
+                "{0} -> {1}",
+                older.Timestamp.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture),
+                newer.Timestamp.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture));
+            DiffPreviewTrigger = Lf(
+                "Backups.Compare.TypeLine",
+                "Type: {0} -> {1}",
+                older.TypeLabel,
+                newer.TypeLabel);
+            DiffPreviewMode = Lf(
+                "Backups.Compare.ElapsedLine",
+                "Elapsed: {0}",
+                FormatElapsed(elapsed));
+            DiffPreviewImportedDisplay = older.IsImported || newer.IsImported
+                ? L("Backups.Snapshot.Type.Imported", "Imported")
+                : L("Backups.Summary.LocalLabel", "Local");
+            DiffPreviewEncryptionDisplay = older.IsEncrypted || newer.IsEncrypted
+                ? L("Projects.EncryptionPolicy.Encrypted", "Encrypted")
+                : L("Projects.EncryptionPolicy.Plain", "Plain");
+            DiffPreviewAdded = newer.DiffAdded;
+            DiffPreviewModified = newer.DiffModified;
+            DiffPreviewDeleted = newer.DiffDeleted;
+            DiffPreviewNet = FormatSignedSize(newer.DiffNetBytes);
+            DiffPreviewTopPaths.Clear();
+            OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
+
+            var compareText = new StringBuilder();
+            compareText.AppendLine("# VaultSync Restore Point Compare");
+            compareText.AppendLine();
+            compareText.AppendLine(Lf("Backups.Compare.PointA", "A: {0} · {1} · {2}",
+                older.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture),
+                older.TypeLabel,
+                older.SizeFormatted));
+            compareText.AppendLine(Lf("Backups.Compare.PointB", "B: {0} · {1} · {2}",
+                newer.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture),
+                newer.TypeLabel,
+                newer.SizeFormatted));
+            compareText.AppendLine(Lf("Backups.Compare.ElapsedLine", "Elapsed: {0}", FormatElapsed(elapsed)));
+            compareText.AppendLine(Lf("Backups.Compare.SizeDeltaLine", "Backup size delta: {0}", FormatSignedSize(sizeDelta)));
+            compareText.AppendLine(Lf("Backups.Compare.NetDeltaLine", "Net diff delta: {0}", FormatSignedSize(netDelta)));
+            compareText.AppendLine();
+            compareText.AppendLine(L("Backups.Compare.NewerSnapshotSummary", "Newest restore point diff summary:"));
+            compareText.AppendLine(Lf("Backups.Compare.NewerAdded", "+ added {0}", newer.DiffAdded.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.NewerModified", "~ modified {0}", newer.DiffModified.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.NewerDeleted", "- deleted {0}", newer.DiffDeleted.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.NewerNet", "Δ net {0}", FormatSignedSize(newer.DiffNetBytes)));
+
+            DiffPreviewText = compareText.ToString().TrimEnd();
+            IsDiffPreviewOpen = true;
+        }
+
+        private string ResolveCompareProjectName(BackupSnapshotItem a, BackupSnapshotItem b)
+        {
+            var projectA = ResolveProjectNameFromSnapshot(a);
+            var projectB = ResolveProjectNameFromSnapshot(b);
+            if (string.Equals(projectA, projectB, StringComparison.OrdinalIgnoreCase))
+                return projectA;
+
+            return L("Backups.Section.HistoryFilterAllProjects", "All projects");
+        }
+
+        private string ResolveProjectNameFromSnapshot(BackupSnapshotItem snapshot)
+        {
+            if (!string.IsNullOrWhiteSpace(snapshot.ProjectId))
+            {
+                var match = ProjectBackups.FirstOrDefault(project =>
+                    string.Equals(project.Id, snapshot.ProjectId, StringComparison.OrdinalIgnoreCase));
+                if (match is not null)
+                    return match.Name;
+            }
+
+            return L("Backups.Section.Group.Unknown", "Unknown project");
+        }
+
+        private static string FormatElapsed(TimeSpan elapsed)
+        {
+            if (elapsed.TotalDays >= 2)
+                return $"{Math.Floor(elapsed.TotalDays):0}d {elapsed.Hours:00}h";
+            if (elapsed.TotalHours >= 1)
+                return $"{Math.Floor(elapsed.TotalHours):0}h {elapsed.Minutes:00}m";
+            if (elapsed.TotalMinutes >= 1)
+                return $"{Math.Floor(elapsed.TotalMinutes):0}m {elapsed.Seconds:00}s";
+            return $"{Math.Max(0, elapsed.Seconds):0}s";
         }
 
         private void CloseSnapshotDiffPreview()
@@ -1181,6 +1372,7 @@ namespace VaultSync.UI.ViewModels
             TotalStoredImportedLine = Lf("Backups.Summary.ImportedTotal", "Imported total: {0}", "0 B");
             TotalStoredImportedValueFormatted = "0 B";
             HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
+            BackupHealthSummaryLine = L("Backups.Health.Center.Empty", "No project health data yet.");
 
             var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", L("DriveHealth.UnknownDrive", "drive"));
             BackupDiskDriveLabel = driveLabel;
@@ -1194,8 +1386,11 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(TotalStoredLocalLine));
             OnPropertyChanged(nameof(TotalStoredImportedLine));
             OnPropertyChanged(nameof(HistoryFilterProjectLabel));
+            OnPropertyChanged(nameof(BackupHealthSummaryLine));
             OnPropertyChanged(nameof(BackupDiskDriveLabel));
             OnPropertyChanged(nameof(BackupDiskHealthText));
+            TopStorageConsumers.Clear();
+            OnPropertyChanged(nameof(HasTopStorageConsumers));
             RefreshProjectSortOptions();
         }
 
@@ -1210,6 +1405,8 @@ namespace VaultSync.UI.ViewModels
                 L("Backups.Sort.TotalSize", "Total size")));
             ProjectSortOptions.Add(new BackupsProjectSortOption("count",
                 L("Backups.Sort.BackupCount", "Backup count")));
+            ProjectSortOptions.Add(new BackupsProjectSortOption("tags",
+                L("Backups.Sort.Tags", "Tags")));
 
             SelectedProjectSortOption = ProjectSortOptions.FirstOrDefault(o =>
                                            string.Equals(o.Id, _projectSortMode, StringComparison.OrdinalIgnoreCase))
@@ -1233,6 +1430,9 @@ namespace VaultSync.UI.ViewModels
                 "count" => ProjectBackups
                     .OrderByDescending(p => p.SnapshotCount)
                     .ThenByDescending(p => p.LastBackupTime ?? DateTime.MinValue)
+                    .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase),
+                "tags" => ProjectBackups
+                    .OrderBy(p => p.PrimaryTagSortKey, StringComparer.CurrentCultureIgnoreCase)
                     .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase),
                 _ => ProjectBackups
                     .OrderByDescending(p => p.LastBackupTime ?? DateTime.MinValue)
@@ -1264,6 +1464,31 @@ namespace VaultSync.UI.ViewModels
             EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
                 ProjectEncryptionPolicy.Plain,
                 L("Projects.EncryptionPolicy.Plain", "Plain")));
+        }
+
+        private void RefreshRestoreModeOptions()
+        {
+            RestoreModeOptions.Clear();
+            RestoreModeOptions.Add(new RestoreModeOption(
+                ProjectRestoreMode.Direct,
+                L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)")));
+            RestoreModeOptions.Add(new RestoreModeOption(
+                ProjectRestoreMode.Sandbox,
+                L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")));
+        }
+
+        private void RefreshVerificationPolicyOptions()
+        {
+            VerificationPolicyOptions.Clear();
+            VerificationPolicyOptions.Add(new VerificationPolicyOption(
+                ProjectVerificationPolicy.Always,
+                L("Backups.Verification.Policy.Always", "Always")));
+            VerificationPolicyOptions.Add(new VerificationPolicyOption(
+                ProjectVerificationPolicy.Scheduled,
+                L("Backups.Verification.Policy.Scheduled", "Scheduled")));
+            VerificationPolicyOptions.Add(new VerificationPolicyOption(
+                ProjectVerificationPolicy.Manual,
+                L("Backups.Verification.Policy.Manual", "Manual only")));
         }
 
         /// <summary>
@@ -1903,6 +2128,9 @@ namespace VaultSync.UI.ViewModels
                 {
                     ProjectId          = key,
                     ProjectName        = projectName,
+                    ProjectTagsDisplay = !string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out var tagSource)
+                        ? tagSource.ProjectTagsDisplay
+                        : string.Empty,
                     Summary            = Lf(summaryKey, summaryFallback, ordered.Count),
                     TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes),
                     LatestBackupDisplay = latest == DateTime.MinValue ? "-" : latest.ToString("yyyy-MM-dd HH:mm"),
@@ -2413,6 +2641,8 @@ namespace VaultSync.UI.ViewModels
                 StorageImportedPercent = safeImported * 100d / totalStorage;
             }
 
+            RebuildTopStorageConsumers();
+            RebuildBackupHealthCenter(now);
             RebuildSnapshotActivity(now);
 
             // Notify UI that summary properties changed
@@ -2446,20 +2676,44 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(ThisWeekImportedPercent));
             OnPropertyChanged(nameof(StorageLocalPercent));
             OnPropertyChanged(nameof(StorageImportedPercent));
+            OnPropertyChanged(nameof(HasTopStorageConsumers));
+            OnPropertyChanged(nameof(HealthHealthyProjects));
+            OnPropertyChanged(nameof(HealthAgingProjects));
+            OnPropertyChanged(nameof(HealthStaleProjects));
+            OnPropertyChanged(nameof(HealthNoBackupProjects));
+            OnPropertyChanged(nameof(HealthHealthyPercent));
+            OnPropertyChanged(nameof(HealthAgingPercent));
+            OnPropertyChanged(nameof(HealthStalePercent));
+            OnPropertyChanged(nameof(HealthNoBackupPercent));
+            OnPropertyChanged(nameof(BackupHealthSummaryLine));
         }
 
         public void UpdateSummaryLayout(double width)
         {
             const double chartThreshold = 1180;
-            const double activityThreshold = 1400;
+            const double activityThreshold = 1460;
 
             var showCharts = width >= chartThreshold;
             var showActivity = width >= activityThreshold;
 
             ShowSummaryCharts = showCharts;
             ShowActivityPanel = showActivity;
-            ActivityColumnWidth = showActivity ? new GridLength(360) : new GridLength(0);
-            SummaryColumnSpacing = showActivity ? 12 : 0;
+            ActivityColumnWidth = showActivity
+                ? new GridLength(1, GridUnitType.Star)
+                : new GridLength(0);
+            SummaryColumnSpacing = showActivity ? 14 : 0;
+
+            // Keep both main panels visible at all viewport sizes and keep equal split.
+            MainAreaLeftColumnWidth = new GridLength(1, GridUnitType.Star);
+            MainAreaRightColumnWidth = new GridLength(1, GridUnitType.Star);
+            MainAreaRightPanelColumn = 1;
+            MainAreaRightPanelRow = 0;
+
+            if (Math.Abs(_lastSummaryViewportWidth - width) > 8)
+            {
+                _lastSummaryViewportWidth = width;
+                RebuildSnapshotActivity(DateTime.Now);
+            }
         }
 
         private static string FormatRelative(TimeSpan span)
@@ -2474,6 +2728,99 @@ namespace VaultSync.UI.ViewModels
                 return Lf("Backups.Relative.DaysAgo", "{0} days ago", (int)span.TotalDays);
 
             return L("Backups.Relative.OverAWeek", "Over a week ago");
+        }
+
+        private void RebuildTopStorageConsumers()
+        {
+            var projectNameById = ProjectBackups
+                .Where(project => !string.IsNullOrWhiteSpace(project.Id))
+                .ToDictionary(project => project.Id, project => project.Name, StringComparer.OrdinalIgnoreCase);
+
+            var totalsByProject = _allSnapshots
+                .GroupBy(snapshot => string.IsNullOrWhiteSpace(snapshot.ProjectId) ? "__unknown__" : snapshot.ProjectId!)
+                .Select(group => new
+                {
+                    ProjectId = group.Key,
+                    TotalBytes = group.Sum(item => Math.Max(0, item.SizeBytes))
+                })
+                .Where(entry => entry.TotalBytes > 0)
+                .OrderByDescending(entry => entry.TotalBytes)
+                .Take(5)
+                .ToList();
+
+            TopStorageConsumers.Clear();
+            if (totalsByProject.Count == 0)
+                return;
+
+            var totalBytes = totalsByProject.Sum(entry => entry.TotalBytes);
+            foreach (var entry in totalsByProject)
+            {
+                var projectName = projectNameById.TryGetValue(entry.ProjectId, out var foundName)
+                    ? foundName
+                    : L("Backups.Section.Group.Unknown", "Unknown project");
+
+                var sharePercent = totalBytes <= 0
+                    ? 0
+                    : entry.TotalBytes * 100d / totalBytes;
+
+                TopStorageConsumers.Add(new StorageConsumerItem(
+                    projectName,
+                    BackupSnapshotItem.FormatSize(entry.TotalBytes),
+                    sharePercent));
+            }
+        }
+
+        private void RebuildBackupHealthCenter(DateTime now)
+        {
+            var healthy = 0;
+            var aging = 0;
+            var stale = 0;
+            var noBackup = 0;
+
+            foreach (var project in ProjectBackups)
+            {
+                if (!project.LastBackupTime.HasValue)
+                {
+                    noBackup++;
+                    continue;
+                }
+
+                var age = now - project.LastBackupTime.Value;
+                if (age.TotalHours < 24)
+                    healthy++;
+                else if (age.TotalHours <= 72)
+                    aging++;
+                else
+                    stale++;
+            }
+
+            HealthHealthyProjects = healthy;
+            HealthAgingProjects = aging;
+            HealthStaleProjects = stale;
+            HealthNoBackupProjects = noBackup;
+
+            var total = Math.Max(0, healthy + aging + stale + noBackup);
+            if (total == 0)
+            {
+                HealthHealthyPercent = 0;
+                HealthAgingPercent = 0;
+                HealthStalePercent = 0;
+                HealthNoBackupPercent = 0;
+                BackupHealthSummaryLine = L("Backups.Health.Center.Empty", "No project health data yet.");
+                return;
+            }
+
+            HealthHealthyPercent = healthy * 100d / total;
+            HealthAgingPercent = aging * 100d / total;
+            HealthStalePercent = stale * 100d / total;
+            HealthNoBackupPercent = noBackup * 100d / total;
+            BackupHealthSummaryLine = Lf(
+                "Backups.Health.Center.Summary",
+                "Healthy {0} · Aging {1} · Stale {2} · No backup {3}",
+                healthy.ToString(CultureInfo.CurrentCulture),
+                aging.ToString(CultureInfo.CurrentCulture),
+                stale.ToString(CultureInfo.CurrentCulture),
+                noBackup.ToString(CultureInfo.CurrentCulture));
         }
 
         // ---------- Weekly activity mini-chart ----------
@@ -2518,6 +2865,11 @@ namespace VaultSync.UI.ViewModels
                 maxTotal = 1; // avoid divide-by-zero
 
             var chartHeight = maxTotal <= 2 ? 150d : (maxTotal <= 4 ? 172d : 192d);
+            // Keep the activity chart proportionate on wide windowed layouts.
+            var widthBoost = ShowActivityPanel
+                ? Math.Clamp((_lastSummaryViewportWidth - 1380d) * 0.05d, 0d, 52d)
+                : 0d;
+            chartHeight += widthBoost;
             const double barBase = 12;
             var barRange = chartHeight - 36;
             SnapshotActivityChartHeight = chartHeight;
@@ -2594,6 +2946,8 @@ namespace VaultSync.UI.ViewModels
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             RefreshEncryptionPolicyOptions();
+            RefreshRestoreModeOptions();
+            RefreshVerificationPolicyOptions();
             RefreshDestinationOptions(config);
 
             var projectList = projects.ToList();
@@ -2642,6 +2996,26 @@ namespace VaultSync.UI.ViewModels
                 projectStats[backup.ProjectId] = stats;
             }
 
+            // Compute per-project delta vs previous backup (latest - previous).
+            var projectDeltaById = new Dictionary<int, long?>();
+            foreach (var group in backupList.GroupBy(b => b.ProjectId))
+            {
+                var ordered = group
+                    .OrderByDescending(b => b.CreatedUtc)
+                    .ThenByDescending(b => b.Id)
+                    .Take(2)
+                    .ToList();
+
+                if (ordered.Count >= 2)
+                {
+                    projectDeltaById[group.Key] = ordered[0].TotalBytes - ordered[1].TotalBytes;
+                }
+                else
+                {
+                    projectDeltaById[group.Key] = null;
+                }
+            }
+
             var orderedProjects = projectList
                 .OrderByDescending(project =>
                     projectStats.TryGetValue(project.Id, out var stats)
@@ -2654,11 +3028,16 @@ namespace VaultSync.UI.ViewModels
             {
                 projectStats.TryGetValue(project.Id, out var stats);
 
+                var projectName = string.IsNullOrWhiteSpace(project.Name)
+                    ? L("Backups.Section.Group.Unknown", "Unknown project")
+                    : project.Name.Trim();
+
                 var projectItem = new ProjectBackupItem
                 {
                     Id                = project.Id.ToString(),
-                    Name              = project.Name,
+                    Name              = projectName,
                     ExternalId        = project.ExternalId ?? string.Empty,
+                    ProjectTagsCsv    = project.Tags ?? string.Empty,
                     LastBackupTime    = stats.LastBackupTime,
                     SnapshotCount     = stats.Count,
                     TotalSizeBytes    = stats.TotalBytes,
@@ -2668,11 +3047,20 @@ namespace VaultSync.UI.ViewModels
                     PreferredDestinationChanged = OnPreferredDestinationChanged,
                     EncryptionPolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy),
                     EncryptionKeyRef = project.EncryptionKeyRef ?? string.Empty,
-                    EncryptionPolicyChanged = OnProjectEncryptionPolicyChanged
+                    EncryptionPolicyChanged = OnProjectEncryptionPolicyChanged,
+                    RestoreMode = ProjectRestoreMode.Normalize(project.RestoreMode),
+                    RestoreModeChanged = OnProjectRestoreModeChanged,
+                    VerificationPolicy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy),
+                    VerificationPolicyChanged = OnProjectVerificationPolicyChanged,
+                    StorageDeltaBytes = projectDeltaById.TryGetValue(project.Id, out var deltaBytes)
+                        ? deltaBytes
+                        : null
                 };
-                projectItem.SetAvatarFromNameAndStore(project.Name, project.RootPath, project.ExternalId);
+                projectItem.SetAvatarFromNameAndStore(projectName, project.RootPath, project.ExternalId);
                 UpdateProjectDestinationDisplay(projectItem, config);
                 UpdateProjectEncryptionDisplay(projectItem, config);
+                UpdateProjectRestoreModeDisplay(projectItem);
+                UpdateProjectVerificationPolicyDisplay(projectItem);
                 ProjectBackups.Add(projectItem);
                 _projectLookupById[projectItem.Id] = projectItem;
             }
@@ -2792,6 +3180,8 @@ namespace VaultSync.UI.ViewModels
                     hash = (hash * 397) ^ (project.PreferredDestinationId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.EncryptionPolicy?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.EncryptionKeyRef?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.RestoreMode?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.VerificationPolicy?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                 }
                 return hash;
             }
@@ -2916,6 +3306,27 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public void RefreshAutoBackupFlagsFromConfig()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(RefreshAutoBackupFlagsFromConfig);
+                return;
+            }
+
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
+                UpdateAutoBackupFlags(disabled);
+                _lastAutoBackupSignature = ComputeAutoBackupSignature(disabled);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Backups] Failed to refresh auto-backup flags: {ex.Message}");
+            }
+        }
+
     private void RefreshDestinationOptionsInternal(AppConfig config)
     {
         DestinationOptions.Clear();
@@ -2966,6 +3377,22 @@ namespace VaultSync.UI.ViewModels
             item.EncryptionSecretStatus = hasSecret
                 ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
                 : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
+        }
+
+        private void UpdateProjectRestoreModeDisplay(ProjectBackupItem item)
+        {
+            item.RestoreMode = ProjectRestoreMode.Normalize(item.RestoreMode);
+            var optionMatch = RestoreModeOptions.FirstOrDefault(o =>
+                string.Equals(o.Id, item.RestoreMode, StringComparison.OrdinalIgnoreCase));
+            item.SetRestoreModeOption(optionMatch ?? RestoreModeOptions.FirstOrDefault());
+        }
+
+        private void UpdateProjectVerificationPolicyDisplay(ProjectBackupItem item)
+        {
+            item.VerificationPolicy = ProjectVerificationPolicy.Normalize(item.VerificationPolicy);
+            var optionMatch = VerificationPolicyOptions.FirstOrDefault(o =>
+                string.Equals(o.Id, item.VerificationPolicy, StringComparison.OrdinalIgnoreCase));
+            item.SetVerificationPolicyOption(optionMatch ?? VerificationPolicyOptions.FirstOrDefault());
         }
 
         private void UpdateProjectDestinationDisplay(ProjectBackupItem item, AppConfig config)
@@ -3048,6 +3475,30 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
+        private void OnProjectRestoreModeChanged(ProjectBackupItem item)
+        {
+            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+                return;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                UpdateProjectRestoreModeDisplay(item);
+                ProjectRestoreModeChanged?.Invoke(projectId, item.RestoreMode);
+            });
+        }
+
+        private void OnProjectVerificationPolicyChanged(ProjectBackupItem item)
+        {
+            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+                return;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                UpdateProjectVerificationPolicyDisplay(item);
+                ProjectVerificationPolicyChanged?.Invoke(projectId, item.VerificationPolicy);
+            });
+        }
+
         public void RefreshDestinationOptions(AppConfig config)
         {
             RefreshDestinationOptionsInternal(config);
@@ -3055,6 +3506,8 @@ namespace VaultSync.UI.ViewModels
             {
                 UpdateProjectDestinationDisplay(project, config);
                 UpdateProjectEncryptionDisplay(project, config);
+                UpdateProjectRestoreModeDisplay(project);
+                UpdateProjectVerificationPolicyDisplay(project);
             }
         }
 
@@ -3082,6 +3535,21 @@ namespace VaultSync.UI.ViewModels
     }
 
     // ---------- Models ----------
+
+        public sealed class StorageConsumerItem
+        {
+            public StorageConsumerItem(string projectName, string totalSize, double sharePercent)
+            {
+                ProjectName = projectName;
+                TotalSize = totalSize;
+                SharePercent = sharePercent;
+            }
+
+            public string ProjectName { get; }
+            public string TotalSize { get; }
+            public double SharePercent { get; }
+            public string SharePercentLabel => $"{SharePercent:0}%";
+        }
 
         public sealed class DiffPreviewPathItem
         {
@@ -3139,6 +3607,8 @@ namespace VaultSync.UI.ViewModels
         public string DiffTopPathsJson { get; set; } = "[]";
 
         public string SizeFormatted => FormatSize(SizeBytes);
+        public string TimelineSelectionLabel =>
+            $"{Timestamp:yyyy-MM-dd HH:mm} \u00b7 {TypeLabel} \u00b7 {SizeFormatted}";
 
         public bool IsImported { get; set; }
         public bool IsEncrypted { get; set; }
@@ -3223,6 +3693,8 @@ namespace VaultSync.UI.ViewModels
     {
         public string? ProjectId { get; set; }
         public string ProjectName { get; set; } = string.Empty;
+        public string ProjectTagsDisplay { get; set; } = string.Empty;
+        public bool HasProjectTags => !string.IsNullOrWhiteSpace(ProjectTagsDisplay);
         public string Summary { get; set; } = string.Empty;
         public string TotalSizeFormatted { get; set; } = string.Empty;
         public string LatestBackupDisplay { get; set; } = string.Empty;
@@ -3266,10 +3738,31 @@ namespace VaultSync.UI.ViewModels
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string ExternalId { get; set; } = string.Empty;
+        private string _projectTagsCsv = string.Empty;
+        public string ProjectTagsCsv
+        {
+            get => _projectTagsCsv;
+            set
+            {
+                if (!SetField(ref _projectTagsCsv, value ?? string.Empty, nameof(ProjectTagsCsv)))
+                    return;
+
+                RebuildProjectTags();
+                OnPropertyChanged(nameof(HasProjectTags));
+                OnPropertyChanged(nameof(ProjectTagsDisplay));
+                OnPropertyChanged(nameof(PrimaryTagSortKey));
+            }
+        }
+
+        public ObservableCollection<string> ProjectTags { get; } = new ObservableCollection<string>();
+        public bool HasProjectTags => ProjectTags.Count > 0;
+        public string ProjectTagsDisplay => string.Join(", ", ProjectTags);
+        public string PrimaryTagSortKey => ProjectTags.FirstOrDefault() ?? string.Empty;
 
         public DateTime? LastBackupTime { get; set; }
         public int       SnapshotCount  { get; set; }
         public long      TotalSizeBytes { get; set; }
+        public long?     StorageDeltaBytes { get; set; }
 
         public bool AutoBackupEnabled
         {
@@ -3286,6 +3779,8 @@ namespace VaultSync.UI.ViewModels
         public Action<ProjectBackupItem>? AutoBackupChanged { get; set; }
         public Action<ProjectBackupItem>? PreferredDestinationChanged { get; set; }
         public Action<ProjectBackupItem>? EncryptionPolicyChanged { get; set; }
+        public Action<ProjectBackupItem>? RestoreModeChanged { get; set; }
+        public Action<ProjectBackupItem>? VerificationPolicyChanged { get; set; }
 
         private string _preferredDestinationId = string.Empty;
         public string PreferredDestinationId
@@ -3379,6 +3874,72 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(EncryptionPolicyOption));
         }
 
+        private string _restoreMode = ProjectRestoreMode.Direct;
+        public string RestoreMode
+        {
+            get => _restoreMode;
+            set => SetField(ref _restoreMode, ProjectRestoreMode.Normalize(value), nameof(RestoreMode));
+        }
+
+        private RestoreModeOption? _restoreModeOption;
+        public RestoreModeOption? RestoreModeOption
+        {
+            get => _restoreModeOption;
+            set
+            {
+                if (!SetField(ref _restoreModeOption, value, nameof(RestoreModeOption)))
+                    return;
+
+                if (value is null)
+                    return;
+
+                RestoreMode = value.Id;
+                RestoreModeChanged?.Invoke(this);
+            }
+        }
+
+        public void SetRestoreModeOption(RestoreModeOption? option)
+        {
+            if (ReferenceEquals(_restoreModeOption, option))
+                return;
+
+            _restoreModeOption = option;
+            OnPropertyChanged(nameof(RestoreModeOption));
+        }
+
+        private string _verificationPolicy = ProjectVerificationPolicy.Always;
+        public string VerificationPolicy
+        {
+            get => _verificationPolicy;
+            set => SetField(ref _verificationPolicy, ProjectVerificationPolicy.Normalize(value), nameof(VerificationPolicy));
+        }
+
+        private VerificationPolicyOption? _verificationPolicyOption;
+        public VerificationPolicyOption? VerificationPolicyOption
+        {
+            get => _verificationPolicyOption;
+            set
+            {
+                if (!SetField(ref _verificationPolicyOption, value, nameof(VerificationPolicyOption)))
+                    return;
+
+                if (value is null)
+                    return;
+
+                VerificationPolicy = value.Id;
+                VerificationPolicyChanged?.Invoke(this);
+            }
+        }
+
+        public void SetVerificationPolicyOption(VerificationPolicyOption? option)
+        {
+            if (ReferenceEquals(_verificationPolicyOption, option))
+                return;
+
+            _verificationPolicyOption = option;
+            OnPropertyChanged(nameof(VerificationPolicyOption));
+        }
+
         private string _effectiveEncryptionDisplay = string.Empty;
         public string EffectiveEncryptionDisplay
         {
@@ -3436,6 +3997,37 @@ namespace VaultSync.UI.ViewModels
 
         public string TotalSizeFormatted =>
             BackupSnapshotItem.FormatSize(TotalSizeBytes);
+
+        public bool HasStorageDelta => StorageDeltaBytes.HasValue;
+
+        public string StorageDeltaFormatted
+        {
+            get
+            {
+                if (!StorageDeltaBytes.HasValue)
+                    return "Δ -";
+
+                var value = StorageDeltaBytes.Value;
+                if (Math.Abs(value) < 1024)
+                    return "Δ ~0 B";
+
+                var sign = value >= 0 ? "+" : "-";
+                return $"Δ {sign}{BackupSnapshotItem.FormatSize(Math.Abs(value))}";
+            }
+        }
+
+        private void RebuildProjectTags()
+        {
+            ProjectTags.Clear();
+            var tags = (_projectTagsCsv ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(tag => tag.Trim())
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tag in tags)
+                ProjectTags.Add(tag);
+        }
     }
 
     public class DestinationStatusItem : ViewModelBase
@@ -3784,6 +4376,7 @@ namespace VaultSync.UI.ViewModels
                     "Completed" => L("Backups.Status.Completed", "Completed"),
                     "Cancelling" => L("Backups.Status.Cancelling", "Cancelling..."),
                     "Deleting" => L("Backups.Stage.Deleting", "Deleting"),
+                    "Restoring" => L("Backups.Status.Restoring", "Restoring backup..."),
                     "Compressing" => L("Backups.Stage.Compressing", "Compressing archive"),
                     "Uploading" => L("Backups.Stage.Uploading", "Uploading archive"),
                     "Hashing" => L("Backups.Stage.Hashing", "Hashing files"),
@@ -4020,6 +4613,12 @@ namespace VaultSync.UI.ViewModels
             if (ContainsToken(_etaText, "Copying"))
                 return "Copying";
 
+            if (ContainsToken(_etaText, "Restoring") ||
+                ContainsToken(_currentFile, "Restoring") ||
+                ContainsToken(_currentFile, "Decrypting") ||
+                ContainsToken(_currentFile, L("Backups.Status.Restoring", "Restoring backup...")))
+                return "Restoring";
+
             if (ContainsToken(_currentFile, L("Backups.Status.Deleting", "Deleting backup files...")) ||
                 ContainsToken(_currentFile, L("Backups.Stage.Deleting", "Deleting")))
                 return "Deleting";
@@ -4065,6 +4664,7 @@ namespace VaultSync.UI.ViewModels
                 "Uploading"   => StageUploadBrush,
                 "Hashing"     => StageHashBrush,
                 "Copying"     => StageCopyBrush,
+                "Restoring"   => StageCopyBrush,
                 "BackingUp"   => StageBackupBrush,
                 "Preparing"   => StagePrepareBrush,
                 _             => StagePrepareBrush

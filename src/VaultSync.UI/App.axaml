@@ -111,21 +111,72 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="{DynamicResource NavButtonPadding}" />
-            <Setter Property="Margin" Value="{DynamicResource NavButtonMargin}" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,4,0,0" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
             <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="MinHeight" Value="52" />
         </Style>
 
         <Style Selector="Button.nav:pointerover">
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="Background" Value="#182033" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style Selector="Button.nav:pressed">
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="Background" Value="#1D2940" />
+        </Style>
+
+        <Style Selector="Button.nav.compact">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Button.sidebar-toggle">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="#172034" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button.sidebar-toggle:pointerover">
+            <Setter Property="Background" Value="#1C2740" />
+        </Style>
+
+        <Style Selector="Border.nav-icon-badge">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="CornerRadius" Value="11" />
+            <Setter Property="Background" Value="#172034" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Border.nav-icon-badge.compact">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="#172034" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button.nav.compact:pointerover Border.nav-icon-badge.compact">
+            <Setter Property="Background" Value="#1F2C48" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="Button.nav.compact:pressed Border.nav-icon-badge.compact">
+            <Setter Property="Background" Value="#233252" />
         </Style>
 
         <!-- Action buttons -->
@@ -213,6 +264,8 @@
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             <Setter Property="TextWrapping" Value="NoWrap" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
         <Style Selector="Border.backup-tag">
@@ -251,6 +304,8 @@
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             <Setter Property="TextWrapping" Value="NoWrap" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
         <Style Selector="Button.small-pill, ToggleButton.small-pill">
@@ -261,6 +316,8 @@
             <Setter Property="Padding" Value="{DynamicResource SmallPillPadding}" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="MinHeight" Value="24" />
             <Setter Property="MinWidth" Value="0" />
         </Style>
@@ -272,6 +329,36 @@
         </Style>
         <Style Selector="ToggleButton.small-pill:checked">
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <!-- Global ComboBox popup readability -->
+        <Style Selector="ComboBox /template/ Popup Border">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource Surface1}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="ComboBox /template/ Popup ListBox">
+            <Setter Property="Background" Value="{DynamicResource Surface1}" />
+            <Setter Property="Padding" Value="6" />
+        </Style>
+        <Style Selector="ComboBox /template/ Popup ListBoxItem">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Margin" Value="2" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ComboBox /template/ Popup ListBoxItem:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
+        <Style Selector="ComboBox /template/ Popup ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>

@@ -312,13 +312,20 @@ namespace VaultSync.UI.ViewModels
                     }
                     var repo = _repo;
                     repo.EnsureSchema();
+                    var remappedBackups = repo.RepairBackupProjectLinksFromSnapshots();
+                    if (remappedBackups > 0)
+                    {
+                        Console.WriteLine($"[Dashboard] Repaired {remappedBackups} backup-project links from snapshots.");
+                    }
 
                     var projects = repo.GetAllProjects().ToList();
                     var backupCount = repo.GetBackupCount();
 
-                    var startDate = DateTime.UtcNow.Date.AddDays(-6);
-                    var endDate = DateTime.UtcNow;
-                    var backupCountsByDay = repo.GetBackupCountsByDayBreakdown(startDate, endDate);
+                    var localStartDate = DateTime.Now.Date.AddDays(-6);
+                    var localEndDate = DateTime.Now.Date.AddDays(1).AddTicks(-1);
+                    var backupCountsByDay = repo.GetBackupCountsByDayBreakdown(
+                        localStartDate.ToUniversalTime(),
+                        localEndDate.ToUniversalTime());
 
                     // Storage slices: total backups per project (incl. imported)
                     long totalLatestBytes = 0;
@@ -341,10 +348,35 @@ namespace VaultSync.UI.ViewModels
                         }
                     }
 
+                    // Fallback: if backup totals cannot be mapped to current project ids
+                    // (e.g. imported/orphaned backup rows after destination/config churn),
+                    // still show per-project storage using latest snapshot sizes.
+                    if (storageSlices.Count == 0 && projects.Count > 0)
+                    {
+                        var latestSnapshotsByProject = repo.GetLatestSnapshotInfoByProject();
+                        foreach (var p in projects)
+                        {
+                            if (!latestSnapshotsByProject.TryGetValue(p.Id, out var info))
+                                continue;
+
+                            if (info.TotalBytes <= 0)
+                                continue;
+
+                            storageSlices.Add((p, info.TotalBytes));
+                            totalLatestBytes += info.TotalBytes;
+                            totalLocalBytes += info.TotalBytes;
+                        }
+
+                        if (storageSlices.Count > 0)
+                        {
+                            Console.WriteLine("[Dashboard] Backup totals were unmapped; using latest snapshot sizes as storage fallback.");
+                        }
+                    }
+
                     var dayLabels = new string[_days.Length];
                     for (var i = 0; i < dayLabels.Length; i++)
                     {
-                        var d = startDate.AddDays(i);
+                        var d = localStartDate.AddDays(i);
                         dayLabels[i] = d.ToString("ddd");
                     }
 
@@ -354,8 +386,9 @@ namespace VaultSync.UI.ViewModels
                     var importedCounts = new int[_snapshotCountsByDay.Length];
                     for (var i = 0; i < counts.Length; i++)
                     {
-                        var d = startDate.AddDays(i);
-                        if (backupCountsByDay.TryGetValue(d, out var breakdown))
+                        var localDay = localStartDate.AddDays(i).Date;
+                        var utcBucket = localDay.ToUniversalTime().Date;
+                        if (backupCountsByDay.TryGetValue(utcBucket, out var breakdown))
                         {
                             autoCounts[i] = breakdown.AutoCount;
                             manualCounts[i] = breakdown.ManualCount;
@@ -469,6 +502,19 @@ namespace VaultSync.UI.ViewModels
                         "manual"   => L("Dashboard.Activity.ManualBackup", "Manual backup created"),
                         _          => L("Dashboard.Activity.SnapshotCreated", "Snapshot created")
                     };
+                    var tagsDisplay = string.Empty;
+                    if (project is not null)
+                    {
+                        var tags = (project.Tags ?? string.Empty)
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(t => t.Trim())
+                            .Where(t => !string.IsNullOrWhiteSpace(t))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .Take(3)
+                            .ToArray();
+                        if (tags.Length > 0)
+                            tagsDisplay = string.Join(" - ", tags);
+                    }
                     var when = a.WhenUtc.ToLocalTime().ToString("g");
 
                     IBrush dotBrush;
@@ -487,7 +533,7 @@ namespace VaultSync.UI.ViewModels
                         dotBrush = GetBrush(Colors.Gray);
                     }
 
-                    activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush));
+                    activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush, tagsDisplay));
                 }
 
                 ActivityItems.Clear();
@@ -529,6 +575,20 @@ namespace VaultSync.UI.ViewModels
                 BuildWeeklyActivity();
                 BuildStorageDonut(data.StorageSlices);
                 BuildBackupUsageBar(data.Config, data.StorageSlices);
+                // Final guard: if we have project slices but the usage bar still resolved to
+                // only "Other", force the project-relative breakdown so users always see
+                // per-project storage in this card.
+                if (data.StorageSlices.Count > 0 &&
+                    (BackupUsageSegments.Count == 0 ||
+                     (BackupUsageSegments.Count == 1 &&
+                      BackupUsageSegments[0].Label.StartsWith(
+                          L("Dashboard.Storage.Other", "Other"),
+                          StringComparison.OrdinalIgnoreCase))))
+                {
+                    BuildBackupUsageBarFromVaultSync(
+                        data.StorageSlices,
+                        data.StorageSlices.Sum(x => Math.Max(0L, x.bytes)));
+                }
 
                 OnPropertyChanged(nameof(TotalSnapshotsWeek));
                 OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
@@ -757,12 +817,8 @@ namespace VaultSync.UI.ViewModels
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
 
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
-            _ = Task.Run(() =>
-            {
-                var cfg = AppConfigStore.Load();
-                Dispatcher.UIThread.Post(() =>
-                    BuildBackupUsageBar(cfg, Array.Empty<(Project project, long bytes)>()));
-            });
+            var cfg = AppConfigStore.Load();
+            BuildBackupUsageBar(cfg, Array.Empty<(Project project, long bytes)>());
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
         }
@@ -841,27 +897,44 @@ namespace VaultSync.UI.ViewModels
         if (otherPercent > 0)
         {
             segments.Add(new BackupUsageSegment(
-                L("Dashboard.Storage.Other", "Other"),
+                $"{L("Dashboard.Storage.Other", "Other")} {FormatBytes(Math.Max(0L, usedBytes - vaultSyncBytes))}",
                 otherPercent,
                 new ImmutableSolidColorBrush(Color.Parse("#8E8E93"))));
         }
 
         // 2) One segment per project for its latest snapshot size, as percent of total disk.
+        var addedProjectSegments = 0;
         if (perProject != null)
         {
             foreach (var (project, bytes) in perProject)
             {
+                if (bytes <= 0) continue;
+
                 var projectPercent = bytes * 100d / totalBytes;
-                if (projectPercent <= 0) continue;
+                // Keep legend/segment presence stable even when disk is huge and
+                // floating-point math yields near-zero percentages.
+                if (projectPercent <= 0)
+                {
+                    projectPercent = 0.0001d;
+                }
 
                 var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
                 var color = Color.Parse(colorHex);
 
                 segments.Add(new BackupUsageSegment(
-                    project.Name,
+                    $"{project.Name} {FormatBytes(bytes)}",
                     projectPercent,
                     new ImmutableSolidColorBrush(color)));
+                addedProjectSegments++;
             }
+        }
+
+        // Guard: if disk-based projection collapses to only "Other" while we do have
+        // project bytes, switch to VaultSync-relative fallback so the breakdown is visible.
+        if (addedProjectSegments == 0 && (perProject?.Any(p => p.bytes > 0) ?? false))
+        {
+            BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
+            return;
         }
 
         BackupUsageSegments = segments;
@@ -1714,12 +1787,13 @@ namespace VaultSync.UI.ViewModels
             private static readonly IBrush DotGrayBrush = new ImmutableSolidColorBrush(Colors.Gray);
 
             // New constructor: allow passing an explicit brush (used when we want per-project colors).
-            public ActivityItem(string title, string subtitle, string when, IBrush dotBrush)
+            public ActivityItem(string title, string subtitle, string when, IBrush dotBrush, string projectTagsDisplay = "")
             {
                 Title    = title;
                 Subtitle = subtitle;
                 When     = when;
                 DotBrush = dotBrush;
+                ProjectTagsDisplay = projectTagsDisplay ?? string.Empty;
             }
 
             // Backwards-compatible constructor for simple fixed dots.
@@ -1732,7 +1806,8 @@ namespace VaultSync.UI.ViewModels
                         Dot.Purple => DotPurpleBrush,
                         Dot.Gray   => DotGrayBrush,
                         _          => DotGrayBrush
-                    })
+                    },
+                    string.Empty)
             {
             }
 
@@ -1740,6 +1815,8 @@ namespace VaultSync.UI.ViewModels
             public string Subtitle { get; }
             public string When { get; }
             public IBrush DotBrush { get; }
+            public string ProjectTagsDisplay { get; }
+            public bool HasProjectTags => !string.IsNullOrWhiteSpace(ProjectTagsDisplay);
         }
     }
 }

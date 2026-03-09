@@ -1,412 +1,187 @@
-# Localization Missing Keys Report
+﻿# Localization Missing Keys Report
 
 Baseline: `Localization/strings.en.json`
 
-Generated: 2026-02-28 11:12:20 UTC
+Generated: 2026-03-09 16:12:54 UTC
 
-## strings.ar.json
+## Summary
 
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **0**
+| Language file | Missing keys | Extra keys |
+|---|---:|---:|
+| strings.ar.json | **160** | **0** |
+| strings.bn.json | **160** | **0** |
+| strings.de.json | **160** | **0** |
+| strings.es.json | **160** | **0** |
+| strings.fr.json | **160** | **0** |
+| strings.hi.json | **160** | **0** |
+| strings.it.json | **160** | **0** |
+| strings.pt.json | **160** | **0** |
+| strings.ru.json | **160** | **0** |
+| strings.zh.json | **160** | **0** |
 
-### Missing (with English source text)
-- None
+All non-English language files are currently missing the same key set.
 
-### Extra (present in target, not in English)
-- None
+## Missing keys with English source text (160 total)
 
-### Possibly broken translations
-- None
-
-## strings.bn.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **0**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- None
-
-## strings.de.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **28**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- `Backups.Status.Deleting`
-  - Reason: possible mojibake/encoding issue
-  - English: `Deleting backup files...`
-  - Current: `Sicherungsdateien werden gelÃ¶scht...`
-- `Backups.Status.LowDisk`
-  - Reason: possible mojibake/encoding issue
-  - English: `Backup skipped: low disk space.`
-  - Current: `Sicherung Ã¼bersprungen: wenig Speicherplatz.`
-- `DriveHealth.BlockedMessage`
-  - Reason: possible mojibake/encoding issue
-  - English: `Backup skipped: drive health failing on {0} ({1}).`
-  - Current: `Sicherung Ã¼bersprungen: Laufwerk fehlerhaft auf {0} ({1}).`
-- `LogConsole.ExportReady`
-  - Reason: possible mojibake/encoding issue
-  - English: `Log export ready. You can share the file.`
-  - Current: `Log-Export bereit. Sie kÃ¶nnen die Datei teilen.`
-- `Logs.Snippet.MetadataImportRootFailure`
-  - Reason: possible mojibake/encoding issue
-  - English: `Metadata import failed for projects root.`
-  - Current: `Metadatenimport fÃ¼r Projektwurzel fehlgeschlagen.`
-- `MetadataSync.Review.LinkProjects`
-  - Reason: possible mojibake/encoding issue
-  - English: `Projects to link`
-  - Current: `Projekte verknÃ¼pfen`
-- `Projects.Notification.SnapshotSuccess`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot created for '{0}'.`
-  - Current: `Snapshot fÃ¼r '{0}' erstellt.`
-- `Settings.Advanced.LanguageDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Choose the language used across the UI.`
-  - Current: `Sprache der BenutzeroberflÃ¤che wÃ¤hlen.`
-- `Settings.Advanced.SaveVerboseLogsDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Write logs to a local file while verbose logging is enabled.`
-  - Current: `Schreibt Protokolle in eine lokale Datei, wenn die ausfÃ¼hrliche Protokollierung aktiv ist.`
-- `Settings.Appearance.CompactDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Use tighter spacing for dense project lists.`
-  - Current: `Engeren Abstand fÃ¼r dichte Listen verwenden.`
-- `Settings.Backups.ConfirmDeleteDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Shows a warning before removing backup data on the destination.`
-  - Current: `Zeigt eine Warnung, bevor Backup-Daten am Ziel gelÃ¶scht werden.`
-- `Settings.Backups.HistorySyncDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Store portable metadata in destinations so other machines can merge history.`
-  - Current: `Speichere portable Metadaten in den Zielen, damit andere Rechner die Historie zusammenfÃ¼hren kÃ¶nnen.`
-- `Settings.Backups.KeepSnapshotsDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Older snapshots are removed once this limit is reached.`
-  - Current: `Ã„ltere Snapshots werden entfernt, sobald dieses Limit erreicht ist.`
-- `Settings.Credentials.AddProfile`
-  - Reason: possible mojibake/encoding issue
-  - English: `Add credential`
-  - Current: `Anmeldeinfo hinzufÃ¼gen`
-- `Settings.Danger.ClearCacheDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Removes cached metadata and state. Project data is not deleted.`
-  - Current: `Entfernt Zwischenspeicher und Status. Projektdaten werden nicht gelÃ¶scht.`
-- `Settings.Danger.ResetDatabase`
-  - Reason: possible mojibake/encoding issue
-  - English: `Resets VaultSync's internal database (projects, snapshots, backups). No files on disk or NAS are removed.`
-  - Current: `Setzt die interne VaultSync-Datenbank zurÃ¼ck (Projekte, Snapshots, Sicherungen). Keine Dateien auf Platte oder NAS werden gelÃ¶scht.`
-- `Settings.Destinations.AutoUnmount`
-  - Reason: possible mojibake/encoding issue
-  - English: `Auto-unmount after backup`
-  - Current: `Automatisch aushÃ¤ngen`
-- `Settings.Destinations.AutoUnmountTooltip`
-  - Reason: possible mojibake/encoding issue
-  - English: `Unmount after backup only if VaultSync mounted it.`
-  - Current: `Nach der Sicherung wieder aushÃ¤ngen, falls wir gemountet haben.`
-- `Settings.DestinationsMode.Tooltip`
-  - Reason: possible mojibake/encoding issue
-  - English: `Turn on Advanced to configure multiple destinations and credentials; leave off to use one simple backup folder.`
-  - Current: `Erweitert aktivieren, um mehrere Ziele und Anmeldedaten zu konfigurieren; deaktivieren fÃ¼r einen einzelnen Backup-Ordner.`
-- `Settings.General.RunInBackground`
-  - Reason: possible mojibake/encoding issue
-  - English: `Run in background when closing`
-  - Current: `Beim SchlieÃŸen im Hintergrund weiterlaufen`
-- `Settings.General.RunInBackgroundDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Hide to tray instead of quitting when closing the window.`
-  - Current: `Beim SchlieÃŸen in die Taskleiste statt Beenden.`
-- `Settings.General.ShowTrayIconDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Keep a tray/menu icon for quick actions.`
-  - Current: `Ein Tray/Menu-Symbol fÃ¼r schnelle Aktionen behalten.`
-- `Settings.General.ShowWindowOnTray`
-  - Reason: possible mojibake/encoding issue
-  - English: `Show main window for tray actions`
-  - Current: `Fenster fÃ¼r Tray-Aktionen anzeigen`
-- `Settings.Storage.ReserveFreeSpaceDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Stop creating new backups once a disk is below this threshold.`
-  - Current: `Neue Sicherungen stoppen, sobald ein Laufwerk unter diesen Wert fÃ¤llt.`
-- `Tray.Health.Error`
-  - Reason: possible mojibake/encoding issue
-  - English: `Unable to check drive health.`
-  - Current: `Laufwerkszustand kann nicht geprÃ¼ft werden.`
-- `Tray.Health.NoPathDetail`
-  - Reason: possible mojibake/encoding issue
-  - English: `Backup path not set. Set a backup location to check drive health.`
-  - Current: `Sicherungspfad nicht gesetzt. Lege einen Ort fest, um den Zustand zu prÃ¼fen.`
-- `Tray.Health.Recheck`
-  - Reason: possible mojibake/encoding issue
-  - English: `Recheck now`
-  - Current: `Erneut prÃ¼fen`
-- `Update.Banner`
-  - Reason: possible mojibake/encoding issue
-  - English: `New update available: {0} ({1})`
-  - Current: `Neues Update verfÃ¼gbar: {0} ({1})`
-
-## strings.es.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **0**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- None
-
-## strings.fr.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **1**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- `Backups.Summary.AgeLabel`
-  - Reason: possible mojibake/encoding issue
-  - English: `Age`
-  - Current: `Âge`
-
-## strings.hi.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **0**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- None
-
-## strings.it.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **1**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- `Backups.Activity.Tooltip`
-  - Reason: possible mojibake/encoding issue
-  - English: `{0}: {1} backups · {2}`
-  - Current: `{0}: {1} backup Â· {2}`
-
-## strings.pt.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **35**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- `Backups.Activity.Tooltip`
-  - Reason: possible mojibake/encoding issue
-  - English: `{0}: {1} backups · {2}`
-  - Current: `{0}: {1} backups Â· {2}`
-- `Backups.Section.Group.Global`
-  - Reason: possible mojibake/encoding issue
-  - English: `Global snapshots`
-  - Current: `Instantâneos globais`
-- `Dashboard.Activity.SnapshotCreated`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot created`
-  - Current: `Instantâneo criado`
-- `Main.HeaderBackups`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshots & history`
-  - Current: `Instantâneos e histórico`
-- `Projects.Health.NoSnapshots`
-  - Reason: possible mojibake/encoding issue
-  - English: `No snapshots yet`
-  - Current: `Nenhum instantâneo ainda`
-- `Projects.LastSnapshot.NoneShort`
-  - Reason: possible mojibake/encoding issue
-  - English: `No snapshots yet`
-  - Current: `Ainda não há instantâneos`
-- `Projects.Notification.Registered`
-  - Reason: possible mojibake/encoding issue
-  - English: `Project '{0}' registered. Next click will create a snapshot.`
-  - Current: `Projeto '{0}' registrado. O próximo clique criará um instantâneo.`
-- `Projects.Notification.SnapshotFailure`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot failed. Check logs for details.`
-  - Current: `Instantâneo falhou. Veja os logs para detalhes.`
-- `Projects.Notification.SnapshotSuccess`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot created for '{0}'.`
-  - Current: `Instantâneo criado para '{0}'.`
-- `Projects.Sort.Latest`
-  - Reason: possible mojibake/encoding issue
-  - English: `Sort: Latest snapshot`
-  - Current: `Ordenar: Último instantâneo`
-- `Projects.Stat.LastSnapshotLabel`
-  - Reason: possible mojibake/encoding issue
-  - English: `Last snapshot taken`
-  - Current: `Último instantâneo`
-- `Projects.Stat.RecentSnapshots`
-  - Reason: possible mojibake/encoding issue
-  - English: `Recent snapshots`
-  - Current: `Instantâneos recentes`
-- `Projects.Stat.SnapshotPreset`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot preset`
-  - Current: `Predefinição de instantâneo`
-- `Projects.Stat.SnapshotStorage`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot storage`
-  - Current: `Armazenamento de instantâneos`
-- `Projects.Stat.SnapshotTrend`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot size trend`
-  - Current: `Tendência do tamanho do instantâneo`
-- `Projects.Stat.TimeSinceLast`
-  - Reason: possible mojibake/encoding issue
-  - English: `Time since last snapshot`
-  - Current: `Tempo desde o último instantâneo`
-- `Projects.Stat.TotalSnapshots`
-  - Reason: possible mojibake/encoding issue
-  - English: `Total snapshots`
-  - Current: `Total de instantâneos`
-- `Projects.Stat.Unchanged`
-  - Reason: possible mojibake/encoding issue
-  - English: `First snapshot / unchanged`
-  - Current: `Primeiro instantâneo / sem mudanças`
-- `Settings.Backups.FullHash`
-  - Reason: possible mojibake/encoding issue
-  - English: `Full snapshot hashing`
-  - Current: `Hash completo dos instantâneos`
-- `Settings.Backups.KeepSnapshots`
-  - Reason: possible mojibake/encoding issue
-  - English: `Keep last N snapshots per project`
-  - Current: `Manter os últimos N instantâneos por projeto`
-- `Settings.Backups.ScanCache`
-  - Reason: possible mojibake/encoding issue
-  - English: `Use scan cache for snapshots`
-  - Current: `Usar cache de varredura para instantâneos`
-- `Settings.Backups.ScanCacheDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Skips unchanged folders to speed up snapshot scans.`
-  - Current: `Ignora pastas inalteradas para acelerar a varredura de instantâneos.`
-- `Settings.Danger.ForgetProjectsDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Resets VaultSync's internal database (projects, snapshots, backups). No files on disk or NAS are removed.`
-  - Current: `Reseta o banco interno do VaultSync (projetos, instantâneos, backups). Nenhum arquivo em disco ou NAS é removido.`
-- `Settings.Danger.ResetDatabase`
-  - Reason: possible mojibake/encoding issue
-  - English: `Resets VaultSync's internal database (projects, snapshots, backups). No files on disk or NAS are removed.`
-  - Current: `Reseta o banco interno do VaultSync (projetos, instantâneos, backups). Nenhum arquivo em disco ou NAS é removido.`
-- `Settings.General.ShowWindowOnTrayDescription`
-  - Reason: possible mojibake/encoding issue
-  - English: `Bring VaultSync to front when starting backups or snapshots from the tray.`
-  - Current: `Trazer o VaultSync para frente ao iniciar backups ou instantâneos pela bandeja.`
-- `Snapshots.Action.Default`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot now`
-  - Current: `Criar instantâneo agora`
-- `Snapshots.Notification.FailureTitle`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot failed`
-  - Current: `Falha no instantâneo`
-- `Snapshots.Notification.SuccessTitle`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot completed`
-  - Current: `Instantâneo concluído`
-- `Tray.Snapshot.All`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot all projects`
-  - Current: `Instantâneo de todos os projetos`
-- `Tray.Snapshot.Title`
-  - Reason: possible mojibake/encoding issue
-  - English: `Snapshot`
-  - Current: `Instantâneo`
-- `Tray.Tooltip`
-  - Reason: possible mojibake/encoding issue
-  - English: `VaultSync - snapshots & backups`
-  - Current: `VaultSync - instantâneos e backups`
-- `Dashboard.Hint.NoSnapshots`
-  - Reason: possible mojibake/encoding issue
-  - English: `No snapshots yet`
-  - Current: `Ainda sem instantâneos`
-- `Dashboard.Hint.StorageLatest`
-  - Reason: possible mojibake/encoding issue
-  - English: `Total across latest snapshots`
-  - Current: `Total dos últimos instantâneos`
-- `Projects.LastSnapshot.None`
-  - Reason: possible mojibake/encoding issue
-  - English: `No snapshots yet`
-  - Current: `Ainda não há instantâneos`
-- `Projects.Stat.AverageSnapshot`
-  - Reason: possible mojibake/encoding issue
-  - English: `Average snapshot size`
-  - Current: `Tamanho médio do instantâneo`
-
-## strings.ru.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **0**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- None
-
-## strings.zh.json
-
-- Missing keys: **0**
-- Extra keys: **0**
-- Possibly broken translations: **0**
-
-### Missing (with English source text)
-- None
-
-### Extra (present in target, not in English)
-- None
-
-### Possibly broken translations
-- None
-
+| Key | English source text |
+|---|---|
+| `Backups.Compare.Button` | Compare |
+| `Backups.Compare.ElapsedLine` | Elapsed: {0} |
+| `Backups.Compare.Header` | Compare two restore points |
+| `Backups.Compare.Help` | Pick an older point (left) and a newer point (right), then click Compare to see what changed. |
+| `Backups.Compare.NetDeltaLine` | Net diff delta: {0} |
+| `Backups.Compare.NewerAdded` | + added {0} |
+| `Backups.Compare.NewerDeleted` | - deleted {0} |
+| `Backups.Compare.NewerModified` | ~ modified {0} |
+| `Backups.Compare.NewerNet` | Î” net {0} |
+| `Backups.Compare.NewerSnapshotSummary` | Newest restore point diff summary: |
+| `Backups.Compare.PointA` | A: {0} Â· {1} Â· {2} |
+| `Backups.Compare.PointB` | B: {0} Â· {1} Â· {2} |
+| `Backups.Compare.Range` | {0} -> {1} |
+| `Backups.Compare.SizeDeltaLine` | Backup size delta: {0} |
+| `Backups.Compare.Title` | Restore point compare - {0} |
+| `Backups.Compare.TypeLine` | Type: {0} -> {1} |
+| `Backups.Destinations.RetryExhausted` | Failed after {0} attempts |
+| `Backups.Destinations.Retrying` | Retrying destination in {0}s (attempt {1}/{2}) |
+| `Backups.Health.Center.Aging` | Aging |
+| `Backups.Health.Center.Empty` | No project health data yet. |
+| `Backups.Health.Center.Healthy` | Healthy |
+| `Backups.Health.Center.NoBackup` | No backup |
+| `Backups.Health.Center.Stale` | Stale |
+| `Backups.Health.Center.Summary` | Healthy {0} Â· Aging {1} Â· Stale {2} Â· No backup {3} |
+| `Backups.Health.Center.Title` | Backup health center |
+| `Backups.Restore.GuidanceMode` | Mode: {0} |
+| `Backups.Restore.Mode.Direct` | Direct (overwrite project path) |
+| `Backups.Restore.Mode.Label` | Restore mode |
+| `Backups.Restore.Mode.Sandbox` | Sandbox (restore to preview folder) |
+| `Backups.Restore.Preview.ConflictFiles` | Potential conflicts (project appears newer/different): {0} |
+| `Backups.Restore.Preview.EncryptedUnavailable` | Preview is unavailable before decrypt for encrypted backups. |
+| `Backups.Restore.Preview.ExtraFilesKept` | Existing project-only files that will be kept: {0} |
+| `Backups.Restore.Preview.Header` | Restore preview |
+| `Backups.Restore.Preview.NewFiles` | New files to add: {0} |
+| `Backups.Restore.Preview.OverwriteFiles` | Files that will overwrite existing project files: {0} |
+| `Backups.Restore.Preview.TotalBytes` | Total restore data: {0} |
+| `Backups.Restore.Preview.TotalFiles` | Files in backup: {0} |
+| `Backups.Restore.Preview.Unavailable` | Preview is unavailable for this backup. |
+| `Backups.Restore.Sandbox.ApplyCompleted` | Sandbox restore applied to project. |
+| `Backups.Restore.Sandbox.ApplyCompletedWithCleanupWarning` | Sandbox restore applied, but cleanup failed: {0} |
+| `Backups.Restore.Sandbox.ApplyConfirmPrompt` | Apply sandbox restore for '{0}' into:<br/>{1} |
+| `Backups.Restore.Sandbox.ApplyConfirmTitle` | Apply sandbox restore to project? |
+| `Backups.Restore.Sandbox.ApplyConfirmWarning` | Existing files with matching paths will be overwritten. |
+| `Backups.Restore.Sandbox.ApplyFailed` | Failed to apply sandbox restore: {0} |
+| `Backups.Restore.Sandbox.ApplyingBusy` | Applying sandbox restore... |
+| `Backups.Restore.Sandbox.ApplyMissing` | Sandbox folder no longer exists. |
+| `Backups.Restore.Sandbox.ApplySummaryHeader` | Apply summary |
+| `Backups.Restore.Sandbox.ApplySummaryNewFiles` | New files: {0} |
+| `Backups.Restore.Sandbox.ApplySummaryOverwriteBytes` | Data that overwrites existing files: {0} |
+| `Backups.Restore.Sandbox.ApplySummaryOverwriteFiles` | Files that overwrite existing project files: {0} |
+| `Backups.Restore.Sandbox.ApplySummaryTotalBytes` | Total data to write: {0} |
+| `Backups.Restore.Sandbox.ApplySummaryTotalFiles` | Total files to copy: {0} |
+| `Backups.Restore.Sandbox.CleanupFailed` | Sandbox cleanup failed. |
+| `Backups.Restore.Sandbox.Completed` | Restore completed in sandbox folder:<br/>{0} |
+| `Backups.Restore.Sandbox.Post.Apply` | Apply to project |
+| `Backups.Restore.Sandbox.Post.DeleteAfterApply` | Delete sandbox folder after apply |
+| `Backups.Restore.Sandbox.Post.Keep` | Keep for later |
+| `Backups.Restore.Sandbox.Post.Open` | Open sandbox |
+| `Backups.Restore.Sandbox.Post.Prompt` | Review the restored files in sandbox for '{0}', then choose what to do next. |
+| `Backups.Restore.Sandbox.Post.Title` | Sandbox restore completed |
+| `Backups.Restore.Selection.Description` | Choose which top-level folders/files to restore. |
+| `Backups.Restore.Selection.Header` | Restore targets |
+| `Backups.Section.TypeImported` | Imported |
+| `Backups.Sort.Tags` | Tags |
+| `Backups.Summary.TopConsumersEmpty` | No project storage data yet. |
+| `Backups.Summary.TopConsumersLabel` | Top storage consumers |
+| `Backups.Verification.Policy.Always` | Always |
+| `Backups.Verification.Policy.Label` | Verification policy |
+| `Backups.Verification.Policy.Manual` | Manual only |
+| `Backups.Verification.Policy.Scheduled` | Scheduled |
+| `Projects.Group.All` | All projects |
+| `Projects.Group.Archive` | Archive |
+| `Projects.Group.AutoBackupDisabled` | Disabled auto backups for {0} projects. |
+| `Projects.Group.AutoBackupEnabled` | Enabled auto backups for {0} projects. |
+| `Projects.Group.BackupAction` | Back up selected view |
+| `Projects.Group.BackupQueued` | Queued backup for {0} projects. |
+| `Projects.Group.Critical` | Critical |
+| `Projects.Group.DisableAuto` | Pause auto backups |
+| `Projects.Group.EnableAuto` | Resume auto backups |
+| `Projects.Group.Games` | Games |
+| `Projects.Group.Help` | Choose a view, then run actions for all projects in that group. |
+| `Projects.Group.Label` | View |
+| `Projects.Group.Media` | Media |
+| `Projects.Group.SnapshotAction` | Snapshot selected view |
+| `Projects.Group.SnapshotError` | Failed to run grouped snapshot operation: {0} |
+| `Projects.Group.SnapshotFailure` | Failed to create snapshots for {0} projects. |
+| `Projects.Group.SnapshotSuccess` | Created snapshots for {0} projects. |
+| `Projects.Group.TagApplied` | Applied tag '{0}' to {1} projects. |
+| `Projects.Group.TagApply` | Apply tag |
+| `Projects.Group.TagHelp` | Applies to all registered projects in the current view. |
+| `Projects.Group.TagLabel` | Group tag |
+| `Projects.Group.TagRemove` | Remove tag |
+| `Projects.Group.TagRemoved` | Removed tag '{0}' from {1} projects. |
+| `Projects.Group.TagWatermark` | Type or pick an existing tag... |
+| `Projects.Group.Work` | Work |
+| `Projects.Preset.Editor.Clone` | Clone preset |
+| `Projects.Preset.Editor.CloneIdWatermark` | new-preset-id (example: unity_local) |
+| `Projects.Preset.Editor.Export` | Export rules |
+| `Projects.Preset.Editor.Help` | One rule per line. Lines starting with # are comments. Example: node_modules/, *.tmp, /bin/** |
+| `Projects.Preset.Editor.Import` | Import file |
+| `Projects.Preset.Editor.ImportPathWatermark` | Path to preset file (.vaultsyncignore)... |
+| `Projects.Preset.Editor.Preview` | Test on this project |
+| `Projects.Preset.Editor.Reload` | Reload |
+| `Projects.Preset.Editor.Save` | Save rules |
+| `Projects.Preset.Editor.Status.Cloned` | Cloned preset as '{0}' and selected it for this project. |
+| `Projects.Preset.Editor.Status.CloneFailed` | Failed to clone preset: {0} |
+| `Projects.Preset.Editor.Status.CloneIdInvalid` | Preset id can contain letters, numbers, '-', '_' and '.'. |
+| `Projects.Preset.Editor.Status.CloneIdRequired` | Enter a preset id before cloning. |
+| `Projects.Preset.Editor.Status.Exported` | Exported preset rules to '{0}'. |
+| `Projects.Preset.Editor.Status.ExportFailed` | Failed to export preset rules: {0} |
+| `Projects.Preset.Editor.Status.Imported` | Imported preset rules from '{0}'. |
+| `Projects.Preset.Editor.Status.ImportFailed` | Failed to import preset rules: {0} |
+| `Projects.Preset.Editor.Status.ImportMissing` | Preset file not found: {0} |
+| `Projects.Preset.Editor.Status.ImportPathRequired` | Enter a file path to import preset rules. |
+| `Projects.Preset.Editor.Status.NewFile` | Preset file does not exist yet. Save to create it. |
+| `Projects.Preset.Editor.Status.NoPreset` | Select a preset to edit its rules. |
+| `Projects.Preset.Editor.Status.PresetsDirMissing` | Could not resolve presets directory. |
+| `Projects.Preset.Editor.Status.PreviewFailed` | Preview failed: {0} |
+| `Projects.Preset.Editor.Status.PreviewNoProject` | Select a valid project path to preview rules. |
+| `Projects.Preset.Editor.Status.PreviewResult` | Preview: scanned {0} files - included {1}, excluded {2}. |
+| `Projects.Preset.Editor.Status.Reloaded` | Preset rules reloaded. |
+| `Projects.Preset.Editor.Status.ReloadFailed` | Failed to reload preset rules: {0} |
+| `Projects.Preset.Editor.Status.ResolveFailed` | Could not resolve preset file for '{0}'. |
+| `Projects.Preset.Editor.Status.Saved` | Saved preset '{0}'. |
+| `Projects.Preset.Editor.Status.SaveFailed` | Failed to save preset rules: {0} |
+| `Projects.Preset.Editor.Title` | Preset rules (exclude patterns) |
+| `Projects.Preset.Editor.Toggle` | Open preset editor |
+| `Projects.Preset.Editor.ToggleClose` | Close preset editor |
+| `Projects.Preset.Editor.ToggleOpen` | Open preset editor |
+| `Projects.Preset.Recommendation.Applied` | Applied recommended preset '{0}'. |
+| `Projects.Preset.Recommendation.Apply` | Apply recommendation |
+| `Projects.Preset.Recommendation.Label` | Recommended preset: |
+| `Projects.Preset.Recommendation.Reason.Avalonia` | Detected Avalonia UI files (*.axaml). |
+| `Projects.Preset.Recommendation.Reason.Blender` | Detected Blender files (*.blend). |
+| `Projects.Preset.Recommendation.Reason.DotNet` | Detected .NET solution/project files (*.sln/*.csproj). |
+| `Projects.Preset.Recommendation.Reason.Godot` | Detected Godot project marker (project.godot). |
+| `Projects.Preset.Recommendation.Reason.Node` | Detected JavaScript/Node project marker (package.json). |
+| `Projects.Preset.Recommendation.Reason.Python` | Detected Python project markers (pyproject.toml or requirements.txt). |
+| `Projects.Preset.Recommendation.Reason.Rust` | Detected Rust project marker (Cargo.toml). |
+| `Projects.Preset.Recommendation.Reason.Unity` | Detected Unity project layout (Assets + ProjectSettings). |
+| `Projects.Preset.Recommendation.Reason.Unreal` | Detected Unreal project file (*.uproject). |
+| `Projects.Preset.Recommendation.Reason.Video` | Detected video editing project files (*.prproj). |
+| `Projects.Tags.Help` | Tags help you group and filter projects. Double-click a tag pill to edit. |
+| `Projects.Tags.Label` | Project tags |
+| `Projects.Tags.ReusableLabel` | Reusable tags |
+| `Projects.Tags.Watermark` | Add a tag (Enter or comma to confirm)... |
+| `Settings.Advanced.SupportBundle` | Support bundle |
+| `Settings.Advanced.SupportBundleExport` | Export support bundle |
+| `Settings.Advanced.SupportBundleExportedTo` | Support bundle exported to {0} |
+| `Settings.Advanced.SupportBundleFailed` | Support bundle export failed. |
+| `Settings.Advanced.SupportBundleImport` | Import support bundle |
+| `Settings.Advanced.SupportBundleImportApplied` | Support bundle settings imported (diagnostics ignored). |
+| `Settings.Advanced.SupportBundleImportFailed` | Support bundle import failed: {0} |
+| `Settings.Advanced.SupportBundleImportMissingConfig` | Support bundle does not contain importable settings. |
+| `Settings.Advanced.SupportBundleImportMissingReport` | Support bundle is missing support-report.json. |
+| `Settings.Advanced.SupportBundleReady` | Support bundle ready. You can share the zip file. |
+| `Settings.Destinations.RetryAttemptsTooltip` | Total attempts including the first run. |
+| `Settings.Destinations.RetryBackoffTooltip` | Base delay in seconds (exponential backoff between retries). |
+| `Settings.Destinations.RetryPolicyDescription` | Retry failed backup attempts on this destination using exponential backoff. |
+| `Settings.Destinations.RetryPolicyLabel` | Retry policy (attempts / base sec) |

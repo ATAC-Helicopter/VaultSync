@@ -126,7 +126,7 @@ public partial class OnboardingTourOverlay : UserControl
         var origin = _target.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0);
         var bounds = new Rect(origin, _target.Bounds.Size);
 
-        const double pad = 16;
+        var pad = GetHighlightPadding(_target.Name);
         var highlightRect = bounds.Inflate(pad);
 
         HighlightBorder.IsVisible = true;
@@ -376,6 +376,22 @@ public partial class OnboardingTourOverlay : UserControl
         var right = Math.Clamp(rect.Right, 0, size.Width);
         var bottom = Math.Clamp(rect.Bottom, 0, size.Height);
         return new Rect(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
+    }
+
+    private static double GetHighlightPadding(string? targetName)
+    {
+        if (string.IsNullOrWhiteSpace(targetName))
+            return 16;
+
+        return targetName switch
+        {
+            // Larger onboarding-safe interaction zones for setup fields with companion actions.
+            "ProjectsRootRow" => 22,
+            "BackupLocationRow" => 24,
+            "AddDestinationButton" => 20,
+            "DestinationPathRow" => 20,
+            _ => 16
+        };
     }
 
     private static void SetOverlayRect(Control overlay, Rect rect)

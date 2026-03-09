@@ -582,6 +582,8 @@
 ## 1.6.x
 
 ### 1.6.0 direction
+- Release target: **2026-03-09** (Monday).
+- Ship rule: only critical fixes and already in-progress `1.6.0` work should be pulled into this release window; all non-critical scope rolls forward.
 - Theme: control, restore safety, and organization.
 - Product goal: make VaultSync feel safer to restore from, easier to organize at scale, and more user-controlled in everyday project setup.
 - Release shape:
@@ -658,58 +660,172 @@
 6. Stabilization pass and release hardening.
 
 ### 1.6 ticket backlog (execution-ready)
-- [ ] `VS-1601` `P0` Richer restore flows (selective restore, dry-run previews, conflict prompts).
+- [x] `VS-1601` `P0` Richer restore flows (selective restore, dry-run previews, conflict prompts).
   - Scope: add restore preview model, selective restore targets, and conflict classification before execution.
+  - Done:
+    - Restore confirmation includes a pre-run preview summary for plain backups (files in backup, new files, overwrite count, potential conflicts, project-only files kept, total bytes).
+    - Encrypted backups surface an explicit preview-unavailable reason before decrypt starts.
+    - Restore confirmation now supports selective top-level restore targets for plain backups/archives.
+    - Restore execution applies only selected top-level targets while preserving direct/sandbox mode behavior.
   - Acceptance tests:
     - UI: restore preview lists overwrite/add/delete/conflict counts before run.
     - Integration: selective restore applies only chosen paths.
     - Regression: standard direct restore still works unchanged when preview options are not used.
-- [ ] `VS-1602` `P0` Restore point browser with compare + timeline.
+- [x] `VS-1602` `P0` Restore point browser with compare + timeline.
   - Scope: timeline-style restore point browser with compare support between selected backups/snapshots.
+  - Done:
+    - Backups history panel now exposes restore-point timeline selectors (`A` / `B`) bound to filtered chronological history.
+    - Added compare action that opens a structured compare summary (time range, elapsed interval, size delta, net-diff delta, and latest-point diff stats).
+    - Compare selection works with current history filters and project grouping without changing restore flow behavior.
   - Acceptance tests:
     - UI: user can navigate restore points chronologically and compare two points.
     - UX: browser remains responsive on projects with long history.
-- [ ] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
+- [x] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
   - Scope: per-project growth metrics, top storage consumers, and clearer dashboard/backups storage summaries.
+  - Current status:
+    - Done: Backups per-project cards now surface storage delta (`Δ`) versus the previous backup snapshot size for each project.
+    - Done: Backups summary now includes top storage consumers (top projects by local backup storage share).
   - Acceptance tests:
     - UI: metrics align with stored backup/snapshot data.
     - Perf: reporting does not cause blocking UI refresh on common data sets.
-- [ ] `VS-1604` `P0` Full preset editor with include/exclude rules, preview, clone, import/export.
+- [x] `VS-1604` `P0` Full preset editor with include/exclude rules, preview, clone, import/export.
   - Scope: replace file-only preset maintenance with an in-app editor and preview workflow.
+  - Current status:
+    - Done: Projects details now includes a preset-rules editor (reload/save) for the selected preset file.
+    - Done: Preset editor now includes live preview counts (included/excluded) against the selected project path.
+    - Done: Preset editor now supports clone/import/export flows (clone to new preset id, import from file path, export to Documents preset exports).
   - Acceptance tests:
     - UI: user can create/edit/clone/delete/import/export presets.
     - Integration: saved presets are immediately assignable to projects and resolve correctly at snapshot/backup time.
-- [ ] `VS-1605` `P1` Backup health center and timeline (success/failure/verified trends).
+- [x] `VS-1605` `P1` Backup health center and timeline (success/failure/verified trends).
   - Scope: health summary model and timeline surfaces for backup freshness, verification, and failure visibility.
+  - Current status:
+    - Done: Backups summary now includes a health center mix (healthy/aging/stale/no-backup project distribution) derived from project backup freshness.
   - Acceptance tests:
     - UI: health state reflects real backup/verification history.
     - UX: timeline/trend surfaces do not crowd primary actions.
-- [ ] `VS-1606` `P2` Exportable config bundle for migration/support.
+- [x] `VS-1606` `P2` Exportable config bundle for migration/support.
   - Scope: export redacted app config, diagnostics context, and selected metadata for support/migration workflows.
   - Acceptance tests:
     - Integration: exported bundle opens and contains the expected redacted data set.
     - Security: no secrets/passwords/raw keys are included.
-- [ ] `VS-1607` `P0` Optional sandbox restore mode with per-project default and per-run override.
+  - Done:
+    - Settings > Advanced now includes `Export support bundle` action that creates a shareable zip under `Documents/VaultSync/Exports/Support`.
+    - Bundle includes redacted config snapshot, local/destination metadata summaries, telemetry export zip, and recent diagnostics logs.
+    - Sensitive values (passwords, key refs, credential usernames/domains) are redacted in the exported report payload.
+- [x] `VS-1607` `P0` Optional sandbox restore mode with per-project default and per-run override.
   - Scope: sandbox workspace creation, review/apply path, cleanup options, and per-project restore-mode preference.
+  - Done:
+    - Project schema/model persists `restore_mode` (`direct` / `sandbox`) with migration-safe default `direct`.
+    - Backups per-project cards expose restore-mode selection and persist it to project settings.
+    - Restore runtime honors sandbox mode by restoring into an isolated preview folder while direct mode keeps existing behavior.
+    - Restore confirmation supports per-run restore-mode override (`Direct` / `Sandbox`) before execution.
+    - Sandbox completion provides post-restore actions (`Keep`, `Open sandbox`, `Apply to project`) with optional cleanup-after-apply.
+    - Sandbox apply path includes pre-apply summary (files/overwrite/bytes) with explicit confirm/cancel gate.
   - Acceptance tests:
     - Integration: sandbox restore leaves destination untouched until confirm/apply.
     - UI: project default can be overridden at restore time.
     - Regression: direct restore remains available for users who do not want sandbox mode.
-- [ ] `VS-1608` `P1` Preset recommendations for detected project/library types.
+- [x] `VS-1608` `P1` Preset recommendations for detected project/library types.
   - Scope: suggest likely presets from observed folder structure/content when adding or editing a project.
+  - Done:
+    - Projects page computes high-signal preset recommendations from detected project markers (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) and caches results per project path.
+    - Preset card surfaces recommendation reason text with one-click `Apply recommendation` action; manual preset selection remains unchanged.
+    - Confidence gating was tightened for generic stacks (`Node`, `Python`, `.NET`) so recommendations are shown only when corroborating markers are present.
   - Acceptance tests:
     - UI: recommendations appear only when confidence is high enough to be useful.
     - Regression: manual preset selection always remains available.
-- [ ] `VS-1701` `P1` Project tagging + smart groups + bulk actions (pause/backup/snapshot by tag).
+- [x] `VS-1609` `P1` Project tagging + smart groups + bulk actions (pause/backup/snapshot by tag).
   - Scope: manual tags, computed smart groups, shared group filters, and bulk actions in Projects/Backups.
   - Current planning note:
     - Pulled forward from the original `1.7.x` bucket because organization now has direct product value for medium/large vaults.
-- [ ] `VS-1702` `P2` Per-destination retry policy with backoff + user status summary.
+  - Done:
+    - Project schema/model now persists `tags` text on projects with migration-safe default empty value.
+    - Projects page supports editable per-project tags (`comma-separated`) and persists updates to DB.
+    - Projects list supports smart group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) driven by tags plus high-signal preset/health hints.
+    - Projects group controls now include bulk actions for `Snapshot group`, `Back up group`, and `Enable/Disable auto backups` for all registered projects in the active group.
+- [x] `VS-1610` `P2` Per-destination retry policy with backoff + user status summary.
   - Scope: destination retry/backoff policy tuning and clearer retry status feedback for network/external targets.
-- [ ] `VS-1901` `P1` Per-project verification policies (always/scheduled/manual).
+  - Done:
+    - Backup destination settings now persist per-destination retry policy (`attempts`, `base backoff seconds`) with bounded validation.
+    - Manual and auto-backup flows now apply destination-scoped retry loops with exponential backoff and retry telemetry events.
+    - Backups UI now surfaces retry status messaging and exhausted-retry summaries for failed destinations.
+- [x] `VS-1611` `P1` Per-project verification policies (always/scheduled/manual).
   - Scope: verification mode per project, verification recency surfacing, and restore-confidence integration.
+  - Done:
+    - Projects schema/model now persists `verification_policy` with migration-safe default `always`.
+    - Backups per-project cards now expose verification-policy controls (`Always`, `Scheduled`, `Manual`) and persist updates live.
+    - Post-backup flow now evaluates project verification policy (`always` -> verify, `scheduled` -> auto runs, `manual` -> skip auto verify).
+    - Metadata sync project settings now export/import verification policy alongside encryption settings.
   - Current planning note:
     - Pulled forward from the original `1.9.x` bucket because verification policy directly supports restore trust in `1.6`.
+- [x] `VS-1612` `P1` Windowed backup-history card layout hardening.
+  - Scope: prevent chip/pill overlap in narrow window widths and keep retention/status text readable without clipping.
+  - Done:
+    - Backups history item layout now reserves dedicated rows for retention and actions to avoid right-column collisions.
+    - Size pill now uses adaptive width bounds instead of a fixed circular capsule in constrained layouts.
+- [x] `VS-1613` `P1` Restore active-card stage and throughput parity.
+  - Scope: ensure restore operations report a restore-specific stage and live transfer detail instead of backup-stage fallbacks.
+  - Done:
+    - Restore progress now emits processed/total bytes with live speed label in the active card.
+    - Active backup stage detection now recognizes restoring/decrypting progress and shows restore-specific status text.
+- [x] `VS-1614` `P2` Diff imported-type localization key parity.
+  - Scope: add missing key used by diff preview/imported-type chips to prevent raw key rendering.
+  - Done:
+    - Added English localization key `Backups.Section.TypeImported` used by diff preview status chips.
+- [x] `VS-1615` `P2` Quiet-hours window editor compact layout pass.
+  - Scope: tighten quiet-hours input composition for windowed mode and remove excessive edge spacing.
+  - Done:
+    - Quiet-hours start/end fields now use centered compact groups with consistent widths and spacing.
+- [x] `VS-1616` `P0` Patch updater trust-boundary hardening.
+  - Scope: harden patch helper input/manifest handling (path normalization, traversal guards, install-root constraints, argument validation) for elevated update flows.
+  - Done:
+    - Patch apply requests are now normalized/validated before execution (absolute paths only, invalid PID guardrails).
+    - Manifest file paths are resolved through strict `CombineUnderRoot` checks to block absolute/out-of-root traversal targets.
+    - Patch staging and install copy now enforce root-bounded file resolution for both verify and write phases.
+- [x] `VS-1617` `P1` Network-share delete fallback and user-guided recovery flow.
+  - Scope: make backup delete on SMB/NAS robust when marker files are protected/locked, with deterministic prompt/retry/skip behavior.
+  - Done:
+    - Backup delete path now enforces destination-root-bounded path resolution before file-system operations.
+    - Robust delete now performs a manual fallback pass after recursive delete failures and reports permission-denied outcomes explicitly.
+    - Failure notifications now add a clear permissions/credentials remediation hint when protected files block delete.
+- [x] `VS-1618` `P0` Updater request integrity binding and archive preflight validation.
+  - Scope: bind elevated helper request file to launcher-provided integrity metadata and verify archive hash/size again before extraction.
+  - Done:
+    - Elevated helper now requires request-file SHA-256 passed by launcher and rejects tampered request payloads.
+    - Request/manifest temp paths are constrained to trusted VaultSync temp roots in helper mode.
+    - Archive hash/size are re-validated against manifest in helper before extraction.
+- [x] `VS-1619` `P1` Backup path root-containment hardening for retention/restore/tray open flows.
+  - Scope: enforce destination-root containment when resolving backup paths in retention cleanup, restore preparation, and tray open-folder flow.
+  - Done:
+    - Retention cleanup now rejects out-of-root backup paths before deletion attempts.
+    - Restore preparation now rejects backup paths that resolve outside destination roots.
+    - Tray backup-folder resolution/open flow now uses root-containment checks before filesystem access.
+- [x] `VS-1620` `P2` Config read retry async cleanup.
+  - Scope: remove blocking sleep from config read retry path to reduce UI-thread contention under lock races.
+  - Done:
+    - Config load retry now uses async backoff/read flow (`Task.Delay`, async stream/file reads) instead of blocking `Thread.Sleep` loops.
+- [x] `VS-1621` `P1` Windowed viewport-width fill for primary pages.
+  - Scope: ensure Backups/Dashboard/Settings root content stretches to available `ScrollViewer` viewport width while preserving readability max-width caps.
+  - Done:
+    - Backups, Dashboard, and Settings roots now bind `MinWidth` to the containing `ScrollViewer` viewport width.
+    - Windowed layouts now use available horizontal space instead of collapsing to narrow centered columns.
+- [x] `VS-1622` `P1` Backups windowed panel and list-height normalization.
+  - Scope: remove hard vertical caps that caused uneven left/right panel heights and rebalance panel split for narrower windows.
+  - Done:
+    - Removed Backups per-project/history hard `MaxHeight` constraints that clipped panel utilization.
+    - Backups main area now uses a `3*:2*` split and tighter control widths/wrap behavior for per-project card fields.
+- [x] `VS-1623` `P2` Projects/Settings windowed control overflow cleanup.
+  - Scope: reflow dense control rows in Projects details and Settings Advanced to prevent truncation/overflow in windowed mode.
+  - Done:
+    - Projects details control panel now uses a 2x2 responsive grid for destination/encryption/health blocks.
+    - Settings Advanced action rows now wrap buttons and copy in narrow widths.
+    - Near-zero storage delta now displays neutral `Δ ~0 B` for sub-1KB changes.
+- [x] `VS-1624` `P2` Backups activity chart card empty-space collapse.
+  - Scope: remove oversized empty space under the Backups 7-day bars in windowed mode.
+  - Done:
+    - Summary/activity row now uses explicit auto row sizing.
+    - Activity card is top-aligned so it keeps chart content height instead of stretching to adjacent summary card height.
 
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
@@ -722,6 +838,5 @@
 - [ ] `VS-1804` `P2` CLI parity with all major UI features.
 
 ## 1.9.x
-- [ ] `VS-1901` `P1` Per-project verification policies (always/scheduled/manual).
 - [ ] `VS-1902` `P1` App signing for trusted distribution.
 - [ ] `VS-1903` `P2` Background integrity audits with alerts.

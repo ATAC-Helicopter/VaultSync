@@ -124,20 +124,26 @@ namespace VaultSync.UI.ViewModels
 
         /// <summary>
         /// Triggered from the tray menu: backup the selected project.
-        /// For now we simply navigate to the Backups page so the user can pick a project
-        /// and start the backup from there. Later we can wire this to the actual selection.
+        /// Uses the current Backups-page project selection when available.
+        /// Falls back to navigation only when nothing is selected yet.
         /// </summary>
         public void RequestBackupSelectedProjectFromTray()
         {
+            var selected = BackupsViewModel.SelectedProject;
 
-            // For now, just bring the Backups page into view.
-            if (NavigateBackups?.CanExecute(null) == true)
+            Dispatcher.UIThread.Post(() =>
             {
-                NavigateBackups.Execute(null);
-            }
+                if (NavigateBackups?.CanExecute(null) == true)
+                {
+                    NavigateBackups.Execute(null);
+                }
+            });
 
-            // TODO (later): once BackupsViewModel exposes the currently selected project,
-            // call OnBackupProjectRequested with that item to start the backup directly.
+            if (selected is null || BackupsViewModel.IsBusy)
+                return;
+
+            _trayInitiatedBackup = true;
+            OnBackupProjectRequested(selected);
         }
 
         /// <summary>
@@ -201,14 +207,16 @@ namespace VaultSync.UI.ViewModels
                 if (string.IsNullOrWhiteSpace(dest.Path))
                     continue;
 
-                var combined = Path.GetFullPath(Path.Combine(dest.Path, relativePath));
+                if (!TryCombinePathUnderRoot(dest.Path, relativePath, out var combined))
+                    continue;
                 if (Directory.Exists(combined) || File.Exists(combined))
                     return dest.Path;
             }
 
             if (!string.IsNullOrWhiteSpace(legacyRoot))
             {
-                var combined = Path.GetFullPath(Path.Combine(legacyRoot, relativePath));
+                if (!TryCombinePathUnderRoot(legacyRoot, relativePath, out var combined))
+                    return null;
                 if (Directory.Exists(combined) || File.Exists(combined))
                     return legacyRoot;
             }
@@ -224,7 +232,8 @@ namespace VaultSync.UI.ViewModels
             {
                 foreach (var dest in destinations.Where(d => !string.IsNullOrWhiteSpace(d.Path)))
                 {
-                    var combined = Path.GetFullPath(Path.Combine(dest.Path!, backup.Path));
+                    if (!TryCombinePathUnderRoot(dest.Path!, backup.Path, out var combined))
+                        continue;
                     if (Directory.Exists(combined) || File.Exists(combined))
                         return dest.Path;
                 }
@@ -241,9 +250,11 @@ namespace VaultSync.UI.ViewModels
 
                 if (match is not null && !string.IsNullOrWhiteSpace(match.Path))
                 {
-                    var combined = Path.GetFullPath(Path.Combine(match.Path, backup.Path ?? string.Empty));
-                    if (Directory.Exists(combined) || File.Exists(combined))
+                    if (TryCombinePathUnderRoot(match.Path, backup.Path ?? string.Empty, out var combined) &&
+                        (Directory.Exists(combined) || File.Exists(combined)))
+                    {
                         return match.Path;
+                    }
                 }
             }
 
@@ -405,7 +416,8 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(backup.Path))
                 return BackupFolderOpenPreparation.Failure;
 
-            var fullPath = Path.GetFullPath(Path.Combine(destinationRoot, backup.Path));
+            if (!TryCombinePathUnderRoot(destinationRoot, backup.Path, out var fullPath))
+                return BackupFolderOpenPreparation.Failure;
             if (!Directory.Exists(fullPath))
                 return BackupFolderOpenPreparation.Failure;
 
@@ -772,6 +784,34 @@ namespace VaultSync.UI.ViewModels
             catch
             {
                 // best effort cleanup
+            }
+        }
+
+        private static bool TryCombinePathUnderRoot(string root, string relativePath, out string fullPath)
+        {
+            fullPath = string.Empty;
+            if (string.IsNullOrWhiteSpace(root))
+                return false;
+
+            try
+            {
+                var normalizedRoot = Path.GetFullPath(root)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+
+                if (Path.IsPathFullyQualified(relativePath))
+                    return false;
+
+                var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath ?? string.Empty));
+                if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                fullPath = candidate;
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 

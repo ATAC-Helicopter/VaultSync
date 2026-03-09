@@ -65,6 +65,7 @@
     <!-- Allow the form to stretch across the viewport while capping width for readability. -->
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
+          MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
           RowDefinitions="Auto,Auto"
           RowSpacing="{DynamicResource PageRowSpacing}">
 
@@ -106,7 +107,8 @@
                 </StackPanel>
 
                 <!-- Projects root -->
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid x:Name="ProjectsRootRow"
+                      ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto"
                       RowSpacing="4"
                       ColumnSpacing="8">
@@ -124,7 +126,7 @@
                            Grid.Row="1"
                            Grid.Column="0"
                            Margin="0,2,0,0"
-                           Text="{Binding ProjectsRootPath, Mode=TwoWay}"
+                           Text="{Binding ProjectsRootPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            Watermark="Leave empty to use OS default" />
 
                   <Button Grid.Row="1"
@@ -406,16 +408,16 @@
                     </WrapPanel>
 
                     <Grid Grid.Row="1"
-                          ColumnDefinitions="*,Auto,*"
-                          ColumnSpacing="10"
-                          HorizontalAlignment="Stretch">
+                          ColumnDefinitions="Auto,Auto,Auto"
+                          ColumnSpacing="12"
+                          HorizontalAlignment="Center">
                       <StackPanel Grid.Column="0"
                                   Spacing="4">
                         <TextBlock Text="{Binding QuietHoursStartLabel}"
                                    FontSize="11"
                                    Foreground="{StaticResource TextSecondary}" />
-                        <TextBox Width="96"
-                                 HorizontalAlignment="Left"
+                        <TextBox Width="110"
+                                 HorizontalAlignment="Center"
                                  HorizontalContentAlignment="Center"
                                  Watermark="HH:mm"
                                  Text="{Binding QuietHoursStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -424,18 +426,18 @@
 
                       <TextBlock Grid.Column="1"
                                  Text="→"
-                                 FontSize="14"
+                                 FontSize="16"
                                  VerticalAlignment="Center"
                                  Foreground="{StaticResource TextSecondary}" />
 
                       <StackPanel Grid.Column="2"
                                   Spacing="4"
-                                  HorizontalAlignment="Right">
+                                  HorizontalAlignment="Center">
                         <TextBlock Text="{Binding QuietHoursEndLabel}"
                                    FontSize="11"
                                    Foreground="{StaticResource TextSecondary}" />
-                        <TextBox Width="96"
-                                 HorizontalAlignment="Right"
+                        <TextBox Width="110"
+                                 HorizontalAlignment="Center"
                                  HorizontalContentAlignment="Center"
                                  Watermark="HH:mm"
                                  Text="{Binding QuietHoursEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -462,7 +464,8 @@
                 </Grid>
 
                 <!-- Backup location (legacy fallback) -->
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid x:Name="BackupLocationRow"
+                      ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto"
                       RowSpacing="4"
                       Margin="0,6,0,0"
@@ -494,7 +497,7 @@
                            Grid.Row="1"
                            Grid.Column="0"
                            VerticalAlignment="Center"
-                           Text="{Binding BackupLocationPath, Mode=TwoWay}"
+                           Text="{Binding BackupLocationPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            ToolTip.Tip="Simple mode: VaultSync writes backups under this folder (one destination)."
                            Watermark="Leave empty to store backups next to projects" />
 
@@ -889,7 +892,7 @@
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
                             <Grid ColumnDefinitions="Auto,*,Auto"
-                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="10"
                                   RowSpacing="8">
                               <Grid x:Name="DestinationBasicsRow"
@@ -922,28 +925,33 @@
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
                               </Button>
 
-                              <TextBox x:Name="DestinationPathRow"
-                                       Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1"
-                                       Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
-                                       Text="{Binding Path, Mode=TwoWay}" />
-                              <StackPanel Grid.Column="2"
-                                          Grid.Row="1"
-                                          Orientation="Horizontal"
-                                          Spacing="6"
-                                          HorizontalAlignment="Right"
-                                          VerticalAlignment="Center">
-                                <Button Classes="settings-ghost"
-                                        Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
-                                </Button>
-                                <Button Classes="settings-ghost"
-                                        Command="{Binding DataContext.TestDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.TestTooltip}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
-                                </Button>
-                              </StackPanel>
+                              <Grid x:Name="DestinationPathRow"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3"
+                                    Grid.Row="1"
+                                    ColumnDefinitions="*,Auto"
+                                    ColumnSpacing="10">
+                                <TextBox Grid.Column="0"
+                                         Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
+                                         Text="{Binding Path, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center">
+                                  <Button Classes="settings-ghost"
+                                          Command="{Binding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          CommandParameter="{Binding}">
+                                    <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
+                                  </Button>
+                                  <Button Classes="settings-ghost"
+                                          Command="{Binding DataContext.TestDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          CommandParameter="{Binding}"
+                                          ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.TestTooltip}">
+                                    <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
+                                  </Button>
+                                </StackPanel>
+                              </Grid>
 
                               <ComboBox x:Name="DestinationCredentialRow"
                                         Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2"
@@ -991,7 +999,34 @@
                                 </StackPanel>
                               </Grid>
 
-                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="4" Orientation="Vertical" Spacing="4" Margin="0,4,0,0">
+                              <Grid Grid.Column="0"
+                                    Grid.ColumnSpan="3"
+                                    Grid.Row="4"
+                                    ColumnDefinitions="*,Auto,Auto"
+                                    ColumnSpacing="8"
+                                    Margin="0,2,0,0">
+                                <StackPanel Grid.Column="0"
+                                            Spacing="2"
+                                            VerticalAlignment="Center">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.RetryPolicyLabel}" />
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.RetryPolicyDescription}"
+                                             Foreground="{StaticResource TextSecondary}"
+                                             FontSize="11"
+                                             TextWrapping="Wrap" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1"
+                                         Width="60"
+                                         HorizontalContentAlignment="Center"
+                                         ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.RetryAttemptsTooltip}"
+                                         Text="{Binding RetryMaxAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBox Grid.Column="2"
+                                         Width="70"
+                                         HorizontalContentAlignment="Center"
+                                         ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.RetryBackoffTooltip}"
+                                         Text="{Binding RetryBackoffSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                              </Grid>
+
+                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="5" Orientation="Vertical" Spacing="4" Margin="0,4,0,0">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.CredentialWarning}"
                                            Foreground="{DynamicResource WarningTextBrush}"
                                            FontSize="11"
@@ -1266,18 +1301,22 @@
                                   IsEnabled="{Binding EnableVerboseLogging}" />
                   </Grid>
 
-                  <Grid ColumnDefinitions="*,Auto"
+                  <Grid ColumnDefinitions="*"
+                        RowDefinitions="Auto,Auto"
                         Margin="0,6,0,0">
-                    <StackPanel Grid.Column="0" Spacing="2">
+                    <StackPanel Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LogConsole}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LogConsoleDescription}"
                                  Foreground="{StaticResource TextSecondary}"
-                                 FontSize="11" />
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                Spacing="8"
-                                VerticalAlignment="Center">
+                    <WrapPanel Grid.Row="1"
+                               Margin="0,8,0,0"
+                               Orientation="Horizontal"
+                               ItemSpacing="8"
+                               LineSpacing="8"
+                               VerticalAlignment="Center">
                       <Button Content="{infra:LocalizedString Key=Settings.Advanced.LogConsoleOpen}"
                               Classes="action-primary"
                               Command="{Binding OpenLogConsoleCommand}" />
@@ -1285,7 +1324,13 @@
                               Classes="action-ghost"
                               Command="{Binding ExportLogConsoleCommand}"
                               IsEnabled="{Binding EnableVerboseLogging}" />
-                    </StackPanel>
+                      <Button Content="{infra:LocalizedString Key=Settings.Advanced.SupportBundleExport}"
+                              Classes="action-ghost"
+                              Command="{Binding ExportSupportBundleCommand}" />
+                      <Button Content="{infra:LocalizedString Key=Settings.Advanced.SupportBundleImport}"
+                              Classes="action-ghost"
+                              Command="{Binding ImportSupportBundleCommand}" />
+                    </WrapPanel>
                   </Grid>
 
                 <Grid ColumnDefinitions="*,Auto"
@@ -1317,15 +1362,19 @@
                            IsEnabled="{Binding CheckForUpdatesOnStartup}" />
                 </Grid>
 
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid ColumnDefinitions="*"
+                      RowDefinitions="Auto,Auto"
                       Margin="0,4,0,0">
-                  <StackPanel Grid.Column="0" Spacing="2">
+                  <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNowDescription}"
                                Foreground="{StaticResource TextSecondary}"
-                               FontSize="11" />
+                               FontSize="11"
+                               TextWrapping="Wrap" />
                   </StackPanel>
-                  <Button Grid.Column="1"
+                  <Button Grid.Row="1"
+                          Margin="0,8,0,0"
+                          HorizontalAlignment="Left"
                           Classes="action-primary"
                           Command="{Binding CheckUpdatesNowCommand}">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />

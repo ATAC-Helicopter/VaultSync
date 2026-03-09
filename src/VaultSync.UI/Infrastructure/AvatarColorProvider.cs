@@ -88,9 +88,7 @@ public static class AvatarColorProvider
 
         lock (Sync)
         {
-            if (_cache.TryGetValue(key, out var existing) && !string.IsNullOrWhiteSpace(existing))
-                return;
-
+            // Metadata-sync color should be authoritative across machines for the same external id.
             _cache[key] = color;
             TrySave(_cache);
         }

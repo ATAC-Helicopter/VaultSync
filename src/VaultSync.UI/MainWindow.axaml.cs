@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Threading;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
 using VaultSync.UI.Infrastructure;
@@ -21,6 +22,9 @@ public partial class MainWindow : Window
     private bool _fullscreenSuppressed;
     private bool _macFullscreenDisabled;
     private bool _ignoreNextPointerPress;
+    private bool _isSidebarCollapsed;
+    private bool _sidebarAutoCollapsed;
+    private const double SidebarAutoCollapseWidth = 1450;
 
     /// <summary>
     /// Indicates whether the main window is currently active (in the foreground).
@@ -65,6 +69,11 @@ public partial class MainWindow : Window
         // Intercept closing to optionally run in background instead of quitting.
         Closing += OnMainWindowClosing;
         // ------------------------------------------------------
+        SizeChanged += (_, _) => ApplyResponsiveSidebar();
+        Dispatcher.UIThread.Post(() =>
+        {
+            ApplyResponsiveSidebar(force: true);
+        }, DispatcherPriority.Background);
 
         if (!OperatingSystem.IsMacOS())
         {
@@ -100,6 +109,97 @@ public partial class MainWindow : Window
 
         _ignoreNextPointerPress = false;
         e.Handled = true;
+    }
+
+    private void OnToggleSidebar(object? sender, RoutedEventArgs e)
+    {
+        _sidebarAutoCollapsed = false;
+        SetSidebarCollapsed(!_isSidebarCollapsed);
+    }
+
+    private void ApplyResponsiveSidebar(bool force = false)
+    {
+        var shouldAutoCollapse = Bounds.Width < SidebarAutoCollapseWidth;
+        if (!force && shouldAutoCollapse == _sidebarAutoCollapsed)
+            return;
+
+        _sidebarAutoCollapsed = shouldAutoCollapse;
+        if (shouldAutoCollapse)
+        {
+            SetSidebarCollapsed(true);
+            return;
+        }
+
+        // Expand back only when collapse was auto-triggered.
+        if (_isSidebarCollapsed)
+            SetSidebarCollapsed(false);
+    }
+
+    private void SetSidebarCollapsed(bool collapsed)
+    {
+        _isSidebarCollapsed = collapsed;
+
+        if (RootGrid.ColumnDefinitions.Count >= 1)
+            RootGrid.ColumnDefinitions[0].Width = new GridLength(collapsed ? 86 : 260);
+
+        SidebarRoot.Padding = collapsed
+            ? new Thickness(10, 12, 10, 10)
+            : new Thickness(16, 18, 16, 14);
+        SidebarTopSection.Margin = collapsed
+            ? new Thickness(0, 4, 0, 10)
+            : new Thickness(4, 10, 4, 16);
+        NavButtonsPanel.Spacing = collapsed ? 12 : 4;
+        NavButtonsPanel.Margin = collapsed
+            ? new Thickness(0, 24, 0, 10)
+            : new Thickness(0, 0, 0, 10);
+
+        ShellBanner.IsVisible = !collapsed;
+        NavigationHeader.IsVisible = !collapsed;
+        SidebarDestinations.IsVisible = !collapsed;
+        SidebarFooter.IsVisible = !collapsed;
+
+        SidebarToggleGlyph.Text = collapsed ? "\uE70D" : "\uE700";
+        SidebarToggleButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Right;
+        SidebarToggleButton.Margin = collapsed ? new Thickness(0, 0, 0, 4) : new Thickness(0, 0, 0, 2);
+        ToolTip.SetTip(SidebarToggleButton, collapsed ? "Expand sidebar" : "Collapse sidebar");
+        NavDashboardText.IsVisible = !collapsed;
+        NavProjectsText.IsVisible = !collapsed;
+        NavBackupsText.IsVisible = !collapsed;
+        NavSettingsText.IsVisible = !collapsed;
+
+        var contentAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+        var navButtonWidth = collapsed ? 48d : double.NaN;
+        var navButtonHeight = collapsed ? 48d : double.NaN;
+        var navButtonPadding = collapsed ? new Thickness(0) : new Thickness(10, 8);
+        NavDashboardButton.HorizontalContentAlignment = contentAlignment;
+        NavProjectsButton.HorizontalContentAlignment = contentAlignment;
+        NavBackupsButton.HorizontalContentAlignment = contentAlignment;
+        NavSettingsButton.HorizontalContentAlignment = contentAlignment;
+        NavDashboardButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        NavProjectsButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        NavBackupsButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        NavSettingsButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        NavDashboardButton.Width = navButtonWidth;
+        NavProjectsButton.Width = navButtonWidth;
+        NavBackupsButton.Width = navButtonWidth;
+        NavSettingsButton.Width = navButtonWidth;
+        NavDashboardButton.Height = navButtonHeight;
+        NavProjectsButton.Height = navButtonHeight;
+        NavBackupsButton.Height = navButtonHeight;
+        NavSettingsButton.Height = navButtonHeight;
+        NavDashboardButton.Padding = navButtonPadding;
+        NavProjectsButton.Padding = navButtonPadding;
+        NavBackupsButton.Padding = navButtonPadding;
+        NavSettingsButton.Padding = navButtonPadding;
+
+        NavDashboardButton.Classes.Set("compact", collapsed);
+        NavProjectsButton.Classes.Set("compact", collapsed);
+        NavBackupsButton.Classes.Set("compact", collapsed);
+        NavSettingsButton.Classes.Set("compact", collapsed);
+        NavDashboardIconBadge.Classes.Set("compact", collapsed);
+        NavProjectsIconBadge.Classes.Set("compact", collapsed);
+        NavBackupsIconBadge.Classes.Set("compact", collapsed);
+        NavSettingsIconBadge.Classes.Set("compact", collapsed);
     }
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)

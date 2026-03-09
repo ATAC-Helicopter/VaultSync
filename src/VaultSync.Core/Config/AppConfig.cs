@@ -217,6 +217,14 @@ namespace VaultSync.Core.Config
         public bool AutoImportMetadata { get; set; } = true;
         public bool ForceMetadataBackfill { get; set; } = false;
         /// <summary>
+        /// Total attempts for backup work on this destination (initial try included).
+        /// </summary>
+        public int RetryMaxAttempts { get; set; } = 1;
+        /// <summary>
+        /// Base backoff in seconds between retries for this destination.
+        /// </summary>
+        public int RetryBackoffSeconds { get; set; } = 10;
+        /// <summary>
         /// Auto-tuned archive upload buffer size for this destination.
         /// When null, VaultSync will probe before the first archive upload and cache the result.
         /// </summary>
@@ -274,8 +282,8 @@ namespace VaultSync.Core.Config
 
     // -------- App Behavior / Background Mode --------
 
-    public sealed class AppBehaviorConfig
-    {
+public sealed class AppBehaviorConfig
+{
         /// <summary>
         /// If true, closing the main window hides it and keeps VaultSync running
         /// in the background via tray/menu bar instead of quitting.
@@ -319,5 +327,10 @@ namespace VaultSync.Core.Config
         /// If true, confirm before deleting backup data from destinations.
         /// </summary>
         public bool ConfirmDeleteBackup { get; set; } = true;
+
+        /// <summary>
+        /// Discovered project root paths hidden from the Projects page list.
+        /// </summary>
+        public List<string> HiddenProjectPaths { get; set; } = new();
     }
 }

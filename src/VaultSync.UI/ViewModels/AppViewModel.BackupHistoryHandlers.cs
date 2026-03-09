@@ -142,7 +142,12 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     var relativePath = backup.Path ?? string.Empty;
-                    var fullPath     = Path.GetFullPath(Path.Combine(backupRoot, relativePath));
+                    if (!TryCombinePathUnderRoot(backupRoot, relativePath, out var fullPath, out var combineError))
+                    {
+                        deleteError = combineError ?? L("Backups.Delete.Error", "Delete failed");
+                        deleteSucceeded = false;
+                        return;
+                    }
 
                     await Task.Run(() =>
                     {
@@ -150,9 +155,11 @@ namespace VaultSync.UI.ViewModels
                         {
                             if (Directory.Exists(fullPath))
                             {
-                                deleteSucceeded = DeleteDirectoryRobust(fullPath, out var deleteFailure);
+                                deleteSucceeded = DeleteDirectoryRobust(fullPath, out var deleteFailure, out var deletePermissionDenied);
                                 if (!deleteSucceeded && string.IsNullOrWhiteSpace(deleteError))
                                     deleteError = deleteFailure ?? L("Backups.Delete.Error", "Delete failed");
+                                if (deletePermissionDenied)
+                                    permissionDenied = true;
                             }
                             else if (File.Exists(fullPath))
                             {
@@ -244,6 +251,12 @@ namespace VaultSync.UI.ViewModels
                 {
                     var title = L("Backups.Delete.FailedTitle", "Backup delete failed");
                     var msg = Lf("Backups.Delete.FailedMessage", "Could not delete backup '{0}'.", projectName);
+                    if (permissionDenied)
+                    {
+                        msg = $"{msg} " + L(
+                            "Backups.Delete.PermissionHint",
+                            "VaultSync could not remove one or more protected files on the destination. Verify destination permissions/credentials and retry.");
+                    }
                     if (!string.IsNullOrWhiteSpace(deleteError))
                     {
                         msg = $"{msg} {deleteError}";
@@ -675,8 +688,12 @@ namespace VaultSync.UI.ViewModels
         /// Deletes a directory tree, clearing read-only attributes to avoid UnauthorizedAccess on Windows.
         /// </summary>
         private static bool DeleteDirectoryRobust(string path, out string? error)
+            => DeleteDirectoryRobust(path, out error, out _);
+
+        private static bool DeleteDirectoryRobust(string path, out string? error, out bool permissionDenied)
         {
             error = null;
+            permissionDenied = false;
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
                 return true;
 
@@ -688,6 +705,10 @@ namespace VaultSync.UI.ViewModels
                     var attrs = File.GetAttributes(file);
                     if ((attrs & FileAttributes.ReadOnly) != 0)
                         File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    permissionDenied = true;
                 }
                 catch
                 {
@@ -703,6 +724,10 @@ namespace VaultSync.UI.ViewModels
                     if ((attrs & FileAttributes.ReadOnly) != 0)
                         File.SetAttributes(dir, attrs & ~FileAttributes.ReadOnly);
                 }
+                catch (UnauthorizedAccessException)
+                {
+                    permissionDenied = true;
+                }
                 catch
                 {
                     // ignore
@@ -713,6 +738,134 @@ namespace VaultSync.UI.ViewModels
             {
                 Directory.Delete(path, recursive: true);
                 return !Directory.Exists(path);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                permissionDenied = true;
+                if (TryDeleteDirectoryManually(path, ref permissionDenied, out var manualError))
+                    return true;
+
+                error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
+                return false;
+            }
+            catch (IOException ex)
+            {
+                if (TryDeleteDirectoryManually(path, ref permissionDenied, out var manualError))
+                    return true;
+
+                error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                if (IsAccessDenied(ex))
+                    permissionDenied = true;
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TryDeleteDirectoryManually(string path, ref bool permissionDenied, out string? error)
+        {
+            error = null;
+            if (!Directory.Exists(path))
+                return true;
+
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        permissionDenied = true;
+                    }
+                    catch
+                    {
+                        // best effort
+                    }
+
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        permissionDenied = true;
+                        error = ex.Message;
+                    }
+                    catch (Exception ex)
+                    {
+                        error = ex.Message;
+                    }
+                }
+
+                foreach (var dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
+                                             .OrderByDescending(d => d.Length))
+                {
+                    try
+                    {
+                        Directory.Delete(dir, recursive: false);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        permissionDenied = true;
+                        error = ex.Message;
+                    }
+                    catch (Exception ex)
+                    {
+                        error = ex.Message;
+                    }
+                }
+
+                if (Directory.Exists(path))
+                    Directory.Delete(path, recursive: false);
+
+                return !Directory.Exists(path);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                permissionDenied = true;
+                error = ex.Message;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TryCombinePathUnderRoot(string root, string relativePath, out string fullPath, out string? error)
+        {
+            fullPath = string.Empty;
+            error = null;
+
+            try
+            {
+                var normalizedRoot = Path.GetFullPath(root)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+
+                var safeRelative = string.IsNullOrWhiteSpace(relativePath) ? string.Empty : relativePath.Trim();
+                if (Path.IsPathFullyQualified(safeRelative))
+                {
+                    error = "Backup path is absolute and outside destination root.";
+                    return false;
+                }
+
+                var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, safeRelative));
+                if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    error = "Backup path resolves outside destination root.";
+                    return false;
+                }
+
+                fullPath = candidate;
+                return true;
             }
             catch (Exception ex)
             {
@@ -922,7 +1075,11 @@ namespace VaultSync.UI.ViewModels
                 return RestoreBackupPreparation.Failure;
             }
 
-            var backupFullPath = Path.Combine(backupRoot, backup.Path);
+            if (!TryCombinePathUnderRoot(backupRoot, backup.Path, out var backupFullPath, out var backupPathError))
+            {
+                Console.WriteLine($"[Restore] Backup path rejected for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', error='{backupPathError}'.");
+                return RestoreBackupPreparation.Failure;
+            }
             if (!Directory.Exists(backupFullPath))
             {
                 Console.WriteLine($"[Restore] Backup path missing for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', full='{backupFullPath}'.");
@@ -936,7 +1093,8 @@ namespace VaultSync.UI.ViewModels
                 return RestoreBackupPreparation.Failure;
             }
 
-            var projectRoot = ResolveRestoreTarget(project);
+            var restoreMode = ProjectRestoreMode.Normalize(project.RestoreMode);
+            var projectRoot = ResolveRestoreTarget(project, restoreMode);
             if (string.IsNullOrWhiteSpace(projectRoot))
                 return RestoreBackupPreparation.Failure;
 
@@ -949,6 +1107,7 @@ namespace VaultSync.UI.ViewModels
                 projectRoot,
                 project.Id,
                 project.Name,
+                restoreMode,
                 isEncrypted,
                 backup.IsImported,
                 BackupModes.Normalize(backup.BackupMode));
@@ -960,6 +1119,7 @@ namespace VaultSync.UI.ViewModels
             string ProjectRoot,
             int ProjectId,
             string ProjectName,
+            string RestoreMode,
             bool IsEncrypted,
             bool IsImported,
             string BackupMode)
@@ -970,6 +1130,7 @@ namespace VaultSync.UI.ViewModels
                 string.Empty,
                 0,
                 string.Empty,
+                ProjectRestoreMode.Direct,
                 false,
                 false,
                 BackupModes.Full);
@@ -1002,8 +1163,28 @@ namespace VaultSync.UI.ViewModels
             return candidates;
         }
 
-        private string ResolveRestoreTarget(Project project)
+        private string ResolveRestoreTarget(Project project, string restoreMode)
         {
+            var mode = ProjectRestoreMode.Normalize(restoreMode);
+            if (string.Equals(mode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase))
+            {
+                var safeProjectName = string.Concat(project.Name.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch));
+                if (string.IsNullOrWhiteSpace(safeProjectName))
+                    safeProjectName = "Project";
+
+                var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+                var sandboxRoot = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "VaultSync",
+                    "restore-sandbox",
+                    safeProjectName,
+                    stamp);
+
+                Directory.CreateDirectory(sandboxRoot);
+                Console.WriteLine($"[Restore] Sandbox mode active. Using sandbox path '{sandboxRoot}'.");
+                return sandboxRoot;
+            }
+
             if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
                 return project.RootPath;
 
@@ -1177,7 +1358,9 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        private async Task<bool> ConfirmRestoreBackupAsync(RestoreBackupPreparation preparation)
+        private async Task<(bool Confirmed, string RestoreMode, IReadOnlyList<string> SelectedTopLevelTargets)> ConfirmRestoreBackupAsync(
+            RestoreBackupPreparation preparation,
+            RestoreExecutionPreview preview)
         {
             return await Dispatcher.UIThread.InvokeAsync(async () =>
             {
@@ -1211,10 +1394,14 @@ namespace VaultSync.UI.ViewModels
                     : string.Equals(preparation.BackupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase)
                         ? L("Backups.Snapshot.Type.Incremental", "Incremental")
                         : L("Backups.Snapshot.Type.Full", "Full");
+                var restoreModeLabel = string.Equals(preparation.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
+                    ? L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")
+                    : L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)");
 
                 var guidanceLines = new[]
                 {
                     Lf("Backups.Restore.GuidanceType", "Type: {0}", backupTypeLabel),
+                    Lf("Backups.Restore.GuidanceMode", "Mode: {0}", restoreModeLabel),
                     L("Backups.Restore.GuidanceOverwrite", "Files with matching paths are overwritten by restored files."),
                     L("Backups.Restore.GuidanceKeepExtra", "Files that exist only in the current project folder are kept."),
                     preparation.IsEncrypted
@@ -1233,6 +1420,100 @@ namespace VaultSync.UI.ViewModels
                     if (GetBrush("TextSecondary") is { } secondary)
                         row.Foreground = secondary;
                     guidancePanel.Children.Add(row);
+                }
+
+                var previewHeader = new TextBlock
+                {
+                    Text = L("Backups.Restore.Preview.Header", "Restore preview"),
+                    FontWeight = FontWeight.SemiBold
+                };
+                var previewPanel = new StackPanel { Spacing = 4 };
+                if (!preview.IsAvailable)
+                {
+                    var unavailable = new TextBlock
+                    {
+                        Text = "• " + (string.IsNullOrWhiteSpace(preview.UnavailableReason)
+                            ? L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup.")
+                            : preview.UnavailableReason),
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    if (GetBrush("TextSecondary") is { } unavailableSecondary)
+                        unavailable.Foreground = unavailableSecondary;
+                    previewPanel.Children.Add(unavailable);
+                }
+                else
+                {
+                    var previewLines = new[]
+                    {
+                        Lf("Backups.Restore.Preview.TotalFiles", "Files in backup: {0}", preview.TotalFiles.ToString(CultureInfo.CurrentCulture)),
+                        Lf("Backups.Restore.Preview.NewFiles", "New files to add: {0}", preview.NewFiles.ToString(CultureInfo.CurrentCulture)),
+                        Lf("Backups.Restore.Preview.OverwriteFiles", "Files that will overwrite existing project files: {0}", preview.OverwriteFiles.ToString(CultureInfo.CurrentCulture)),
+                        Lf("Backups.Restore.Preview.ConflictFiles", "Potential conflicts (project appears newer/different): {0}", preview.ConflictFiles.ToString(CultureInfo.CurrentCulture)),
+                        Lf("Backups.Restore.Preview.ExtraFilesKept", "Existing project-only files that will be kept: {0}", preview.ExtraFilesKept.ToString(CultureInfo.CurrentCulture)),
+                        Lf("Backups.Restore.Preview.TotalBytes", "Total restore data: {0}", BackupSnapshotItem.FormatSize(preview.TotalBytes))
+                    };
+                    foreach (var line in previewLines)
+                    {
+                        var row = new TextBlock
+                        {
+                            Text = "• " + line,
+                            TextWrapping = TextWrapping.Wrap
+                        };
+                        if (GetBrush("TextSecondary") is { } previewSecondary)
+                            row.Foreground = previewSecondary;
+                        previewPanel.Children.Add(row);
+                    }
+                }
+
+                var restoreModeOptions = new List<RestoreModeOption>
+                {
+                    new(ProjectRestoreMode.Direct, L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)")),
+                    new(ProjectRestoreMode.Sandbox, L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)"))
+                };
+                var restoreModeCombo = new ComboBox
+                {
+                    ItemsSource = restoreModeOptions,
+                    SelectedItem = restoreModeOptions.FirstOrDefault(o =>
+                        string.Equals(o.Id, preparation.RestoreMode, StringComparison.OrdinalIgnoreCase))
+                        ?? restoreModeOptions[0],
+                    MinWidth = 360
+                };
+                var restoreModeSelector = new StackPanel { Spacing = 5 };
+                restoreModeSelector.Children.Add(new TextBlock
+                {
+                    Text = L("Backups.Restore.Mode.Label", "Restore mode"),
+                    FontWeight = FontWeight.SemiBold
+                });
+                restoreModeSelector.Children.Add(restoreModeCombo);
+
+                var targetSelector = new StackPanel { Spacing = 5 };
+                var targetSelections = new List<CheckBox>();
+                var targetOptions = preview.TopLevelTargets;
+                var showTargetSelector = preview.IsAvailable && targetOptions.Count > 1;
+                if (showTargetSelector)
+                {
+                    targetSelector.Children.Add(new TextBlock
+                    {
+                        Text = L("Backups.Restore.Selection.Header", "Restore targets"),
+                        FontWeight = FontWeight.SemiBold
+                    });
+                    targetSelector.Children.Add(new TextBlock
+                    {
+                        Text = L("Backups.Restore.Selection.Description", "Choose which top-level folders/files to restore."),
+                        TextWrapping = TextWrapping.Wrap,
+                        Foreground = GetBrush("TextSecondary")
+                    });
+
+                    foreach (var option in targetOptions)
+                    {
+                        var cb = new CheckBox
+                        {
+                            Content = option,
+                            IsChecked = true
+                        };
+                        targetSelections.Add(cb);
+                        targetSelector.Children.Add(cb);
+                    }
                 }
 
                 var buttonRow = new StackPanel
@@ -1275,6 +1556,11 @@ namespace VaultSync.UI.ViewModels
                 content.Children.Add(question);
                 content.Children.Add(guidanceHeader);
                 content.Children.Add(guidancePanel);
+                content.Children.Add(previewHeader);
+                content.Children.Add(previewPanel);
+                if (showTargetSelector)
+                    content.Children.Add(targetSelector);
+                content.Children.Add(restoreModeSelector);
                 content.Children.Add(buttonRow);
 
                 var card = new Border
@@ -1291,6 +1577,576 @@ namespace VaultSync.UI.ViewModels
                     Content = card,
                     CanResize = false,
                     Width = 620,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                var selectedMode = (restoreModeCombo.SelectedItem as RestoreModeOption)?.Id ?? preparation.RestoreMode;
+                IReadOnlyList<string> selectedTargets = showTargetSelector
+                    ? targetSelections.Where(cb => cb.IsChecked == true)
+                        .Select(cb => cb.Content?.ToString() ?? string.Empty)
+                        .Where(v => !string.IsNullOrWhiteSpace(v))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                    : targetOptions.ToList();
+
+                if (confirmed && showTargetSelector && selectedTargets.Count == 0)
+                    return (false, ProjectRestoreMode.Normalize(selectedMode), Array.Empty<string>());
+
+                return (confirmed, ProjectRestoreMode.Normalize(selectedMode), selectedTargets);
+            });
+        }
+
+        private enum SandboxPostRestoreAction
+        {
+            Keep,
+            Open,
+            Apply
+        }
+
+        private sealed record SandboxPostRestoreDecision(
+            SandboxPostRestoreAction Action,
+            bool DeleteAfterApply);
+
+        private async Task<SandboxPostRestoreDecision> ConfirmSandboxPostRestoreActionAsync(string projectName, string sandboxPath)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Restore.Sandbox.Post.Title", "Sandbox restore completed"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var prompt = new TextBlock
+                {
+                    Text = Lf(
+                        "Backups.Restore.Sandbox.Post.Prompt",
+                        "Review the restored files in sandbox for '{0}', then choose what to do next.",
+                        projectName),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var pathLine = new TextBlock
+                {
+                    Text = sandboxPath,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                if (GetBrush("TextSecondary") is { } secondary)
+                    pathLine.Foreground = secondary;
+
+                var deleteAfterApply = new CheckBox
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.DeleteAfterApply", "Delete sandbox folder after apply"),
+                    IsChecked = true
+                };
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var keepButton = new Button
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.Keep", "Keep for later"),
+                    MinWidth = 130
+                };
+                keepButton.Classes.Add("action-ghost");
+
+                var openButton = new Button
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.Open", "Open sandbox"),
+                    MinWidth = 130
+                };
+                openButton.Classes.Add("action-ghost");
+
+                var applyButton = new Button
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
+                    MinWidth = 150
+                };
+                applyButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var action = SandboxPostRestoreAction.Keep;
+                keepButton.Click += (_, _) =>
+                {
+                    action = SandboxPostRestoreAction.Keep;
+                    window?.Close();
+                };
+                openButton.Click += (_, _) =>
+                {
+                    action = SandboxPostRestoreAction.Open;
+                    window?.Close();
+                };
+                applyButton.Click += (_, _) =>
+                {
+                    action = SandboxPostRestoreAction.Apply;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(keepButton);
+                buttonRow.Children.Add(openButton);
+                buttonRow.Children.Add(applyButton);
+
+                var content = new StackPanel { Spacing = 12 };
+                content.Children.Add(title);
+                content.Children.Add(prompt);
+                content.Children.Add(pathLine);
+                content.Children.Add(deleteAfterApply);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Restore.Sandbox.Post.Title", "Sandbox restore completed"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 650,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var owner = GetMainWindow();
+                if (owner != null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await tcs.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return new SandboxPostRestoreDecision(
+                    action,
+                    deleteAfterApply.IsChecked == true);
+            });
+        }
+
+        private async Task ApplySandboxRestoreToProjectAsync(
+            Project project,
+            string projectName,
+            string sandboxPath,
+            bool deleteAfterApply)
+        {
+            if (!Directory.Exists(sandboxPath))
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Restore.Sandbox.ApplyMissing", "Sandbox folder no longer exists."),
+                    "Error");
+                return;
+            }
+
+            var targetPath = ResolveRestoreTarget(project, ProjectRestoreMode.Direct);
+            if (string.IsNullOrWhiteSpace(targetPath))
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    "Error");
+                return;
+            }
+
+            var preview = await Task.Run(() => BuildSandboxApplyPreview(sandboxPath, targetPath));
+            var applyConfirmed = await ConfirmSandboxApplyAsync(projectName, targetPath, preview);
+            if (!applyConfirmed)
+                return;
+
+            var applyCardId = $"sandbox-apply-{project.Id}";
+            BackupsViewModel.IsBusy = true;
+            BackupsViewModel.BusyMessage = L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...");
+            BackupsViewModel.UpdateActiveBackup(
+                applyCardId,
+                projectName,
+                0,
+                L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore..."),
+                string.Empty,
+                allowCancel: false);
+
+            var applySucceeded = false;
+            string? cleanupError = null;
+            try
+            {
+                await Task.Run(() =>
+                {
+                    CopyDirectoryWithProgress(sandboxPath, targetPath, null, 0, 100, update =>
+                    {
+                        var label = string.IsNullOrWhiteSpace(update.CurrentFile)
+                            ? L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...")
+                            : update.CurrentFile;
+                        BackupsViewModel.UpdateActiveBackup(
+                            applyCardId,
+                            projectName,
+                            update.Percent,
+                            label,
+                            string.Empty,
+                            allowCancel: false);
+                    });
+                });
+
+                _repo.UpdateProjectNeedsRestore(project.Id, false);
+                applySucceeded = true;
+
+                if (deleteAfterApply)
+                {
+                    if (!DeleteDirectoryRobust(sandboxPath, out cleanupError))
+                    {
+                        cleanupError ??= L("Backups.Restore.Sandbox.CleanupFailed", "Sandbox cleanup failed.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Restore] Failed to apply sandbox restore for '{projectName}': {ex.Message}");
+                BackupsViewModel.ShowNotification(
+                    Lf("Backups.Restore.Sandbox.ApplyFailed", "Failed to apply sandbox restore: {0}", ex.Message),
+                    "Error");
+            }
+            finally
+            {
+                BackupsViewModel.RemoveActiveBackup(applyCardId);
+                BackupsViewModel.IsBusy = false;
+                BackupsViewModel.BusyMessage = string.Empty;
+            }
+
+            if (!applySucceeded)
+                return;
+
+            if (string.IsNullOrWhiteSpace(cleanupError))
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Restore.Sandbox.ApplyCompleted", "Sandbox restore applied to project."),
+                    "Success");
+            }
+            else
+            {
+                BackupsViewModel.ShowNotification(
+                    Lf(
+                        "Backups.Restore.Sandbox.ApplyCompletedWithCleanupWarning",
+                        "Sandbox restore applied, but cleanup failed: {0}",
+                        cleanupError),
+                    "Warning");
+            }
+        }
+
+        private sealed record SandboxApplyPreview(
+            int TotalFiles,
+            int NewFiles,
+            int OverwriteFiles,
+            long TotalBytes,
+            long OverwriteBytes);
+
+        private sealed record RestoreExecutionPreview(
+            bool IsAvailable,
+            int TotalFiles,
+            int NewFiles,
+            int OverwriteFiles,
+            int ConflictFiles,
+            int ExtraFilesKept,
+            long TotalBytes,
+            IReadOnlyList<string> TopLevelTargets,
+            string UnavailableReason)
+        {
+            public static RestoreExecutionPreview Unavailable(string reason) => new(
+                false,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                Array.Empty<string>(),
+                reason);
+        }
+
+        private RestoreExecutionPreview BuildRestoreExecutionPreview(RestoreBackupPreparation preparation)
+        {
+            if (preparation.IsEncrypted)
+            {
+                return RestoreExecutionPreview.Unavailable(
+                    L(
+                        "Backups.Restore.Preview.EncryptedUnavailable",
+                        "Preview is unavailable before decrypt for encrypted backups."));
+            }
+
+            if (!Directory.Exists(preparation.BackupFullPath) || !Directory.Exists(preparation.ProjectRoot))
+            {
+                return RestoreExecutionPreview.Unavailable(
+                    L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup."));
+            }
+
+            var sourceRelative = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var topLevelTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var totalFiles = 0;
+            var newFiles = 0;
+            var overwriteFiles = 0;
+            var conflictFiles = 0;
+            long totalBytes = 0;
+            var archivePath = Path.Combine(preparation.BackupFullPath, BackupArchiveCryptoService.PlainArchiveFileName);
+            if (File.Exists(archivePath))
+            {
+                using var archive = ZipFile.OpenRead(archivePath);
+                foreach (var entry in archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)))
+                {
+                    var relative = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                    sourceRelative.Add(relative);
+                    var topLevel = GetTopLevelSegment(entry.FullName);
+                    if (!string.IsNullOrWhiteSpace(topLevel))
+                        topLevelTargets.Add(topLevel);
+                    totalFiles++;
+                    totalBytes += Math.Max(0, entry.Length);
+
+                    var targetPath = Path.Combine(preparation.ProjectRoot, relative);
+                    if (!File.Exists(targetPath))
+                    {
+                        newFiles++;
+                        continue;
+                    }
+
+                    overwriteFiles++;
+                    var targetInfo = new FileInfo(targetPath);
+                    var sourceWriteUtc = entry.LastWriteTime.UtcDateTime == DateTime.MinValue
+                        ? DateTime.MinValue
+                        : entry.LastWriteTime.UtcDateTime;
+                    var targetSeemsNewer = sourceWriteUtc != DateTime.MinValue
+                        && targetInfo.LastWriteTimeUtc > sourceWriteUtc.AddSeconds(1);
+                    var contentLooksDifferent = targetInfo.Length != entry.Length;
+                    if (targetSeemsNewer || contentLooksDifferent)
+                        conflictFiles++;
+                }
+            }
+            else
+            {
+                var sourceFiles = Directory.GetFiles(preparation.BackupFullPath, "*", SearchOption.AllDirectories);
+                foreach (var sourcePath in sourceFiles)
+                {
+                    var relative = Path.GetRelativePath(preparation.BackupFullPath, sourcePath);
+                    sourceRelative.Add(relative);
+                    var topLevel = GetTopLevelSegment(relative);
+                    if (!string.IsNullOrWhiteSpace(topLevel))
+                        topLevelTargets.Add(topLevel);
+                    totalFiles++;
+
+                    var sourceInfo = new FileInfo(sourcePath);
+                    totalBytes += sourceInfo.Length;
+
+                    var targetPath = Path.Combine(preparation.ProjectRoot, relative);
+                    if (!File.Exists(targetPath))
+                    {
+                        newFiles++;
+                        continue;
+                    }
+
+                    overwriteFiles++;
+                    var targetInfo = new FileInfo(targetPath);
+                    var targetSeemsNewer = targetInfo.LastWriteTimeUtc > sourceInfo.LastWriteTimeUtc.AddSeconds(1);
+                    var contentLooksDifferent = targetInfo.Length != sourceInfo.Length;
+                    if (targetSeemsNewer || contentLooksDifferent)
+                        conflictFiles++;
+                }
+            }
+
+            var extraFilesKept = 0;
+            try
+            {
+                var targetFiles = Directory.GetFiles(preparation.ProjectRoot, "*", SearchOption.AllDirectories);
+                foreach (var targetPath in targetFiles)
+                {
+                    var relative = Path.GetRelativePath(preparation.ProjectRoot, targetPath);
+                    if (!sourceRelative.Contains(relative))
+                        extraFilesKept++;
+                }
+            }
+            catch
+            {
+                // best-effort; keep computed counts from source scan
+            }
+
+            return new RestoreExecutionPreview(
+                true,
+                totalFiles,
+                newFiles,
+                overwriteFiles,
+                conflictFiles,
+                extraFilesKept,
+                totalBytes,
+                topLevelTargets.OrderBy(v => v, StringComparer.CurrentCultureIgnoreCase).ToArray(),
+                string.Empty);
+        }
+
+        private static SandboxApplyPreview BuildSandboxApplyPreview(string sandboxPath, string targetPath)
+        {
+            var totalFiles = 0;
+            var newFiles = 0;
+            var overwriteFiles = 0;
+            long totalBytes = 0;
+            long overwriteBytes = 0;
+
+            foreach (var sourceFile in Directory.EnumerateFiles(sandboxPath, "*", SearchOption.AllDirectories))
+            {
+                totalFiles++;
+                var fileInfo = new FileInfo(sourceFile);
+                totalBytes += fileInfo.Length;
+
+                var relativePath = Path.GetRelativePath(sandboxPath, sourceFile);
+                var destinationFile = Path.Combine(targetPath, relativePath);
+                if (File.Exists(destinationFile))
+                {
+                    overwriteFiles++;
+                    overwriteBytes += fileInfo.Length;
+                }
+                else
+                {
+                    newFiles++;
+                }
+            }
+
+            return new SandboxApplyPreview(totalFiles, newFiles, overwriteFiles, totalBytes, overwriteBytes);
+        }
+
+        private async Task<bool> ConfirmSandboxApplyAsync(string projectName, string targetPath, SandboxApplyPreview preview)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var title = new TextBlock
+                {
+                    Text = L("Backups.Restore.Sandbox.ApplyConfirmTitle", "Apply sandbox restore to project?"),
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var prompt = new TextBlock
+                {
+                    Text = Lf(
+                        "Backups.Restore.Sandbox.ApplyConfirmPrompt",
+                        "Apply sandbox restore for '{0}' into:\n{1}",
+                        projectName,
+                        targetPath),
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                var summaryHeader = new TextBlock
+                {
+                    Text = L("Backups.Restore.Sandbox.ApplySummaryHeader", "Apply summary"),
+                    FontWeight = FontWeight.SemiBold
+                };
+
+                var summaryLines = new[]
+                {
+                    Lf("Backups.Restore.Sandbox.ApplySummaryTotalFiles", "Total files to copy: {0}", preview.TotalFiles.ToString(CultureInfo.CurrentCulture)),
+                    Lf("Backups.Restore.Sandbox.ApplySummaryNewFiles", "New files: {0}", preview.NewFiles.ToString(CultureInfo.CurrentCulture)),
+                    Lf("Backups.Restore.Sandbox.ApplySummaryOverwriteFiles", "Files that overwrite existing project files: {0}", preview.OverwriteFiles.ToString(CultureInfo.CurrentCulture)),
+                    Lf("Backups.Restore.Sandbox.ApplySummaryTotalBytes", "Total data to write: {0}", BackupSnapshotItem.FormatSize(preview.TotalBytes)),
+                    Lf("Backups.Restore.Sandbox.ApplySummaryOverwriteBytes", "Data that overwrites existing files: {0}", BackupSnapshotItem.FormatSize(preview.OverwriteBytes))
+                };
+
+                var summaryPanel = new StackPanel { Spacing = 4 };
+                foreach (var line in summaryLines)
+                {
+                    var row = new TextBlock
+                    {
+                        Text = "• " + line,
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    if (GetBrush("TextSecondary") is { } secondary)
+                        row.Foreground = secondary;
+                    summaryPanel.Children.Add(row);
+                }
+
+                var warning = new TextBlock
+                {
+                    Text = L("Backups.Restore.Sandbox.ApplyConfirmWarning", "Existing files with matching paths will be overwritten."),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                if (GetBrush("TextSecondary") is { } warningBrush)
+                    warning.Foreground = warningBrush;
+
+                var buttonRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 10
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 120
+                };
+                cancelButton.Classes.Add("action-ghost");
+
+                var applyButton = new Button
+                {
+                    Content = L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
+                    MinWidth = 150
+                };
+                applyButton.Classes.Add("action-primary");
+
+                Window? window = null;
+                var confirmed = false;
+                cancelButton.Click += (_, _) => window?.Close();
+                applyButton.Click += (_, _) =>
+                {
+                    confirmed = true;
+                    window?.Close();
+                };
+
+                buttonRow.Children.Add(cancelButton);
+                buttonRow.Children.Add(applyButton);
+
+                var content = new StackPanel { Spacing = 12 };
+                content.Children.Add(title);
+                content.Children.Add(prompt);
+                content.Children.Add(summaryHeader);
+                content.Children.Add(summaryPanel);
+                content.Children.Add(warning);
+                content.Children.Add(buttonRow);
+
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16)
+                };
+                card.Classes.Add("card");
+                card.Child = content;
+
+                window = new Window
+                {
+                    Title = L("Backups.Restore.Sandbox.ApplyConfirmTitle", "Apply sandbox restore to project?"),
+                    Content = card,
+                    CanResize = false,
+                    Width = 700,
                     SizeToContent = SizeToContent.Height,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
@@ -1339,11 +2195,33 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var restoreConfirmed = await ConfirmRestoreBackupAsync(preparation);
-            if (!restoreConfirmed)
+            var restorePreview = await Task.Run(() => BuildRestoreExecutionPreview(preparation));
+            var restoreDecision = await ConfirmRestoreBackupAsync(preparation, restorePreview);
+            if (!restoreDecision.Confirmed)
                 return;
 
-            var projectRoot   = preparation.ProjectRoot;
+            var selectedRestoreMode = ProjectRestoreMode.Normalize(restoreDecision.RestoreMode);
+            var selectedTopLevelTargets = restoreDecision.SelectedTopLevelTargets;
+            var restoreProject = _repo.GetProjectById(preparation.ProjectId);
+            if (restoreProject is null)
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    "Error");
+                Console.WriteLine($"[Restore] Project not found during restore execution for backupId={backupId}.");
+                return;
+            }
+
+            var projectRoot = ResolveRestoreTarget(restoreProject, selectedRestoreMode);
+            if (string.IsNullOrWhiteSpace(projectRoot))
+            {
+                BackupsViewModel.ShowNotification(
+                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    "Error");
+                Console.WriteLine($"[Restore] Restore target resolution failed for backupId={backupId}.");
+                return;
+            }
+
             var backupFullPath = preparation.BackupFullPath;
             BackupsViewModel.IsBusy      = true;
             BackupsViewModel.BusyMessage = $"Restoring {preparation.ProjectName}...";
@@ -1359,18 +2237,59 @@ namespace VaultSync.UI.ViewModels
             var restoreSucceeded = false;
             try
             {
-                void RunRestore(string? encryptionPassword) =>
-                    RestoreDirectory(backupFullPath, projectRoot, encryptionPassword, (percent, currentFile) =>
+                long lastProcessedBytes = 0;
+                var lastProgressSampleUtc = DateTime.UtcNow;
+                double smoothedBytesPerSecond = 0;
+
+                string BuildRestoreEtaLabel(RestoreProgressUpdate update)
+                {
+                    if (update.TotalBytes <= 0)
+                        return string.Empty;
+
+                    var nowUtc = DateTime.UtcNow;
+                    var elapsedSeconds = (nowUtc - lastProgressSampleUtc).TotalSeconds;
+                    if (elapsedSeconds >= 0.2 && update.ProcessedBytes >= lastProcessedBytes)
                     {
-                        var label = string.IsNullOrWhiteSpace(currentFile)
+                        var instantRate = (update.ProcessedBytes - lastProcessedBytes) / elapsedSeconds;
+                        if (instantRate >= 0)
+                        {
+                            smoothedBytesPerSecond = smoothedBytesPerSecond <= 0
+                                ? instantRate
+                                : (smoothedBytesPerSecond * 0.75) + (instantRate * 0.25);
+                        }
+
+                        lastProcessedBytes = update.ProcessedBytes;
+                        lastProgressSampleUtc = nowUtc;
+                    }
+
+                    var speedLabel = smoothedBytesPerSecond > 0
+                        ? $"{BackupSnapshotItem.FormatSize((long)smoothedBytesPerSecond)}/s"
+                        : L("Backups.Progress.Estimating", "Estimating...");
+
+                    var processedLabel = BackupSnapshotItem.FormatSize(Math.Max(0, update.ProcessedBytes));
+                    var totalLabel = BackupSnapshotItem.FormatSize(update.TotalBytes);
+                    var detailLabel = string.Format(
+                        CultureInfo.CurrentCulture,
+                        "Restoring ({0}/{1})",
+                        processedLabel,
+                        totalLabel);
+
+                    return $"{speedLabel} - {detailLabel}";
+                }
+
+                void RunRestore(string? encryptionPassword) =>
+                    RestoreDirectory(backupFullPath, projectRoot, encryptionPassword, selectedTopLevelTargets, update =>
+                    {
+                        var label = string.IsNullOrWhiteSpace(update.CurrentFile)
                             ? L("Backups.Status.Restoring", "Restoring backup...")
-                            : currentFile;
+                            : update.CurrentFile;
+                        var etaLabel = BuildRestoreEtaLabel(update);
                         BackupsViewModel.UpdateActiveBackup(
                             restoreCardId,
                             preparation.ProjectName,
-                            percent,
+                            update.Percent,
                             label,
-                            string.Empty,
+                            etaLabel,
                             allowCancel: false);
                     });
 
@@ -1459,9 +2378,43 @@ namespace VaultSync.UI.ViewModels
                 if (restoreSucceeded)
                 {
                     var restoredProject = _repo.GetProjectByName(preparation.ProjectName);
-                    if (restoredProject != null && restoredProject.NeedsRestore)
+                    var isDirectRestore = !string.Equals(selectedRestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase);
+                    if (isDirectRestore && restoredProject != null && restoredProject.NeedsRestore)
                     {
                         _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
+                    }
+
+                    if (!isDirectRestore)
+                    {
+                        var sandboxPath = projectRoot;
+                        var decision = await ConfirmSandboxPostRestoreActionAsync(preparation.ProjectName, sandboxPath);
+                        if (decision.Action == SandboxPostRestoreAction.Open)
+                        {
+                            OpenPathInSystemFileManager(sandboxPath);
+                            BackupsViewModel.ShowNotification(
+                                Lf(
+                                    "Backups.Restore.Sandbox.Completed",
+                                    "Restore completed in sandbox folder:\n{0}",
+                                    sandboxPath),
+                                "Info");
+                        }
+                        else if (decision.Action == SandboxPostRestoreAction.Apply && restoredProject is not null)
+                        {
+                            await ApplySandboxRestoreToProjectAsync(
+                                restoredProject,
+                                preparation.ProjectName,
+                                sandboxPath,
+                                decision.DeleteAfterApply);
+                        }
+                        else
+                        {
+                            BackupsViewModel.ShowNotification(
+                                Lf(
+                                    "Backups.Restore.Sandbox.Completed",
+                                    "Restore completed in sandbox folder:\n{0}",
+                                    sandboxPath),
+                                "Info");
+                        }
                     }
                 }
                 BackupsViewModel.RemoveActiveBackup(restoreCardId);
@@ -1488,7 +2441,28 @@ namespace VaultSync.UI.ViewModels
             return false;
         }
 
-        private static void RestoreDirectory(string sourceDir, string targetDir, string? encryptionPassword, Action<double, string>? progress)
+        private readonly struct RestoreProgressUpdate
+        {
+            public RestoreProgressUpdate(double percent, string currentFile, long processedBytes, long totalBytes)
+            {
+                Percent = percent;
+                CurrentFile = currentFile ?? string.Empty;
+                ProcessedBytes = processedBytes;
+                TotalBytes = totalBytes;
+            }
+
+            public double Percent { get; }
+            public string CurrentFile { get; }
+            public long ProcessedBytes { get; }
+            public long TotalBytes { get; }
+        }
+
+        private static void RestoreDirectory(
+            string sourceDir,
+            string targetDir,
+            string? encryptionPassword,
+            IReadOnlyList<string>? selectedTopLevelTargets,
+            Action<RestoreProgressUpdate>? progress)
         {
             if (string.IsNullOrWhiteSpace(sourceDir))
                 throw new ArgumentException("Source directory is required.", nameof(sourceDir));
@@ -1505,7 +2479,7 @@ namespace VaultSync.UI.ViewModels
             var archivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.PlainArchiveFileName);
             if (File.Exists(archivePath))
             {
-                ExtractArchiveWithProgress(archivePath, targetDir, progress);
+                ExtractArchiveWithProgress(archivePath, targetDir, selectedTopLevelTargets, progress);
                 return;
             }
 
@@ -1518,29 +2492,43 @@ namespace VaultSync.UI.ViewModels
                         "A password is required to restore encrypted backups.");
                 }
 
-                RestoreEncryptedArchiveWithProgress(sourceDir, targetDir, encryptionPassword, progress);
+                RestoreEncryptedArchiveWithProgress(sourceDir, targetDir, encryptionPassword, selectedTopLevelTargets, progress);
                 return;
             }
+
+            var selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
 
             // Create all directories
             foreach (var dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
             {
                 var relative = Path.GetRelativePath(sourceDir, dirPath);
+                if (!ShouldIncludeRelativePath(relative, selectedTopLevels))
+                    continue;
                 var target   = Path.Combine(targetDir, relative);
                 Directory.CreateDirectory(target);
             }
 
             // Copy all files, overwriting existing ones but not deleting extras.
-            CopyDirectoryWithProgress(sourceDir, targetDir, 0, 100, progress);
+            CopyDirectoryWithProgress(sourceDir, targetDir, selectedTopLevelTargets, 0, 100, progress);
         }
 
-        private static void ExtractArchiveWithProgress(string archivePath, string targetDir, Action<double, string>? progress)
+        private static void ExtractArchiveWithProgress(
+            string archivePath,
+            string targetDir,
+            IReadOnlyList<string>? selectedTopLevelTargets,
+            Action<RestoreProgressUpdate>? progress)
         {
             using var archive = ZipFile.OpenRead(archivePath);
-            var totalEntries = archive.Entries.Count;
+            var selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
+            var entries = archive.Entries
+                .Where(entry => ShouldIncludeRelativePath(entry.FullName, selectedTopLevels))
+                .ToArray();
+            var totalEntries = entries.Length;
             var processed = 0;
+            var totalBytes = entries.Where(e => !string.IsNullOrEmpty(e.Name)).Sum(e => Math.Max(0, e.Length));
+            long processedBytes = 0;
 
-            foreach (var entry in archive.Entries)
+            foreach (var entry in entries)
             {
                 var destinationPath = Path.Combine(targetDir, entry.FullName);
                 if (string.IsNullOrEmpty(entry.Name))
@@ -1557,7 +2545,14 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 processed++;
-                progress?.Invoke(totalEntries == 0 ? 100 : processed * 100d / totalEntries, entry.FullName);
+                if (!string.IsNullOrEmpty(entry.Name))
+                    processedBytes += Math.Max(0, entry.Length);
+
+                progress?.Invoke(new RestoreProgressUpdate(
+                    totalEntries == 0 ? 100 : processed * 100d / totalEntries,
+                    entry.FullName,
+                    processedBytes,
+                    totalBytes));
             }
         }
 
@@ -1565,7 +2560,8 @@ namespace VaultSync.UI.ViewModels
             string sourceDir,
             string targetDir,
             string password,
-            Action<double, string>? progress)
+            IReadOnlyList<string>? selectedTopLevelTargets,
+            Action<RestoreProgressUpdate>? progress)
         {
             var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-restore-{Guid.NewGuid():N}");
             var stagingExtracted = Path.Combine(stagingRoot, "content");
@@ -1574,20 +2570,24 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 Directory.CreateDirectory(stagingExtracted);
-                progress?.Invoke(5, "Decrypting backup...");
+                progress?.Invoke(new RestoreProgressUpdate(5, "Decrypting backup...", 0, 0));
 
                 var cryptoService = new BackupArchiveCryptoService();
                 cryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
-                progress?.Invoke(30, "Decrypting backup...");
+                progress?.Invoke(new RestoreProgressUpdate(30, "Decrypting backup...", 0, 0));
 
-                ExtractArchiveWithProgress(stagingArchive, stagingExtracted, (percent, currentFile) =>
+                ExtractArchiveWithProgress(stagingArchive, stagingExtracted, selectedTopLevelTargets, update =>
                 {
-                    var mapped = 30 + (percent * 0.5);
-                    progress?.Invoke(Math.Clamp(mapped, 30, 80), currentFile);
+                    var mapped = 30 + (update.Percent * 0.5);
+                    progress?.Invoke(new RestoreProgressUpdate(
+                        Math.Clamp(mapped, 30, 80),
+                        update.CurrentFile,
+                        update.ProcessedBytes,
+                        update.TotalBytes));
                 });
 
-                progress?.Invoke(82, "Restoring backup...");
-                CopyDirectoryWithProgress(stagingExtracted, targetDir, 82, 100, progress);
+                progress?.Invoke(new RestoreProgressUpdate(82, "Restoring backup...", 0, 0));
+                CopyDirectoryWithProgress(stagingExtracted, targetDir, selectedTopLevelTargets, 82, 100, progress);
             }
             finally
             {
@@ -1608,15 +2608,24 @@ namespace VaultSync.UI.ViewModels
         private static void CopyDirectoryWithProgress(
             string sourceDir,
             string targetDir,
+            IReadOnlyList<string>? selectedTopLevelTargets,
             double startPercent,
             double endPercent,
-            Action<double, string>? progress)
+            Action<RestoreProgressUpdate>? progress)
         {
-            var files = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories);
+            var selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
+            var files = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories)
+                .Where(filePath => ShouldIncludeRelativePath(Path.GetRelativePath(sourceDir, filePath), selectedTopLevels))
+                .ToArray();
             var totalFiles = files.Length;
+            var totalBytes = files
+                .Select(filePath => new FileInfo(filePath))
+                .Sum(fileInfo => Math.Max(0, fileInfo.Length));
+            long processedBytes = 0;
             var processed = 0;
             foreach (var filePath in files)
             {
+                var fileLength = Math.Max(0, new FileInfo(filePath).Length);
                 var relative = Path.GetRelativePath(sourceDir, filePath);
                 var target = Path.Combine(targetDir, relative);
 
@@ -1625,17 +2634,61 @@ namespace VaultSync.UI.ViewModels
                     Directory.CreateDirectory(parentDir);
 
                 File.Copy(filePath, target, overwrite: true);
+                processedBytes += fileLength;
                 processed++;
                 if (progress is not null)
                 {
                     var ratio = totalFiles == 0 ? 1d : processed / (double)totalFiles;
                     var value = startPercent + ((endPercent - startPercent) * ratio);
-                    progress(value, relative);
+                    progress(new RestoreProgressUpdate(value, relative, processedBytes, totalBytes));
                 }
             }
 
             if (totalFiles == 0)
-                progress?.Invoke(endPercent, string.Empty);
+                progress?.Invoke(new RestoreProgressUpdate(endPercent, string.Empty, 0, 0));
+        }
+
+        private static HashSet<string>? BuildSelectedTopLevelSet(IReadOnlyList<string>? selectedTopLevelTargets)
+        {
+            if (selectedTopLevelTargets is null || selectedTopLevelTargets.Count == 0)
+                return null;
+
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var value in selectedTopLevelTargets)
+            {
+                var normalized = value?.Trim();
+                if (!string.IsNullOrWhiteSpace(normalized))
+                    result.Add(normalized);
+            }
+
+            return result.Count == 0 ? null : result;
+        }
+
+        private static bool ShouldIncludeRelativePath(string? relativePath, HashSet<string>? selectedTopLevels)
+        {
+            if (selectedTopLevels is null || selectedTopLevels.Count == 0)
+                return true;
+
+            var topLevel = GetTopLevelSegment(relativePath ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(topLevel))
+                return false;
+
+            return selectedTopLevels.Contains(topLevel);
+        }
+
+        private static string GetTopLevelSegment(string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+                return string.Empty;
+
+            var normalized = relativePath.Replace('\\', '/').Trim('/');
+            if (normalized.Length == 0)
+                return string.Empty;
+
+            var slashIndex = normalized.IndexOf('/');
+            return slashIndex >= 0
+                ? normalized.Substring(0, slashIndex)
+                : normalized;
         }
 
     }

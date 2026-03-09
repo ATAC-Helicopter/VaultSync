@@ -704,22 +704,14 @@ namespace VaultSync.UI.ViewModels
             {
                 Directory.CreateDirectory(testTarget);
 
-                var writable = true;
-                var message = LStatic("Destinations.Test.Reachable", "Reachable");
-
-                try
-                {
-                    if (!TryWriteProbeFile(testTarget))
-                    {
-                        writable = false;
-                        message = LStatic("Destinations.Test.ReadOnly", "Read-only");
-                    }
-                }
-                catch
-                {
-                    writable = false;
-                    message = LStatic("Destinations.Test.ReadOnly", "Read-only");
-                }
+                // Startup/background probes should avoid write attempts that can raise
+                // first-chance UnauthorizedAccess exceptions in debugger sessions.
+                // Use a non-throwing heuristic and keep real write validation for
+                // explicit operations (backup/test actions).
+                var writable = IsLikelyWritableDirectory(testTarget);
+                var message = writable
+                    ? LStatic("Destinations.Test.Reachable", "Reachable")
+                    : LStatic("Destinations.Test.ReadOnly", "Read-only");
 
                 return new DestinationTestResult(true, writable, testTarget, message);
             }
@@ -753,30 +745,26 @@ namespace VaultSync.UI.ViewModels
 
         private sealed record DestinationTestResult(bool Reachable, bool Writable, string EffectivePath, string Message);
 
-        private static bool TryWriteProbeFile(string effectivePath)
+        private static bool IsLikelyWritableDirectory(string path)
         {
-            var testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
             try
             {
-                File.WriteAllText(testFile, "ok");
-                File.Delete(testFile);
+                var info = new DirectoryInfo(path);
+                if (!info.Exists)
+                    return false;
+
+                if ((info.Attributes & FileAttributes.ReadOnly) != 0)
+                    return false;
+
                 return true;
             }
             catch
             {
+                // Keep startup probes resilient and non-throwing.
                 return false;
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(testFile))
-                        File.Delete(testFile);
-                }
-                catch
-                {
-                    // best effort cleanup
-                }
             }
         }
 

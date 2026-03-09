@@ -1,4 +1,68 @@
 ﻿# Changelog
+## [1.6.0] - 09.03.2026
+### Added
+- [VS-1607] Added per-project restore mode settings in Backups (Direct, Sandbox) and persisted restore_mode in project schema/model with migration-safe default direct.
+- [VS-1608] Added preset recommendation detection for common project types (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) with cached per-path evaluation.
+- [VS-1609] Added per-project tag persistence (`projects.tags`) and editable tag field in Projects details (`comma-separated`).
+- [VS-1606] Added exportable support bundle generation (redacted config + metadata summaries + diagnostics + telemetry) under `Documents/VaultSync/Exports/Support`.
+- [VS-1610] Added per-destination retry policy settings (`attempts`, `base backoff seconds`) with persistence in advanced backup destinations.
+- [VS-1611] Added per-project verification policy persistence (`always`, `scheduled`, `manual`) with metadata sync import/export coverage.
+### Changed
+- [VS-1607] Restore flow now honors project restore mode: sandbox restores target an isolated preview folder while direct restores keep current project-path behavior.
+- [VS-1607] Restore confirmation now includes a per-run restore-mode override selector so users can switch between direct and sandbox restore at execution time.
+- [VS-1607] Sandbox restore completion now offers post-restore actions (keep, open sandbox, apply to project) and optional sandbox cleanup after apply.
+- [VS-1607] Sandbox apply now includes a pre-apply summary (total/new/overwrite files and bytes) plus explicit confirmation before writing into the project path.
+- [VS-1601] Restore confirmation now includes a pre-run preview for plain backups (files in backup, new files, overwrite count, potential conflicts, project-only files kept, total bytes).
+- [VS-1601] Restore confirmation now supports selective top-level restore targets, and restore execution applies only selected targets for plain backups/archives.
+- [VS-1602] Backups history now includes restore-point timeline compare selectors (`A` / `B`) with a compare summary dialog (range, elapsed, size delta, net-diff delta, latest-point diff stats).
+- [VS-1602] Restore-point compare copy now explains selection order (`older` on the left, `newer` on the right) directly in the UI.
+- [VS-1608] Projects preset card now shows a localized recommendation reason and an `Apply recommendation` action while keeping manual preset selection fully available.
+- [VS-1608] Preset recommendation confidence gating now requires corroborating markers for generic stacks (`Node`, `Python`, `.NET`) to reduce noisy/low-confidence suggestions.
+- [VS-1604] Projects details now includes an in-app preset rules editor (reload/save + preview include/exclude counts against the selected project path) for faster preset tuning without leaving the app.
+- [VS-1604] Preset editor now supports clone/import/export flows (`Clone` to a new preset id, `Import` from file path, `Export` to `Documents/VaultSync/Exports/Presets`).
+- [VS-1604] Projects preset editor copy/layout was refined for clarity (clearer action labels, usage guidance, concise preset file display with full-path tooltip).
+- [VS-1609] Projects list now includes smart-group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) using project tags and lightweight preset/health signals.
+- [VS-1609] Projects smart-group selector now includes a bulk `Snapshot group` action for registered projects in the active group filter.
+- [VS-1609] Projects smart-group controls now include `Back up group` and group-wide auto-backup toggles (`Disable auto`, `Enable auto`) to support pause/backup workflows by tag/group.
+- [VS-1609] Projects tags now use pill-based editing (Enter/comma to commit, double-click pill to edit, remove button per tag) so partial typing does not immediately overwrite project tags.
+- [VS-1609] Tag pills are now color-coded, reusable tag suggestions are clickable, and group actions now support apply/remove by tag for all projects in the active view.
+- [VS-1609] Projects now pre-seed reusable tags (`Work`, `Games`, `Media`, `Critical`, `Archive`) so group tagging works immediately on first use.
+- [VS-1609] Project tags are now visible in Backups per-project cards, Backups history group headers, and Dashboard recent activity entries.
+- [VS-1609] Backups per-project sorting now includes a `Tags` mode.
+- [VS-1609] Metadata sync now round-trips project tags, preferred destination routing, and restore mode so per-project behavior stays aligned across machines.
+- [VS-1603] Backups per-project cards now show storage delta (`Δ`) versus the previous backup size to surface per-project growth/shrink at a glance.
+- [VS-1603] Backups summary now surfaces top local storage consumers (top projects by backup storage share) for faster capacity triage.
+- [VS-1605] Backups summary now includes a health center mix (healthy/aging/stale/no-backup projects) based on per-project backup freshness.
+- [VS-1610] Manual and auto-backup destination execution now uses destination-scoped retry loops with exponential backoff and retry telemetry/status feedback.
+- [VS-1611] Post-backup verification flow now follows per-project verification policy (`always` verifies every run, `scheduled` verifies auto-runs, `manual` skips automatic verification).
+- [VS-1606] Settings > Advanced now exposes an `Export support bundle` action that writes a redacted support zip and opens the export folder.
+- [ISS-16001] Quiet-hours editor now uses a compact centered start/end layout with consistent control widths in windowed mode.
+- [ISS-16002] App config load retry now uses async backoff/read operations instead of blocking sleep loops during transient file-lock contention.
+### Fixed
+- [BUG-16001] Backups history cards in windowed mode no longer overlap snapshot chips, retention text, and action controls.
+- [BUG-16002] History snapshot size pill now keeps a stable adaptive shape instead of collapsing into a circular badge on narrow widths.
+- [BUG-16001] Windowed history chips now trim long mode/import/encryption labels to keep spacing stable next to the size pill.
+- [BUG-16003] Restore active backup cards now report restore/decrypt stages (not generic backup stage labels) with live throughput and restored-bytes progress detail.
+- [BUG-16004] Diff imported-type chip no longer shows raw key text; English localization now includes `Backups.Section.TypeImported`.
+- [BUG-16005] Elevated patch helper now validates patch request paths and constrains manifest file targets to the staging/install roots, blocking absolute and traversal paths during verify/copy.
+- [BUG-16006] Backup delete now enforces destination-root path containment and uses a manual fallback delete pass with explicit permission guidance for protected SMB/NAS files.
+- [BUG-16007] Elevated patch mode now binds request payload integrity via launcher-provided SHA-256 and re-validates patch archive hash/size in helper before extraction.
+- [BUG-16008] Retention cleanup, restore preparation, and tray backup-folder open flow now enforce destination-root path containment to reject out-of-root/traversal backup paths.
+- [BUG-16009] Backups page windowed layout now reflows the per-project and history panels (including per-project destination/encryption/restore controls) to prevent narrow-width collapse and overlap.
+- [BUG-16010] Projects group selector now renders readable option labels in the dropdown instead of fallback "View not found for ProjectGroupOption" text.
+- [BUG-16011] Group auto-backup actions now immediately sync per-project toggle state on the Backups page by refreshing from the same `AutoBackupDisabledProjects` setting source.
+- [BUG-16012] Backups page left per-project panel no longer uses a hard list-height cap, avoiding visibly shorter column height versus the right history panel.
+- [BUG-16013] Top storage consumers now aggregate total backup storage (including imported history) so names/sizes are consistent with total-storage summaries.
+- [BUG-16014] Dashboard storage legend and backups top-consumer rows now use centered vertical alignment for cleaner name/dot/value layout.
+- [BUG-16015] Projects list cards now show project tags in the All projects panel (`TagsDisplay`) to match tagging visibility across the app.
+- [BUG-16016] Dashboard weekly backups-per-day buckets now use local-day window boundaries (converted to UTC for query) to reduce day-label/count drift.
+- [BUG-16017] Dropdown popups were restyled app-wide for readability (clean hover/selected states, rounded popup panel, consistent item spacing) and Projects/Backups selected rows no longer use harsh filled highlight.
+- [BUG-16018] Backups, Dashboard, and Settings pages now stretch to full `ScrollViewer` viewport width in windowed mode (while keeping max-width readability caps) instead of rendering as narrow centered columns.
+- [BUG-16019] Backups page now removes hard per-panel list height caps and rebalances per-project/history columns to better use available windowed space without collapse.
+- [BUG-16020] Projects details and Settings Advanced controls now reflow/wrap in windowed mode, and near-zero per-project storage deltas render as neutral `Δ ~0 B`.
+- [BUG-16021] Backups summary activity card now sizes to content in windowed mode (top-aligned, auto-height row) so the chart no longer leaves a large empty block under the bars.
+- [BUG-16022] Projects tag input Enter shortcut now runs through a guarded key handler, removing startup/null `CommitProjectTagInputCommand` binding trace noise in diagnostics logs.
+
 ## [1.5.1] - 28.02.2026
 ### Added
 - [VS-15001] Added Backups-page per-project sort control (Latest backup, Name, Total size, Backup count) to improve project list navigation.
@@ -712,4 +776,7 @@
 ---
 
 ? 2026 VaultSync Project. MIT Licensed.
+
+
+
 
