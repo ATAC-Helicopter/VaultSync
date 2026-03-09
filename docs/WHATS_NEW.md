@@ -1,26 +1,30 @@
 # What's New
 
-## [1.5.1]
+## [1.6.0]
 
-### Stability and startup
-- Fixed backup project cards so destination and encryption selectors keep the saved value on startup.
-- Fixed startup fallback behavior so empty selector states now default to `Auto (active destinations)` and `Inherit global`.
-- Improved chart refresh timing and reduced first-load UI state issues.
+### Restore and backup workflow
+- Added per-project restore mode (`Direct`, `Sandbox`) with a restore-time override.
+- Added sandbox completion actions (`Keep`, `Open sandbox`, `Apply to project`) and apply preflight summary/confirmation.
+- Added plain-backup restore preview and selective top-level restore targets.
+- Added restore-point timeline compare (`A`/`B`) with range/size/net-diff summary.
 
-### Backup flow fixes
-- Fixed stale disabled states on project action buttons such as `Open folder` and `Remove from VaultSync`.
-- Hardened backup delete and diagnostics paths to reduce noisy exceptions on network shares and missing external tools.
-- Improved UNC/network path handling and config-read resilience during backup startup and metadata work.
+### Projects and presets
+- Added project tags persistence, pill editing, reusable tag suggestions, and smart groups (`Work`, `Games`, `Media`, `Critical`, `Archive`).
+- Added group actions in Projects (snapshot, backup, auto-backup toggles, apply/remove by tag).
+- Added preset recommendation engine for common stacks and improved confidence gating.
+- Added in-app preset rules editor with reload/test/save plus clone/import/export actions.
 
-### Transfer policy and settings polish
-- Refined bandwidth and quiet-hours settings copy and localization coverage.
-- Improved lock-timeout and `Lock now` localization bindings.
-- Removed the obsolete roadmap-sync GitHub workflow that was failing against the old project location.
+### Reliability, diagnostics, and storage insights
+- Added support bundle export (`Settings > Advanced`) with redacted config, diagnostics, and telemetry summaries.
+- Added per-destination retry policy settings and destination-scoped retry execution with backoff/telemetry.
+- Added per-project verification policy (`always`, `scheduled`, `manual`).
+- Added backup storage deltas and top-storage-consumer insights in Backups/Dashboard.
 
-### Presets and localization
-- Added consumer-friendly presets for Photos, Documents, Steam Mods, and Creative Suites.
-- Added preset description/example guidance in the Projects page.
-- Refreshed localization reports and normalized non-English locale key ordering.
+### Fixes and hardening
+- Fixed major windowed-mode layout/overflow issues across Backups, Projects, Dashboard, and Settings.
+- Fixed backup path-containment validation across delete/retention/restore/open-folder flows.
+- Hardened elevated patch validation (request path checks + payload/archive integrity checks).
+- Fixed project tag input command startup binding noise in diagnostics logs.
 
 ### Updates
 - Release notes are available in the app. [Release notes](https://github.com/ATAC-Helicopter/VaultSync/releases)
