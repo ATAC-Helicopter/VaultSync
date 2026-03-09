@@ -485,7 +485,7 @@ public sealed class MetadataStore
 
     private SqliteConnection Open(bool write)
     {
-        var attempts = IsLikelyNetworkPath(_dbPath) ? 3 : 1;
+        var attempts = write && IsLikelyNetworkPath(_dbPath) ? 3 : 1;
         var delayMs = 200;
         Exception? lastError = null;
         for (var attempt = 0; attempt < attempts; attempt++)

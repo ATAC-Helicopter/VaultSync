@@ -124,20 +124,26 @@ namespace VaultSync.UI.ViewModels
 
         /// <summary>
         /// Triggered from the tray menu: backup the selected project.
-        /// For now we simply navigate to the Backups page so the user can pick a project
-        /// and start the backup from there. Later we can wire this to the actual selection.
+        /// Uses the current Backups-page project selection when available.
+        /// Falls back to navigation only when nothing is selected yet.
         /// </summary>
         public void RequestBackupSelectedProjectFromTray()
         {
+            var selected = BackupsViewModel.SelectedProject;
 
-            // For now, just bring the Backups page into view.
-            if (NavigateBackups?.CanExecute(null) == true)
+            Dispatcher.UIThread.Post(() =>
             {
-                NavigateBackups.Execute(null);
-            }
+                if (NavigateBackups?.CanExecute(null) == true)
+                {
+                    NavigateBackups.Execute(null);
+                }
+            });
 
-            // TODO (later): once BackupsViewModel exposes the currently selected project,
-            // call OnBackupProjectRequested with that item to start the backup directly.
+            if (selected is null || BackupsViewModel.IsBusy)
+                return;
+
+            _trayInitiatedBackup = true;
+            OnBackupProjectRequested(selected);
         }
 
         /// <summary>

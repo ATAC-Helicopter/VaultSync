@@ -174,20 +174,20 @@ namespace VaultSync.UI.ViewModels
             if (Interlocked.Exchange(ref _dashboardWarmLoadQueued, 1) == 1)
                 return;
 
-            Dispatcher.UIThread.Post(async () =>
+            RunDetached(async () =>
             {
                 try
                 {
                     if (InitialDataLoadDelay > TimeSpan.Zero)
                         await Task.Delay(InitialDataLoadDelay).ConfigureAwait(false);
                     _lastDashboardRefreshUtc = DateTime.UtcNow;
-                    await DashboardViewModel.RefreshAsync();
+                    await DashboardViewModel.RefreshAsync().ConfigureAwait(false);
                 }
                 finally
                 {
                     Interlocked.Exchange(ref _dashboardWarmLoadQueued, 0);
                 }
-            });
+            }, nameof(EnsureDashboardWarmLoad));
         }
 
         private void QueueDashboardWarmLoadIfReady()
@@ -199,7 +199,7 @@ namespace VaultSync.UI.ViewModels
             if (delay < TimeSpan.Zero)
                 delay = TimeSpan.Zero;
 
-            Dispatcher.UIThread.Post(async () =>
+            RunDetached(async () =>
             {
                 try
                 {
@@ -215,7 +215,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     Interlocked.Exchange(ref _dashboardWarmLoadScheduled, 0);
                 }
-            });
+            }, nameof(QueueDashboardWarmLoadIfReady));
         }
 
         private void EnsureBackupsWarmLoad()
@@ -241,7 +241,7 @@ namespace VaultSync.UI.ViewModels
             if (delay < TimeSpan.Zero)
                 delay = TimeSpan.Zero;
 
-            Dispatcher.UIThread.Post(async () =>
+            RunDetached(async () =>
             {
                 try
                 {
@@ -256,7 +256,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     Interlocked.Exchange(ref _backupsWarmLoadScheduled, 0);
                 }
-            });
+            }, nameof(QueueBackupsWarmLoadIfReady));
         }
 
         private void ApplyLastSessionView()
