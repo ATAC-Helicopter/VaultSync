@@ -1,4 +1,4 @@
-{
+﻿{
   "Backups.Action.BackupAll": "Sauvegarder tous les projets",
   "Backups.Activity.Tooltip": "{0} : {1} sauvegardes · {2}",
   "Backups.Activity.TooltipNone": "{0} : Aucune sauvegarde",
@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "✕",
   "Onboarding.Close": "Fermer",
   "Onboarding.Finish": "Terminer",
+  "Onboarding.Go": "Aller",
   "Onboarding.GoBackups": "Ouvrir les sauvegardes",
   "Onboarding.GoProjects": "Ouvrir les projets",
   "Onboarding.GoSettings": "Ouvrir les paramètres",

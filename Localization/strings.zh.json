@@ -1,4 +1,4 @@
-{
+﻿{
   "Backups.Action.BackupAll": "备份所有项目",
   "Backups.Activity.Tooltip": "{0}：{1} 个备份 · {2}",
   "Backups.Activity.TooltipNone": "{0}：无备份",
@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "×",
   "Onboarding.Close": "关闭",
   "Onboarding.Finish": "完成",
+  "Onboarding.Go": "开始",
   "Onboarding.GoBackups": "打开备份",
   "Onboarding.GoProjects": "打开项目",
   "Onboarding.GoSettings": "打开设置",

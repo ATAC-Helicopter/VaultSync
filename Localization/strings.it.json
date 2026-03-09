@@ -1,4 +1,4 @@
-{
+﻿{
   "Backups.Action.BackupAll": "Esegui il backup di tutti i progetti",
   "Backups.Activity.Tooltip": "{0}: {1} backup · {2}",
   "Backups.Activity.TooltipNone": "{0}: Nessun backup",
@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "x",
   "Onboarding.Close": "Chiudi",
   "Onboarding.Finish": "Fine",
+  "Onboarding.Go": "Vai",
   "Onboarding.GoBackups": "Apri Backup",
   "Onboarding.GoProjects": "Apri Progetti",
   "Onboarding.GoSettings": "Apri Impostazioni",

@@ -941,12 +941,12 @@
         </Expander>
 
         <!-- MAIN AREA: two columns on wide windows, stacked on narrower windows -->
-        <Grid RowDefinitions="Auto,Auto"
+        <Grid RowDefinitions="Auto"
               RowSpacing="16"
               ColumnSpacing="16">
           <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="{Binding MainAreaLeftColumnWidth}" />
-            <ColumnDefinition Width="{Binding MainAreaRightColumnWidth}" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
           </Grid.ColumnDefinitions>
 
           <!-- PER-PROJECT BACKUPS -->
@@ -954,9 +954,12 @@
                   CornerRadius="18"
                   Padding="14"
                   MinWidth="0"
+                  Margin="0,0,0,1"
                   Grid.Column="0"
                   Grid.Row="0"
-                  VerticalAlignment="Stretch">
+                  VerticalAlignment="Top"
+                  Height="{Binding Bounds.Height, ElementName=BackupsRightPanel}"
+                  MinHeight="560">
 
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="8">
@@ -1286,10 +1289,12 @@
           </Border>
 
           <!-- RIGHT PANEL: destinations + history -->
-          <Grid Grid.Column="{Binding MainAreaRightPanelColumn}"
-                Grid.Row="{Binding MainAreaRightPanelRow}"
+          <Grid x:Name="BackupsRightPanel"
+                Grid.Column="1"
+                Grid.Row="0"
                 RowDefinitions="Auto,Auto"
-                RowSpacing="12">
+                RowSpacing="12"
+                VerticalAlignment="Top">
 
             <!-- DESTINATIONS -->
             <Border Classes="card"
@@ -1461,6 +1466,9 @@
                         Background="{DynamicResource DividerBrush}" />
 
                   <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Disabled"
+                                Height="560"
+                                MaxHeight="560"
                                 Margin="0,2,0,0">
                     <ItemsControl ItemsSource="{Binding SnapshotGroups}">
                       <ItemsControl.ItemsPanel>

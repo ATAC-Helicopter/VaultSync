@@ -1,4 +1,4 @@
-{
+﻿{
   "Backups.Action.BackupAll": "Respaldar todos los proyectos",
   "Backups.Activity.Tooltip": "{0}: {1} copias de seguridad · {2}",
   "Backups.Activity.TooltipNone": "{0}: Sin copias de seguridad",
@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "✕",
   "Onboarding.Close": "Cerrar",
   "Onboarding.Finish": "Finalizar",
+  "Onboarding.Go": "Ir",
   "Onboarding.GoBackups": "Abrir respaldos",
   "Onboarding.GoProjects": "Abrir proyectos",
   "Onboarding.GoSettings": "Abrir configuración",

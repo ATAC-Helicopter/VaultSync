@@ -1,4 +1,4 @@
-{
+﻿{
   "Backups.Action.BackupAll": "عمل نسخة احتياطية لجميع المشاريع",
   "Backups.Activity.Tooltip": "{0}: {1} نسخة احتياطية · {2}",
   "Backups.Activity.TooltipNone": "{0}: لا توجد نسخ احتياطية",
@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "×",
   "Onboarding.Close": "إغلاق",
   "Onboarding.Finish": "إنهاء",
+  "Onboarding.Go": "اذهب",
   "Onboarding.GoBackups": "فتح النسخ الاحتياطية",
   "Onboarding.GoProjects": "فتح المشاريع",
   "Onboarding.GoSettings": "فتح الإعدادات",

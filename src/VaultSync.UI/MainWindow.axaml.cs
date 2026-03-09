@@ -148,9 +148,9 @@ public partial class MainWindow : Window
         SidebarTopSection.Margin = collapsed
             ? new Thickness(0, 4, 0, 10)
             : new Thickness(4, 10, 4, 16);
-        NavButtonsPanel.Spacing = collapsed ? 14 : 4;
+        NavButtonsPanel.Spacing = collapsed ? 12 : 4;
         NavButtonsPanel.Margin = collapsed
-            ? new Thickness(0, 34, 0, 10)
+            ? new Thickness(0, 24, 0, 10)
             : new Thickness(0, 0, 0, 10);
 
         ShellBanner.IsVisible = !collapsed;

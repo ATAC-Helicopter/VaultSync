@@ -1460,6 +1460,32 @@ DELETE FROM sqlite_sequence;";
             return rows.ToDictionary(row => row.ProjectId, row => row.TotalBytes);
         }
 
+        /// <summary>
+        /// Repairs backup->project links using the authoritative snapshot->project link.
+        /// Exact-match only: updates rows where backup.snapshot_id exists and points to a
+        /// different project than backup.project_id.
+        /// Returns the number of updated backup rows.
+        /// </summary>
+        public int RepairBackupProjectLinksFromSnapshots()
+        {
+            using var c = Open();
+            return c.Execute(
+                """
+                UPDATE backups
+                SET project_id = (
+                    SELECT s.project_id
+                    FROM snapshots s
+                    WHERE s.id = backups.snapshot_id
+                )
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM snapshots s
+                    WHERE s.id = backups.snapshot_id
+                      AND s.project_id != backups.project_id
+                );
+                """);
+        }
+
         private sealed class BackupActivityRow
         {
             public long ProjectId { get; init; }

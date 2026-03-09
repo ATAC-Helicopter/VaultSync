@@ -1,4 +1,4 @@
-{
+﻿{
   "Backups.Action.BackupAll": "सभी प्रोजेक्ट का बैकअप लें",
   "Backups.Activity.Tooltip": "{0}: {1} बैकअप · {2}",
   "Backups.Activity.TooltipNone": "{0}: कोई बैकअप नहीं",
@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "×",
   "Onboarding.Close": "बंद करें",
   "Onboarding.Finish": "पूरा करें",
+  "Onboarding.Go": "जाओ",
   "Onboarding.GoBackups": "खोलें बैकअप",
   "Onboarding.GoProjects": "खोलें प्रोजेक्ट्स",
   "Onboarding.GoSettings": "खोलें सेटिंग्स",

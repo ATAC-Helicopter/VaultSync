@@ -88,15 +88,15 @@
 
     <Style Selector="Border.preset-editor-shell">
       <Setter Property="CornerRadius" Value="20" />
-      <Setter Property="Background" Value="#131B2D" />
+      <Setter Property="Background" Value="#141D31" />
       <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Padding" Value="16" />
+      <Setter Property="Padding" Value="18" />
     </Style>
 
     <Style Selector="Border.preset-editor-section">
       <Setter Property="CornerRadius" Value="16" />
-      <Setter Property="Background" Value="#182235" />
+      <Setter Property="Background" Value="#19243A" />
       <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="12" />
@@ -126,15 +126,16 @@
     </Style>
 
     <Style Selector="Button.preset-editor-action">
-      <Setter Property="Background" Value="#1B2740" />
+      <Setter Property="Background" Value="#1C2942" />
       <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="12" />
-      <Setter Property="Padding" Value="12,7" />
+      <Setter Property="Padding" Value="12,8" />
       <Setter Property="FontSize" Value="11" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="MinWidth" Value="0" />
       <Setter Property="MinHeight" Value="34" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
 
     <Style Selector="Button.preset-editor-action:pointerover">
@@ -239,11 +240,11 @@
                   Background="{DynamicResource InputBackgroundBrush}"
                   BorderBrush="{DynamicResource DividerBrush}"
                   BorderThickness="1"
-                  Padding="8,4">
+                  Padding="12,10">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                   ColumnDefinitions="Auto,*"
                   ColumnSpacing="8"
-                  RowSpacing="6">
+                  RowSpacing="8">
               <TextBlock VerticalAlignment="Center"
                          Text="{infra:LocalizedString Key=Projects.Group.Label}"
                          Foreground="{DynamicResource TextSecondaryBrush}"
@@ -262,8 +263,8 @@
               <WrapPanel Grid.Row="1"
                          Grid.ColumnSpan="2"
                          Orientation="Horizontal"
-                         ItemSpacing="6"
-                         LineSpacing="6">
+                         ItemSpacing="8"
+                         LineSpacing="8">
                 <Button Padding="{DynamicResource ButtonTightPadding}"
                         CornerRadius="10"
                         Background="{DynamicResource Surface2}"
@@ -310,8 +311,8 @@
               <WrapPanel Grid.Row="3"
                          Grid.ColumnSpan="2"
                          Orientation="Horizontal"
-                         ItemSpacing="6"
-                         LineSpacing="6">
+                         ItemSpacing="8"
+                         LineSpacing="8">
                 <Button Padding="{DynamicResource ButtonTightPadding}"
                         CornerRadius="10"
                         Background="{DynamicResource Surface2}"
@@ -328,7 +329,7 @@
                 </Button>
                 <TextBlock VerticalAlignment="Center"
                            Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="10"
+                           FontSize="11"
                            Text="{infra:LocalizedString Key=Projects.Group.TagHelp}" />
               </WrapPanel>
               <ItemsControl Grid.Row="4"
@@ -817,8 +818,8 @@
                     </Grid>
 
                     <Grid Grid.Row="1"
-                          ColumnDefinitions="2.2*,1*"
-                          ColumnSpacing="12">
+                          ColumnDefinitions="1.9*,1.1*"
+                          ColumnSpacing="14">
                       <Border Grid.Column="0"
                               Classes="preset-editor-section"
                               Padding="0">
@@ -845,8 +846,7 @@
                                    AcceptsReturn="True"
                                    TextWrapping="NoWrap"
                                    FontFamily="Consolas, Menlo, monospace"
-                                   MinHeight="250"
-                                   MaxHeight="360"
+                                   MinHeight="320"
                                    VerticalContentAlignment="Top"
                                    Text="{Binding DataContext.PresetEditorContent, ElementName=Root, Mode=TwoWay}"
                                    Background="{DynamicResource InputBackgroundBrush}"
@@ -864,18 +864,22 @@
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <Button Classes="preset-editor-primary"
+                                    HorizontalAlignment="Stretch"
                                     Command="{Binding DataContext.SavePresetEditorCommand, ElementName=Root}">
                               <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Save}" />
                             </Button>
                             <Button Classes="preset-editor-action"
+                                    HorizontalAlignment="Stretch"
                                     Command="{Binding DataContext.PreviewPresetEditorCommand, ElementName=Root}">
                               <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Preview}" />
                             </Button>
                             <Button Classes="preset-editor-action"
+                                    HorizontalAlignment="Stretch"
                                     Command="{Binding DataContext.ReloadPresetEditorCommand, ElementName=Root}">
                               <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Reload}" />
                             </Button>
                             <Button Classes="preset-editor-action"
+                                    HorizontalAlignment="Stretch"
                                     Command="{Binding DataContext.ExportPresetEditorCommand, ElementName=Root}">
                               <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.Export}" />
                             </Button>

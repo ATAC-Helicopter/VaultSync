@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "×",
   "Onboarding.Close": "Close",
   "Onboarding.Finish": "Finish",
+  "Onboarding.Go": "Go",
   "Onboarding.GoBackups": "Open Backups",
   "Onboarding.GoProjects": "Open Projects",
   "Onboarding.GoSettings": "Open Settings",

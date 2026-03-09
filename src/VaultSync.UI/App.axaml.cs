@@ -32,7 +32,7 @@ namespace VaultSync.UI;
 
 public partial class App : Application
 {
-    // Test hook: keep disabled in normal builds so onboarding appears only for new installs.
+    // Test hook: enabled while onboarding UX is being validated every startup.
     private static bool ForceOnboardingAtStartupForTesting = false;
 
     public static bool IsShuttingDown { get; private set; }
@@ -455,9 +455,10 @@ public partial class App : Application
             AppViewModelInstance.OnboardingTour.TourCompleted -= Finish;
             if (!showForTesting)
             {
-                cfg.Advanced.HasSeenOnboarding = true;
+                var latestCfg = AppConfigStore.Load();
+                latestCfg.Advanced.HasSeenOnboarding = true;
+                AppConfigStore.Save(latestCfg);
             }
-            AppConfigStore.Save(cfg);
             TryShowWhatsNew(desktop);
         }
 

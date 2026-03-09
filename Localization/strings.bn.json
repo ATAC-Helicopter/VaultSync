@@ -1,4 +1,4 @@
-{
+﻿{
   "Backups.Action.BackupAll": "সব প্রকল্প ব্যাকআপ করুন",
   "Backups.Activity.Tooltip": "{0}: {1} ব্যাকআপ · {2}",
   "Backups.Activity.TooltipNone": "{0}: কোনো ব্যাকআপ নেই",
@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "×",
   "Onboarding.Close": "বন্ধ করুন",
   "Onboarding.Finish": "শেষ করুন",
+  "Onboarding.Go": "যাও",
   "Onboarding.GoBackups": "ব্যাকআপ খুলুন",
   "Onboarding.GoProjects": "প্রোজেক্ট খুলুন",
   "Onboarding.GoSettings": "সেটিংস খুলুন",

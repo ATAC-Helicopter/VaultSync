@@ -219,11 +219,26 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private void BuildSteps()
     {
         _steps.Clear();
-        bool UseAdvanced() => GetConfig().Backups.UseAdvancedDestinations;
+        bool UseAdvanced()
+        {
+            var live = _app.SettingsViewModel;
+            if (live is not null)
+                return live.UseAdvancedDestinations;
+
+            return GetConfig().Backups.UseAdvancedDestinations;
+        }
         bool HasAdvancedDestination()
         {
+            var live = _app.SettingsViewModel;
+            if (live is not null)
+            {
+                // Step 4 is "Add a destination": it should complete when an entry exists.
+                // Path configuration is guided by the following onboarding steps.
+                return live.Destinations.Count > 0;
+            }
+
             var cfg = GetConfig();
-            return cfg.Backups.Destinations.Any(d => !string.IsNullOrWhiteSpace(d.Path));
+            return cfg.Backups.Destinations.Any();
         }
         bool HasLanguageSelected()
         {
@@ -232,6 +247,10 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         }
         bool HasProjectsRoot()
         {
+            var live = _app.SettingsViewModel;
+            if (live is not null)
+                return !string.IsNullOrWhiteSpace(live.ProjectsRootPath);
+
             var cfg = GetConfig();
             return !string.IsNullOrWhiteSpace(cfg.ProjectsRoot);
         }
@@ -251,7 +270,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         AddSettingsStep(
             L("Onboarding.Tour.Step2.Title", "Set your projects root"),
             L("Onboarding.Tour.Step2.Body", "Choose the folder where your projects live so VaultSync can discover them."),
-            "ProjectsRootInput",
+            "ProjectsRootRow",
             HasProjectsRoot);
 
         AddSettingsStep(
@@ -317,16 +336,18 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         AddStepDynamic(
             L("Onboarding.Tour.Step11.Title", "Select a backup destination"),
             L("Onboarding.Tour.Step11.Body", "Choose the folder where your backups will be stored in simple mode."),
-            () =>
-            {
-                return UseAdvanced() ? string.Empty : "BackupLocationInput";
-            },
+            () => UseAdvanced() ? string.Empty : "BackupLocationRow",
             "Settings",
             () =>
             {
-                var cfg = GetConfig();
-                if (cfg.Backups.UseAdvancedDestinations)
+                if (UseAdvanced())
                     return true;
+
+                var live = _app.SettingsViewModel;
+                if (live is not null)
+                    return !string.IsNullOrWhiteSpace(live.BackupLocationPath);
+
+                var cfg = GetConfig();
                 return HasDestinationConfigured(cfg);
             },
             isApplicable: () => !UseAdvanced());
@@ -429,10 +450,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private static bool HasDestinationConfigured(AppConfig cfg)
     {
         if (cfg.Backups.UseAdvancedDestinations)
-        {
-            return cfg.Backups.Destinations.Any(d =>
-                d.Active && !string.IsNullOrWhiteSpace(d.Path));
-        }
+            return cfg.Backups.Destinations.Any();
 
         var root = cfg.Backups.BackupRoot ?? cfg.Backups.BackupLocation ?? string.Empty;
         return !string.IsNullOrWhiteSpace(root);

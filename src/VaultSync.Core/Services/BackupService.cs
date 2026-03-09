@@ -2211,7 +2211,11 @@ public sealed class BackupService
 
         // Keep all protected backups; apply the cap only to unprotected ones.
         var unprotected = backups.Where(b => !b.IsProtected).ToList();
-        var toRemove = unprotected.Skip(maxToKeep).ToList();
+        var deleteQuota = Math.Max(0, unprotected.Count - maxToKeep);
+        // Retention candidates are oldest first.
+        var candidates = unprotected
+            .OrderBy(b => b.CreatedUtc)
+            .ToList();
 
         var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
         var projectName = project?.Name;
@@ -2224,8 +2228,21 @@ public sealed class BackupService
                 snapshotRefs[backup.SnapshotId] = 1;
         }
 
-        foreach (var backup in toRemove)
+        var attempted = new HashSet<int>();
+        var deleted = 0;
+
+        while (deleted < deleteQuota)
         {
+            // Try the next oldest unprotected candidate that has not been attempted yet.
+            var backup = candidates.FirstOrDefault(b => !attempted.Contains(b.Id));
+            if (backup is null)
+                break;
+
+            attempted.Add(backup.Id);
+
+            var canDeleteDbRow = true;
+            var diskDeleteSucceeded = true;
+
             try
             {
                 var baseRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
@@ -2243,13 +2260,17 @@ public sealed class BackupService
                 {
                     Console.WriteLine(
                         $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}).");
-                    continue;
+                    canDeleteDbRow = false;
+                    diskDeleteSucceeded = false;
                 }
-
-                if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
+                else if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
                 {
                     Console.WriteLine($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
-                    TryDeleteBackupFolder(fullPath, backup.Id);
+                    diskDeleteSucceeded = TryDeleteBackupFolder(fullPath, backup.Id);
+                    if (!diskDeleteSucceeded)
+                    {
+                        Console.WriteLine($"[BackupService] Retention delete failed for backupId={backup.Id}; trying next oldest unprotected candidate.");
+                    }
                 }
                 else
                 {
@@ -2258,35 +2279,44 @@ public sealed class BackupService
             }
             catch (Exception ex)
             {
-                // Log and continue; retention should still drop the DB row even if disk cleanup fails.
                 Console.WriteLine($"[BackupService] Failed to delete old backup (backupId={backup.Id}): {ex}");
+                canDeleteDbRow = false;
+                diskDeleteSucceeded = false;
             }
-            finally
+
+            // If we failed to remove this candidate from disk, do NOT drop its DB row;
+            // move to the next oldest unprotected candidate.
+            if (!diskDeleteSucceeded || !canDeleteDbRow)
             {
-                BackupRetentionDeleted?.Invoke(backup);
-                _repo.DeleteBackupById(backup.Id);
-                if (projectName != null &&
-                    snapshotRefs.TryGetValue(backup.SnapshotId, out var remaining) &&
-                    remaining <= 1)
-                {
-                    _repo.DeleteSnapshotsById(projectName, new[] { backup.SnapshotId });
-                    snapshotRefs.Remove(backup.SnapshotId);
-                }
-                else if (snapshotRefs.TryGetValue(backup.SnapshotId, out var count) && count > 1)
-                {
-                    snapshotRefs[backup.SnapshotId] = count - 1;
-                }
+                continue;
             }
+
+            BackupRetentionDeleted?.Invoke(backup);
+            _repo.DeleteBackupById(backup.Id);
+            if (projectName != null &&
+                snapshotRefs.TryGetValue(backup.SnapshotId, out var remaining) &&
+                remaining <= 1)
+            {
+                _repo.DeleteSnapshotsById(projectName, new[] { backup.SnapshotId });
+                snapshotRefs.Remove(backup.SnapshotId);
+            }
+            else if (snapshotRefs.TryGetValue(backup.SnapshotId, out var count) && count > 1)
+            {
+                snapshotRefs[backup.SnapshotId] = count - 1;
+            }
+
+            deleted++;
         }
     }
 
-    private void TryDeleteBackupFolder(string fullPath, int backupId)
+    private bool TryDeleteBackupFolder(string fullPath, int backupId)
     {
         try
         {
             ClearAttributesRecursive(fullPath);
             DeleteKnownMarkerFiles(fullPath);
             Directory.Delete(fullPath, recursive: true);
+            return true;
         }
         catch (Exception firstEx)
         {
@@ -2294,11 +2324,12 @@ public sealed class BackupService
             try
             {
                 FallbackDeleteDirectory(fullPath);
+                return true;
             }
             catch (Exception fallbackEx)
             {
                 Console.WriteLine($"[BackupService] Retention fallback delete failed for '{fullPath}' (backupId={backupId}): {fallbackEx}");
-                throw;
+                return false;
             }
         }
     }

@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.6.0] - Unreleased (target: 09.03.2026)
+## [1.6.0] - 09.03.2026
 ### Added
 - [VS-1607] Added per-project restore mode settings in Backups (Direct, Sandbox) and persisted restore_mode in project schema/model with migration-safe default direct.
 - [VS-1608] Added preset recommendation detection for common project types (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) with cached per-path evaluation.

@@ -1,4 +1,4 @@
-{
+﻿{
   "Backups.Action.BackupAll": "Создать резервные копии всех проектов",
   "Backups.Activity.Tooltip": "{0}: {1} резервных копий · {2}",
   "Backups.Activity.TooltipNone": "{0}: нет резервных копий",
@@ -368,6 +368,7 @@
   "Notifications.DismissGlyph": "×",
   "Onboarding.Close": "Закрыть",
   "Onboarding.Finish": "Готово",
+  "Onboarding.Go": "Перейти",
   "Onboarding.GoBackups": "Открыть резервные копии",
   "Onboarding.GoProjects": "Открыть проекты",
   "Onboarding.GoSettings": "Открыть настройки",
