@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using VaultSync.Core.Config;
 using VaultSync.Core.Services;
 using Xunit;
@@ -99,5 +100,20 @@ public sealed class CredentialVaultTests
             fallbackPlaintext: "fallback-secret");
 
         Assert.Equal("fallback-secret", secret);
+    }
+
+    [Fact]
+    public void TryUnprotect_RejectsNonDpapiPayloads()
+    {
+        var method = typeof(CredentialVault).GetMethod(
+            "TryUnprotect",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("plain-secret"));
+        var result = method!.Invoke(null, new object[] { encoded, false });
+
+        Assert.Null(result);
     }
 }

@@ -332,15 +332,12 @@ public sealed class CredentialVault
     {
         try
         {
-            var data = Convert.FromBase64String(protectedSecret);
-            if (wasDpapi && OperatingSystem.IsWindows())
-            {
-                var plain = ProtectedData.Unprotect(data, optionalEntropy: null, DataProtectionScope.CurrentUser);
-                return Encoding.UTF8.GetString(plain);
-            }
+            if (!wasDpapi || !OperatingSystem.IsWindows())
+                return null;
 
-            // Not DPAPI: treat as base64 of plaintext.
-            return Encoding.UTF8.GetString(data);
+            var data = Convert.FromBase64String(protectedSecret);
+            var plain = ProtectedData.Unprotect(data, optionalEntropy: null, DataProtectionScope.CurrentUser);
+            return Encoding.UTF8.GetString(plain);
         }
         catch
         {

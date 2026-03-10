@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.Media;
@@ -1476,6 +1477,13 @@ namespace VaultSync.UI.ViewModels
                     SelectedItem = restoreModeOptions.FirstOrDefault(o =>
                         string.Equals(o.Id, preparation.RestoreMode, StringComparison.OrdinalIgnoreCase))
                         ?? restoreModeOptions[0],
+                    ItemTemplate = new FuncDataTemplate<RestoreModeOption>(
+                        (option, _) => new TextBlock
+                        {
+                            Text = option?.Label ?? string.Empty,
+                            TextWrapping = TextWrapping.NoWrap
+                        },
+                        supportsRecycling: true),
                     MinWidth = 360
                 };
                 var restoreModeSelector = new StackPanel { Spacing = 5 };

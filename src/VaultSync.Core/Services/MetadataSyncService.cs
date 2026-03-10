@@ -252,9 +252,11 @@ public sealed class MetadataSyncService
             if (!opts.AllowCreateProjects)
                 continue;
 
-            var projectRoot = !string.IsNullOrWhiteSpace(metaProject.RootPathHint)
-                ? metaProject.RootPathHint
-                : (config.ProjectsRoot ?? string.Empty);
+            var projectRoot = ResolveImportedProjectRoot(
+                metaProject.RootPathHint,
+                config.ProjectsRoot,
+                metaProject.Name,
+                metaProject.ExternalId);
 
             var project = new Project
             {
@@ -878,6 +880,80 @@ public sealed class MetadataSyncService
 
         return path.StartsWith("\\\\", StringComparison.Ordinal) ||
                path.StartsWith("//", StringComparison.Ordinal);
+    }
+
+    private static string ResolveImportedProjectRoot(
+        string? rootPathHint,
+        string? projectsRoot,
+        string? projectName,
+        string? externalId)
+    {
+        if (IsAcceptableImportedProjectRoot(rootPathHint))
+            return Path.GetFullPath(rootPathHint!);
+
+        if (IsAcceptableProjectsRoot(projectsRoot))
+        {
+            var folderName = BuildImportedProjectFolderName(projectName, externalId);
+            return Path.Combine(Path.GetFullPath(projectsRoot!), folderName);
+        }
+
+        return string.Empty;
+    }
+
+    private static bool IsAcceptableImportedProjectRoot(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !IsRootedPath(path))
+            return false;
+
+        if (path.StartsWith("\\\\", StringComparison.Ordinal) ||
+            path.StartsWith("//", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            return Directory.Exists(fullPath);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsAcceptableProjectsRoot(string? projectsRoot)
+    {
+        if (string.IsNullOrWhiteSpace(projectsRoot) || !IsRootedPath(projectsRoot))
+            return false;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(projectsRoot);
+            return Directory.Exists(fullPath);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string BuildImportedProjectFolderName(string? projectName, string? externalId)
+    {
+        var source = string.IsNullOrWhiteSpace(projectName) ? externalId : projectName;
+        if (string.IsNullOrWhiteSpace(source))
+            return "ImportedProject";
+
+        var invalidChars = Path.GetInvalidFileNameChars().ToHashSet();
+        var cleaned = new string(source
+            .Trim()
+            .Select(ch => invalidChars.Contains(ch) ? '-' : ch)
+            .ToArray())
+            .Trim(' ', '.');
+
+        return string.IsNullOrWhiteSpace(cleaned)
+            ? "ImportedProject"
+            : cleaned;
     }
 
     private static void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)

@@ -199,6 +199,7 @@
   "Backups.Status.NoBackupCreated": "No backup created",
   "Backups.Status.NoChanges": "No changes detected",
   "Backups.Status.Preparing": "Preparing backup...",
+  "Backups.Status.Restoring": "Restoring backup...",
   "Backups.Status.RestoreFailed": "Restore failed.",
   "Backups.Status.RestoreFailedSuffix": "Restore failed",
   "Backups.Status.RestoreRequired": "Restore recommended",

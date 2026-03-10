@@ -2451,8 +2451,12 @@ namespace VaultSync.UI
                 cfg.Backups.EnableBandwidthLimit = ReadBool(backups, nameof(cfg.Backups.EnableBandwidthLimit), cfg.Backups.EnableBandwidthLimit);
                 cfg.Backups.MaxBandwidthMbps = ClampInt(ReadInt(backups, nameof(cfg.Backups.MaxBandwidthMbps), cfg.Backups.MaxBandwidthMbps), 1, 100000, 100);
                 cfg.Backups.EnableQuietHours = ReadBool(backups, nameof(cfg.Backups.EnableQuietHours), cfg.Backups.EnableQuietHours);
-                cfg.Backups.QuietHoursStart = ReadString(backups, nameof(cfg.Backups.QuietHoursStart), cfg.Backups.QuietHoursStart);
-                cfg.Backups.QuietHoursEnd = ReadString(backups, nameof(cfg.Backups.QuietHoursEnd), cfg.Backups.QuietHoursEnd);
+                cfg.Backups.QuietHoursStart = NormalizeTimeOfDay(
+                    ReadString(backups, nameof(cfg.Backups.QuietHoursStart), cfg.Backups.QuietHoursStart),
+                    cfg.Backups.QuietHoursStart);
+                cfg.Backups.QuietHoursEnd = NormalizeTimeOfDay(
+                    ReadString(backups, nameof(cfg.Backups.QuietHoursEnd), cfg.Backups.QuietHoursEnd),
+                    cfg.Backups.QuietHoursEnd);
                 cfg.Backups.UseAdvancedDestinations = ReadBool(backups, nameof(cfg.Backups.UseAdvancedDestinations), cfg.Backups.UseAdvancedDestinations);
                 cfg.Backups.UseCompression = ReadBool(backups, nameof(cfg.Backups.UseCompression), cfg.Backups.UseCompression);
                 cfg.Backups.UseRsyncDelta = ReadBool(backups, nameof(cfg.Backups.UseRsyncDelta), cfg.Backups.UseRsyncDelta);
@@ -2468,9 +2472,15 @@ namespace VaultSync.UI
                 if (backups.TryGetProperty("encryption", out var enc))
                 {
                     cfg.Backups.Encryption.Enabled = ReadBool(enc, nameof(cfg.Backups.Encryption.Enabled), cfg.Backups.Encryption.Enabled);
-                    cfg.Backups.Encryption.Algorithm = ReadString(enc, nameof(cfg.Backups.Encryption.Algorithm), cfg.Backups.Encryption.Algorithm);
-                    cfg.Backups.Encryption.KdfProfile = ReadString(enc, nameof(cfg.Backups.Encryption.KdfProfile), cfg.Backups.Encryption.KdfProfile);
-                    cfg.Backups.Encryption.KdfParamRef = ReadString(enc, nameof(cfg.Backups.Encryption.KdfParamRef), cfg.Backups.Encryption.KdfParamRef);
+                    cfg.Backups.Encryption.Algorithm = NormalizeImportedEncryptionAlgorithm(
+                        ReadString(enc, nameof(cfg.Backups.Encryption.Algorithm), cfg.Backups.Encryption.Algorithm),
+                        cfg.Backups.Encryption.Algorithm);
+                    cfg.Backups.Encryption.KdfProfile = NormalizeImportedKdfProfile(
+                        ReadString(enc, nameof(cfg.Backups.Encryption.KdfProfile), cfg.Backups.Encryption.KdfProfile),
+                        cfg.Backups.Encryption.KdfProfile);
+                    cfg.Backups.Encryption.KdfParamRef = NormalizeImportedKdfParamRef(
+                        ReadString(enc, nameof(cfg.Backups.Encryption.KdfParamRef), cfg.Backups.Encryption.KdfParamRef),
+                        cfg.Backups.Encryption.KdfParamRef);
                     cfg.Backups.Encryption.AllowSessionFallback = ReadBool(enc, nameof(cfg.Backups.Encryption.AllowSessionFallback), cfg.Backups.Encryption.AllowSessionFallback);
                     cfg.Backups.Encryption.OpenUnlockTimeoutMinutes = ClampInt(ReadInt(enc, nameof(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes), cfg.Backups.Encryption.OpenUnlockTimeoutMinutes), 1, 1440, 10);
                 }
@@ -2485,7 +2495,9 @@ namespace VaultSync.UI
 
             if (redactedConfig.TryGetProperty("appearance", out var appearance))
             {
-                cfg.Appearance.Theme = ReadString(appearance, nameof(cfg.Appearance.Theme), cfg.Appearance.Theme);
+                cfg.Appearance.Theme = NormalizeImportedTheme(
+                    ReadString(appearance, nameof(cfg.Appearance.Theme), cfg.Appearance.Theme),
+                    cfg.Appearance.Theme);
                 cfg.Appearance.CompactLayout = ReadBool(appearance, nameof(cfg.Appearance.CompactLayout), cfg.Appearance.CompactLayout);
                 cfg.Appearance.ShowProjectAvatars = ReadBool(appearance, nameof(cfg.Appearance.ShowProjectAvatars), cfg.Appearance.ShowProjectAvatars);
             }
@@ -2508,7 +2520,9 @@ namespace VaultSync.UI
                 cfg.Advanced.CheckUpdates = ReadBool(advanced, nameof(cfg.Advanced.CheckUpdates), cfg.Advanced.CheckUpdates);
                 cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(ReadInt(advanced, nameof(cfg.Advanced.UpdateCheckIntervalMinutes), cfg.Advanced.UpdateCheckIntervalMinutes), 15, 1440, 120);
                 cfg.Advanced.BetaChannelEnabled = ReadBool(advanced, nameof(cfg.Advanced.BetaChannelEnabled), cfg.Advanced.BetaChannelEnabled);
-                cfg.Advanced.Language = ReadString(advanced, nameof(cfg.Advanced.Language), cfg.Advanced.Language);
+                cfg.Advanced.Language = NormalizeImportedLanguage(
+                    ReadString(advanced, nameof(cfg.Advanced.Language), cfg.Advanced.Language),
+                    cfg.Advanced.Language);
                 cfg.Advanced.HasSeenOnboarding = ReadBool(advanced, nameof(cfg.Advanced.HasSeenOnboarding), cfg.Advanced.HasSeenOnboarding);
             }
 
@@ -2544,6 +2558,61 @@ namespace VaultSync.UI
             if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.String)
                 return fallback;
             return value.GetString() ?? fallback;
+        }
+
+        private static string NormalizeImportedTheme(string value, string fallback)
+        {
+            return value switch
+            {
+                "Dark" => "Dark",
+                "Light" => "Light",
+                "Follow system" => "Follow system",
+                "System" => "Follow system",
+                _ => fallback
+            };
+        }
+
+        private static string NormalizeImportedLanguage(string value, string fallback)
+        {
+            var normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
+            return normalized switch
+            {
+                "en" or "it" or "es" or "fr" or "de" or "pt" or "zh" or "hi" or "ar" or "bn" or "ru" => normalized,
+                _ => fallback
+            };
+        }
+
+        private static string NormalizeImportedEncryptionAlgorithm(string value, string fallback)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            return string.Equals(normalized, "aes-256-cbc-hmac-sha256-v1", StringComparison.OrdinalIgnoreCase)
+                ? "aes-256-cbc-hmac-sha256-v1"
+                : fallback;
+        }
+
+        private static string NormalizeImportedKdfProfile(string value, string fallback)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            return string.Equals(normalized, "pbkdf2-sha256-v1", StringComparison.OrdinalIgnoreCase)
+                ? "pbkdf2-sha256-v1"
+                : fallback;
+        }
+
+        private static string NormalizeImportedKdfParamRef(string value, string fallback)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+                return fallback;
+
+            const string prefix = "pbkdf2-iter-";
+            if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return fallback;
+
+            var valuePart = normalized[prefix.Length..].Trim();
+            if (!int.TryParse(valuePart, out var iterations))
+                return fallback;
+
+            return $"pbkdf2-iter-{Math.Clamp(iterations, 10_000, 1_000_000)}";
         }
 
     }

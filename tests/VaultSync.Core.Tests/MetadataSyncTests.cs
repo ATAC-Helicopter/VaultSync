@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
+using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
@@ -165,6 +166,48 @@ public sealed class MetadataSyncTests : IDisposable
         var project = repo.GetProjectByName("Project Two");
         Assert.NotNull(project);
         Assert.False(project!.NeedsRestore);
+    }
+
+    [Fact]
+    public void ImportFromStore_FallsBackToProjectsRootWhenRootHintIsUnsafe()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var localProjectsRoot = CreateTempDir();
+
+        var store = CreateStore(metaRoot);
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-unsafe-root",
+            Name = "Unsafe Root Project",
+            Preset = "dotnet",
+            RootPathHint = "\\\\server\\share\\system32",
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        var repo = CreateRepository(dbPath);
+        var cfg = AppConfigStore.Load();
+        cfg.ProjectsRoot = localProjectsRoot;
+        AppConfigStore.Save(cfg);
+
+        try
+        {
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, new MetadataSyncOptions(true, false));
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            var project = repo.GetProjectByName("Unsafe Root Project");
+            Assert.NotNull(project);
+            Assert.Equal(Path.Combine(localProjectsRoot, "Unsafe Root Project"), project!.RootPath);
+        }
+        finally
+        {
+            cfg.ProjectsRoot = string.Empty;
+            AppConfigStore.Save(cfg);
+        }
     }
 
     [Fact]

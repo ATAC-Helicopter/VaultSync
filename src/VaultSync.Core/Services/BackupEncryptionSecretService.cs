@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Services;
@@ -10,7 +12,7 @@ public sealed class BackupEncryptionSecretService
     private readonly Func<string?, string, bool, string?, string?> _getSecret;
     private readonly Action<string, string, string, bool> _saveSecret;
     private readonly Action<string?, string> _deleteSecret;
-    private readonly ConcurrentDictionary<string, string> _sessionSecrets = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, byte[]> _sessionSecrets = new(StringComparer.OrdinalIgnoreCase);
 
     public BackupEncryptionSecretService()
         : this(
@@ -52,12 +54,12 @@ public sealed class BackupEncryptionSecretService
         try
         {
             _saveSecret(keyRef, username, secret, preferKeychain);
-            _sessionSecrets.TryRemove(keyRef, out _);
+            RemoveSessionSecret(keyRef);
             return EncryptionSecretStorageMode.SecureStore;
         }
         catch when (allowSessionFallback && fallbackConfirmed)
         {
-            _sessionSecrets[keyRef] = secret;
+            StoreSessionSecret(keyRef, secret);
             return EncryptionSecretStorageMode.SessionMemory;
         }
         catch (Exception ex)
@@ -80,9 +82,7 @@ public sealed class BackupEncryptionSecretService
         if (!string.IsNullOrWhiteSpace(stored))
             return stored;
 
-        return _sessionSecrets.TryGetValue(keyRef, out var sessionSecret)
-            ? sessionSecret
-            : null;
+        return TryReadSessionSecret(keyRef);
     }
 
     public void DeleteSecret(string? keyRef, string username)
@@ -91,6 +91,47 @@ public sealed class BackupEncryptionSecretService
             return;
 
         _deleteSecret(keyRef, username);
-        _sessionSecrets.TryRemove(keyRef, out _);
+        RemoveSessionSecret(keyRef);
+    }
+
+    public void ClearSessionSecrets()
+    {
+        foreach (var keyRef in _sessionSecrets.Keys)
+            RemoveSessionSecret(keyRef);
+    }
+
+    private void StoreSessionSecret(string keyRef, string secret)
+    {
+        var secretBytes = Encoding.UTF8.GetBytes(secret);
+        if (_sessionSecrets.TryGetValue(keyRef, out var existing))
+        {
+            _sessionSecrets[keyRef] = secretBytes;
+            ClearBuffer(existing);
+            return;
+        }
+
+        _sessionSecrets[keyRef] = secretBytes;
+    }
+
+    private string? TryReadSessionSecret(string keyRef)
+    {
+        if (!_sessionSecrets.TryGetValue(keyRef, out var sessionSecret) || sessionSecret.Length == 0)
+            return null;
+
+        return Encoding.UTF8.GetString(sessionSecret);
+    }
+
+    private void RemoveSessionSecret(string keyRef)
+    {
+        if (_sessionSecrets.TryRemove(keyRef, out var existing))
+            ClearBuffer(existing);
+    }
+
+    private static void ClearBuffer(byte[]? buffer)
+    {
+        if (buffer is null || buffer.Length == 0)
+            return;
+
+        CryptographicOperations.ZeroMemory(buffer);
     }
 }

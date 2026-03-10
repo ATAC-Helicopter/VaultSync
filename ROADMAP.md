@@ -827,6 +827,18 @@
     - Summary/activity row now uses explicit auto row sizing.
     - Activity card is top-aligned so it keeps chart content height instead of stretching to adjacent summary card height.
 
+### 1.6.1 follow-up patch backlog
+- [ ] `VS-1625` `P1` Restore runtime localization parity.
+  - Scope: ensure restore-progress and active-card restore states always resolve through shipped localization keys, including runtime status text such as `Backups.Status.Restoring`.
+  - Acceptance:
+    - Active restore cards never show raw localization keys in the UI.
+    - `strings.en.json` includes all restore-runtime keys required by current restore flows.
+- [ ] `VS-1626` `P1` Restore-mode dropdown display binding hardening.
+  - Scope: ensure restore confirmation dropdowns render `Direct` / `Sandbox` labels through explicit display templates/bindings instead of falling through to the view locator.
+  - Acceptance:
+    - Restore confirmation never shows `View not found for RestoreModeOption`.
+    - Both restore-mode options render correctly in the dialog and any shared restore-mode selector surface.
+
 ## 1.7.x
 - [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
 - [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).

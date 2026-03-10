@@ -1,4 +1,9 @@
-﻿# Changelog
+# Changelog
+## [1.6.1] - Unreleased (target: 16.03.2026)
+### Follow-up
+- [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
+- [BUG-16024] Track restore-mode dropdown rendering parity so restore confirmation never falls back to `View not found for RestoreModeOption` for either option.
+
 ## [1.6.0] - 09.03.2026
 ### Added
 - [VS-1607] Added per-project restore mode settings in Backups (Direct, Sandbox) and persisted restore_mode in project schema/model with migration-safe default direct.
@@ -30,7 +35,7 @@
 - [VS-1609] Project tags are now visible in Backups per-project cards, Backups history group headers, and Dashboard recent activity entries.
 - [VS-1609] Backups per-project sorting now includes a `Tags` mode.
 - [VS-1609] Metadata sync now round-trips project tags, preferred destination routing, and restore mode so per-project behavior stays aligned across machines.
-- [VS-1603] Backups per-project cards now show storage delta (`Δ`) versus the previous backup size to surface per-project growth/shrink at a glance.
+- [VS-1603] Backups per-project cards now show storage delta (`?`) versus the previous backup size to surface per-project growth/shrink at a glance.
 - [VS-1603] Backups summary now surfaces top local storage consumers (top projects by backup storage share) for faster capacity triage.
 - [VS-1605] Backups summary now includes a health center mix (healthy/aging/stale/no-backup projects) based on per-project backup freshness.
 - [VS-1610] Manual and auto-backup destination execution now uses destination-scoped retry loops with exponential backoff and retry telemetry/status feedback.
@@ -59,7 +64,7 @@
 - [BUG-16017] Dropdown popups were restyled app-wide for readability (clean hover/selected states, rounded popup panel, consistent item spacing) and Projects/Backups selected rows no longer use harsh filled highlight.
 - [BUG-16018] Backups, Dashboard, and Settings pages now stretch to full `ScrollViewer` viewport width in windowed mode (while keeping max-width readability caps) instead of rendering as narrow centered columns.
 - [BUG-16019] Backups page now removes hard per-panel list height caps and rebalances per-project/history columns to better use available windowed space without collapse.
-- [BUG-16020] Projects details and Settings Advanced controls now reflow/wrap in windowed mode, and near-zero per-project storage deltas render as neutral `Δ ~0 B`.
+- [BUG-16020] Projects details and Settings Advanced controls now reflow/wrap in windowed mode, and near-zero per-project storage deltas render as neutral `? ~0 B`.
 - [BUG-16021] Backups summary activity card now sizes to content in windowed mode (top-aligned, auto-height row) so the chart no longer leaves a large empty block under the bars.
 - [BUG-16022] Projects tag input Enter shortcut now runs through a guarded key handler, removing startup/null `CommitProjectTagInputCommand` binding trace noise in diagnostics logs.
 
@@ -776,6 +781,8 @@
 ---
 
 ? 2026 VaultSync Project. MIT Licensed.
+
+
 
 
 
