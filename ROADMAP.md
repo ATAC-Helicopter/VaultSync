@@ -887,6 +887,46 @@
   - Scope: optional scheduled health/repair/cleanup routines with summary notifications.
   - Acceptance:
     - Maintenance jobs run only within configured windows and emit clear run summaries.
+- [ ] `VS-1711` `P0` Backup chain preflight before retention prune.
+  - Scope: validate there is at least one restorable point per project before pruning non-protected backups.
+  - Acceptance:
+    - Retention never leaves a project without a restorable backup chain unless explicitly user-confirmed.
+    - Preflight result is logged and surfaced in diagnostics.
+- [ ] `VS-1712` `P1` Destination identity stability and remount continuity.
+  - Scope: introduce stable destination identity checks across remove/re-add cycles to reduce index drift and false-orphan scenarios.
+  - Acceptance:
+    - Re-adding the same destination path/identity preserves project routing and history linkage where exact identity matches.
+    - Mismatch cases are reported with explicit remediation guidance.
+- [ ] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard.
+  - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
+  - Acceptance:
+    - Scorecard is explainable and links to the underlying failing signals.
+    - No blocking UI regressions on large project sets.
+- [ ] `VS-1714` `P1` Doctor workflows for “Fix now” guided remediation.
+  - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
+  - Acceptance:
+    - Each doctor action has a dry-run summary and explicit apply step.
+    - All mutations are audit-logged in diagnostics/support bundle.
+- [ ] `VS-1715` `P2` Non-blocking startup diagnostics timeline.
+  - Scope: startup timeline with phase durations (config load, repo init, destination probe, metadata warm-up, update check) and slow-path attribution.
+  - Acceptance:
+    - Timeline is available in diagnostics and support bundle.
+    - Normal startup path remains non-blocking.
+- [ ] `VS-1716` `P2` Retention simulation mode in settings.
+  - Scope: preview retention outcomes per project/destination without deleting data.
+  - Acceptance:
+    - Simulation output matches actual retention behavior on subsequent apply.
+    - Protected backups are always highlighted as retained.
+- [ ] `VS-1717` `P1` Cross-machine metadata conflict resolver UX.
+  - Scope: detect and resolve conflicting project-level metadata updates (destination/restore mode/tags/verification policy) with explicit conflict resolution options.
+  - Acceptance:
+    - Conflicts are visible with source machine/time context.
+    - Resolver prevents silent overwrite of newer authoritative metadata.
+- [ ] `VS-1718` `P2` Release readiness gate checklist automation.
+  - Scope: scripted pre-release checks for patch assets, installer presence, changelog/whats-new parity, and project board release completeness.
+  - Acceptance:
+    - One command emits pass/fail with actionable errors.
+    - Gate output is attachable to release notes/support workflows.
 
 ## 1.8.x
 - [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.

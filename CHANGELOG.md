@@ -1,6 +1,8 @@
-# Changelog
-## [1.6.1] - Unreleased (target: 16.03.2026)
-### Follow-up
+﻿# Changelog
+## [1.7.0] - Unreleased (target: 20.03.2026)
+### Added
+### Changed
+### Fixed
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
 - [BUG-16024] Track restore-mode dropdown rendering parity so restore confirmation never falls back to `View not found for RestoreModeOption` for either option.
 
