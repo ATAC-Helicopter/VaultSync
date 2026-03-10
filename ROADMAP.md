@@ -840,8 +840,53 @@
     - Both restore-mode options render correctly in the dialog and any shared restore-mode selector surface.
 
 ## 1.7.x
-- [ ] `VS-1703` `P2` Destination quotas + cleanup suggestions.
+- [ ] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine.
+  - Scope: remap only through trusted exact links (`backup.snapshot_id -> snapshots.project_id` and exact external-id matches), never name/path heuristics.
+  - Acceptance:
+    - Orphan remap jobs are deterministic and idempotent.
+    - Diagnostics/support bundle include remapped/unresolved counts and reasons.
+- [ ] `VS-1702` `P0` Manual repair action for backup/project links.
+  - Scope: add `Settings/Doctor` repair flow with dry-run and apply modes.
+  - Acceptance:
+    - UI shows what will be relinked before apply.
+    - User can run safe repair without touching valid mappings.
+- [ ] `VS-1703` `P1` Destination quotas + cleanup suggestions.
+  - Scope: per-destination quota targets, warning thresholds, and suggested cleanup candidates by age/size/protection status.
+  - Acceptance:
+    - Quota warnings are visible before destination exhaustion.
+    - Cleanup suggestions never include protected backups as auto-candidates.
 - [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).
+  - Scope: shared-vault collaboration primitives and operator audit visibility.
+  - Acceptance:
+    - Shared workflows stay optional and do not regress solo mode defaults.
+- [ ] `VS-1705` `P0` Retention delete resilience v2.
+  - Scope: when oldest non-protected delete fails, continue to next eligible non-protected entry and report structured failure reasons.
+  - Acceptance:
+    - Retention does not halt on first non-protected delete failure when other eligible entries exist.
+    - Protected backups are always skipped.
+- [ ] `VS-1706` `P1` Startup backup-index consistency checks.
+  - Scope: lightweight integrity scan for backup/snapshot/project links and destination-path consistency with non-blocking warnings.
+  - Acceptance:
+    - Startup scan surfaces actionable warnings without blocking app launch.
+    - Scan output is available in diagnostics/support bundle.
+- [ ] `VS-1707` `P1` Updater channel and release-target diagnostics hardening.
+  - Scope: expose candidate channel/branch resolution and release-target diagnostics to reduce mis-publish ambiguity.
+  - Acceptance:
+    - Support diagnostics clearly show selected candidate release and why.
+    - Channel mismatch scenarios are visible to operators without debug builds.
+- [ ] `VS-1708` `P1` Patch chain compatibility preflight.
+  - Scope: explicit preflight validation for `current -> target` patch chain and required assets before showing patch install option.
+  - Acceptance:
+    - Patch button appears only when chain/assets are valid.
+    - Installer fallback messaging states precise incompatibility reason.
+- [ ] `VS-1709` `P2` Support bundle update/repair telemetry expansion.
+  - Scope: include update candidate resolution trace, patch eligibility details, and orphan/repair summaries in redacted support exports.
+  - Acceptance:
+    - New telemetry sections are redacted and stable for support use.
+- [ ] `VS-1710` `P2` Scheduled maintenance window jobs.
+  - Scope: optional scheduled health/repair/cleanup routines with summary notifications.
+  - Acceptance:
+    - Maintenance jobs run only within configured windows and emit clear run summaries.
 
 ## 1.8.x
 - [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.
