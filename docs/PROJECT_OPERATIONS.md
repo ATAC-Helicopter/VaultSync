@@ -50,7 +50,7 @@ Keep IDs stable once published in roadmap/changelog/project board.
 - Update current release status summary.
 - Move truly finished highlights into `Completed (highlights)` when requested.
 
-## 4) GitHub Project Board (`VaultSync 1.5.1 Stabilization`, org project #1)
+## 4) GitHub Project Board (`VaultSync Roadmap`, org project #7)
 
 ### Solo operating model
 - `Owner`: `Flavio Giacchetti`
