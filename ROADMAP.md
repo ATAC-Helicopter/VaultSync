@@ -840,99 +840,229 @@
     - Both restore-mode options render correctly in the dialog and any shared restore-mode selector surface.
 
 ## 1.7.x
+### Release intent
+- `1.7` should be the reliability/repair release:
+  - make backup history, retention, restore readiness, and updater eligibility deterministic and explainable.
+  - add guided remediation before adding new collaboration surface area.
+- This means `1.7` should optimize for:
+  1. deterministic data repair,
+  2. retention safety,
+  3. updater/serviceability diagnostics,
+  4. operator-facing doctor workflows.
+
+### Proposed delivery phases
+1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`
+   - Goal: know whether indexes are trustworthy before auto-repair or retention decisions run.
+2. Phase `B` (guided repair UX): `VS-1702` -> `VS-1714` -> `VS-1717`
+   - Goal: surface deterministic repair plans with dry-run/apply and conflict awareness.
+3. Phase `C` (update/serviceability): `VS-1707` -> `VS-1708` -> `VS-1709` -> `VS-1718`
+   - Goal: make update targeting, patch eligibility, and release gates auditable and support-friendly.
+4. Phase `D` (capacity + maintenance): `VS-1703` -> `VS-1716` -> `VS-1710` -> `VS-1715` -> `VS-1713`
+   - Goal: give operators quota planning, maintenance windows, startup diagnostics, and restore-readiness signals.
+5. Phase `E` (dashboard refresh): `VS-1719`
+   - Goal: modernize the dashboard information hierarchy and visual clarity without losing VaultSync's current identity or familiar navigation.
+
+### Revised planning notes
+- `VS-1704` is moved out of `1.7` and into `1.8` as a deliberate scope cut.
+  - Reason: shared-vault access control and audit trails are a separate product stream and would dilute the reliability/repair focus of `1.7`.
+- `1.7` release should not ship until:
+  - orphan detection/remap is deterministic and idempotent,
+  - retention can prove it preserves at least one restorable point per project,
+  - updater diagnostics explain channel/target/patch eligibility without debug builds,
+  - doctor workflows provide dry-run before mutation.
+
 - [ ] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine.
   - Scope: remap only through trusted exact links (`backup.snapshot_id -> snapshots.project_id` and exact external-id matches), never name/path heuristics.
+  - What it takes:
+    - introduce a repair-evidence model (`exact snapshot link`, `exact external-id match`, `destination identity match`, `rejected heuristic`).
+    - persist remap job results and reasons so re-runs are idempotent and diagnosable.
+    - expose unresolved buckets (`missing snapshot`, `missing project`, `ambiguous match`, `identity mismatch`) for doctor/support surfaces.
+  - Depends on:
+    - `VS-1706` startup consistency scan signals.
+    - `VS-1712` stable destination identity model.
   - Acceptance:
     - Orphan remap jobs are deterministic and idempotent.
     - Diagnostics/support bundle include remapped/unresolved counts and reasons.
 - [ ] `VS-1702` `P0` Manual repair action for backup/project links.
   - Scope: add `Settings/Doctor` repair flow with dry-run and apply modes.
+  - What it takes:
+    - reusable repair-plan DTOs shared by UI, diagnostics export, and future CLI flows.
+    - dry-run/apply orchestration with explicit counts, sample items, and post-apply summary.
+    - mutation audit log entry for every repair apply action.
+  - Depends on:
+    - `VS-1701` deterministic repair engine.
   - Acceptance:
     - UI shows what will be relinked before apply.
     - User can run safe repair without touching valid mappings.
 - [ ] `VS-1703` `P1` Destination quotas + cleanup suggestions.
   - Scope: per-destination quota targets, warning thresholds, and suggested cleanup candidates by age/size/protection status.
+  - What it takes:
+    - persist per-destination quota/threshold settings.
+    - rank cleanup candidates from existing retention metadata without suggesting protected backups.
+    - surface “space to recover” estimates and tie into health/readiness panels.
   - Acceptance:
     - Quota warnings are visible before destination exhaustion.
     - Cleanup suggestions never include protected backups as auto-candidates.
-- [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).
-  - Scope: shared-vault collaboration primitives and operator audit visibility.
-  - Acceptance:
-    - Shared workflows stay optional and do not regress solo mode defaults.
 - [ ] `VS-1705` `P0` Retention delete resilience v2.
   - Scope: when oldest non-protected delete fails, continue to next eligible non-protected entry and report structured failure reasons.
+  - What it takes:
+    - refactor retention candidate evaluation into a reusable ordered plan.
+    - preserve per-candidate failure reasons (`permission denied`, `out-of-root`, `unreachable`, `locked`, `verify failed`).
+    - ensure delete attempts and skip decisions are visible in diagnostics and user-facing summaries.
+  - Depends on:
+    - `VS-1711` chain preflight.
   - Acceptance:
     - Retention does not halt on first non-protected delete failure when other eligible entries exist.
     - Protected backups are always skipped.
 - [ ] `VS-1706` `P1` Startup backup-index consistency checks.
   - Scope: lightweight integrity scan for backup/snapshot/project links and destination-path consistency with non-blocking warnings.
+  - What it takes:
+    - add a cheap startup scan model with bounded work (sampled/full depending on vault size).
+    - classify findings as `warning`, `repairable`, `critical`.
+    - cache last scan summary so UI can show status without rescanning synchronously.
   - Acceptance:
     - Startup scan surfaces actionable warnings without blocking app launch.
     - Scan output is available in diagnostics/support bundle.
 - [ ] `VS-1707` `P1` Updater channel and release-target diagnostics hardening.
   - Scope: expose candidate channel/branch resolution and release-target diagnostics to reduce mis-publish ambiguity.
+  - What it takes:
+    - persist update resolution trace (`channel`, `branch`, `tag`, `asset`, `why rejected`).
+    - add operator-facing diagnostics surface and support-bundle export.
+    - keep messages user-readable without exposing internal-only noise by default.
   - Acceptance:
     - Support diagnostics clearly show selected candidate release and why.
     - Channel mismatch scenarios are visible to operators without debug builds.
 - [ ] `VS-1708` `P1` Patch chain compatibility preflight.
   - Scope: explicit preflight validation for `current -> target` patch chain and required assets before showing patch install option.
+  - What it takes:
+    - explicit patch-chain model (`current`, `intermediate`, `target`, `supported`, `missing asset`, `requires installer`).
+    - UI gate so patch CTA is shown only when eligibility is proven.
+    - release tooling support so manifests expose enough chain metadata.
+  - Depends on:
+    - `VS-1707` updater target diagnostics.
   - Acceptance:
     - Patch button appears only when chain/assets are valid.
     - Installer fallback messaging states precise incompatibility reason.
 - [ ] `VS-1709` `P2` Support bundle update/repair telemetry expansion.
   - Scope: include update candidate resolution trace, patch eligibility details, and orphan/repair summaries in redacted support exports.
+  - What it takes:
+    - extend support-bundle schema with stable redacted sections for updater/repair outcomes.
+    - version the schema so support tooling can rely on field names across minor releases.
   - Acceptance:
     - New telemetry sections are redacted and stable for support use.
 - [ ] `VS-1710` `P2` Scheduled maintenance window jobs.
   - Scope: optional scheduled health/repair/cleanup routines with summary notifications.
+  - What it takes:
+    - background scheduler model that reuses quiet-hours and retry policy concepts.
+    - job history/logging so maintenance is explainable and non-silent.
+    - opt-in defaults only; no surprise background mutation on upgrade.
   - Acceptance:
     - Maintenance jobs run only within configured windows and emit clear run summaries.
 - [ ] `VS-1711` `P0` Backup chain preflight before retention prune.
   - Scope: validate there is at least one restorable point per project before pruning non-protected backups.
+  - What it takes:
+    - define “restorable point” precisely across direct/sandbox/encrypted/imported histories.
+    - integrate with retention planner before delete execution, not after.
+    - emit clear block reasons when prune would violate restore safety.
+  - Depends on:
+    - `VS-1706` consistency scan.
   - Acceptance:
     - Retention never leaves a project without a restorable backup chain unless explicitly user-confirmed.
     - Preflight result is logged and surfaced in diagnostics.
 - [ ] `VS-1712` `P1` Destination identity stability and remount continuity.
   - Scope: introduce stable destination identity checks across remove/re-add cycles to reduce index drift and false-orphan scenarios.
+  - What it takes:
+    - define a durable destination identity fingerprint beyond path/alias.
+    - store identity in metadata/import/export so re-add and remount can be matched safely.
+    - distinguish same-path-new-device from same-device-new-mount cases.
   - Acceptance:
     - Re-adding the same destination path/identity preserves project routing and history linkage where exact identity matches.
     - Mismatch cases are reported with explicit remediation guidance.
 - [ ] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard.
   - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
+  - What it takes:
+    - compute a stable readiness model from existing health/verification/reachability signals.
+    - make the score explainable with links to failing inputs rather than a black-box number.
+    - avoid expensive recompute on every page refresh.
+  - Depends on:
+    - `VS-1706`, `VS-1711`, and `VS-1712`
   - Acceptance:
     - Scorecard is explainable and links to the underlying failing signals.
     - No blocking UI regressions on large project sets.
 - [ ] `VS-1714` `P1` Doctor workflows for “Fix now” guided remediation.
   - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
+  - What it takes:
+    - reusable doctor card/action model with dry-run/apply + remediation guidance.
+    - action-specific validators for “can run now”, “needs destination online”, “needs user choice”.
+    - support/diagnostic logging for every doctor action.
+  - Depends on:
+    - `VS-1702`
+    - `VS-1706`
   - Acceptance:
     - Each doctor action has a dry-run summary and explicit apply step.
     - All mutations are audit-logged in diagnostics/support bundle.
 - [ ] `VS-1715` `P2` Non-blocking startup diagnostics timeline.
   - Scope: startup timeline with phase durations (config load, repo init, destination probe, metadata warm-up, update check) and slow-path attribution.
+  - What it takes:
+    - lightweight startup spans with bounded retention.
+    - diagnostics-only collection path that does not become another startup tax.
   - Acceptance:
     - Timeline is available in diagnostics and support bundle.
     - Normal startup path remains non-blocking.
 - [ ] `VS-1716` `P2` Retention simulation mode in settings.
   - Scope: preview retention outcomes per project/destination without deleting data.
+  - What it takes:
+    - reuse the same retention planner as real delete flow.
+    - make simulation output diffable against current protected/kept/deleted buckets.
   - Acceptance:
     - Simulation output matches actual retention behavior on subsequent apply.
     - Protected backups are always highlighted as retained.
 - [ ] `VS-1717` `P1` Cross-machine metadata conflict resolver UX.
   - Scope: detect and resolve conflicting project-level metadata updates (destination/restore mode/tags/verification policy) with explicit conflict resolution options.
+  - What it takes:
+    - define conflict records with source machine/time/value deltas.
+    - choose precedence rules that are explicit, not implicit overwrite.
+    - provide batch-safe resolution actions for repeated conflicts.
+  - Depends on:
+    - `VS-1714`
   - Acceptance:
     - Conflicts are visible with source machine/time context.
     - Resolver prevents silent overwrite of newer authoritative metadata.
 - [ ] `VS-1718` `P2` Release readiness gate checklist automation.
   - Scope: scripted pre-release checks for patch assets, installer presence, changelog/whats-new parity, and project board release completeness.
+  - What it takes:
+    - one scripted gate command with machine-readable + human-readable output.
+    - GitHub/project/release-asset queries wired into a deterministic checklist.
   - Acceptance:
     - One command emits pass/fail with actionable errors.
     - Gate output is attachable to release notes/support workflows.
+- [ ] `VS-1719` `P2` Dashboard information architecture and visual modernization pass.
+  - Scope: revisit the Dashboard layout so it feels more modern and operationally useful while keeping VaultSync's dark visual identity, navigation model, and familiar core cards.
+  - What it takes:
+    - redesign KPI/card hierarchy so the most actionable signals land first (`backups`, `restore readiness`, `alerts`, `storage`, `recent activity`).
+    - replace the current stretched/empty-space-prone sections with responsive card groups that scale cleanly in both maximized and windowed modes.
+    - introduce a more modern trend/insight presentation (for example: compact KPI tiles, clearer health/alert center, better weekly/storage visuals) without copying another product's layout literally.
+    - preserve existing data sources and avoid a visual rewrite that breaks learned user flows.
+  - Design constraints:
+    - keep the current VaultSync look-and-feel recognizable: dark shell, left navigation, strong status color coding, familiar terminology.
+    - prioritize clarity and responsiveness over decorative charts.
+    - any new dashboard component must degrade well in narrower window sizes.
+  - Acceptance:
+    - Dashboard uses space more intentionally in both fullscreen and windowed states.
+    - Primary health/alert/storage signals are easier to scan than in `1.6`.
+    - Existing dashboard identity remains recognizable to current users.
 
 ## 1.8.x
 - [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.
 - [ ] `VS-1802` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
 - [ ] `VS-1803` `P2` Automation hooks (webhooks/scripts on backup/restore events).
 - [ ] `VS-1804` `P2` CLI parity with all major UI features.
+- [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).
+  - Scope: shared-vault collaboration primitives and operator audit visibility.
+  - Planning note:
+    - Moved from `1.7.x` so `1.7` can stay focused on reliability, repair, and updater determinism.
+  - Acceptance:
+    - Shared workflows stay optional and do not regress solo mode defaults.
 
 ## 1.9.x
 - [ ] `VS-1902` `P1` App signing for trusted distribution.
