@@ -1112,6 +1112,14 @@ DELETE FROM sqlite_sequence;";
                 new { externalId, id = backupId });
         }
 
+        public void UpdateBackupProjectId(int backupId, int projectId)
+        {
+            using var c = Open();
+            c.Execute(
+                "UPDATE backups SET project_id = @projectId WHERE id = @id;",
+                new { projectId, id = backupId });
+        }
+
         public void UpdateBackupEncryptionMetadata(int backupId, bool isEncrypted, string? cryptoDescriptorJson, long totalBytes)
         {
             using var c = Open();

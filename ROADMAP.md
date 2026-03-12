@@ -871,12 +871,14 @@
   - updater diagnostics explain channel/target/patch eligibility without debug builds,
   - doctor workflows provide dry-run before mutation.
 
-- [ ] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine.
+- [ ] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine. _(In progress)_
   - Scope: remap only through trusted exact links (`backup.snapshot_id -> snapshots.project_id` and exact external-id matches), never name/path heuristics.
   - What it takes:
     - introduce a repair-evidence model (`exact snapshot link`, `exact external-id match`, `destination identity match`, `rejected heuristic`).
     - persist remap job results and reasons so re-runs are idempotent and diagnosable.
     - expose unresolved buckets (`missing snapshot`, `missing project`, `ambiguous match`, `identity mismatch`) for doctor/support surfaces.
+  - Current status:
+    - In progress: first pass builds deterministic dry-run repair plans for exact backup->project remaps from authoritative snapshot ownership and reports unresolved orphan buckets.
   - Depends on:
     - `VS-1706` startup consistency scan signals.
     - `VS-1712` stable destination identity model.
