@@ -914,7 +914,7 @@
   - Acceptance:
     - Retention does not halt on first non-protected delete failure when other eligible entries exist.
     - Protected backups are always skipped.
-- [ ] `VS-1706` `P1` Startup backup-index consistency checks.
+- [ ] `VS-1706` `P1` Startup backup-index consistency checks. _(In progress)_
   - Scope: lightweight integrity scan for backup/snapshot/project links and destination-path consistency with non-blocking warnings.
   - What it takes:
     - add a cheap startup scan model with bounded work (sampled/full depending on vault size).
