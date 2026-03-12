@@ -323,6 +323,7 @@ namespace VaultSync.Core.Config
         public UpdateReleaseCandidateDiagnostics SelectedCandidate { get; set; } = new();
         public UpdateReleaseCandidateDiagnostics StableCandidate { get; set; } = new();
         public UpdateReleaseCandidateDiagnostics BetaCandidate { get; set; } = new();
+        public PatchPreflightDiagnostics PatchPreflight { get; set; } = new();
     }
 
     public sealed class UpdateReleaseCandidateDiagnostics
@@ -332,6 +333,20 @@ namespace VaultSync.Core.Config
         public bool Prerelease { get; set; }
         public string PublishedUtc { get; set; } = string.Empty;
         public bool HasPatch { get; set; }
+        public bool HasInstaller { get; set; }
+    }
+
+    public sealed class PatchPreflightDiagnostics
+    {
+        public string StatusCode { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string CurrentVersion { get; set; } = string.Empty;
+        public string ManifestPreviousVersion { get; set; } = string.Empty;
+        public string ManifestTargetVersion { get; set; } = string.Empty;
+        public bool Eligible { get; set; }
+        public bool RequiresInstaller { get; set; }
+        public bool HasManifest { get; set; }
+        public bool HasArchive { get; set; }
         public bool HasInstaller { get; set; }
     }
 

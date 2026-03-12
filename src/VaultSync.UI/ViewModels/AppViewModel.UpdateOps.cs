@@ -270,12 +270,14 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var plan = await _patchService.PreparePatchAsync(
+                var preflight = await _patchService.PreflightPatchAsync(
                     _pendingUpdateResult,
                     _currentVersionString,
                     CancellationToken.None);
+                _pendingUpdateResult.Diagnostics.PatchPreflight = ToPatchPreflightDiagnostics(preflight, _currentVersionString);
+                PersistUpdateDiagnostics(_pendingUpdateResult.Diagnostics);
 
-                if (plan is null)
+                if (!preflight.Eligible || preflight.Plan is null)
                 {
                     PatchStatusMessage = L("Patch.Status.ManifestIncompatible", "Patch manifest cannot be applied to this version.");
                     _patchBlocked = true;
@@ -284,6 +286,8 @@ namespace VaultSync.UI.ViewModels
                     OnPropertyChanged(nameof(ShowInstallerFallback));
                     return;
                 }
+
+                var plan = preflight.Plan;
 
                 var archivePath = await _patchService.DownloadPatchArchiveAsync(
                     plan,
@@ -412,13 +416,16 @@ namespace VaultSync.UI.ViewModels
 
                 if (result.HasPatch)
                 {
-                    var plan = await _patchService
-                        .PreparePatchAsync(result, _currentVersionString, cancellationToken)
+                    var preflight = await _patchService
+                        .PreflightPatchAsync(result, _currentVersionString, cancellationToken)
                         .ConfigureAwait(false);
-                    if (plan is null)
+                    result.Diagnostics.PatchPreflight = ToPatchPreflightDiagnostics(preflight, _currentVersionString);
+                    PersistUpdateDiagnostics(result.Diagnostics);
+                    if (!preflight.Eligible)
                     {
                         _patchBlocked = true;
-                        Console.WriteLine("[Update] Patch manifest is not compatible with the current version; hiding patch option.");
+                        Console.WriteLine($"[Update] Patch preflight blocked: code={preflight.StatusCode}, installerFallback={preflight.RequiresInstaller}.");
+                        DiagnosticsLogger.Record($"Patch preflight blocked: code={preflight.StatusCode}, installerFallback={preflight.RequiresInstaller}.");
                     }
                     else
                     {
@@ -428,6 +435,18 @@ namespace VaultSync.UI.ViewModels
                 else
                 {
                     _patchBlocked = false;
+                    result.Diagnostics.PatchPreflight = new PatchPreflightDiagnostics
+                    {
+                        StatusCode = "no-patch-assets",
+                        Message = "Release does not provide patch assets.",
+                        CurrentVersion = _currentVersionString,
+                        Eligible = false,
+                        RequiresInstaller = result.HasInstaller,
+                        HasManifest = false,
+                        HasArchive = false,
+                        HasInstaller = result.HasInstaller
+                    };
+                    PersistUpdateDiagnostics(result.Diagnostics);
                 }
 
                 Console.WriteLine($"[Update] Update available: tag={result.TagName}, name={result.ReleaseName}, patch={result.HasPatch}, installer={result.HasInstaller}.");
@@ -634,6 +653,23 @@ namespace VaultSync.UI.ViewModels
             {
                 DiagnosticsLogger.Record($"Update diagnostics persist failed: {ex.GetType().Name} - {ex.Message}");
             }
+        }
+
+        private static PatchPreflightDiagnostics ToPatchPreflightDiagnostics(PatchPreflightResult preflight, string currentVersion)
+        {
+            return new PatchPreflightDiagnostics
+            {
+                StatusCode = preflight.StatusCode,
+                Message = preflight.Message,
+                CurrentVersion = currentVersion,
+                ManifestPreviousVersion = preflight.Manifest?.PreviousVersion ?? string.Empty,
+                ManifestTargetVersion = preflight.Manifest?.TargetVersion ?? string.Empty,
+                Eligible = preflight.Eligible,
+                RequiresInstaller = preflight.RequiresInstaller,
+                HasManifest = preflight.HasManifest,
+                HasArchive = preflight.HasArchive,
+                HasInstaller = preflight.HasInstaller
+            };
         }
 
         private void ScheduleUpdateRetry()

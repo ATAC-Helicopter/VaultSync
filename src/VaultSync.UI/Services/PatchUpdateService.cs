@@ -56,6 +56,41 @@ namespace VaultSync.UI.Services
         }
     }
 
+    public sealed class PatchPreflightResult
+    {
+        public PatchPreflightResult(
+            bool eligible,
+            bool requiresInstaller,
+            string statusCode,
+            string message,
+            PatchPlan? plan,
+            PatchManifest? manifest,
+            bool hasManifest,
+            bool hasArchive,
+            bool hasInstaller)
+        {
+            Eligible = eligible;
+            RequiresInstaller = requiresInstaller;
+            StatusCode = statusCode;
+            Message = message;
+            Plan = plan;
+            Manifest = manifest;
+            HasManifest = hasManifest;
+            HasArchive = hasArchive;
+            HasInstaller = hasInstaller;
+        }
+
+        public bool Eligible { get; }
+        public bool RequiresInstaller { get; }
+        public string StatusCode { get; }
+        public string Message { get; }
+        public PatchPlan? Plan { get; }
+        public PatchManifest? Manifest { get; }
+        public bool HasManifest { get; }
+        public bool HasArchive { get; }
+        public bool HasInstaller { get; }
+    }
+
     public sealed class PatchUpdateService
     {
         private static readonly HttpClient s_httpClient = CreateHttpClient();
@@ -68,22 +103,105 @@ namespace VaultSync.UI.Services
             string currentVersion,
             CancellationToken cancellationToken)
         {
-            if (!updateResult.HasPatch || string.IsNullOrWhiteSpace(updateResult.PatchManifestUrl) || updateResult.PatchArchiveUrl is null)
-                return null;
+            var preflight = await PreflightPatchAsync(updateResult, currentVersion, cancellationToken);
+            return preflight.Eligible ? preflight.Plan : null;
+        }
 
-            var manifest = await GetManifestAsync(updateResult.PatchManifestUrl, cancellationToken);
+        public async Task<PatchPreflightResult> PreflightPatchAsync(
+            UpdateCheckResult updateResult,
+            string currentVersion,
+            CancellationToken cancellationToken)
+        {
+            var hasManifest = !string.IsNullOrWhiteSpace(updateResult.PatchManifestUrl);
+            var hasArchive = updateResult.PatchArchiveUrl is not null;
+            var hasInstaller = updateResult.HasInstaller;
 
+            if (!hasManifest || !hasArchive)
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: hasInstaller,
+                    statusCode: "missing-patch-assets",
+                    message: "Patch assets are incomplete for this release.",
+                    plan: null,
+                    manifest: null,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
+
+            var manifest = await GetManifestAsync(updateResult.PatchManifestUrl!, cancellationToken);
             if (manifest is null)
-                return null;
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: hasInstaller,
+                    statusCode: "manifest-unavailable",
+                    message: "Patch manifest could not be downloaded.",
+                    plan: null,
+                    manifest: null,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
 
             if (!VersionsMatch(manifest.PreviousVersion, currentVersion))
-                return null;
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: true,
+                    statusCode: "base-version-mismatch",
+                    message: "Patch manifest does not match the current installed version.",
+                    plan: null,
+                    manifest: manifest,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
+
+            if (!VersionsMatch(manifest.TargetVersion, updateResult.TagName))
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: true,
+                    statusCode: "target-version-mismatch",
+                    message: "Patch manifest target version does not match the selected release.",
+                    plan: null,
+                    manifest: manifest,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
+
+            if (manifest.Files is null || manifest.Files.Count == 0)
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: true,
+                    statusCode: "manifest-empty",
+                    message: "Patch manifest does not contain any file entries.",
+                    plan: null,
+                    manifest: manifest,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
 
             var archiveName = string.IsNullOrWhiteSpace(updateResult.PatchArchiveName)
-                ? Path.GetFileName(updateResult.PatchArchiveUrl.AbsolutePath)
+                ? Path.GetFileName(updateResult.PatchArchiveUrl!.AbsolutePath)
                 : updateResult.PatchArchiveName;
+            var plan = new PatchPlan(manifest, updateResult.PatchArchiveUrl!, archiveName);
 
-            return new PatchPlan(manifest, updateResult.PatchArchiveUrl, archiveName);
+            return new PatchPreflightResult(
+                eligible: true,
+                requiresInstaller: false,
+                statusCode: "eligible",
+                message: "Patch chain is compatible with the current install.",
+                plan: plan,
+                manifest: manifest,
+                hasManifest: hasManifest,
+                hasArchive: hasArchive,
+                hasInstaller: hasInstaller);
         }
 
         public async Task<string?> DownloadPatchArchiveAsync(

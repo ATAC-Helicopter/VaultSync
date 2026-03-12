@@ -1541,6 +1541,20 @@ namespace VaultSync.UI
                         diagnostics.Error));
             }
 
+            if (!string.IsNullOrWhiteSpace(diagnostics.PatchPreflight?.StatusCode))
+            {
+                summary = string.Concat(
+                    summary,
+                    " | ",
+                    string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.Advanced.UpdateDiagnosticsPatch", "Patch preflight: {0} ({1})"),
+                        diagnostics.PatchPreflight.StatusCode,
+                        diagnostics.PatchPreflight.Eligible
+                            ? L("Settings.Advanced.UpdateDiagnosticsPatchEligible", "eligible")
+                            : L("Settings.Advanced.UpdateDiagnosticsPatchBlocked", "blocked")));
+            }
+
             UpdateDiagnosticsText = summary;
         }
 

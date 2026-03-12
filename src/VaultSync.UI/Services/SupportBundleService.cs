@@ -204,6 +204,19 @@ public sealed class SupportBundleService
                     config.Advanced.UpdateDiagnostics.CurrentVersion,
                     config.Advanced.UpdateDiagnostics.Decision,
                     config.Advanced.UpdateDiagnostics.Error,
+                    patchPreflight = new
+                    {
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.StatusCode,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.Message,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.CurrentVersion,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.ManifestPreviousVersion,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.ManifestTargetVersion,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.Eligible,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.RequiresInstaller,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.HasManifest,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.HasArchive,
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.HasInstaller
+                    },
                     selectedCandidate = config.Advanced.UpdateDiagnostics.SelectedCandidate is null
                         ? null
                         : new

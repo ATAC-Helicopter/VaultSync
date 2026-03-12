@@ -948,7 +948,7 @@
   - Acceptance:
     - Support diagnostics clearly show selected candidate release and why.
     - Channel mismatch scenarios are visible to operators without debug builds.
-- [ ] `VS-1708` `P1` Patch chain compatibility preflight.
+- [ ] `VS-1708` `P1` Patch chain compatibility preflight. _(In progress)_
   - Scope: explicit preflight validation for `current -> target` patch chain and required assets before showing patch install option.
   - What it takes:
     - explicit patch-chain model (`current`, `intermediate`, `target`, `supported`, `missing asset`, `requires installer`).
@@ -956,6 +956,10 @@
     - release tooling support so manifests expose enough chain metadata.
   - Depends on:
     - `VS-1707` updater target diagnostics.
+  - Current status:
+    - In progress: patch checks now validate base version, target version, manifest availability, and manifest file entries before exposing patch install.
+    - In progress: preflight outcomes now persist stable status codes/messages alongside update diagnostics and export through support bundles.
+    - In progress: Settings > Advanced shows the current patch preflight outcome as part of the updater diagnostics summary.
   - Acceptance:
     - Patch button appears only when chain/assets are valid.
     - Installer fallback messaging states precise incompatibility reason.
