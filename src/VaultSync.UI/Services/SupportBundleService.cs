@@ -196,7 +196,17 @@ public sealed class SupportBundleService
                 config.Advanced.Language,
                 skippedUpdateTag = RedactToken(config.Advanced.SkippedUpdateTag),
                 lastWhatsNewVersion = RedactToken(config.Advanced.LastWhatsNewVersion),
-                config.Advanced.HasSeenOnboarding
+                config.Advanced.HasSeenOnboarding,
+                backupIndexLastScan = new
+                {
+                    config.Advanced.BackupIndexLastScan.CheckedUtc,
+                    config.Advanced.BackupIndexLastScan.ProjectCount,
+                    config.Advanced.BackupIndexLastScan.SnapshotCount,
+                    config.Advanced.BackupIndexLastScan.BackupCount,
+                    config.Advanced.BackupIndexLastScan.ErrorCount,
+                    config.Advanced.BackupIndexLastScan.WarningCount,
+                    topFindingCodes = config.Advanced.BackupIndexLastScan.TopFindingCodes.ToList()
+                }
             },
             behavior = new
             {

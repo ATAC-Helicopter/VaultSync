@@ -46,6 +46,15 @@ public sealed record BackupIndexConsistencyReport(
     public bool HasIssues => Findings.Count > 0;
 }
 
+public sealed record BackupIndexConsistencySummary(
+    string CheckedUtc,
+    int ProjectCount,
+    int SnapshotCount,
+    int BackupCount,
+    int ErrorCount,
+    int WarningCount,
+    IReadOnlyList<string> TopFindingCodes);
+
 public sealed class BackupIndexConsistencyService
 {
     private readonly SqliteRepository _repo;
@@ -69,19 +78,22 @@ public sealed class BackupIndexConsistencyService
             projects,
             p => p.ExternalId,
             BackupIndexConsistencyCode.MissingProjectExternalId,
-            "Projects are missing external IDs required for metadata sync.");
+            "Projects are missing external IDs required for metadata sync.",
+            p => $"{p.Id}:{p.Name}");
         AppendMissingExternalIdFindings(
             findings,
             snapshots,
             s => s.ExternalId,
             BackupIndexConsistencyCode.MissingSnapshotExternalId,
-            "Snapshots are missing external IDs required for metadata sync.");
+            "Snapshots are missing external IDs required for metadata sync.",
+            s => $"{s.Id}:project={s.ProjectId}");
         AppendMissingExternalIdFindings(
             findings,
             backups,
             b => b.ExternalId,
             BackupIndexConsistencyCode.MissingBackupExternalId,
-            "Backups are missing external IDs required for metadata sync.");
+            "Backups are missing external IDs required for metadata sync.",
+            b => $"{b.Id}:project={b.ProjectId}:snapshot={b.SnapshotId}");
 
         AppendDuplicateExternalIdFindings(
             findings,
@@ -111,6 +123,7 @@ public sealed class BackupIndexConsistencyService
         var snapshotsWithMissingProject = snapshots
             .Where(s => !projectIds.Contains(s.ProjectId))
             .Select(s => $"{s.Id}:project={s.ProjectId}")
+            .OrderBy(static sample => sample, StringComparer.Ordinal)
             .Take(5)
             .ToList();
         if (snapshotsWithMissingProject.Count > 0)
@@ -126,6 +139,7 @@ public sealed class BackupIndexConsistencyService
         var backupsWithMissingProject = backups
             .Where(b => !projectIds.Contains(b.ProjectId))
             .Select(b => $"{b.Id}:project={b.ProjectId}")
+            .OrderBy(static sample => sample, StringComparer.Ordinal)
             .Take(5)
             .ToList();
         if (backupsWithMissingProject.Count > 0)
@@ -141,6 +155,7 @@ public sealed class BackupIndexConsistencyService
         var backupsWithMissingSnapshot = backups
             .Where(b => !snapshotsById.ContainsKey(b.SnapshotId))
             .Select(b => $"{b.Id}:snapshot={b.SnapshotId}")
+            .OrderBy(static sample => sample, StringComparer.Ordinal)
             .Take(5)
             .ToList();
         if (backupsWithMissingSnapshot.Count > 0)
@@ -160,6 +175,7 @@ public sealed class BackupIndexConsistencyService
                 var snapshot = snapshotsById[b.SnapshotId];
                 return $"{b.Id}:project={b.ProjectId}:snapshot={b.SnapshotId}:snapshotProject={snapshot.ProjectId}";
             })
+            .OrderBy(static sample => sample, StringComparer.Ordinal)
             .Take(5)
             .ToList();
         if (mismatchedBackups.Count > 0)
@@ -183,17 +199,39 @@ public sealed class BackupIndexConsistencyService
                 .ToList());
     }
 
+    public static BackupIndexConsistencySummary BuildSummary(BackupIndexConsistencyReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        return new BackupIndexConsistencySummary(
+            report.CheckedUtc.ToString("O"),
+            report.ProjectCount,
+            report.SnapshotCount,
+            report.BackupCount,
+            report.ErrorCount,
+            report.WarningCount,
+            report.Findings
+                .OrderByDescending(static finding => finding.Count)
+                .ThenByDescending(static finding => finding.Severity)
+                .ThenBy(static finding => finding.Code, StringComparer.Ordinal)
+                .Take(5)
+                .Select(static finding => finding.Code)
+                .ToList());
+    }
+
     private static void AppendMissingExternalIdFindings<T>(
         ICollection<BackupIndexConsistencyFinding> findings,
         IReadOnlyCollection<T> items,
         Func<T, string?> externalIdSelector,
         string code,
-        string message)
+        string message,
+        Func<T, string> sampleFormatter)
     {
         var missing = items
             .Where(item => string.IsNullOrWhiteSpace(externalIdSelector(item)))
+            .Select(sampleFormatter)
+            .OrderBy(static sample => sample, StringComparer.Ordinal)
             .Take(5)
-            .Select(static item => item?.ToString() ?? string.Empty)
             .ToList();
         if (missing.Count == 0)
             return;
@@ -218,13 +256,14 @@ public sealed class BackupIndexConsistencyService
             .Where(item => !string.IsNullOrWhiteSpace(externalIdSelector(item)))
             .GroupBy(item => externalIdSelector(item)!, StringComparer.OrdinalIgnoreCase)
             .Where(group => group.Count() > 1)
+            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (duplicates.Count == 0)
             return;
 
         var samples = duplicates
             .Take(5)
-            .Select(group => $"{group.Key} => {string.Join(", ", group.Take(3).Select(sampleFormatter))}")
+            .Select(group => $"{group.Key} => {string.Join(", ", group.Select(sampleFormatter).OrderBy(static sample => sample, StringComparer.Ordinal).Take(3))}")
             .ToList();
 
         findings.Add(new BackupIndexConsistencyFinding(

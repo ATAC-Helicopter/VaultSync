@@ -129,6 +129,38 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
         Assert.Contains(report.Findings, f => f.Code == BackupIndexConsistencyCode.MissingBackupExternalId);
     }
 
+    [Fact]
+    public void Scan_SortsSamplesDeterministically_AndBuildsStableSummary()
+    {
+        var repo = CreateRepository();
+        var projectB = repo.AddProject(new Project
+        {
+            Name = "Zulu",
+            RootPath = Path.Combine(_tempDir, "Zulu"),
+            Preset = "dotnet"
+        });
+        var projectA = repo.AddProject(new Project
+        {
+            Name = "Alpha",
+            RootPath = Path.Combine(_tempDir, "Alpha"),
+            Preset = "dotnet"
+        });
+
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        connection.Open();
+        connection.Execute("UPDATE projects SET external_id = '' WHERE id IN @ids;", new { ids = new[] { projectB, projectA } });
+
+        var service = new BackupIndexConsistencyService(repo);
+        var report = service.Scan();
+        var summary = BackupIndexConsistencyService.BuildSummary(report);
+
+        var finding = Assert.Single(report.Findings, f => f.Code == BackupIndexConsistencyCode.MissingProjectExternalId);
+        Assert.Equal(new[] { $"{projectA}:Alpha", $"{projectB}:Zulu" }, finding.Samples);
+        Assert.Contains(BackupIndexConsistencyCode.MissingProjectExternalId, summary.TopFindingCodes);
+        Assert.Equal(report.WarningCount, summary.WarningCount);
+        Assert.Equal(report.ErrorCount, summary.ErrorCount);
+    }
+
     private SqliteRepository CreateRepository()
     {
         var repo = new SqliteRepository(_dbPath);

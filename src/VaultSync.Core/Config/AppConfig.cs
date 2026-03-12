@@ -278,6 +278,18 @@ namespace VaultSync.Core.Config
         public string SkippedUpdateTag { get; set; } = string.Empty;
         public string LastWhatsNewVersion { get; set; } = string.Empty;
         public bool HasSeenOnboarding { get; set; } = false;
+        public BackupIndexScanSummary BackupIndexLastScan { get; set; } = new();
+    }
+
+    public sealed class BackupIndexScanSummary
+    {
+        public string CheckedUtc { get; set; } = string.Empty;
+        public int ProjectCount { get; set; }
+        public int SnapshotCount { get; set; }
+        public int BackupCount { get; set; }
+        public int ErrorCount { get; set; }
+        public int WarningCount { get; set; }
+        public List<string> TopFindingCodes { get; set; } = new();
     }
 
     // -------- App Behavior / Background Mode --------

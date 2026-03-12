@@ -923,6 +923,7 @@
   - Current status:
     - In progress: first pass now runs as a deferred startup task after metadata auto-import and before update checks.
     - In progress: initial scan covers missing/duplicate external IDs plus snapshot/project/backup relationship mismatches, with runtime diagnostics summary state in `AppViewModel`.
+    - In progress: findings now emit deterministic samples and persist a lightweight last-scan summary for support-bundle reuse.
   - Acceptance:
     - Startup scan surfaces actionable warnings without blocking app launch.
     - Scan output is available in diagnostics/support bundle.
