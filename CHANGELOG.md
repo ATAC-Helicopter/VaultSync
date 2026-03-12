@@ -13,6 +13,7 @@
 ### Changed
 - [VS-1707] Settings > Advanced now shows persisted updater release-target diagnostics (decision, channel, selected candidate, stable candidate, beta candidate, error) and support bundles now export the same trace for operator triage.
 - [VS-1708] Patch availability now runs an explicit `current -> target` preflight (base-version match, target-version match, manifest presence, file list presence) before the patch button is offered, and the resulting eligibility trace is persisted/exported with updater diagnostics.
+- [VS-1709] Support bundles now export persisted updater diagnostics, patch preflight eligibility, backup-repair telemetry, and metadata-conflict summaries so off-box triage has the latest repair/update state without requiring a live repro.
 ### Fixed
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
 - [BUG-16024] Track restore-mode dropdown rendering parity so restore confirmation never falls back to `View not found for RestoreModeOption` for either option.

@@ -281,6 +281,8 @@ namespace VaultSync.Core.Config
         public BackupIndexScanSummary BackupIndexLastScan { get; set; } = new();
         public List<ProjectMetadataConflictRecord> ProjectMetadataConflicts { get; set; } = new();
         public UpdateCheckDiagnostics UpdateDiagnostics { get; set; } = new();
+        public BackupRepairTelemetry BackupRepairTelemetry { get; set; } = new();
+        public MetadataConflictTelemetry MetadataConflictTelemetry { get; set; } = new();
     }
 
     public sealed class BackupIndexScanSummary
@@ -348,6 +350,26 @@ namespace VaultSync.Core.Config
         public bool HasManifest { get; set; }
         public bool HasArchive { get; set; }
         public bool HasInstaller { get; set; }
+    }
+
+    public sealed class BackupRepairTelemetry
+    {
+        public string LastScanUtc { get; set; } = string.Empty;
+        public int PlannedActionCount { get; set; }
+        public int BlockedIssueBucketCount { get; set; }
+        public List<string> PlannedActionCodes { get; set; } = new();
+        public List<string> BlockedIssueCodes { get; set; } = new();
+        public string LastApplyUtc { get; set; } = string.Empty;
+        public int LastAppliedCount { get; set; }
+        public string LastStatus { get; set; } = string.Empty;
+    }
+
+    public sealed class MetadataConflictTelemetry
+    {
+        public string LastUpdatedUtc { get; set; } = string.Empty;
+        public int PendingConflictCount { get; set; }
+        public string LastResolutionAction { get; set; } = string.Empty;
+        public string LastResolvedProject { get; set; } = string.Empty;
     }
 
     // -------- App Behavior / Background Mode --------

@@ -251,6 +251,34 @@ public sealed class SupportBundleService
                             config.Advanced.UpdateDiagnostics.BetaCandidate.HasInstaller
                         }
                 },
+                backupRepairTelemetry = new
+                {
+                    config.Advanced.BackupRepairTelemetry.LastScanUtc,
+                    config.Advanced.BackupRepairTelemetry.PlannedActionCount,
+                    config.Advanced.BackupRepairTelemetry.BlockedIssueBucketCount,
+                    plannedActionCodes = config.Advanced.BackupRepairTelemetry.PlannedActionCodes.ToList(),
+                    blockedIssueCodes = config.Advanced.BackupRepairTelemetry.BlockedIssueCodes.ToList(),
+                    config.Advanced.BackupRepairTelemetry.LastApplyUtc,
+                    config.Advanced.BackupRepairTelemetry.LastAppliedCount,
+                    config.Advanced.BackupRepairTelemetry.LastStatus
+                },
+                metadataConflictTelemetry = new
+                {
+                    config.Advanced.MetadataConflictTelemetry.LastUpdatedUtc,
+                    config.Advanced.MetadataConflictTelemetry.PendingConflictCount,
+                    config.Advanced.MetadataConflictTelemetry.LastResolutionAction,
+                    config.Advanced.MetadataConflictTelemetry.LastResolvedProject,
+                    conflicts = (config.Advanced.ProjectMetadataConflicts ?? new List<ProjectMetadataConflictRecord>())
+                        .Select(conflict => new
+                        {
+                            conflict.ProjectExternalId,
+                            conflict.ProjectName,
+                            conflict.SourceMachineId,
+                            conflict.SourceUpdatedUtc,
+                            differingFields = BuildConflictFieldList(conflict)
+                        })
+                        .ToList()
+                },
                 backupIndexLastScan = new
                 {
                     config.Advanced.BackupIndexLastScan.CheckedUtc,
@@ -274,6 +302,20 @@ public sealed class SupportBundleService
                 config.Behavior.ConfirmDeleteBackup
             }
         };
+    }
+
+    private static List<string> BuildConflictFieldList(ProjectMetadataConflictRecord conflict)
+    {
+        var fields = new List<string>();
+        if (!string.Equals(conflict.Local?.PreferredDestinationId, conflict.Imported?.PreferredDestinationId, StringComparison.Ordinal))
+            fields.Add("preferredDestination");
+        if (!string.Equals(conflict.Local?.RestoreMode, conflict.Imported?.RestoreMode, StringComparison.Ordinal))
+            fields.Add("restoreMode");
+        if (!string.Equals(conflict.Local?.VerificationPolicy, conflict.Imported?.VerificationPolicy, StringComparison.Ordinal))
+            fields.Add("verificationPolicy");
+        if (!string.Equals(conflict.Local?.Tags, conflict.Imported?.Tags, StringComparison.Ordinal))
+            fields.Add("tags");
+        return fields;
     }
 
     private static object QueryMetadataSummary(string? dbPath)

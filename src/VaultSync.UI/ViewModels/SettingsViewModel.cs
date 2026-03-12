@@ -2554,6 +2554,7 @@ namespace VaultSync.UI
                     L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
                 DiagnosticsLogger.Record(
                     $"Doctor action complete: backup-index-repair scan. Actions={plan.Actions.Count}; BlockedBuckets={plan.BlockedIssues.Count}.");
+                PersistBackupRepairTelemetry(plan, appliedCount: null, status: BackupIndexRepairStatus);
             }
             catch (Exception ex)
             {
@@ -2567,6 +2568,7 @@ namespace VaultSync.UI
                     NotificationSeverity.Error,
                     L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
                 DiagnosticsLogger.Record($"Doctor action failed: backup-index-repair scan. {ex.GetType().Name} - {ex.Message}");
+                PersistBackupRepairTelemetry(null, appliedCount: null, status: BackupIndexRepairStatus);
             }
             finally
             {
@@ -2609,6 +2611,7 @@ namespace VaultSync.UI
                     NotificationSeverity.Info,
                     L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
                 DiagnosticsLogger.Record($"Doctor action complete: backup-index-repair apply. Applied={applied}.");
+                PersistBackupRepairTelemetry(plan, applied, BackupIndexRepairStatus);
 
                 await ScanBackupIndexRepairPlanAsync().ConfigureAwait(false);
             }
@@ -2624,6 +2627,7 @@ namespace VaultSync.UI
                     NotificationSeverity.Error,
                     L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
                 DiagnosticsLogger.Record($"Doctor action failed: backup-index-repair apply. {ex.GetType().Name} - {ex.Message}");
+                PersistBackupRepairTelemetry(plan, appliedCount: null, status: BackupIndexRepairStatus);
             }
             finally
             {
@@ -2641,7 +2645,7 @@ namespace VaultSync.UI
                 CultureInfo.CurrentCulture,
                 L("Settings.Advanced.BackupRepairSummaryBlocked", "{0} blocked orphan bucket(s)"),
                 plan.BlockedIssues.Count);
-            return $"{exactActions} · {blockedIssues}";
+            return $"{exactActions} | {blockedIssues}";
         }
 
         private string BuildBackupIndexRepairDetails(BackupIndexRepairPlan plan)
@@ -2705,6 +2709,7 @@ namespace VaultSync.UI
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictsPending", "{0} pending cross-machine metadata conflict(s)."),
                     ProjectMetadataConflicts.Count);
+            PersistMetadataConflictTelemetry(lastAction: null, lastResolvedProject: null, pendingCount: ProjectMetadataConflicts.Count);
             OnPropertyChanged(nameof(HasProjectMetadataConflicts));
             _acceptProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
             _keepLocalProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
@@ -2748,6 +2753,7 @@ namespace VaultSync.UI
                     repo.UpdateProjectTags(item.ProjectId, EmptyToNull(item.ImportedTags));
 
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
+                    UpdateMetadataConflictTelemetry(cfg, "accept-imported", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
                     AppConfigStore.Save(cfg);
                 }).ConfigureAwait(false);
 
@@ -2801,6 +2807,7 @@ namespace VaultSync.UI
                 {
                     var cfg = AppConfigStore.Load();
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
+                    UpdateMetadataConflictTelemetry(cfg, "keep-local", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
                     AppConfigStore.Save(cfg);
                 }).ConfigureAwait(false);
 
@@ -2845,6 +2852,69 @@ namespace VaultSync.UI
             if (existing is not null)
             {
                 cfg.Advanced.ProjectMetadataConflicts.Remove(existing);
+            }
+        }
+
+        private void PersistMetadataConflictTelemetry(string? lastAction, string? lastResolvedProject, int pendingCount)
+        {
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                UpdateMetadataConflictTelemetry(cfg, lastAction, lastResolvedProject, pendingCount);
+                AppConfigStore.Save(cfg);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Metadata conflict telemetry persist failed: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        private static void UpdateMetadataConflictTelemetry(AppConfig cfg, string? lastAction, string? lastResolvedProject, int pendingCount)
+        {
+            cfg.Advanced.MetadataConflictTelemetry ??= new MetadataConflictTelemetry();
+            cfg.Advanced.MetadataConflictTelemetry.LastUpdatedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+            cfg.Advanced.MetadataConflictTelemetry.PendingConflictCount = Math.Max(0, pendingCount);
+
+            if (!string.IsNullOrWhiteSpace(lastAction))
+                cfg.Advanced.MetadataConflictTelemetry.LastResolutionAction = lastAction;
+
+            if (!string.IsNullOrWhiteSpace(lastResolvedProject))
+                cfg.Advanced.MetadataConflictTelemetry.LastResolvedProject = lastResolvedProject;
+        }
+
+        private static void PersistBackupRepairTelemetry(BackupIndexRepairPlan? plan, int? appliedCount, string status)
+        {
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                cfg.Advanced.BackupRepairTelemetry ??= new BackupRepairTelemetry();
+                var telemetry = cfg.Advanced.BackupRepairTelemetry;
+                telemetry.LastScanUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+                telemetry.LastStatus = status ?? string.Empty;
+                telemetry.PlannedActionCount = plan?.Actions.Count ?? 0;
+                telemetry.BlockedIssueBucketCount = plan?.BlockedIssues.Count ?? 0;
+                telemetry.PlannedActionCodes = plan?.Actions
+                    .Select(static action => action.Code)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(static code => code, StringComparer.Ordinal)
+                    .ToList() ?? new List<string>();
+                telemetry.BlockedIssueCodes = plan?.BlockedIssues
+                    .Select(static issue => issue.Code)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(static code => code, StringComparer.Ordinal)
+                    .ToList() ?? new List<string>();
+
+                if (appliedCount.HasValue)
+                {
+                    telemetry.LastApplyUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+                    telemetry.LastAppliedCount = appliedCount.Value;
+                }
+
+                AppConfigStore.Save(cfg);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Backup repair telemetry persist failed: {ex.GetType().Name} - {ex.Message}");
             }
         }
 

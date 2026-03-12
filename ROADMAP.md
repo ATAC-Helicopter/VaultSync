@@ -963,11 +963,15 @@
   - Acceptance:
     - Patch button appears only when chain/assets are valid.
     - Installer fallback messaging states precise incompatibility reason.
-- [ ] `VS-1709` `P2` Support bundle update/repair telemetry expansion.
+- [ ] `VS-1709` `P2` Support bundle update/repair telemetry expansion. _(In progress)_
   - Scope: include update candidate resolution trace, patch eligibility details, and orphan/repair summaries in redacted support exports.
   - What it takes:
     - extend support-bundle schema with stable redacted sections for updater/repair outcomes.
     - version the schema so support tooling can rely on field names across minor releases.
+  - Current status:
+    - In progress: support bundles now export persisted updater decision traces and patch-preflight eligibility results from advanced config.
+    - In progress: doctor repair dry-run/apply flows now persist lightweight repair telemetry (actions, blocked buckets, codes, last apply state) for support exports.
+    - In progress: metadata conflict tracking now persists conflict-resolution telemetry and exports pending conflict summaries for cross-machine triage.
   - Acceptance:
     - New telemetry sections are redacted and stable for support use.
 - [ ] `VS-1710` `P2` Scheduled maintenance window jobs.
