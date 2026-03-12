@@ -116,6 +116,7 @@ namespace VaultSync.UI.ViewModels
         private readonly INotificationService _notificationService;
         private readonly IPowerStatusProvider _powerStatusProvider;
         private readonly IDriveHealthService _driveHealthService;
+        private readonly BackupIndexConsistencyService _backupIndexConsistencyService;
         private readonly HashSet<BackupDestinationViewModel> _observedDestinations = new();
         private readonly LogConsoleService _logConsoleService;
         private LogConsoleWindow? _logConsoleWindow;
@@ -204,6 +205,8 @@ namespace VaultSync.UI.ViewModels
         private int _reloadBackupsQueued;
         private bool _isPatchInstalling;
         private string _patchStatusMessage = string.Empty;
+        private BackupIndexConsistencyReport? _backupIndexConsistencyReport;
+        private string _backupIndexConsistencyStatus = string.Empty;
         private bool _showSoftCrashBanner;
         private string _softCrashBannerMessage = string.Empty;
         private string? _softCrashLogPath;
@@ -559,6 +562,13 @@ namespace VaultSync.UI.ViewModels
         public string FooterProductDisplay => $"VaultSync · {CurrentVersionDisplay}";
         public string FooterCopyrightDisplay => $"© {DateTime.UtcNow.Year} Flavio Giacchetti";
         public bool ShowSoftCrashBanner => _showSoftCrashBanner;
+        public BackupIndexConsistencyReport? BackupIndexConsistencyReport => _backupIndexConsistencyReport;
+        public bool HasBackupIndexConsistencyIssues => (_backupIndexConsistencyReport?.HasIssues).GetValueOrDefault();
+        public string BackupIndexConsistencyStatus
+        {
+            get => _backupIndexConsistencyStatus;
+            private set => SetField(ref _backupIndexConsistencyStatus, value);
+        }
         public string SoftCrashBannerMessage
         {
             get => _softCrashBannerMessage;

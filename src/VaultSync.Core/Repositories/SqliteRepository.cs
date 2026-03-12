@@ -1442,6 +1442,33 @@ DELETE FROM sqlite_sequence;";
                 """);
         }
 
+        public List<Backup> GetAllBackups()
+        {
+            using var c = Open();
+            return c.Query<Backup>(
+                """
+                SELECT
+                  id,
+                  external_id as ExternalId,
+                  project_id  as ProjectId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  type,
+                  backup_mode as BackupMode,
+                  total_bytes as TotalBytes,
+                  path,
+                  destination_path as DestinationPath,
+                  destination_alias as DestinationAlias,
+                  origin_machine_name as OriginMachineName,
+                  is_protected as IsProtected,
+                  is_encrypted as IsEncrypted,
+                  crypto_descriptor_json as CryptoDescriptorJson,
+                  is_imported as IsImported
+                FROM backups
+                ORDER BY created_utc DESC;
+                """).ToList();
+        }
+
         public int GetBackupCount()
         {
             using var c = Open();

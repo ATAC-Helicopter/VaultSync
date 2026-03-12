@@ -920,6 +920,9 @@
     - add a cheap startup scan model with bounded work (sampled/full depending on vault size).
     - classify findings as `warning`, `repairable`, `critical`.
     - cache last scan summary so UI can show status without rescanning synchronously.
+  - Current status:
+    - In progress: first pass now runs as a deferred startup task after metadata auto-import and before update checks.
+    - In progress: initial scan covers missing/duplicate external IDs plus snapshot/project/backup relationship mismatches, with runtime diagnostics summary state in `AppViewModel`.
   - Acceptance:
     - Startup scan surfaces actionable warnings without blocking app launch.
     - Scan output is available in diagnostics/support bundle.

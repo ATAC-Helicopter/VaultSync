@@ -222,6 +222,7 @@ namespace VaultSync.UI.ViewModels
                     TryImportMetadataFromRoot(cfg.ProjectsRoot ?? string.Empty);
                 }
 
+                await RunStartupBackupIndexConsistencyCheckAsync().ConfigureAwait(false);
                 StartUpdateCheck();
                 ConfigureUpdateCheckTimer();
             });

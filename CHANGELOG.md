@@ -1,6 +1,7 @@
 ﻿# Changelog
 ## [1.7.0] - Unreleased (target: 20.03.2026)
 ### Added
+- [VS-1706] Added a non-blocking startup backup-index consistency scan that audits project/snapshot/backup links and records duplicate/missing external IDs plus broken backup->snapshot->project mappings before warm loads run.
 ### Changed
 ### Fixed
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).

@@ -56,6 +56,7 @@ namespace VaultSync.UI.ViewModels
             _notificationService = new NotificationService();
             _powerStatusProvider = new PowerStatusProvider();
             _driveHealthService = new DriveHealthService();
+            _backupIndexConsistencyService = new BackupIndexConsistencyService(_repo);
 
             // 2) Section viewmodels
             _dashboardViewModel = null;
