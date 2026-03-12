@@ -107,6 +107,7 @@ namespace VaultSync.UI
         private string? _lastUpdateCheckError;
         private string _updateCheckStatusText = string.Empty;
         private string _updateCheckErrorText = string.Empty;
+        private string _updateDiagnosticsText = string.Empty;
         private string _rsyncStatusHint = string.Empty;
         private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
@@ -444,6 +445,7 @@ namespace VaultSync.UI
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
             _updateCheckIntervalMinutes = ClampInt(cfg.Advanced.UpdateCheckIntervalMinutes, 15, 10080, 120);
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
+            RefreshUpdateDiagnostics(cfg.Advanced.UpdateDiagnostics);
             RefreshProjectMetadataConflicts(cfg.Advanced.ProjectMetadataConflicts);
 
             // Apply theme + layout when loading config (in case Settings view is opened first)
@@ -1412,6 +1414,12 @@ namespace VaultSync.UI
             }
         }
 
+        public string UpdateDiagnosticsText
+        {
+            get => _updateDiagnosticsText;
+            private set => SetField(ref _updateDiagnosticsText, value);
+        }
+
         public bool HasUpdateCheckError => !string.IsNullOrWhiteSpace(_updateCheckErrorText);
 
         public IReadOnlyList<LanguageOption> LanguageOptions => _localizationService.SupportedLanguages;
@@ -1472,6 +1480,11 @@ namespace VaultSync.UI
             RefreshUpdateCheckStatus();
         }
 
+        public void ReloadUpdateDiagnostics()
+        {
+            RefreshUpdateDiagnostics(AppConfigStore.Load().Advanced.UpdateDiagnostics);
+        }
+
         private void RefreshUpdateCheckStatus()
         {
             var neverText = L("Settings.Advanced.UpdateStatusNever", "Never checked");
@@ -1491,6 +1504,44 @@ namespace VaultSync.UI
             UpdateCheckErrorText = string.IsNullOrWhiteSpace(_lastUpdateCheckError)
                 ? string.Empty
                 : string.Format(CultureInfo.CurrentCulture, errorTemplate, _lastUpdateCheckError);
+        }
+
+        private void RefreshUpdateDiagnostics(UpdateCheckDiagnostics? diagnostics)
+        {
+            diagnostics ??= new UpdateCheckDiagnostics();
+            if (string.IsNullOrWhiteSpace(diagnostics.Decision))
+            {
+                UpdateDiagnosticsText = L("Settings.Advanced.UpdateDiagnosticsEmpty", "No release-target diagnostics captured yet.");
+                return;
+            }
+
+            var selectedTag = string.IsNullOrWhiteSpace(diagnostics.SelectedCandidate?.Tag) ? "-" : diagnostics.SelectedCandidate.Tag;
+            var selectedTarget = string.IsNullOrWhiteSpace(diagnostics.SelectedCandidate?.TargetCommitish) ? "-" : diagnostics.SelectedCandidate.TargetCommitish;
+            var stableTag = string.IsNullOrWhiteSpace(diagnostics.StableCandidate?.Tag) ? "-" : diagnostics.StableCandidate.Tag;
+            var betaTag = string.IsNullOrWhiteSpace(diagnostics.BetaCandidate?.Tag) ? "-" : diagnostics.BetaCandidate.Tag;
+
+            var summary = string.Format(
+                CultureInfo.CurrentCulture,
+                L("Settings.Advanced.UpdateDiagnosticsTemplate", "Decision: {0} | Channel: {1} | Selected: {2} ({3}) | Stable: {4} | Beta: {5}"),
+                diagnostics.Decision,
+                string.IsNullOrWhiteSpace(diagnostics.Channel) ? "-" : diagnostics.Channel,
+                selectedTag,
+                selectedTarget,
+                stableTag,
+                betaTag);
+
+            if (!string.IsNullOrWhiteSpace(diagnostics.Error))
+            {
+                summary = string.Concat(
+                    summary,
+                    " | ",
+                    string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.Advanced.UpdateDiagnosticsError", "Error: {0}"),
+                        diagnostics.Error));
+            }
+
+            UpdateDiagnosticsText = summary;
         }
 
         private void RefreshRsyncStatusHint()

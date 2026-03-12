@@ -1561,6 +1561,10 @@
                   <TextBlock Text="{Binding UpdateCheckStatusText}"
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="11" />
+                  <TextBlock Text="{Binding UpdateDiagnosticsText}"
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="11"
+                             TextWrapping="Wrap" />
                   <TextBlock Text="{Binding UpdateCheckErrorText}"
                              Foreground="{DynamicResource WarningTextBrush}"
                              FontSize="11"

@@ -280,6 +280,7 @@ namespace VaultSync.Core.Config
         public bool HasSeenOnboarding { get; set; } = false;
         public BackupIndexScanSummary BackupIndexLastScan { get; set; } = new();
         public List<ProjectMetadataConflictRecord> ProjectMetadataConflicts { get; set; } = new();
+        public UpdateCheckDiagnostics UpdateDiagnostics { get; set; } = new();
     }
 
     public sealed class BackupIndexScanSummary
@@ -310,6 +311,28 @@ namespace VaultSync.Core.Config
         public string RestoreMode { get; set; } = string.Empty;
         public string VerificationPolicy { get; set; } = string.Empty;
         public string Tags { get; set; } = string.Empty;
+    }
+
+    public sealed class UpdateCheckDiagnostics
+    {
+        public string CheckedUtc { get; set; } = string.Empty;
+        public string Channel { get; set; } = string.Empty;
+        public string CurrentVersion { get; set; } = string.Empty;
+        public string Decision { get; set; } = string.Empty;
+        public string Error { get; set; } = string.Empty;
+        public UpdateReleaseCandidateDiagnostics SelectedCandidate { get; set; } = new();
+        public UpdateReleaseCandidateDiagnostics StableCandidate { get; set; } = new();
+        public UpdateReleaseCandidateDiagnostics BetaCandidate { get; set; } = new();
+    }
+
+    public sealed class UpdateReleaseCandidateDiagnostics
+    {
+        public string Tag { get; set; } = string.Empty;
+        public string TargetCommitish { get; set; } = string.Empty;
+        public bool Prerelease { get; set; }
+        public string PublishedUtc { get; set; } = string.Empty;
+        public bool HasPatch { get; set; }
+        public bool HasInstaller { get; set; }
     }
 
     // -------- App Behavior / Background Mode --------

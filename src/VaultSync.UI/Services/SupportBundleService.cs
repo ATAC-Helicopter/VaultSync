@@ -197,6 +197,47 @@ public sealed class SupportBundleService
                 skippedUpdateTag = RedactToken(config.Advanced.SkippedUpdateTag),
                 lastWhatsNewVersion = RedactToken(config.Advanced.LastWhatsNewVersion),
                 config.Advanced.HasSeenOnboarding,
+                updateDiagnostics = new
+                {
+                    config.Advanced.UpdateDiagnostics.CheckedUtc,
+                    config.Advanced.UpdateDiagnostics.Channel,
+                    config.Advanced.UpdateDiagnostics.CurrentVersion,
+                    config.Advanced.UpdateDiagnostics.Decision,
+                    config.Advanced.UpdateDiagnostics.Error,
+                    selectedCandidate = config.Advanced.UpdateDiagnostics.SelectedCandidate is null
+                        ? null
+                        : new
+                        {
+                            config.Advanced.UpdateDiagnostics.SelectedCandidate.Tag,
+                            config.Advanced.UpdateDiagnostics.SelectedCandidate.TargetCommitish,
+                            config.Advanced.UpdateDiagnostics.SelectedCandidate.PublishedUtc,
+                            config.Advanced.UpdateDiagnostics.SelectedCandidate.Prerelease,
+                            config.Advanced.UpdateDiagnostics.SelectedCandidate.HasPatch,
+                            config.Advanced.UpdateDiagnostics.SelectedCandidate.HasInstaller
+                        },
+                    stableCandidate = config.Advanced.UpdateDiagnostics.StableCandidate is null
+                        ? null
+                        : new
+                        {
+                            config.Advanced.UpdateDiagnostics.StableCandidate.Tag,
+                            config.Advanced.UpdateDiagnostics.StableCandidate.TargetCommitish,
+                            config.Advanced.UpdateDiagnostics.StableCandidate.PublishedUtc,
+                            config.Advanced.UpdateDiagnostics.StableCandidate.Prerelease,
+                            config.Advanced.UpdateDiagnostics.StableCandidate.HasPatch,
+                            config.Advanced.UpdateDiagnostics.StableCandidate.HasInstaller
+                        },
+                    betaCandidate = config.Advanced.UpdateDiagnostics.BetaCandidate is null
+                        ? null
+                        : new
+                        {
+                            config.Advanced.UpdateDiagnostics.BetaCandidate.Tag,
+                            config.Advanced.UpdateDiagnostics.BetaCandidate.TargetCommitish,
+                            config.Advanced.UpdateDiagnostics.BetaCandidate.PublishedUtc,
+                            config.Advanced.UpdateDiagnostics.BetaCandidate.Prerelease,
+                            config.Advanced.UpdateDiagnostics.BetaCandidate.HasPatch,
+                            config.Advanced.UpdateDiagnostics.BetaCandidate.HasInstaller
+                        }
+                },
                 backupIndexLastScan = new
                 {
                     config.Advanced.BackupIndexLastScan.CheckedUtc,

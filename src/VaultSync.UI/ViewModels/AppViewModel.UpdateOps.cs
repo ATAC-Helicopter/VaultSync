@@ -388,9 +388,11 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 DiagnosticsLogger.Record("Update check running.");
-                var result = await _updateService
+                var evaluation = await _updateService
                     .CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken)
                     .ConfigureAwait(false);
+                PersistUpdateDiagnostics(evaluation.Diagnostics);
+                var result = evaluation.Update;
                 if (result is null)
                 {
                     Console.WriteLine("[Update] No update available.");
@@ -441,6 +443,14 @@ namespace VaultSync.UI.ViewModels
             {
                 // Silently ignore update failures; we don't want to disturb the user.
                 DiagnosticsLogger.Record($"Update check failed: {ex.GetType().Name} - {ex.Message}");
+                PersistUpdateDiagnostics(new UpdateCheckDiagnostics
+                {
+                    CheckedUtc = DateTimeOffset.UtcNow.ToString("O"),
+                    Channel = CurrentUpdateChannel.ToString(),
+                    CurrentVersion = _currentVersionString,
+                    Decision = "error",
+                    Error = ex.Message
+                });
                 RecordUpdateCheckFailure(ex);
             }
             finally
@@ -609,6 +619,21 @@ namespace VaultSync.UI.ViewModels
             Dispatcher.UIThread.Post(() =>
                 _settingsViewModel.UpdateUpdateCheckStatus(_lastUpdateCheckAt, _lastUpdateCheckError));
             ScheduleUpdateRetry();
+        }
+
+        private void PersistUpdateDiagnostics(UpdateCheckDiagnostics diagnostics)
+        {
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                cfg.Advanced.UpdateDiagnostics = diagnostics ?? new UpdateCheckDiagnostics();
+                AppConfigStore.Save(cfg);
+                Dispatcher.UIThread.Post(() => _settingsViewModel.ReloadUpdateDiagnostics());
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Update diagnostics persist failed: {ex.GetType().Name} - {ex.Message}");
+            }
         }
 
         private void ScheduleUpdateRetry()

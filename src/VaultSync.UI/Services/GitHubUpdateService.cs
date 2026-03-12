@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using VaultSync.Core.Config;
 
 namespace VaultSync.UI.Services
 {
@@ -24,7 +25,8 @@ namespace VaultSync.UI.Services
             Uri? patchArchiveUrl,
             string? patchArchiveName,
             Uri? installerUrl,
-            string? installerName)
+            string? installerName,
+            UpdateCheckDiagnostics diagnostics)
         {
             TagName          = tagName;
             ReleaseName      = releaseName;
@@ -36,6 +38,7 @@ namespace VaultSync.UI.Services
             PatchArchiveName = patchArchiveName;
             InstallerUrl     = installerUrl;
             InstallerName    = installerName;
+            Diagnostics      = diagnostics;
         }
 
         public string TagName { get; }
@@ -50,6 +53,19 @@ namespace VaultSync.UI.Services
         public string? InstallerName { get; }
         public bool HasPatch => !string.IsNullOrWhiteSpace(PatchManifestUrl) && PatchArchiveUrl != null;
         public bool HasInstaller => InstallerUrl != null;
+        public UpdateCheckDiagnostics Diagnostics { get; }
+    }
+
+    public sealed class UpdateCheckEvaluation
+    {
+        public UpdateCheckEvaluation(UpdateCheckResult? update, UpdateCheckDiagnostics diagnostics)
+        {
+            Update = update;
+            Diagnostics = diagnostics;
+        }
+
+        public UpdateCheckResult? Update { get; }
+        public UpdateCheckDiagnostics Diagnostics { get; }
     }
 
     public enum GitHubReleaseChannel
@@ -73,52 +89,67 @@ namespace VaultSync.UI.Services
         private static DateTimeOffset? s_releaseCacheTimestamp;
         private static readonly TimeSpan s_releaseCacheTtl = TimeSpan.FromMinutes(5);
 
-        public async Task<UpdateCheckResult?> CheckForUpdateAsync(
+        public async Task<UpdateCheckEvaluation> CheckForUpdateAsync(
             string currentVersion,
             GitHubReleaseChannel channel,
             CancellationToken cancellationToken)
         {
             Console.WriteLine($"[Update] Fetching GitHub releases (channel={channel}, current={currentVersion}).");
+            var diagnostics = new UpdateCheckDiagnostics
+            {
+                CheckedUtc = DateTimeOffset.UtcNow.ToString("O"),
+                Channel = channel.ToString(),
+                CurrentVersion = currentVersion?.Trim() ?? string.Empty
+            };
             var releases = await FetchReleasesAsync(cancellationToken).ConfigureAwait(false);
             if (releases == null || releases.Count == 0)
             {
                 Console.WriteLine("[Update] No releases returned from GitHub.");
-                return null;
+                diagnostics.Decision = "no-releases";
+                return new UpdateCheckEvaluation(null, diagnostics);
             }
+
+            var betaCandidate = SelectBetaCandidate(releases);
+            var stableCandidate = SelectStableCandidate(releases);
+            diagnostics.BetaCandidate = ToDiagnostics(betaCandidate);
+            diagnostics.StableCandidate = ToDiagnostics(stableCandidate);
 
             if (channel == GitHubReleaseChannel.Beta)
             {
-                var betaCandidate = SelectBetaCandidate(releases);
-                var stableCandidate = SelectStableCandidate(releases);
                 Console.WriteLine($"[Update] Beta candidate: {DescribeRelease(betaCandidate)}");
                 Console.WriteLine($"[Update] Stable candidate: {DescribeRelease(stableCandidate)}");
             }
             else
             {
-                var stableCandidate = SelectStableCandidate(releases);
                 Console.WriteLine($"[Update] Stable candidate: {DescribeRelease(stableCandidate)}");
             }
 
             var candidate = channel == GitHubReleaseChannel.Beta
                 ? SelectBestBetaOrStableCandidate(releases)
                 : SelectStableCandidate(releases);
+            diagnostics.SelectedCandidate = ToDiagnostics(candidate);
 
             if (candidate == null)
             {
                 Console.WriteLine("[Update] No suitable release candidate found.");
-                return null;
+                diagnostics.Decision = "no-suitable-candidate";
+                return new UpdateCheckEvaluation(null, diagnostics);
             }
 
             var releaseTag = (candidate.TagName ?? string.Empty).Trim();
             if (string.IsNullOrEmpty(releaseTag))
-                return null;
+            {
+                diagnostics.Decision = "candidate-missing-tag";
+                return new UpdateCheckEvaluation(null, diagnostics);
+            }
 
             Console.WriteLine($"[Update] Candidate release: tag={releaseTag}, prerelease={candidate.Prerelease}, published={candidate.PublishedAt:O}, target={candidate.TargetCommitish}.");
 
             if (!IsReleaseNewer(releaseTag, currentVersion))
             {
                 Console.WriteLine("[Update] Candidate is not newer than current version.");
-                return null;
+                diagnostics.Decision = "candidate-not-newer";
+                return new UpdateCheckEvaluation(null, diagnostics);
             }
 
             if (!Uri.TryCreate(candidate.HtmlUrl, UriKind.Absolute, out var releaseUri))
@@ -132,8 +163,13 @@ namespace VaultSync.UI.Services
 
             var (manifestUrl, archiveUrl, archiveName) = GetPatchAssets(candidate.Assets);
             var (installerUrl, installerName) = GetInstallerAsset(candidate.Assets);
+            diagnostics.SelectedCandidate = ToDiagnostics(candidate, !string.IsNullOrWhiteSpace(manifestUrl) && archiveUrl != null, installerUrl != null);
+            diagnostics.Decision = channel == GitHubReleaseChannel.Beta
+                ? "beta-or-stable-candidate-selected"
+                : "stable-candidate-selected";
 
-            return new UpdateCheckResult(
+            return new UpdateCheckEvaluation(
+                new UpdateCheckResult(
                 releaseTag,
                 releaseName,
                 releaseNotes,
@@ -143,7 +179,9 @@ namespace VaultSync.UI.Services
                 archiveUrl,
                 archiveName,
                 installerUrl,
-                installerName);
+                installerName,
+                diagnostics),
+                diagnostics);
         }
 
         private static bool IsReleaseNewer(string releaseTag, string currentVersion)
@@ -486,6 +524,24 @@ namespace VaultSync.UI.Services
             var target = string.IsNullOrWhiteSpace(release.TargetCommitish) ? "?" : release.TargetCommitish;
             var published = release.PublishedAt?.ToString("O") ?? "?";
             return $"tag={tag}, prerelease={release.Prerelease}, published={published}, target={target}";
+        }
+
+        private static UpdateReleaseCandidateDiagnostics ToDiagnostics(GitHubRelease? release, bool? hasPatch = null, bool? hasInstaller = null)
+        {
+            if (release is null)
+                return new UpdateReleaseCandidateDiagnostics();
+
+            var (manifestUrl, archiveUrl, _) = GetPatchAssets(release.Assets);
+            var (installerUrl, _) = GetInstallerAsset(release.Assets);
+            return new UpdateReleaseCandidateDiagnostics
+            {
+                Tag = (release.TagName ?? string.Empty).Trim(),
+                TargetCommitish = (release.TargetCommitish ?? string.Empty).Trim(),
+                Prerelease = release.Prerelease,
+                PublishedUtc = release.PublishedAt?.ToUniversalTime().ToString("O") ?? string.Empty,
+                HasPatch = hasPatch ?? (!string.IsNullOrWhiteSpace(manifestUrl) && archiveUrl != null),
+                HasInstaller = hasInstaller ?? installerUrl != null
+            };
         }
     }
 }

@@ -935,12 +935,16 @@
   - Acceptance:
     - Startup scan surfaces actionable warnings without blocking app launch.
     - Scan output is available in diagnostics/support bundle.
-- [ ] `VS-1707` `P1` Updater channel and release-target diagnostics hardening.
+- [ ] `VS-1707` `P1` Updater channel and release-target diagnostics hardening. _(In progress)_
   - Scope: expose candidate channel/branch resolution and release-target diagnostics to reduce mis-publish ambiguity.
   - What it takes:
     - persist update resolution trace (`channel`, `branch`, `tag`, `asset`, `why rejected`).
     - add operator-facing diagnostics surface and support-bundle export.
     - keep messages user-readable without exposing internal-only noise by default.
+  - Current status:
+    - In progress: update checks now persist channel/decision/candidate diagnostics alongside the selected release result.
+    - In progress: Settings > Advanced now surfaces the persisted diagnostics summary next to the existing update status block.
+    - In progress: support bundles now export the same redacted update diagnostics so release-target decisions can be inspected off-box.
   - Acceptance:
     - Support diagnostics clearly show selected candidate release and why.
     - Channel mismatch scenarios are visible to operators without debug builds.
