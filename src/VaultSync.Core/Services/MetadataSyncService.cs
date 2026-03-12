@@ -1776,7 +1776,9 @@ public sealed class MetadataSyncService
 
             if (doc.RootElement.TryGetProperty("preferredDestinationId", out var destinationProp))
             {
-                preferredDestinationId = NormalizePreferredDestinationId(destinationProp.GetString());
+                preferredDestinationId = NormalizePreferredDestinationId(
+                    destinationProp.GetString(),
+                    AppConfigStore.Load().Backups.Destinations);
                 hasPreferredDestinationId = true;
             }
 
@@ -1858,9 +1860,10 @@ public sealed class MetadataSyncService
         var nextVerificationPolicy = parsedSettings.HasVerificationPolicy
             ? ProjectVerificationPolicy.Normalize(parsedSettings.VerificationPolicy)
             : currentVerificationPolicy;
-        var currentPreferredDestinationId = NormalizePreferredDestinationId(current.PreferredDestinationId);
+        var destinations = AppConfigStore.Load().Backups.Destinations;
+        var currentPreferredDestinationId = NormalizePreferredDestinationId(current.PreferredDestinationId, destinations);
         var nextPreferredDestinationId = parsedSettings.HasPreferredDestinationId
-            ? NormalizePreferredDestinationId(parsedSettings.PreferredDestinationId)
+            ? NormalizePreferredDestinationId(parsedSettings.PreferredDestinationId, destinations)
             : currentPreferredDestinationId;
         var currentRestoreMode = ProjectRestoreMode.Normalize(current.RestoreMode);
         var nextRestoreMode = parsedSettings.HasRestoreMode
@@ -1890,16 +1893,8 @@ public sealed class MetadataSyncService
         _repo.UpdateProjectTags(projectId, nextTags);
     }
 
-    private static string NormalizePreferredDestinationId(string? preferredDestinationId)
-    {
-        var raw = preferredDestinationId?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(raw))
-            return string.Empty;
-
-        return string.Equals(raw, "auto", StringComparison.OrdinalIgnoreCase)
-            ? string.Empty
-            : raw;
-    }
+    private static string NormalizePreferredDestinationId(string? preferredDestinationId, IReadOnlyCollection<BackupDestination> destinations)
+        => DestinationIdentityService.NormalizePreferredDestinationId(preferredDestinationId, destinations);
 
     private static void TryApplyProjectColor(MetaProject metaProject)
     {

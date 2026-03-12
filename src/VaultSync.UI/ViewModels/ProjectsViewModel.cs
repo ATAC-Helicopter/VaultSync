@@ -700,7 +700,7 @@ public class ProjectsViewModel : ViewModelBase
                     label = $"{label}{suffix}";
                 }
 
-                var id = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
+                var id = DestinationIdentityService.GetId(dest);
                 DestinationOptions.Add(new DestinationOption(id, label));
             }
         }
@@ -732,7 +732,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void UpdateProjectDestinationDisplay(ProjectItemViewModel vm, AppConfig config)
     {
-        var id = vm.PreferredDestinationId ?? string.Empty;
+        var id = DestinationIdentityService.NormalizePreferredDestinationId(vm.PreferredDestinationId, config.Backups.Destinations);
         if (string.IsNullOrWhiteSpace(id))
         {
             vm.PreferredDestinationDisplay = L("Projects.Destination.Auto", "Auto (active destinations)");
@@ -748,9 +748,7 @@ public class ProjectsViewModel : ViewModelBase
             return;
         }
 
-        var match = config.Backups.Destinations.FirstOrDefault(d =>
-            string.Equals(d.Alias ?? string.Empty, id, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(d.Path ?? string.Empty, id, StringComparison.OrdinalIgnoreCase));
+        var match = DestinationIdentityService.FindByPreferredDestinationId(config.Backups.Destinations, id);
 
         if (match != null)
         {
@@ -761,6 +759,11 @@ public class ProjectsViewModel : ViewModelBase
         else
         {
             vm.PreferredDestinationDisplay = id;
+        }
+
+        if (!string.Equals(vm.PreferredDestinationId, id, StringComparison.OrdinalIgnoreCase))
+        {
+            vm.PreferredDestinationId = id;
         }
 
         var optionMatch = DestinationOptions.FirstOrDefault(o =>

@@ -3348,7 +3348,7 @@ namespace VaultSync.UI.ViewModels
                         label = $"{label}{suffix}";
                     }
 
-                    var id = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
+                    var id = DestinationIdentityService.GetId(dest);
                     DestinationOptions.Add(new DestinationOption(id, label));
                 }
             }
@@ -3397,7 +3397,7 @@ namespace VaultSync.UI.ViewModels
 
         private void UpdateProjectDestinationDisplay(ProjectBackupItem item, AppConfig config)
         {
-            var id = item.PreferredDestinationId ?? string.Empty;
+            var id = DestinationIdentityService.NormalizePreferredDestinationId(item.PreferredDestinationId, config.Backups.Destinations);
             if (string.IsNullOrWhiteSpace(id))
             {
                 item.PreferredDestinationDisplay = L("Projects.Destination.Auto", "Auto (active destinations)");
@@ -3413,9 +3413,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var match = config.Backups.Destinations.FirstOrDefault(d =>
-                string.Equals(d.Alias ?? string.Empty, id, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(d.Path ?? string.Empty, id, StringComparison.OrdinalIgnoreCase));
+            var match = DestinationIdentityService.FindByPreferredDestinationId(config.Backups.Destinations, id);
 
             if (match != null)
             {
@@ -3424,6 +3422,11 @@ namespace VaultSync.UI.ViewModels
             else
             {
                 item.PreferredDestinationDisplay = id;
+            }
+
+            if (!string.Equals(item.PreferredDestinationId, id, StringComparison.OrdinalIgnoreCase))
+            {
+                item.PreferredDestinationId = id;
             }
 
             var optionMatch = DestinationOptions.FirstOrDefault(o =>
@@ -4157,7 +4160,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         public static string GetId(BackupDestination dest) =>
-            string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+            DestinationIdentityService.GetId(dest);
     }
 
     public class BackupProgressItem : ViewModelBase

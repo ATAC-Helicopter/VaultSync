@@ -980,12 +980,15 @@
   - Acceptance:
     - Retention never leaves a project without a restorable backup chain unless explicitly user-confirmed.
     - Preflight result is logged and surfaced in diagnostics.
-- [ ] `VS-1712` `P1` Destination identity stability and remount continuity.
+- [ ] `VS-1712` `P1` Destination identity stability and remount continuity. _(In progress)_
   - Scope: introduce stable destination identity checks across remove/re-add cycles to reduce index drift and false-orphan scenarios.
   - What it takes:
     - define a durable destination identity fingerprint beyond path/alias.
     - store identity in metadata/import/export so re-add and remount can be matched safely.
     - distinguish same-path-new-device from same-device-new-mount cases.
+  - Current status:
+    - Stable destination fingerprints now derive from canonical path + credential + mount mode.
+    - Preferred-destination IDs in UI and metadata import now normalize legacy alias/path values onto stable destination identities.
   - Acceptance:
     - Re-adding the same destination path/identity preserves project routing and history linkage where exact identity matches.
     - Mismatch cases are reported with explicit remediation guidance.

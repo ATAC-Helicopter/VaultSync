@@ -420,7 +420,7 @@ namespace VaultSync.UI.ViewModels
         {
             var activeDestinations = GetActiveDestinations(cfg);
             var allDestinations = GetAllDestinations(cfg);
-            var preferredId = project.PreferredDestinationId ?? string.Empty;
+            var preferredId = DestinationIdentityService.NormalizePreferredDestinationId(project.PreferredDestinationId, allDestinations);
 
             if (string.IsNullOrWhiteSpace(preferredId))
             {
@@ -432,9 +432,7 @@ namespace VaultSync.UI.ViewModels
                 return new ProjectDestinationSelection(allDestinations, null, null);
             }
 
-            var match = allDestinations.FirstOrDefault(d =>
-                string.Equals(d.Alias ?? string.Empty, preferredId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(d.Path ?? string.Empty, preferredId, StringComparison.OrdinalIgnoreCase));
+            var match = DestinationIdentityService.FindByPreferredDestinationId(allDestinations, preferredId);
 
             if (match is null)
             {
