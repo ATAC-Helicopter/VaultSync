@@ -1037,7 +1037,7 @@
   - Acceptance:
     - Simulation output matches actual retention behavior on subsequent apply.
     - Protected backups are always highlighted as retained.
-- [ ] `VS-1717` `P1` Cross-machine metadata conflict resolver UX.
+- [ ] `VS-1717` `P1` Cross-machine metadata conflict resolver UX. _(In progress)_
   - Scope: detect and resolve conflicting project-level metadata updates (destination/restore mode/tags/verification policy) with explicit conflict resolution options.
   - What it takes:
     - define conflict records with source machine/time/value deltas.
@@ -1048,6 +1048,9 @@
   - Acceptance:
     - Conflicts are visible with source machine/time context.
     - Resolver prevents silent overwrite of newer authoritative metadata.
+  - Current status:
+    - Done: metadata import now records tracked field conflicts instead of silently overwriting local destination / restore mode / verification / tags.
+    - Done: Settings > Advanced Doctor now exposes pending conflict cards with `Keep local` and `Accept imported` actions.
 - [ ] `VS-1718` `P2` Release readiness gate checklist automation.
   - Scope: scripted pre-release checks for patch assets, installer presence, changelog/whats-new parity, and project board release completeness.
   - What it takes:

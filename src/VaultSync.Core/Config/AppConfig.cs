@@ -279,6 +279,7 @@ namespace VaultSync.Core.Config
         public string LastWhatsNewVersion { get; set; } = string.Empty;
         public bool HasSeenOnboarding { get; set; } = false;
         public BackupIndexScanSummary BackupIndexLastScan { get; set; } = new();
+        public List<ProjectMetadataConflictRecord> ProjectMetadataConflicts { get; set; } = new();
     }
 
     public sealed class BackupIndexScanSummary
@@ -290,6 +291,25 @@ namespace VaultSync.Core.Config
         public int ErrorCount { get; set; }
         public int WarningCount { get; set; }
         public List<string> TopFindingCodes { get; set; } = new();
+    }
+
+    public sealed class ProjectMetadataConflictRecord
+    {
+        public int ProjectId { get; set; }
+        public string ProjectExternalId { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+        public string SourceMachineId { get; set; } = string.Empty;
+        public string SourceUpdatedUtc { get; set; } = string.Empty;
+        public ProjectMetadataConflictValues Local { get; set; } = new();
+        public ProjectMetadataConflictValues Imported { get; set; } = new();
+    }
+
+    public sealed class ProjectMetadataConflictValues
+    {
+        public string PreferredDestinationId { get; set; } = string.Empty;
+        public string RestoreMode { get; set; } = string.Empty;
+        public string VerificationPolicy { get; set; } = string.Empty;
+        public string Tags { get; set; } = string.Empty;
     }
 
     // -------- App Behavior / Background Mode --------

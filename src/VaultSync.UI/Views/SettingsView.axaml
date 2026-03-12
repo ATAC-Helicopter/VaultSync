@@ -1388,6 +1388,123 @@
                                      TextWrapping="Wrap" />
                         </StackPanel>
                       </Border>
+
+                      <Border Classes="subtle-card"
+                              Padding="12"
+                              CornerRadius="12">
+                        <StackPanel Spacing="8">
+                          <StackPanel Spacing="2">
+                            <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsTitle}" />
+                            <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsDescription}"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                          <TextBlock Text="{Binding ProjectMetadataConflictStatus}"
+                                     Foreground="{StaticResource TextSecondary}"
+                                     FontSize="11"
+                                     TextWrapping="Wrap" />
+                          <ItemsControl ItemsSource="{Binding ProjectMetadataConflicts}"
+                                        IsVisible="{Binding HasProjectMetadataConflicts}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate>
+                                <Border Classes="subtle-card"
+                                        Padding="10"
+                                        CornerRadius="10"
+                                        Margin="0,4,0,0">
+                                  <StackPanel Spacing="8">
+                                    <StackPanel Spacing="2">
+                                      <TextBlock Text="{Binding ProjectName}"
+                                                 FontWeight="SemiBold" />
+                                      <TextBlock Foreground="{StaticResource TextSecondary}"
+                                                 FontSize="11"
+                                                 TextWrapping="Wrap">
+                                        <Run Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsSourceLabel}" />
+                                        <Run Text=": " />
+                                        <Run Text="{Binding SourceMachineId}" />
+                                        <Run Text=" · " />
+                                        <Run Text="{Binding SourceUpdatedUtc}" />
+                                      </TextBlock>
+                                    </StackPanel>
+
+                                    <Grid ColumnDefinitions="Auto,*,*"
+                                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                          ColumnSpacing="12"
+                                          RowSpacing="4">
+                                      <TextBlock Grid.Row="0"
+                                                 Grid.Column="1"
+                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsLocalLabel}"
+                                                 FontWeight="SemiBold" />
+                                      <TextBlock Grid.Row="0"
+                                                 Grid.Column="2"
+                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsImportedLabel}"
+                                                 FontWeight="SemiBold" />
+
+                                      <TextBlock Grid.Row="1"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}" />
+
+                                      <TextBlock Grid.Row="1"
+                                                 Grid.Column="1"
+                                                 Text="{Binding LocalPreferredDestinationId}" />
+                                      <TextBlock Grid.Row="1"
+                                                 Grid.Column="2"
+                                                 Text="{Binding ImportedPreferredDestinationId}" />
+
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Backups.Restore.ModeLabel}" />
+
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="1"
+                                                 Text="{Binding LocalRestoreMode}" />
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="2"
+                                                 Text="{Binding ImportedRestoreMode}" />
+
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Backups.Verification.Policy}" />
+
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="1"
+                                                 Text="{Binding LocalVerificationPolicy}" />
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="2"
+                                                 Text="{Binding ImportedVerificationPolicy}" />
+
+                                      <TextBlock Grid.Row="4"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Projects.Tags.Label}" />
+                                      <TextBlock Grid.Row="4"
+                                                 Grid.Column="1"
+                                                 Text="{Binding LocalTags}"
+                                                 TextWrapping="Wrap" />
+                                      <TextBlock Grid.Row="4"
+                                                 Grid.Column="2"
+                                                 Text="{Binding ImportedTags}"
+                                                 TextWrapping="Wrap" />
+                                    </Grid>
+
+                                    <WrapPanel Orientation="Horizontal"
+                                               ItemSpacing="8"
+                                               LineSpacing="8">
+                                      <Button Content="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsKeepLocal}"
+                                              Classes="action-ghost"
+                                              Command="{Binding #Root.DataContext.KeepLocalProjectMetadataConflictCommand}"
+                                              CommandParameter="{Binding}" />
+                                      <Button Content="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsAcceptImported}"
+                                              Classes="action-primary"
+                                              Command="{Binding #Root.DataContext.AcceptProjectMetadataConflictCommand}"
+                                              CommandParameter="{Binding}" />
+                                    </WrapPanel>
+                                  </StackPanel>
+                                </Border>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Border>
                     </StackPanel>
                   </Border>
 

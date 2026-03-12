@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
@@ -193,6 +194,8 @@ public sealed class MetadataSyncService
 
         var config = AppConfigStore.Load();
         var localProjects = _repo.GetAllProjects().ToList();
+        var pendingConflicts = config.Advanced.ProjectMetadataConflicts ??= new List<ProjectMetadataConflictRecord>();
+        var metadataConflictChanged = false;
 
         var projectExternalMap = _repo.GetProjectExternalIdMap();
         foreach (var pair in projectExternalMap)
@@ -230,7 +233,12 @@ public sealed class MetadataSyncService
 
             if (projectMap.TryGetValue(metaProject.ExternalId, out var mappedProjectId))
             {
-                ApplyImportedProjectSettings(mappedProjectId, parsedSettings);
+                metadataConflictChanged |= ApplyImportedProjectSettings(
+                    mappedProjectId,
+                    metaProject,
+                    metaInfo?.WriterMachineId,
+                    parsedSettings,
+                    pendingConflicts);
                 continue;
             }
 
@@ -244,7 +252,12 @@ public sealed class MetadataSyncService
                     _repo.UpdateProjectExternalId(existingByName.Id, metaProject.ExternalId);
                 }
 
-                ApplyImportedProjectSettings(existingByName.Id, parsedSettings);
+                metadataConflictChanged |= ApplyImportedProjectSettings(
+                    existingByName.Id,
+                    metaProject,
+                    metaInfo?.WriterMachineId,
+                    parsedSettings,
+                    pendingConflicts);
                 projectMap[metaProject.ExternalId] = existingByName.Id;
                 continue;
             }
@@ -458,6 +471,11 @@ public sealed class MetadataSyncService
             {
                 TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
             }
+        }
+
+        if (metadataConflictChanged)
+        {
+            AppConfigStore.Save(config);
         }
 
         var result = new MetadataSyncResult(
@@ -1827,7 +1845,12 @@ public sealed class MetadataSyncService
         }
     }
 
-    private void ApplyImportedProjectSettings(int projectId, ParsedProjectSettings parsedSettings)
+    private bool ApplyImportedProjectSettings(
+        int projectId,
+        MetaProject metaProject,
+        string? sourceMachineId,
+        ParsedProjectSettings parsedSettings,
+        IList<ProjectMetadataConflictRecord> pendingConflicts)
     {
         if (!parsedSettings.HasEncryptionPolicy &&
             !parsedSettings.HasEncryptionKeyRef &&
@@ -1835,11 +1858,11 @@ public sealed class MetadataSyncService
             !parsedSettings.HasRestoreMode &&
             !parsedSettings.HasVerificationPolicy &&
             !parsedSettings.HasTags)
-            return;
+            return false;
 
         var current = _repo.GetProjectById(projectId);
         if (current is null)
-            return;
+            return false;
 
         var currentPolicy = ProjectEncryptionPolicy.Normalize(current.EncryptionPolicy);
         var incomingPolicy = parsedSettings.HasEncryptionPolicy
@@ -1883,14 +1906,131 @@ public sealed class MetadataSyncService
             string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(nextTags, currentTags, StringComparison.Ordinal))
         {
-            return;
+            return RemoveProjectMetadataConflict(projectId, pendingConflicts);
         }
 
-        _repo.UpdateProjectPreferredDestination(projectId, nextPreferredDestinationId);
-        _repo.UpdateProjectRestoreMode(projectId, nextRestoreMode);
         _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, normalizedNextKeyRef);
-        _repo.UpdateProjectVerificationPolicy(projectId, nextVerificationPolicy);
-        _repo.UpdateProjectTags(projectId, nextTags);
+
+        var conflictValuesDiffer =
+            !string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(nextTags, currentTags, StringComparison.Ordinal);
+
+        if (!conflictValuesDiffer)
+        {
+            _repo.UpdateProjectPreferredDestination(projectId, nextPreferredDestinationId);
+            _repo.UpdateProjectRestoreMode(projectId, nextRestoreMode);
+            _repo.UpdateProjectVerificationPolicy(projectId, nextVerificationPolicy);
+            _repo.UpdateProjectTags(projectId, nextTags);
+            return RemoveProjectMetadataConflict(projectId, pendingConflicts);
+        }
+
+        return UpsertProjectMetadataConflict(
+            current,
+            metaProject,
+            sourceMachineId,
+            currentPreferredDestinationId,
+            currentRestoreMode,
+            currentVerificationPolicy,
+            currentTags,
+            nextPreferredDestinationId,
+            nextRestoreMode,
+            nextVerificationPolicy,
+            nextTags,
+            pendingConflicts);
+    }
+
+    private static bool RemoveProjectMetadataConflict(int projectId, IList<ProjectMetadataConflictRecord> pendingConflicts)
+    {
+        var existing = pendingConflicts.FirstOrDefault(conflict => conflict.ProjectId == projectId);
+        if (existing is null)
+            return false;
+
+        pendingConflicts.Remove(existing);
+        return true;
+    }
+
+    private static bool UpsertProjectMetadataConflict(
+        Project current,
+        MetaProject metaProject,
+        string? sourceMachineId,
+        string currentPreferredDestinationId,
+        string currentRestoreMode,
+        string currentVerificationPolicy,
+        string currentTags,
+        string importedPreferredDestinationId,
+        string importedRestoreMode,
+        string importedVerificationPolicy,
+        string importedTags,
+        IList<ProjectMetadataConflictRecord> pendingConflicts)
+    {
+        var next = new ProjectMetadataConflictRecord
+        {
+            ProjectId = current.Id,
+            ProjectExternalId = string.IsNullOrWhiteSpace(current.ExternalId) ? metaProject.ExternalId : current.ExternalId,
+            ProjectName = current.Name,
+            SourceMachineId = string.IsNullOrWhiteSpace(sourceMachineId) ? "unknown" : sourceMachineId,
+            SourceUpdatedUtc = metaProject.UpdatedUtc == default
+                ? string.Empty
+                : metaProject.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+            Local = new ProjectMetadataConflictValues
+            {
+                PreferredDestinationId = currentPreferredDestinationId,
+                RestoreMode = currentRestoreMode,
+                VerificationPolicy = currentVerificationPolicy,
+                Tags = currentTags
+            },
+            Imported = new ProjectMetadataConflictValues
+            {
+                PreferredDestinationId = importedPreferredDestinationId,
+                RestoreMode = importedRestoreMode,
+                VerificationPolicy = importedVerificationPolicy,
+                Tags = importedTags
+            }
+        };
+
+        var existing = pendingConflicts.FirstOrDefault(conflict =>
+            conflict.ProjectId == current.Id ||
+            (!string.IsNullOrWhiteSpace(conflict.ProjectExternalId) &&
+             string.Equals(conflict.ProjectExternalId, next.ProjectExternalId, StringComparison.OrdinalIgnoreCase)));
+
+        if (existing is null)
+        {
+            pendingConflicts.Add(next);
+            return true;
+        }
+
+        if (ProjectMetadataConflictEquals(existing, next))
+            return false;
+
+        existing.ProjectId = next.ProjectId;
+        existing.ProjectExternalId = next.ProjectExternalId;
+        existing.ProjectName = next.ProjectName;
+        existing.SourceMachineId = next.SourceMachineId;
+        existing.SourceUpdatedUtc = next.SourceUpdatedUtc;
+        existing.Local = next.Local;
+        existing.Imported = next.Imported;
+        return true;
+    }
+
+    private static bool ProjectMetadataConflictEquals(ProjectMetadataConflictRecord left, ProjectMetadataConflictRecord right)
+    {
+        return left.ProjectId == right.ProjectId &&
+               string.Equals(left.ProjectExternalId, right.ProjectExternalId, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.ProjectName, right.ProjectName, StringComparison.Ordinal) &&
+               string.Equals(left.SourceMachineId, right.SourceMachineId, StringComparison.Ordinal) &&
+               string.Equals(left.SourceUpdatedUtc, right.SourceUpdatedUtc, StringComparison.Ordinal) &&
+               ProjectMetadataConflictValuesEqual(left.Local, right.Local) &&
+               ProjectMetadataConflictValuesEqual(left.Imported, right.Imported);
+    }
+
+    private static bool ProjectMetadataConflictValuesEqual(ProjectMetadataConflictValues left, ProjectMetadataConflictValues right)
+    {
+        return string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.RestoreMode, right.RestoreMode, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.VerificationPolicy, right.VerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.Tags, right.Tags, StringComparison.Ordinal);
     }
 
     private static string NormalizePreferredDestinationId(string? preferredDestinationId, IReadOnlyCollection<BackupDestination> destinations)

@@ -116,10 +116,13 @@ namespace VaultSync.UI
         private readonly SupportBundleService _supportBundleService = new();
         private RelayCommand? _scanBackupIndexRepairPlanCommand;
         private RelayCommand? _applyBackupIndexRepairPlanCommand;
+        private RelayCommand? _acceptProjectMetadataConflictCommand;
+        private RelayCommand? _keepLocalProjectMetadataConflictCommand;
         private BackupIndexRepairPlan? _currentBackupIndexRepairPlan;
         private string _backupIndexRepairStatus = string.Empty;
         private string _backupIndexRepairSummary = string.Empty;
         private string _backupIndexRepairDetails = string.Empty;
+        private string _projectMetadataConflictStatus = string.Empty;
         private bool _isBackupIndexRepairBusy;
         private bool _showLegacyBackupLocation = true;
         private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
@@ -158,7 +161,26 @@ namespace VaultSync.UI
             bool UseKeychain,
             string Password);
 
+        public sealed class ProjectMetadataConflictItemViewModel
+        {
+            public required int ProjectId { get; init; }
+            public required string ProjectName { get; init; }
+            public required string ProjectExternalId { get; init; }
+            public required string SourceMachineId { get; init; }
+            public required string SourceUpdatedUtc { get; init; }
+            public required string LocalPreferredDestinationId { get; init; }
+            public required string ImportedPreferredDestinationId { get; init; }
+            public required string LocalRestoreMode { get; init; }
+            public required string ImportedRestoreMode { get; init; }
+            public required string LocalVerificationPolicy { get; init; }
+            public required string ImportedVerificationPolicy { get; init; }
+            public required string LocalTags { get; init; }
+            public required string ImportedTags { get; init; }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
+        public ObservableCollection<ProjectMetadataConflictItemViewModel> ProjectMetadataConflicts { get; } = new();
+
         private void RefreshLegacyVisibility()
         {
             ShowLegacyBackupLocation = !UseAdvancedDestinations;
@@ -220,6 +242,12 @@ namespace VaultSync.UI
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             _scanBackupIndexRepairPlanCommand = new RelayCommand(_ => ScanBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy);
             _applyBackupIndexRepairPlanCommand = new RelayCommand(_ => ApplyBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy && HasBackupIndexRepairActions);
+            _acceptProjectMetadataConflictCommand = new RelayCommand(
+                parameter => AcceptProjectMetadataConflict(parameter as ProjectMetadataConflictItemViewModel),
+                parameter => parameter is ProjectMetadataConflictItemViewModel && !IsBackupIndexRepairBusy);
+            _keepLocalProjectMetadataConflictCommand = new RelayCommand(
+                parameter => KeepLocalProjectMetadataConflict(parameter as ProjectMetadataConflictItemViewModel),
+                parameter => parameter is ProjectMetadataConflictItemViewModel && !IsBackupIndexRepairBusy);
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
             ClearBackupEncryptionPasswordCommand = new RelayCommand(_ => ClearBackupEncryptionPassword());
@@ -416,6 +444,7 @@ namespace VaultSync.UI
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
             _updateCheckIntervalMinutes = ClampInt(cfg.Advanced.UpdateCheckIntervalMinutes, 15, 10080, 120);
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
+            RefreshProjectMetadataConflicts(cfg.Advanced.ProjectMetadataConflicts);
 
             // Apply theme + layout when loading config (in case Settings view is opened first)
             ApplyThemeFromSelected();
@@ -1235,6 +1264,12 @@ namespace VaultSync.UI
             private set => SetField(ref _backupIndexRepairDetails, value);
         }
 
+        public string ProjectMetadataConflictStatus
+        {
+            get => _projectMetadataConflictStatus;
+            private set => SetField(ref _projectMetadataConflictStatus, value);
+        }
+
         public bool IsBackupIndexRepairBusy
         {
             get => _isBackupIndexRepairBusy;
@@ -1255,6 +1290,8 @@ namespace VaultSync.UI
         public bool HasBackupIndexRepairBlockedIssues => _currentBackupIndexRepairPlan?.BlockedIssues.Count > 0;
 
         public bool HasBackupIndexRepairFindings => HasBackupIndexRepairActions || HasBackupIndexRepairBlockedIssues;
+
+        public bool HasProjectMetadataConflicts => ProjectMetadataConflicts.Count > 0;
 
         public bool NotificationsEnabled
         {
@@ -1685,6 +1722,8 @@ namespace VaultSync.UI
         public ICommand CheckUpdatesNowCommand { get; }
         public ICommand ScanBackupIndexRepairPlanCommand => _scanBackupIndexRepairPlanCommand!;
         public ICommand ApplyBackupIndexRepairPlanCommand => _applyBackupIndexRepairPlanCommand!;
+        public ICommand AcceptProjectMetadataConflictCommand => _acceptProjectMetadataConflictCommand!;
+        public ICommand KeepLocalProjectMetadataConflictCommand => _keepLocalProjectMetadataConflictCommand!;
         public ICommand RefreshHistoryCommand { get; }
         public ICommand SetBackupEncryptionPasswordCommand { get; }
         public ICommand ClearBackupEncryptionPasswordCommand { get; }
@@ -2568,6 +2607,184 @@ namespace VaultSync.UI
 
             return string.Join(" ", parts);
         }
+
+        private void RefreshProjectMetadataConflicts(IEnumerable<ProjectMetadataConflictRecord>? conflicts)
+        {
+            ProjectMetadataConflicts.Clear();
+
+            foreach (var conflict in (conflicts ?? Enumerable.Empty<ProjectMetadataConflictRecord>())
+                         .OrderBy(static item => item.ProjectName, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(static item => item.SourceUpdatedUtc, StringComparer.Ordinal))
+            {
+                ProjectMetadataConflicts.Add(new ProjectMetadataConflictItemViewModel
+                {
+                    ProjectId = conflict.ProjectId,
+                    ProjectName = string.IsNullOrWhiteSpace(conflict.ProjectName) ? conflict.ProjectExternalId : conflict.ProjectName,
+                    ProjectExternalId = conflict.ProjectExternalId,
+                    SourceMachineId = string.IsNullOrWhiteSpace(conflict.SourceMachineId) ? "unknown" : conflict.SourceMachineId,
+                    SourceUpdatedUtc = FormatConflictUtc(conflict.SourceUpdatedUtc),
+                    LocalPreferredDestinationId = FormatConflictValue(conflict.Local?.PreferredDestinationId),
+                    ImportedPreferredDestinationId = FormatConflictValue(conflict.Imported?.PreferredDestinationId),
+                    LocalRestoreMode = FormatConflictValue(conflict.Local?.RestoreMode),
+                    ImportedRestoreMode = FormatConflictValue(conflict.Imported?.RestoreMode),
+                    LocalVerificationPolicy = FormatConflictValue(conflict.Local?.VerificationPolicy),
+                    ImportedVerificationPolicy = FormatConflictValue(conflict.Imported?.VerificationPolicy),
+                    LocalTags = FormatConflictValue(conflict.Local?.Tags),
+                    ImportedTags = FormatConflictValue(conflict.Imported?.Tags)
+                });
+            }
+
+            ProjectMetadataConflictStatus = ProjectMetadataConflicts.Count == 0
+                ? L("Settings.Advanced.MetadataConflictsNone", "No pending cross-machine metadata conflicts.")
+                : string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.MetadataConflictsPending", "{0} pending cross-machine metadata conflict(s)."),
+                    ProjectMetadataConflicts.Count);
+            OnPropertyChanged(nameof(HasProjectMetadataConflicts));
+            _acceptProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
+            _keepLocalProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
+        }
+
+        private static string FormatConflictValue(string? value)
+            => string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
+
+        private static string FormatConflictUtc(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "-";
+
+            return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
+                ? parsed.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+                : value;
+        }
+
+        private void AcceptProjectMetadataConflict(ProjectMetadataConflictItemViewModel? item)
+        {
+            if (item is null)
+                return;
+
+            _ = RunDetachedAsync(() => AcceptProjectMetadataConflictAsync(item), nameof(AcceptProjectMetadataConflictAsync));
+        }
+
+        private async Task AcceptProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
+        {
+            IsBackupIndexRepairBusy = true;
+            DiagnosticsLogger.Record($"Doctor action started: metadata-conflict accept. ProjectId={item.ProjectId}; ExternalId={item.ProjectExternalId}.");
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    var cfg = AppConfigStore.Load();
+                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    repo.UpdateProjectPreferredDestination(item.ProjectId, EmptyToNull(item.ImportedPreferredDestinationId));
+                    repo.UpdateProjectRestoreMode(item.ProjectId, EmptyToNull(item.ImportedRestoreMode));
+                    repo.UpdateProjectVerificationPolicy(item.ProjectId, EmptyToNull(item.ImportedVerificationPolicy));
+                    repo.UpdateProjectTags(item.ProjectId, EmptyToNull(item.ImportedTags));
+
+                    RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
+                    AppConfigStore.Save(cfg);
+                }).ConfigureAwait(false);
+
+                LoadFromConfig();
+                ProjectMetadataConflictStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.MetadataConflictAccepted", "Imported metadata applied for {0}."),
+                    item.ProjectName);
+                SaveStatus = ProjectMetadataConflictStatus;
+                GlobalNotificationCenter.Instance.Show(
+                    ProjectMetadataConflictStatus,
+                    NotificationSeverity.Info,
+                    L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                DiagnosticsLogger.Record($"Doctor action complete: metadata-conflict accept. ProjectId={item.ProjectId}.");
+            }
+            catch (Exception ex)
+            {
+                ProjectMetadataConflictStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.MetadataConflictAcceptFailed", "Applying imported metadata failed: {0}"),
+                    ex.Message);
+                SaveStatus = ProjectMetadataConflictStatus;
+                GlobalNotificationCenter.Instance.Show(
+                    ProjectMetadataConflictStatus,
+                    NotificationSeverity.Error,
+                    L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                DiagnosticsLogger.Record($"Doctor action failed: metadata-conflict accept. {ex.GetType().Name} - {ex.Message}");
+            }
+            finally
+            {
+                IsBackupIndexRepairBusy = false;
+            }
+        }
+
+        private void KeepLocalProjectMetadataConflict(ProjectMetadataConflictItemViewModel? item)
+        {
+            if (item is null)
+                return;
+
+            _ = RunDetachedAsync(() => KeepLocalProjectMetadataConflictAsync(item), nameof(KeepLocalProjectMetadataConflictAsync));
+        }
+
+        private async Task KeepLocalProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
+        {
+            IsBackupIndexRepairBusy = true;
+            DiagnosticsLogger.Record($"Doctor action started: metadata-conflict keep-local. ProjectId={item.ProjectId}; ExternalId={item.ProjectExternalId}.");
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    var cfg = AppConfigStore.Load();
+                    RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
+                    AppConfigStore.Save(cfg);
+                }).ConfigureAwait(false);
+
+                LoadFromConfig();
+                ProjectMetadataConflictStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.MetadataConflictKeptLocal", "Local metadata kept for {0}."),
+                    item.ProjectName);
+                SaveStatus = ProjectMetadataConflictStatus;
+                GlobalNotificationCenter.Instance.Show(
+                    ProjectMetadataConflictStatus,
+                    NotificationSeverity.Info,
+                    L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                DiagnosticsLogger.Record($"Doctor action complete: metadata-conflict keep-local. ProjectId={item.ProjectId}.");
+            }
+            catch (Exception ex)
+            {
+                ProjectMetadataConflictStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.MetadataConflictKeepLocalFailed", "Keeping local metadata failed: {0}"),
+                    ex.Message);
+                SaveStatus = ProjectMetadataConflictStatus;
+                GlobalNotificationCenter.Instance.Show(
+                    ProjectMetadataConflictStatus,
+                    NotificationSeverity.Error,
+                    L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                DiagnosticsLogger.Record($"Doctor action failed: metadata-conflict keep-local. {ex.GetType().Name} - {ex.Message}");
+            }
+            finally
+            {
+                IsBackupIndexRepairBusy = false;
+            }
+        }
+
+        private static void RemoveProjectMetadataConflictRecord(AppConfig cfg, int projectId, string projectExternalId)
+        {
+            cfg.Advanced.ProjectMetadataConflicts ??= new List<ProjectMetadataConflictRecord>();
+            var existing = cfg.Advanced.ProjectMetadataConflicts.FirstOrDefault(conflict =>
+                conflict.ProjectId == projectId ||
+                (!string.IsNullOrWhiteSpace(projectExternalId) &&
+                 string.Equals(conflict.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase)));
+            if (existing is not null)
+            {
+                cfg.Advanced.ProjectMetadataConflicts.Remove(existing);
+            }
+        }
+
+        private static string? EmptyToNull(string? value)
+            => string.IsNullOrWhiteSpace(value) || string.Equals(value.Trim(), "-", StringComparison.Ordinal) ? null : value.Trim();
 
         private async Task ImportSupportBundleAsync()
         {

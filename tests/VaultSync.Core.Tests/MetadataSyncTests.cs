@@ -437,6 +437,75 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_ProjectSettings_RecordsConflictInsteadOfOverwritingTrackedFields()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+        var now = DateTime.UtcNow;
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var cfg = CloneConfig(originalConfig);
+            cfg.Advanced.ProjectMetadataConflicts.Clear();
+            AppConfigStore.Save(cfg);
+
+            var repo = CreateRepository(dbPath);
+            var projectId = repo.AddProject(new Project
+            {
+                ExternalId = "proj-conflict-1",
+                Name = "Project Conflict",
+                RootPath = projectRoot,
+                Preset = "unity",
+                CreatedUtc = now.AddDays(-2),
+                PreferredDestinationId = "dest-local",
+                RestoreMode = ProjectRestoreMode.Direct,
+                VerificationPolicy = ProjectVerificationPolicy.Always,
+                Tags = "local,stable"
+            });
+
+            var store = CreateStore(metaRoot);
+            SeedMetaInfo(store, "machine-conflict");
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = "proj-conflict-1",
+                Name = "Project Conflict",
+                Preset = "unity",
+                RootPathHint = projectRoot,
+                CreatedUtc = now.AddDays(-2),
+                SettingsJson = "{\"preferredDestinationId\":\"dest-imported\",\"restoreMode\":\"sandbox\",\"verificationPolicy\":\"manual\",\"tags\":\"imported,remote\"}",
+                UpdatedUtc = now
+            });
+
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            var project = repo.GetProjectById(projectId);
+            Assert.NotNull(project);
+            Assert.Equal("dest-local", project!.PreferredDestinationId);
+            Assert.Equal(ProjectRestoreMode.Direct, project.RestoreMode);
+            Assert.Equal(ProjectVerificationPolicy.Always, project.VerificationPolicy);
+            Assert.Equal("local,stable", project.Tags);
+
+            var refreshedConfig = AppConfigStore.Load();
+            var conflict = Assert.Single(refreshedConfig.Advanced.ProjectMetadataConflicts);
+            Assert.Equal(projectId, conflict.ProjectId);
+            Assert.Equal("machine-conflict", conflict.SourceMachineId);
+            Assert.Equal("dest-local", conflict.Local.PreferredDestinationId);
+            Assert.Equal("dest-imported", conflict.Imported.PreferredDestinationId);
+            Assert.Equal(ProjectRestoreMode.Direct, conflict.Local.RestoreMode);
+            Assert.Equal(ProjectRestoreMode.Sandbox, conflict.Imported.RestoreMode);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
     public void ExportBackupToStore_ProjectSettings_IncludeEncryptionFields()
     {
         var metaRoot = CreateTempDir();
@@ -812,5 +881,11 @@ public sealed class MetadataSyncTests : IDisposable
             cmd.Parameters.AddWithValue("$destinationAlias", "LegacyPrimary");
             _ = cmd.ExecuteNonQuery();
         }
+    }
+
+    private static AppConfig CloneConfig(AppConfig config)
+    {
+        var json = JsonSerializer.Serialize(config);
+        return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
     }
 }

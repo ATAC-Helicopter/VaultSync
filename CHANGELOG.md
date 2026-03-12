@@ -9,6 +9,7 @@
 - [VS-1712] Added stable destination fingerprinting and legacy preferred-destination normalization so project routing survives destination rename/re-add cycles more reliably.
 - [VS-1705] Added an ordered retention deletion plan that skips unsafe oldest candidates and records structured failure codes when delete attempts fall through to later eligible entries.
 - [VS-1714] Added a first Doctor workflow surface in Settings > Advanced so repair actions now run through dry-run/Fix now guidance and write audit-friendly diagnostics entries.
+- [VS-1717] Added cross-machine project metadata conflict tracking plus Doctor resolution actions so destination, restore mode, verification, and tag differences no longer overwrite local values silently on import.
 ### Changed
 ### Fixed
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
