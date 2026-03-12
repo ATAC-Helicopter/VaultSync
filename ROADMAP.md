@@ -1006,7 +1006,7 @@
   - Acceptance:
     - Scorecard is explainable and links to the underlying failing signals.
     - No blocking UI regressions on large project sets.
-- [ ] `VS-1714` `P1` Doctor workflows for “Fix now” guided remediation.
+- [ ] `VS-1714` `P1` Doctor workflows for “Fix now” guided remediation. _(In progress)_
   - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
   - What it takes:
     - reusable doctor card/action model with dry-run/apply + remediation guidance.
@@ -1015,6 +1015,9 @@
   - Depends on:
     - `VS-1702`
     - `VS-1706`
+  - Current status:
+    - Settings > Advanced now frames backup-index repair as a Doctor workflow with dry-run and Fix now actions plus guided remediation copy.
+    - Every doctor repair scan/apply action now writes structured diagnostics log entries for support-bundle auditability.
   - Acceptance:
     - Each doctor action has a dry-run summary and explicit apply step.
     - All mutations are audit-logged in diagnostics/support bundle.

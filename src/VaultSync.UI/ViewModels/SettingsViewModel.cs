@@ -1254,6 +1254,8 @@ namespace VaultSync.UI
 
         public bool HasBackupIndexRepairBlockedIssues => _currentBackupIndexRepairPlan?.BlockedIssues.Count > 0;
 
+        public bool HasBackupIndexRepairFindings => HasBackupIndexRepairActions || HasBackupIndexRepairBlockedIssues;
+
         public bool NotificationsEnabled
         {
             get => _notificationsEnabled;
@@ -2418,6 +2420,7 @@ namespace VaultSync.UI
         private async Task ScanBackupIndexRepairPlanAsync()
         {
             IsBackupIndexRepairBusy = true;
+            DiagnosticsLogger.Record("Doctor action started: backup-index-repair scan.");
 
             try
             {
@@ -2445,6 +2448,8 @@ namespace VaultSync.UI
                     BackupIndexRepairStatus,
                     NotificationSeverity.Info,
                     L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                DiagnosticsLogger.Record(
+                    $"Doctor action complete: backup-index-repair scan. Actions={plan.Actions.Count}; BlockedBuckets={plan.BlockedIssues.Count}.");
             }
             catch (Exception ex)
             {
@@ -2457,6 +2462,7 @@ namespace VaultSync.UI
                     BackupIndexRepairStatus,
                     NotificationSeverity.Error,
                     L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                DiagnosticsLogger.Record($"Doctor action failed: backup-index-repair scan. {ex.GetType().Name} - {ex.Message}");
             }
             finally
             {
@@ -2476,6 +2482,8 @@ namespace VaultSync.UI
                 return;
 
             IsBackupIndexRepairBusy = true;
+            DiagnosticsLogger.Record(
+                $"Doctor action started: backup-index-repair apply. PlannedActions={plan.Actions.Count}; BlockedBuckets={plan.BlockedIssues.Count}.");
 
             try
             {
@@ -2496,6 +2504,7 @@ namespace VaultSync.UI
                     BackupIndexRepairStatus,
                     NotificationSeverity.Info,
                     L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                DiagnosticsLogger.Record($"Doctor action complete: backup-index-repair apply. Applied={applied}.");
 
                 await ScanBackupIndexRepairPlanAsync().ConfigureAwait(false);
             }
@@ -2510,6 +2519,7 @@ namespace VaultSync.UI
                     BackupIndexRepairStatus,
                     NotificationSeverity.Error,
                     L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                DiagnosticsLogger.Record($"Doctor action failed: backup-index-repair apply. {ex.GetType().Name} - {ex.Message}");
             }
             finally
             {
