@@ -23,6 +23,12 @@ public sealed class BackupService
     private const string InProgressMarkerFileName = ".vaultsync_inprogress";
     private const string CompletedMarkerFileName = ".vaultsync_complete";
     public event Action<Backup>? BackupRetentionDeleted;
+    public sealed record BackupRetentionPreflightResult(
+        bool CanPrune,
+        string Code,
+        string Message,
+        int ValidRestorePointCount,
+        int DeletionQuota);
 
     public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
     public sealed record BackupPreflightResult(
@@ -2216,6 +2222,16 @@ public sealed class BackupService
         var candidates = unprotected
             .OrderBy(b => b.CreatedUtc)
             .ToList();
+        var projectSnapshots = _repo.GetAllSnapshots()
+            .Where(snapshot => snapshot.ProjectId == projectId)
+            .ToDictionary(snapshot => snapshot.Id);
+        var preflight = EvaluateRetentionPreflight(projectId, backups, candidates, projectSnapshots, deleteQuota);
+        if (!preflight.CanPrune)
+        {
+            Console.WriteLine(
+                $"[BackupService] Retention preflight blocked for projectId={projectId}: code={preflight.Code}; validRestorePoints={preflight.ValidRestorePointCount}; deleteQuota={preflight.DeletionQuota}; message={preflight.Message}");
+            return;
+        }
 
         var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
         var projectName = project?.Name;
@@ -2307,6 +2323,72 @@ public sealed class BackupService
 
             deleted++;
         }
+    }
+
+    internal static BackupRetentionPreflightResult EvaluateRetentionPreflight(
+        int projectId,
+        IReadOnlyList<Backup> backups,
+        IReadOnlyList<Backup> candidates,
+        IReadOnlyDictionary<int, Snapshot> snapshotsById,
+        int deleteQuota)
+    {
+        if (deleteQuota <= 0 || backups.Count == 0)
+        {
+            return new BackupRetentionPreflightResult(true, "ok", "Retention preflight passed.", CountValidRestorePoints(projectId, backups, snapshotsById), deleteQuota);
+        }
+
+        var validRestorePoints = CountValidRestorePoints(projectId, backups, snapshotsById);
+        if (validRestorePoints == 0)
+        {
+            return new BackupRetentionPreflightResult(
+                false,
+                "retention-no-restorable-point",
+                "Retention blocked because the project currently has no metadata-valid restore point.",
+                0,
+                deleteQuota);
+        }
+
+        var simulatedDeletedIds = candidates
+            .Take(deleteQuota)
+            .Select(static backup => backup.Id)
+            .ToHashSet();
+        var remainingValidRestorePoints = backups
+            .Where(backup => !simulatedDeletedIds.Contains(backup.Id))
+            .Count(backup => IsMetadataValidRestorePoint(projectId, backup, snapshotsById));
+
+        if (remainingValidRestorePoints <= 0)
+        {
+            return new BackupRetentionPreflightResult(
+                false,
+                "retention-last-restorable-point",
+                "Retention blocked because pruning would remove the last metadata-valid restore point for this project.",
+                validRestorePoints,
+                deleteQuota);
+        }
+
+        return new BackupRetentionPreflightResult(true, "ok", "Retention preflight passed.", validRestorePoints, deleteQuota);
+    }
+
+    private static int CountValidRestorePoints(
+        int projectId,
+        IEnumerable<Backup> backups,
+        IReadOnlyDictionary<int, Snapshot> snapshotsById)
+    {
+        return backups.Count(backup => IsMetadataValidRestorePoint(projectId, backup, snapshotsById));
+    }
+
+    private static bool IsMetadataValidRestorePoint(
+        int projectId,
+        Backup backup,
+        IReadOnlyDictionary<int, Snapshot> snapshotsById)
+    {
+        if (backup.ProjectId != projectId)
+            return false;
+
+        if (!snapshotsById.TryGetValue(backup.SnapshotId, out var snapshot))
+            return false;
+
+        return snapshot.ProjectId == projectId;
     }
 
     private bool TryDeleteBackupFolder(string fullPath, int backupId)

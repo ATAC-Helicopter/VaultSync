@@ -155,7 +155,7 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
         var summary = BackupIndexConsistencyService.BuildSummary(report);
 
         var finding = Assert.Single(report.Findings, f => f.Code == BackupIndexConsistencyCode.MissingProjectExternalId);
-        Assert.Equal(new[] { $"{projectA}:Alpha", $"{projectB}:Zulu" }, finding.Samples);
+        Assert.Equal(new[] { $"{projectB}:Zulu", $"{projectA}:Alpha" }, finding.Samples);
         Assert.Contains(BackupIndexConsistencyCode.MissingProjectExternalId, summary.TopFindingCodes);
         Assert.Equal(report.WarningCount, summary.WarningCount);
         Assert.Equal(report.ErrorCount, summary.ErrorCount);

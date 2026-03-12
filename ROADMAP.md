@@ -962,12 +962,14 @@
     - opt-in defaults only; no surprise background mutation on upgrade.
   - Acceptance:
     - Maintenance jobs run only within configured windows and emit clear run summaries.
-- [ ] `VS-1711` `P0` Backup chain preflight before retention prune.
+- [ ] `VS-1711` `P0` Backup chain preflight before retention prune. _(In progress)_
   - Scope: validate there is at least one restorable point per project before pruning non-protected backups.
   - What it takes:
     - define “restorable point” precisely across direct/sandbox/encrypted/imported histories.
     - integrate with retention planner before delete execution, not after.
     - emit clear block reasons when prune would violate restore safety.
+  - Current status:
+    - In progress: retention now simulates prune candidates and blocks when deletion would remove the last metadata-valid restore point for the project.
   - Depends on:
     - `VS-1706` consistency scan.
   - Acceptance:
