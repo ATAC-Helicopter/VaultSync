@@ -30,6 +30,12 @@ public sealed class BackupService
         int ValidRestorePointCount,
         int DeletionQuota);
 
+    internal sealed record BackupRetentionCandidateDecision(
+        int BackupId,
+        bool Selected,
+        string Code,
+        string Message);
+
     public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
     public sealed record BackupPreflightResult(
         long TotalBytes,
@@ -2244,13 +2250,24 @@ public sealed class BackupService
                 snapshotRefs[backup.SnapshotId] = 1;
         }
 
+        var retentionPlan = BuildRetentionDeletionPlan(projectId, backups, candidates, projectSnapshots, deleteQuota);
+        foreach (var skipped in retentionPlan.Where(static decision => !decision.Selected))
+        {
+            Console.WriteLine(
+                $"[BackupService] Retention candidate skipped for projectId={projectId}: backupId={skipped.BackupId}; code={skipped.Code}; message={skipped.Message}");
+        }
+
+        var plannedCandidateIds = retentionPlan
+            .Where(static decision => decision.Selected)
+            .Select(static decision => decision.BackupId)
+            .ToHashSet();
         var attempted = new HashSet<int>();
         var deleted = 0;
 
         while (deleted < deleteQuota)
         {
             // Try the next oldest unprotected candidate that has not been attempted yet.
-            var backup = candidates.FirstOrDefault(b => !attempted.Contains(b.Id));
+            var backup = candidates.FirstOrDefault(b => plannedCandidateIds.Contains(b.Id) && !attempted.Contains(b.Id));
             if (backup is null)
                 break;
 
@@ -2275,17 +2292,18 @@ public sealed class BackupService
                     !TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
                 {
                     Console.WriteLine(
-                        $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}).");
+                        $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}); code=out-of-root.");
                     canDeleteDbRow = false;
                     diskDeleteSucceeded = false;
                 }
                 else if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
                 {
                     Console.WriteLine($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
-                    diskDeleteSucceeded = TryDeleteBackupFolder(fullPath, backup.Id);
+                    var deleteResult = TryDeleteBackupFolder(fullPath, backup.Id);
+                    diskDeleteSucceeded = deleteResult.Success;
                     if (!diskDeleteSucceeded)
                     {
-                        Console.WriteLine($"[BackupService] Retention delete failed for backupId={backup.Id}; trying next oldest unprotected candidate.");
+                        Console.WriteLine($"[BackupService] Retention delete failed for backupId={backup.Id}; code={deleteResult.Code}; trying next eligible unprotected candidate.");
                     }
                 }
                 else
@@ -2369,6 +2387,56 @@ public sealed class BackupService
         return new BackupRetentionPreflightResult(true, "ok", "Retention preflight passed.", validRestorePoints, deleteQuota);
     }
 
+    internal static IReadOnlyList<BackupRetentionCandidateDecision> BuildRetentionDeletionPlan(
+        int projectId,
+        IReadOnlyList<Backup> backups,
+        IReadOnlyList<Backup> candidates,
+        IReadOnlyDictionary<int, Snapshot> snapshotsById,
+        int deleteQuota)
+    {
+        var decisions = new List<BackupRetentionCandidateDecision>();
+        if (deleteQuota <= 0 || candidates.Count == 0)
+            return decisions;
+
+        var remainingValidRestorePoints = CountValidRestorePoints(projectId, backups, snapshotsById);
+        var selected = 0;
+
+        foreach (var candidate in candidates.OrderBy(static backup => backup.CreatedUtc).ThenBy(static backup => backup.Id))
+        {
+            if (selected >= deleteQuota)
+            {
+                decisions.Add(new BackupRetentionCandidateDecision(
+                    candidate.Id,
+                    false,
+                    "quota-satisfied",
+                    "Deletion quota already satisfied by older eligible candidates."));
+                continue;
+            }
+
+            var isValidRestorePoint = IsMetadataValidRestorePoint(projectId, candidate, snapshotsById);
+            if (isValidRestorePoint && remainingValidRestorePoints <= 1)
+            {
+                decisions.Add(new BackupRetentionCandidateDecision(
+                    candidate.Id,
+                    false,
+                    "preserve-last-restorable-point",
+                    "Deleting this backup would remove the last metadata-valid restore point for the project."));
+                continue;
+            }
+
+            decisions.Add(new BackupRetentionCandidateDecision(
+                candidate.Id,
+                true,
+                "selected",
+                "Eligible for retention deletion."));
+            selected++;
+            if (isValidRestorePoint)
+                remainingValidRestorePoints--;
+        }
+
+        return decisions;
+    }
+
     private static int CountValidRestorePoints(
         int projectId,
         IEnumerable<Backup> backups,
@@ -2391,14 +2459,14 @@ public sealed class BackupService
         return snapshot.ProjectId == projectId;
     }
 
-    private bool TryDeleteBackupFolder(string fullPath, int backupId)
+    private RetentionDeleteAttemptResult TryDeleteBackupFolder(string fullPath, int backupId)
     {
         try
         {
             ClearAttributesRecursive(fullPath);
             DeleteKnownMarkerFiles(fullPath);
             Directory.Delete(fullPath, recursive: true);
-            return true;
+            return new RetentionDeleteAttemptResult(true, "deleted", "Retention delete succeeded.");
         }
         catch (Exception firstEx)
         {
@@ -2406,14 +2474,27 @@ public sealed class BackupService
             try
             {
                 FallbackDeleteDirectory(fullPath);
-                return true;
+                return new RetentionDeleteAttemptResult(true, "deleted-fallback", "Retention delete succeeded via fallback path.");
             }
             catch (Exception fallbackEx)
             {
                 Console.WriteLine($"[BackupService] Retention fallback delete failed for '{fullPath}' (backupId={backupId}): {fallbackEx}");
-                return false;
+                return new RetentionDeleteAttemptResult(false, ClassifyRetentionDeleteFailure(fallbackEx), fallbackEx.Message);
             }
         }
+    }
+
+    private sealed record RetentionDeleteAttemptResult(bool Success, string Code, string Message);
+
+    private static string ClassifyRetentionDeleteFailure(Exception ex)
+    {
+        return ex switch
+        {
+            UnauthorizedAccessException => "permission-denied",
+            IOException ioEx when ioEx.Message.Contains("used by another process", StringComparison.OrdinalIgnoreCase) => "locked",
+            IOException => "io-error",
+            _ => "delete-failed"
+        };
     }
 
     private static void DeleteKnownMarkerFiles(string rootPath)

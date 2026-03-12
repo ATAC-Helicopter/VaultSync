@@ -123,6 +123,66 @@ public sealed class BackupRetentionPreflightTests : IDisposable
         Assert.Equal("backup-new", remainingBackups[0].ExternalId);
     }
 
+    [Fact]
+    public void BuildRetentionDeletionPlan_SkipsLastValidRestorePoint_AndSelectsNextEligibleCandidate()
+    {
+        var projectId = 42;
+        var otherProjectId = 7;
+        var validSnapshotId = 100;
+        var invalidSnapshotId = 200;
+
+        var validOld = new Backup
+        {
+            Id = 1,
+            ProjectId = projectId,
+            SnapshotId = validSnapshotId,
+            CreatedUtc = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc)
+        };
+        var invalidNewer = new Backup
+        {
+            Id = 2,
+            ProjectId = projectId,
+            SnapshotId = invalidSnapshotId,
+            CreatedUtc = new DateTime(2026, 3, 1, 11, 0, 0, DateTimeKind.Utc)
+        };
+
+        var snapshots = new[]
+        {
+            new Snapshot { Id = validSnapshotId, ProjectId = projectId },
+            new Snapshot { Id = invalidSnapshotId, ProjectId = otherProjectId }
+        }.ToDictionary(x => x.Id);
+
+        var plan = BackupService.BuildRetentionDeletionPlan(
+            projectId,
+            new[] { validOld, invalidNewer },
+            new[] { validOld, invalidNewer },
+            snapshots,
+            deleteQuota: 1);
+
+        Assert.Contains(plan, x => x.BackupId == 1 && !x.Selected && x.Code == "preserve-last-restorable-point");
+        Assert.Contains(plan, x => x.BackupId == 2 && x.Selected && x.Code == "selected");
+    }
+
+    [Fact]
+    public void BuildRetentionDeletionPlan_StopsSelectingOnceQuotaIsSatisfied()
+    {
+        var projectId = 5;
+        var snapshotId = 10;
+        var backups = new[]
+        {
+            new Backup { Id = 1, ProjectId = projectId, SnapshotId = snapshotId, CreatedUtc = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc) },
+            new Backup { Id = 2, ProjectId = projectId, SnapshotId = snapshotId, CreatedUtc = new DateTime(2026, 3, 1, 11, 0, 0, DateTimeKind.Utc) },
+            new Backup { Id = 3, ProjectId = projectId, SnapshotId = snapshotId, CreatedUtc = new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc) }
+        };
+        var snapshots = new[] { new Snapshot { Id = snapshotId, ProjectId = projectId } }.ToDictionary(x => x.Id);
+
+        var plan = BackupService.BuildRetentionDeletionPlan(projectId, backups, backups, snapshots, deleteQuota: 1);
+
+        Assert.Contains(plan, x => x.BackupId == 1 && x.Selected);
+        Assert.Contains(plan, x => x.BackupId == 2 && !x.Selected && x.Code == "quota-satisfied");
+        Assert.Contains(plan, x => x.BackupId == 3 && !x.Selected && x.Code == "quota-satisfied");
+    }
+
     private SqliteRepository CreateRepository()
     {
         var repo = new SqliteRepository(_dbPath);

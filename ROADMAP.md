@@ -908,7 +908,7 @@
   - Acceptance:
     - Quota warnings are visible before destination exhaustion.
     - Cleanup suggestions never include protected backups as auto-candidates.
-- [ ] `VS-1705` `P0` Retention delete resilience v2.
+- [ ] `VS-1705` `P0` Retention delete resilience v2. _(In progress)_
   - Scope: when oldest non-protected delete fails, continue to next eligible non-protected entry and report structured failure reasons.
   - What it takes:
     - refactor retention candidate evaluation into a reusable ordered plan.
@@ -916,6 +916,9 @@
     - ensure delete attempts and skip decisions are visible in diagnostics and user-facing summaries.
   - Depends on:
     - `VS-1711` chain preflight.
+  - Current status:
+    - Retention now builds an ordered deletion plan that can skip the oldest candidate when deleting it would remove the last metadata-valid restore point.
+    - Delete failures now emit structured reason codes so later diagnostics and user-facing summaries can reuse stable failure classifications.
   - Acceptance:
     - Retention does not halt on first non-protected delete failure when other eligible entries exist.
     - Protected backups are always skipped.

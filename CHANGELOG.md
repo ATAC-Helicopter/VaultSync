@@ -7,6 +7,7 @@
 - [VS-1701] Added a deterministic orphan-link repair planning engine that generates exact backup->project remap actions from snapshot ownership and reports blocked orphan cases for later Doctor workflows.
 - [VS-1702] Added a Settings > Advanced backup-index repair panel with dry-run scan, exact-fix apply, and blocked orphan summaries for deterministic manual repair flows.
 - [VS-1712] Added stable destination fingerprinting and legacy preferred-destination normalization so project routing survives destination rename/re-add cycles more reliably.
+- [VS-1705] Added an ordered retention deletion plan that skips unsafe oldest candidates and records structured failure codes when delete attempts fall through to later eligible entries.
 ### Changed
 ### Fixed
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
