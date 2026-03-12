@@ -885,7 +885,7 @@
   - Acceptance:
     - Orphan remap jobs are deterministic and idempotent.
     - Diagnostics/support bundle include remapped/unresolved counts and reasons.
-- [ ] `VS-1702` `P0` Manual repair action for backup/project links.
+- [ ] `VS-1702` `P0` Manual repair action for backup/project links. _(In progress)_
   - Scope: add `Settings/Doctor` repair flow with dry-run and apply modes.
   - What it takes:
     - reusable repair-plan DTOs shared by UI, diagnostics export, and future CLI flows.
@@ -893,6 +893,9 @@
     - mutation audit log entry for every repair apply action.
   - Depends on:
     - `VS-1701` deterministic repair engine.
+  - Current status:
+    - Settings > Advanced now exposes a manual backup-index repair panel with dry-run scan and exact-fix apply actions.
+    - First pass reports exact remap counts and blocked orphan buckets, then reapplies a fresh scan after apply.
   - Acceptance:
     - UI shows what will be relinked before apply.
     - User can run safe repair without touching valid mappings.

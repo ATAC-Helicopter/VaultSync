@@ -114,6 +114,13 @@ namespace VaultSync.UI
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
         private readonly SupportBundleService _supportBundleService = new();
+        private RelayCommand? _scanBackupIndexRepairPlanCommand;
+        private RelayCommand? _applyBackupIndexRepairPlanCommand;
+        private BackupIndexRepairPlan? _currentBackupIndexRepairPlan;
+        private string _backupIndexRepairStatus = string.Empty;
+        private string _backupIndexRepairSummary = string.Empty;
+        private string _backupIndexRepairDetails = string.Empty;
+        private bool _isBackupIndexRepairBusy;
         private bool _showLegacyBackupLocation = true;
         private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
 
@@ -211,6 +218,8 @@ namespace VaultSync.UI
             ExportSupportBundleCommand   = new RelayCommand(_ => ExportSupportBundle());
             ImportSupportBundleCommand   = new RelayCommand(_ => ImportSupportBundle());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
+            _scanBackupIndexRepairPlanCommand = new RelayCommand(_ => ScanBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy);
+            _applyBackupIndexRepairPlanCommand = new RelayCommand(_ => ApplyBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy && HasBackupIndexRepairActions);
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
             ClearBackupEncryptionPasswordCommand = new RelayCommand(_ => ClearBackupEncryptionPassword());
@@ -1208,6 +1217,43 @@ namespace VaultSync.UI
             private set => SetField(ref _saveStatus, value);
         }
 
+        public string BackupIndexRepairStatus
+        {
+            get => _backupIndexRepairStatus;
+            private set => SetField(ref _backupIndexRepairStatus, value);
+        }
+
+        public string BackupIndexRepairSummary
+        {
+            get => _backupIndexRepairSummary;
+            private set => SetField(ref _backupIndexRepairSummary, value);
+        }
+
+        public string BackupIndexRepairDetails
+        {
+            get => _backupIndexRepairDetails;
+            private set => SetField(ref _backupIndexRepairDetails, value);
+        }
+
+        public bool IsBackupIndexRepairBusy
+        {
+            get => _isBackupIndexRepairBusy;
+            private set
+            {
+                if (!SetField(ref _isBackupIndexRepairBusy, value))
+                    return;
+
+                _scanBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
+                _applyBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
+            }
+        }
+
+        public bool HasBackupIndexRepairPlan => _currentBackupIndexRepairPlan is not null;
+
+        public bool HasBackupIndexRepairActions => _currentBackupIndexRepairPlan?.Actions.Count > 0;
+
+        public bool HasBackupIndexRepairBlockedIssues => _currentBackupIndexRepairPlan?.BlockedIssues.Count > 0;
+
         public bool NotificationsEnabled
         {
             get => _notificationsEnabled;
@@ -1635,6 +1681,8 @@ namespace VaultSync.UI
         public ICommand ExportSupportBundleCommand { get; }
         public ICommand ImportSupportBundleCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
+        public ICommand ScanBackupIndexRepairPlanCommand => _scanBackupIndexRepairPlanCommand!;
+        public ICommand ApplyBackupIndexRepairPlanCommand => _applyBackupIndexRepairPlanCommand!;
         public ICommand RefreshHistoryCommand { get; }
         public ICommand SetBackupEncryptionPasswordCommand { get; }
         public ICommand ClearBackupEncryptionPasswordCommand { get; }
@@ -2360,6 +2408,155 @@ namespace VaultSync.UI
         private void ImportSupportBundle()
         {
             _ = RunDetachedAsync(ImportSupportBundleAsync, nameof(ImportSupportBundleAsync));
+        }
+
+        private void ScanBackupIndexRepairPlan()
+        {
+            _ = RunDetachedAsync(ScanBackupIndexRepairPlanAsync, nameof(ScanBackupIndexRepairPlanAsync));
+        }
+
+        private async Task ScanBackupIndexRepairPlanAsync()
+        {
+            IsBackupIndexRepairBusy = true;
+
+            try
+            {
+                var plan = await Task.Run(() =>
+                {
+                    var cfg = AppConfigStore.Load();
+                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    var service = new BackupIndexRepairService(repo);
+                    return service.BuildPlan();
+                }).ConfigureAwait(false);
+
+                _currentBackupIndexRepairPlan = plan;
+                BackupIndexRepairSummary = BuildBackupIndexRepairSummary(plan);
+                BackupIndexRepairDetails = BuildBackupIndexRepairDetails(plan);
+                BackupIndexRepairStatus = plan.HasActions
+                    ? L("Settings.Advanced.BackupRepairPlanReady", "Repair plan ready.")
+                    : L("Settings.Advanced.BackupRepairPlanNoActions", "No exact repair actions are currently available.");
+                SaveStatus = BackupIndexRepairStatus;
+                OnPropertyChanged(nameof(HasBackupIndexRepairPlan));
+                OnPropertyChanged(nameof(HasBackupIndexRepairActions));
+                OnPropertyChanged(nameof(HasBackupIndexRepairBlockedIssues));
+                _applyBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
+
+                GlobalNotificationCenter.Instance.Show(
+                    BackupIndexRepairStatus,
+                    NotificationSeverity.Info,
+                    L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+            }
+            catch (Exception ex)
+            {
+                BackupIndexRepairStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.BackupRepairFailed", "Backup repair scan failed: {0}"),
+                    ex.Message);
+                SaveStatus = BackupIndexRepairStatus;
+                GlobalNotificationCenter.Instance.Show(
+                    BackupIndexRepairStatus,
+                    NotificationSeverity.Error,
+                    L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+            }
+            finally
+            {
+                IsBackupIndexRepairBusy = false;
+            }
+        }
+
+        private void ApplyBackupIndexRepairPlan()
+        {
+            _ = RunDetachedAsync(ApplyBackupIndexRepairPlanAsync, nameof(ApplyBackupIndexRepairPlanAsync));
+        }
+
+        private async Task ApplyBackupIndexRepairPlanAsync()
+        {
+            var plan = _currentBackupIndexRepairPlan;
+            if (plan is null || !plan.HasActions)
+                return;
+
+            IsBackupIndexRepairBusy = true;
+
+            try
+            {
+                var applied = await Task.Run(() =>
+                {
+                    var cfg = AppConfigStore.Load();
+                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    var service = new BackupIndexRepairService(repo);
+                    return service.ApplyPlan(plan);
+                }).ConfigureAwait(false);
+
+                BackupIndexRepairStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.BackupRepairApplied", "Applied {0} exact backup-link repair action(s)."),
+                    applied);
+                SaveStatus = BackupIndexRepairStatus;
+                GlobalNotificationCenter.Instance.Show(
+                    BackupIndexRepairStatus,
+                    NotificationSeverity.Info,
+                    L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+
+                await ScanBackupIndexRepairPlanAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                BackupIndexRepairStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.BackupRepairApplyFailed", "Backup repair apply failed: {0}"),
+                    ex.Message);
+                SaveStatus = BackupIndexRepairStatus;
+                GlobalNotificationCenter.Instance.Show(
+                    BackupIndexRepairStatus,
+                    NotificationSeverity.Error,
+                    L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+            }
+            finally
+            {
+                IsBackupIndexRepairBusy = false;
+            }
+        }
+
+        private string BuildBackupIndexRepairSummary(BackupIndexRepairPlan plan)
+        {
+            var exactActions = string.Format(
+                CultureInfo.CurrentCulture,
+                L("Settings.Advanced.BackupRepairSummaryActions", "{0} exact remap action(s)"),
+                plan.Actions.Count);
+            var blockedIssues = string.Format(
+                CultureInfo.CurrentCulture,
+                L("Settings.Advanced.BackupRepairSummaryBlocked", "{0} blocked orphan bucket(s)"),
+                plan.BlockedIssues.Count);
+            return $"{exactActions} · {blockedIssues}";
+        }
+
+        private string BuildBackupIndexRepairDetails(BackupIndexRepairPlan plan)
+        {
+            var parts = new List<string>();
+
+            if (plan.Actions.Count > 0)
+            {
+                parts.Add(string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.BackupRepairDetailsActions", "Exact remaps ready: {0}."),
+                    plan.Actions.Count));
+            }
+
+            foreach (var issue in plan.BlockedIssues.OrderBy(static issue => issue.Code, StringComparer.Ordinal))
+            {
+                parts.Add(string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.BackupRepairDetailsBlocked", "{0}: {1} item(s)."),
+                    issue.Code,
+                    issue.Count));
+            }
+
+            if (parts.Count == 0)
+            {
+                parts.Add(L("Settings.Advanced.BackupRepairDetailsHealthy", "No deterministic repair issues were found."));
+            }
+
+            return string.Join(" ", parts);
         }
 
         private async Task ImportSupportBundleAsync()

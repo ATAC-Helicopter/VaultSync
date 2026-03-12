@@ -5,6 +5,7 @@
 - [VS-1706] Added deterministic finding samples and persisted last-scan summary data so support bundles and future doctor flows can reuse the latest startup integrity snapshot.
 - [VS-1711] Added retention chain preflight so prune runs stop before deleting the last metadata-valid restore point for a project.
 - [VS-1701] Added a deterministic orphan-link repair planning engine that generates exact backup->project remap actions from snapshot ownership and reports blocked orphan cases for later Doctor workflows.
+- [VS-1702] Added a Settings > Advanced backup-index repair panel with dry-run scan, exact-fix apply, and blocked orphan summaries for deterministic manual repair flows.
 ### Changed
 ### Fixed
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).

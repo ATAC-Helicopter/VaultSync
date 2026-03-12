@@ -1333,6 +1333,44 @@
                     </WrapPanel>
                   </Grid>
 
+                  <Border Classes="subtle-card"
+                          Margin="0,8,0,0"
+                          Padding="12"
+                          CornerRadius="14">
+                    <StackPanel Spacing="8">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BackupRepairTitle}" />
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BackupRepairDescription}"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                      <WrapPanel Orientation="Horizontal"
+                                 ItemSpacing="8"
+                                 LineSpacing="8">
+                        <Button Content="{infra:LocalizedString Key=Settings.Advanced.BackupRepairScan}"
+                                Classes="action-ghost"
+                                Command="{Binding ScanBackupIndexRepairPlanCommand}" />
+                        <Button Content="{infra:LocalizedString Key=Settings.Advanced.BackupRepairApply}"
+                                Classes="action-primary"
+                                Command="{Binding ApplyBackupIndexRepairPlanCommand}"
+                                IsEnabled="{Binding HasBackupIndexRepairActions}" />
+                      </WrapPanel>
+                      <TextBlock Text="{Binding BackupIndexRepairSummary}"
+                                 FontWeight="SemiBold"
+                                 IsVisible="{Binding HasBackupIndexRepairPlan}" />
+                      <TextBlock Text="{Binding BackupIndexRepairDetails}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap"
+                                 IsVisible="{Binding HasBackupIndexRepairPlan}" />
+                      <TextBlock Text="{Binding BackupIndexRepairStatus}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
                   <StackPanel Grid.Column="0" Spacing="2">
