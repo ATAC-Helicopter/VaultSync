@@ -1100,16 +1100,17 @@
     - In progress: first-pass dashboard redesign is in place with a stronger operations header, wrap-based KPI layout, a dedicated recent-activity rail, and rebalanced trend/storage cards that behave more predictably in windowed layouts.
     - In progress: header and lower information groups were refined to reduce the random/duplicated feel and make readiness, activity, trend, and storage read as one consistent dashboard hierarchy.
 - [ ] `VS-1721` `P2` App-wide tag color editor and chip styling. _(In progress)_
-  - Scope: add a complete tag-color editor in Settings and apply those colors consistently wherever project tags render.
+  - Scope: add a complete app-wide tag-color system, edited primarily from Projects, and apply those colors consistently wherever project tags render.
   - What it takes:
     - persist per-tag background/foreground/border overrides in appearance settings.
     - render colored chips through one shared tag appearance helper across Projects, Backups, and Dashboard activity.
     - preserve configured colors through settings export/import flows.
   - Current status:
-    - In progress: shared tag appearance resolution now supports configurable colors, and Settings includes the first pass of a tag color editor with add/reset/remove actions.
+    - In progress: shared tag appearance resolution now supports configurable colors, and Projects now hosts the primary visual editor with a ring picker, quick swatches, live preview, and app-wide save/reset flows.
+    - In progress: Settings now points users back to Projects for tag-color editing so the workflow stays in context instead of duplicating a second full editor.
     - In progress: Projects, Backups, and Dashboard activity are being aligned to render the same configured chips app-wide.
   - Acceptance:
-    - Tag colors can be added, edited, reset, and removed from Settings without breaking layout.
+    - Tag colors can be added, edited, reset, and removed from Projects without confusing duplicate entry points or broken layout.
     - The same tag uses the same colors anywhere it appears in the app.
     - Support-bundle settings export/import preserves configured tag colors.
 - [ ] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(In progress)_
