@@ -1090,11 +1090,13 @@
   - Acceptance:
     - One command emits pass/fail with actionable errors.
     - Gate output is attachable to release notes/support workflows.
-- [ ] `VS-1719` `P2` Dashboard information architecture and visual modernization pass.
+- [ ] `VS-1719` `P2` Dashboard information architecture and visual modernization pass. _(In progress)_
   - Scope: revisit the Dashboard layout so it feels more modern and operationally useful while keeping VaultSync's dark visual identity, navigation model, and familiar core cards.
   - What it takes:
     - redesign KPI/card hierarchy so the most actionable signals land first (`backups`, `restore readiness`, `alerts`, `storage`, `recent activity`).
     - replace the current stretched/empty-space-prone sections with responsive card groups that scale cleanly in both maximized and windowed modes.
+  - Current status:
+    - In progress: first-pass dashboard redesign is in place with a stronger operations header, wrap-based KPI layout, a dedicated recent-activity rail, and rebalanced trend/storage cards that behave more predictably in windowed layouts.
 - [ ] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(In progress)_
   - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
   - Current status:

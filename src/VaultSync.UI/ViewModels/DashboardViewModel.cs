@@ -901,7 +901,7 @@ namespace VaultSync.UI.ViewModels
             StorageUsedLocal = Lf("Dashboard.Kpi.StorageLocal", "Local: {0}", "0 B");
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
             RestoreReadinessHeadline = "No tracked projects yet";
-            RestoreReadinessDetail = "Ready 0 · Attention 0 · Risk 0 · Unavailable 0";
+            RestoreReadinessDetail = "Ready 0 - Attention 0 - Risk 0 - Unavailable 0";
             RestoreReadinessReadyCount = 0;
             RestoreReadinessAttentionCount = 0;
             RestoreReadinessRiskCount = 0;
@@ -1911,3 +1911,4 @@ namespace VaultSync.UI.ViewModels
         }
     }
 }
+
