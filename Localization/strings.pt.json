@@ -1127,5 +1127,8 @@
   "Settings.Destinations.CheckpointResumeLabel": "Resume interrupted uploads",
   "Settings.Destinations.CheckpointResumeDescription": "Keep resumable archive checkpoints on this destination so failed uploads can continue from the last verified byte range.",
   "Update.Download.Waiting": "Waiting for network...",
-  "Update.Installer.Timeout": "Installer download timed out. Check your connection or open the release page."
+  "Update.Installer.Timeout": "Installer download timed out. Check your connection or open the release page.",
+  "Dashboard.Storage.MoreProjects": "+ {0} more",
+  "Dashboard.Storage.MoreProjectsTooltip": "{0} additional projects: {1}",
+  "Dashboard.Storage.SegmentTooltip": "{0}: {1}"
 }

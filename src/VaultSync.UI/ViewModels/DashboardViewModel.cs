@@ -710,7 +710,7 @@ namespace VaultSync.UI.ViewModels
                 if (data.StorageSlices.Count > 0 &&
                     (BackupUsageSegments.Count == 0 ||
                      (BackupUsageSegments.Count == 1 &&
-                      BackupUsageSegments[0].Label.StartsWith(
+                      BackupUsageSegments[0].Name.StartsWith(
                           L("Dashboard.Storage.Other", "Other"),
                           StringComparison.OrdinalIgnoreCase))))
                 {
@@ -1022,25 +1022,35 @@ namespace VaultSync.UI.ViewModels
         var otherPercent     = Math.Max(0d, usedPercentTotal - vaultSyncPercent);
 
         var segments = new List<BackupUsageSegment>();
+        const int maxProjectSegments = 5;
 
         // 1) Other segment (non-VaultSync usage on the backup drive).
         // This is both in the legend and in the overlay bar.
+        var otherBytes = Math.Max(0L, usedBytes - vaultSyncBytes);
         if (otherPercent > 0)
         {
             segments.Add(new BackupUsageSegment(
-                $"{L("Dashboard.Storage.Other", "Other")} {FormatBytes(Math.Max(0L, usedBytes - vaultSyncBytes))}",
+                L("Dashboard.Storage.Other", "Other"),
+                FormatBytes(otherBytes),
                 otherPercent,
-                new ImmutableSolidColorBrush(Color.Parse("#8E8E93"))));
+                new ImmutableSolidColorBrush(Color.Parse("#8E8E93")),
+                Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", L("Dashboard.Storage.Other", "Other"), FormatBytes(otherBytes))));
         }
 
         // 2) One segment per project for its latest snapshot size, as percent of total disk.
         var addedProjectSegments = 0;
         if (perProject != null)
         {
-            foreach (var (project, bytes) in perProject)
-            {
-                if (bytes <= 0) continue;
+            var orderedProjects = perProject
+                .Where(p => p.bytes > 0)
+                .OrderByDescending(p => p.bytes)
+                .ToList();
 
+            var visibleProjects = orderedProjects.Take(maxProjectSegments).ToList();
+            var remainingProjects = orderedProjects.Skip(maxProjectSegments).ToList();
+
+            foreach (var (project, bytes) in visibleProjects)
+            {
                 var projectPercent = bytes * 100d / totalBytes;
                 // Keep legend/segment presence stable even when disk is huge and
                 // floating-point math yields near-zero percentages.
@@ -1051,12 +1061,31 @@ namespace VaultSync.UI.ViewModels
 
                 var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
                 var color = Color.Parse(colorHex);
+                var displayName = TrimForTooltip(project.Name, 26);
 
                 segments.Add(new BackupUsageSegment(
-                    $"{project.Name} {FormatBytes(bytes)}",
+                    displayName,
+                    FormatBytes(bytes),
                     projectPercent,
-                    new ImmutableSolidColorBrush(color)));
+                    new ImmutableSolidColorBrush(color),
+                    Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", project.Name, FormatBytes(bytes))));
                 addedProjectSegments++;
+            }
+
+            if (remainingProjects.Count > 0)
+            {
+                var remainingBytes = remainingProjects.Sum(x => x.bytes);
+                var remainingPercent = remainingBytes * 100d / totalBytes;
+                if (remainingPercent <= 0)
+                    remainingPercent = 0.0001d;
+
+                segments.Add(new BackupUsageSegment(
+                    Lf("Dashboard.Storage.MoreProjects", "+ {0} more", remainingProjects.Count),
+                    FormatBytes(remainingBytes),
+                    remainingPercent,
+                    new ImmutableSolidColorBrush(Color.Parse("#5B6480")),
+                    Lf("Dashboard.Storage.MoreProjectsTooltip", "{0} additional projects: {1}", remainingProjects.Count, FormatBytes(remainingBytes))));
+                addedProjectSegments += remainingProjects.Count;
             }
         }
 
@@ -1211,6 +1240,7 @@ namespace VaultSync.UI.ViewModels
             }
 
             var segments = new List<BackupUsageSegment>();
+            const int maxProjectSegments = 5;
             var projectPalette = new[]
             {
                 Color.Parse("#4C8DFF"),
@@ -1221,10 +1251,13 @@ namespace VaultSync.UI.ViewModels
             };
 
             var index = 0;
-            foreach (var (project, bytes) in perProject)
-            {
-                if (bytes <= 0) continue;
+            var orderedProjects = perProject
+                .Where(p => p.bytes > 0)
+                .OrderByDescending(p => p.bytes)
+                .ToList();
 
+            foreach (var (project, bytes) in orderedProjects.Take(maxProjectSegments))
+            {
                 var percent = bytes * 100d / vaultSyncBytes;
                 if (percent <= 0) continue;
 
@@ -1232,9 +1265,27 @@ namespace VaultSync.UI.ViewModels
                 index++;
 
                 segments.Add(new BackupUsageSegment(
-                    project.Name,
+                    TrimForTooltip(project.Name, 26),
+                    FormatBytes(bytes),
                     percent,
-                    new ImmutableSolidColorBrush(color)));
+                    new ImmutableSolidColorBrush(color),
+                    Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", project.Name, FormatBytes(bytes))));
+            }
+
+            var remainingProjects = orderedProjects.Skip(maxProjectSegments).ToList();
+            if (remainingProjects.Count > 0)
+            {
+                var remainingBytes = remainingProjects.Sum(x => x.bytes);
+                var remainingPercent = remainingBytes * 100d / vaultSyncBytes;
+                if (remainingPercent > 0)
+                {
+                    segments.Add(new BackupUsageSegment(
+                        Lf("Dashboard.Storage.MoreProjects", "+ {0} more", remainingProjects.Count),
+                        FormatBytes(remainingBytes),
+                        remainingPercent,
+                        new ImmutableSolidColorBrush(Color.Parse("#5B6480")),
+                        Lf("Dashboard.Storage.MoreProjectsTooltip", "{0} additional projects: {1}", remainingProjects.Count, FormatBytes(remainingBytes))));
+                }
             }
 
             BackupUsageSegments = segments;
@@ -1970,7 +2021,7 @@ namespace VaultSync.UI.ViewModels
 
         // Bindables
         public record LegendItem(string Label, string Tooltip, IBrush Brush);
-        public record BackupUsageSegment(string Label, double SizeBytes, IBrush Brush);
+        public record BackupUsageSegment(string Name, string ValueText, double SizeBytes, IBrush Brush, string Tooltip);
 
         public enum Dot { Green, Blue, Purple, Gray }
 
