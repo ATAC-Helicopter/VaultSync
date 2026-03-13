@@ -50,7 +50,8 @@ Keep IDs stable once published in roadmap/changelog/project board.
 - Update current release status summary.
 - Move truly finished highlights into `Completed (highlights)` when requested.
 
-## 4) GitHub Project Board (`VaultSync 1.5.1 Stabilization`, org project #1)
+## 4) GitHub Project Board (`VaultSync Roadmap`, project #7)
+      https://github.com/users/ATAC-Helicopter/projects/7
 
 ### Solo operating model
 - `Owner`: `Flavio Giacchetti`

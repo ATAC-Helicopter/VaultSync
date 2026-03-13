@@ -23,6 +23,7 @@
 - [VS-1715] Settings diagnostics and support bundles now include the latest non-blocking startup timeline summary (total duration plus per-phase elapsed checkpoints) so slow startup paths are diagnosable without attaching a debugger.
 - [VS-1713] Backups and Dashboard now surface a restore-readiness scorecard that summarizes ready/attention/risk/unavailable projects from backup recency, verification posture, destination reachability, and startup consistency findings.
 - [VS-1719] Dashboard now uses a more intentional wrap-based information layout with a stronger operations header, responsive KPI cards, a dedicated activity rail, and rebalanced trend/storage sections for better fullscreen and windowed behavior.
+- [VS-1719] Dashboard composition was refined again so the operations header, KPI row, activity rail, trend section, and storage/readiness cards now read as one coherent layout instead of disconnected surfaces.
 - [VS-1713] Restore-readiness summaries and dashboard pills now format through localized UI copy instead of shipping hard-coded English readiness counts and fallback headlines.
 ### Fixed
 - [BUG-17002] Restored corrupted bundled Noto Sans font assets so UI text rendering no longer depends on invalid HTML placeholders stored as `.ttf` files.

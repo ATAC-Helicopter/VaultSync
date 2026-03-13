@@ -1098,6 +1098,7 @@
     - replace the current stretched/empty-space-prone sections with responsive card groups that scale cleanly in both maximized and windowed modes.
   - Current status:
     - In progress: first-pass dashboard redesign is in place with a stronger operations header, wrap-based KPI layout, a dedicated recent-activity rail, and rebalanced trend/storage cards that behave more predictably in windowed layouts.
+    - In progress: header and lower information groups were refined to reduce the random/duplicated feel and make readiness, activity, trend, and storage read as one consistent dashboard hierarchy.
 - [ ] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(In progress)_
   - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
   - Current status:
