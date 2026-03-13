@@ -1,41 +1,41 @@
 ﻿# Changelog
 ## [1.7.0] - Unreleased (target: 20.03.2026)
 ### Added
-- [VS-1706] Added a non-blocking startup backup-index consistency scan that audits project/snapshot/backup links and records duplicate/missing external IDs plus broken backup->snapshot->project mappings before warm loads run.
-- [VS-1706] Added deterministic finding samples and persisted last-scan summary data so support bundles and future doctor flows can reuse the latest startup integrity snapshot.
-- [VS-1711] Added retention chain preflight so prune runs stop before deleting the last metadata-valid restore point for a project.
-- [VS-1701] Added a deterministic orphan-link repair planning engine that generates exact backup->project remap actions from snapshot ownership and reports blocked orphan cases for later Doctor workflows.
-- [VS-1702] Added a Settings > Advanced backup-index repair panel with dry-run scan, exact-fix apply, and blocked orphan summaries for deterministic manual repair flows.
-- [VS-1712] Added stable destination fingerprinting and legacy preferred-destination normalization so project routing survives destination rename/re-add cycles more reliably.
-- [VS-1705] Added an ordered retention deletion plan that skips unsafe oldest candidates and records structured failure codes when delete attempts fall through to later eligible entries.
-- [VS-1714] Added a first Doctor workflow surface in Settings > Advanced so repair actions now run through dry-run/Fix now guidance and write audit-friendly diagnostics entries.
-- [VS-1717] Added cross-machine project metadata conflict tracking plus Doctor resolution actions so destination, restore mode, verification, and tag differences no longer overwrite local values silently on import.
-- [VS-1710] Added an opt-in maintenance window in Settings > Advanced so integrity scan, repair dry-run, and metadata refresh jobs can run on a schedule inside a configured time range.
-- [VS-1703] Added per-destination soft quota settings plus cleanup suggestions so VaultSync can estimate reclaimable space from unprotected backups before a target fills up.
+- [VS-1706] Added a non-blocking startup backup-index consistency scan.
+- [VS-1706] Added persisted integrity findings for support bundles and Doctor workflows.
+- [VS-1711] Added retention preflight to protect the last valid restore point.
+- [VS-1701] Added deterministic orphan-backup repair planning.
+- [VS-1702] Added backup-index repair tools in Settings > Advanced.
+- [VS-1712] Added stable destination fingerprinting for rename and re-add scenarios.
+- [VS-1705] Added ordered fallback deletion for retention cleanup.
+- [VS-1714] Added an initial Doctor workflow surface in Settings > Advanced.
+- [VS-1717] Added cross-machine project metadata conflict tracking and resolution.
+- [VS-1710] Added an optional maintenance window for scheduled health tasks.
+- [VS-1703] Added per-destination soft quotas and cleanup suggestions.
 - [VS-1721] Added app-wide tag colors with visual editing from Projects.
 ### Changed
-- [VS-1707] Settings > Advanced now shows persisted updater release-target diagnostics (decision, channel, selected candidate, stable candidate, beta candidate, error) and support bundles now export the same trace for operator triage.
-- [VS-1708] Patch availability now runs an explicit `current -> target` preflight (base-version match, target-version match, manifest presence, file list presence) before the patch button is offered, and the resulting eligibility trace is persisted/exported with updater diagnostics.
-- [VS-1709] Support bundles now export persisted updater diagnostics, patch preflight eligibility, backup-repair telemetry, and metadata-conflict summaries so off-box triage has the latest repair/update state without requiring a live repro.
-- [VS-1720] Archive destinations can now keep resumable upload checkpoints, validate partial payload prefixes, and continue interrupted archive transfers from the last verified byte range instead of always restarting from zero.
-- [VS-1716] Settings > Backups now includes a retention simulation preview that reuses the real retention preflight/delete planner to show per-project reclaim and blocked prune outcomes without deleting data.
-- [VS-1718] Added a scripted release-readiness gate command that checks source version parity, changelog/What's New alignment, release asset presence, and project-board release completeness with both human-readable and JSON output.
-- [VS-1718] Release gate now supports `PrePublish` and `PostPublish` phases so missing installer/patch assets warn with actionable generation steps before upload, but fail only during final post-publish verification.
-- [VS-1715] Settings diagnostics and support bundles now include the latest non-blocking startup timeline summary (total duration plus per-phase elapsed checkpoints) so slow startup paths are diagnosable without attaching a debugger.
+- [VS-1707] Settings and support bundles now include updater release-target diagnostics.
+- [VS-1708] Patch updates now run explicit `current -> target` preflight checks before offering the patch path.
+- [VS-1709] Support bundles now include update, repair, and metadata-conflict telemetry.
+- [VS-1720] Archive transfers can now resume from verified checkpoints instead of restarting.
+- [VS-1716] Settings > Backups now includes a retention simulation preview.
+- [VS-1718] Added a scripted release-readiness gate with human and JSON output.
+- [VS-1718] Release gate now separates `PrePublish` warnings from `PostPublish` failures.
+- [VS-1715] Diagnostics now include a non-blocking startup timeline summary.
 - [VS-1721] Tag-color editing now lives primarily in Projects instead of a duplicate Settings workflow.
 - [BUG-17005] Simplified the custom theme editor layout in Settings > Appearance.
-- [VS-1713] Backups and Dashboard now surface a restore-readiness scorecard that summarizes ready/attention/risk/unavailable projects from backup recency, verification posture, destination reachability, and startup consistency findings.
-- [VS-1719] Dashboard now uses a more intentional wrap-based information layout with a stronger operations header, responsive KPI cards, a dedicated activity rail, and rebalanced trend/storage sections for better fullscreen and windowed behavior.
-- [VS-1719] Dashboard composition was refined again so the operations header, KPI row, activity rail, trend section, and storage/readiness cards now read as one coherent layout instead of disconnected surfaces.
-- [VS-1713] Restore-readiness summaries and dashboard pills now format through localized UI copy instead of shipping hard-coded English readiness counts and fallback headlines.
+- [VS-1713] Backups and Dashboard now show a restore-readiness scorecard.
+- [VS-1719] Dashboard now uses a more coherent wrap-based information layout.
+- [VS-1719] Dashboard sections were rebalanced for clearer fullscreen and windowed layouts.
+- [VS-1713] Restore-readiness summaries and dashboard pills now use localized copy.
 ### Fixed
-- [BUG-17002] Restored corrupted bundled Noto Sans font assets so UI text rendering no longer depends on invalid HTML placeholders stored as `.ttf` files.
-- [BUG-17003] Projects now fall back to registered database entries when folder discovery is empty or partial, so the Projects page still renders tracked projects instead of appearing blank.
-- [BUG-17003] Projects now show explicit empty/select-a-project placeholders instead of rendering a broken-looking blank pane when discovery or selection state is empty.
-- [BUG-17004] Projects root config persistence now survives startup config read/write races by using atomic config replace plus backup/last-known-good fallback instead of defaulting straight to empty values.
-- [BUG-17001] Doctor backup-repair and metadata-conflict workflows now marshal command-state and status updates onto the UI thread, removing Avalonia `Call from invalid thread` traces during detached scan/apply operations.
-- [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
-- [BUG-16024] Track restore-mode dropdown rendering parity so restore confirmation never falls back to `View not found for RestoreModeOption` for either option.
+- [BUG-17002] Restored corrupted bundled Noto Sans font assets.
+- [BUG-17003] Projects now fall back to registered entries when discovery is empty or partial.
+- [BUG-17003] Projects now show explicit empty and no-selection placeholders.
+- [BUG-17004] Projects root now survives startup config read/write races.
+- [BUG-17001] Doctor repair workflows now marshal state updates onto the UI thread.
+- [BUG-16023] Restore status no longer falls back to raw localization keys.
+- [BUG-16024] Restore-mode dropdowns no longer render fallback view text.
 
 ## [1.6.0] - 09.03.2026
 ### Added
