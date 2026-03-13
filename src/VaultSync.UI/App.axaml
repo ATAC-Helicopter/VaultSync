@@ -67,6 +67,7 @@
 
         <!-- Core Fluent theme (actual control templates). Base = Light, we override via RequestedThemeVariant -->
         <fluent:FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
 
         <!-- Window background uses our brush from Colors.axaml -->
         <Style Selector="Window">

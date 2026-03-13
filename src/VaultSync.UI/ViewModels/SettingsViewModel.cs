@@ -16,6 +16,7 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -199,10 +200,18 @@ namespace VaultSync.UI
 
         public sealed class TagColorRuleViewModel : INotifyPropertyChanged
         {
+            private enum ColorSlot
+            {
+                Background,
+                Foreground,
+                Border
+            }
+
             private string _tag = string.Empty;
             private string _background = string.Empty;
             private string _foreground = string.Empty;
             private string _border = string.Empty;
+            private ColorSlot _selectedSlot = ColorSlot.Background;
 
             public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -254,6 +263,44 @@ namespace VaultSync.UI
                 }
             }
 
+            public bool IsEditingBackground
+            {
+                get => _selectedSlot == ColorSlot.Background;
+                set
+                {
+                    if (value)
+                        SetSelectedSlot(ColorSlot.Background);
+                }
+            }
+
+            public bool IsEditingForeground
+            {
+                get => _selectedSlot == ColorSlot.Foreground;
+                set
+                {
+                    if (value)
+                        SetSelectedSlot(ColorSlot.Foreground);
+                }
+            }
+
+            public bool IsEditingBorder
+            {
+                get => _selectedSlot == ColorSlot.Border;
+                set
+                {
+                    if (value)
+                        SetSelectedSlot(ColorSlot.Border);
+                }
+            }
+
+            public Color ActiveColor
+            {
+                get => ParseColor(GetSelectedColorHex());
+                set => SetSelectedColor(ProjectTagAppearance.FormatHex(value.R, value.G, value.B));
+            }
+
+            public string ActiveColorHex => GetSelectedColorHex();
+
             public string PreviewTag => string.IsNullOrWhiteSpace(Tag) ? "Example" : Tag.Trim();
 
             public string PreviewBackground
@@ -283,16 +330,70 @@ namespace VaultSync.UI
                 }
             }
 
+            private void SetSelectedSlot(ColorSlot slot)
+            {
+                if (_selectedSlot == slot)
+                    return;
+
+                _selectedSlot = slot;
+                RaiseSelection();
+            }
+
+            private void SetSelectedColor(string hex)
+            {
+                switch (_selectedSlot)
+                {
+                    case ColorSlot.Background:
+                        Background = hex;
+                        break;
+                    case ColorSlot.Foreground:
+                        Foreground = hex;
+                        break;
+                    default:
+                        Border = hex;
+                        break;
+                }
+            }
+
+            private string GetSelectedColorHex() => _selectedSlot switch
+            {
+                ColorSlot.Background => PreviewBackground,
+                ColorSlot.Foreground => PreviewForeground,
+                _ => PreviewBorder
+            };
+
+            private static Color ParseColor(string hex)
+            {
+                return Color.TryParse(hex, out var color) ? color : Colors.Transparent;
+            }
+
+            private void RaiseSelection()
+            {
+                RaiseProperty(nameof(IsEditingBackground));
+                RaiseProperty(nameof(IsEditingForeground));
+                RaiseProperty(nameof(IsEditingBorder));
+                RaiseProperty(nameof(ActiveColor));
+                RaiseProperty(nameof(ActiveColorHex));
+            }
+
+            private void RaiseProperty(string propertyName)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
+
             private void RaiseAll()
             {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Tag)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Background)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Foreground)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Border)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewTag)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewBackground)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewForeground)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewBorder)));
+                RaiseProperty(nameof(Tag));
+                RaiseProperty(nameof(Background));
+                RaiseProperty(nameof(Foreground));
+                RaiseProperty(nameof(Border));
+                RaiseProperty(nameof(PreviewTag));
+                RaiseProperty(nameof(PreviewBackground));
+                RaiseProperty(nameof(PreviewForeground));
+                RaiseProperty(nameof(PreviewBorder));
+                RaiseProperty(nameof(ActiveColor));
+                RaiseProperty(nameof(ActiveColorHex));
+                RaiseSelection();
             }
         }
 
