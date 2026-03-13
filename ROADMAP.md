@@ -1063,11 +1063,14 @@
   - Current status:
     - Done: metadata import now records tracked field conflicts instead of silently overwriting local destination / restore mode / verification / tags.
     - Done: Settings > Advanced Doctor now exposes pending conflict cards with `Keep local` and `Accept imported` actions.
-- [ ] `VS-1718` `P2` Release readiness gate checklist automation.
+- [ ] `VS-1718` `P2` Release readiness gate checklist automation. _(In progress)_
   - Scope: scripted pre-release checks for patch assets, installer presence, changelog/whats-new parity, and project board release completeness.
   - What it takes:
     - one scripted gate command with machine-readable + human-readable output.
     - GitHub/project/release-asset queries wired into a deterministic checklist.
+  - Current status:
+    - In progress: added `scripts/release_readiness_gate.ps1` to validate UI/installer version parity, unreleased changelog alignment, What's New version alignment, release asset presence, and project-board completion for the target release slice.
+    - In progress: release docs now point to the gate command as part of the release checklist.
   - Acceptance:
     - One command emits pass/fail with actionable errors.
     - Gate output is attachable to release notes/support workflows.

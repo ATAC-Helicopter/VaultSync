@@ -28,6 +28,10 @@ This document defines the current release packaging flow.
 Create patch manifest and patch archives as described in `docs/UPDATER.md`.
 
 ## 4) Release Checklist
+- Run the release gate before publishing:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1
+  ```
 - `CHANGELOG.md` updated
 - `docs/WHATS_NEW.md` updated
 - relevant wiki/help docs updated
