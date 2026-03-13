@@ -1468,162 +1468,30 @@
                         Padding="12"
                         Margin="0,6,0,0">
                   <StackPanel Spacing="10">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Grid ColumnDefinitions="*" ColumnSpacing="10">
                       <StackPanel Grid.Column="0" Spacing="2">
                         <TextBlock Text="{Binding TagColorsLabel}" />
                         <TextBlock Text="{Binding TagColorsDescription}"
                                    Foreground="{StaticResource TextSecondary}"
-                                   FontSize="11" />
+                                   FontSize="11"
+                                   TextWrapping="Wrap" />
                       </StackPanel>
-                      <Button Grid.Column="1"
-                              Classes="settings-ghost"
-                              Command="{Binding AddTagColorRuleCommand}">
-                        <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Add}" />
-                      </Button>
                     </Grid>
 
-                    <ItemsControl ItemsSource="{Binding TagColorRules}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Border Background="{DynamicResource Surface2}"
-                                  BorderBrush="{DynamicResource DividerBrush}"
-                                  BorderThickness="1"
-                                  CornerRadius="12"
-                                  Padding="12"
-                                  Margin="0,0,0,6">
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
-                                  RowSpacing="10">
-                              <Grid ColumnDefinitions="1.2*,Auto,Auto"
-                                    ColumnSpacing="8">
-                                <TextBox Grid.Column="0"
-                                         Text="{Binding Tag, Mode=TwoWay}"
-                                         Watermark="{infra:LocalizedString Key=Settings.Appearance.TagColors.TagWatermark}" />
-                                <Button Grid.Column="1"
-                                        Classes="settings-ghost"
-                                        Command="{Binding DataContext.ResetTagColorRuleCommand, ElementName=Root}"
-                                        CommandParameter="{Binding}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Reset}" />
-                                </Button>
-                                <Button Grid.Column="2"
-                                        Classes="settings-danger-outline"
-                                        Command="{Binding DataContext.RemoveTagColorRuleCommand, ElementName=Root}"
-                                        CommandParameter="{Binding}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Remove}" />
-                                </Button>
-                              </Grid>
-
-                              <Grid Grid.Row="1"
-                                    ColumnDefinitions="Auto,Auto,Auto,*,Auto"
-                                    ColumnSpacing="8"
-                                    RowDefinitions="Auto,Auto"
-                                    RowSpacing="8">
-                                <ToggleButton Grid.Column="0"
-                                              Classes="small-pill"
-                                              IsChecked="{Binding IsEditingBackground, Mode=TwoWay}">
-                                  <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Border Width="14"
-                                            Height="14"
-                                            CornerRadius="7"
-                                            Background="{Binding PreviewBackground}"
-                                            BorderBrush="{Binding PreviewBorder}"
-                                            BorderThickness="1" />
-                                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Background}" />
-                                  </StackPanel>
-                                </ToggleButton>
-                                <ToggleButton Grid.Column="1"
-                                              Classes="small-pill"
-                                              IsChecked="{Binding IsEditingForeground, Mode=TwoWay}">
-                                  <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Border Width="14"
-                                            Height="14"
-                                            CornerRadius="7"
-                                            Background="{Binding PreviewForeground}"
-                                            BorderBrush="{Binding PreviewBorder}"
-                                            BorderThickness="1" />
-                                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Foreground}" />
-                                  </StackPanel>
-                                </ToggleButton>
-                                <ToggleButton Grid.Column="2"
-                                              Classes="small-pill"
-                                              IsChecked="{Binding IsEditingBorder, Mode=TwoWay}">
-                                  <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Border Width="14"
-                                            Height="14"
-                                            CornerRadius="7"
-                                            Background="{Binding PreviewBorder}"
-                                            BorderBrush="{Binding PreviewBorder}"
-                                            BorderThickness="1" />
-                                    <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Border}" />
-                                  </StackPanel>
-                                </ToggleButton>
-
-                                <Border Grid.Column="4"
-                                        CornerRadius="999"
-                                        Background="{Binding PreviewBackground}"
-                                        BorderBrush="{Binding PreviewBorder}"
-                                        BorderThickness="1"
-                                        Padding="10,4"
-                                        HorizontalAlignment="Right">
-                                  <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <TextBlock Text="{Binding PreviewTag}"
-                                               FontWeight="SemiBold"
-                                               Foreground="{Binding PreviewForeground}" />
-                                    <TextBlock Text="{Binding ActiveColorHex}"
-                                               Foreground="{Binding PreviewForeground}"
-                                               Opacity="0.9" />
-                                  </StackPanel>
-                                </Border>
-
-                                <TextBlock Grid.Row="1"
-                                           Grid.ColumnSpan="5"
-                                           Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Help}"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           FontSize="11" />
-                              </Grid>
-
-                              <colorpicker:ColorView Grid.Row="2"
-                                                     Margin="0,2,0,0"
-                                                     Color="{Binding ActiveColor, Mode=TwoWay}"
-                                                     IsAlphaEnabled="False"
-                                                     IsAlphaVisible="False"
-                                                     IsColorModelVisible="False"
-                                                     IsColorPaletteVisible="False"
-                                                     IsHexInputVisible="False"
-                                                     IsComponentTextInputVisible="False"
-                                                     IsColorPreviewVisible="True"
-                                                     IsColorSpectrumVisible="True"
-                                                     IsColorSpectrumSliderVisible="True"
-                                                     IsComponentSliderVisible="True"
-                                                     ColorSpectrumShape="Ring" />
-
-                              <ItemsControl Grid.Row="3"
-                                            ItemsSource="{Binding PaletteSwatches}">
-                                <ItemsControl.ItemsPanel>
-                                  <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
-                                  </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                  <DataTemplate>
-                                    <Button Width="28"
-                                            Height="28"
-                                            Padding="0"
-                                            CornerRadius="14"
-                                            Background="{Binding SwatchColor}"
-                                            BorderBrush="{DynamicResource BorderSoft}"
-                                            BorderThickness="1"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Top"
-                                            Command="{Binding DataContext.ApplyPaletteSwatchCommand, RelativeSource={RelativeSource AncestorType=Border}}"
-                                            CommandParameter="{Binding}" />
-                                  </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                              </ItemsControl>
-                            </Grid>
-                          </Border>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <Border Background="{DynamicResource Surface2}"
+                            BorderBrush="{DynamicResource DividerBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="12">
+                      <StackPanel Spacing="8">
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.PrimaryLocation}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.PrimaryLocationHint}"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
                   </StackPanel>
                 </Border>
 

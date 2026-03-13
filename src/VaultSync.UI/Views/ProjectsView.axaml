@@ -3,6 +3,7 @@
     x:Name="Root"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:colorpicker="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.ColorPicker"
     xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     x:CompileBindings="False">
@@ -789,8 +790,8 @@
                           BorderBrush="{DynamicResource DividerBrush}"
                           BorderThickness="1"
                           Padding="14">
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
-                          ColumnDefinitions="1.2*,0.8*"
+                    <Grid RowDefinitions="Auto,Auto,Auto"
+                          ColumnDefinitions="1.1*,0.9*"
                           RowSpacing="10"
                           ColumnSpacing="16">
                       <StackPanel Grid.Row="0"
@@ -827,144 +828,65 @@
                         </StackPanel>
                       </Border>
 
-                      <Grid Grid.Row="1"
-                            Grid.ColumnSpan="2"
-                            ColumnDefinitions="Auto,*"
-                            ColumnSpacing="10">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Hex}"
-                                   Width="88"
-                                   VerticalAlignment="Center"
+                      <StackPanel Grid.Row="1"
+                                  Grid.Column="0"
+                                  Spacing="8">
+                        <TextBlock Text="{Binding DataContext.ProjectTagColorPickerLabel, ElementName=Root}"
+                                   FontSize="11"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding DataContext.ProjectTagColorHex, ElementName=Root, Mode=TwoWay}"
-                                 Watermark="#RRGGBB"
-                                 Background="{DynamicResource InputBackgroundBrush}"
-                                 BorderBrush="{DynamicResource DividerBrush}"
-                                 BorderThickness="1"
-                                 Padding="{DynamicResource InputPadding}" />
-                      </Grid>
+                        <Border Background="{DynamicResource Surface1}"
+                                BorderBrush="{DynamicResource DividerBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="10">
+                          <colorpicker:ColorView Color="{Binding DataContext.SelectedProjectTagColor, ElementName=Root, Mode=TwoWay}"
+                                                 IsAlphaEnabled="False"
+                                                 IsAlphaVisible="False"
+                                                 IsColorModelVisible="False"
+                                                 IsColorPaletteVisible="False"
+                                                 IsHexInputVisible="False"
+                                                 IsComponentTextInputVisible="False"
+                                                 IsColorPreviewVisible="True"
+                                                 IsColorSpectrumVisible="True"
+                                                 IsColorSpectrumSliderVisible="True"
+                                                 IsComponentSliderVisible="True"
+                                                 ColorSpectrumShape="Ring" />
+                        </Border>
+                      </StackPanel>
 
-                      <Grid Grid.Row="2"
-                            Grid.ColumnSpan="2"
-                            ColumnDefinitions="Auto,*,Auto"
-                            ColumnSpacing="10">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Hue}"
-                                   Width="88"
-                                   VerticalAlignment="Center"
+                      <StackPanel Grid.Row="1"
+                                  Grid.Column="1"
+                                  Spacing="8">
+                        <TextBlock Text="{Binding DataContext.ProjectTagColorPaletteLabel, ElementName=Root}"
+                                   FontSize="11"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <Slider Grid.Column="1"
-                                Minimum="0"
-                                Maximum="360"
-                                Value="{Binding DataContext.ProjectTagColorHue, ElementName=Root, Mode=TwoWay}" />
-                        <TextBlock Grid.Column="2"
-                                   Width="56"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right"
-                                   Text="{Binding DataContext.ProjectTagColorHue, ElementName=Root, StringFormat={}{0:0}°}"
-                                   Foreground="{DynamicResource TextMutedBrush}" />
-                      </Grid>
+                        <ItemsControl ItemsSource="{Binding DataContext.ProjectTagColorSwatches, ElementName=Root}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                              <Button Width="34"
+                                      Height="34"
+                                      Padding="0"
+                                      CornerRadius="17"
+                                      Background="{Binding Swatch}"
+                                      BorderBrush="{DynamicResource BorderSoft}"
+                                      BorderThickness="1"
+                                      Command="{Binding DataContext.ApplyProjectTagColorSwatchCommand, ElementName=Root}"
+                                      CommandParameter="{Binding Hex}" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{Binding DataContext.ProjectTagColorGlobalHint, ElementName=Root}"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
 
-                      <Grid Grid.Row="3"
-                            Grid.ColumnSpan="2"
-                            ColumnDefinitions="Auto,*,Auto"
-                            ColumnSpacing="10">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Saturation}"
-                                   Width="88"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <Slider Grid.Column="1"
-                                Minimum="0"
-                                Maximum="100"
-                                Value="{Binding DataContext.ProjectTagColorSaturation, ElementName=Root, Mode=TwoWay}" />
-                        <TextBlock Grid.Column="2"
-                                   Width="56"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right"
-                                   Text="{Binding DataContext.ProjectTagColorSaturation, ElementName=Root, StringFormat={}{0:0}%}"
-                                   Foreground="{DynamicResource TextMutedBrush}" />
-                      </Grid>
-
-                      <Grid Grid.Row="4"
-                            Grid.ColumnSpan="2"
-                            ColumnDefinitions="Auto,*,Auto"
-                            ColumnSpacing="10">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Brightness}"
-                                   Width="88"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <Slider Grid.Column="1"
-                                Minimum="0"
-                                Maximum="100"
-                                Value="{Binding DataContext.ProjectTagColorValue, ElementName=Root, Mode=TwoWay}" />
-                        <TextBlock Grid.Column="2"
-                                   Width="56"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right"
-                                   Text="{Binding DataContext.ProjectTagColorValue, ElementName=Root, StringFormat={}{0:0}%}"
-                                   Foreground="{DynamicResource TextMutedBrush}" />
-                      </Grid>
-
-                      <Grid Grid.Row="5"
-                            Grid.ColumnSpan="2"
-                            ColumnDefinitions="Auto,*,Auto"
-                            ColumnSpacing="10">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Red}"
-                                   Width="88"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <Slider Grid.Column="1"
-                                Minimum="0"
-                                Maximum="255"
-                                Value="{Binding DataContext.ProjectTagColorRed, ElementName=Root, Mode=TwoWay}" />
-                        <TextBlock Grid.Column="2"
-                                   Width="56"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right"
-                                   Text="{Binding DataContext.ProjectTagColorRed, ElementName=Root, StringFormat={}{0:0}}"
-                                   Foreground="{DynamicResource TextMutedBrush}" />
-                      </Grid>
-
-                      <Grid Grid.Row="6"
-                            Grid.ColumnSpan="2"
-                            ColumnDefinitions="Auto,*,Auto"
-                            ColumnSpacing="10">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Green}"
-                                   Width="88"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <Slider Grid.Column="1"
-                                Minimum="0"
-                                Maximum="255"
-                                Value="{Binding DataContext.ProjectTagColorGreen, ElementName=Root, Mode=TwoWay}" />
-                        <TextBlock Grid.Column="2"
-                                   Width="56"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right"
-                                   Text="{Binding DataContext.ProjectTagColorGreen, ElementName=Root, StringFormat={}{0:0}}"
-                                   Foreground="{DynamicResource TextMutedBrush}" />
-                      </Grid>
-
-                      <Grid Grid.Row="7"
-                            Grid.ColumnSpan="2"
-                            ColumnDefinitions="Auto,*,Auto"
-                            ColumnSpacing="10">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Blue}"
-                                   Width="88"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <Slider Grid.Column="1"
-                                Minimum="0"
-                                Maximum="255"
-                                Value="{Binding DataContext.ProjectTagColorBlue, ElementName=Root, Mode=TwoWay}" />
-                        <TextBlock Grid.Column="2"
-                                   Width="56"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right"
-                                   Text="{Binding DataContext.ProjectTagColorBlue, ElementName=Root, StringFormat={}{0:0}}"
-                                   Foreground="{DynamicResource TextMutedBrush}" />
-                      </Grid>
-
-                      <StackPanel Grid.Row="8"
+                      <StackPanel Grid.Row="2"
                                   Grid.ColumnSpan="2"
                                   Orientation="Horizontal"
                                   HorizontalAlignment="Right"

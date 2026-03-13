@@ -1130,5 +1130,10 @@
   "Update.Installer.Timeout": "Installer download timed out. Check your connection or open the release page.",
   "Dashboard.Storage.MoreProjects": "+ {0} more",
   "Dashboard.Storage.MoreProjectsTooltip": "{0} additional projects: {1}",
-  "Dashboard.Storage.SegmentTooltip": "{0}: {1}"
+  "Dashboard.Storage.SegmentTooltip": "{0}: {1}",
+  "Projects.Tags.Color.GlobalHint": "Saved colors apply app-wide to this tag anywhere it appears.",
+  "Projects.Tags.Color.Palette": "Quick palette",
+  "Projects.Tags.Color.Picker": "Pick a color",
+  "Settings.Appearance.TagColors.PrimaryLocation": "Primary editing now lives in Projects",
+  "Settings.Appearance.TagColors.PrimaryLocationHint": "Open a project, type or pick a tag, then use the custom color editor there. Changes still apply app-wide to that tag."
 }

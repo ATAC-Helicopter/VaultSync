@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Avalonia.Media;
 using Avalonia.Threading;
 using VaultSync.Core.Repositories;
 using System.Threading.Tasks;
@@ -44,6 +45,19 @@ public class ProjectsViewModel : ViewModelBase
         var fmt = L(key, fallback);
         return string.Format(CultureInfo.CurrentCulture, fmt, args);
     }
+
+    public sealed class ProjectTagColorSwatchViewModel
+    {
+        public ProjectTagColorSwatchViewModel(string hex)
+        {
+            Hex = hex;
+            Swatch = Color.Parse(hex);
+        }
+
+        public string Hex { get; }
+        public Color Swatch { get; }
+    }
+
     /// <summary>
     /// Preset options that can be applied to projects. These correspond to
     /// .vaultsyncignore-style profiles (Unity, .NET, etc.) plus an explicit
@@ -90,12 +104,14 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _toggleProjectTagColorEditorCommand;
     private readonly RelayCommand _applyProjectTagColorCommand;
     private readonly RelayCommand _resetProjectTagColorCommand;
+    private readonly RelayCommand _applyProjectTagColorSwatchCommand;
     private readonly RelayCommand _applyTagToGroupCommand;
     private readonly RelayCommand _removeTagFromGroupCommand;
     private readonly RelayCommand _selectGroupTagCommand;
     private bool _isProjectTagColorEditorOpen;
     private bool _projectTagColorSyncing;
     private string _projectTagColorHex = "#3A7AFE";
+    private Color _selectedProjectTagColor = Color.Parse("#3A7AFE");
     private double _projectTagColorRed = 58;
     private double _projectTagColorGreen = 122;
     private double _projectTagColorBlue = 254;
@@ -172,6 +188,7 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand ToggleProjectTagColorEditorCommand { get; }
     public ICommand ApplyProjectTagColorCommand { get; }
     public ICommand ResetProjectTagColorCommand { get; }
+    public ICommand ApplyProjectTagColorSwatchCommand { get; }
     public ICommand ApplyTagToGroupCommand { get; }
     public ICommand RemoveTagFromGroupCommand { get; }
     public ICommand SelectGroupTagCommand { get; }
@@ -186,6 +203,7 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand ExportPresetEditorCommand { get; }
     public ICommand ImportPresetEditorCommand { get; }
     public ICommand ToggleSortCommand { get; }
+    public ObservableCollection<ProjectTagColorSwatchViewModel> ProjectTagColorSwatches { get; } = new();
     public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
     public event Action<int, string>? ProjectEncryptionPolicyChanged;
     public event Action<IReadOnlyList<int>>? BackupGroupRequested;
@@ -251,6 +269,32 @@ public class ProjectsViewModel : ViewModelBase
 
     public string ProjectTagColorTarget => (ProjectTagInput ?? string.Empty).Trim();
 
+    public Color SelectedProjectTagColor
+    {
+        get => _selectedProjectTagColor;
+        set
+        {
+            if (_projectTagColorSyncing || _selectedProjectTagColor == value)
+                return;
+
+            _projectTagColorSyncing = true;
+            try
+            {
+                _selectedProjectTagColor = value;
+                OnPropertyChanged();
+                _projectTagColorHex = ProjectTagAppearance.FormatHex(value.R, value.G, value.B);
+                OnPropertyChanged(nameof(ProjectTagColorHex));
+            }
+            finally
+            {
+                _projectTagColorSyncing = false;
+            }
+
+            SyncRgbFromHex();
+            RefreshProjectTagColorPreview();
+        }
+    }
+
     public string ProjectTagColorHex
     {
         get => _projectTagColorHex;
@@ -259,6 +303,12 @@ public class ProjectsViewModel : ViewModelBase
             var normalized = ProjectTagAppearance.NormalizeHex(value, _projectTagColorHex);
             if (!SetProperty(ref _projectTagColorHex, normalized))
                 return;
+
+            if (Color.TryParse(normalized, out var parsed))
+            {
+                _selectedProjectTagColor = parsed;
+                OnPropertyChanged(nameof(SelectedProjectTagColor));
+            }
 
             SyncRgbFromHex();
             RefreshProjectTagColorPreview();
@@ -340,6 +390,9 @@ public class ProjectsViewModel : ViewModelBase
     public string ProjectTagColorPreviewBackground => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Background;
     public string ProjectTagColorPreviewForeground => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Foreground;
     public string ProjectTagColorPreviewBorder => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Border;
+    public string ProjectTagColorPickerLabel => L("Projects.Tags.Color.Picker", "Pick a color");
+    public string ProjectTagColorPaletteLabel => L("Projects.Tags.Color.Palette", "Quick palette");
+    public string ProjectTagColorGlobalHint => L("Projects.Tags.Color.GlobalHint", "Saved colors apply app-wide to this tag anywhere it appears.");
     private string _presetEditorContent = string.Empty;
     public string PresetEditorContent
     {
@@ -499,6 +552,7 @@ public class ProjectsViewModel : ViewModelBase
         _toggleProjectTagColorEditorCommand = new RelayCommand(_ => ToggleProjectTagColorEditor(), _ => CanEditProjectTagColor);
         _applyProjectTagColorCommand = new RelayCommand(_ => ApplyProjectTagColor(), _ => CanEditProjectTagColor);
         _resetProjectTagColorCommand = new RelayCommand(_ => ResetProjectTagColor(), _ => CanEditProjectTagColor);
+        _applyProjectTagColorSwatchCommand = new RelayCommand(hex => ApplyProjectTagColorSwatch(hex as string), hex => !string.IsNullOrWhiteSpace(hex as string));
         _applyTagToGroupCommand = new RelayCommand(
             _ => _ = RunDetachedAsync(() => SetTagForSelectedGroupAsync(add: true), "apply-tag-selected-group"),
             _ => CanSetTagForSelectedGroup());
@@ -526,12 +580,22 @@ public class ProjectsViewModel : ViewModelBase
         ToggleProjectTagColorEditorCommand = _toggleProjectTagColorEditorCommand;
         ApplyProjectTagColorCommand = _applyProjectTagColorCommand;
         ResetProjectTagColorCommand = _resetProjectTagColorCommand;
+        ApplyProjectTagColorSwatchCommand = _applyProjectTagColorSwatchCommand;
         ApplyTagToGroupCommand = _applyTagToGroupCommand;
         RemoveTagFromGroupCommand = _removeTagFromGroupCommand;
         SelectGroupTagCommand = _selectGroupTagCommand;
         SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
         ManageProjectEncryptionCommand = new RelayCommand(p => RequestProjectEncryptionPasswordEdit(p as ProjectItemViewModel ?? SelectedProject));
         ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());
+
+        foreach (var hex in new[]
+                 {
+                     "#3A7AFE", "#4F8DFF", "#4CC9F0", "#22CC88", "#FFC766", "#FF8B4D",
+                     "#FF6B6B", "#F857A6", "#B983FF", "#8E8E93", "#FFFFFF", "#101218"
+                 })
+        {
+            ProjectTagColorSwatches.Add(new ProjectTagColorSwatchViewModel(hex));
+        }
 
         LoadAvailablePresets();
         RefreshEncryptionPolicyOptions();
@@ -1342,6 +1406,11 @@ public class ProjectsViewModel : ViewModelBase
         {
             _projectTagColorHex = accent;
             OnPropertyChanged(nameof(ProjectTagColorHex));
+            if (Color.TryParse(accent, out var parsed))
+            {
+                _selectedProjectTagColor = parsed;
+                OnPropertyChanged(nameof(SelectedProjectTagColor));
+            }
             if (ProjectTagAppearance.TryParseRgb(accent, out var red, out var green, out var blue))
             {
                 _projectTagColorRed = red;
@@ -1450,6 +1519,14 @@ public class ProjectsViewModel : ViewModelBase
         OnPropertyChanged(nameof(ProjectTagColorPreviewBackground));
         OnPropertyChanged(nameof(ProjectTagColorPreviewForeground));
         OnPropertyChanged(nameof(ProjectTagColorPreviewBorder));
+    }
+
+    private void ApplyProjectTagColorSwatch(string? hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex))
+            return;
+
+        ProjectTagColorHex = hex.Trim();
     }
 
     private void SelectGroupTag(string? tag)
