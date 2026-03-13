@@ -1352,6 +1352,101 @@
                               CornerRadius="12">
                         <StackPanel Spacing="8">
                           <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding MaintenanceWindowLabel}" />
+                            <TextBlock Text="{Binding MaintenanceWindowDescription}"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+
+                          <Grid ColumnDefinitions="*,*"
+                                RowDefinitions="Auto,Auto"
+                                ColumnSpacing="12"
+                                RowSpacing="8">
+                            <StackPanel Grid.Row="0"
+                                        Grid.Column="0"
+                                        Spacing="2">
+                              <TextBlock Text="{Binding MaintenanceWindowStartLabel}" />
+                              <TextBox Text="{Binding MaintenanceWindowStart}"
+                                       Watermark="01:00" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="0"
+                                        Grid.Column="1"
+                                        Spacing="2">
+                              <TextBlock Text="{Binding MaintenanceWindowEndLabel}" />
+                              <TextBox Text="{Binding MaintenanceWindowEnd}"
+                                       Watermark="05:00" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="1"
+                                        Grid.ColumnSpan="2"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                              <TextBlock Text="{Binding MaintenanceWindowPreviewLabel}"
+                                         Foreground="{StaticResource TextSecondary}"
+                                         FontSize="11" />
+                              <Border Background="{DynamicResource AccentBrush}"
+                                      CornerRadius="999"
+                                      Padding="10,4"
+                                      Opacity="0.14">
+                                <TextBlock Text="{Binding MaintenanceWindowPreview}"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           FontWeight="SemiBold" />
+                              </Border>
+                              <ToggleSwitch IsChecked="{Binding EnableMaintenanceWindow}"
+                                            VerticalAlignment="Center" />
+                            </StackPanel>
+                          </Grid>
+
+                          <Grid ColumnDefinitions="*,Auto"
+                                Margin="0,6,0,0">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                              <TextBlock Text="{Binding MaintenanceWindowConsistencyLabel}" />
+                              <TextBlock Text="{Binding MaintenanceWindowConsistencyDescription}"
+                                         Foreground="{StaticResource TextSecondary}"
+                                         FontSize="11"
+                                         TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding MaintenanceRunConsistencyScan}" />
+                          </Grid>
+
+                          <Grid ColumnDefinitions="*,Auto"
+                                Margin="0,6,0,0">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                              <TextBlock Text="{Binding MaintenanceWindowRepairLabel}" />
+                              <TextBlock Text="{Binding MaintenanceWindowRepairDescription}"
+                                         Foreground="{StaticResource TextSecondary}"
+                                         FontSize="11"
+                                         TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding MaintenanceRunRepairDryRun}" />
+                          </Grid>
+
+                          <Grid ColumnDefinitions="*,Auto"
+                                Margin="0,6,0,0">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                              <TextBlock Text="{Binding MaintenanceWindowMetadataLabel}" />
+                              <TextBlock Text="{Binding MaintenanceWindowMetadataDescription}"
+                                         Foreground="{StaticResource TextSecondary}"
+                                         FontSize="11"
+                                         TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding MaintenanceRunMetadataRefresh}" />
+                          </Grid>
+                        </StackPanel>
+                      </Border>
+
+                      <Border Classes="subtle-card"
+                              Padding="12"
+                              CornerRadius="12">
+                        <StackPanel Spacing="8">
+                          <StackPanel Spacing="2">
                             <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BackupRepairTitle}" />
                             <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BackupRepairDescription}"
                                        Foreground="{StaticResource TextSecondary}"

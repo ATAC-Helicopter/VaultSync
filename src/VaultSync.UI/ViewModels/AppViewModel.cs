@@ -103,6 +103,8 @@ namespace VaultSync.UI.ViewModels
         private int _nasMonitorInFlight;
         private Timer? _autoBackupTimer;
         private int _autoBackupInFlight;
+        private Timer? _maintenanceTimer;
+        private int _maintenanceInFlight;
         private Timer? _destinationProbeTimer;
         private int _destinationProbeInFlight;
 

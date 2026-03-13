@@ -102,6 +102,12 @@ namespace VaultSync.UI
         private bool _checkForUpdatesOnStartup = true;
         private int _updateCheckIntervalMinutes = 120;
         private bool _betaChannelEnabled = false;
+        private bool _enableMaintenanceWindow = false;
+        private string _maintenanceWindowStart = "01:00";
+        private string _maintenanceWindowEnd = "05:00";
+        private bool _maintenanceRunConsistencyScan = true;
+        private bool _maintenanceRunRepairDryRun = true;
+        private bool _maintenanceRunMetadataRefresh = true;
         private readonly LocalizationService _localizationService;
         private DateTimeOffset? _lastUpdateCheckAt;
         private string? _lastUpdateCheckError;
@@ -210,6 +216,18 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(QuietHoursEndLabel));
                 OnPropertyChanged(nameof(QuietHoursWindowLabel));
                 OnPropertyChanged(nameof(QuietHoursWindowPreview));
+                OnPropertyChanged(nameof(MaintenanceWindowLabel));
+                OnPropertyChanged(nameof(MaintenanceWindowDescription));
+                OnPropertyChanged(nameof(MaintenanceWindowStartLabel));
+                OnPropertyChanged(nameof(MaintenanceWindowEndLabel));
+                OnPropertyChanged(nameof(MaintenanceWindowPreviewLabel));
+                OnPropertyChanged(nameof(MaintenanceWindowPreview));
+                OnPropertyChanged(nameof(MaintenanceWindowConsistencyLabel));
+                OnPropertyChanged(nameof(MaintenanceWindowConsistencyDescription));
+                OnPropertyChanged(nameof(MaintenanceWindowRepairLabel));
+                OnPropertyChanged(nameof(MaintenanceWindowRepairDescription));
+                OnPropertyChanged(nameof(MaintenanceWindowMetadataLabel));
+                OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -445,6 +463,12 @@ namespace VaultSync.UI
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
             _updateCheckIntervalMinutes = ClampInt(cfg.Advanced.UpdateCheckIntervalMinutes, 15, 10080, 120);
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
+            _enableMaintenanceWindow    = cfg.Advanced.Maintenance.Enabled;
+            _maintenanceWindowStart     = NormalizeTimeOfDay(cfg.Advanced.Maintenance.WindowStart, "01:00");
+            _maintenanceWindowEnd       = NormalizeTimeOfDay(cfg.Advanced.Maintenance.WindowEnd, "05:00");
+            _maintenanceRunConsistencyScan = cfg.Advanced.Maintenance.RunConsistencyScan;
+            _maintenanceRunRepairDryRun = cfg.Advanced.Maintenance.RunRepairDryRun;
+            _maintenanceRunMetadataRefresh = cfg.Advanced.Maintenance.RunMetadataRefresh;
             RefreshUpdateDiagnostics(cfg.Advanced.UpdateDiagnostics);
             RefreshProjectMetadataConflicts(cfg.Advanced.ProjectMetadataConflicts);
 
@@ -647,6 +671,12 @@ namespace VaultSync.UI
             cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(UpdateCheckIntervalMinutes, 15, 10080, 120);
             cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
             cfg.Advanced.Language            = SelectedLanguageCode;
+            cfg.Advanced.Maintenance.Enabled = EnableMaintenanceWindow;
+            cfg.Advanced.Maintenance.WindowStart = NormalizeTimeOfDay(MaintenanceWindowStart, "01:00");
+            cfg.Advanced.Maintenance.WindowEnd = NormalizeTimeOfDay(MaintenanceWindowEnd, "05:00");
+            cfg.Advanced.Maintenance.RunConsistencyScan = MaintenanceRunConsistencyScan;
+            cfg.Advanced.Maintenance.RunRepairDryRun = MaintenanceRunRepairDryRun;
+            cfg.Advanced.Maintenance.RunMetadataRefresh = MaintenanceRunMetadataRefresh;
 
             if (_lastLaunchOnLoginApplied != _launchOnLogin)
             {
@@ -721,6 +751,19 @@ namespace VaultSync.UI
                     SaveStatus = L(
                         "Settings.Validation.QuietHoursFormat",
                         "Quiet hours must use HH:mm format (24h).");
+                }
+
+                return false;
+            }
+
+            if (EnableMaintenanceWindow &&
+                (!TryParseTimeOfDay(MaintenanceWindowStart, out _) || !TryParseTimeOfDay(MaintenanceWindowEnd, out _)))
+            {
+                if (notifyOnError)
+                {
+                    SaveStatus = L(
+                        "Settings.Validation.MaintenanceWindowFormat",
+                        "Maintenance window must use HH:mm format (24h).");
                 }
 
                 return false;
@@ -1396,6 +1439,50 @@ namespace VaultSync.UI
             set => SetField(ref _betaChannelEnabled, value);
         }
 
+        public bool EnableMaintenanceWindow
+        {
+            get => _enableMaintenanceWindow;
+            set => SetField(ref _enableMaintenanceWindow, value);
+        }
+
+        public string MaintenanceWindowStart
+        {
+            get => _maintenanceWindowStart;
+            set
+            {
+                if (SetField(ref _maintenanceWindowStart, value))
+                    OnPropertyChanged(nameof(MaintenanceWindowPreview));
+            }
+        }
+
+        public string MaintenanceWindowEnd
+        {
+            get => _maintenanceWindowEnd;
+            set
+            {
+                if (SetField(ref _maintenanceWindowEnd, value))
+                    OnPropertyChanged(nameof(MaintenanceWindowPreview));
+            }
+        }
+
+        public bool MaintenanceRunConsistencyScan
+        {
+            get => _maintenanceRunConsistencyScan;
+            set => SetField(ref _maintenanceRunConsistencyScan, value);
+        }
+
+        public bool MaintenanceRunRepairDryRun
+        {
+            get => _maintenanceRunRepairDryRun;
+            set => SetField(ref _maintenanceRunRepairDryRun, value);
+        }
+
+        public bool MaintenanceRunMetadataRefresh
+        {
+            get => _maintenanceRunMetadataRefresh;
+            set => SetField(ref _maintenanceRunMetadataRefresh, value);
+        }
+
         public string UpdateCheckStatusText
         {
             get => _updateCheckStatusText;
@@ -1810,6 +1897,19 @@ namespace VaultSync.UI
         public string QuietHoursWindowLabel => L("Settings.Backups.QuietHoursWindow", "Active window");
         public string QuietHoursWindowPreview =>
             $"{NormalizeTimeOfDay(QuietHoursStart, "23:00")} -> {NormalizeTimeOfDay(QuietHoursEnd, "07:00")}";
+        public string MaintenanceWindowLabel => L("Settings.Advanced.MaintenanceWindow", "Maintenance window");
+        public string MaintenanceWindowDescription => L("Settings.Advanced.MaintenanceWindowDescription", "Run optional health and repair checks during this time window.");
+        public string MaintenanceWindowStartLabel => L("Settings.Advanced.MaintenanceWindowStart", "Start (HH:mm)");
+        public string MaintenanceWindowEndLabel => L("Settings.Advanced.MaintenanceWindowEnd", "End (HH:mm)");
+        public string MaintenanceWindowPreviewLabel => L("Settings.Advanced.MaintenanceWindowPreview", "Active window");
+        public string MaintenanceWindowPreview =>
+            $"{NormalizeTimeOfDay(MaintenanceWindowStart, "01:00")} -> {NormalizeTimeOfDay(MaintenanceWindowEnd, "05:00")}";
+        public string MaintenanceWindowConsistencyLabel => L("Settings.Advanced.MaintenanceConsistency", "Run consistency scan");
+        public string MaintenanceWindowConsistencyDescription => L("Settings.Advanced.MaintenanceConsistencyDescription", "Scan backup, snapshot, and project links and record a health summary.");
+        public string MaintenanceWindowRepairLabel => L("Settings.Advanced.MaintenanceRepairDryRun", "Run repair dry-run");
+        public string MaintenanceWindowRepairDescription => L("Settings.Advanced.MaintenanceRepairDryRunDescription", "Generate an exact repair plan without applying changes.");
+        public string MaintenanceWindowMetadataLabel => L("Settings.Advanced.MaintenanceMetadataRefresh", "Refresh metadata history");
+        public string MaintenanceWindowMetadataDescription => L("Settings.Advanced.MaintenanceMetadataRefreshDescription", "Import latest destination metadata during the maintenance run.");
         public string EncryptionOpenTimeoutLabel =>
             L("Settings.Encryption.OpenTimeoutLabel", "Encrypted open timeout (minutes)");
         public string EncryptionOpenTimeoutDescription =>
@@ -3083,6 +3183,32 @@ namespace VaultSync.UI
                     ReadString(advanced, nameof(cfg.Advanced.Language), cfg.Advanced.Language),
                     cfg.Advanced.Language);
                 cfg.Advanced.HasSeenOnboarding = ReadBool(advanced, nameof(cfg.Advanced.HasSeenOnboarding), cfg.Advanced.HasSeenOnboarding);
+
+                if (advanced.TryGetProperty(nameof(cfg.Advanced.Maintenance), out var maintenance))
+                {
+                    cfg.Advanced.Maintenance.Enabled = ReadBool(
+                        maintenance,
+                        nameof(cfg.Advanced.Maintenance.Enabled),
+                        cfg.Advanced.Maintenance.Enabled);
+                    cfg.Advanced.Maintenance.WindowStart = NormalizeTimeOfDay(
+                        ReadString(maintenance, nameof(cfg.Advanced.Maintenance.WindowStart), cfg.Advanced.Maintenance.WindowStart),
+                        "01:00");
+                    cfg.Advanced.Maintenance.WindowEnd = NormalizeTimeOfDay(
+                        ReadString(maintenance, nameof(cfg.Advanced.Maintenance.WindowEnd), cfg.Advanced.Maintenance.WindowEnd),
+                        "05:00");
+                    cfg.Advanced.Maintenance.RunConsistencyScan = ReadBool(
+                        maintenance,
+                        nameof(cfg.Advanced.Maintenance.RunConsistencyScan),
+                        cfg.Advanced.Maintenance.RunConsistencyScan);
+                    cfg.Advanced.Maintenance.RunRepairDryRun = ReadBool(
+                        maintenance,
+                        nameof(cfg.Advanced.Maintenance.RunRepairDryRun),
+                        cfg.Advanced.Maintenance.RunRepairDryRun);
+                    cfg.Advanced.Maintenance.RunMetadataRefresh = ReadBool(
+                        maintenance,
+                        nameof(cfg.Advanced.Maintenance.RunMetadataRefresh),
+                        cfg.Advanced.Maintenance.RunMetadataRefresh);
+                }
             }
 
             if (redactedConfig.TryGetProperty("behavior", out var behavior))

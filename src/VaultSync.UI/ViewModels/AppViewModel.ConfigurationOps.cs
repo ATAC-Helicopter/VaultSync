@@ -1220,6 +1220,16 @@ namespace VaultSync.UI.ViewModels
                     ConfigureAutoBackupTimer();
                 }
 
+                if (propertyName is nameof(SettingsViewModel.EnableMaintenanceWindow)
+                    or nameof(SettingsViewModel.MaintenanceWindowStart)
+                    or nameof(SettingsViewModel.MaintenanceWindowEnd)
+                    or nameof(SettingsViewModel.MaintenanceRunConsistencyScan)
+                    or nameof(SettingsViewModel.MaintenanceRunRepairDryRun)
+                    or nameof(SettingsViewModel.MaintenanceRunMetadataRefresh))
+                {
+                    ConfigureMaintenanceTimer();
+                }
+
                 if (propertyName == nameof(SettingsViewModel.CheckForUpdatesOnStartup))
                 {
                     StartUpdateCheck();

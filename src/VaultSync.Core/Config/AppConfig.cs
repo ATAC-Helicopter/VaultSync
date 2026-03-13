@@ -283,6 +283,19 @@ namespace VaultSync.Core.Config
         public UpdateCheckDiagnostics UpdateDiagnostics { get; set; } = new();
         public BackupRepairTelemetry BackupRepairTelemetry { get; set; } = new();
         public MetadataConflictTelemetry MetadataConflictTelemetry { get; set; } = new();
+        public MaintenanceConfig Maintenance { get; set; } = new();
+    }
+
+    public sealed class MaintenanceConfig
+    {
+        public bool Enabled { get; set; } = false;
+        public string WindowStart { get; set; } = "01:00";
+        public string WindowEnd { get; set; } = "05:00";
+        public bool RunConsistencyScan { get; set; } = true;
+        public bool RunRepairDryRun { get; set; } = true;
+        public bool RunMetadataRefresh { get; set; } = true;
+        public string LastRunUtc { get; set; } = string.Empty;
+        public string LastStatus { get; set; } = string.Empty;
     }
 
     public sealed class BackupIndexScanSummary

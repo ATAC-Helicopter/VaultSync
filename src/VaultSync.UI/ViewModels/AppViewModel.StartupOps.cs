@@ -117,6 +117,7 @@ namespace VaultSync.UI.ViewModels
             // Ensure launch-on-login matches config
             _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(_config.Behavior.LaunchOnLogin));
             ConfigureAutoBackupTimer();
+            ConfigureMaintenanceTimer();
             LogBackupPolicyTransitionIfChanged(_config, "startup");
 
             // 6) Navigation commands (using cached VMs)

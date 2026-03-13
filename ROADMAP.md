@@ -857,8 +857,8 @@
    - Goal: surface deterministic repair plans with dry-run/apply and conflict awareness.
 3. Phase `C` (update/serviceability): `VS-1707` -> `VS-1708` -> `VS-1709` -> `VS-1718`
    - Goal: make update targeting, patch eligibility, and release gates auditable and support-friendly.
-4. Phase `D` (capacity + maintenance): `VS-1703` -> `VS-1716` -> `VS-1710` -> `VS-1715` -> `VS-1713`
-   - Goal: give operators quota planning, maintenance windows, startup diagnostics, and restore-readiness signals.
+4. Phase `D` (capacity + maintenance): `VS-1703` -> `VS-1720` -> `VS-1716` -> `VS-1710` -> `VS-1715` -> `VS-1713`
+   - Goal: give operators quota planning, checkpointed retry resilience, maintenance windows, startup diagnostics, and restore-readiness signals.
 5. Phase `E` (dashboard refresh): `VS-1719`
    - Goal: modernize the dashboard information hierarchy and visual clarity without losing VaultSync's current identity or familiar navigation.
 
@@ -974,12 +974,15 @@
     - In progress: metadata conflict tracking now persists conflict-resolution telemetry and exports pending conflict summaries for cross-machine triage.
   - Acceptance:
     - New telemetry sections are redacted and stable for support use.
-- [ ] `VS-1710` `P2` Scheduled maintenance window jobs.
+- [ ] `VS-1710` `P2` Scheduled maintenance window jobs. _(In progress)_
   - Scope: optional scheduled health/repair/cleanup routines with summary notifications.
   - What it takes:
     - background scheduler model that reuses quiet-hours and retry policy concepts.
     - job history/logging so maintenance is explainable and non-silent.
     - opt-in defaults only; no surprise background mutation on upgrade.
+  - Current status:
+    - In progress: Settings > Advanced now exposes an opt-in maintenance window with per-task toggles for consistency scan, repair dry-run, and metadata refresh.
+    - In progress: App startup/settings reload now wire a maintenance timer that runs only inside the configured window and records last-run status in advanced config.
   - Acceptance:
     - Maintenance jobs run only within configured windows and emit clear run summaries.
 - [ ] `VS-1711` `P0` Backup chain preflight before retention prune. _(In progress)_
@@ -1080,6 +1083,24 @@
   - What it takes:
     - redesign KPI/card hierarchy so the most actionable signals land first (`backups`, `restore readiness`, `alerts`, `storage`, `recent activity`).
     - replace the current stretched/empty-space-prone sections with responsive card groups that scale cleanly in both maximized and windowed modes.
+
+- [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers.
+  - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
+  - Why it matters:
+    - reduces wasted time and bandwidth on large backups and unstable network destinations.
+    - directly addresses user feedback about retry behavior on partial transfer failures.
+  - What it takes:
+    - define a durable checkpoint model for archive and non-archive transfer modes so partially uploaded data can be resumed safely.
+    - guarantee consistency of partial uploads (`checkpoint metadata`, `finalization marker`, `validation before resume`, `safe discard path`).
+    - integrate checkpoint awareness with retry/backoff logic, destination capability checks, and cleanup of abandoned partial payloads.
+    - surface resumable vs restart-required state in diagnostics so failures remain explainable.
+  - Dependencies:
+    - `VS-1712` destination identity stability so resumed transfers bind to the correct target.
+    - existing retry/backoff and upload-buffer logic in backup runtime.
+  - Acceptance:
+    - interrupted transfers resume from the last committed checkpoint when the destination supports it.
+    - unsafe or stale partial payloads are rejected and restarted cleanly instead of producing corrupted backups.
+    - diagnostics/support bundle clearly report checkpoint creation, resume, discard, and fallback-to-full-retry reasons.
     - introduce a more modern trend/insight presentation (for example: compact KPI tiles, clearer health/alert center, better weekly/storage visuals) without copying another product's layout literally.
     - preserve existing data sources and avoid a visual rewrite that breaks learned user flows.
   - Design constraints:
