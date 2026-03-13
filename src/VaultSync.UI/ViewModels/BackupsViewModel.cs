@@ -2855,15 +2855,15 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessAttentionProjects = summary.AttentionCount;
             RestoreReadinessRiskProjects = summary.RiskCount;
             RestoreReadinessUnavailableProjects = summary.UnavailableCount;
-            RestoreReadinessHeadline = summary.Headline;
-            RestoreReadinessDetail = summary.Detail;
+            RestoreReadinessHeadline = FormatRestoreReadinessHeadline(summary);
+            RestoreReadinessDetail = FormatRestoreReadinessDetail(summary);
 
             foreach (var result in summary.Projects)
             {
                 if (!_projectLookupById.TryGetValue(result.ProjectId.ToString(CultureInfo.InvariantCulture), out var item))
                     continue;
 
-                item.RestoreReadinessLabel = result.Label;
+                item.RestoreReadinessLabel = LocalizeRestoreReadinessLabel(result.State);
                 item.RestoreReadinessReason = result.Reason;
                 item.RestoreReadinessBrush = result.State switch
                 {
@@ -2888,6 +2888,48 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessAttentionPercent = summary.AttentionCount * 100d / total;
             RestoreReadinessRiskPercent = summary.RiskCount * 100d / total;
             RestoreReadinessUnavailablePercent = summary.UnavailableCount * 100d / total;
+        }
+
+        private static string LocalizeRestoreReadinessLabel(RestoreReadinessState state)
+        {
+            return state switch
+            {
+                RestoreReadinessState.Ready => L("RestoreReadiness.State.Ready", "Ready"),
+                RestoreReadinessState.Attention => L("RestoreReadiness.State.Attention", "Attention"),
+                RestoreReadinessState.Risk => L("RestoreReadiness.State.Risk", "Risk"),
+                _ => L("RestoreReadiness.State.Unavailable", "Unavailable")
+            };
+        }
+
+        private static string FormatRestoreReadinessHeadline(RestoreReadinessSummary summary)
+        {
+            if (summary.ProjectCount <= 0)
+                return L("RestoreReadiness.Headline.Empty", "No tracked projects yet");
+
+            if (summary.ReadyCount == summary.ProjectCount)
+                return L("RestoreReadiness.Headline.AllReady", "Restore ready across all tracked projects");
+
+            if (summary.UnavailableCount > 0)
+                return Lf("RestoreReadiness.Headline.Unavailable", "{0} project(s) are not currently restore-ready", summary.UnavailableCount);
+
+            if (summary.RiskCount > 0)
+                return Lf("RestoreReadiness.Headline.Risk", "{0} project(s) need restore-readiness attention", summary.RiskCount);
+
+            if (summary.AttentionCount > 0)
+                return Lf("RestoreReadiness.Headline.Attention", "{0} project(s) should be reviewed", summary.AttentionCount);
+
+            return L("RestoreReadiness.Headline.Empty", "No tracked projects yet");
+        }
+
+        private static string FormatRestoreReadinessDetail(RestoreReadinessSummary summary)
+        {
+            return Lf(
+                "RestoreReadiness.Detail",
+                "Ready {0} - Attention {1} - Risk {2} - Unavailable {3}",
+                summary.ReadyCount,
+                summary.AttentionCount,
+                summary.RiskCount,
+                summary.UnavailableCount);
         }
 
         // ---------- Weekly activity mini-chart ----------

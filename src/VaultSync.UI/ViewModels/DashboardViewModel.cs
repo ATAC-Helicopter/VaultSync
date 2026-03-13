@@ -46,6 +46,10 @@ namespace VaultSync.UI.ViewModels
         private int _restoreReadinessAttentionCount;
         private int _restoreReadinessRiskCount;
         private int _restoreReadinessUnavailableCount;
+        private string _restoreReadinessReadyLabel = string.Empty;
+        private string _restoreReadinessAttentionLabel = string.Empty;
+        private string _restoreReadinessRiskLabel = string.Empty;
+        private string _restoreReadinessUnavailableLabel = string.Empty;
 
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
@@ -263,6 +267,50 @@ namespace VaultSync.UI.ViewModels
             {
                 if (_restoreReadinessUnavailableCount == value) return;
                 _restoreReadinessUnavailableCount = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RestoreReadinessReadyLabel
+        {
+            get => _restoreReadinessReadyLabel;
+            private set
+            {
+                if (_restoreReadinessReadyLabel == value) return;
+                _restoreReadinessReadyLabel = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RestoreReadinessAttentionLabel
+        {
+            get => _restoreReadinessAttentionLabel;
+            private set
+            {
+                if (_restoreReadinessAttentionLabel == value) return;
+                _restoreReadinessAttentionLabel = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RestoreReadinessRiskLabel
+        {
+            get => _restoreReadinessRiskLabel;
+            private set
+            {
+                if (_restoreReadinessRiskLabel == value) return;
+                _restoreReadinessRiskLabel = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RestoreReadinessUnavailableLabel
+        {
+            get => _restoreReadinessUnavailableLabel;
+            private set
+            {
+                if (_restoreReadinessUnavailableLabel == value) return;
+                _restoreReadinessUnavailableLabel = value;
                 OnPropertyChanged();
             }
         }
@@ -547,12 +595,7 @@ namespace VaultSync.UI.ViewModels
                 StorageHint = _activeProjectsCount == 0
                     ? L("Dashboard.Hint.StorageEmpty", "No storage used")
                     : L("Dashboard.Hint.StorageTotal", "Total across all backups");
-                RestoreReadinessHeadline = data.RestoreReadiness.Headline;
-                RestoreReadinessDetail = data.RestoreReadiness.Detail;
-                RestoreReadinessReadyCount = data.RestoreReadiness.ReadyCount;
-                RestoreReadinessAttentionCount = data.RestoreReadiness.AttentionCount;
-                RestoreReadinessRiskCount = data.RestoreReadiness.RiskCount;
-                RestoreReadinessUnavailableCount = data.RestoreReadiness.UnavailableCount;
+                ApplyRestoreReadinessSummary(data.RestoreReadiness);
 
                 // Activity
                 var activityItems = new List<ActivityItem>();
@@ -900,12 +943,7 @@ namespace VaultSync.UI.ViewModels
             StorageUsed    = "0 B";
             StorageUsedLocal = Lf("Dashboard.Kpi.StorageLocal", "Local: {0}", "0 B");
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
-            RestoreReadinessHeadline = "No tracked projects yet";
-            RestoreReadinessDetail = "Ready 0 - Attention 0 - Risk 0 - Unavailable 0";
-            RestoreReadinessReadyCount = 0;
-            RestoreReadinessAttentionCount = 0;
-            RestoreReadinessRiskCount = 0;
-            RestoreReadinessUnavailableCount = 0;
+            ApplyRestoreReadinessSummary(new RestoreReadinessSummary());
 
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
             var cfg = AppConfigStore.Load();
@@ -1842,7 +1880,71 @@ namespace VaultSync.UI.ViewModels
                 ? L("Dashboard.Hint.StorageEmpty", "No storage used")
                 : L("Dashboard.Hint.StorageTotal", "Total across all backups");
 
+            RestoreReadinessHeadline = FormatRestoreReadinessHeadline(
+                RestoreReadinessReadyCount,
+                RestoreReadinessAttentionCount,
+                RestoreReadinessRiskCount,
+                RestoreReadinessUnavailableCount,
+                RestoreReadinessReadyCount + RestoreReadinessAttentionCount + RestoreReadinessRiskCount + RestoreReadinessUnavailableCount);
+            RestoreReadinessDetail = FormatRestoreReadinessDetail(
+                RestoreReadinessReadyCount,
+                RestoreReadinessAttentionCount,
+                RestoreReadinessRiskCount,
+                RestoreReadinessUnavailableCount);
+            RestoreReadinessReadyLabel = Lf("RestoreReadiness.Count.Ready", "{0} ready", RestoreReadinessReadyCount);
+            RestoreReadinessAttentionLabel = Lf("RestoreReadiness.Count.Attention", "{0} attention", RestoreReadinessAttentionCount);
+            RestoreReadinessRiskLabel = Lf("RestoreReadiness.Count.Risk", "{0} risk", RestoreReadinessRiskCount);
+            RestoreReadinessUnavailableLabel = Lf("RestoreReadiness.Count.Unavailable", "{0} unavailable", RestoreReadinessUnavailableCount);
+
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
+        }
+
+        private void ApplyRestoreReadinessSummary(RestoreReadinessSummary summary)
+        {
+            RestoreReadinessReadyCount = summary.ReadyCount;
+            RestoreReadinessAttentionCount = summary.AttentionCount;
+            RestoreReadinessRiskCount = summary.RiskCount;
+            RestoreReadinessUnavailableCount = summary.UnavailableCount;
+            RestoreReadinessHeadline = FormatRestoreReadinessHeadline(
+                summary.ReadyCount,
+                summary.AttentionCount,
+                summary.RiskCount,
+                summary.UnavailableCount,
+                summary.ProjectCount);
+            RestoreReadinessDetail = FormatRestoreReadinessDetail(
+                summary.ReadyCount,
+                summary.AttentionCount,
+                summary.RiskCount,
+                summary.UnavailableCount);
+            RestoreReadinessReadyLabel = Lf("RestoreReadiness.Count.Ready", "{0} ready", summary.ReadyCount);
+            RestoreReadinessAttentionLabel = Lf("RestoreReadiness.Count.Attention", "{0} attention", summary.AttentionCount);
+            RestoreReadinessRiskLabel = Lf("RestoreReadiness.Count.Risk", "{0} risk", summary.RiskCount);
+            RestoreReadinessUnavailableLabel = Lf("RestoreReadiness.Count.Unavailable", "{0} unavailable", summary.UnavailableCount);
+        }
+
+        private static string FormatRestoreReadinessHeadline(int ready, int attention, int risk, int unavailable, int projectCount)
+        {
+            if (projectCount <= 0)
+                return L("RestoreReadiness.Headline.Empty", "No tracked projects yet");
+
+            if (ready == projectCount)
+                return L("RestoreReadiness.Headline.AllReady", "Restore ready across all tracked projects");
+
+            if (unavailable > 0)
+                return Lf("RestoreReadiness.Headline.Unavailable", "{0} project(s) are not currently restore-ready", unavailable);
+
+            if (risk > 0)
+                return Lf("RestoreReadiness.Headline.Risk", "{0} project(s) need restore-readiness attention", risk);
+
+            if (attention > 0)
+                return Lf("RestoreReadiness.Headline.Attention", "{0} project(s) should be reviewed", attention);
+
+            return L("RestoreReadiness.Headline.Empty", "No tracked projects yet");
+        }
+
+        private static string FormatRestoreReadinessDetail(int ready, int attention, int risk, int unavailable)
+        {
+            return Lf("RestoreReadiness.Detail", "Ready {0} - Attention {1} - Risk {2} - Unavailable {3}", ready, attention, risk, unavailable);
         }
 
         private static string FormatBytes(long bytes)

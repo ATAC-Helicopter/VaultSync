@@ -62,22 +62,22 @@
                            TextWrapping="Wrap"/>
                 <WrapPanel ItemSpacing="6" LineSpacing="6">
                   <Border Classes="stat-pill sm success">
-                    <TextBlock Text="{Binding RestoreReadinessReadyCount, StringFormat='{}{0} ready'}"
+                    <TextBlock Text="{Binding RestoreReadinessReadyLabel}"
                                FontSize="10"
                                FontWeight="SemiBold"/>
                   </Border>
                   <Border Classes="stat-pill sm warning">
-                    <TextBlock Text="{Binding RestoreReadinessAttentionCount, StringFormat='{}{0} attention'}"
+                    <TextBlock Text="{Binding RestoreReadinessAttentionLabel}"
                                FontSize="10"
                                FontWeight="SemiBold"/>
                   </Border>
                   <Border Classes="stat-pill sm danger">
-                    <TextBlock Text="{Binding RestoreReadinessRiskCount, StringFormat='{}{0} risk'}"
+                    <TextBlock Text="{Binding RestoreReadinessRiskLabel}"
                                FontSize="10"
                                FontWeight="SemiBold"/>
                   </Border>
                   <Border Classes="stat-pill sm info">
-                    <TextBlock Text="{Binding RestoreReadinessUnavailableCount, StringFormat='{}{0} unavailable'}"
+                    <TextBlock Text="{Binding RestoreReadinessUnavailableLabel}"
                                FontSize="10"
                                FontWeight="SemiBold"/>
                   </Border>
