@@ -1071,6 +1071,7 @@
   - Current status:
     - In progress: added `scripts/release_readiness_gate.ps1` to validate UI/installer version parity, unreleased changelog alignment, What's New version alignment, release asset presence, and project-board completion for the target release slice.
     - In progress: release docs now point to the gate command as part of the release checklist.
+    - In progress: gate now distinguishes `PrePublish` vs `PostPublish` verification so asset-generation steps are emitted as warnings before upload and hard-fail only during final release verification.
   - Acceptance:
     - One command emits pass/fail with actionable errors.
     - Gate output is attachable to release notes/support workflows.

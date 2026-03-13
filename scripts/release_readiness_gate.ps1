@@ -3,6 +3,8 @@ param(
     [string]$ReleaseTrack,
     [string]$Repository = "ATAC-Helicopter/VaultSync",
     [int]$ProjectNumber = 7,
+    [ValidateSet("PrePublish", "PostPublish")]
+    [string]$Phase = "PrePublish",
     [switch]$Json
 )
 
@@ -12,14 +14,16 @@ $ErrorActionPreference = "Stop"
 function New-Result {
     param(
         [string]$Code,
-        [bool]$Passed,
+        [ValidateSet("pass", "warn", "fail")]
+        [string]$Status,
         [string]$Message,
         [hashtable]$Data = @{}
     )
 
     [pscustomobject]@{
         code    = $Code
-        passed  = $Passed
+        status  = $Status
+        passed  = ($Status -ne "fail")
         message = $Message
         data    = [pscustomobject]$Data
     }
@@ -61,9 +65,7 @@ function Get-WhatsNewVersion {
 }
 
 function Get-GhJson {
-    param(
-        [string]$Command
-    )
+    param([string]$Command)
 
     $raw = Invoke-Expression $Command
     if ($LASTEXITCODE -ne 0) {
@@ -88,6 +90,29 @@ function Get-ReleaseTrackFromVersion {
     return "$($parts[0]).$($parts[1]).x"
 }
 
+function Add-CheckResult {
+    param(
+        [System.Collections.Generic.List[object]]$Results,
+        [string]$Code,
+        [bool]$Condition,
+        [string]$PassMessage,
+        [string]$FailMessage,
+        [hashtable]$Data = @{},
+        [switch]$WarningOnFail
+    )
+
+    $status = if ($Condition) {
+        "pass"
+    } elseif ($WarningOnFail) {
+        "warn"
+    } else {
+        "fail"
+    }
+
+    $message = if ($Condition) { $PassMessage } else { $FailMessage }
+    $Results.Add((New-Result -Code $Code -Status $status -Message $message -Data $Data))
+}
+
 if ([string]::IsNullOrWhiteSpace($TargetVersion)) {
     $TargetVersion = Get-FileVersionValue -Path "src/VaultSync.UI/VaultSync.UI.csproj" -Pattern '<Version>([^<]+)</Version>'
 }
@@ -97,18 +122,51 @@ if ([string]::IsNullOrWhiteSpace($ReleaseTrack)) {
 }
 
 $results = New-Object System.Collections.Generic.List[object]
-
 $uiVersion = Get-FileVersionValue -Path "src/VaultSync.UI/VaultSync.UI.csproj" -Pattern '<Version>([^<]+)</Version>'
 $installerVersion = Get-FileVersionValue -Path "installer/VaultSyncInstaller.iss" -Pattern '#define MyAppVersion "([^"]+)"'
 $changelogVersion = Get-ChangelogVersion
 $whatsNewVersion = Get-WhatsNewVersion
+$releasingDoc = Get-Content docs/RELEASING.md -Raw
 
-$results.Add((New-Result -Code "version-ui" -Passed ($uiVersion -eq $TargetVersion) -Message "UI project version is '$uiVersion'." -Data @{ expected = $TargetVersion; actual = $uiVersion }))
-$results.Add((New-Result -Code "version-installer" -Passed ($installerVersion -eq $TargetVersion) -Message "Installer version is '$installerVersion'." -Data @{ expected = $TargetVersion; actual = $installerVersion }))
-$results.Add((New-Result -Code "docs-changelog" -Passed ($changelogVersion -eq $TargetVersion) -Message "Top unreleased changelog version is '$changelogVersion'." -Data @{ expected = $TargetVersion; actual = $changelogVersion }))
-$results.Add((New-Result -Code "docs-whats-new" -Passed ($whatsNewVersion -eq $TargetVersion) -Message "Top What's New version is '$whatsNewVersion'." -Data @{ expected = $TargetVersion; actual = $whatsNewVersion }))
-$results.Add((New-Result -Code "workflow-release-assets" -Passed (Test-Path ".github/workflows/release-assets.yml") -Message "Release assets workflow present." -Data @{ path = ".github/workflows/release-assets.yml" }))
-$results.Add((New-Result -Code "script-build-patch" -Passed (Test-Path "scripts/build_patch.py") -Message "Patch build script present." -Data @{ path = "scripts/build_patch.py" }))
+Add-CheckResult -Results $results -Code "version-ui" -Condition ($uiVersion -eq $TargetVersion) `
+    -PassMessage "UI project version is '$uiVersion'." `
+    -FailMessage "UI project version '$uiVersion' does not match target '$TargetVersion'." `
+    -Data @{ expected = $TargetVersion; actual = $uiVersion }
+
+Add-CheckResult -Results $results -Code "version-installer" -Condition ($installerVersion -eq $TargetVersion) `
+    -PassMessage "Installer version is '$installerVersion'." `
+    -FailMessage "Installer version '$installerVersion' does not match target '$TargetVersion'." `
+    -Data @{ expected = $TargetVersion; actual = $installerVersion }
+
+Add-CheckResult -Results $results -Code "docs-changelog" -Condition ($changelogVersion -eq $TargetVersion) `
+    -PassMessage "Top unreleased changelog version is '$changelogVersion'." `
+    -FailMessage "Top unreleased changelog version '$changelogVersion' does not match target '$TargetVersion'." `
+    -Data @{ expected = $TargetVersion; actual = $changelogVersion }
+
+Add-CheckResult -Results $results -Code "docs-whats-new" -Condition ($whatsNewVersion -eq $TargetVersion) `
+    -PassMessage "Top What's New version is '$whatsNewVersion'." `
+    -FailMessage "Top What's New version '$whatsNewVersion' does not match target '$TargetVersion'." `
+    -Data @{ expected = $TargetVersion; actual = $whatsNewVersion }
+
+Add-CheckResult -Results $results -Code "workflow-release-assets" -Condition (Test-Path ".github/workflows/release-assets.yml") `
+    -PassMessage "Release assets workflow present." `
+    -FailMessage "Release assets workflow is missing." `
+    -Data @{ path = ".github/workflows/release-assets.yml" }
+
+Add-CheckResult -Results $results -Code "script-build-patch" -Condition (Test-Path "scripts/build_patch.py") `
+    -PassMessage "Patch build script present." `
+    -FailMessage "Patch build script is missing." `
+    -Data @{ path = "scripts/build_patch.py" }
+
+Add-CheckResult -Results $results -Code "script-release-gate" -Condition (Test-Path "scripts/release_readiness_gate.ps1") `
+    -PassMessage "Release readiness gate script present." `
+    -FailMessage "Release readiness gate script is missing." `
+    -Data @{ path = "scripts/release_readiness_gate.ps1" }
+
+Add-CheckResult -Results $results -Code "docs-release-checklist" -Condition ($releasingDoc -match 'release assets uploaded' -and $releasingDoc -match 'release_readiness_gate\.ps1') `
+    -PassMessage "Release guide includes the release gate and asset-upload checklist." `
+    -FailMessage "Release guide is missing release gate and/or asset-upload checklist coverage." `
+    -Data @{ path = "docs/RELEASING.md" }
 
 $releaseTag = "v$TargetVersion"
 $release = $null
@@ -118,18 +176,66 @@ try {
     $release = $null
 }
 
+$warnForPublishArtifacts = ($Phase -eq "PrePublish")
 if ($null -eq $release) {
-    $results.Add((New-Result -Code "github-release" -Passed $false -Message "GitHub release '$releaseTag' not found." -Data @{ tag = $releaseTag; repository = $Repository }))
+    Add-CheckResult -Results $results -Code "github-release" -Condition $false `
+        -PassMessage "GitHub release '$releaseTag' found." `
+        -FailMessage "GitHub release '$releaseTag' not found yet. Create the release before post-publish verification." `
+        -Data @{ tag = $releaseTag; repository = $Repository; phase = $Phase } `
+        -WarningOnFail:$warnForPublishArtifacts
+
+    if ($warnForPublishArtifacts) {
+        $results.Add((New-Result -Code "publish-assets-next-step" -Status "warn" -Message "Generate and upload release assets after creating the GitHub release." -Data @{
+            nextSteps = @(
+                "Run the release-assets GitHub Actions workflow for the target version.",
+                "Upload installer and patch assets to the GitHub release.",
+                "Rerun the gate with -Phase PostPublish."
+            )
+        }))
+    }
 } else {
     $assetNames = @($release.assets | ForEach-Object { $_.name })
-    $hasInstaller = $assetNames | Where-Object { $_ -like "VaultSync-Setup-*.exe" } | Select-Object -First 1
-    $hasPatchManifest = $assetNames | Where-Object { $_ -like "vaultsync-patch-*.json" } | Select-Object -First 1
-    $hasPatchArchive = $assetNames | Where-Object { $_ -like "vaultsync-patch-*.zip" } | Select-Object -First 1
+    $hasInstaller = [bool]($assetNames | Where-Object { $_ -like "VaultSync-Setup-*.exe" } | Select-Object -First 1)
+    $hasPatchManifest = [bool]($assetNames | Where-Object { $_ -like "vaultsync-patch-*.json" } | Select-Object -First 1)
+    $hasPatchArchive = [bool]($assetNames | Where-Object { $_ -like "vaultsync-patch-*.zip" } | Select-Object -First 1)
 
-    $results.Add((New-Result -Code "github-release" -Passed $true -Message "GitHub release '$releaseTag' found." -Data @{ url = $release.url; assetCount = $assetNames.Count }))
-    $results.Add((New-Result -Code "asset-installer" -Passed ([bool]$hasInstaller) -Message "Installer asset presence check." -Data @{ expectedPattern = "VaultSync-Setup-*.exe"; assets = $assetNames }))
-    $results.Add((New-Result -Code "asset-patch-manifest" -Passed ([bool]$hasPatchManifest) -Message "Patch manifest asset presence check." -Data @{ expectedPattern = "vaultsync-patch-*.json"; assets = $assetNames }))
-    $results.Add((New-Result -Code "asset-patch-archive" -Passed ([bool]$hasPatchArchive) -Message "Patch archive asset presence check." -Data @{ expectedPattern = "vaultsync-patch-*.zip"; assets = $assetNames }))
+    Add-CheckResult -Results $results -Code "github-release" -Condition $true `
+        -PassMessage "GitHub release '$releaseTag' found." `
+        -FailMessage "" `
+        -Data @{ url = $release.url; assetCount = $assetNames.Count; phase = $Phase }
+
+    Add-CheckResult -Results $results -Code "asset-installer" -Condition $hasInstaller `
+        -PassMessage "Installer asset is present on the release." `
+        -FailMessage "Installer asset is missing. Generate/upload installer assets before shipping." `
+        -Data @{ expectedPattern = "VaultSync-Setup-*.exe"; assets = $assetNames } `
+        -WarningOnFail:$warnForPublishArtifacts
+
+    Add-CheckResult -Results $results -Code "asset-patch-manifest" -Condition $hasPatchManifest `
+        -PassMessage "Patch manifest asset is present on the release." `
+        -FailMessage "Patch manifest asset is missing. Generate/upload patch assets before shipping." `
+        -Data @{ expectedPattern = "vaultsync-patch-*.json"; assets = $assetNames } `
+        -WarningOnFail:$warnForPublishArtifacts
+
+    Add-CheckResult -Results $results -Code "asset-patch-archive" -Condition $hasPatchArchive `
+        -PassMessage "Patch archive asset is present on the release." `
+        -FailMessage "Patch archive asset is missing. Generate/upload patch assets before shipping." `
+        -Data @{ expectedPattern = "vaultsync-patch-*.zip"; assets = $assetNames } `
+        -WarningOnFail:$warnForPublishArtifacts
+
+    if ($warnForPublishArtifacts -and (-not ($hasInstaller -and $hasPatchManifest -and $hasPatchArchive))) {
+        $results.Add((New-Result -Code "publish-assets-next-step" -Status "warn" -Message "Release exists but assets are incomplete. Run release asset generation before final verification." -Data @{
+            missing = @(
+                if (-not $hasInstaller) { "installer" }
+                if (-not $hasPatchManifest) { "patch-manifest" }
+                if (-not $hasPatchArchive) { "patch-archive" }
+            )
+            nextSteps = @(
+                "Trigger the release-assets GitHub Actions workflow for the target version.",
+                "Confirm generated assets are attached to the GitHub release.",
+                "Rerun the gate with -Phase PostPublish."
+            )
+        }))
+    }
 }
 
 $owner = ($Repository -split "/")[0]
@@ -137,26 +243,36 @@ $projectItems = Get-GhJson -Command "gh project item-list $ProjectNumber --owner
 $releaseItems = @($projectItems.items | Where-Object { $_.release -eq $ReleaseTrack })
 $incompleteItems = @($releaseItems | Where-Object { $_.status -ne "Done" })
 
-$results.Add((New-Result -Code "project-release-items" -Passed ($releaseItems.Count -gt 0) -Message "Project release slice '$ReleaseTrack' contains $($releaseItems.Count) item(s)." -Data @{ release = $ReleaseTrack; count = $releaseItems.Count }))
-$results.Add((New-Result -Code "project-release-complete" -Passed ($incompleteItems.Count -eq 0) -Message "Project release slice '$ReleaseTrack' has $($incompleteItems.Count) incomplete item(s)." -Data @{
-    release = $ReleaseTrack
-    incomplete = @($incompleteItems | ForEach-Object {
-        [pscustomobject]@{
-            title  = $_.title
-            number = $_.content.number
-            status = $_.status
-        }
-    })
-}))
+Add-CheckResult -Results $results -Code "project-release-items" -Condition ($releaseItems.Count -gt 0) `
+    -PassMessage "Project release slice '$ReleaseTrack' contains $($releaseItems.Count) item(s)." `
+    -FailMessage "Project release slice '$ReleaseTrack' has no items." `
+    -Data @{ release = $ReleaseTrack; count = $releaseItems.Count }
 
-$failed = @($results | Where-Object { -not $_.passed })
+Add-CheckResult -Results $results -Code "project-release-complete" -Condition ($incompleteItems.Count -eq 0) `
+    -PassMessage "Project release slice '$ReleaseTrack' is complete." `
+    -FailMessage "Project release slice '$ReleaseTrack' still has incomplete work." `
+    -Data @{
+        release = $ReleaseTrack
+        incomplete = @($incompleteItems | ForEach-Object {
+            [pscustomobject]@{
+                title  = $_.title
+                number = $_.content.number
+                status = $_.status
+            }
+        })
+    }
+
+$fails = @($results | Where-Object { $_.status -eq "fail" })
+$warnings = @($results | Where-Object { $_.status -eq "warn" })
 $summary = [pscustomobject]@{
     targetVersion = $TargetVersion
     releaseTrack  = $ReleaseTrack
     repository    = $Repository
+    phase         = $Phase
     checkedUtc    = [DateTimeOffset]::UtcNow.ToString("O")
-    passed        = ($failed.Count -eq 0)
-    failedCount   = $failed.Count
+    passed        = ($fails.Count -eq 0)
+    failedCount   = $fails.Count
+    warningCount  = $warnings.Count
     checks        = $results
 }
 
@@ -164,20 +280,30 @@ if ($Json) {
     $summary | ConvertTo-Json -Depth 8
 } else {
     if ($summary.passed) {
-        Write-Host "Release readiness gate: PASS" -ForegroundColor Green
+        $headline = if ($warnings.Count -gt 0) {
+            "Release readiness gate: PASS with warnings ($($summary.warningCount))"
+        } else {
+            "Release readiness gate: PASS"
+        }
+        Write-Host $headline -ForegroundColor Green
     } else {
-        Write-Host "Release readiness gate: FAIL ($($summary.failedCount) check(s))" -ForegroundColor Red
+        Write-Host "Release readiness gate: FAIL ($($summary.failedCount) check(s), $($summary.warningCount) warning(s))" -ForegroundColor Red
     }
 
     Write-Host "Target version : $TargetVersion"
     Write-Host "Release track  : $ReleaseTrack"
+    Write-Host "Phase          : $Phase"
     Write-Host "Repository     : $Repository"
     Write-Host ""
 
     foreach ($check in $results) {
-        $prefix = if ($check.passed) { "[PASS]" } else { "[FAIL]" }
+        $prefix = switch ($check.status) {
+            "pass" { "[PASS]" }
+            "warn" { "[WARN]" }
+            default { "[FAIL]" }
+        }
         Write-Host "$prefix $($check.code): $($check.message)"
-        if (-not $check.passed -and $check.data) {
+        if (($check.status -ne "pass") -and $check.data) {
             $detail = ($check.data | ConvertTo-Json -Depth 6 -Compress)
             Write-Host "       $detail"
         }

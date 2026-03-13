@@ -15,6 +15,7 @@
 - [VS-1708] Patch availability now runs an explicit `current -> target` preflight (base-version match, target-version match, manifest presence, file list presence) before the patch button is offered, and the resulting eligibility trace is persisted/exported with updater diagnostics.
 - [VS-1709] Support bundles now export persisted updater diagnostics, patch preflight eligibility, backup-repair telemetry, and metadata-conflict summaries so off-box triage has the latest repair/update state without requiring a live repro.
 - [VS-1718] Added a scripted release-readiness gate command that checks source version parity, changelog/What's New alignment, release asset presence, and project-board release completeness with both human-readable and JSON output.
+- [VS-1718] Release gate now supports `PrePublish` and `PostPublish` phases so missing installer/patch assets warn with actionable generation steps before upload, but fail only during final post-publish verification.
 ### Fixed
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
 - [BUG-16024] Track restore-mode dropdown rendering parity so restore confirmation never falls back to `View not found for RestoreModeOption` for either option.

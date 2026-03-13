@@ -32,6 +32,10 @@ Create patch manifest and patch archives as described in `docs/UPDATER.md`.
   ```powershell
   powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1
   ```
+- Run the release gate again after GitHub Actions uploads assets:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -Phase PostPublish
+  ```
 - `CHANGELOG.md` updated
 - `docs/WHATS_NEW.md` updated
 - relevant wiki/help docs updated
