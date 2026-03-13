@@ -1323,8 +1323,7 @@ namespace VaultSync.UI
                 if (!SetField(ref _isBackupIndexRepairBusy, value))
                     return;
 
-                _scanBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
-                _applyBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
+                RaiseRepairCommandStateChanged();
             }
         }
 
@@ -2282,6 +2281,23 @@ namespace VaultSync.UI
             }
         }
 
+        private void RaiseRepairCommandStateChanged()
+        {
+            void Raise()
+            {
+                _scanBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
+                _applyBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
+            }
+
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                Raise();
+                return;
+            }
+
+            Dispatcher.UIThread.Post(Raise);
+        }
+
         private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -2623,7 +2639,7 @@ namespace VaultSync.UI
 
         private async Task ScanBackupIndexRepairPlanAsync()
         {
-            IsBackupIndexRepairBusy = true;
+            await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
             DiagnosticsLogger.Record("Doctor action started: backup-index-repair scan.");
 
             try
@@ -2636,43 +2652,53 @@ namespace VaultSync.UI
                     return service.BuildPlan();
                 }).ConfigureAwait(false);
 
-                _currentBackupIndexRepairPlan = plan;
-                BackupIndexRepairSummary = BuildBackupIndexRepairSummary(plan);
-                BackupIndexRepairDetails = BuildBackupIndexRepairDetails(plan);
-                BackupIndexRepairStatus = plan.HasActions
+                var status = plan.HasActions
                     ? L("Settings.Advanced.BackupRepairPlanReady", "Repair plan ready.")
                     : L("Settings.Advanced.BackupRepairPlanNoActions", "No exact repair actions are currently available.");
-                SaveStatus = BackupIndexRepairStatus;
-                OnPropertyChanged(nameof(HasBackupIndexRepairPlan));
-                OnPropertyChanged(nameof(HasBackupIndexRepairActions));
-                OnPropertyChanged(nameof(HasBackupIndexRepairBlockedIssues));
-                _applyBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
 
-                GlobalNotificationCenter.Instance.Show(
-                    BackupIndexRepairStatus,
-                    NotificationSeverity.Info,
-                    L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    _currentBackupIndexRepairPlan = plan;
+                    BackupIndexRepairSummary = BuildBackupIndexRepairSummary(plan);
+                    BackupIndexRepairDetails = BuildBackupIndexRepairDetails(plan);
+                    BackupIndexRepairStatus = status;
+                    SaveStatus = status;
+                    OnPropertyChanged(nameof(HasBackupIndexRepairPlan));
+                    OnPropertyChanged(nameof(HasBackupIndexRepairActions));
+                    OnPropertyChanged(nameof(HasBackupIndexRepairBlockedIssues));
+                    RaiseRepairCommandStateChanged();
+
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Info,
+                        L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                });
                 DiagnosticsLogger.Record(
                     $"Doctor action complete: backup-index-repair scan. Actions={plan.Actions.Count}; BlockedBuckets={plan.BlockedIssues.Count}.");
-                PersistBackupRepairTelemetry(plan, appliedCount: null, status: BackupIndexRepairStatus);
+                PersistBackupRepairTelemetry(plan, appliedCount: null, status: status);
             }
             catch (Exception ex)
             {
-                BackupIndexRepairStatus = string.Format(
+                var status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.BackupRepairFailed", "Backup repair scan failed: {0}"),
                     ex.Message);
-                SaveStatus = BackupIndexRepairStatus;
-                GlobalNotificationCenter.Instance.Show(
-                    BackupIndexRepairStatus,
-                    NotificationSeverity.Error,
-                    L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    BackupIndexRepairStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Error,
+                        L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                });
                 DiagnosticsLogger.Record($"Doctor action failed: backup-index-repair scan. {ex.GetType().Name} - {ex.Message}");
-                PersistBackupRepairTelemetry(null, appliedCount: null, status: BackupIndexRepairStatus);
+                PersistBackupRepairTelemetry(null, appliedCount: null, status: status);
             }
             finally
             {
-                IsBackupIndexRepairBusy = false;
+                await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
             }
         }
 
@@ -2687,7 +2713,7 @@ namespace VaultSync.UI
             if (plan is null || !plan.HasActions)
                 return;
 
-            IsBackupIndexRepairBusy = true;
+            await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
             DiagnosticsLogger.Record(
                 $"Doctor action started: backup-index-repair apply. PlannedActions={plan.Actions.Count}; BlockedBuckets={plan.BlockedIssues.Count}.");
 
@@ -2701,37 +2727,47 @@ namespace VaultSync.UI
                     return service.ApplyPlan(plan);
                 }).ConfigureAwait(false);
 
-                BackupIndexRepairStatus = string.Format(
+                var status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.BackupRepairApplied", "Applied {0} exact backup-link repair action(s)."),
                     applied);
-                SaveStatus = BackupIndexRepairStatus;
-                GlobalNotificationCenter.Instance.Show(
-                    BackupIndexRepairStatus,
-                    NotificationSeverity.Info,
-                    L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    BackupIndexRepairStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Info,
+                        L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                });
                 DiagnosticsLogger.Record($"Doctor action complete: backup-index-repair apply. Applied={applied}.");
-                PersistBackupRepairTelemetry(plan, applied, BackupIndexRepairStatus);
+                PersistBackupRepairTelemetry(plan, applied, status);
 
                 await ScanBackupIndexRepairPlanAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                BackupIndexRepairStatus = string.Format(
+                var status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.BackupRepairApplyFailed", "Backup repair apply failed: {0}"),
                     ex.Message);
-                SaveStatus = BackupIndexRepairStatus;
-                GlobalNotificationCenter.Instance.Show(
-                    BackupIndexRepairStatus,
-                    NotificationSeverity.Error,
-                    L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    BackupIndexRepairStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Error,
+                        L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                });
                 DiagnosticsLogger.Record($"Doctor action failed: backup-index-repair apply. {ex.GetType().Name} - {ex.Message}");
-                PersistBackupRepairTelemetry(plan, appliedCount: null, status: BackupIndexRepairStatus);
+                PersistBackupRepairTelemetry(plan, appliedCount: null, status: status);
             }
             finally
             {
-                IsBackupIndexRepairBusy = false;
+                await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
             }
         }
 
@@ -2811,6 +2847,7 @@ namespace VaultSync.UI
                     ProjectMetadataConflicts.Count);
             PersistMetadataConflictTelemetry(lastAction: null, lastResolvedProject: null, pendingCount: ProjectMetadataConflicts.Count);
             OnPropertyChanged(nameof(HasProjectMetadataConflicts));
+            RaiseRepairCommandStateChanged();
             _acceptProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
             _keepLocalProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
         }
@@ -2838,7 +2875,7 @@ namespace VaultSync.UI
 
         private async Task AcceptProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
         {
-            IsBackupIndexRepairBusy = true;
+            await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
             DiagnosticsLogger.Record($"Doctor action started: metadata-conflict accept. ProjectId={item.ProjectId}; ExternalId={item.ProjectExternalId}.");
 
             try
@@ -2857,34 +2894,44 @@ namespace VaultSync.UI
                     AppConfigStore.Save(cfg);
                 }).ConfigureAwait(false);
 
-                LoadFromConfig();
-                ProjectMetadataConflictStatus = string.Format(
+                var status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictAccepted", "Imported metadata applied for {0}."),
                     item.ProjectName);
-                SaveStatus = ProjectMetadataConflictStatus;
-                GlobalNotificationCenter.Instance.Show(
-                    ProjectMetadataConflictStatus,
-                    NotificationSeverity.Info,
-                    L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    LoadFromConfig();
+                    ProjectMetadataConflictStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Info,
+                        L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                });
                 DiagnosticsLogger.Record($"Doctor action complete: metadata-conflict accept. ProjectId={item.ProjectId}.");
             }
             catch (Exception ex)
             {
-                ProjectMetadataConflictStatus = string.Format(
+                var status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictAcceptFailed", "Applying imported metadata failed: {0}"),
                     ex.Message);
-                SaveStatus = ProjectMetadataConflictStatus;
-                GlobalNotificationCenter.Instance.Show(
-                    ProjectMetadataConflictStatus,
-                    NotificationSeverity.Error,
-                    L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    ProjectMetadataConflictStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Error,
+                        L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                });
                 DiagnosticsLogger.Record($"Doctor action failed: metadata-conflict accept. {ex.GetType().Name} - {ex.Message}");
             }
             finally
             {
-                IsBackupIndexRepairBusy = false;
+                await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
             }
         }
 
@@ -2898,7 +2945,7 @@ namespace VaultSync.UI
 
         private async Task KeepLocalProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
         {
-            IsBackupIndexRepairBusy = true;
+            await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
             DiagnosticsLogger.Record($"Doctor action started: metadata-conflict keep-local. ProjectId={item.ProjectId}; ExternalId={item.ProjectExternalId}.");
 
             try
@@ -2911,34 +2958,44 @@ namespace VaultSync.UI
                     AppConfigStore.Save(cfg);
                 }).ConfigureAwait(false);
 
-                LoadFromConfig();
-                ProjectMetadataConflictStatus = string.Format(
+                var status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictKeptLocal", "Local metadata kept for {0}."),
                     item.ProjectName);
-                SaveStatus = ProjectMetadataConflictStatus;
-                GlobalNotificationCenter.Instance.Show(
-                    ProjectMetadataConflictStatus,
-                    NotificationSeverity.Info,
-                    L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    LoadFromConfig();
+                    ProjectMetadataConflictStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Info,
+                        L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                });
                 DiagnosticsLogger.Record($"Doctor action complete: metadata-conflict keep-local. ProjectId={item.ProjectId}.");
             }
             catch (Exception ex)
             {
-                ProjectMetadataConflictStatus = string.Format(
+                var status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictKeepLocalFailed", "Keeping local metadata failed: {0}"),
                     ex.Message);
-                SaveStatus = ProjectMetadataConflictStatus;
-                GlobalNotificationCenter.Instance.Show(
-                    ProjectMetadataConflictStatus,
-                    NotificationSeverity.Error,
-                    L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    ProjectMetadataConflictStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Error,
+                        L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                });
                 DiagnosticsLogger.Record($"Doctor action failed: metadata-conflict keep-local. {ex.GetType().Name} - {ex.Message}");
             }
             finally
             {
-                IsBackupIndexRepairBusy = false;
+                await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
             }
         }
 

@@ -1083,6 +1083,12 @@
   - What it takes:
     - redesign KPI/card hierarchy so the most actionable signals land first (`backups`, `restore readiness`, `alerts`, `storage`, `recent activity`).
     - replace the current stretched/empty-space-prone sections with responsive card groups that scale cleanly in both maximized and windowed modes.
+- [ ] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(In progress)_
+  - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
+  - Current status:
+    - In progress: backup repair and metadata-conflict flows now dispatch busy-state, status, notification, and command refresh updates through Avalonia's UI thread.
+  - Acceptance:
+    - Doctor workflows no longer emit `Call from invalid thread` traces during dry-run/apply operations.
 
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers.
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
