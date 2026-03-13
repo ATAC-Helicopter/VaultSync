@@ -1131,9 +1131,19 @@
   - Scope: keep the Projects page populated from registered database projects when directory discovery returns no items or misses known projects.
   - Current status:
     - In progress: registered projects are now merged into the Projects page source list so tracked entries still render when folder discovery is unavailable or partial.
+    - In progress: Projects now render explicit empty-state and no-selection placeholders instead of leaving the list/detail panes visually broken when scan results or selection state are empty.
   - Acceptance:
     - Projects page no longer appears blank just because discovery root scanning returned zero items.
     - Registered projects remain visible and selectable from stored metadata paths.
+
+- [ ] `BUG-17004` `P1` Preserve Projects root across startup config read/write races. _(In progress)_
+  - Scope: stop `Projects root` from clearing itself across restarts when config reads race startup writes or transiently deserialize invalid/partial JSON.
+  - Current status:
+    - In progress: config writes now use temp-file replace semantics with a backup file, and config loads fall back to backup/last-known-good snapshots before defaulting to empty values.
+    - In progress: safeguard is being verified against unreachable destination/startup stress scenarios so unrelated config saves cannot persist a blank projects root.
+  - Acceptance:
+    - `Projects root` persists across restart even if startup writes happen while the destination is unreachable or config reads are transiently busy.
+    - transient config read failures no longer downgrade the in-memory config to defaults and then overwrite the saved root path.
 
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.

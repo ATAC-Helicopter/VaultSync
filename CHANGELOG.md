@@ -29,6 +29,8 @@
 ### Fixed
 - [BUG-17002] Restored corrupted bundled Noto Sans font assets so UI text rendering no longer depends on invalid HTML placeholders stored as `.ttf` files.
 - [BUG-17003] Projects now fall back to registered database entries when folder discovery is empty or partial, so the Projects page still renders tracked projects instead of appearing blank.
+- [BUG-17003] Projects now show explicit empty/select-a-project placeholders instead of rendering a broken-looking blank pane when discovery or selection state is empty.
+- [BUG-17004] Projects root config persistence now survives startup config read/write races by using atomic config replace plus backup/last-known-good fallback instead of defaulting straight to empty values.
 - [BUG-17001] Doctor backup-repair and metadata-conflict workflows now marshal command-state and status updates onto the UI thread, removing Avalonia `Call from invalid thread` traces during detached scan/apply operations.
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
 - [BUG-16024] Track restore-mode dropdown rendering parity so restore confirmation never falls back to `View not found for RestoreModeOption` for either option.

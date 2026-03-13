@@ -10,11 +10,17 @@ namespace VaultSync.Core.Config
     public static class AppConfigStore
     {
         private static readonly SemaphoreSlim SaveGate = new(1, 1);
+        private static readonly object LastKnownGoodGate = new();
         private static readonly string ConfigDir =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync");
 
         private static readonly string ConfigFilePath =
             Path.Combine(ConfigDir, "appsettings.json");
+
+        private static readonly string ConfigBackupFilePath =
+            Path.Combine(ConfigDir, "appsettings.bak.json");
+
+        private static AppConfig? LastKnownGoodConfig;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -34,8 +40,7 @@ namespace VaultSync.Core.Config
                 }
                 else
                 {
-                    var json = ReadConfigWithRetryAsync(CancellationToken.None).GetAwaiter().GetResult();
-                    cfg = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+                    cfg = LoadBestAvailableConfig(CancellationToken.None);
                 }
 
                 // ----- Ensure DbPath is always set -----
@@ -58,12 +63,13 @@ namespace VaultSync.Core.Config
                     }
                 }
 
+                RememberLastKnownGood(cfg);
                 return cfg;
             }
             catch
             {
                 // On any error, fall back to defaults instead of crashing the app.
-                var fallback = new AppConfig();
+                var fallback = GetLastKnownGoodClone() ?? new AppConfig();
 
                 // Ensure fallback also receives a default DbPath
                 var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -80,6 +86,7 @@ namespace VaultSync.Core.Config
             Directory.CreateDirectory(ConfigDir);
             var json = JsonSerializer.Serialize(config, JsonOptions);
             WriteConfigWithRetryAsync(json, CancellationToken.None).GetAwaiter().GetResult();
+            RememberLastKnownGood(config);
         }
 
         public static async Task SaveAsync(AppConfig config, CancellationToken ct = default)
@@ -87,6 +94,7 @@ namespace VaultSync.Core.Config
             Directory.CreateDirectory(ConfigDir);
             var json = JsonSerializer.Serialize(config, JsonOptions);
             await WriteConfigWithRetryAsync(json, ct).ConfigureAwait(false);
+            RememberLastKnownGood(config);
         }
 
         public static string GetDefaultDbPath()
@@ -110,9 +118,23 @@ namespace VaultSync.Core.Config
                     try
                     {
                         var tempPath = Path.Combine(ConfigDir, $"appsettings.tmp.{Guid.NewGuid():N}.json");
-                        File.WriteAllText(tempPath, json);
-                        File.Copy(tempPath, ConfigFilePath, overwrite: true);
-                        File.Delete(tempPath);
+                        try
+                        {
+                            File.WriteAllText(tempPath, json);
+                            if (File.Exists(ConfigFilePath))
+                            {
+                                File.Replace(tempPath, ConfigFilePath, ConfigBackupFilePath, ignoreMetadataErrors: true);
+                            }
+                            else
+                            {
+                                File.Move(tempPath, ConfigFilePath);
+                            }
+                        }
+                        finally
+                        {
+                            if (File.Exists(tempPath))
+                                File.Delete(tempPath);
+                        }
                         return;
                     }
                     catch (IOException) when (attempt < maxAttempts)
@@ -123,7 +145,24 @@ namespace VaultSync.Core.Config
                 }
 
                 // Last attempt: allow exception to surface for diagnostics.
-                File.WriteAllText(ConfigFilePath, json);
+                var finalTempPath = Path.Combine(ConfigDir, $"appsettings.tmp.{Guid.NewGuid():N}.json");
+                try
+                {
+                    File.WriteAllText(finalTempPath, json);
+                    if (File.Exists(ConfigFilePath))
+                    {
+                        File.Replace(finalTempPath, ConfigFilePath, ConfigBackupFilePath, ignoreMetadataErrors: true);
+                    }
+                    else
+                    {
+                        File.Move(finalTempPath, ConfigFilePath);
+                    }
+                }
+                finally
+                {
+                    if (File.Exists(finalTempPath))
+                        File.Delete(finalTempPath);
+                }
             }
             finally
             {
@@ -131,7 +170,7 @@ namespace VaultSync.Core.Config
             }
         }
 
-        private static async Task<string> ReadConfigWithRetryAsync(CancellationToken ct)
+        private static async Task<string> ReadConfigWithRetryAsync(string path, CancellationToken ct)
         {
             const int maxAttempts = 5;
             var delay = 25;
@@ -142,7 +181,7 @@ namespace VaultSync.Core.Config
                 try
                 {
                     using var fs = new FileStream(
-                        ConfigFilePath,
+                        path,
                         FileMode.Open,
                         FileAccess.Read,
                         FileShare.ReadWrite | FileShare.Delete);
@@ -157,7 +196,62 @@ namespace VaultSync.Core.Config
             }
 
             // Final read to surface useful diagnostics for fallback handling in Load().
-            return await File.ReadAllTextAsync(ConfigFilePath, ct).ConfigureAwait(false);
+            return await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
+        }
+
+        private static AppConfig LoadBestAvailableConfig(CancellationToken ct)
+        {
+            try
+            {
+                var json = ReadConfigWithRetryAsync(ConfigFilePath, ct).GetAwaiter().GetResult();
+                return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+            }
+            catch
+            {
+                if (File.Exists(ConfigBackupFilePath))
+                {
+                    try
+                    {
+                        var backupJson = ReadConfigWithRetryAsync(ConfigBackupFilePath, ct).GetAwaiter().GetResult();
+                        return JsonSerializer.Deserialize<AppConfig>(backupJson, JsonOptions) ?? new AppConfig();
+                    }
+                    catch
+                    {
+                        var cached = GetLastKnownGoodClone();
+                        if (cached is not null)
+                            return cached;
+                    }
+                }
+
+                var fallback = GetLastKnownGoodClone();
+                if (fallback is not null)
+                    return fallback;
+
+                throw;
+            }
+        }
+
+        private static void RememberLastKnownGood(AppConfig config)
+        {
+            var clone = CloneConfig(config);
+            lock (LastKnownGoodGate)
+            {
+                LastKnownGoodConfig = clone;
+            }
+        }
+
+        private static AppConfig? GetLastKnownGoodClone()
+        {
+            lock (LastKnownGoodGate)
+            {
+                return LastKnownGoodConfig is null ? null : CloneConfig(LastKnownGoodConfig);
+            }
+        }
+
+        private static AppConfig CloneConfig(AppConfig config)
+        {
+            var json = JsonSerializer.Serialize(config, JsonOptions);
+            return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
         }
     }
 }

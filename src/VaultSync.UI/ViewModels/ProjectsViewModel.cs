@@ -100,6 +100,9 @@ public class ProjectsViewModel : ViewModelBase
                 if (value is not null && !string.IsNullOrWhiteSpace(value.Name))
                     _lastSelectedProjectName = value.Name;
 
+                OnPropertyChanged(nameof(HasSelectedProject));
+                OnPropertyChanged(nameof(ShowSelectedProjectEmptyState));
+
                 _openFolderCommand.RaiseCanExecuteChanged();
                 _removeProjectCommand.RaiseCanExecuteChanged();
                 _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
@@ -118,6 +121,11 @@ public class ProjectsViewModel : ViewModelBase
             }
         }
     }
+
+    public bool HasProjects => Projects.Count > 0;
+    public bool ShowProjectsEmptyState => !HasProjects;
+    public bool HasSelectedProject => SelectedProject is not null;
+    public bool ShowSelectedProjectEmptyState => !HasSelectedProject;
 
     public bool ShowProjectAvatars { get; private set; } = true;
 
@@ -952,6 +960,11 @@ public class ProjectsViewModel : ViewModelBase
                 SelectedProject = Projects[0];
             }
         }
+
+        OnPropertyChanged(nameof(HasProjects));
+        OnPropertyChanged(nameof(ShowProjectsEmptyState));
+        OnPropertyChanged(nameof(HasSelectedProject));
+        OnPropertyChanged(nameof(ShowSelectedProjectEmptyState));
     }
 
     private void LoadGroupOptions()

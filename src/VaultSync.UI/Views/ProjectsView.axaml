@@ -368,21 +368,22 @@
           </Border>
 
           <!-- Projects list -->
-          <ScrollViewer Grid.Row="3"
-                        VerticalScrollBarVisibility="Auto"
-                        HorizontalScrollBarVisibility="Disabled"
-                        Padding="0,0,0,8">
-            <ListBox
-              x:Name="ProjectList"
-              ItemsSource="{Binding Projects}"
-              SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
-              Background="Transparent"
-              BorderThickness="0"
-              HorizontalAlignment="Stretch">
+          <Grid Grid.Row="3">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="0,0,0,8"
+                          IsVisible="{Binding HasProjects}">
+              <ListBox
+                x:Name="ProjectList"
+                ItemsSource="{Binding Projects}"
+                SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+                Background="Transparent"
+                BorderThickness="0"
+                HorizontalAlignment="Stretch">
 
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
                     <!-- Name + last snapshot short + size + avatar -->
                     <Grid Grid.Row="0"
                           ColumnDefinitions="Auto,*,Auto,Auto"
@@ -522,10 +523,30 @@
                         Foreground="{Binding HealthForeground}" />
                     </Border>
                   </Grid>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </ScrollViewer>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </ScrollViewer>
+
+            <Border IsVisible="{Binding ShowProjectsEmptyState}"
+                    CornerRadius="18"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    BorderBrush="{DynamicResource DividerBrush}"
+                    BorderThickness="1"
+                    Padding="20"
+                    VerticalAlignment="Top">
+              <StackPanel Spacing="8">
+                <TextBlock Text="No projects are available yet."
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="Set a projects root in Settings or re-add a tracked project so the Projects page can rebuild its list."
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </Grid>
         </Grid>
       </Border>
 
@@ -535,7 +556,8 @@
               Background="{DynamicResource SurfaceCardBrush}"
               CornerRadius="24"
               Padding="24"
-              DataContext="{Binding SelectedItem, ElementName=ProjectList}">
+              DataContext="{Binding SelectedItem, ElementName=ProjectList}"
+              IsVisible="{Binding HasSelectedProject}">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
           <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
@@ -1374,6 +1396,24 @@
 
           </Grid>
         </ScrollViewer>
+      </Border>
+
+      <Border Grid.Column="2"
+              Background="{DynamicResource SurfaceCardBrush}"
+              CornerRadius="24"
+              Padding="24"
+              IsVisible="{Binding ShowSelectedProjectEmptyState}">
+        <StackPanel Spacing="10"
+                    VerticalAlignment="Top">
+          <TextBlock Text="Select a project to inspect details."
+                     FontSize="{DynamicResource PageTitleFontSize}"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="The detail pane will show presets, destinations, encryption, tags, and snapshot history after a project is available."
+                     FontSize="12"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
       </Border>
     </Grid>
     </Grid>
