@@ -1786,21 +1786,15 @@ public partial class App : Application
     private void ApplyThemeFromConfig()
     {
         var config = AppConfigStore.Load();
-        ApplyTheme(config.Appearance.Theme);
+        ThemeManager.ApplyAppearance(config.Appearance);
         ThemeManager.ApplyCompactLayout(config.Appearance.CompactLayout);
     }
 
     public void ApplyTheme(string themeOption)
     {
-        RequestedThemeVariant = themeOption switch
-        {
-            "Light" => ThemeVariant.Light,
-            "Dark"  => ThemeVariant.Dark,
-            _       => ThemeVariant.Default
-        };
-
         var config = AppConfigStore.Load();
         config.Appearance.Theme = themeOption;
+        ThemeManager.ApplyAppearance(config.Appearance);
         AppConfigStore.Save(config);
     }
 

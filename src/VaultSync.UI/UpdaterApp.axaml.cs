@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Avalonia.Styling;
 using VaultSync.Core.Config;
 using VaultSync.UI.Services;
 using VaultSync.UI.ViewModels;
@@ -73,11 +72,6 @@ public sealed partial class UpdaterApp : Application
     private void ApplyThemeFromConfig()
     {
         var config = AppConfigStore.Load();
-        RequestedThemeVariant = config.Appearance.Theme switch
-        {
-            "Light" => ThemeVariant.Light,
-            "Dark" => ThemeVariant.Dark,
-            _ => ThemeVariant.Default
-        };
+        ThemeManager.ApplyAppearance(config.Appearance);
     }
 }

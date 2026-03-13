@@ -130,6 +130,9 @@ namespace VaultSync.UI
         private RelayCommand? _addTagColorRuleCommand;
         private RelayCommand? _removeTagColorRuleCommand;
         private RelayCommand? _resetTagColorRuleCommand;
+        private RelayCommand? _applyThemePresetCommand;
+        private RelayCommand? _applyThemePaletteSwatchCommand;
+        private RelayCommand? _resetCustomThemeCommand;
         private RelayCommand? _scanBackupIndexRepairPlanCommand;
         private RelayCommand? _applyBackupIndexRepairPlanCommand;
         private RelayCommand? _acceptProjectMetadataConflictCommand;
@@ -142,6 +145,9 @@ namespace VaultSync.UI
         private string _projectMetadataConflictStatus = string.Empty;
         private bool _isBackupIndexRepairBusy;
         private bool _showLegacyBackupLocation = true;
+        private string _customThemeName = "VaultSync Midnight";
+        private string _customThemeBase = "Dark";
+        private ThemeColorSlotViewModel? _selectedThemeColorSlot;
         private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
 
         private bool _isInitialized;
@@ -213,7 +219,31 @@ namespace VaultSync.UI
             private string _border = string.Empty;
             private ColorSlot _selectedSlot = ColorSlot.Background;
 
+            public TagColorRuleViewModel()
+            {
+                PaletteSwatches = new[]
+                {
+                    new ThemePaletteSwatchViewModel("#4F8DFF"),
+                    new ThemePaletteSwatchViewModel("#2663FF"),
+                    new ThemePaletteSwatchViewModel("#4CC9F0"),
+                    new ThemePaletteSwatchViewModel("#5AC88F"),
+                    new ThemePaletteSwatchViewModel("#B983FF"),
+                    new ThemePaletteSwatchViewModel("#FF8B4D"),
+                    new ThemePaletteSwatchViewModel("#F857A6"),
+                    new ThemePaletteSwatchViewModel("#FFC766"),
+                    new ThemePaletteSwatchViewModel("#FF7676"),
+                    new ThemePaletteSwatchViewModel("#FFFFFF"),
+                    new ThemePaletteSwatchViewModel("#B3B8C7"),
+                    new ThemePaletteSwatchViewModel("#222635")
+                };
+                ApplyPaletteSwatchCommand = new RelayCommand(
+                    p => ApplyPaletteSwatch(p as ThemePaletteSwatchViewModel),
+                    p => p is ThemePaletteSwatchViewModel);
+            }
+
             public event PropertyChangedEventHandler? PropertyChanged;
+            public IReadOnlyList<ThemePaletteSwatchViewModel> PaletteSwatches { get; }
+            public ICommand ApplyPaletteSwatchCommand { get; }
 
             public string Tag
             {
@@ -367,6 +397,14 @@ namespace VaultSync.UI
                 return Color.TryParse(hex, out var color) ? color : Colors.Transparent;
             }
 
+            private void ApplyPaletteSwatch(ThemePaletteSwatchViewModel? swatch)
+            {
+                if (swatch is null)
+                    return;
+
+                ActiveColor = swatch.SwatchColor;
+            }
+
             private void RaiseSelection()
             {
                 RaiseProperty(nameof(IsEditingBackground));
@@ -397,9 +435,97 @@ namespace VaultSync.UI
             }
         }
 
+        public sealed class ThemeColorSlotViewModel : INotifyPropertyChanged
+        {
+            private string _hex;
+            private bool _isSelected;
+
+            public ThemeColorSlotViewModel(string id, string label, string hex)
+            {
+                Id = id;
+                Label = label;
+                _hex = hex;
+            }
+
+            public event PropertyChangedEventHandler? PropertyChanged;
+
+            public string Id { get; }
+            public string Label { get; }
+
+            public string Hex
+            {
+                get => _hex;
+                set
+                {
+                    var normalized = NormalizeHex(value, _hex);
+                    if (_hex == normalized)
+                        return;
+
+                    _hex = normalized;
+                    RaiseProperty(nameof(Hex));
+                    RaiseProperty(nameof(SwatchColor));
+                }
+            }
+
+            public bool IsSelected
+            {
+                get => _isSelected;
+                set
+                {
+                    if (_isSelected == value)
+                        return;
+                    _isSelected = value;
+                    RaiseProperty(nameof(IsSelected));
+                }
+            }
+
+            public Color SwatchColor => Color.Parse(_hex);
+
+            private static string NormalizeHex(string? value, string fallback)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    return fallback;
+
+                var candidate = value.Trim();
+                if (!candidate.StartsWith("#", StringComparison.Ordinal))
+                    candidate = "#" + candidate;
+
+                return Color.TryParse(candidate, out var color)
+                    ? $"#{color.R:X2}{color.G:X2}{color.B:X2}"
+                    : fallback;
+            }
+
+            private void RaiseProperty(string propertyName)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+
+        public sealed class ThemePresetOptionViewModel
+        {
+            public required string Name { get; init; }
+            public required string Description { get; init; }
+            public required ThemePaletteConfig Palette { get; init; }
+        }
+
+        public sealed class ThemePaletteSwatchViewModel
+        {
+            public ThemePaletteSwatchViewModel(string hex)
+            {
+                Hex = hex;
+                SwatchColor = Color.Parse(hex);
+            }
+
+            public string Hex { get; }
+            public Color SwatchColor { get; }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         public ObservableCollection<ProjectMetadataConflictItemViewModel> ProjectMetadataConflicts { get; } = new();
         public ObservableCollection<TagColorRuleViewModel> TagColorRules { get; } = new();
+        public ObservableCollection<ThemeColorSlotViewModel> ThemeColorSlots { get; } = new();
+        public ObservableCollection<ThemePresetOptionViewModel> ThemePresets { get; } = new();
+        public ObservableCollection<ThemePaletteSwatchViewModel> ThemePaletteSwatches { get; } = new();
 
         private void RefreshLegacyVisibility()
         {
@@ -449,10 +575,12 @@ namespace VaultSync.UI
             {
                 "Follow system",
                 "Dark",
-                "Light"
+                "Light",
+                "Custom"
             };
 
             _selectedTheme = ThemeOptions[0];
+            InitializeThemeEditor();
 
             BrowseProjectsRootCommand    = new RelayCommand(_ => BrowseProjectsRoot());
             BrowseBackupLocationCommand  = new RelayCommand(_ => BrowseBackupLocation());
@@ -470,6 +598,9 @@ namespace VaultSync.UI
             _addTagColorRuleCommand      = new RelayCommand(_ => AddTagColorRule());
             _removeTagColorRuleCommand   = new RelayCommand(p => RemoveTagColorRule(p as TagColorRuleViewModel), p => p is TagColorRuleViewModel);
             _resetTagColorRuleCommand    = new RelayCommand(p => ResetTagColorRule(p as TagColorRuleViewModel), p => p is TagColorRuleViewModel);
+            _applyThemePresetCommand     = new RelayCommand(p => ApplyThemePreset(p as ThemePresetOptionViewModel), p => p is ThemePresetOptionViewModel);
+            _applyThemePaletteSwatchCommand = new RelayCommand(p => ApplyThemePaletteSwatch(p as ThemePaletteSwatchViewModel), p => p is ThemePaletteSwatchViewModel && SelectedThemeColorSlot is not null);
+            _resetCustomThemeCommand     = new RelayCommand(_ => ResetCustomTheme());
             OpenHelpCommand              = new RelayCommand(_ => OpenHelp());
             ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());
             OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
@@ -496,6 +627,7 @@ namespace VaultSync.UI
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
             TagColorRules.CollectionChanged      += OnTagColorRulesCollectionChanged;
+            ThemeColorSlots.CollectionChanged    += OnThemeColorSlotsCollectionChanged;
 
             PropertyChanged += OnSettingsPropertyChanged;
 
@@ -669,6 +801,7 @@ namespace VaultSync.UI
             _useCompactLayout   = cfg.Appearance.CompactLayout;
             _showProjectAvatars = cfg.Appearance.ShowProjectAvatars;
             LoadTagColorRules(cfg);
+            LoadCustomTheme(cfg.Appearance.CustomTheme);
 
             _notifyOnBackupSuccess   = cfg.Notifications.OnBackupSuccess;
             _notifyOnBackupFailure   = cfg.Notifications.OnBackupFailure;
@@ -893,6 +1026,7 @@ namespace VaultSync.UI
             cfg.Appearance.CompactLayout      = UseCompactLayout;
             cfg.Appearance.ShowProjectAvatars = ShowProjectAvatars;
             cfg.Appearance.TagColors          = BuildTagColorConfig();
+            cfg.Appearance.CustomTheme        = BuildCustomThemeConfig();
 
             cfg.Notifications.OnBackupSuccess    = NotifyOnBackupSuccess;
             cfg.Notifications.OnBackupFailure    = NotifyOnBackupFailure;
@@ -1088,6 +1222,43 @@ namespace VaultSync.UI
             TriggerAutoSave();
         }
 
+        private void OnThemeColorSlotsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems is not null)
+            {
+                foreach (ThemeColorSlotViewModel slot in e.NewItems)
+                    slot.PropertyChanged += OnThemeColorSlotPropertyChanged;
+            }
+
+            if (e.OldItems is not null)
+            {
+                foreach (ThemeColorSlotViewModel slot in e.OldItems)
+                    slot.PropertyChanged -= OnThemeColorSlotPropertyChanged;
+            }
+        }
+
+        private void OnThemeColorSlotPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not ThemeColorSlotViewModel slot)
+                return;
+
+            if (string.Equals(e.PropertyName, nameof(ThemeColorSlotViewModel.IsSelected), StringComparison.Ordinal))
+            {
+                if (slot.IsSelected)
+                    SelectedThemeColorSlot = slot;
+                return;
+            }
+
+            if (!string.Equals(e.PropertyName, nameof(ThemeColorSlotViewModel.Hex), StringComparison.Ordinal))
+                return;
+
+            RefreshThemeEditorPreview();
+            if (_isInitialized && IsCustomThemeSelected)
+                ApplyThemePreview();
+
+            TriggerAutoSave();
+        }
+
         private void OnNestedPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (sender is BackupDestinationViewModel dest &&
@@ -1154,6 +1325,145 @@ namespace VaultSync.UI
         private void AddTagColorRule()
         {
             TagColorRules.Add(new TagColorRuleViewModel());
+        }
+
+        private void InitializeThemeEditor()
+        {
+            ThemeColorSlots.Clear();
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Background", "Background", "#101218"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Surface", "Cards", "#181B24"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("SurfaceAlt", "Raised surfaces", "#222635"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Accent", "Accent", "#4F8DFF"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("TextPrimary", "Primary text", "#FFFFFF"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("TextSecondary", "Secondary text", "#B3B8C7"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Success", "Success", "#4FF2B6"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Warning", "Warning", "#FFC766"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Danger", "Danger", "#FF7676"));
+
+            ThemePresets.Clear();
+            foreach (var preset in ThemeManager.GetThemePresets())
+            {
+                ThemePresets.Add(new ThemePresetOptionViewModel
+                {
+                    Name = preset.Name,
+                    Description = preset.Description,
+                    Palette = preset.Palette.Clone()
+                });
+            }
+
+            ThemePaletteSwatches.Clear();
+            foreach (var hex in new[]
+            {
+                "#101218", "#181B24", "#222635", "#2E3447", "#3B425B", "#F4F5F9", "#FFFFFF", "#E6E9F2",
+                "#4F8DFF", "#2663FF", "#4CC9F0", "#5AC88F", "#B983FF", "#FF8B4D", "#F857A6", "#FFC766",
+                "#32DFA0", "#4FF2B6", "#FFBF5F", "#FF7676", "#FF6A6A", "#AFC4D9", "#B3B8C7", "#5C6275"
+            })
+            {
+                ThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
+            }
+
+            SelectedThemeColorSlot = ThemeColorSlots.FirstOrDefault();
+        }
+
+        private void ApplyThemePreset(ThemePresetOptionViewModel? preset)
+        {
+            if (preset is null)
+                return;
+
+            SelectedTheme = "Custom";
+            LoadCustomTheme(preset.Palette.Clone());
+            SaveStatus = $"{preset.Name} preset applied.";
+        }
+
+        private void ApplyThemePaletteSwatch(ThemePaletteSwatchViewModel? swatch)
+        {
+            if (swatch is null || SelectedThemeColorSlot is null)
+                return;
+
+            SelectedThemeColorSlot.Hex = swatch.Hex;
+        }
+
+        private void ResetCustomTheme()
+        {
+            LoadCustomTheme(ThemeManager.GetDefaultCustomTheme());
+            SaveStatus = "Custom theme reset.";
+        }
+
+        private void LoadCustomTheme(ThemePaletteConfig? palette)
+        {
+            var theme = palette?.Clone() ?? ThemeManager.GetDefaultCustomTheme();
+            _customThemeName = string.IsNullOrWhiteSpace(theme.Name) ? "VaultSync Midnight" : theme.Name.Trim();
+            _customThemeBase = string.Equals(theme.BaseTheme, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+
+            SetThemeSlotHex("Background", theme.Background);
+            SetThemeSlotHex("Surface", theme.Surface);
+            SetThemeSlotHex("SurfaceAlt", theme.SurfaceAlt);
+            SetThemeSlotHex("Accent", theme.Accent);
+            SetThemeSlotHex("TextPrimary", theme.TextPrimary);
+            SetThemeSlotHex("TextSecondary", theme.TextSecondary);
+            SetThemeSlotHex("Success", theme.Success);
+            SetThemeSlotHex("Warning", theme.Warning);
+            SetThemeSlotHex("Danger", theme.Danger);
+
+            OnPropertyChanged(nameof(CustomThemeName));
+            OnPropertyChanged(nameof(CustomThemeBase));
+            RefreshThemeEditorPreview();
+
+            if (_isInitialized && IsCustomThemeSelected)
+                ApplyThemePreview();
+        }
+
+        private void SetThemeSlotHex(string slotId, string hex)
+        {
+            var slot = ThemeColorSlots.FirstOrDefault(x => string.Equals(x.Id, slotId, StringComparison.Ordinal));
+            if (slot is not null)
+                slot.Hex = hex;
+        }
+
+        private ThemePaletteConfig BuildCustomThemeConfig()
+        {
+            string Get(string slotId, string fallback)
+            {
+                return ThemeColorSlots.FirstOrDefault(x => string.Equals(x.Id, slotId, StringComparison.Ordinal))?.Hex ?? fallback;
+            }
+
+            return new ThemePaletteConfig
+            {
+                Name = string.IsNullOrWhiteSpace(CustomThemeName) ? "Custom theme" : CustomThemeName.Trim(),
+                BaseTheme = string.Equals(CustomThemeBase, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark",
+                Background = Get("Background", "#101218"),
+                Surface = Get("Surface", "#181B24"),
+                SurfaceAlt = Get("SurfaceAlt", "#222635"),
+                Accent = Get("Accent", "#4F8DFF"),
+                TextPrimary = Get("TextPrimary", "#FFFFFF"),
+                TextSecondary = Get("TextSecondary", "#B3B8C7"),
+                Success = Get("Success", "#4FF2B6"),
+                Warning = Get("Warning", "#FFC766"),
+                Danger = Get("Danger", "#FF7676")
+            };
+        }
+
+        private void ApplyThemePreview()
+        {
+            var appearance = new AppearanceConfig
+            {
+                Theme = NormalizeThemeOption(SelectedTheme),
+                CustomTheme = BuildCustomThemeConfig()
+            };
+
+            ThemeManager.ApplyAppearance(appearance);
+        }
+
+        private void RefreshThemeEditorPreview()
+        {
+            OnPropertyChanged(nameof(SelectedThemeColor));
+            OnPropertyChanged(nameof(SelectedThemeColorHex));
+            OnPropertyChanged(nameof(ThemePreviewBackground));
+            OnPropertyChanged(nameof(ThemePreviewSurface));
+            OnPropertyChanged(nameof(ThemePreviewSurfaceAlt));
+            OnPropertyChanged(nameof(ThemePreviewAccent));
+            OnPropertyChanged(nameof(ThemePreviewTextPrimary));
+            OnPropertyChanged(nameof(ThemePreviewTextSecondary));
         }
 
         private void RemoveTagColorRule(TagColorRuleViewModel? rule)
@@ -1234,15 +1544,11 @@ namespace VaultSync.UI
 
         private void ApplyThemeFromSelected()
         {
-            var app = Application.Current;
-            if (app is null) return;
-
-            app.RequestedThemeVariant = _selectedTheme switch
+            ThemeManager.ApplyAppearance(new AppearanceConfig
             {
-                "Dark"  => ThemeVariant.Dark,
-                "Light" => ThemeVariant.Light,
-                _       => ThemeVariant.Default  // Follow system
-            };
+                Theme = NormalizeThemeOption(_selectedTheme),
+                CustomTheme = BuildCustomThemeConfig()
+            });
         }
 
         private static string NormalizeThemeOption(string theme)
@@ -1251,6 +1557,7 @@ namespace VaultSync.UI
             {
                 "Dark"          => "Dark",
                 "Light"         => "Light",
+                "Custom"        => "Custom",
                 "Follow system" => "System",
                 "System"        => "System",
                 _               => "System"
@@ -1263,6 +1570,7 @@ namespace VaultSync.UI
             {
                 "Dark"  => "Dark",
                 "Light" => "Light",
+                "Custom" => "Custom",
                 _       => "Follow system"
             };
         }
@@ -1560,14 +1868,88 @@ namespace VaultSync.UI
             {
                 if (SetField(ref _selectedTheme, value))
                 {
+                    OnPropertyChanged(nameof(IsCustomThemeSelected));
                     if (_isInitialized)
                     {
-                        // change app theme live when dropdown changes
                         ApplyThemeFromSelected();
                     }
                 }
             }
         }
+
+        public bool IsCustomThemeSelected => string.Equals(SelectedTheme, "Custom", StringComparison.Ordinal);
+
+        public string CustomThemeName
+        {
+            get => _customThemeName;
+            set
+            {
+                var normalized = string.IsNullOrWhiteSpace(value) ? "Custom theme" : value.Trim();
+                if (!SetField(ref _customThemeName, normalized))
+                    return;
+
+                if (_isInitialized && IsCustomThemeSelected)
+                    ApplyThemePreview();
+            }
+        }
+
+        public string CustomThemeBase
+        {
+            get => _customThemeBase;
+            set
+            {
+                var normalized = string.Equals(value, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+                if (!SetField(ref _customThemeBase, normalized))
+                    return;
+
+                if (_isInitialized && IsCustomThemeSelected)
+                    ApplyThemePreview();
+            }
+        }
+
+        public ObservableCollection<string> CustomThemeBaseOptions { get; } = new() { "Dark", "Light" };
+
+        public ThemeColorSlotViewModel? SelectedThemeColorSlot
+        {
+            get => _selectedThemeColorSlot;
+            set
+            {
+                if (ReferenceEquals(_selectedThemeColorSlot, value) || value is null)
+                    return;
+
+                if (_selectedThemeColorSlot is not null)
+                    _selectedThemeColorSlot.IsSelected = false;
+
+                _selectedThemeColorSlot = value;
+                if (!_selectedThemeColorSlot.IsSelected)
+                    _selectedThemeColorSlot.IsSelected = true;
+
+                RefreshThemeEditorPreview();
+                _applyThemePaletteSwatchCommand?.RaiseCanExecuteChanged();
+                OnPropertyChanged(nameof(SelectedThemeColorSlot));
+            }
+        }
+
+        public Color SelectedThemeColor
+        {
+            get => SelectedThemeColorSlot?.SwatchColor ?? Color.Parse("#4F8DFF");
+            set
+            {
+                if (SelectedThemeColorSlot is null)
+                    return;
+
+                SelectedThemeColorSlot.Hex = $"#{value.R:X2}{value.G:X2}{value.B:X2}";
+            }
+        }
+
+        public string SelectedThemeColorHex => SelectedThemeColorSlot?.Hex ?? "#4F8DFF";
+
+        public string ThemePreviewBackground => ThemeColorSlots.FirstOrDefault(x => x.Id == "Background")?.Hex ?? "#101218";
+        public string ThemePreviewSurface => ThemeColorSlots.FirstOrDefault(x => x.Id == "Surface")?.Hex ?? "#181B24";
+        public string ThemePreviewSurfaceAlt => ThemeColorSlots.FirstOrDefault(x => x.Id == "SurfaceAlt")?.Hex ?? "#222635";
+        public string ThemePreviewAccent => ThemeColorSlots.FirstOrDefault(x => x.Id == "Accent")?.Hex ?? "#4F8DFF";
+        public string ThemePreviewTextPrimary => ThemeColorSlots.FirstOrDefault(x => x.Id == "TextPrimary")?.Hex ?? "#FFFFFF";
+        public string ThemePreviewTextSecondary => ThemeColorSlots.FirstOrDefault(x => x.Id == "TextSecondary")?.Hex ?? "#B3B8C7";
 
         public bool ShowWindowOnTrayActions
         {
@@ -2283,6 +2665,9 @@ namespace VaultSync.UI
     public ICommand AddTagColorRuleCommand => _addTagColorRuleCommand!;
     public ICommand RemoveTagColorRuleCommand => _removeTagColorRuleCommand!;
     public ICommand ResetTagColorRuleCommand => _resetTagColorRuleCommand!;
+        public ICommand ApplyThemePresetCommand => _applyThemePresetCommand!;
+        public ICommand ApplyThemePaletteSwatchCommand => _applyThemePaletteSwatchCommand!;
+        public ICommand ResetCustomThemeCommand => _resetCustomThemeCommand!;
         public ICommand OpenHelpCommand { get; }
         public ICommand ExportTelemetryCommand { get; }
         public ICommand OpenLogConsoleCommand { get; }
@@ -2330,7 +2715,15 @@ namespace VaultSync.UI
         public string MaintenanceWindowMetadataLabel => L("Settings.Advanced.MaintenanceMetadataRefresh", "Refresh metadata history");
         public string MaintenanceWindowMetadataDescription => L("Settings.Advanced.MaintenanceMetadataRefreshDescription", "Import latest destination metadata during the maintenance run.");
         public string TagColorsLabel => L("Settings.Appearance.TagColors", "Tag colors");
-        public string TagColorsDescription => L("Settings.Appearance.TagColorsDescription", "Override app-wide tag chip colors with hex values.");
+        public string TagColorsDescription => L("Settings.Appearance.TagColorsDescription", "Override app-wide tag chip colors with a visual picker.");
+        public string ThemeEditorLabel => "Custom theme";
+        public string ThemeEditorDescription => "Build a theme from stable app colors, apply a preset, then fine-tune it with the visual picker.";
+        public string ThemePresetsLabel => "Starter themes";
+        public string ThemePaletteLabel => "Quick palette";
+        public string ThemeBaseLabel => "Base";
+        public string ThemeNameLabel => "Theme name";
+        public string ThemePickerLabel => "Edit selected color";
+        public string ThemePreviewLabel => "Preview";
         public string EncryptionOpenTimeoutLabel =>
             L("Settings.Encryption.OpenTimeoutLabel", "Encrypted open timeout (minutes)");
         public string EncryptionOpenTimeoutDescription =>
@@ -3834,6 +4227,25 @@ namespace VaultSync.UI
 
                     cfg.Appearance.TagColors = importedTagColors;
                 }
+
+                if (appearance.TryGetProperty(nameof(cfg.Appearance.CustomTheme), out var customTheme) &&
+                    customTheme.ValueKind == JsonValueKind.Object)
+                {
+                    cfg.Appearance.CustomTheme = new ThemePaletteConfig
+                    {
+                        Name = ReadString(customTheme, nameof(ThemePaletteConfig.Name), cfg.Appearance.CustomTheme.Name),
+                        BaseTheme = ReadString(customTheme, nameof(ThemePaletteConfig.BaseTheme), cfg.Appearance.CustomTheme.BaseTheme),
+                        Background = ReadString(customTheme, nameof(ThemePaletteConfig.Background), cfg.Appearance.CustomTheme.Background),
+                        Surface = ReadString(customTheme, nameof(ThemePaletteConfig.Surface), cfg.Appearance.CustomTheme.Surface),
+                        SurfaceAlt = ReadString(customTheme, nameof(ThemePaletteConfig.SurfaceAlt), cfg.Appearance.CustomTheme.SurfaceAlt),
+                        Accent = ReadString(customTheme, nameof(ThemePaletteConfig.Accent), cfg.Appearance.CustomTheme.Accent),
+                        TextPrimary = ReadString(customTheme, nameof(ThemePaletteConfig.TextPrimary), cfg.Appearance.CustomTheme.TextPrimary),
+                        TextSecondary = ReadString(customTheme, nameof(ThemePaletteConfig.TextSecondary), cfg.Appearance.CustomTheme.TextSecondary),
+                        Success = ReadString(customTheme, nameof(ThemePaletteConfig.Success), cfg.Appearance.CustomTheme.Success),
+                        Warning = ReadString(customTheme, nameof(ThemePaletteConfig.Warning), cfg.Appearance.CustomTheme.Warning),
+                        Danger = ReadString(customTheme, nameof(ThemePaletteConfig.Danger), cfg.Appearance.CustomTheme.Danger)
+                    };
+                }
             }
 
             if (redactedConfig.TryGetProperty("notifications", out var notifications))
@@ -3926,6 +4338,7 @@ namespace VaultSync.UI
             {
                 "Dark" => "Dark",
                 "Light" => "Light",
+                "Custom" => "Custom",
                 "Follow system" => "Follow system",
                 "System" => "Follow system",
                 _ => fallback

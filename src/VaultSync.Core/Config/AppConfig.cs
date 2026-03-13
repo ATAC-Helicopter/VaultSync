@@ -253,6 +253,7 @@ namespace VaultSync.Core.Config
         public bool    CompactLayout      { get; set; } = false;
         public bool    ShowProjectAvatars { get; set; } = true;
         public Dictionary<string, TagColorConfig> TagColors { get; set; } = new();
+        public ThemePaletteConfig CustomTheme { get; set; } = ThemePaletteConfig.CreateDefault();
     }
 
     public sealed class TagColorConfig
@@ -260,6 +261,41 @@ namespace VaultSync.Core.Config
         public string Background { get; set; } = string.Empty;
         public string Foreground { get; set; } = string.Empty;
         public string Border { get; set; } = string.Empty;
+    }
+
+    public sealed class ThemePaletteConfig
+    {
+        public string Name { get; set; } = "VaultSync Midnight";
+        public string BaseTheme { get; set; } = "Dark";
+        public string Background { get; set; } = "#101218";
+        public string Surface { get; set; } = "#181B24";
+        public string SurfaceAlt { get; set; } = "#222635";
+        public string Accent { get; set; } = "#4F8DFF";
+        public string TextPrimary { get; set; } = "#FFFFFF";
+        public string TextSecondary { get; set; } = "#B3B8C7";
+        public string Success { get; set; } = "#4FF2B6";
+        public string Warning { get; set; } = "#FFC766";
+        public string Danger { get; set; } = "#FF7676";
+
+        public ThemePaletteConfig Clone()
+        {
+            return new ThemePaletteConfig
+            {
+                Name = Name,
+                BaseTheme = BaseTheme,
+                Background = Background,
+                Surface = Surface,
+                SurfaceAlt = SurfaceAlt,
+                Accent = Accent,
+                TextPrimary = TextPrimary,
+                TextSecondary = TextSecondary,
+                Success = Success,
+                Warning = Warning,
+                Danger = Danger
+            };
+        }
+
+        public static ThemePaletteConfig CreateDefault() => new();
     }
 
     // -------- Notifications --------
