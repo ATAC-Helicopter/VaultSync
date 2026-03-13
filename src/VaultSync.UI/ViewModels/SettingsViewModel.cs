@@ -503,6 +503,7 @@ namespace VaultSync.UI
 
         public sealed class ThemePresetOptionViewModel
         {
+            public required string Id { get; init; }
             public required string Name { get; init; }
             public required string Description { get; init; }
             public required ThemePaletteConfig Palette { get; init; }
@@ -1330,23 +1331,24 @@ namespace VaultSync.UI
         private void InitializeThemeEditor()
         {
             ThemeColorSlots.Clear();
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Background", "Background", "#101218"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Surface", "Cards", "#181B24"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("SurfaceAlt", "Raised surfaces", "#222635"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Accent", "Accent", "#4F8DFF"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("TextPrimary", "Primary text", "#FFFFFF"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("TextSecondary", "Secondary text", "#B3B8C7"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Success", "Success", "#4FF2B6"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Warning", "Warning", "#FFC766"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Danger", "Danger", "#FF7676"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Background", L("Settings.Appearance.ThemeSlots.Background", "Background"), "#101218"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Surface", L("Settings.Appearance.ThemeSlots.Surface", "Cards"), "#181B24"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("SurfaceAlt", L("Settings.Appearance.ThemeSlots.SurfaceAlt", "Raised surfaces"), "#222635"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Accent", L("Settings.Appearance.ThemeSlots.Accent", "Accent"), "#4F8DFF"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("TextPrimary", L("Settings.Appearance.ThemeSlots.TextPrimary", "Primary text"), "#FFFFFF"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("TextSecondary", L("Settings.Appearance.ThemeSlots.TextSecondary", "Secondary text"), "#B3B8C7"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Success", L("Settings.Appearance.ThemeSlots.Success", "Success"), "#4FF2B6"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Warning", L("Settings.Appearance.ThemeSlots.Warning", "Warning"), "#FFC766"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Danger", L("Settings.Appearance.ThemeSlots.Danger", "Danger"), "#FF7676"));
 
             ThemePresets.Clear();
             foreach (var preset in ThemeManager.GetThemePresets())
             {
                 ThemePresets.Add(new ThemePresetOptionViewModel
                 {
-                    Name = preset.Name,
-                    Description = preset.Description,
+                    Id = preset.Id,
+                    Name = L($"Settings.Appearance.ThemePresets.{preset.Id}.Name", preset.Palette.Name),
+                    Description = L($"Settings.Appearance.ThemePresets.{preset.Id}.Description", preset.Description),
                     Palette = preset.Palette.Clone()
                 });
             }
@@ -1372,7 +1374,7 @@ namespace VaultSync.UI
 
             SelectedTheme = "Custom";
             LoadCustomTheme(preset.Palette.Clone());
-            SaveStatus = $"{preset.Name} preset applied.";
+            SaveStatus = string.Format(L("Settings.Appearance.ThemePresetApplied", "Theme preset applied: {0}."), preset.Name);
         }
 
         private void ApplyThemePaletteSwatch(ThemePaletteSwatchViewModel? swatch)
@@ -1386,13 +1388,15 @@ namespace VaultSync.UI
         private void ResetCustomTheme()
         {
             LoadCustomTheme(ThemeManager.GetDefaultCustomTheme());
-            SaveStatus = "Custom theme reset.";
+            SaveStatus = L("Settings.Appearance.ThemeReset", "Custom theme reset.");
         }
 
         private void LoadCustomTheme(ThemePaletteConfig? palette)
         {
             var theme = palette?.Clone() ?? ThemeManager.GetDefaultCustomTheme();
-            _customThemeName = string.IsNullOrWhiteSpace(theme.Name) ? "VaultSync Midnight" : theme.Name.Trim();
+            _customThemeName = string.IsNullOrWhiteSpace(theme.Name)
+                ? L("Settings.Appearance.ThemePresets.vaultsync-midnight.Name", "VaultSync Midnight")
+                : theme.Name.Trim();
             _customThemeBase = string.Equals(theme.BaseTheme, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
 
             SetThemeSlotHex("Background", theme.Background);
@@ -1429,7 +1433,7 @@ namespace VaultSync.UI
 
             return new ThemePaletteConfig
             {
-                Name = string.IsNullOrWhiteSpace(CustomThemeName) ? "Custom theme" : CustomThemeName.Trim(),
+                Name = string.IsNullOrWhiteSpace(CustomThemeName) ? L("Settings.Appearance.ThemeNameDefault", "Custom theme") : CustomThemeName.Trim(),
                 BaseTheme = string.Equals(CustomThemeBase, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark",
                 Background = Get("Background", "#101218"),
                 Surface = Get("Surface", "#181B24"),
@@ -1884,7 +1888,9 @@ namespace VaultSync.UI
             get => _customThemeName;
             set
             {
-                var normalized = string.IsNullOrWhiteSpace(value) ? "Custom theme" : value.Trim();
+                var normalized = string.IsNullOrWhiteSpace(value)
+                    ? L("Settings.Appearance.ThemeNameDefault", "Custom theme")
+                    : value.Trim();
                 if (!SetField(ref _customThemeName, normalized))
                     return;
 
@@ -2715,15 +2721,19 @@ namespace VaultSync.UI
         public string MaintenanceWindowMetadataLabel => L("Settings.Advanced.MaintenanceMetadataRefresh", "Refresh metadata history");
         public string MaintenanceWindowMetadataDescription => L("Settings.Advanced.MaintenanceMetadataRefreshDescription", "Import latest destination metadata during the maintenance run.");
         public string TagColorsLabel => L("Settings.Appearance.TagColors", "Tag colors");
-        public string TagColorsDescription => L("Settings.Appearance.TagColorsDescription", "Override app-wide tag chip colors with a visual picker.");
-        public string ThemeEditorLabel => "Custom theme";
-        public string ThemeEditorDescription => "Build a theme from stable app colors, apply a preset, then fine-tune it with the visual picker.";
-        public string ThemePresetsLabel => "Starter themes";
-        public string ThemePaletteLabel => "Quick palette";
-        public string ThemeBaseLabel => "Base";
-        public string ThemeNameLabel => "Theme name";
-        public string ThemePickerLabel => "Edit selected color";
-        public string ThemePreviewLabel => "Preview";
+        public string TagColorsDescription => L("Settings.Appearance.TagColors.Description", "Override app-wide tag chip colors with a visual picker.");
+        public string ThemeEditorLabel => L("Settings.Appearance.ThemeEditor.Label", "Custom theme");
+        public string ThemeEditorDescription => L("Settings.Appearance.ThemeEditor.Description", "Build a theme from stable app colors, apply a preset, then fine-tune it with the visual picker.");
+        public string ThemePresetsLabel => L("Settings.Appearance.ThemeEditor.Presets", "Starter themes");
+        public string ThemePaletteLabel => L("Settings.Appearance.ThemeEditor.Palette", "Quick palette");
+        public string ThemeBaseLabel => L("Settings.Appearance.ThemeEditor.BaseTheme", "Base");
+        public string ThemeNameLabel => L("Settings.Appearance.ThemeEditor.Name", "Theme name");
+        public string ThemePickerLabel => L("Settings.Appearance.ThemeEditor.Picker", "Edit selected color");
+        public string ThemePreviewLabel => L("Settings.Appearance.ThemeEditor.Preview", "Preview");
+        public string ThemePreviewAccentLabel => L("Settings.Appearance.ThemeEditor.PreviewAccent", "Accent");
+        public string ThemePreviewSurfaceLabel => L("Settings.Appearance.ThemeEditor.PreviewSurface", "Surface");
+        public string ThemePreviewPrimaryLabel => L("Settings.Appearance.ThemeEditor.PreviewPrimary", "Primary text");
+        public string ThemePreviewSecondaryLabel => L("Settings.Appearance.ThemeEditor.PreviewSecondary", "Secondary text stays readable while you tune the palette.");
         public string EncryptionOpenTimeoutLabel =>
             L("Settings.Encryption.OpenTimeoutLabel", "Encrypted open timeout (minutes)");
         public string EncryptionOpenTimeoutDescription =>

@@ -9,19 +9,17 @@ namespace VaultSync.UI.Services
 {
     public static class ThemeManager
     {
-        private sealed record ThemePresetDefinition(string Id, string Name, string Description, ThemePaletteConfig Palette);
+        private sealed record ThemePresetDefinition(string Id, string Description, ThemePaletteConfig Palette);
 
         private static readonly ThemePresetDefinition[] ThemePresets =
         {
             new(
                 "vaultsync-midnight",
-                "VaultSync Midnight",
-                "The default dark VaultSync look with a cool blue accent.",
+                "Default VaultSync dark palette with balanced contrast and blue accents.",
                 new ThemePaletteConfig()),
             new(
                 "studio-light",
-                "Studio Light",
-                "A clean bright theme with sharper contrast for daytime work.",
+                "Clean light workspace with crisp surfaces and a bright accent.",
                 new ThemePaletteConfig
                 {
                     Name = "Studio Light",
@@ -38,8 +36,7 @@ namespace VaultSync.UI.Services
                 }),
             new(
                 "ember",
-                "Ember",
-                "Warm charcoal surfaces with a copper accent.",
+                "Warm dark tones with orange accents for a softer night theme.",
                 new ThemePaletteConfig
                 {
                     Name = "Ember",
@@ -56,8 +53,7 @@ namespace VaultSync.UI.Services
                 }),
             new(
                 "fjord",
-                "Fjord",
-                "Deep slate blues with a crisp aqua accent.",
+                "Cool blue dark theme inspired by colder, calmer palettes.",
                 new ThemePaletteConfig
                 {
                     Name = "Fjord",
@@ -74,8 +70,7 @@ namespace VaultSync.UI.Services
                 }),
             new(
                 "forest",
-                "Forest",
-                "Muted green accents with grounded dark neutrals.",
+                "Muted green palette built for long sessions and lower visual noise.",
                 new ThemePaletteConfig
                 {
                     Name = "Forest",
@@ -92,8 +87,7 @@ namespace VaultSync.UI.Services
                 }),
             new(
                 "orchid",
-                "Orchid",
-                "A brighter creative theme with magenta-blue contrast.",
+                "High-contrast violet palette with a brighter accent pop.",
                 new ThemePaletteConfig
                 {
                     Name = "Orchid",
@@ -110,11 +104,11 @@ namespace VaultSync.UI.Services
                 })
         };
 
-        public static IReadOnlyList<(string Id, string Name, string Description, ThemePaletteConfig Palette)> GetThemePresets()
+        public static IReadOnlyList<(string Id, string Description, ThemePaletteConfig Palette)> GetThemePresets()
         {
-            var items = new List<(string, string, string, ThemePaletteConfig)>(ThemePresets.Length);
+            var items = new List<(string, string, ThemePaletteConfig)>(ThemePresets.Length);
             foreach (var preset in ThemePresets)
-                items.Add((preset.Id, preset.Name, preset.Description, preset.Palette.Clone()));
+                items.Add((preset.Id, preset.Description, preset.Palette.Clone()));
             return items;
         }
 

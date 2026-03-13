@@ -1405,7 +1405,7 @@
                                 <Border Background="{Binding ThemePreviewAccent}"
                                         CornerRadius="999"
                                         Padding="10,4">
-                                  <TextBlock Text="Accent"
+                                  <TextBlock Text="{Binding DataContext.ThemePreviewAccentLabel, ElementName=Root}"
                                              Foreground="{Binding ThemePreviewBackground}"
                                              FontWeight="SemiBold" />
                                 </Border>
@@ -1414,17 +1414,17 @@
                                         BorderThickness="1"
                                         CornerRadius="999"
                                         Padding="10,4">
-                                  <TextBlock Text="Surface"
+                                  <TextBlock Text="{Binding DataContext.ThemePreviewSurfaceLabel, ElementName=Root}"
                                              Foreground="{Binding ThemePreviewTextPrimary}" />
                                 </Border>
                               </StackPanel>
                             </Border>
                             <StackPanel Grid.Row="2"
                                         Spacing="4">
-                              <TextBlock Text="Primary text"
+                              <TextBlock Text="{Binding DataContext.ThemePreviewPrimaryLabel, ElementName=Root}"
                                          Foreground="{Binding ThemePreviewTextPrimary}"
                                          FontWeight="SemiBold" />
-                              <TextBlock Text="Secondary text stays readable while you tune the palette."
+                              <TextBlock Text="{Binding DataContext.ThemePreviewSecondaryLabel, ElementName=Root}"
                                          Foreground="{Binding ThemePreviewTextSecondary}"
                                          FontSize="11" />
                             </StackPanel>
@@ -1988,7 +1988,7 @@
 
                                       <TextBlock Grid.Row="2"
                                                  Grid.Column="0"
-                                                 Text="{infra:LocalizedString Key=Backups.Restore.ModeLabel}" />
+                                                 Text="{infra:LocalizedString Key=Backups.Restore.Mode.Label}" />
 
                                       <TextBlock Grid.Row="2"
                                                  Grid.Column="1"
@@ -1999,7 +1999,7 @@
 
                                       <TextBlock Grid.Row="3"
                                                  Grid.Column="0"
-                                                 Text="{infra:LocalizedString Key=Backups.Verification.Policy}" />
+                                                 Text="{infra:LocalizedString Key=Backups.Verification.Policy.Label}" />
 
                                       <TextBlock Grid.Row="3"
                                                  Grid.Column="1"
