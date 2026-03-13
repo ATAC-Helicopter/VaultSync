@@ -1050,11 +1050,15 @@
   - Current status:
     - In progress: startup now records stable constructor/deferred-startup phase checkpoints and persists the latest timeline summary in advanced config.
     - In progress: Settings diagnostics and support bundles now surface the last startup timeline with total duration and per-phase elapsed milliseconds.
-- [ ] `VS-1716` `P2` Retention simulation mode in settings.
-  - Scope: preview retention outcomes per project/destination without deleting data.
-  - What it takes:
-    - reuse the same retention planner as real delete flow.
-    - make simulation output diffable against current protected/kept/deleted buckets.
+- [ ] `VS-1716` `P2` Retention simulation mode in settings. _(In progress)_
+    - Scope: preview retention outcomes per project/destination without deleting data.
+    - What it takes:
+      - reuse the same retention planner as real delete flow.
+      - make simulation output diffable against current protected/kept/deleted buckets.
+    - Current status:
+      - Added a retention simulation service that reuses the retention preflight and delete planner without mutating data.
+      - Added Settings > Backups simulation UI with per-project reclaim/block summaries.
+      - Next pass should add richer bucket breakdowns and destination-aware grouping in the preview output.
   - Acceptance:
     - Simulation output matches actual retention behavior on subsequent apply.
     - Protected backups are always highlighted as retained.

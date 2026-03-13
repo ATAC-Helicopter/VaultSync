@@ -115,6 +115,10 @@ namespace VaultSync.UI
         private string _updateCheckErrorText = string.Empty;
         private string _updateDiagnosticsText = string.Empty;
         private string _startupDiagnosticsText = string.Empty;
+        private string _retentionSimulationStatus = string.Empty;
+        private string _retentionSimulationSummary = string.Empty;
+        private string _retentionSimulationDetails = string.Empty;
+        private bool _isRetentionSimulationBusy;
         private string _rsyncStatusHint = string.Empty;
         private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
@@ -126,6 +130,7 @@ namespace VaultSync.UI
         private RelayCommand? _applyBackupIndexRepairPlanCommand;
         private RelayCommand? _acceptProjectMetadataConflictCommand;
         private RelayCommand? _keepLocalProjectMetadataConflictCommand;
+        private RelayCommand? _runRetentionSimulationCommand;
         private BackupIndexRepairPlan? _currentBackupIndexRepairPlan;
         private string _backupIndexRepairStatus = string.Empty;
         private string _backupIndexRepairSummary = string.Empty;
@@ -270,6 +275,7 @@ namespace VaultSync.UI
             _keepLocalProjectMetadataConflictCommand = new RelayCommand(
                 parameter => KeepLocalProjectMetadataConflict(parameter as ProjectMetadataConflictItemViewModel),
                 parameter => parameter is ProjectMetadataConflictItemViewModel && !IsBackupIndexRepairBusy);
+            _runRetentionSimulationCommand = new RelayCommand(_ => RunRetentionSimulation(), _ => !IsRetentionSimulationBusy);
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
             ClearBackupEncryptionPasswordCommand = new RelayCommand(_ => ClearBackupEncryptionPassword());
@@ -1342,6 +1348,24 @@ namespace VaultSync.UI
             private set => SetField(ref _projectMetadataConflictStatus, value);
         }
 
+        public string RetentionSimulationStatus
+        {
+            get => _retentionSimulationStatus;
+            private set => SetField(ref _retentionSimulationStatus, value);
+        }
+
+        public string RetentionSimulationSummary
+        {
+            get => _retentionSimulationSummary;
+            private set => SetField(ref _retentionSimulationSummary, value);
+        }
+
+        public string RetentionSimulationDetails
+        {
+            get => _retentionSimulationDetails;
+            private set => SetField(ref _retentionSimulationDetails, value);
+        }
+
         public bool IsBackupIndexRepairBusy
         {
             get => _isBackupIndexRepairBusy;
@@ -1351,6 +1375,18 @@ namespace VaultSync.UI
                     return;
 
                 RaiseRepairCommandStateChanged();
+            }
+        }
+
+        public bool IsRetentionSimulationBusy
+        {
+            get => _isRetentionSimulationBusy;
+            private set
+            {
+                if (!SetField(ref _isRetentionSimulationBusy, value))
+                    return;
+
+                _runRetentionSimulationCommand?.RaiseCanExecuteChanged();
             }
         }
 
@@ -1950,6 +1986,7 @@ namespace VaultSync.UI
         public ICommand ApplyBackupIndexRepairPlanCommand => _applyBackupIndexRepairPlanCommand!;
         public ICommand AcceptProjectMetadataConflictCommand => _acceptProjectMetadataConflictCommand!;
         public ICommand KeepLocalProjectMetadataConflictCommand => _keepLocalProjectMetadataConflictCommand!;
+        public ICommand RunRetentionSimulationCommand => _runRetentionSimulationCommand!;
         public ICommand RefreshHistoryCommand { get; }
         public ICommand SetBackupEncryptionPasswordCommand { get; }
         public ICommand ClearBackupEncryptionPasswordCommand { get; }
@@ -2723,9 +2760,158 @@ namespace VaultSync.UI
             _ = RunDetachedAsync(ImportSupportBundleAsync, nameof(ImportSupportBundleAsync));
         }
 
+        private void RunRetentionSimulation()
+        {
+            _ = RunDetachedAsync(RunRetentionSimulationAsync, nameof(RunRetentionSimulationAsync));
+        }
+
+        private async Task RunRetentionSimulationAsync()
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => IsRetentionSimulationBusy = true);
+            DiagnosticsLogger.Record("Retention simulation started.");
+
+            try
+            {
+                var result = await Task.Run(() =>
+                {
+                    var cfg = AppConfigStore.Load();
+                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    var service = new BackupRetentionSimulationService(repo);
+                    return service.Simulate(ClampInt(cfg.Backups.MaxSnapshotsPerProject, 1, 999, 20));
+                }).ConfigureAwait(false);
+
+                var status = result.AffectedProjectCount == 0
+                    ? L("Settings.Backups.RetentionSimulationClear", "No projects currently exceed the retention cap.")
+                    : string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.Backups.RetentionSimulationReady", "Retention simulation ready for {0} project(s)."),
+                        result.AffectedProjectCount);
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    RetentionSimulationSummary = BuildRetentionSimulationSummary(result);
+                    RetentionSimulationDetails = BuildRetentionSimulationDetails(result);
+                    RetentionSimulationStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Info,
+                        L("Settings.Backups.RetentionSimulationTitle", "Retention simulation"));
+                });
+                DiagnosticsLogger.Record(
+                    $"Retention simulation complete. Projects={result.AffectedProjectCount}; SuggestedDeletes={result.SuggestedDeleteCount}; BlockedProjects={result.BlockedProjectCount}.");
+            }
+            catch (Exception ex)
+            {
+                var status = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Backups.RetentionSimulationFailed", "Retention simulation failed: {0}"),
+                    ex.Message);
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    RetentionSimulationStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Error,
+                        L("Settings.Backups.RetentionSimulationTitle", "Retention simulation"));
+                });
+                DiagnosticsLogger.Record($"Retention simulation failed. {ex.GetType().Name} - {ex.Message}");
+            }
+            finally
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => IsRetentionSimulationBusy = false);
+            }
+        }
+
         private void ScanBackupIndexRepairPlan()
         {
             _ = RunDetachedAsync(ScanBackupIndexRepairPlanAsync, nameof(ScanBackupIndexRepairPlanAsync));
+        }
+
+        private string BuildRetentionSimulationSummary(BackupRetentionSimulationResult result)
+        {
+            if (result.AffectedProjectCount == 0)
+            {
+                return L("Settings.Backups.RetentionSimulationSummaryClear", "No projects currently exceed the retention cap.");
+            }
+
+            return string.Format(
+                CultureInfo.CurrentCulture,
+                L(
+                    "Settings.Backups.RetentionSimulationSummary",
+                    "Affected projects: {0} · Suggested deletes: {1} · Reclaimable bytes: {2} · Blocked projects: {3}"),
+                result.AffectedProjectCount,
+                result.SuggestedDeleteCount,
+                FormatByteSize(result.SuggestedDeleteBytes),
+                result.BlockedProjectCount);
+        }
+
+        private string BuildRetentionSimulationDetails(BackupRetentionSimulationResult result)
+        {
+            if (result.Projects.Count == 0)
+                return string.Empty;
+
+            var lines = new List<string>
+            {
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Backups.RetentionSimulationConfigLine", "Retention cap: keep {0} snapshots per project."),
+                    result.MaxSnapshotsPerProject)
+            };
+
+            foreach (var project in result.Projects
+                         .OrderByDescending(item => item.SelectedDeleteBytes)
+                         .ThenByDescending(item => item.DeleteQuota)
+                         .ThenBy(item => item.ProjectName, StringComparer.CurrentCultureIgnoreCase))
+            {
+                var line = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L(
+                        "Settings.Backups.RetentionSimulationProjectLine",
+                        "{0}: backups {1}, delete quota {2}, suggested deletes {3}, reclaim {4}, valid restore points {5}, blocked {6}"),
+                    project.ProjectName,
+                    project.BackupCount,
+                    project.DeleteQuota,
+                    project.SelectedDeleteCount,
+                    FormatByteSize(project.SelectedDeleteBytes),
+                    project.ValidRestorePointCount,
+                    project.CanPrune ? L("Common.No", "No") : L("Common.Yes", "Yes"));
+
+                if (!project.CanPrune)
+                {
+                    line = $"{line} ({project.PreflightCode})";
+                }
+
+                lines.Add(line);
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static string FormatByteSize(long bytes)
+        {
+            const double Kb = 1024d;
+            const double Mb = Kb * 1024d;
+            const double Gb = Mb * 1024d;
+
+            if (bytes >= Gb)
+            {
+                return $"{bytes / Gb:0.##} GB";
+            }
+
+            if (bytes >= Mb)
+            {
+                return $"{bytes / Mb:0.##} MB";
+            }
+
+            if (bytes >= Kb)
+            {
+                return $"{bytes / Kb:0.##} KB";
+            }
+
+            return $"{bytes} B";
         }
 
         private async Task ScanBackupIndexRepairPlanAsync()
@@ -3637,3 +3823,4 @@ namespace VaultSync.UI
         public bool ShowPassword { get => _showPassword; set => SetField(ref _showPassword, value); }
     }
 }
+

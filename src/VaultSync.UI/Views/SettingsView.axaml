@@ -278,6 +278,44 @@
                            HorizontalAlignment="Right" />
                 </Grid>
 
+                <StackPanel Spacing="6"
+                            Margin="0,6,0,0">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="10">
+                    <StackPanel Grid.Column="0"
+                                Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RetentionSimulationLabel}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RetentionSimulationDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="settings-ghost"
+                            Command="{Binding RunRetentionSimulationCommand}">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RetentionSimulationRun}" />
+                    </Button>
+                  </Grid>
+                  <TextBlock Text="{Binding RetentionSimulationSummary}"
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="11"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding RetentionSimulationSummary, Converter={StaticResource StringNotEmptyConverter}}" />
+                  <Border Padding="10"
+                          CornerRadius="10"
+                          Background="{DynamicResource VsCardHighlightBrush}"
+                          IsVisible="{Binding RetentionSimulationDetails, Converter={StaticResource StringNotEmptyConverter}}">
+                    <ScrollViewer MaxHeight="140"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                      <TextBlock Text="{Binding RetentionSimulationDetails}"
+                                 FontFamily="Cascadia Code, Consolas, monospace"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </ScrollViewer>
+                  </Border>
+                </StackPanel>
+
                 <!-- Confirm before deleting backups -->
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">
