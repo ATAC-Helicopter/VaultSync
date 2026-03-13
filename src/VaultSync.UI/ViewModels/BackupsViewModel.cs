@@ -78,6 +78,8 @@ namespace VaultSync.UI.ViewModels
         private readonly List<BackupSnapshotItem> _filteredSnapshots = new();
         private readonly Dictionary<string, ProjectBackupItem> _projectLookupById =
             new Dictionary<string, ProjectBackupItem>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, DestinationQuotaPlan> _destinationQuotaPlansById =
+            new Dictionary<string, DestinationQuotaPlan>(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, PendingBackupUpdate> _pendingActiveBackupUpdates = new();
         private readonly DispatcherTimer _activeBackupFlushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
 
@@ -1709,6 +1711,7 @@ namespace VaultSync.UI.ViewModels
                     IsActive = dest.Active,
                     IsConfigurable = allowToggle
                 };
+                ApplyDestinationQuotaPlan(item);
                 item.PropertyChanged += OnDestinationItemPropertyChanged;
                 DestinationStatuses.Add(item);
             }
@@ -2960,6 +2963,7 @@ namespace VaultSync.UI.ViewModels
                 }
             }
             var backupList = dedupBackups.Values.ToList();
+            RefreshDestinationQuotaPlans(config, backupList);
             var snapshotById = LoadSnapshotLookup(config, backupList);
             var projectSignature = ComputeProjectSignature(projectList);
             var backupSignature = ComputeBackupSignature(backupList);
@@ -3151,6 +3155,88 @@ namespace VaultSync.UI.ViewModels
             _lastProjectSignature = projectSignature;
             _lastBackupSignature = backupSignature;
             _lastAutoBackupSignature = autoSignature;
+        }
+
+        private void RefreshDestinationQuotaPlans(AppConfig config, IEnumerable<Backup> backups)
+        {
+            _destinationQuotaPlansById.Clear();
+
+            var planner = new DestinationQuotaPlanner();
+            foreach (var plan in planner.BuildPlans(config.Backups.Destinations ?? new List<BackupDestination>(), backups))
+            {
+                _destinationQuotaPlansById[plan.DestinationId] = plan;
+            }
+
+            foreach (var item in DestinationStatuses)
+            {
+                ApplyDestinationQuotaPlan(item);
+            }
+        }
+
+        private void ApplyDestinationQuotaPlan(DestinationStatusItem item)
+        {
+            if (!_destinationQuotaPlansById.TryGetValue(item.Id, out var plan))
+            {
+                item.StoredBytesText = string.Empty;
+                item.CleanupSuggestionText = string.Empty;
+                return;
+            }
+
+            item.StoredBytesText = string.Format(
+                CultureInfo.CurrentCulture,
+                Lf("Backups.Destinations.StoredBytes", "Stored: {0}"),
+                BackupSnapshotItem.FormatSize(plan.StoredBytes));
+
+            if (!plan.SoftQuotaBytes.HasValue)
+            {
+                item.CleanupSuggestionText = string.Empty;
+                return;
+            }
+
+            var usageLabel = string.Format(
+                CultureInfo.CurrentCulture,
+                Lf("Backups.Destinations.QuotaUsage", "Quota: {0} of {1} ({2}% warn)"),
+                BackupSnapshotItem.FormatSize(plan.StoredBytes),
+                BackupSnapshotItem.FormatSize(plan.SoftQuotaBytes.Value),
+                plan.WarningPercent);
+
+            if (!plan.ExceedsWarningThreshold)
+            {
+                item.CleanupSuggestionText = usageLabel;
+                return;
+            }
+
+            if (plan.SuggestedCandidateCount <= 0)
+            {
+                item.CleanupSuggestionText = string.Format(
+                    CultureInfo.CurrentCulture,
+                    Lf(
+                        "Backups.Destinations.CleanupBlocked",
+                        "{0} No unprotected backups are currently available to get back under the warning threshold."),
+                    usageLabel);
+                return;
+            }
+
+            var cleanupLabel = string.Format(
+                CultureInfo.CurrentCulture,
+                Lf(
+                    "Backups.Destinations.CleanupSuggestion",
+                    "{0} Suggest deleting {1} unprotected backups to reclaim about {2}."),
+                usageLabel,
+                plan.SuggestedCandidateCount,
+                BackupSnapshotItem.FormatSize(plan.SuggestedReclaimBytes));
+
+            if (!plan.CanReachWarningThreshold)
+            {
+                cleanupLabel = string.Format(
+                    CultureInfo.CurrentCulture,
+                    Lf(
+                        "Backups.Destinations.CleanupPartial",
+                        "{0} Even deleting all eligible unprotected backups would still leave this destination above the warning threshold."),
+                    cleanupLabel);
+            }
+
+            item.CleanupSuggestionText = cleanupLabel;
         }
 
         public void RefreshActiveViewState()
@@ -4158,6 +4244,36 @@ namespace VaultSync.UI.ViewModels
                 return string.Format(CultureInfo.CurrentCulture, label, local);
             }
         }
+
+        private string _storedBytesText = string.Empty;
+        public string StoredBytesText
+        {
+            get => _storedBytesText;
+            set
+            {
+                if (SetField(ref _storedBytesText, value))
+                {
+                    OnPropertyChanged(nameof(HasStoredBytesText));
+                }
+            }
+        }
+
+        public bool HasStoredBytesText => !string.IsNullOrWhiteSpace(StoredBytesText);
+
+        private string _cleanupSuggestionText = string.Empty;
+        public string CleanupSuggestionText
+        {
+            get => _cleanupSuggestionText;
+            set
+            {
+                if (SetField(ref _cleanupSuggestionText, value))
+                {
+                    OnPropertyChanged(nameof(HasCleanupSuggestionText));
+                }
+            }
+        }
+
+        public bool HasCleanupSuggestionText => !string.IsNullOrWhiteSpace(CleanupSuggestionText);
 
         public static string GetId(BackupDestination dest) =>
             DestinationIdentityService.GetId(dest);

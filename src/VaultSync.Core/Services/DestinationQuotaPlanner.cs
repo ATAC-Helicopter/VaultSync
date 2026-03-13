@@ -1,0 +1,129 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using VaultSync.Core.Config;
+using VaultSync.Core.Models;
+
+namespace VaultSync.Core.Services;
+
+public sealed class DestinationQuotaPlanner
+{
+    public IReadOnlyList<DestinationQuotaPlan> BuildPlans(
+        IEnumerable<BackupDestination> destinations,
+        IEnumerable<Backup> backups)
+    {
+        ArgumentNullException.ThrowIfNull(destinations);
+        ArgumentNullException.ThrowIfNull(backups);
+
+        var backupList = backups.ToList();
+        var plans = new List<DestinationQuotaPlan>();
+
+        foreach (var destination in destinations)
+        {
+            var destinationId = DestinationIdentityService.GetId(destination);
+            var normalizedPath = NormalizePath(destination.Path);
+            var matchingBackups = backupList
+                .Where(backup => string.Equals(NormalizePath(backup.DestinationPath), normalizedPath, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(backup => backup.CreatedUtc)
+                .ThenByDescending(backup => backup.TotalBytes)
+                .ThenBy(backup => backup.Id)
+                .ToList();
+
+            var storedBytes = matchingBackups.Sum(backup => backup.TotalBytes);
+            var softQuotaBytes = NormalizeQuotaBytes(destination.SoftQuotaBytes);
+            var warningPercent = Math.Clamp(destination.QuotaWarningPercent, 50, 99);
+
+            if (!softQuotaBytes.HasValue)
+            {
+                plans.Add(new DestinationQuotaPlan(
+                    destinationId,
+                    destination.Path ?? string.Empty,
+                    storedBytes,
+                    null,
+                    warningPercent,
+                    null,
+                    false,
+                    false,
+                    0,
+                    0,
+                    false));
+                continue;
+            }
+
+            var warningBytes = (long)Math.Floor(softQuotaBytes.Value * (warningPercent / 100d));
+            if (warningBytes <= 0)
+                warningBytes = softQuotaBytes.Value;
+
+            var exceedsWarning = storedBytes >= warningBytes;
+            var exceedsQuota = storedBytes > softQuotaBytes.Value;
+            var reclaimTargetBytes = Math.Max(0, storedBytes - warningBytes);
+
+            var candidateCount = 0;
+            var candidateBytes = 0L;
+            if (reclaimTargetBytes > 0)
+            {
+                foreach (var candidate in matchingBackups.Where(backup => !backup.IsProtected))
+                {
+                    candidateCount++;
+                    candidateBytes += candidate.TotalBytes;
+                    if (candidateBytes >= reclaimTargetBytes)
+                        break;
+                }
+            }
+
+            var canReachWarningThreshold = reclaimTargetBytes == 0 || candidateBytes >= reclaimTargetBytes;
+
+            plans.Add(new DestinationQuotaPlan(
+                destinationId,
+                destination.Path ?? string.Empty,
+                storedBytes,
+                softQuotaBytes,
+                warningPercent,
+                warningBytes,
+                exceedsWarning,
+                exceedsQuota,
+                reclaimTargetBytes,
+                candidateCount,
+                canReachWarningThreshold));
+        }
+
+        return plans;
+    }
+
+    private static long? NormalizeQuotaBytes(long? value) =>
+        value.HasValue && value.Value > 0 ? value.Value : null;
+
+    private static string NormalizePath(string? path)
+    {
+        var raw = (path ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        var slashNormalized = raw.Replace('/', '\\');
+        try
+        {
+            if (slashNormalized.StartsWith(@"\\", StringComparison.Ordinal))
+                return slashNormalized.TrimEnd('\\').ToLowerInvariant();
+
+            return Path.GetFullPath(slashNormalized).TrimEnd('\\').ToLowerInvariant();
+        }
+        catch
+        {
+            return slashNormalized.TrimEnd('\\').ToLowerInvariant();
+        }
+    }
+}
+
+public sealed record DestinationQuotaPlan(
+    string DestinationId,
+    string DestinationPath,
+    long StoredBytes,
+    long? SoftQuotaBytes,
+    int WarningPercent,
+    long? WarningBytes,
+    bool ExceedsWarningThreshold,
+    bool ExceedsQuota,
+    long SuggestedReclaimBytes,
+    int SuggestedCandidateCount,
+    bool CanReachWarningThreshold);

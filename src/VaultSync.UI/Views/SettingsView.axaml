@@ -892,7 +892,7 @@
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
                             <Grid ColumnDefinitions="Auto,*,Auto"
-                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="10"
                                   RowSpacing="8">
                               <Grid x:Name="DestinationBasicsRow"
@@ -1026,7 +1026,34 @@
                                          Text="{Binding RetryBackoffSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                               </Grid>
 
-                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="5" Orientation="Vertical" Spacing="4" Margin="0,4,0,0">
+                              <Grid Grid.Column="0"
+                                    Grid.ColumnSpan="3"
+                                    Grid.Row="5"
+                                    ColumnDefinitions="*,Auto,Auto"
+                                    ColumnSpacing="8"
+                                    Margin="0,2,0,0">
+                                <StackPanel Grid.Column="0"
+                                            Spacing="2"
+                                            VerticalAlignment="Center">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.QuotaPolicyLabel}" />
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.QuotaPolicyDescription}"
+                                             Foreground="{StaticResource TextSecondary}"
+                                             FontSize="11"
+                                             TextWrapping="Wrap" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1"
+                                         Width="80"
+                                         HorizontalContentAlignment="Center"
+                                         ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.QuotaGbTooltip}"
+                                         Text="{Binding SoftQuotaGb, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBox Grid.Column="2"
+                                         Width="70"
+                                         HorizontalContentAlignment="Center"
+                                         ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.QuotaWarningTooltip}"
+                                         Text="{Binding QuotaWarningPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                              </Grid>
+
+                              <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="6" Orientation="Vertical" Spacing="4" Margin="0,4,0,0">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.CredentialWarning}"
                                            Foreground="{DynamicResource WarningTextBrush}"
                                            FontSize="11"

@@ -11,6 +11,7 @@
 - [VS-1714] Added a first Doctor workflow surface in Settings > Advanced so repair actions now run through dry-run/Fix now guidance and write audit-friendly diagnostics entries.
 - [VS-1717] Added cross-machine project metadata conflict tracking plus Doctor resolution actions so destination, restore mode, verification, and tag differences no longer overwrite local values silently on import.
 - [VS-1710] Added an opt-in maintenance window in Settings > Advanced so integrity scan, repair dry-run, and metadata refresh jobs can run on a schedule inside a configured time range.
+- [VS-1703] Added per-destination soft quota settings plus cleanup suggestions so VaultSync can estimate reclaimable space from unprotected backups before a target fills up.
 ### Changed
 - [VS-1707] Settings > Advanced now shows persisted updater release-target diagnostics (decision, channel, selected candidate, stable candidate, beta candidate, error) and support bundles now export the same trace for operator triage.
 - [VS-1708] Patch availability now runs an explicit `current -> target` preflight (base-version match, target-version match, manifest presence, file list presence) before the patch button is offered, and the resulting eligibility trace is persisted/exported with updater diagnostics.

@@ -159,7 +159,9 @@ namespace VaultSync.UI
             bool AutoImportMetadata,
             bool ForceMetadataBackfill,
             int RetryMaxAttempts,
-            int RetryBackoffSeconds);
+            int RetryBackoffSeconds,
+            long? SoftQuotaBytes,
+            int QuotaWarningPercent);
 
         private sealed record CredentialSnapshot(
             string Name,
@@ -404,7 +406,11 @@ namespace VaultSync.UI
                         AutoImportMetadata = dest.AutoImportMetadata,
                         ForceMetadataBackfill = dest.ForceMetadataBackfill,
                         RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
-                        RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10)
+                        RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
+                        SoftQuotaGb = dest.SoftQuotaBytes.HasValue && dest.SoftQuotaBytes.Value > 0
+                            ? Math.Round(dest.SoftQuotaBytes.Value / 1024d / 1024d / 1024d, 2)
+                            : 0d,
+                        QuotaWarningPercent = ClampInt(dest.QuotaWarningPercent, 50, 99, 85)
                     };
 
                     vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
@@ -431,7 +437,9 @@ namespace VaultSync.UI
                     AutoImportMetadata = true,
                     ForceMetadataBackfill = false,
                     RetryMaxAttempts = 1,
-                    RetryBackoffSeconds = 10
+                    RetryBackoffSeconds = 10,
+                    SoftQuotaGb = 0d,
+                    QuotaWarningPercent = 85
                 });
             }
             }
@@ -525,7 +533,9 @@ namespace VaultSync.UI
                     AutoImportMetadata: d.AutoImportMetadata,
                     ForceMetadataBackfill: d.ForceMetadataBackfill,
                     RetryMaxAttempts: ClampInt(d.RetryMaxAttempts, 1, 10, 1),
-                    RetryBackoffSeconds: ClampInt(d.RetryBackoffSeconds, 1, 300, 10)))
+                    RetryBackoffSeconds: ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
+                    SoftQuotaBytes: ToQuotaBytes(d.SoftQuotaGb),
+                    QuotaWarningPercent: ClampInt(d.QuotaWarningPercent, 50, 99, 85)))
                 .ToList();
 
             var credentialSnapshot = CredentialProfiles
@@ -603,7 +613,9 @@ namespace VaultSync.UI
                 AutoImportMetadata = d.AutoImportMetadata,
                 ForceMetadataBackfill = d.ForceMetadataBackfill,
                 RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
-                RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10)
+                RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
+                SoftQuotaBytes = d.SoftQuotaBytes,
+                QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
             }).ToList();
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
@@ -718,6 +730,19 @@ namespace VaultSync.UI
                     if (notifyOnError)
                     {
                         SaveStatus = $"Duplicate destination alias '{dest.Alias}'.";
+                        GlobalNotificationCenter.Instance.Show(
+                            SaveStatus,
+                            NotificationSeverity.Error,
+                            "Destination validation");
+                    }
+                    return false;
+                }
+
+                if (dest.SoftQuotaGb < 0)
+                {
+                    if (notifyOnError)
+                    {
+                        SaveStatus = "Destination quota must be 0 GB or higher.";
                         GlobalNotificationCenter.Instance.Show(
                             SaveStatus,
                             NotificationSeverity.Error,
@@ -2222,7 +2247,9 @@ namespace VaultSync.UI
                 AutoUnmount    = dest.AutoUnmount,
                 CredentialName = dest.CredentialName,
                 RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
-                RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10)
+                RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
+                SoftQuotaBytes = ToQuotaBytes(dest.SoftQuotaGb),
+                QuotaWarningPercent = ClampInt(dest.QuotaWarningPercent, 50, 99, 85)
             };
 
             var result = await Task.Run(() =>
@@ -2462,9 +2489,23 @@ namespace VaultSync.UI
                 Active = true,
                 PreMounted = true,
                 RetryMaxAttempts = 1,
-                RetryBackoffSeconds = 10
+                RetryBackoffSeconds = 10,
+                SoftQuotaGb = 0d,
+                QuotaWarningPercent = 85
             });
             RefreshLegacyVisibility();
+        }
+
+        private static long? ToQuotaBytes(double valueGb)
+        {
+            if (valueGb <= 0)
+                return null;
+
+            var bytes = valueGb * 1024d * 1024d * 1024d;
+            if (bytes < 1d)
+                return null;
+
+            return (long)Math.Round(bytes, MidpointRounding.AwayFromZero);
         }
 
         private void RemoveDestination(BackupDestinationViewModel? dest)
@@ -3539,6 +3580,20 @@ namespace VaultSync.UI
         {
             get => _retryBackoffSeconds;
             set => SetField(ref _retryBackoffSeconds, Math.Clamp(value, 1, 300));
+        }
+
+        private double _softQuotaGb;
+        public double SoftQuotaGb
+        {
+            get => _softQuotaGb;
+            set => SetField(ref _softQuotaGb, Math.Clamp(value, 0d, 1024d * 1024d));
+        }
+
+        private int _quotaWarningPercent = 85;
+        public int QuotaWarningPercent
+        {
+            get => _quotaWarningPercent;
+            set => SetField(ref _quotaWarningPercent, Math.Clamp(value, 50, 99));
         }
 
         private string _lastTestStatus = string.Empty;

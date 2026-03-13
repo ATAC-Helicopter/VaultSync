@@ -229,6 +229,15 @@ namespace VaultSync.Core.Config
         /// When null, VaultSync will probe before the first archive upload and cache the result.
         /// </summary>
         public int? ArchiveUploadBufferBytes { get; set; } = null;
+        /// <summary>
+        /// Optional soft quota target in bytes for backups written to this destination.
+        /// When null or 0, VaultSync will not compute quota suggestions for the destination.
+        /// </summary>
+        public long? SoftQuotaBytes { get; set; } = null;
+        /// <summary>
+        /// Warning threshold percentage within the soft quota where VaultSync starts suggesting cleanup.
+        /// </summary>
+        public int QuotaWarningPercent { get; set; } = 85;
     }
 
     // -------- Appearance --------

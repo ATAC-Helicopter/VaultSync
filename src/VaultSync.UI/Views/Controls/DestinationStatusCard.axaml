@@ -36,6 +36,9 @@
     <Style Selector="UserControl.compact TextBlock.path">
       <Setter Property="FontSize" Value="8" />
     </Style>
+    <Style Selector="UserControl.compact TextBlock.quota-detail">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
     <Style Selector="UserControl.compact TextBlock.status">
       <Setter Property="FontSize" Value="8.5" />
     </Style>
@@ -47,6 +50,9 @@
       <Setter Property="Width" Value="6" />
       <Setter Property="Height" Value="6" />
       <Setter Property="CornerRadius" Value="3" />
+    </Style>
+    <Style Selector="UserControl.tray TextBlock.quota-detail">
+      <Setter Property="IsVisible" Value="False" />
     </Style>
   </UserControl.Styles>
 
@@ -85,6 +91,19 @@
                    FontSize="11"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    TextTrimming="CharacterEllipsis" />
+        <TextBlock Classes="path quota-detail"
+                   Text="{Binding StoredBytesText}"
+                   FontSize="10"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   TextTrimming="CharacterEllipsis"
+                   IsVisible="{Binding HasStoredBytesText}" />
+        <TextBlock Classes="path quota-detail"
+                   Text="{Binding CleanupSuggestionText}"
+                   FontSize="10"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   MaxLines="3"
+                   IsVisible="{Binding HasCleanupSuggestionText}" />
       </StackPanel>
       <StackPanel Grid.Column="2"
                   Orientation="Horizontal"

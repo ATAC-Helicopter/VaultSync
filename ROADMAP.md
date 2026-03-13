@@ -899,12 +899,15 @@
   - Acceptance:
     - UI shows what will be relinked before apply.
     - User can run safe repair without touching valid mappings.
-- [ ] `VS-1703` `P1` Destination quotas + cleanup suggestions.
+- [ ] `VS-1703` `P1` Destination quotas + cleanup suggestions. _(In progress)_
   - Scope: per-destination quota targets, warning thresholds, and suggested cleanup candidates by age/size/protection status.
   - What it takes:
     - persist per-destination quota/threshold settings.
     - rank cleanup candidates from existing retention metadata without suggesting protected backups.
     - surface “space to recover” estimates and tie into health/readiness panels.
+  - Current status:
+    - Settings > Advanced now persists per-destination soft quota and warning-threshold values.
+    - Backups destination cards now show stored bytes plus cleanup suggestions derived from unprotected backup candidates only.
   - Acceptance:
     - Quota warnings are visible before destination exhaustion.
     - Cleanup suggestions never include protected backups as auto-candidates.
