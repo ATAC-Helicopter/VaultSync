@@ -1066,5 +1066,6 @@
   "Backups.Compare.NewerAdded": "+ added {0}",
   "Backups.Compare.NewerModified": "~ modified {0}",
   "Backups.Compare.NewerDeleted": "- deleted {0}",
-  "Backups.Compare.NewerNet": "Δ net {0}"
+  "Backups.Compare.NewerNet": "Δ net {0}",
+  "Projects.Tags.Color.Close": "Close color"
 }

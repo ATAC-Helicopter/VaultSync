@@ -767,7 +767,7 @@
                             CornerRadius="12"
                             Background="{DynamicResource Surface2}"
                             Foreground="{DynamicResource TextPrimaryBrush}">
-                      <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Open}" />
+                      <TextBlock Text="{Binding DataContext.ProjectTagColorToggleLabel, ElementName=Root}" />
                     </Button>
                     <Border CornerRadius="999"
                             Padding="12,4"

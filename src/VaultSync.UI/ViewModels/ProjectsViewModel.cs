@@ -218,6 +218,7 @@ public class ProjectsViewModel : ViewModelBase
             ConsumeProjectTagInputDelimiters();
             OnPropertyChanged(nameof(CanEditProjectTagColor));
             OnPropertyChanged(nameof(ProjectTagColorTarget));
+            OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
             _toggleProjectTagColorEditorCommand.RaiseCanExecuteChanged();
             _applyProjectTagColorCommand.RaiseCanExecuteChanged();
             _resetProjectTagColorCommand.RaiseCanExecuteChanged();
@@ -234,8 +235,19 @@ public class ProjectsViewModel : ViewModelBase
     public bool IsProjectTagColorEditorOpen
     {
         get => _isProjectTagColorEditorOpen;
-        set => SetProperty(ref _isProjectTagColorEditorOpen, value);
+        set
+        {
+            if (!SetProperty(ref _isProjectTagColorEditorOpen, value))
+                return;
+
+            OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
+        }
     }
+
+    public string ProjectTagColorToggleLabel =>
+        IsProjectTagColorEditorOpen
+            ? L("Projects.Tags.Color.Close", "Close color")
+            : L("Projects.Tags.Color.Open", "Custom color");
 
     public string ProjectTagColorTarget => (ProjectTagInput ?? string.Empty).Trim();
 
