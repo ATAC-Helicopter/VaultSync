@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels;
 
 namespace VaultSync.UI.Views

@@ -630,6 +630,7 @@ namespace VaultSync.UI.ViewModels
                         _          => L("Dashboard.Activity.SnapshotCreated", "Snapshot created")
                     };
                     var tagsDisplay = string.Empty;
+                    var tagChips = Array.Empty<ProjectTagChip>();
                     if (project is not null)
                     {
                         var tags = (project.Tags ?? string.Empty)
@@ -641,6 +642,7 @@ namespace VaultSync.UI.ViewModels
                             .ToArray();
                         if (tags.Length > 0)
                             tagsDisplay = string.Join(" - ", tags);
+                        tagChips = ProjectTagAppearance.CreateChips(project.Tags, max: 3).ToArray();
                     }
                     var when = a.WhenUtc.ToLocalTime().ToString("g");
 
@@ -660,7 +662,7 @@ namespace VaultSync.UI.ViewModels
                         dotBrush = GetBrush(Colors.Gray);
                     }
 
-                    activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush, tagsDisplay));
+                    activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush, tagsDisplay, tagChips));
                 }
 
                 ActivityItems.Clear();
@@ -1980,13 +1982,14 @@ namespace VaultSync.UI.ViewModels
             private static readonly IBrush DotGrayBrush = new ImmutableSolidColorBrush(Colors.Gray);
 
             // New constructor: allow passing an explicit brush (used when we want per-project colors).
-            public ActivityItem(string title, string subtitle, string when, IBrush dotBrush, string projectTagsDisplay = "")
+            public ActivityItem(string title, string subtitle, string when, IBrush dotBrush, string projectTagsDisplay = "", IEnumerable<ProjectTagChip>? projectTagChips = null)
             {
                 Title    = title;
                 Subtitle = subtitle;
                 When     = when;
                 DotBrush = dotBrush;
                 ProjectTagsDisplay = projectTagsDisplay ?? string.Empty;
+                ProjectTagChips = new ObservableCollection<ProjectTagChip>(projectTagChips ?? Array.Empty<ProjectTagChip>());
             }
 
             // Backwards-compatible constructor for simple fixed dots.
@@ -2009,7 +2012,8 @@ namespace VaultSync.UI.ViewModels
             public string When { get; }
             public IBrush DotBrush { get; }
             public string ProjectTagsDisplay { get; }
-            public bool HasProjectTags => !string.IsNullOrWhiteSpace(ProjectTagsDisplay);
+            public ObservableCollection<ProjectTagChip> ProjectTagChips { get; }
+            public bool HasProjectTags => ProjectTagChips.Count > 0;
         }
     }
 }

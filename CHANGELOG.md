@@ -12,6 +12,7 @@
 - [VS-1717] Added cross-machine project metadata conflict tracking plus Doctor resolution actions so destination, restore mode, verification, and tag differences no longer overwrite local values silently on import.
 - [VS-1710] Added an opt-in maintenance window in Settings > Advanced so integrity scan, repair dry-run, and metadata refresh jobs can run on a schedule inside a configured time range.
 - [VS-1703] Added per-destination soft quota settings plus cleanup suggestions so VaultSync can estimate reclaimable space from unprotected backups before a target fills up.
+- [VS-1721] Added an app-wide tag color editor in Settings so custom chip colors can be applied consistently across Projects, Backups, and Dashboard activity.
 ### Changed
 - [VS-1707] Settings > Advanced now shows persisted updater release-target diagnostics (decision, channel, selected candidate, stable candidate, beta candidate, error) and support bundles now export the same trace for operator triage.
 - [VS-1708] Patch availability now runs an explicit `current -> target` preflight (base-version match, target-version match, manifest presence, file list presence) before the patch button is offered, and the resulting eligibility trace is persisted/exported with updater diagnostics.
@@ -27,6 +28,7 @@
 - [VS-1713] Restore-readiness summaries and dashboard pills now format through localized UI copy instead of shipping hard-coded English readiness counts and fallback headlines.
 ### Fixed
 - [BUG-17002] Restored corrupted bundled Noto Sans font assets so UI text rendering no longer depends on invalid HTML placeholders stored as `.ttf` files.
+- [BUG-17003] Projects now fall back to registered database entries when folder discovery is empty or partial, so the Projects page still renders tracked projects instead of appearing blank.
 - [BUG-17001] Doctor backup-repair and metadata-conflict workflows now marshal command-state and status updates onto the UI thread, removing Avalonia `Call from invalid thread` traces during detached scan/apply operations.
 - [BUG-16023] Track restore runtime localization parity so active restore status never falls back to raw localization keys (currently surfaced by `Backups.Status.Restoring`).
 - [BUG-16024] Track restore-mode dropdown rendering parity so restore confirmation never falls back to `View not found for RestoreModeOption` for either option.

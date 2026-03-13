@@ -174,7 +174,8 @@ public sealed class SupportBundleService
             {
                 config.Appearance.Theme,
                 config.Appearance.CompactLayout,
-                config.Appearance.ShowProjectAvatars
+                config.Appearance.ShowProjectAvatars,
+                config.Appearance.TagColors
             },
             notifications = new
             {

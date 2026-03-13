@@ -252,6 +252,14 @@ namespace VaultSync.Core.Config
         public string Theme { get; set; } = "System";
         public bool    CompactLayout      { get; set; } = false;
         public bool    ShowProjectAvatars { get; set; } = true;
+        public Dictionary<string, TagColorConfig> TagColors { get; set; } = new();
+    }
+
+    public sealed class TagColorConfig
+    {
+        public string Background { get; set; } = string.Empty;
+        public string Foreground { get; set; } = string.Empty;
+        public string Border { get; set; } = string.Empty;
     }
 
     // -------- Notifications --------

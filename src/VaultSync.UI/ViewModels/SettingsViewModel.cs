@@ -126,6 +126,9 @@ namespace VaultSync.UI
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
         private readonly SupportBundleService _supportBundleService = new();
+        private RelayCommand? _addTagColorRuleCommand;
+        private RelayCommand? _removeTagColorRuleCommand;
+        private RelayCommand? _resetTagColorRuleCommand;
         private RelayCommand? _scanBackupIndexRepairPlanCommand;
         private RelayCommand? _applyBackupIndexRepairPlanCommand;
         private RelayCommand? _acceptProjectMetadataConflictCommand;
@@ -194,8 +197,108 @@ namespace VaultSync.UI
             public required string ImportedTags { get; init; }
         }
 
+        public sealed class TagColorRuleViewModel : INotifyPropertyChanged
+        {
+            private string _tag = string.Empty;
+            private string _background = string.Empty;
+            private string _foreground = string.Empty;
+            private string _border = string.Empty;
+
+            public event PropertyChangedEventHandler? PropertyChanged;
+
+            public string Tag
+            {
+                get => _tag;
+                set
+                {
+                    if (_tag == (value ?? string.Empty))
+                        return;
+                    _tag = value ?? string.Empty;
+                    RaiseAll();
+                }
+            }
+
+            public string Background
+            {
+                get => _background;
+                set
+                {
+                    if (_background == (value ?? string.Empty))
+                        return;
+                    _background = value ?? string.Empty;
+                    RaiseAll();
+                }
+            }
+
+            public string Foreground
+            {
+                get => _foreground;
+                set
+                {
+                    if (_foreground == (value ?? string.Empty))
+                        return;
+                    _foreground = value ?? string.Empty;
+                    RaiseAll();
+                }
+            }
+
+            public string Border
+            {
+                get => _border;
+                set
+                {
+                    if (_border == (value ?? string.Empty))
+                        return;
+                    _border = value ?? string.Empty;
+                    RaiseAll();
+                }
+            }
+
+            public string PreviewTag => string.IsNullOrWhiteSpace(Tag) ? "Example" : Tag.Trim();
+
+            public string PreviewBackground
+            {
+                get
+                {
+                    var defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
+                    return ProjectTagAppearance.NormalizeHex(Background, defaults.Background);
+                }
+            }
+
+            public string PreviewForeground
+            {
+                get
+                {
+                    var defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
+                    return ProjectTagAppearance.NormalizeHex(Foreground, defaults.Foreground);
+                }
+            }
+
+            public string PreviewBorder
+            {
+                get
+                {
+                    var defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
+                    return ProjectTagAppearance.NormalizeHex(Border, defaults.Border);
+                }
+            }
+
+            private void RaiseAll()
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Tag)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Background)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Foreground)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Border)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewTag)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewBackground)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewForeground)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewBorder)));
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         public ObservableCollection<ProjectMetadataConflictItemViewModel> ProjectMetadataConflicts { get; } = new();
+        public ObservableCollection<TagColorRuleViewModel> TagColorRules { get; } = new();
 
         private void RefreshLegacyVisibility()
         {
@@ -237,6 +340,8 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(MaintenanceWindowRepairDescription));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataLabel));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
+                OnPropertyChanged(nameof(TagColorsLabel));
+                OnPropertyChanged(nameof(TagColorsDescription));
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -261,6 +366,9 @@ namespace VaultSync.UI
             TestDestinationCommand       = new RelayCommand(p => TestDestination(p as BackupDestinationViewModel));
             AddCredentialCommand         = new RelayCommand(_ => AddCredential());
             RemoveCredentialCommand      = new RelayCommand(p => RemoveCredential(p as NetworkCredentialViewModel));
+            _addTagColorRuleCommand      = new RelayCommand(_ => AddTagColorRule());
+            _removeTagColorRuleCommand   = new RelayCommand(p => RemoveTagColorRule(p as TagColorRuleViewModel), p => p is TagColorRuleViewModel);
+            _resetTagColorRuleCommand    = new RelayCommand(p => ResetTagColorRule(p as TagColorRuleViewModel), p => p is TagColorRuleViewModel);
             OpenHelpCommand              = new RelayCommand(_ => OpenHelp());
             ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());
             OpenLogConsoleCommand        = new RelayCommand(_ => OpenLogConsole());
@@ -286,6 +394,7 @@ namespace VaultSync.UI
 
             CredentialProfiles.CollectionChanged += OnCredentialProfilesCollectionChanged;
             Destinations.CollectionChanged       += OnDestinationsCollectionChanged;
+            TagColorRules.CollectionChanged      += OnTagColorRulesCollectionChanged;
 
             PropertyChanged += OnSettingsPropertyChanged;
 
@@ -458,6 +567,7 @@ namespace VaultSync.UI
             _selectedTheme      = DisplayThemeOption(cfg.Appearance.Theme ?? "System");
             _useCompactLayout   = cfg.Appearance.CompactLayout;
             _showProjectAvatars = cfg.Appearance.ShowProjectAvatars;
+            LoadTagColorRules(cfg);
 
             _notifyOnBackupSuccess   = cfg.Notifications.OnBackupSuccess;
             _notifyOnBackupFailure   = cfg.Notifications.OnBackupFailure;
@@ -681,6 +791,7 @@ namespace VaultSync.UI
             cfg.Appearance.Theme              = NormalizeThemeOption(SelectedTheme);
             cfg.Appearance.CompactLayout      = UseCompactLayout;
             cfg.Appearance.ShowProjectAvatars = ShowProjectAvatars;
+            cfg.Appearance.TagColors          = BuildTagColorConfig();
 
             cfg.Notifications.OnBackupSuccess    = NotifyOnBackupSuccess;
             cfg.Notifications.OnBackupFailure    = NotifyOnBackupFailure;
@@ -854,6 +965,28 @@ namespace VaultSync.UI
             TriggerAutoSave();
         }
 
+        private void OnTagColorRulesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems is not null)
+            {
+                foreach (TagColorRuleViewModel rule in e.NewItems)
+                    rule.PropertyChanged += OnTagColorRulePropertyChanged;
+            }
+
+            if (e.OldItems is not null)
+            {
+                foreach (TagColorRuleViewModel rule in e.OldItems)
+                    rule.PropertyChanged -= OnTagColorRulePropertyChanged;
+            }
+
+            TriggerAutoSave();
+        }
+
+        private void OnTagColorRulePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            TriggerAutoSave();
+        }
+
         private void OnNestedPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (sender is BackupDestinationViewModel dest &&
@@ -915,6 +1048,72 @@ namespace VaultSync.UI
                 return;
 
             TriggerAutoSave();
+        }
+
+        private void AddTagColorRule()
+        {
+            TagColorRules.Add(new TagColorRuleViewModel());
+        }
+
+        private void RemoveTagColorRule(TagColorRuleViewModel? rule)
+        {
+            if (rule is null)
+                return;
+
+            TagColorRules.Remove(rule);
+        }
+
+        private void ResetTagColorRule(TagColorRuleViewModel? rule)
+        {
+            if (rule is null)
+                return;
+
+            var defaults = ProjectTagChip.GetDefaultPalette(rule.PreviewTag);
+            rule.Background = defaults.Background;
+            rule.Foreground = defaults.Foreground;
+            rule.Border = defaults.Border;
+        }
+
+        private void LoadTagColorRules(AppConfig cfg)
+        {
+            TagColorRules.Clear();
+
+            var rules = cfg.Appearance.TagColors
+                .OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var entry in rules)
+            {
+                var defaults = ProjectTagChip.GetDefaultPalette(entry.Key);
+                TagColorRules.Add(new TagColorRuleViewModel
+                {
+                    Tag = entry.Key,
+                    Background = ProjectTagAppearance.NormalizeHex(entry.Value?.Background, defaults.Background),
+                    Foreground = ProjectTagAppearance.NormalizeHex(entry.Value?.Foreground, defaults.Foreground),
+                    Border = ProjectTagAppearance.NormalizeHex(entry.Value?.Border, defaults.Border)
+                });
+            }
+        }
+
+        private Dictionary<string, TagColorConfig> BuildTagColorConfig()
+        {
+            var rules = new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var rule in TagColorRules)
+            {
+                var tag = (rule.Tag ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(tag))
+                    continue;
+
+                var defaults = ProjectTagChip.GetDefaultPalette(tag);
+                rules[tag] = new TagColorConfig
+                {
+                    Background = ProjectTagAppearance.NormalizeHex(rule.Background, defaults.Background),
+                    Foreground = ProjectTagAppearance.NormalizeHex(rule.Foreground, defaults.Foreground),
+                    Border = ProjectTagAppearance.NormalizeHex(rule.Border, defaults.Border)
+                };
+            }
+
+            return rules;
         }
 
         public void RebindDestinationCredentials()
@@ -1980,6 +2179,9 @@ namespace VaultSync.UI
     public ICommand TestDestinationCommand { get; }
     public ICommand AddCredentialCommand { get; }
     public ICommand RemoveCredentialCommand { get; }
+    public ICommand AddTagColorRuleCommand => _addTagColorRuleCommand!;
+    public ICommand RemoveTagColorRuleCommand => _removeTagColorRuleCommand!;
+    public ICommand ResetTagColorRuleCommand => _resetTagColorRuleCommand!;
         public ICommand OpenHelpCommand { get; }
         public ICommand ExportTelemetryCommand { get; }
         public ICommand OpenLogConsoleCommand { get; }
@@ -2026,6 +2228,8 @@ namespace VaultSync.UI
         public string MaintenanceWindowRepairDescription => L("Settings.Advanced.MaintenanceRepairDryRunDescription", "Generate an exact repair plan without applying changes.");
         public string MaintenanceWindowMetadataLabel => L("Settings.Advanced.MaintenanceMetadataRefresh", "Refresh metadata history");
         public string MaintenanceWindowMetadataDescription => L("Settings.Advanced.MaintenanceMetadataRefreshDescription", "Import latest destination metadata during the maintenance run.");
+        public string TagColorsLabel => L("Settings.Appearance.TagColors", "Tag colors");
+        public string TagColorsDescription => L("Settings.Appearance.TagColorsDescription", "Override app-wide tag chip colors with hex values.");
         public string EncryptionOpenTimeoutLabel =>
             L("Settings.Encryption.OpenTimeoutLabel", "Encrypted open timeout (minutes)");
         public string EncryptionOpenTimeoutDescription =>
@@ -3500,6 +3704,35 @@ namespace VaultSync.UI
                     cfg.Appearance.Theme);
                 cfg.Appearance.CompactLayout = ReadBool(appearance, nameof(cfg.Appearance.CompactLayout), cfg.Appearance.CompactLayout);
                 cfg.Appearance.ShowProjectAvatars = ReadBool(appearance, nameof(cfg.Appearance.ShowProjectAvatars), cfg.Appearance.ShowProjectAvatars);
+
+                if (appearance.TryGetProperty(nameof(cfg.Appearance.TagColors), out var tagColors) &&
+                    tagColors.ValueKind == JsonValueKind.Object)
+                {
+                    var importedTagColors = new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var property in tagColors.EnumerateObject())
+                    {
+                        var tag = property.Name?.Trim() ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(tag) || property.Value.ValueKind != JsonValueKind.Object)
+                            continue;
+
+                        var defaults = ProjectTagChip.GetDefaultPalette(tag);
+                        importedTagColors[tag] = new TagColorConfig
+                        {
+                            Background = ProjectTagAppearance.NormalizeHex(
+                                ReadString(property.Value, nameof(TagColorConfig.Background), defaults.Background),
+                                defaults.Background),
+                            Foreground = ProjectTagAppearance.NormalizeHex(
+                                ReadString(property.Value, nameof(TagColorConfig.Foreground), defaults.Foreground),
+                                defaults.Foreground),
+                            Border = ProjectTagAppearance.NormalizeHex(
+                                ReadString(property.Value, nameof(TagColorConfig.Border), defaults.Border),
+                                defaults.Border)
+                        };
+                    }
+
+                    cfg.Appearance.TagColors = importedTagColors;
+                }
             }
 
             if (redactedConfig.TryGetProperty("notifications", out var notifications))

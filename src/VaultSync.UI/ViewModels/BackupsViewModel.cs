@@ -2151,6 +2151,12 @@ namespace VaultSync.UI.ViewModels
                     IsExpanded         = isExpanded
                 };
 
+                if (!string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out var chipSource))
+                {
+                    foreach (var chip in chipSource.ProjectTagChips)
+                        groupVm.ProjectTagChips.Add(chip);
+                }
+
                 foreach (var snap in ordered)
                     groupVm.Snapshots.Add(snap);
 
@@ -3890,7 +3896,8 @@ namespace VaultSync.UI.ViewModels
         public string? ProjectId { get; set; }
         public string ProjectName { get; set; } = string.Empty;
         public string ProjectTagsDisplay { get; set; } = string.Empty;
-        public bool HasProjectTags => !string.IsNullOrWhiteSpace(ProjectTagsDisplay);
+        public ObservableCollection<ProjectTagChip> ProjectTagChips { get; } = new ObservableCollection<ProjectTagChip>();
+        public bool HasProjectTags => ProjectTagChips.Count > 0;
         public string Summary { get; set; } = string.Empty;
         public string TotalSizeFormatted { get; set; } = string.Empty;
         public string LatestBackupDisplay { get; set; } = string.Empty;
@@ -3950,10 +3957,10 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        public ObservableCollection<string> ProjectTags { get; } = new ObservableCollection<string>();
-        public bool HasProjectTags => ProjectTags.Count > 0;
-        public string ProjectTagsDisplay => string.Join(", ", ProjectTags);
-        public string PrimaryTagSortKey => ProjectTags.FirstOrDefault() ?? string.Empty;
+        public ObservableCollection<ProjectTagChip> ProjectTagChips { get; } = new ObservableCollection<ProjectTagChip>();
+        public bool HasProjectTags => ProjectTagChips.Count > 0;
+        public string ProjectTagsDisplay => string.Join(", ", ProjectTagChips.Select(tag => tag.Value));
+        public string PrimaryTagSortKey => ProjectTagChips.FirstOrDefault()?.Value ?? string.Empty;
 
         public DateTime? LastBackupTime { get; set; }
         public int       SnapshotCount  { get; set; }
@@ -4234,15 +4241,9 @@ namespace VaultSync.UI.ViewModels
 
         private void RebuildProjectTags()
         {
-            ProjectTags.Clear();
-            var tags = (_projectTagsCsv ?? string.Empty)
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(tag => tag.Trim())
-                .Where(tag => !string.IsNullOrWhiteSpace(tag))
-                .Distinct(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var tag in tags)
-                ProjectTags.Add(tag);
+            ProjectTagChips.Clear();
+            foreach (var chip in ProjectTagAppearance.CreateChips(_projectTagsCsv))
+                ProjectTagChips.Add(chip);
         }
     }
 

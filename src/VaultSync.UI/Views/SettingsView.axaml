@@ -4,6 +4,7 @@
              xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
              xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
              x:Class="VaultSync.UI.SettingsView"
+             x:Name="Root"
              x:DataType="vm:SettingsViewModel"
              x:CompileBindings="False">
 
@@ -1261,6 +1262,89 @@
                                 VerticalAlignment="Center"
                                 IsChecked="{Binding ShowProjectAvatars, Mode=TwoWay}" />
                 </Grid>
+
+                <Border Background="{DynamicResource ItemBg}"
+                        BorderBrush="{DynamicResource DividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        Padding="12"
+                        Margin="0,6,0,0">
+                  <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                      <StackPanel Grid.Column="0" Spacing="2">
+                        <TextBlock Text="{Binding TagColorsLabel}" />
+                        <TextBlock Text="{Binding TagColorsDescription}"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11" />
+                      </StackPanel>
+                      <Button Grid.Column="1"
+                              Classes="settings-ghost"
+                              Command="{Binding AddTagColorRuleCommand}">
+                        <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Add}" />
+                      </Button>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding TagColorRules}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Background="{DynamicResource Surface2}"
+                                  BorderBrush="{DynamicResource DividerBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="12"
+                                  Padding="12"
+                                  Margin="0,0,0,6">
+                            <StackPanel Spacing="8">
+                              <Grid ColumnDefinitions="1.2*,*,*,*" ColumnSpacing="8">
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding Tag, Mode=TwoWay}"
+                                         Watermark="{infra:LocalizedString Key=Settings.Appearance.TagColors.TagWatermark}" />
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding Background, Mode=TwoWay}"
+                                         Watermark="{infra:LocalizedString Key=Settings.Appearance.TagColors.Background}" />
+                                <TextBox Grid.Column="2"
+                                         Text="{Binding Foreground, Mode=TwoWay}"
+                                         Watermark="{infra:LocalizedString Key=Settings.Appearance.TagColors.Foreground}" />
+                                <TextBox Grid.Column="3"
+                                         Text="{Binding Border, Mode=TwoWay}"
+                                         Watermark="{infra:LocalizedString Key=Settings.Appearance.TagColors.Border}" />
+                              </Grid>
+
+                              <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" VerticalAlignment="Center">
+                                <Border Grid.Column="0"
+                                        CornerRadius="999"
+                                        Background="{Binding PreviewBackground}"
+                                        BorderBrush="{Binding PreviewBorder}"
+                                        BorderThickness="1"
+                                        Padding="10,4">
+                                  <TextBlock Text="{Binding PreviewTag}"
+                                             FontWeight="SemiBold"
+                                             Foreground="{Binding PreviewForeground}" />
+                                </Border>
+                                <TextBlock Grid.Column="1"
+                                           Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Help}"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="2"
+                                        Classes="settings-ghost"
+                                        Command="{Binding DataContext.ResetTagColorRuleCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Reset}" />
+                                </Button>
+                                <Button Grid.Column="3"
+                                        Classes="settings-danger-outline"
+                                        Command="{Binding DataContext.RemoveTagColorRuleCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.Remove}" />
+                                </Button>
+                              </Grid>
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
 
               </StackPanel>
             </Border>

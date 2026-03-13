@@ -859,8 +859,8 @@
    - Goal: make update targeting, patch eligibility, and release gates auditable and support-friendly.
 4. Phase `D` (capacity + maintenance): `VS-1703` -> `VS-1720` -> `VS-1716` -> `VS-1710` -> `VS-1715` -> `VS-1713`
    - Goal: give operators quota planning, checkpointed retry resilience, maintenance windows, startup diagnostics, and restore-readiness signals.
-5. Phase `E` (dashboard refresh): `VS-1719`
-   - Goal: modernize the dashboard information hierarchy and visual clarity without losing VaultSync's current identity or familiar navigation.
+5. Phase `E` (dashboard refresh): `VS-1719` -> `VS-1721`
+   - Goal: modernize the dashboard information hierarchy and visual clarity without losing VaultSync's current identity or familiar navigation, then carry shared project-tag color semantics consistently across the app.
 
 ### Revised planning notes
 - `VS-1704` is moved out of `1.7` and into `1.8` as a deliberate scope cut.
@@ -1099,6 +1099,19 @@
   - Current status:
     - In progress: first-pass dashboard redesign is in place with a stronger operations header, wrap-based KPI layout, a dedicated recent-activity rail, and rebalanced trend/storage cards that behave more predictably in windowed layouts.
     - In progress: header and lower information groups were refined to reduce the random/duplicated feel and make readiness, activity, trend, and storage read as one consistent dashboard hierarchy.
+- [ ] `VS-1721` `P2` App-wide tag color editor and chip styling. _(In progress)_
+  - Scope: add a complete tag-color editor in Settings and apply those colors consistently wherever project tags render.
+  - What it takes:
+    - persist per-tag background/foreground/border overrides in appearance settings.
+    - render colored chips through one shared tag appearance helper across Projects, Backups, and Dashboard activity.
+    - preserve configured colors through settings export/import flows.
+  - Current status:
+    - In progress: shared tag appearance resolution now supports configurable colors, and Settings includes the first pass of a tag color editor with add/reset/remove actions.
+    - In progress: Projects, Backups, and Dashboard activity are being aligned to render the same configured chips app-wide.
+  - Acceptance:
+    - Tag colors can be added, edited, reset, and removed from Settings without breaking layout.
+    - The same tag uses the same colors anywhere it appears in the app.
+    - Support-bundle settings export/import preserves configured tag colors.
 - [ ] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(In progress)_
   - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
   - Current status:
@@ -1113,6 +1126,14 @@
   - Acceptance:
     - bundled font assets open as valid font binaries instead of text/HTML payloads.
     - UI text rendering no longer depends on unpredictable system fallback caused by broken embedded assets.
+
+- [ ] `BUG-17003` `P1` Projects page discovery fallback when filesystem scan is empty. _(In progress)_
+  - Scope: keep the Projects page populated from registered database projects when directory discovery returns no items or misses known projects.
+  - Current status:
+    - In progress: registered projects are now merged into the Projects page source list so tracked entries still render when folder discovery is unavailable or partial.
+  - Acceptance:
+    - Projects page no longer appears blank just because discovery root scanning returned zero items.
+    - Registered projects remain visible and selectable from stored metadata paths.
 
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.

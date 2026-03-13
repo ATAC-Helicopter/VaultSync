@@ -1130,7 +1130,7 @@
                                      FontSize="14"
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
-                          <ItemsControl ItemsSource="{Binding ProjectTags}"
+                          <ItemsControl ItemsSource="{Binding ProjectTagChips}"
                                         IsVisible="{Binding HasProjectTags}">
                             <ItemsControl.ItemsPanel>
                               <ItemsPanelTemplate>
@@ -1139,9 +1139,15 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                               <DataTemplate>
-                                <Border Classes="stat-pill sm info"
+                                <Border CornerRadius="999"
+                                        Background="{Binding Background}"
+                                        BorderBrush="{Binding Border}"
+                                        BorderThickness="1"
                                         Padding="{DynamicResource StatPillPadding}">
-                                  <TextBlock Text="{Binding}" FontSize="10" />
+                                  <TextBlock Text="{Binding Value}"
+                                             FontSize="10"
+                                             FontWeight="SemiBold"
+                                             Foreground="{Binding Foreground}" />
                                 </Border>
                               </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -1570,16 +1576,32 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            TextTrimming="CharacterEllipsis" />
-                                <Border Classes="backup-tag sm info"
-                                        IsVisible="{Binding HasProjectTags}"
-                                        HorizontalAlignment="Left"
-                                        MaxWidth="360"
-                                        ToolTip.Tip="{Binding ProjectTagsDisplay}">
-                                  <TextBlock Text="{Binding ProjectTagsDisplay}"
-                                             FontSize="10"
-                                             TextTrimming="CharacterEllipsis"
-                                             TextWrapping="NoWrap" />
-                                </Border>
+                                <ItemsControl ItemsSource="{Binding ProjectTagChips}"
+                                              IsVisible="{Binding HasProjectTags}"
+                                              MaxWidth="360">
+                                  <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                      <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4" />
+                                    </ItemsPanelTemplate>
+                                  </ItemsControl.ItemsPanel>
+                                  <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                      <Border CornerRadius="999"
+                                              Background="{Binding Background}"
+                                              BorderBrush="{Binding Border}"
+                                              BorderThickness="1"
+                                              Padding="8,3"
+                                              ToolTip.Tip="{Binding Value}">
+                                        <TextBlock Text="{Binding Value}"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{Binding Foreground}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   TextWrapping="NoWrap" />
+                                      </Border>
+                                    </DataTemplate>
+                                  </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                               </StackPanel>
                               <StackPanel Grid.Row="1"
                                           Grid.Column="1"

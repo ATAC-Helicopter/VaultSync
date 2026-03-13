@@ -542,6 +542,7 @@ public class ProjectsViewModel : ViewModelBase
 
         // Try to open the shared DB so we can enrich projects with real snapshot data.
         SqliteRepository? repo = null;
+        List<Project>? registeredProjects = null;
         Dictionary<string, Project>? projectsByName = null;
         IReadOnlyDictionary<int, (DateTime CreatedUtc, long TotalBytes)>? latestSnapshotsByProject = null;
         Dictionary<int, Backup>? latestBackupsByProject = null;
@@ -552,7 +553,8 @@ public class ProjectsViewModel : ViewModelBase
                 : GetDefaultDbPath();
 
             repo = new SqliteRepository(dbPath);
-            projectsByName = repo.GetAllProjects()
+            registeredProjects = repo.GetAllProjects().ToList();
+            projectsByName = registeredProjects
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
             latestSnapshotsByProject = repo.GetLatestSnapshotInfoByProject();
@@ -564,11 +566,46 @@ public class ProjectsViewModel : ViewModelBase
         {
         }
 
-        if (discovered.Count == 0)
+        var projectSources = new List<DiscoveredProject>(discovered);
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in discovered)
+        {
+            var normalized = NormalizeProjectPath(item.Path);
+            if (!string.IsNullOrWhiteSpace(normalized))
+                seenPaths.Add(normalized);
+        }
+
+        if (registeredProjects is { Count: > 0 })
+        {
+            foreach (var project in registeredProjects)
+            {
+                var rootPath = project.RootPath?.Trim();
+                if (string.IsNullOrWhiteSpace(rootPath))
+                    continue;
+
+                var normalizedRoot = NormalizeProjectPath(rootPath);
+                if (!string.IsNullOrWhiteSpace(normalizedRoot) && seenPaths.Contains(normalizedRoot))
+                    continue;
+
+                projectSources.Add(new DiscoveredProject(
+                    string.IsNullOrWhiteSpace(project.Name)
+                        ? Path.GetFileName(rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                        : project.Name,
+                    rootPath,
+                    null,
+                    null));
+
+                if (!string.IsNullOrWhiteSpace(normalizedRoot))
+                    seenPaths.Add(normalizedRoot);
+            }
+        }
+
+        if (projectSources.Count == 0)
             return new List<ProjectItemViewModel>();
 
         var items = new List<ProjectItemViewModel>();
-        foreach (var p in discovered)
+        foreach (var p in projectSources)
         {
             var normalizedPath = NormalizeProjectPath(p.Path);
             if (!string.IsNullOrWhiteSpace(normalizedPath) && hiddenPaths.Contains(normalizedPath))
@@ -936,8 +973,9 @@ public class ProjectsViewModel : ViewModelBase
         if (SelectedProject is null)
             return;
 
+        var config = ProjectTagAppearance.TryLoadConfig();
         foreach (var tag in ParseTags(SelectedProject.TagsCsv))
-            SelectedProjectTags.Add(ProjectTagChip.Create(tag));
+            SelectedProjectTags.Add(ProjectTagChip.Create(tag, config));
     }
 
     private void RefreshReusableProjectTags()
@@ -952,8 +990,9 @@ public class ProjectsViewModel : ViewModelBase
             .ToList();
 
         ReusableProjectTags.Clear();
+        var config = ProjectTagAppearance.TryLoadConfig();
         foreach (var tag in allTags)
-            ReusableProjectTags.Add(ProjectTagChip.Create(tag));
+            ReusableProjectTags.Add(ProjectTagChip.Create(tag, config));
 
         if (string.IsNullOrWhiteSpace(selected) ||
             allTags.Any(t => string.Equals(t, selected, StringComparison.OrdinalIgnoreCase)))
@@ -1048,7 +1087,7 @@ public class ProjectsViewModel : ViewModelBase
         if (SelectedProjectTags.Any(t => string.Equals(t.Value, token, StringComparison.OrdinalIgnoreCase)))
             return false;
 
-        SelectedProjectTags.Add(ProjectTagChip.Create(token));
+        SelectedProjectTags.Add(ProjectTagChip.Create(token, ProjectTagAppearance.TryLoadConfig()));
         return true;
     }
 
@@ -3331,8 +3370,9 @@ public class ProjectItemViewModel : ViewModelBase
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(4);
 
+        var config = ProjectTagAppearance.TryLoadConfig();
         foreach (var tag in tags)
-            TagChips.Add(ProjectTagChip.Create(tag));
+            TagChips.Add(ProjectTagChip.Create(tag, config));
     }
 
     private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
@@ -3393,40 +3433,6 @@ public sealed class ProjectGroupOption
     {
         return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
     }
-}
-
-public sealed class ProjectTagChip
-{
-    private static readonly (string Background, string Foreground, string Border)[] Palette =
-    {
-        ("#243A5A", "#D6E9FF", "#32598A"),
-        ("#2A4A3A", "#D9FDE9", "#3E7A5F"),
-        ("#4A3528", "#FFEAD6", "#8A5F3F"),
-        ("#3A2C4A", "#ECDDFF", "#6A4E8A"),
-        ("#3F2F2F", "#FFDCDC", "#8A5252"),
-        ("#2E414D", "#D8F0FF", "#4B7083"),
-    };
-
-    public static ProjectTagChip Create(string value)
-    {
-        var safe = (value ?? string.Empty).Trim();
-        var idx = Math.Abs(StringComparer.OrdinalIgnoreCase.GetHashCode(safe)) % Palette.Length;
-        var (background, foreground, border) = Palette[idx];
-        return new ProjectTagChip(safe, background, foreground, border);
-    }
-
-    private ProjectTagChip(string value, string background, string foreground, string border)
-    {
-        Value = value ?? string.Empty;
-        Background = background;
-        Foreground = foreground;
-        Border = border;
-    }
-
-    public string Value { get; }
-    public string Background { get; }
-    public string Foreground { get; }
-    public string Border { get; }
 }
 
 public sealed class EncryptionPolicyOption
