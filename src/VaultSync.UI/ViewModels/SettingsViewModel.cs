@@ -145,6 +145,7 @@ namespace VaultSync.UI
         private string _projectMetadataConflictStatus = string.Empty;
         private bool _isBackupIndexRepairBusy;
         private bool _showLegacyBackupLocation = true;
+        private bool _showAdvancedThemeControls;
         private string _customThemeName = "VaultSync Midnight";
         private string _customThemeBase = "Dark";
         private ThemeColorSlotViewModel? _selectedThemeColorSlot;
@@ -1882,6 +1883,12 @@ namespace VaultSync.UI
         }
 
         public bool IsCustomThemeSelected => string.Equals(SelectedTheme, "Custom", StringComparison.Ordinal);
+
+        public bool ShowAdvancedThemeControls
+        {
+            get => _showAdvancedThemeControls;
+            set => SetField(ref _showAdvancedThemeControls, value);
+        }
 
         public string CustomThemeName
         {

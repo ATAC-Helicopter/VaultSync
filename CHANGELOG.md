@@ -23,6 +23,7 @@
 - [VS-1718] Release gate now separates `PrePublish` warnings from `PostPublish` failures.
 - [VS-1715] Diagnostics now include a non-blocking startup timeline summary.
 - [VS-1721] Tag-color editing now lives primarily in Projects instead of a duplicate Settings workflow.
+- [VS-1722] Custom themes now include OLED Black, Deep Blue, and an optional advanced slider mode.
 - [BUG-17005] Simplified the custom theme editor with visible swatches and a cleaner spectrum-only picker.
 - [VS-1713] Backups and Dashboard now show a restore-readiness scorecard.
 - [VS-1719] Dashboard now uses a more coherent wrap-based information layout.

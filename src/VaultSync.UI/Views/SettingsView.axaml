@@ -77,7 +77,8 @@
       <Setter Property="MinHeight" Value="0" />
       <Setter Property="Template">
         <ControlTemplate>
-          <ContentPresenter HorizontalAlignment="Center"
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalAlignment="Center"
                             VerticalAlignment="Center" />
         </ControlTemplate>
       </Setter>
@@ -1346,9 +1347,21 @@
                               Padding="12">
                         <StackPanel Spacing="12">
                           <StackPanel Spacing="6">
-                            <TextBlock Text="{Binding ThemePaletteLabel}"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       FontSize="11" />
+                            <Grid ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="12">
+                              <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding ThemePaletteLabel}"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           FontSize="11" />
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.ThemeEditor.PaletteDescription}"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="11" />
+                              </StackPanel>
+                              <CheckBox Grid.Column="1"
+                                        VerticalAlignment="Top"
+                                        IsChecked="{Binding ShowAdvancedThemeControls}"
+                                        Content="{infra:LocalizedString Key=Settings.Appearance.ThemeEditor.Advanced}" />
+                            </Grid>
                             <ItemsControl ItemsSource="{Binding ThemePaletteSwatches}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -1444,7 +1457,7 @@
                                                    HorizontalAlignment="Left"
                                                    IsAlphaEnabled="False"
                                                    IsAlphaVisible="False"
-                                                   IsColorComponentsVisible="False"
+                                                   IsColorComponentsVisible="{Binding ShowAdvancedThemeControls}"
                                                    IsColorModelVisible="False"
                                                    IsColorPaletteVisible="False"
                                                    IsHexInputVisible="False"
@@ -1452,7 +1465,7 @@
                                                    IsColorPreviewVisible="False"
                                                    IsColorSpectrumVisible="True"
                                                    IsColorSpectrumSliderVisible="True"
-                                                   IsComponentSliderVisible="False"
+                                                   IsComponentSliderVisible="{Binding ShowAdvancedThemeControls}"
                                                    SelectedIndex="0"
                                                    ColorSpectrumShape="Ring" />
                           </Border>

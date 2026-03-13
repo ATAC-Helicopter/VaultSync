@@ -69,6 +69,23 @@ namespace VaultSync.UI.Services
                     Danger = "#FF7A88"
                 }),
             new(
+                "deep-blue",
+                "Deeper blue night theme with stronger contrast and cooler surfaces.",
+                new ThemePaletteConfig
+                {
+                    Name = "Deep Blue",
+                    BaseTheme = "Dark",
+                    Background = "#09111B",
+                    Surface = "#0F1A29",
+                    SurfaceAlt = "#16253A",
+                    Accent = "#5D8DFF",
+                    TextPrimary = "#F4F8FF",
+                    TextSecondary = "#A9BBD6",
+                    Success = "#57D8AF",
+                    Warning = "#FFCA66",
+                    Danger = "#FF7B86"
+                }),
+            new(
                 "forest",
                 "Muted green palette built for long sessions and lower visual noise.",
                 new ThemePaletteConfig
@@ -101,6 +118,23 @@ namespace VaultSync.UI.Services
                     Success = "#5ED7B4",
                     Warning = "#F8C86C",
                     Danger = "#FF82A8"
+                }),
+            new(
+                "oled-black",
+                "Pure black dark theme for OLED displays with bright blue highlights.",
+                new ThemePaletteConfig
+                {
+                    Name = "OLED Black",
+                    BaseTheme = "Dark",
+                    Background = "#000000",
+                    Surface = "#090B10",
+                    SurfaceAlt = "#111621",
+                    Accent = "#4F8DFF",
+                    TextPrimary = "#F5F8FF",
+                    TextSecondary = "#AAB5CB",
+                    Success = "#4DDAA6",
+                    Warning = "#FFC766",
+                    Danger = "#FF7676"
                 })
         };
 
