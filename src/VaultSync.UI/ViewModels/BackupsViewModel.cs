@@ -477,6 +477,16 @@ namespace VaultSync.UI.ViewModels
         public double HealthStalePercent { get; private set; }
         public double HealthNoBackupPercent { get; private set; }
         public string BackupHealthSummaryLine { get; private set; } = string.Empty;
+        public int RestoreReadinessReadyProjects { get; private set; }
+        public int RestoreReadinessAttentionProjects { get; private set; }
+        public int RestoreReadinessRiskProjects { get; private set; }
+        public int RestoreReadinessUnavailableProjects { get; private set; }
+        public double RestoreReadinessReadyPercent { get; private set; }
+        public double RestoreReadinessAttentionPercent { get; private set; }
+        public double RestoreReadinessRiskPercent { get; private set; }
+        public double RestoreReadinessUnavailablePercent { get; private set; }
+        public string RestoreReadinessHeadline { get; private set; } = string.Empty;
+        public string RestoreReadinessDetail { get; private set; } = string.Empty;
 
         // Mini backup storage card (for Backups page)
         private double _backupDiskUsedPercent;
@@ -2689,6 +2699,16 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(HealthStalePercent));
             OnPropertyChanged(nameof(HealthNoBackupPercent));
             OnPropertyChanged(nameof(BackupHealthSummaryLine));
+            OnPropertyChanged(nameof(RestoreReadinessReadyProjects));
+            OnPropertyChanged(nameof(RestoreReadinessAttentionProjects));
+            OnPropertyChanged(nameof(RestoreReadinessRiskProjects));
+            OnPropertyChanged(nameof(RestoreReadinessUnavailableProjects));
+            OnPropertyChanged(nameof(RestoreReadinessReadyPercent));
+            OnPropertyChanged(nameof(RestoreReadinessAttentionPercent));
+            OnPropertyChanged(nameof(RestoreReadinessRiskPercent));
+            OnPropertyChanged(nameof(RestoreReadinessUnavailablePercent));
+            OnPropertyChanged(nameof(RestoreReadinessHeadline));
+            OnPropertyChanged(nameof(RestoreReadinessDetail));
         }
 
         public void UpdateSummaryLayout(double width)
@@ -2824,6 +2844,50 @@ namespace VaultSync.UI.ViewModels
                 aging.ToString(CultureInfo.CurrentCulture),
                 stale.ToString(CultureInfo.CurrentCulture),
                 noBackup.ToString(CultureInfo.CurrentCulture));
+        }
+
+        private void UpdateRestoreReadinessSummary(AppConfig config, IReadOnlyList<Project> projectList, IReadOnlyList<Backup> backupList)
+        {
+            var service = new RestoreReadinessService();
+            var summary = service.BuildSummary(projectList, backupList, config, config.Advanced.BackupIndexLastScan);
+
+            RestoreReadinessReadyProjects = summary.ReadyCount;
+            RestoreReadinessAttentionProjects = summary.AttentionCount;
+            RestoreReadinessRiskProjects = summary.RiskCount;
+            RestoreReadinessUnavailableProjects = summary.UnavailableCount;
+            RestoreReadinessHeadline = summary.Headline;
+            RestoreReadinessDetail = summary.Detail;
+
+            foreach (var result in summary.Projects)
+            {
+                if (!_projectLookupById.TryGetValue(result.ProjectId.ToString(CultureInfo.InvariantCulture), out var item))
+                    continue;
+
+                item.RestoreReadinessLabel = result.Label;
+                item.RestoreReadinessReason = result.Reason;
+                item.RestoreReadinessBrush = result.State switch
+                {
+                    RestoreReadinessState.Ready => FreshnessGoodBrush,
+                    RestoreReadinessState.Attention => FreshnessModerateBrush,
+                    RestoreReadinessState.Risk => FreshnessStaleBrush,
+                    _ => FreshnessUnknownBrush
+                };
+            }
+
+            var total = summary.ProjectCount;
+            if (total <= 0)
+            {
+                RestoreReadinessReadyPercent = 0;
+                RestoreReadinessAttentionPercent = 0;
+                RestoreReadinessRiskPercent = 0;
+                RestoreReadinessUnavailablePercent = 0;
+                return;
+            }
+
+            RestoreReadinessReadyPercent = summary.ReadyCount * 100d / total;
+            RestoreReadinessAttentionPercent = summary.AttentionCount * 100d / total;
+            RestoreReadinessRiskPercent = summary.RiskCount * 100d / total;
+            RestoreReadinessUnavailablePercent = summary.UnavailableCount * 100d / total;
         }
 
         // ---------- Weekly activity mini-chart ----------
@@ -3068,6 +3132,7 @@ namespace VaultSync.UI.ViewModels
                 ProjectBackups.Add(projectItem);
                 _projectLookupById[projectItem.Id] = projectItem;
             }
+            UpdateRestoreReadinessSummary(config, projectList, backupList);
             SortProjectBackups();
 
             // Map individual backups into the history list model
@@ -3852,6 +3917,26 @@ namespace VaultSync.UI.ViewModels
         public int       SnapshotCount  { get; set; }
         public long      TotalSizeBytes { get; set; }
         public long?     StorageDeltaBytes { get; set; }
+        private string _restoreReadinessLabel = string.Empty;
+        public string RestoreReadinessLabel
+        {
+            get => _restoreReadinessLabel;
+            set => SetField(ref _restoreReadinessLabel, value ?? string.Empty, nameof(RestoreReadinessLabel));
+        }
+
+        private string _restoreReadinessReason = string.Empty;
+        public string RestoreReadinessReason
+        {
+            get => _restoreReadinessReason;
+            set => SetField(ref _restoreReadinessReason, value ?? string.Empty, nameof(RestoreReadinessReason));
+        }
+
+        private IBrush _restoreReadinessBrush = new ImmutableSolidColorBrush(Color.Parse("#7F8FA8"));
+        public IBrush RestoreReadinessBrush
+        {
+            get => _restoreReadinessBrush;
+            set => SetField(ref _restoreReadinessBrush, value, nameof(RestoreReadinessBrush));
+        }
 
         public bool AutoBackupEnabled
         {

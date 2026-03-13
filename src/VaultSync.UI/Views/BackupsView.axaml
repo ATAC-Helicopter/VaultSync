@@ -707,6 +707,73 @@
                                  Background="{DynamicResource Surface2}" />
                   </Grid>
                 </StackPanel>
+
+                <StackPanel Spacing="6"
+                            Margin="0,4,0,0">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.RestoreReadiness.Title}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <TextBlock Text="{Binding RestoreReadinessHeadline}"
+                             FontSize="10"
+                             FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding RestoreReadinessDetail}"
+                             FontSize="10"
+                             Foreground="{DynamicResource TextMutedBrush}" />
+                  <Grid ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto,Auto"
+                        ColumnSpacing="8"
+                        RowSpacing="4">
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.RestoreReadiness.Ready}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding RestoreReadinessReadyPercent}"
+                                 Height="5"
+                                 Foreground="#22CC88"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="1"
+                               Text="{infra:LocalizedString Key=Backups.RestoreReadiness.Attention}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="1"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding RestoreReadinessAttentionPercent}"
+                                 Height="5"
+                                 Foreground="#FFB84C"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="2"
+                               Text="{infra:LocalizedString Key=Backups.RestoreReadiness.Risk}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="2"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding RestoreReadinessRiskPercent}"
+                                 Height="5"
+                                 Foreground="#F56A5A"
+                                 Background="{DynamicResource Surface2}" />
+
+                    <TextBlock Grid.Row="3"
+                               Text="{infra:LocalizedString Key=Backups.RestoreReadiness.Unavailable}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ProgressBar Grid.Row="3"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding RestoreReadinessUnavailablePercent}"
+                                 Height="5"
+                                 Foreground="#7F8FA8"
+                                 Background="{DynamicResource Surface2}" />
+                  </Grid>
+                </StackPanel>
               </StackPanel>
             </Border>
         </Grid>

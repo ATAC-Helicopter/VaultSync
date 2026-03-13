@@ -1013,7 +1013,7 @@
   - Acceptance:
     - Re-adding the same destination path/identity preserves project routing and history linkage where exact identity matches.
     - Mismatch cases are reported with explicit remediation guidance.
-- [ ] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard.
+- [ ] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard. _(In progress)_
   - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
   - What it takes:
     - compute a stable readiness model from existing health/verification/reachability signals.
@@ -1024,6 +1024,8 @@
   - Acceptance:
     - Scorecard is explainable and links to the underlying failing signals.
     - No blocking UI regressions on large project sets.
+  - Current status:
+    - Backups and Dashboard now compute a shared readiness summary with per-project labels, reasons, and aggregate ready/attention/risk/unavailable counts from backup recency, verification policy, destination reachability, and startup consistency results.
 - [ ] `VS-1714` `P1` Doctor workflows for “Fix now” guided remediation. _(In progress)_
   - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
   - What it takes:

@@ -17,6 +17,7 @@ using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
+using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure; // for RelayCommand
 using VaultSync.UI.Services;
 
@@ -39,6 +40,12 @@ namespace VaultSync.UI.ViewModels
         private bool _backupDiskIsBelowThreshold;
         private string _snapshotActivitySummary = string.Empty;
         private string _snapshotsSummaryLine = string.Empty;
+        private string _restoreReadinessHeadline = string.Empty;
+        private string _restoreReadinessDetail = string.Empty;
+        private int _restoreReadinessReadyCount;
+        private int _restoreReadinessAttentionCount;
+        private int _restoreReadinessRiskCount;
+        private int _restoreReadinessUnavailableCount;
 
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
@@ -190,6 +197,72 @@ namespace VaultSync.UI.ViewModels
             {
                 if (_snapshotsSummaryLine == value) return;
                 _snapshotsSummaryLine = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RestoreReadinessHeadline
+        {
+            get => _restoreReadinessHeadline;
+            private set
+            {
+                if (_restoreReadinessHeadline == value) return;
+                _restoreReadinessHeadline = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RestoreReadinessDetail
+        {
+            get => _restoreReadinessDetail;
+            private set
+            {
+                if (_restoreReadinessDetail == value) return;
+                _restoreReadinessDetail = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int RestoreReadinessReadyCount
+        {
+            get => _restoreReadinessReadyCount;
+            private set
+            {
+                if (_restoreReadinessReadyCount == value) return;
+                _restoreReadinessReadyCount = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int RestoreReadinessAttentionCount
+        {
+            get => _restoreReadinessAttentionCount;
+            private set
+            {
+                if (_restoreReadinessAttentionCount == value) return;
+                _restoreReadinessAttentionCount = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int RestoreReadinessRiskCount
+        {
+            get => _restoreReadinessRiskCount;
+            private set
+            {
+                if (_restoreReadinessRiskCount == value) return;
+                _restoreReadinessRiskCount = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int RestoreReadinessUnavailableCount
+        {
+            get => _restoreReadinessUnavailableCount;
+            private set
+            {
+                if (_restoreReadinessUnavailableCount == value) return;
+                _restoreReadinessUnavailableCount = value;
                 OnPropertyChanged();
             }
         }
@@ -429,7 +502,12 @@ namespace VaultSync.UI.ViewModels
                         SnapshotCounts = counts,
                         AutoCounts = autoCounts,
                         ManualCounts = manualCounts,
-                        ImportedCounts = importedCounts
+                        ImportedCounts = importedCounts,
+                        RestoreReadiness = new RestoreReadinessService().BuildSummary(
+                            projects,
+                            repo.GetAllBackups().ToList(),
+                            cfg,
+                            cfg.Advanced.BackupIndexLastScan)
                     };
                     _lastDashboardData = dashboardData;
                     _lastDashboardDataUtc = DateTime.UtcNow;
@@ -469,6 +547,12 @@ namespace VaultSync.UI.ViewModels
                 StorageHint = _activeProjectsCount == 0
                     ? L("Dashboard.Hint.StorageEmpty", "No storage used")
                     : L("Dashboard.Hint.StorageTotal", "Total across all backups");
+                RestoreReadinessHeadline = data.RestoreReadiness.Headline;
+                RestoreReadinessDetail = data.RestoreReadiness.Detail;
+                RestoreReadinessReadyCount = data.RestoreReadiness.ReadyCount;
+                RestoreReadinessAttentionCount = data.RestoreReadiness.AttentionCount;
+                RestoreReadinessRiskCount = data.RestoreReadiness.RiskCount;
+                RestoreReadinessUnavailableCount = data.RestoreReadiness.UnavailableCount;
 
                 // Activity
                 var activityItems = new List<ActivityItem>();
@@ -624,6 +708,7 @@ namespace VaultSync.UI.ViewModels
             public int[] AutoCounts { get; init; } = Array.Empty<int>();
             public int[] ManualCounts { get; init; } = Array.Empty<int>();
             public int[] ImportedCounts { get; init; } = Array.Empty<int>();
+            public RestoreReadinessSummary RestoreReadiness { get; init; } = new();
         }
 
         private void BuildSnapshotSeries()
@@ -815,6 +900,12 @@ namespace VaultSync.UI.ViewModels
             StorageUsed    = "0 B";
             StorageUsedLocal = Lf("Dashboard.Kpi.StorageLocal", "Local: {0}", "0 B");
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
+            RestoreReadinessHeadline = "No tracked projects yet";
+            RestoreReadinessDetail = "Ready 0 · Attention 0 · Risk 0 · Unavailable 0";
+            RestoreReadinessReadyCount = 0;
+            RestoreReadinessAttentionCount = 0;
+            RestoreReadinessRiskCount = 0;
+            RestoreReadinessUnavailableCount = 0;
 
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
             var cfg = AppConfigStore.Load();

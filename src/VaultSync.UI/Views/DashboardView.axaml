@@ -36,7 +36,7 @@
         </Border>
 
         <!-- KPI row -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16" Margin="4,8,4,0">
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="16" Margin="4,8,4,0">
           <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="0">
             <Grid RowDefinitions="Auto,*">
               <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Projects}" Classes="kicker"/>
@@ -75,6 +75,44 @@
                            Classes="metric-hint"
                            TextWrapping="Wrap"
                            TextTrimming="CharacterEllipsis"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="3">
+            <Grid RowDefinitions="Auto,*">
+              <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker"/>
+              <StackPanel Grid.Row="1" Spacing="6">
+                <TextBlock Text="{Binding RestoreReadinessHeadline}"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           MaxLines="2"/>
+                <TextBlock Text="{Binding RestoreReadinessDetail}"
+                           Classes="metric-hint"
+                           TextWrapping="Wrap" />
+                <WrapPanel ItemSpacing="8" LineSpacing="6">
+                  <Border Classes="stat-pill sm success">
+                    <TextBlock Text="{Binding RestoreReadinessReadyCount, StringFormat='{}{0} ready'}"
+                               FontSize="10"
+                               FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="stat-pill sm warning">
+                    <TextBlock Text="{Binding RestoreReadinessAttentionCount, StringFormat='{}{0} attention'}"
+                               FontSize="10"
+                               FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="stat-pill sm danger">
+                    <TextBlock Text="{Binding RestoreReadinessRiskCount, StringFormat='{}{0} risk'}"
+                               FontSize="10"
+                               FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="stat-pill sm info">
+                    <TextBlock Text="{Binding RestoreReadinessUnavailableCount, StringFormat='{}{0} unavailable'}"
+                               FontSize="10"
+                               FontWeight="SemiBold" />
+                  </Border>
+                </WrapPanel>
               </StackPanel>
             </Grid>
           </Border>

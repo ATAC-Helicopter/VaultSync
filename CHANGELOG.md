@@ -21,6 +21,7 @@
 - [VS-1718] Added a scripted release-readiness gate command that checks source version parity, changelog/What's New alignment, release asset presence, and project-board release completeness with both human-readable and JSON output.
 - [VS-1718] Release gate now supports `PrePublish` and `PostPublish` phases so missing installer/patch assets warn with actionable generation steps before upload, but fail only during final post-publish verification.
 - [VS-1715] Settings diagnostics and support bundles now include the latest non-blocking startup timeline summary (total duration plus per-phase elapsed checkpoints) so slow startup paths are diagnosable without attaching a debugger.
+- [VS-1713] Backups and Dashboard now surface a restore-readiness scorecard that summarizes ready/attention/risk/unavailable projects from backup recency, verification posture, destination reachability, and startup consistency findings.
 ### Fixed
 - [BUG-17002] Restored corrupted bundled Noto Sans font assets so UI text rendering no longer depends on invalid HTML placeholders stored as `.ttf` files.
 - [BUG-17001] Doctor backup-repair and metadata-conflict workflows now marshal command-state and status updates onto the UI thread, removing Avalonia `Call from invalid thread` traces during detached scan/apply operations.
