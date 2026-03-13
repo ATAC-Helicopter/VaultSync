@@ -23,7 +23,7 @@
 - [VS-1718] Release gate now separates `PrePublish` warnings from `PostPublish` failures.
 - [VS-1715] Diagnostics now include a non-blocking startup timeline summary.
 - [VS-1721] Tag-color editing now lives primarily in Projects instead of a duplicate Settings workflow.
-- [BUG-17005] Simplified the custom theme editor layout in Settings > Appearance.
+- [BUG-17005] Simplified the custom theme editor with visible swatches and a cleaner spectrum-only picker.
 - [VS-1713] Backups and Dashboard now show a restore-readiness scorecard.
 - [VS-1719] Dashboard now uses a more coherent wrap-based information layout.
 - [VS-1719] Dashboard sections were rebalanced for clearer fullscreen and windowed layouts.

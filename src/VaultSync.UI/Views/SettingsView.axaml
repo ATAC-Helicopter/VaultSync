@@ -67,6 +67,21 @@
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
+
+    <Style Selector="Button.theme-swatch-button">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <ContentPresenter HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+        </ControlTemplate>
+      </Setter>
+    </Style>
   </UserControl.Styles>
 
     <UserControl.Resources>
@@ -1342,15 +1357,25 @@
                               </ItemsControl.ItemsPanel>
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                  <Button Width="30"
-                                          Height="30"
-                                          Padding="0"
-                                          CornerRadius="15"
-                                          Background="{Binding SwatchColor}"
-                                          BorderBrush="{DynamicResource BorderSoft}"
-                                          BorderThickness="1"
+                                  <Button Classes="theme-swatch-button"
+                                          Width="34"
+                                          Height="34"
                                           Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
-                                          CommandParameter="{Binding}" />
+                                          CommandParameter="{Binding}">
+                                    <Border Width="30"
+                                            Height="30"
+                                            CornerRadius="15"
+                                            Background="{DynamicResource Surface0}"
+                                            BorderBrush="{DynamicResource BorderSoft}"
+                                            BorderThickness="1.5">
+                                      <Border Width="24"
+                                              Height="24"
+                                              CornerRadius="12"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Background="{Binding SwatchColor}" />
+                                    </Border>
+                                  </Button>
                                 </DataTemplate>
                               </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -1415,18 +1440,20 @@
                                   CornerRadius="12"
                                   Padding="10">
                             <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                   MaxWidth="460"
+                                                   MaxWidth="440"
                                                    HorizontalAlignment="Left"
                                                    IsAlphaEnabled="False"
                                                    IsAlphaVisible="False"
+                                                   IsColorComponentsVisible="False"
                                                    IsColorModelVisible="False"
                                                    IsColorPaletteVisible="False"
                                                    IsHexInputVisible="False"
                                                    IsComponentTextInputVisible="False"
-                                                   IsColorPreviewVisible="True"
+                                                   IsColorPreviewVisible="False"
                                                    IsColorSpectrumVisible="True"
                                                    IsColorSpectrumSliderVisible="True"
-                                                   IsComponentSliderVisible="True"
+                                                   IsComponentSliderVisible="False"
+                                                   SelectedIndex="0"
                                                    ColorSpectrumShape="Ring" />
                           </Border>
                         </StackPanel>
@@ -1437,7 +1464,8 @@
                               BorderBrush="{DynamicResource DividerBrush}"
                               BorderThickness="1"
                               CornerRadius="12"
-                              Padding="12">
+                              Padding="12"
+                              VerticalAlignment="Top">
                         <StackPanel Spacing="10">
                           <TextBlock Text="{Binding ThemePreviewLabel}"
                                      Foreground="{StaticResource TextSecondary}"

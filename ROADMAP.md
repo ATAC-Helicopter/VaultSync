@@ -1150,10 +1150,11 @@
 - [ ] `BUG-17005` `P2` Simplify custom theme editor hierarchy in Settings > Appearance. _(In progress)_
   - Scope: make the custom theme editor easier to understand visually by reducing duplicate emphasis, clarifying the edit order, and tightening the picker/preview layout.
   - Current status:
-    - In progress: the editor is being reorganized into a clearer preset -> target -> pick -> preview flow with more compact preset cards and a less noisy customization surface.
+    - In progress: the editor now follows a clearer preset -> target -> pick -> preview flow, and the picker is being stripped down to visible swatches plus a cleaner spectrum view.
   - Acceptance:
     - The theme editor reads as one coherent workflow instead of a pile of equal-weight controls.
     - Presets, target selection, picker, and preview are visually distinct and easier to scan in windowed mode.
+    - Quick swatches render as obvious colors instead of neutral placeholders, and the picker no longer wastes space on low-value chrome.
 
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
