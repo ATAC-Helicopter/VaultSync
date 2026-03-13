@@ -1,5 +1,9 @@
 # What's New
 
+## [1.7.0]
+
+Draft release notes. Final user-facing highlights will be curated at release cut.
+
 ## [1.6.0]
 
 ### Restore and backup workflow
