@@ -47,6 +47,21 @@ When behavior changes, update in the same PR:
 
 Use `docs/README.md` and `DOCUMENTATION.md` as structure references.
 
+### Changelog Style Rules
+From `1.7.0` onward, keep `CHANGELOG.md` intentionally short:
+- Write for release readers, not implementers.
+- Prefer one user-facing outcome per bullet.
+- Keep each bullet to roughly `18-22` words max.
+- Do not list internal implementation details unless they change user expectations or upgrade behavior.
+- If a change needs deep explanation, keep the short summary in `CHANGELOG.md` and put the detail in the issue, PR, or `docs/WHATS_NEW.md`.
+
+Preferred bullet format:
+- `[ID] Short user-facing result.`
+
+Examples:
+- Good: `[VS-1721] Added app-wide custom tag colors with in-context editing from Projects.`
+- Bad: `[VS-1721] Added a visual picker, swatches, preview card, shared appearance helper, and a Settings pointer flow for app-wide tag color editing.`
+
 ## 6) Pull Request Requirements
 - Reference the related ID (`VS-xxxx` preferred).
 - Describe what changed and why.
@@ -127,6 +142,7 @@ Changelog/roadmap consistency rules:
 - Use IDs when available (`VS-xxxx`, `ISS-xxxxx`, `BUG-xxxxx`, `REL-xxxxx`).
 - Do not renumber existing roadmap IDs.
 - Keep changelog entries in the correct version block.
+- Keep changelog bullets concise and user-facing.
 - Keep roadmap priorities and status accurate.
 
 Project board rules:

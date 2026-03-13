@@ -12,7 +12,7 @@
 - [VS-1717] Added cross-machine project metadata conflict tracking plus Doctor resolution actions so destination, restore mode, verification, and tag differences no longer overwrite local values silently on import.
 - [VS-1710] Added an opt-in maintenance window in Settings > Advanced so integrity scan, repair dry-run, and metadata refresh jobs can run on a schedule inside a configured time range.
 - [VS-1703] Added per-destination soft quota settings plus cleanup suggestions so VaultSync can estimate reclaimable space from unprotected backups before a target fills up.
-- [VS-1721] Added an app-wide tag color system with a visual picker, quick palette swatches, and live preview so custom chip colors can be managed primarily from Projects and render consistently across Projects, Backups, and Dashboard activity.
+- [VS-1721] Added app-wide tag colors with visual editing from Projects.
 ### Changed
 - [VS-1707] Settings > Advanced now shows persisted updater release-target diagnostics (decision, channel, selected candidate, stable candidate, beta candidate, error) and support bundles now export the same trace for operator triage.
 - [VS-1708] Patch availability now runs an explicit `current -> target` preflight (base-version match, target-version match, manifest presence, file list presence) before the patch button is offered, and the resulting eligibility trace is persisted/exported with updater diagnostics.
@@ -22,8 +22,8 @@
 - [VS-1718] Added a scripted release-readiness gate command that checks source version parity, changelog/What's New alignment, release asset presence, and project-board release completeness with both human-readable and JSON output.
 - [VS-1718] Release gate now supports `PrePublish` and `PostPublish` phases so missing installer/patch assets warn with actionable generation steps before upload, but fail only during final post-publish verification.
 - [VS-1715] Settings diagnostics and support bundles now include the latest non-blocking startup timeline summary (total duration plus per-phase elapsed checkpoints) so slow startup paths are diagnosable without attaching a debugger.
-- [VS-1721] Tag-color management now lives primarily in Projects for in-context editing, while Settings keeps a lightweight pointer back to the project-scoped editor instead of duplicating the full workflow.
-- [BUG-17005] The custom theme editor was reorganized into a clearer preset -> target -> pick -> preview flow, with tighter preset cards, a more compact picker column, and less visually noisy hierarchy in Settings > Appearance.
+- [VS-1721] Tag-color editing now lives primarily in Projects instead of a duplicate Settings workflow.
+- [BUG-17005] Simplified the custom theme editor layout in Settings > Appearance.
 - [VS-1713] Backups and Dashboard now surface a restore-readiness scorecard that summarizes ready/attention/risk/unavailable projects from backup recency, verification posture, destination reachability, and startup consistency findings.
 - [VS-1719] Dashboard now uses a more intentional wrap-based information layout with a stronger operations header, responsive KPI cards, a dedicated activity rail, and rebalanced trend/storage sections for better fullscreen and windowed behavior.
 - [VS-1719] Dashboard composition was refined again so the operations header, KPI row, activity rail, trend section, and storage/readiness cards now read as one coherent layout instead of disconnected surfaces.
