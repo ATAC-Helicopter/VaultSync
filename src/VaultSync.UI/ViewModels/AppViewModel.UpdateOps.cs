@@ -209,22 +209,45 @@ namespace VaultSync.UI.ViewModels
         {
             _ = Task.Run(async () =>
             {
-                var delay = OperatingSystem.IsMacOS()
-                    ? TimeSpan.FromSeconds(30)
-                    : TimeSpan.FromSeconds(2);
-                await Task.Delay(delay);
-
-                var cfg = AppConfigStore.Load();
-                EnsureDestinationProbeStarted();
-
-                if (cfg.Backups.EnableMetadataSync)
+                try
                 {
-                    TryImportMetadataFromRoot(cfg.ProjectsRoot ?? string.Empty);
-                }
+                    var delay = OperatingSystem.IsMacOS()
+                        ? TimeSpan.FromSeconds(30)
+                        : TimeSpan.FromSeconds(2);
+                    await Task.Delay(delay);
+                    RecordStartupPhase("deferred-startup-begin");
 
-                await RunStartupBackupIndexConsistencyCheckAsync().ConfigureAwait(false);
-                StartUpdateCheck();
-                ConfigureUpdateCheckTimer();
+                    var cfg = AppConfigStore.Load();
+                    EnsureDestinationProbeStarted();
+                    RecordStartupPhase("destination-probe-ready");
+
+                    if (cfg.Backups.EnableMetadataSync)
+                    {
+                        TryImportMetadataFromRoot(cfg.ProjectsRoot ?? string.Empty);
+                        RecordStartupPhase("metadata-import-queued");
+                    }
+                    else
+                    {
+                        RecordStartupPhase("metadata-import-skipped");
+                    }
+
+                    await RunStartupBackupIndexConsistencyCheckAsync().ConfigureAwait(false);
+                    RecordStartupPhase("backup-index-scan-complete");
+                    StartUpdateCheck();
+                    RecordStartupPhase("update-check-started");
+                    ConfigureUpdateCheckTimer();
+                    RecordStartupPhase("update-timer-configured");
+                    RecordStartupPhase("startup-complete");
+                }
+                catch (Exception ex)
+                {
+                    RecordStartupPhase("startup-failed");
+                    DiagnosticsLogger.Record($"Deferred startup failed: {ex.GetType().Name} - {ex.Message}");
+                }
+                finally
+                {
+                    PersistStartupDiagnosticsSummary();
+                }
             });
         }
 

@@ -288,6 +288,18 @@ public sealed class SupportBundleService
                     config.Advanced.BackupIndexLastScan.ErrorCount,
                     config.Advanced.BackupIndexLastScan.WarningCount,
                     topFindingCodes = config.Advanced.BackupIndexLastScan.TopFindingCodes.ToList()
+                },
+                startupDiagnostics = new
+                {
+                    config.Advanced.StartupDiagnostics.LastCompletedUtc,
+                    config.Advanced.StartupDiagnostics.TotalDurationMs,
+                    phases = config.Advanced.StartupDiagnostics.Phases
+                        .Select(phase => new
+                        {
+                            phase.Name,
+                            phase.ElapsedMs
+                        })
+                        .ToList()
                 }
             },
             behavior = new

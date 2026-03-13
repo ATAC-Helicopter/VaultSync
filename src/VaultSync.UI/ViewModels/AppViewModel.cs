@@ -164,6 +164,9 @@ namespace VaultSync.UI.ViewModels
         private readonly GitHubUpdateService _updateService = new();
         private readonly PatchUpdateService _patchService = new();
         private readonly LocalizationService _localizationService = new();
+        private readonly Stopwatch _startupDiagnosticsStopwatch = Stopwatch.StartNew();
+        private readonly object _startupDiagnosticsGate = new();
+        private readonly List<StartupDiagnosticsPhase> _startupDiagnosticsPhases = new();
         private static readonly HttpClient s_installerClient = CreateInstallerHttpClient();
         private readonly string _currentVersionString;
         private CancellationTokenSource? _updateCheckCts;

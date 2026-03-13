@@ -14,9 +14,11 @@ namespace VaultSync.UI.ViewModels
         public AppViewModel()
         {
             _currentVersionString = GetCurrentVersionString();
+            RecordStartupPhase("version-resolved");
 
             // 1) Config + DB + services
             _config = AppConfigStore.Load();
+            RecordStartupPhase("config-loaded");
             if (string.IsNullOrWhiteSpace(_config.Advanced.Language))
             {
                 var systemLang = ResolveSystemLanguageCode(_localizationService);
@@ -30,6 +32,7 @@ namespace VaultSync.UI.ViewModels
             _localizationService.SetLanguage(targetLang);
             LocalizationProvider.Initialize(_localizationService);
             _localizationService.LanguageChanged += OnLanguageChanged;
+            RecordStartupPhase("localization-initialized");
 
             _repo = new SqliteRepository(_config.DbPath ?? string.Empty);
             _ = Task.Run(() =>
@@ -57,6 +60,7 @@ namespace VaultSync.UI.ViewModels
             _powerStatusProvider = new PowerStatusProvider();
             _driveHealthService = new DriveHealthService();
             _backupIndexConsistencyService = new BackupIndexConsistencyService(_repo);
+            RecordStartupPhase("core-services-ready");
 
             // 2) Section viewmodels
             _dashboardViewModel = null;
@@ -80,6 +84,7 @@ namespace VaultSync.UI.ViewModels
             {
                 TrackDestinationViewModel(dest);
             }
+            RecordStartupPhase("section-viewmodels-ready");
 
             _projectEncryptionEnrollmentService = new ProjectEncryptionEnrollmentService(
                 _repo,
@@ -99,6 +104,7 @@ namespace VaultSync.UI.ViewModels
             _ = Task.Run(() => CleanupIncompleteBackupsOnStartup());
             _ = Task.Run(() => EnforceRetentionOnStartup());
             _ = Task.Run(() => CleanupUnusedCredentialSecretsOnStartup());
+            RecordStartupPhase("startup-cleanup-scheduled");
 
             // 3) BackupsViewModel is created lazily; wiring happens when instantiated.
 
@@ -113,12 +119,14 @@ namespace VaultSync.UI.ViewModels
             {
                 ApplyLastSessionView();
             }
+            RecordStartupPhase("initial-route-ready");
 
             // Ensure launch-on-login matches config
             _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(_config.Behavior.LaunchOnLogin));
             ConfigureAutoBackupTimer();
             ConfigureMaintenanceTimer();
             LogBackupPolicyTransitionIfChanged(_config, "startup");
+            RecordStartupPhase("timers-configured");
 
             // 6) Navigation commands (using cached VMs)
             NavigateDashboard = new RelayCommand(_ => SetCurrentView("Dashboard"));
@@ -135,8 +143,10 @@ namespace VaultSync.UI.ViewModels
             _dismissUpdateBannerCommand = new RelayCommand(_ => DismissUpdateBanner());
             _dismissSoftCrashBannerCommand = new RelayCommand(_ => DismissSoftCrashBanner());
             _copySoftCrashLogCommand = new RelayCommand(_ => _ = CopySoftCrashLogAsync(), _ => CanCopySoftCrashLog);
+            RecordStartupPhase("commands-ready");
 
             StartDeferredStartupTasks();
+            RecordStartupPhase("deferred-startup-scheduled");
         }
 
         private BackupsViewModel CreateBackupsViewModel()

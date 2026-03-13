@@ -1036,7 +1036,7 @@
   - Acceptance:
     - Each doctor action has a dry-run summary and explicit apply step.
     - All mutations are audit-logged in diagnostics/support bundle.
-- [ ] `VS-1715` `P2` Non-blocking startup diagnostics timeline.
+- [ ] `VS-1715` `P2` Non-blocking startup diagnostics timeline. _(In progress)_
   - Scope: startup timeline with phase durations (config load, repo init, destination probe, metadata warm-up, update check) and slow-path attribution.
   - What it takes:
     - lightweight startup spans with bounded retention.
@@ -1044,6 +1044,9 @@
   - Acceptance:
     - Timeline is available in diagnostics and support bundle.
     - Normal startup path remains non-blocking.
+  - Current status:
+    - In progress: startup now records stable constructor/deferred-startup phase checkpoints and persists the latest timeline summary in advanced config.
+    - In progress: Settings diagnostics and support bundles now surface the last startup timeline with total duration and per-phase elapsed milliseconds.
 - [ ] `VS-1716` `P2` Retention simulation mode in settings.
   - Scope: preview retention outcomes per project/destination without deleting data.
   - What it takes:

@@ -114,6 +114,7 @@ namespace VaultSync.UI
         private string _updateCheckStatusText = string.Empty;
         private string _updateCheckErrorText = string.Empty;
         private string _updateDiagnosticsText = string.Empty;
+        private string _startupDiagnosticsText = string.Empty;
         private string _rsyncStatusHint = string.Empty;
         private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
@@ -470,6 +471,7 @@ namespace VaultSync.UI
             _maintenanceRunRepairDryRun = cfg.Advanced.Maintenance.RunRepairDryRun;
             _maintenanceRunMetadataRefresh = cfg.Advanced.Maintenance.RunMetadataRefresh;
             RefreshUpdateDiagnostics(cfg.Advanced.UpdateDiagnostics);
+            RefreshStartupDiagnostics(cfg.Advanced.StartupDiagnostics);
             RefreshProjectMetadataConflicts(cfg.Advanced.ProjectMetadataConflicts);
 
             // Apply theme + layout when loading config (in case Settings view is opened first)
@@ -1506,6 +1508,12 @@ namespace VaultSync.UI
             private set => SetField(ref _updateDiagnosticsText, value);
         }
 
+        public string StartupDiagnosticsText
+        {
+            get => _startupDiagnosticsText;
+            private set => SetField(ref _startupDiagnosticsText, value);
+        }
+
         public bool HasUpdateCheckError => !string.IsNullOrWhiteSpace(_updateCheckErrorText);
 
         public IReadOnlyList<LanguageOption> LanguageOptions => _localizationService.SupportedLanguages;
@@ -1569,6 +1577,11 @@ namespace VaultSync.UI
         public void ReloadUpdateDiagnostics()
         {
             RefreshUpdateDiagnostics(AppConfigStore.Load().Advanced.UpdateDiagnostics);
+        }
+
+        public void ReloadStartupDiagnostics()
+        {
+            RefreshStartupDiagnostics(AppConfigStore.Load().Advanced.StartupDiagnostics);
         }
 
         private void RefreshUpdateCheckStatus()
@@ -1642,6 +1655,43 @@ namespace VaultSync.UI
             }
 
             UpdateDiagnosticsText = summary;
+        }
+
+        private void RefreshStartupDiagnostics(StartupDiagnosticsSummary? diagnostics)
+        {
+            diagnostics ??= new StartupDiagnosticsSummary();
+            if (string.IsNullOrWhiteSpace(diagnostics.LastCompletedUtc) || diagnostics.Phases.Count == 0)
+            {
+                StartupDiagnosticsText = L("Settings.Advanced.StartupDiagnosticsEmpty", "No startup diagnostics timeline captured yet.");
+                return;
+            }
+
+            string completedText;
+            if (DateTimeOffset.TryParse(diagnostics.LastCompletedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var completedUtc))
+            {
+                completedText = completedUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+            }
+            else
+            {
+                completedText = diagnostics.LastCompletedUtc;
+            }
+
+            var phaseSummary = string.Join(
+                " | ",
+                diagnostics.Phases
+                    .OrderBy(phase => phase.ElapsedMs)
+                    .Select(phase => string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.Advanced.StartupDiagnosticsPhase", "{0}: {1} ms"),
+                        phase.Name,
+                        phase.ElapsedMs)));
+
+            StartupDiagnosticsText = string.Format(
+                CultureInfo.CurrentCulture,
+                L("Settings.Advanced.StartupDiagnosticsTemplate", "Last startup: {0} | Total: {1} ms | Phases: {2}"),
+                completedText,
+                diagnostics.TotalDurationMs,
+                phaseSummary);
         }
 
         private void RefreshRsyncStatusHint()

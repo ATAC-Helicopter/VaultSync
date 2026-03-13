@@ -1660,6 +1660,10 @@
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="11"
                              TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding StartupDiagnosticsText}"
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="11"
+                             TextWrapping="Wrap" />
                   <TextBlock Text="{Binding UpdateCheckErrorText}"
                              Foreground="{DynamicResource WarningTextBrush}"
                              FontSize="11"

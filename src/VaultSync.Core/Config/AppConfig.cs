@@ -284,6 +284,7 @@ namespace VaultSync.Core.Config
         public BackupRepairTelemetry BackupRepairTelemetry { get; set; } = new();
         public MetadataConflictTelemetry MetadataConflictTelemetry { get; set; } = new();
         public MaintenanceConfig Maintenance { get; set; } = new();
+        public StartupDiagnosticsSummary StartupDiagnostics { get; set; } = new();
     }
 
     public sealed class MaintenanceConfig
@@ -383,6 +384,19 @@ namespace VaultSync.Core.Config
         public int PendingConflictCount { get; set; }
         public string LastResolutionAction { get; set; } = string.Empty;
         public string LastResolvedProject { get; set; } = string.Empty;
+    }
+
+    public sealed class StartupDiagnosticsSummary
+    {
+        public string LastCompletedUtc { get; set; } = string.Empty;
+        public long TotalDurationMs { get; set; }
+        public List<StartupDiagnosticsPhase> Phases { get; set; } = new();
+    }
+
+    public sealed class StartupDiagnosticsPhase
+    {
+        public string Name { get; set; } = string.Empty;
+        public long ElapsedMs { get; set; }
     }
 
     // -------- App Behavior / Background Mode --------
