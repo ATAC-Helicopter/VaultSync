@@ -1093,6 +1093,14 @@
   - Acceptance:
     - Doctor workflows no longer emit `Call from invalid thread` traces during dry-run/apply operations.
 
+- [ ] `BUG-17002` `P1` Restore corrupted bundled UI font assets. _(In progress)_
+  - Scope: replace invalid bundled `.ttf` placeholders with valid Noto Sans binaries so the shipped font pack is deterministic across machines.
+  - Current status:
+    - In progress: corrupted `NotoSans*` and `NotoSansArabic*` placeholder assets have been replaced with valid binaries so Avalonia stops ingesting HTML masquerading as font files.
+  - Acceptance:
+    - bundled font assets open as valid font binaries instead of text/HTML payloads.
+    - UI text rendering no longer depends on unpredictable system fallback caused by broken embedded assets.
+
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers.
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:
