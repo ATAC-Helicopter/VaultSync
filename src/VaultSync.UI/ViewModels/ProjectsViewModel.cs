@@ -87,9 +87,21 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _commitProjectTagInputCommand;
     private readonly RelayCommand _removeProjectTagCommand;
     private readonly RelayCommand _addExistingTagToSelectedProjectCommand;
+    private readonly RelayCommand _toggleProjectTagColorEditorCommand;
+    private readonly RelayCommand _applyProjectTagColorCommand;
+    private readonly RelayCommand _resetProjectTagColorCommand;
     private readonly RelayCommand _applyTagToGroupCommand;
     private readonly RelayCommand _removeTagFromGroupCommand;
     private readonly RelayCommand _selectGroupTagCommand;
+    private bool _isProjectTagColorEditorOpen;
+    private bool _projectTagColorSyncing;
+    private string _projectTagColorHex = "#3A7AFE";
+    private double _projectTagColorRed = 58;
+    private double _projectTagColorGreen = 122;
+    private double _projectTagColorBlue = 254;
+    private double _projectTagColorHue = 219;
+    private double _projectTagColorSaturation = 77;
+    private double _projectTagColorValue = 100;
     public ProjectItemViewModel? SelectedProject
     {
         get => _selectedProject;
@@ -157,6 +169,9 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand CommitProjectTagInputCommand { get; }
     public ICommand RemoveProjectTagCommand { get; }
     public ICommand AddExistingTagToSelectedProjectCommand { get; }
+    public ICommand ToggleProjectTagColorEditorCommand { get; }
+    public ICommand ApplyProjectTagColorCommand { get; }
+    public ICommand ResetProjectTagColorCommand { get; }
     public ICommand ApplyTagToGroupCommand { get; }
     public ICommand RemoveTagFromGroupCommand { get; }
     public ICommand SelectGroupTagCommand { get; }
@@ -201,8 +216,118 @@ public class ProjectsViewModel : ViewModelBase
                 return;
 
             ConsumeProjectTagInputDelimiters();
+            OnPropertyChanged(nameof(CanEditProjectTagColor));
+            OnPropertyChanged(nameof(ProjectTagColorTarget));
+            _toggleProjectTagColorEditorCommand.RaiseCanExecuteChanged();
+            _applyProjectTagColorCommand.RaiseCanExecuteChanged();
+            _resetProjectTagColorCommand.RaiseCanExecuteChanged();
+
+            if (CanEditProjectTagColor)
+                SyncProjectTagColorDraftFromInput();
+            else
+                IsProjectTagColorEditorOpen = false;
         }
     }
+
+    public bool CanEditProjectTagColor => SelectedProject is not null && !string.IsNullOrWhiteSpace(ProjectTagInput);
+
+    public bool IsProjectTagColorEditorOpen
+    {
+        get => _isProjectTagColorEditorOpen;
+        set => SetProperty(ref _isProjectTagColorEditorOpen, value);
+    }
+
+    public string ProjectTagColorTarget => (ProjectTagInput ?? string.Empty).Trim();
+
+    public string ProjectTagColorHex
+    {
+        get => _projectTagColorHex;
+        set
+        {
+            var normalized = ProjectTagAppearance.NormalizeHex(value, _projectTagColorHex);
+            if (!SetProperty(ref _projectTagColorHex, normalized))
+                return;
+
+            SyncRgbFromHex();
+            RefreshProjectTagColorPreview();
+        }
+    }
+
+    public double ProjectTagColorRed
+    {
+        get => _projectTagColorRed;
+        set
+        {
+            var clamped = Math.Clamp(value, 0d, 255d);
+            if (!SetProperty(ref _projectTagColorRed, clamped))
+                return;
+            SyncHexFromRgb();
+        }
+    }
+
+    public double ProjectTagColorGreen
+    {
+        get => _projectTagColorGreen;
+        set
+        {
+            var clamped = Math.Clamp(value, 0d, 255d);
+            if (!SetProperty(ref _projectTagColorGreen, clamped))
+                return;
+            SyncHexFromRgb();
+        }
+    }
+
+    public double ProjectTagColorBlue
+    {
+        get => _projectTagColorBlue;
+        set
+        {
+            var clamped = Math.Clamp(value, 0d, 255d);
+            if (!SetProperty(ref _projectTagColorBlue, clamped))
+                return;
+            SyncHexFromRgb();
+        }
+    }
+
+    public double ProjectTagColorHue
+    {
+        get => _projectTagColorHue;
+        set
+        {
+            var normalized = Math.Clamp(value, 0d, 360d);
+            if (!SetProperty(ref _projectTagColorHue, normalized))
+                return;
+            SyncHexFromHsv();
+        }
+    }
+
+    public double ProjectTagColorSaturation
+    {
+        get => _projectTagColorSaturation;
+        set
+        {
+            var normalized = Math.Clamp(value, 0d, 100d);
+            if (!SetProperty(ref _projectTagColorSaturation, normalized))
+                return;
+            SyncHexFromHsv();
+        }
+    }
+
+    public double ProjectTagColorValue
+    {
+        get => _projectTagColorValue;
+        set
+        {
+            var normalized = Math.Clamp(value, 0d, 100d);
+            if (!SetProperty(ref _projectTagColorValue, normalized))
+                return;
+            SyncHexFromHsv();
+        }
+    }
+
+    public string ProjectTagColorPreviewBackground => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Background;
+    public string ProjectTagColorPreviewForeground => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Foreground;
+    public string ProjectTagColorPreviewBorder => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Border;
     private string _presetEditorContent = string.Empty;
     public string PresetEditorContent
     {
@@ -359,6 +484,9 @@ public class ProjectsViewModel : ViewModelBase
             tag => AddExistingTagToSelectedProject(tag as string),
             tag => SelectedProject is not null &&
                    (!string.IsNullOrWhiteSpace(tag as string) || !string.IsNullOrWhiteSpace(GroupTagInput)));
+        _toggleProjectTagColorEditorCommand = new RelayCommand(_ => ToggleProjectTagColorEditor(), _ => CanEditProjectTagColor);
+        _applyProjectTagColorCommand = new RelayCommand(_ => ApplyProjectTagColor(), _ => CanEditProjectTagColor);
+        _resetProjectTagColorCommand = new RelayCommand(_ => ResetProjectTagColor(), _ => CanEditProjectTagColor);
         _applyTagToGroupCommand = new RelayCommand(
             _ => _ = RunDetachedAsync(() => SetTagForSelectedGroupAsync(add: true), "apply-tag-selected-group"),
             _ => CanSetTagForSelectedGroup());
@@ -383,6 +511,9 @@ public class ProjectsViewModel : ViewModelBase
         CommitProjectTagInputCommand = _commitProjectTagInputCommand;
         RemoveProjectTagCommand = _removeProjectTagCommand;
         AddExistingTagToSelectedProjectCommand = _addExistingTagToSelectedProjectCommand;
+        ToggleProjectTagColorEditorCommand = _toggleProjectTagColorEditorCommand;
+        ApplyProjectTagColorCommand = _applyProjectTagColorCommand;
+        ResetProjectTagColorCommand = _resetProjectTagColorCommand;
         ApplyTagToGroupCommand = _applyTagToGroupCommand;
         RemoveTagFromGroupCommand = _removeTagFromGroupCommand;
         SelectGroupTagCommand = _selectGroupTagCommand;
@@ -983,6 +1114,7 @@ public class ProjectsViewModel : ViewModelBase
     {
         SelectedProjectTags.Clear();
         ProjectTagInput = string.Empty;
+        IsProjectTagColorEditorOpen = false;
         if (SelectedProject is null)
             return;
 
@@ -1069,6 +1201,8 @@ public class ProjectsViewModel : ViewModelBase
 
         RemoveProjectTag(tag, sync: false);
         ProjectTagInput = tag.Trim();
+        IsProjectTagColorEditorOpen = true;
+        SyncProjectTagColorDraft(tag.Trim());
     }
 
     private void RemoveProjectTag(string? tag)
@@ -1125,6 +1259,185 @@ public class ProjectsViewModel : ViewModelBase
 
         if (TryAddTagChip(token))
             SyncSelectedProjectTagsToProject();
+    }
+
+    private void ToggleProjectTagColorEditor()
+    {
+        if (!CanEditProjectTagColor)
+            return;
+
+        IsProjectTagColorEditorOpen = !IsProjectTagColorEditorOpen;
+        if (IsProjectTagColorEditorOpen)
+            SyncProjectTagColorDraftFromInput();
+    }
+
+    private void ApplyProjectTagColor()
+    {
+        var tag = ProjectTagColorTarget;
+        if (!CanEditProjectTagColor || string.IsNullOrWhiteSpace(tag))
+            return;
+
+        var cfg = AppConfigStore.Load();
+        cfg.Appearance.TagColors ??= new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
+        cfg.Appearance.TagColors[tag] = ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex);
+        AppConfigStore.Save(cfg);
+        RefreshProjectTagAppearance(cfg);
+        ShowNotification(Lf("Projects.Tags.ColorApplied", "Saved custom color for tag '{0}'.", tag));
+    }
+
+    private void ResetProjectTagColor()
+    {
+        var tag = ProjectTagColorTarget;
+        if (!CanEditProjectTagColor || string.IsNullOrWhiteSpace(tag))
+            return;
+
+        var defaults = ProjectTagChip.GetDefaultPalette(tag);
+        ProjectTagColorHex = defaults.Background;
+
+        var cfg = AppConfigStore.Load();
+        cfg.Appearance.TagColors ??= new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
+        cfg.Appearance.TagColors.Remove(tag);
+        AppConfigStore.Save(cfg);
+        RefreshProjectTagAppearance(cfg);
+        ShowNotification(Lf("Projects.Tags.ColorReset", "Reset tag '{0}' to the default palette.", tag));
+    }
+
+    private void RefreshProjectTagAppearance(AppConfig? config = null)
+    {
+        config ??= AppConfigStore.Load();
+        RefreshSelectedProjectTags();
+        RefreshReusableProjectTags();
+        foreach (var project in _allProjects)
+            project.RefreshTagChips(config);
+    }
+
+    private void SyncProjectTagColorDraftFromInput()
+    {
+        var tag = ProjectTagColorTarget;
+        if (string.IsNullOrWhiteSpace(tag))
+            return;
+
+        SyncProjectTagColorDraft(tag);
+    }
+
+    private void SyncProjectTagColorDraft(string tag)
+    {
+        var cfg = AppConfigStore.Load();
+        var accent = ProjectTagAppearance.Resolve(tag, cfg.Appearance.TagColors).Background;
+
+        _projectTagColorSyncing = true;
+        try
+        {
+            _projectTagColorHex = accent;
+            OnPropertyChanged(nameof(ProjectTagColorHex));
+            if (ProjectTagAppearance.TryParseRgb(accent, out var red, out var green, out var blue))
+            {
+                _projectTagColorRed = red;
+                _projectTagColorGreen = green;
+                _projectTagColorBlue = blue;
+                OnPropertyChanged(nameof(ProjectTagColorRed));
+                OnPropertyChanged(nameof(ProjectTagColorGreen));
+                OnPropertyChanged(nameof(ProjectTagColorBlue));
+
+                ProjectTagAppearance.RgbToHsv(red, green, blue, out var hue, out var saturation, out var value);
+                _projectTagColorHue = hue;
+                _projectTagColorSaturation = saturation;
+                _projectTagColorValue = value;
+                OnPropertyChanged(nameof(ProjectTagColorHue));
+                OnPropertyChanged(nameof(ProjectTagColorSaturation));
+                OnPropertyChanged(nameof(ProjectTagColorValue));
+            }
+        }
+        finally
+        {
+            _projectTagColorSyncing = false;
+        }
+
+        RefreshProjectTagColorPreview();
+    }
+
+    private void SyncRgbFromHex()
+    {
+        if (_projectTagColorSyncing)
+            return;
+
+        if (!ProjectTagAppearance.TryParseRgb(_projectTagColorHex, out var red, out var green, out var blue))
+            return;
+
+        _projectTagColorSyncing = true;
+        try
+        {
+            _projectTagColorRed = red;
+            _projectTagColorGreen = green;
+            _projectTagColorBlue = blue;
+            OnPropertyChanged(nameof(ProjectTagColorRed));
+            OnPropertyChanged(nameof(ProjectTagColorGreen));
+            OnPropertyChanged(nameof(ProjectTagColorBlue));
+
+            ProjectTagAppearance.RgbToHsv(red, green, blue, out var hue, out var saturation, out var value);
+            _projectTagColorHue = hue;
+            _projectTagColorSaturation = saturation;
+            _projectTagColorValue = value;
+            OnPropertyChanged(nameof(ProjectTagColorHue));
+            OnPropertyChanged(nameof(ProjectTagColorSaturation));
+            OnPropertyChanged(nameof(ProjectTagColorValue));
+        }
+        finally
+        {
+            _projectTagColorSyncing = false;
+        }
+    }
+
+    private void SyncHexFromRgb()
+    {
+        if (_projectTagColorSyncing)
+            return;
+
+        _projectTagColorSyncing = true;
+        try
+        {
+            _projectTagColorHex = ProjectTagAppearance.FormatHex(
+                (byte)Math.Round(_projectTagColorRed),
+                (byte)Math.Round(_projectTagColorGreen),
+                (byte)Math.Round(_projectTagColorBlue));
+            OnPropertyChanged(nameof(ProjectTagColorHex));
+        }
+        finally
+        {
+            _projectTagColorSyncing = false;
+        }
+
+        RefreshProjectTagColorPreview();
+    }
+
+    private void SyncHexFromHsv()
+    {
+        if (_projectTagColorSyncing)
+            return;
+
+        _projectTagColorSyncing = true;
+        try
+        {
+            _projectTagColorHex = ProjectTagAppearance.HsvToHex(
+                _projectTagColorHue,
+                _projectTagColorSaturation,
+                _projectTagColorValue);
+            OnPropertyChanged(nameof(ProjectTagColorHex));
+        }
+        finally
+        {
+            _projectTagColorSyncing = false;
+        }
+
+        SyncRgbFromHex();
+        RefreshProjectTagColorPreview();
+    }
+
+    private void RefreshProjectTagColorPreview()
+    {
+        OnPropertyChanged(nameof(ProjectTagColorPreviewBackground));
+        OnPropertyChanged(nameof(ProjectTagColorPreviewForeground));
+        OnPropertyChanged(nameof(ProjectTagColorPreviewBorder));
     }
 
     private void SelectGroupTag(string? tag)
@@ -3384,6 +3697,25 @@ public class ProjectItemViewModel : ViewModelBase
             .Take(4);
 
         var config = ProjectTagAppearance.TryLoadConfig();
+        foreach (var tag in tags)
+            TagChips.Add(ProjectTagChip.Create(tag, config));
+    }
+
+    public void RefreshTagChips(AppConfig? config = null)
+    {
+        TagChips.Clear();
+
+        if (string.IsNullOrWhiteSpace(TagsCsv))
+            return;
+
+        var tags = TagsCsv
+            .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(4);
+
+        config ??= ProjectTagAppearance.TryLoadConfig();
         foreach (var tag in tags)
             TagChips.Add(ProjectTagChip.Create(tag, config));
     }

@@ -134,4 +134,116 @@ public static class ProjectTagAppearance
         normalized = $"#{raw.ToUpperInvariant()}";
         return true;
     }
+
+    public static TagColorConfig BuildConfigFromAccent(string accentHex)
+    {
+        if (!TryNormalizeHex(accentHex, out var normalized) || !TryParseRgb(normalized, out var red, out var green, out var blue))
+        {
+            normalized = "#3A7AFE";
+            TryParseRgb(normalized, out red, out green, out blue);
+        }
+
+        var foreground = GetReadableForeground(red, green, blue);
+        var border = CreateBorder(red, green, blue);
+
+        return new TagColorConfig
+        {
+            Background = normalized,
+            Foreground = foreground,
+            Border = border
+        };
+    }
+
+    public static string FormatHex(byte red, byte green, byte blue) =>
+        $"#{red:X2}{green:X2}{blue:X2}";
+
+    public static bool TryParseRgb(string? value, out byte red, out byte green, out byte blue)
+    {
+        red = green = blue = 0;
+        if (!TryNormalizeHex(value, out var normalized))
+            return false;
+
+        var raw = normalized[1..];
+        red = byte.Parse(raw[..2], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        green = byte.Parse(raw.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        blue = byte.Parse(raw.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        return true;
+    }
+
+    public static void RgbToHsv(byte red, byte green, byte blue, out double hue, out double saturation, out double value)
+    {
+        var r = red / 255d;
+        var g = green / 255d;
+        var b = blue / 255d;
+        var max = Math.Max(r, Math.Max(g, b));
+        var min = Math.Min(r, Math.Min(g, b));
+        var delta = max - min;
+
+        hue = 0d;
+        if (delta > 0d)
+        {
+            if (Math.Abs(max - r) < double.Epsilon)
+                hue = 60d * (((g - b) / delta) % 6d);
+            else if (Math.Abs(max - g) < double.Epsilon)
+                hue = 60d * (((b - r) / delta) + 2d);
+            else
+                hue = 60d * (((r - g) / delta) + 4d);
+        }
+
+        if (hue < 0d)
+            hue += 360d;
+
+        saturation = max <= 0d ? 0d : (delta / max) * 100d;
+        value = max * 100d;
+    }
+
+    public static string HsvToHex(double hue, double saturation, double value)
+    {
+        hue = ((hue % 360d) + 360d) % 360d;
+        saturation = Math.Clamp(saturation / 100d, 0d, 1d);
+        value = Math.Clamp(value / 100d, 0d, 1d);
+
+        var chroma = value * saturation;
+        var segment = hue / 60d;
+        var x = chroma * (1d - Math.Abs((segment % 2d) - 1d));
+        var m = value - chroma;
+
+        double rPrime;
+        double gPrime;
+        double bPrime;
+
+        if (segment < 1d)
+            (rPrime, gPrime, bPrime) = (chroma, x, 0d);
+        else if (segment < 2d)
+            (rPrime, gPrime, bPrime) = (x, chroma, 0d);
+        else if (segment < 3d)
+            (rPrime, gPrime, bPrime) = (0d, chroma, x);
+        else if (segment < 4d)
+            (rPrime, gPrime, bPrime) = (0d, x, chroma);
+        else if (segment < 5d)
+            (rPrime, gPrime, bPrime) = (x, 0d, chroma);
+        else
+            (rPrime, gPrime, bPrime) = (chroma, 0d, x);
+
+        var red = (byte)Math.Round((rPrime + m) * 255d);
+        var green = (byte)Math.Round((gPrime + m) * 255d);
+        var blue = (byte)Math.Round((bPrime + m) * 255d);
+        return FormatHex(red, green, blue);
+    }
+
+    private static string GetReadableForeground(byte red, byte green, byte blue)
+    {
+        var luminance = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+        return luminance >= 148 ? "#11131A" : "#F7F9FF";
+    }
+
+    private static string CreateBorder(byte red, byte green, byte blue)
+    {
+        var luminance = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+        var delta = luminance >= 148 ? -42 : 42;
+        return FormatHex(Shift(red, delta), Shift(green, delta), Shift(blue, delta));
+    }
+
+    private static byte Shift(byte value, int delta) =>
+        (byte)Math.Clamp(value + delta, 0, 255);
 }
