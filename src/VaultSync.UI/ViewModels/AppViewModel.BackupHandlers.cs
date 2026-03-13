@@ -358,7 +358,8 @@ namespace VaultSync.UI.ViewModels
                                         preferRunnerProgressOnly: isRemoteDestination,
                                         preferParallelArchiveUpload: preferParallelUpload,
                                         useScanCache: _settingsViewModel.EnableScanCache,
-                                        aggressiveScanCache: _settingsViewModel.AggressiveScanCache
+                                        aggressiveScanCache: _settingsViewModel.AggressiveScanCache,
+                                        enableCheckpointedRetry: dest.EnableCheckpointResume
                                     );
                                     sw.Stop();
 
@@ -1018,7 +1019,8 @@ namespace VaultSync.UI.ViewModels
                                 preferRunnerProgressOnly: isRemoteDestination,
                                 preferParallelArchiveUpload: preferParallelUpload,
                                 useScanCache: _settingsViewModel.EnableScanCache,
-                                aggressiveScanCache: _settingsViewModel.AggressiveScanCache
+                                aggressiveScanCache: _settingsViewModel.AggressiveScanCache,
+                                enableCheckpointedRetry: primaryDest.EnableCheckpointResume
                             );
                             sw.Stop();
 

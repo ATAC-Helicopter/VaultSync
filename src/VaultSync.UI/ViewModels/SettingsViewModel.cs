@@ -165,6 +165,7 @@ namespace VaultSync.UI
             bool ForceMetadataBackfill,
             int RetryMaxAttempts,
             int RetryBackoffSeconds,
+            bool EnableCheckpointResume,
             long? SoftQuotaBytes,
             int QuotaWarningPercent);
 
@@ -413,6 +414,7 @@ namespace VaultSync.UI
                         ForceMetadataBackfill = dest.ForceMetadataBackfill,
                         RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
                         RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
+                        EnableCheckpointResume = dest.EnableCheckpointResume,
                         SoftQuotaGb = dest.SoftQuotaBytes.HasValue && dest.SoftQuotaBytes.Value > 0
                             ? Math.Round(dest.SoftQuotaBytes.Value / 1024d / 1024d / 1024d, 2)
                             : 0d,
@@ -444,6 +446,7 @@ namespace VaultSync.UI
                     ForceMetadataBackfill = false,
                     RetryMaxAttempts = 1,
                     RetryBackoffSeconds = 10,
+                    EnableCheckpointResume = true,
                     SoftQuotaGb = 0d,
                     QuotaWarningPercent = 85
                 });
@@ -540,6 +543,7 @@ namespace VaultSync.UI
                     ForceMetadataBackfill: d.ForceMetadataBackfill,
                     RetryMaxAttempts: ClampInt(d.RetryMaxAttempts, 1, 10, 1),
                     RetryBackoffSeconds: ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
+                    EnableCheckpointResume: d.EnableCheckpointResume,
                     SoftQuotaBytes: ToQuotaBytes(d.SoftQuotaGb),
                     QuotaWarningPercent: ClampInt(d.QuotaWarningPercent, 50, 99, 85)))
                 .ToList();
@@ -620,6 +624,7 @@ namespace VaultSync.UI
                 ForceMetadataBackfill = d.ForceMetadataBackfill,
                 RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
                 RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
+                EnableCheckpointResume = d.EnableCheckpointResume,
                 SoftQuotaBytes = d.SoftQuotaBytes,
                 QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
             }).ToList();
@@ -2285,6 +2290,7 @@ namespace VaultSync.UI
                 CredentialName = dest.CredentialName,
                 RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
                 RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
+                EnableCheckpointResume = dest.EnableCheckpointResume,
                 SoftQuotaBytes = ToQuotaBytes(dest.SoftQuotaGb),
                 QuotaWarningPercent = ClampInt(dest.QuotaWarningPercent, 50, 99, 85)
             };
@@ -2527,7 +2533,8 @@ namespace VaultSync.UI
                 PreMounted = true,
                 RetryMaxAttempts = 1,
                 RetryBackoffSeconds = 10,
-                SoftQuotaGb = 0d,
+                    EnableCheckpointResume = true,
+                    SoftQuotaGb = 0d,
                 QuotaWarningPercent = 85
             });
             RefreshLegacyVisibility();
@@ -3768,6 +3775,13 @@ namespace VaultSync.UI
             set => SetField(ref _retryBackoffSeconds, Math.Clamp(value, 1, 300));
         }
 
+        private bool _enableCheckpointResume = true;
+        public bool EnableCheckpointResume
+        {
+            get => _enableCheckpointResume;
+            set => SetField(ref _enableCheckpointResume, value);
+        }
+
         private double _softQuotaGb;
         public double SoftQuotaGb
         {
@@ -3823,4 +3837,5 @@ namespace VaultSync.UI
         public bool ShowPassword { get => _showPassword; set => SetField(ref _showPassword, value); }
     }
 }
+
 

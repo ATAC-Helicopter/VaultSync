@@ -819,6 +819,8 @@
   "Settings.Destinations.Remove": "Remove",
   "Settings.Destinations.RetryAttemptsTooltip": "Total attempts including the first run.",
   "Settings.Destinations.RetryBackoffTooltip": "Base delay in seconds (exponential backoff between retries).",
+  "Settings.Destinations.CheckpointResumeLabel": "Resume interrupted uploads",
+  "Settings.Destinations.CheckpointResumeDescription": "Keep resumable archive checkpoints on this destination so failed uploads can continue from the last verified byte range.",
   "Settings.Destinations.RetryPolicyDescription": "Retry failed backup attempts on this destination using exponential backoff.",
   "Settings.Destinations.RetryPolicyLabel": "Retry policy (attempts / base sec)",
   "Settings.Destinations.Select": "Select...",

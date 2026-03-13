@@ -225,6 +225,11 @@ namespace VaultSync.Core.Config
         /// </summary>
         public int RetryBackoffSeconds { get; set; } = 10;
         /// <summary>
+        /// When true, interrupted archive uploads keep resumable checkpoint state so later retries can continue
+        /// from the last completed byte range instead of restarting the whole transfer.
+        /// </summary>
+        public bool EnableCheckpointResume { get; set; } = true;
+        /// <summary>
         /// Auto-tuned archive upload buffer size for this destination.
         /// When null, VaultSync will probe before the first archive upload and cache the result.
         /// </summary>

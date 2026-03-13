@@ -1108,7 +1108,7 @@
     - bundled font assets open as valid font binaries instead of text/HTML payloads.
     - UI text rendering no longer depends on unpredictable system fallback caused by broken embedded assets.
 
-- [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers.
+- [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:
     - reduces wasted time and bandwidth on large backups and unstable network destinations.
@@ -1125,6 +1125,10 @@
     - interrupted transfers resume from the last committed checkpoint when the destination supports it.
     - unsafe or stale partial payloads are rejected and restarted cleanly instead of producing corrupted backups.
     - diagnostics/support bundle clearly report checkpoint creation, resume, discard, and fallback-to-full-retry reasons.
+  - Current status:
+    - Added archive-upload checkpoint persistence and resumable incomplete backup preservation per destination.
+    - Added prefix validation so resumed uploads restart cleanly if partial payload bytes no longer match the rebuilt local archive.
+    - Next pass should extend checkpoint semantics beyond archive uploads and expose resume/discard outcomes in diagnostics/support bundles.
     - introduce a more modern trend/insight presentation (for example: compact KPI tiles, clearer health/alert center, better weekly/storage visuals) without copying another product's layout literally.
     - preserve existing data sources and avoid a visual rewrite that breaks learned user flows.
   - Design constraints:

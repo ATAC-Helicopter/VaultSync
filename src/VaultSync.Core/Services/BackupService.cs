@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Config;
@@ -22,6 +26,8 @@ public sealed class BackupService
     private readonly BackupArchiveCryptoService _backupArchiveCryptoService;
     private const string InProgressMarkerFileName = ".vaultsync_inprogress";
     private const string CompletedMarkerFileName = ".vaultsync_complete";
+    private const string ArchiveResumeCheckpointFileName = ".vaultsync_resume.json";
+    private static readonly JsonSerializerOptions ResumeCheckpointJsonOptions = new() { WriteIndented = true };
     public event Action<Backup>? BackupRetentionDeleted;
     public sealed record BackupRetentionPreflightResult(
         bool CanPrune,
@@ -35,6 +41,13 @@ public sealed class BackupService
         bool Selected,
         string Code,
         string Message);
+
+    internal sealed record ArchiveResumeCheckpoint(
+        int Version,
+        string Mode,
+        string SourceFingerprint,
+        long ArchiveSizeBytes,
+        DateTime LastUpdatedUtc);
 
     public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
     public sealed record BackupPreflightResult(
@@ -127,6 +140,161 @@ public sealed class BackupService
         {
             Console.WriteLine($"[BackupService] Failed to remove marker '{fileName}' in '{backupFolder}': {ex.Message}");
         }
+    }
+
+    private static string GetArchiveResumeCheckpointPath(string backupFolder)
+        => Path.Combine(backupFolder, ArchiveResumeCheckpointFileName);
+
+    private static void WriteArchiveResumeCheckpoint(string backupFolder, ArchiveResumeCheckpoint checkpoint)
+    {
+        try
+        {
+            var path = GetArchiveResumeCheckpointPath(backupFolder);
+            var json = JsonSerializer.Serialize(checkpoint, ResumeCheckpointJsonOptions);
+            File.WriteAllText(path, json, Encoding.UTF8);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to write archive resume checkpoint in '{backupFolder}': {ex.Message}");
+        }
+    }
+
+    private static ArchiveResumeCheckpoint? TryReadArchiveResumeCheckpoint(string backupFolder)
+    {
+        try
+        {
+            var path = GetArchiveResumeCheckpointPath(backupFolder);
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            var json = File.ReadAllText(path, Encoding.UTF8);
+            return JsonSerializer.Deserialize<ArchiveResumeCheckpoint>(json, ResumeCheckpointJsonOptions);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to read archive resume checkpoint in '{backupFolder}': {ex.Message}");
+            return null;
+        }
+    }
+
+    private static void RemoveArchiveResumeCheckpoint(string backupFolder)
+    {
+        try
+        {
+            var path = GetArchiveResumeCheckpointPath(backupFolder);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to remove archive resume checkpoint in '{backupFolder}': {ex.Message}");
+        }
+    }
+
+    internal static string BuildArchiveResumeFingerprint(string sourceDir, IEnumerable<string> files)
+    {
+        using var sha = SHA256.Create();
+        var orderedFiles = files
+            .Select(path => Path.GetFullPath(path))
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in orderedFiles)
+        {
+            var info = new FileInfo(file);
+            var relative = Path.GetRelativePath(sourceDir, file).Replace('\\', '/');
+            var line = $"{relative}|{info.Length.ToString(CultureInfo.InvariantCulture)}|{info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture)}\n";
+            var bytes = Encoding.UTF8.GetBytes(line);
+            sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
+        }
+
+        sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+        return Convert.ToHexString(sha.Hash ?? Array.Empty<byte>());
+    }
+
+    private static bool IsResumableArchiveBackup(string backupDir)
+    {
+        if (!Directory.Exists(backupDir))
+        {
+            return false;
+        }
+
+        if (!File.Exists(Path.Combine(backupDir, InProgressMarkerFileName)))
+        {
+            return false;
+        }
+
+        if (TryReadArchiveResumeCheckpoint(backupDir) is null)
+        {
+            return false;
+        }
+
+        return File.Exists(Path.Combine(backupDir, BackupArchiveCryptoService.PlainArchiveFileName));
+    }
+
+    private static string? TryFindResumableArchiveBackupFolder(string candidateDestDir, string sourceFingerprint)
+    {
+        var projectDir = Path.GetDirectoryName(candidateDestDir);
+        if (string.IsNullOrWhiteSpace(projectDir) || !Directory.Exists(projectDir))
+        {
+            return null;
+        }
+
+        var match = SafeEnumerateDirectories(projectDir)
+            .Where(dir => !string.Equals(dir, candidateDestDir, StringComparison.OrdinalIgnoreCase))
+            .Select(dir => new { Dir = dir, Checkpoint = TryReadArchiveResumeCheckpoint(dir) })
+            .Where(item => item.Checkpoint is not null
+                           && string.Equals(item.Checkpoint.Mode, "archive", StringComparison.OrdinalIgnoreCase)
+                           && string.Equals(item.Checkpoint.SourceFingerprint, sourceFingerprint, StringComparison.Ordinal)
+                           && IsResumableArchiveBackup(item.Dir))
+            .OrderByDescending(item => item.Checkpoint!.LastUpdatedUtc)
+            .Select(item => item.Dir)
+            .FirstOrDefault();
+
+        return match;
+    }
+
+    internal static bool ValidateArchiveResumePrefix(string localArchive, string destinationArchive, long length, int bufferSize, CancellationToken ct)
+    {
+        if (length <= 0)
+        {
+            return true;
+        }
+
+        var remaining = length;
+        var compareBuffer = Math.Max(64 * 1024, bufferSize);
+        var left = new byte[compareBuffer];
+        var right = new byte[compareBuffer];
+
+        using var src = new FileStream(localArchive, FileMode.Open, FileAccess.Read, FileShare.Read, compareBuffer, FileOptions.SequentialScan);
+        using var dst = new FileStream(destinationArchive, FileMode.Open, FileAccess.Read, FileShare.Read, compareBuffer, FileOptions.SequentialScan);
+
+        while (remaining > 0)
+        {
+            ct.ThrowIfCancellationRequested();
+            var toRead = (int)Math.Min(compareBuffer, remaining);
+            var srcRead = src.Read(left, 0, toRead);
+            var dstRead = dst.Read(right, 0, toRead);
+            if (srcRead != dstRead || srcRead != toRead)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < toRead; i++)
+            {
+                if (left[i] != right[i])
+                {
+                    return false;
+                }
+            }
+
+            remaining -= toRead;
+        }
+
+        return true;
     }
 
     private static bool IsNetworkPathOrDrive(string path)
@@ -358,6 +526,12 @@ public sealed class BackupService
                     if (!File.Exists(markerPath))
                         continue;
 
+                    if (IsResumableArchiveBackup(backupDir))
+                    {
+                        Console.WriteLine($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
+                        continue;
+                    }
+
                     DeletePartialBackup(backupDir);
                     removed++;
                 }
@@ -442,7 +616,8 @@ public sealed class BackupService
         bool preferRunnerProgressOnly = false,
         bool preferParallelArchiveUpload = false,
         bool useScanCache = false,
-        bool aggressiveScanCache = false)
+        bool aggressiveScanCache = false,
+        bool enableCheckpointedRetry = true)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(project.RootPath))
@@ -636,7 +811,7 @@ public sealed class BackupService
                 progressCallback?.Invoke(0, "Preparing archive backup...", string.Empty);
 
                 var uploadBufferBytes = NormalizeArchiveUploadBufferBytes(archiveUploadBufferBytes);
-                await RunArchiveBackupAsync(
+                backupFolderUsed = await RunArchiveBackupAsync(
                     project,
                     backupFolder,
                     totalBytes,
@@ -645,7 +820,8 @@ public sealed class BackupService
                     progressCallback,
                     linkedToken,
                     uploadBufferBytes,
-                    preferParallelArchiveUpload);
+                    preferParallelArchiveUpload,
+                    enableCheckpointedRetry);
             }
             else
             {
@@ -1306,7 +1482,7 @@ public sealed class BackupService
     private const int ArchiveCopyBufferBytes = 1024 * 1024;
     private const int ArchiveFileStreamBufferBytes = 1024 * 1024;
 
-    private static async Task RunArchiveBackupAsync(
+    private static async Task<string> RunArchiveBackupAsync(
         Project project,
         string destDir,
         long totalBytes,
@@ -1315,7 +1491,8 @@ public sealed class BackupService
         Action<double, string, string>? progressCallback,
         CancellationToken ct,
         int uploadBufferBytes,
-        bool preferParallelUpload)
+        bool preferParallelUpload,
+        bool enableCheckpointedRetry)
     {
         var sourceDir = project.RootPath;
         var srcInfo = new DirectoryInfo(sourceDir);
@@ -1331,9 +1508,31 @@ public sealed class BackupService
         var allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
         var archiveTotalFiles = totalFiles > 0 ? totalFiles : allFiles.Length;
 
+        var workingDestDir = destDir;
+        ArchiveResumeCheckpoint? resumeCheckpoint = null;
+        if (enableCheckpointedRetry && allFiles.Length > 0)
+        {
+            var fingerprint = BuildArchiveResumeFingerprint(sourceDir, allFiles);
+            resumeCheckpoint = new ArchiveResumeCheckpoint(
+                Version: 1,
+                Mode: "archive",
+                SourceFingerprint: fingerprint,
+                ArchiveSizeBytes: 0,
+                LastUpdatedUtc: DateTime.UtcNow);
+
+            var resumableDir = TryFindResumableArchiveBackupFolder(destDir, fingerprint);
+            if (!string.IsNullOrWhiteSpace(resumableDir) &&
+                !string.Equals(resumableDir, destDir, StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"[BackupService] Resuming interrupted archive upload for '{project.Name}' from '{resumableDir}'.");
+                DeletePartialBackup(destDir);
+                workingDestDir = resumableDir;
+            }
+        }
+
         // 3. Prepare destination and local temp folder.
-        Directory.CreateDirectory(destDir);
-        var finalArchivePath = Path.Combine(destDir, BackupArchiveCryptoService.PlainArchiveFileName);
+        Directory.CreateDirectory(workingDestDir);
+        var finalArchivePath = Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName);
 
         var localTempRoot = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(localTempRoot);
@@ -1358,10 +1557,11 @@ public sealed class BackupService
 
                 File.Copy(localArchive, finalArchivePath, overwrite: true);
                 progressCallback?.Invoke(100, string.Empty, "Archive empty (0 files).");
+                RemoveArchiveResumeCheckpoint(workingDestDir);
 
                 var emptySize = new FileInfo(finalArchivePath).Length;
                 Console.WriteLine($"[BackupService] Created empty archive for '{project.Name}', size={emptySize} bytes.");
-                return;
+                return workingDestDir;
             }
 
             // --------------------
@@ -1478,6 +1678,17 @@ public sealed class BackupService
             var zipSize = zipInfo.Length;
             var bufferSize = uploadBufferBytes;
             var stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
+
+            if (resumeCheckpoint is not null)
+            {
+                WriteArchiveResumeCheckpoint(
+                    workingDestDir,
+                    resumeCheckpoint with
+                    {
+                        ArchiveSizeBytes = zipSize,
+                        LastUpdatedUtc = DateTime.UtcNow
+                    });
+            }
 
             async Task UploadSingleAttemptAsync(long startOffset)
             {
@@ -1626,6 +1837,15 @@ public sealed class BackupService
                             }
                         }
 
+                        if (existingLength > 0 &&
+                            !ValidateArchiveResumePrefix(localArchive, finalArchivePath, existingLength, bufferSize, ct))
+                        {
+                            Console.WriteLine($"[BackupService] Existing archive checkpoint for '{finalArchivePath}' did not match the local archive prefix. Restarting upload from 0 bytes.");
+                            using var truncate = new FileStream(finalArchivePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                            truncate.SetLength(0);
+                            existingLength = 0;
+                        }
+
                         await UploadSingleAttemptAsync(existingLength);
                         return;
                     }
@@ -1637,7 +1857,13 @@ public sealed class BackupService
                 }
             }
 
-            await EnsureDestinationWriteReadyAsync(destDir, ct);
+            await EnsureDestinationWriteReadyAsync(workingDestDir, ct);
+
+            if (enableCheckpointedRetry && preferParallelUpload)
+            {
+                Console.WriteLine($"[BackupService] Parallel archive upload disabled for '{project.Name}' because checkpointed retry is enabled.");
+                preferParallelUpload = false;
+            }
 
             if (preferParallelUpload && zipSize >= bufferSize * 8L)
             {
@@ -1664,12 +1890,22 @@ public sealed class BackupService
                 await UploadSingleWithResumeAsync(2);
             }
 
+            RemoveArchiveResumeCheckpoint(workingDestDir);
             Console.WriteLine($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalZipSize={zipSize} bytes");
+            return workingDestDir;
         }
         catch
         {
-            // Cleanup: remove incomplete destination folder and rethrow.
-            DeletePartialBackup(destDir);
+            if (enableCheckpointedRetry && File.Exists(finalArchivePath))
+            {
+                Console.WriteLine($"[BackupService] Preserving incomplete archive checkpoint in '{workingDestDir}' for later retry.");
+            }
+            else
+            {
+                // Cleanup: remove incomplete destination folder and rethrow.
+                DeletePartialBackup(workingDestDir);
+            }
+
             throw;
         }
         finally
