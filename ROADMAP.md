@@ -1109,6 +1109,7 @@
     - In progress: shared tag appearance resolution now supports configurable colors, and Projects now hosts the primary visual editor with a ring picker, quick swatches, live preview, and app-wide save/reset flows.
     - In progress: Settings now points users back to Projects for tag-color editing so the workflow stays in context instead of duplicating a second full editor.
     - In progress: Projects, Backups, and Dashboard activity are being aligned to render the same configured chips app-wide.
+    - In progress: the Settings > Appearance custom theme editor is being simplified into a clearer preset -> target -> pick -> preview workflow so the visual customization tools feel deliberate instead of crowded.
   - Acceptance:
     - Tag colors can be added, edited, reset, and removed from Projects without confusing duplicate entry points or broken layout.
     - The same tag uses the same colors anywhere it appears in the app.
@@ -1145,6 +1146,14 @@
   - Acceptance:
     - `Projects root` persists across restart even if startup writes happen while the destination is unreachable or config reads are transiently busy.
     - transient config read failures no longer downgrade the in-memory config to defaults and then overwrite the saved root path.
+
+- [ ] `BUG-17005` `P2` Simplify custom theme editor hierarchy in Settings > Appearance. _(In progress)_
+  - Scope: make the custom theme editor easier to understand visually by reducing duplicate emphasis, clarifying the edit order, and tightening the picker/preview layout.
+  - Current status:
+    - In progress: the editor is being reorganized into a clearer preset -> target -> pick -> preview flow with more compact preset cards and a less noisy customization surface.
+  - Acceptance:
+    - The theme editor reads as one coherent workflow instead of a pile of equal-weight controls.
+    - Presets, target selection, picker, and preview are visually distinct and easier to scan in windowed mode.
 
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.

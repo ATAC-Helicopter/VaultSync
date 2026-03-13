@@ -51,6 +51,22 @@
     <Style Selector="Button.settings-ghost:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
     </Style>
+
+    <Style Selector="Button.theme-preset-card">
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="14,12" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+      <Setter Property="MinWidth" Value="220" />
+      <Setter Property="MaxWidth" Value="260" />
+    </Style>
+    <Style Selector="Button.theme-preset-card:pointerover">
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
   </UserControl.Styles>
 
     <UserControl.Resources>
@@ -1245,7 +1261,7 @@
                         CornerRadius="14"
                         Padding="12"
                         Margin="0,6,0,0">
-                  <StackPanel Spacing="12">
+                  <StackPanel Spacing="14">
                     <StackPanel Spacing="2">
                       <TextBlock Text="{Binding ThemeEditorLabel}" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding ThemeEditorDescription}"
@@ -1253,15 +1269,22 @@
                                  FontSize="11" />
                     </StackPanel>
 
-                    <Grid ColumnDefinitions="1.4*,Auto,Auto"
-                          ColumnSpacing="8">
-                      <TextBox Grid.Column="0"
-                               Text="{Binding CustomThemeName, Mode=TwoWay}"
-                               Watermark="{Binding ThemeNameLabel}" />
-                      <ComboBox Grid.Column="1"
-                                Width="140"
-                                ItemsSource="{Binding CustomThemeBaseOptions}"
-                                SelectedItem="{Binding CustomThemeBase, Mode=TwoWay}" />
+                    <Grid ColumnDefinitions="1.35*,0.65*,Auto"
+                          ColumnSpacing="10">
+                      <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock Text="{Binding ThemeNameLabel}"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11" />
+                        <TextBox Text="{Binding CustomThemeName, Mode=TwoWay}"
+                                 Watermark="{Binding ThemeNameLabel}" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Text="{Binding ThemeBaseLabel}"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11" />
+                        <ComboBox ItemsSource="{Binding CustomThemeBaseOptions}"
+                                  SelectedItem="{Binding CustomThemeBase, Mode=TwoWay}" />
+                      </StackPanel>
                       <Button Grid.Column="2"
                               Classes="settings-ghost"
                               Command="{Binding ResetCustomThemeCommand}">
@@ -1277,160 +1300,221 @@
                         <ItemsControl.ItemsPanel>
                           <ItemsPanelTemplate>
                             <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
-                          </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate>
-                            <Button Classes="small-pill"
-                                    Command="{Binding DataContext.ApplyThemePresetCommand, ElementName=Root}"
-                                    CommandParameter="{Binding}">
-                              <StackPanel Spacing="2">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                <TextBlock Text="{Binding Description}"
-                                           FontSize="10"
-                                           Foreground="{DynamicResource TextMutedBrush}" />
-                              </StackPanel>
-                            </Button>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </StackPanel>
-
-                    <StackPanel Spacing="6">
-                      <TextBlock Text="{Binding ThemePaletteLabel}"
-                                 Foreground="{StaticResource TextSecondary}"
-                                 FontSize="11" />
-                      <ItemsControl ItemsSource="{Binding ThemePaletteSwatches}">
-                        <ItemsControl.ItemsPanel>
-                          <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
-                          </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate>
-                            <Button Width="34"
-                                    Height="34"
-                                    Padding="0"
-                                    CornerRadius="17"
-                                    Background="{Binding SwatchColor}"
-                                    BorderBrush="{DynamicResource BorderSoft}"
-                                    BorderThickness="1"
-                                    Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
-                                    CommandParameter="{Binding}" />
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </StackPanel>
-
-                    <ItemsControl ItemsSource="{Binding ThemeColorSlots}">
-                      <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                          <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
                         </ItemsPanelTemplate>
                       </ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                          <ToggleButton Classes="small-pill"
-                                        IsChecked="{Binding IsSelected, Mode=TwoWay}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                              <Border Width="14"
-                                      Height="14"
-                                      CornerRadius="7"
-                                      Background="{Binding SwatchColor}"
-                                      BorderBrush="{DynamicResource BorderSoft}"
-                                      BorderThickness="1" />
-                              <TextBlock Text="{Binding Label}" />
-                            </StackPanel>
-                          </ToggleButton>
+                            <Button Classes="theme-preset-card"
+                                    Command="{Binding DataContext.ApplyThemePresetCommand, ElementName=Root}"
+                                    CommandParameter="{Binding}">
+                              <StackPanel Width="220"
+                                          Spacing="4">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Description}"
+                                           FontSize="10"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextMutedBrush}" />
+                              </StackPanel>
+                            </Button>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    </StackPanel>
 
                     <Grid ColumnDefinitions="1.15*,0.85*"
                           ColumnSpacing="12">
-                      <StackPanel Spacing="8">
-                        <TextBlock Text="{Binding ThemePickerLabel}"
-                                   Foreground="{StaticResource TextSecondary}"
-                                   FontSize="11" />
-                        <Border Background="{DynamicResource Surface2}"
-                                BorderBrush="{DynamicResource DividerBrush}"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Padding="10">
-                          <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                 IsAlphaEnabled="False"
-                                                 IsAlphaVisible="False"
-                                                 IsColorModelVisible="False"
-                                                 IsColorPaletteVisible="False"
-                                                 IsHexInputVisible="False"
-                                                 IsComponentTextInputVisible="False"
-                                                 IsColorPreviewVisible="True"
-                                                 IsColorSpectrumVisible="True"
-                                                 IsColorSpectrumSliderVisible="True"
-                                                 IsComponentSliderVisible="True"
-                                                 ColorSpectrumShape="Ring" />
-                        </Border>
-                      </StackPanel>
+                      <Border Grid.Column="0"
+                              Background="{DynamicResource Surface2}"
+                              BorderBrush="{DynamicResource DividerBrush}"
+                              BorderThickness="1"
+                              CornerRadius="12"
+                              Padding="12">
+                        <StackPanel Spacing="12">
+                          <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding ThemePaletteLabel}"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontSize="11" />
+                            <ItemsControl ItemsSource="{Binding ThemePaletteSwatches}">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                  <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                                </ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                  <Button Width="30"
+                                          Height="30"
+                                          Padding="0"
+                                          CornerRadius="15"
+                                          Background="{Binding SwatchColor}"
+                                          BorderBrush="{DynamicResource BorderSoft}"
+                                          BorderThickness="1"
+                                          Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
+                                          CommandParameter="{Binding}" />
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
 
-                      <StackPanel Spacing="8">
-                        <TextBlock Text="{Binding ThemePreviewLabel}"
-                                   Foreground="{StaticResource TextSecondary}"
-                                   FontSize="11" />
-                        <Border Background="{Binding ThemePreviewBackground}"
-                                BorderBrush="{Binding ThemePreviewSurfaceAlt}"
-                                BorderThickness="1"
-                                CornerRadius="16"
-                                Padding="14">
-                          <Grid RowDefinitions="Auto,Auto,Auto"
-                                RowSpacing="10">
-                            <Border Background="{Binding ThemePreviewSurface}"
-                                    BorderBrush="{Binding ThemePreviewSurfaceAlt}"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="12">
-                              <StackPanel Spacing="6">
-                                <TextBlock Text="{Binding CustomThemeName}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{Binding ThemePreviewTextPrimary}" />
+                          <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding ThemePickerLabel}"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontSize="11" />
+                            <ItemsControl ItemsSource="{Binding ThemeColorSlots}">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                  <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                                </ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                  <ToggleButton Classes="small-pill"
+                                                IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                      <Border Width="14"
+                                              Height="14"
+                                              CornerRadius="7"
+                                              Background="{Binding SwatchColor}"
+                                              BorderBrush="{DynamicResource BorderSoft}"
+                                              BorderThickness="1" />
+                                      <TextBlock Text="{Binding Label}" />
+                                    </StackPanel>
+                                  </ToggleButton>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+
+                          <Border Background="{DynamicResource Surface1}"
+                                  BorderBrush="{DynamicResource DividerBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="12"
+                                  Padding="10">
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="10">
+                              <Border Width="34"
+                                      Height="34"
+                                      CornerRadius="17"
+                                      Background="{Binding SelectedThemeColorHex}"
+                                      BorderBrush="{DynamicResource BorderSoft}"
+                                      BorderThickness="1" />
+                              <StackPanel Grid.Column="1"
+                                          Spacing="2">
+                                <TextBlock Text="{Binding SelectedThemeColorSlot.Label}"
+                                           FontWeight="SemiBold" />
                                 <TextBlock Text="{Binding SelectedThemeColorHex}"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="11" />
+                              </StackPanel>
+                            </Grid>
+                          </Border>
+
+                          <Border Background="{DynamicResource Surface1}"
+                                  BorderBrush="{DynamicResource DividerBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="12"
+                                  Padding="10">
+                            <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
+                                                   MaxWidth="460"
+                                                   HorizontalAlignment="Left"
+                                                   IsAlphaEnabled="False"
+                                                   IsAlphaVisible="False"
+                                                   IsColorModelVisible="False"
+                                                   IsColorPaletteVisible="False"
+                                                   IsHexInputVisible="False"
+                                                   IsComponentTextInputVisible="False"
+                                                   IsColorPreviewVisible="True"
+                                                   IsColorSpectrumVisible="True"
+                                                   IsColorSpectrumSliderVisible="True"
+                                                   IsComponentSliderVisible="True"
+                                                   ColorSpectrumShape="Ring" />
+                          </Border>
+                        </StackPanel>
+                      </Border>
+
+                      <Border Grid.Column="1"
+                              Background="{DynamicResource Surface2}"
+                              BorderBrush="{DynamicResource DividerBrush}"
+                              BorderThickness="1"
+                              CornerRadius="12"
+                              Padding="12">
+                        <StackPanel Spacing="10">
+                          <TextBlock Text="{Binding ThemePreviewLabel}"
+                                     Foreground="{StaticResource TextSecondary}"
+                                     FontSize="11" />
+                          <Border Background="{Binding ThemePreviewBackground}"
+                                  BorderBrush="{Binding ThemePreviewSurfaceAlt}"
+                                  BorderThickness="1"
+                                  CornerRadius="16"
+                                  Padding="14">
+                            <Grid RowDefinitions="Auto,Auto,Auto"
+                                  RowSpacing="10">
+                              <Border Background="{Binding ThemePreviewSurface}"
+                                      BorderBrush="{Binding ThemePreviewSurfaceAlt}"
+                                      BorderThickness="1"
+                                      CornerRadius="12"
+                                      Padding="12">
+                                <StackPanel Spacing="6">
+                                  <TextBlock Text="{Binding CustomThemeName}"
+                                             FontWeight="SemiBold"
+                                             Foreground="{Binding ThemePreviewTextPrimary}" />
+                                  <TextBlock Text="{Binding SelectedThemeColorSlot.Label}"
+                                             Foreground="{Binding ThemePreviewTextSecondary}"
+                                             FontSize="11" />
+                                </StackPanel>
+                              </Border>
+                              <Border Grid.Row="1"
+                                      Background="{Binding ThemePreviewSurfaceAlt}"
+                                      CornerRadius="12"
+                                      Padding="12">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                  <Border Background="{Binding ThemePreviewAccent}"
+                                          CornerRadius="999"
+                                          Padding="10,4">
+                                    <TextBlock Text="{Binding DataContext.ThemePreviewAccentLabel, ElementName=Root}"
+                                               Foreground="{Binding ThemePreviewBackground}"
+                                               FontWeight="SemiBold" />
+                                  </Border>
+                                  <Border Background="{Binding ThemePreviewSurface}"
+                                          BorderBrush="{Binding ThemePreviewSurfaceAlt}"
+                                          BorderThickness="1"
+                                          CornerRadius="999"
+                                          Padding="10,4">
+                                    <TextBlock Text="{Binding DataContext.ThemePreviewSurfaceLabel, ElementName=Root}"
+                                               Foreground="{Binding ThemePreviewTextPrimary}" />
+                                  </Border>
+                                </StackPanel>
+                              </Border>
+                              <StackPanel Grid.Row="2"
+                                          Spacing="4">
+                                <TextBlock Text="{Binding DataContext.ThemePreviewPrimaryLabel, ElementName=Root}"
+                                           Foreground="{Binding ThemePreviewTextPrimary}"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding DataContext.ThemePreviewSecondaryLabel, ElementName=Root}"
                                            Foreground="{Binding ThemePreviewTextSecondary}"
                                            FontSize="11" />
                               </StackPanel>
-                            </Border>
-                            <Border Grid.Row="1"
-                                    Background="{Binding ThemePreviewSurfaceAlt}"
-                                    CornerRadius="12"
-                                    Padding="12">
-                              <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Border Background="{Binding ThemePreviewAccent}"
-                                        CornerRadius="999"
-                                        Padding="10,4">
-                                  <TextBlock Text="{Binding DataContext.ThemePreviewAccentLabel, ElementName=Root}"
-                                             Foreground="{Binding ThemePreviewBackground}"
-                                             FontWeight="SemiBold" />
-                                </Border>
-                                <Border Background="{Binding ThemePreviewSurface}"
-                                        BorderBrush="{Binding ThemePreviewSurfaceAlt}"
-                                        BorderThickness="1"
-                                        CornerRadius="999"
-                                        Padding="10,4">
-                                  <TextBlock Text="{Binding DataContext.ThemePreviewSurfaceLabel, ElementName=Root}"
-                                             Foreground="{Binding ThemePreviewTextPrimary}" />
-                                </Border>
-                              </StackPanel>
-                            </Border>
-                            <StackPanel Grid.Row="2"
-                                        Spacing="4">
-                              <TextBlock Text="{Binding DataContext.ThemePreviewPrimaryLabel, ElementName=Root}"
-                                         Foreground="{Binding ThemePreviewTextPrimary}"
+                            </Grid>
+                          </Border>
+
+                          <Border Background="{DynamicResource Surface1}"
+                                  BorderBrush="{DynamicResource DividerBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="12"
+                                  Padding="12">
+                            <StackPanel Spacing="4">
+                              <TextBlock Text="{Binding ThemeBaseLabel}"
+                                         Foreground="{DynamicResource TextMutedBrush}"
+                                         FontSize="11" />
+                              <TextBlock Text="{Binding CustomThemeBase}"
                                          FontWeight="SemiBold" />
-                              <TextBlock Text="{Binding DataContext.ThemePreviewSecondaryLabel, ElementName=Root}"
-                                         Foreground="{Binding ThemePreviewTextSecondary}"
+                              <TextBlock Text="{Binding SelectedThemeColorHex}"
+                                         Foreground="{DynamicResource TextMutedBrush}"
                                          FontSize="11" />
                             </StackPanel>
-                          </Grid>
-                        </Border>
-                      </StackPanel>
+                          </Border>
+                        </StackPanel>
+                      </Border>
                     </Grid>
                   </StackPanel>
                 </Border>
