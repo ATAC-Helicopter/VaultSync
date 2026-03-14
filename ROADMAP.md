@@ -1182,6 +1182,16 @@
     - Theme quick colors use familiar hard-coded presets instead of abstract placeholder swatches.
     - Theme quick colors stay usable for the selected slot category instead of requiring manual guesswork.
 
+- [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials. _(In progress)_
+  - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.
+  - Current status:
+    - In progress: the custom theme editor models, commands, labels, and helper methods are being extracted out of the main `SettingsViewModel` file into a dedicated partial.
+    - In progress: the refactor is intentionally behavior-preserving so the existing Settings bindings and saved appearance data stay unchanged.
+  - Acceptance:
+    - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
+    - Existing Settings bindings continue to work without regressions.
+    - The split makes later platform-specific settings work lower-risk and easier to review.
+
 - [ ] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(In progress)_
   - Scope:
     - make restore-readiness risk states easy to inspect from Dashboard and Backups without hunting for the affected projects;
