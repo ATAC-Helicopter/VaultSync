@@ -1325,8 +1325,8 @@
                     <WrapPanel Orientation="Horizontal"
                                ItemSpacing="12"
                                LineSpacing="12">
-                      <Border MinWidth="340"
-                              MaxWidth="560"
+                      <Border MinWidth="320"
+                              MaxWidth="540"
                               Background="{DynamicResource Surface2}"
                               BorderBrush="{DynamicResource DividerBrush}"
                               BorderThickness="1"
@@ -1351,15 +1351,15 @@
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                   <Button Classes="color-swatch-button"
-                                          Width="42"
-                                          Height="42"
+                                          Width="46"
+                                          Height="34"
                                           Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
                                           CommandParameter="{Binding}">
-                                    <Border Width="36"
-                                            Height="36"
-                                            CornerRadius="18"
+                                    <Border Width="40"
+                                            Height="28"
+                                            CornerRadius="10"
                                             Background="{Binding SwatchBrush}"
-                                            BorderBrush="#D9E6FF"
+                                            BorderBrush="{Binding OutlineBrush}"
                                             BorderThickness="1.5" />
                                   </Button>
                                 </DataTemplate>
@@ -1426,7 +1426,7 @@
                                   CornerRadius="12"
                                   Padding="10">
                             <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                   MaxWidth="360"
+                                                   MaxWidth="320"
                                                    HorizontalAlignment="Left"
                                                    IsAlphaEnabled="False"
                                                    IsAlphaVisible="False"
@@ -1445,8 +1445,8 @@
                         </StackPanel>
                       </Border>
 
-                      <Border MinWidth="300"
-                              MaxWidth="380"
+                      <Border MinWidth="280"
+                              MaxWidth="360"
                               Background="{DynamicResource Surface2}"
                               BorderBrush="{DynamicResource DividerBrush}"
                               BorderThickness="1"

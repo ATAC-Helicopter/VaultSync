@@ -1113,6 +1113,7 @@
     - In progress: the Projects editor is being tightened into a wrap-friendly layout with stronger quick swatches so it still reads clearly in narrower windows.
     - In progress: the quick tag palette is being switched to a standard hard-coded color set so it behaves more like familiar color pickers.
     - In progress: tag presets are being kept chip-friendly so the quick colors make sense for tags instead of mirroring generic theme slots.
+    - In progress: swatch borders are being made contrast-aware so light preset colors remain readable on dark surfaces.
   - Acceptance:
     - Tag colors can be added, edited, reset, and removed from Projects without confusing duplicate entry points or broken layout.
     - The same tag uses the same colors anywhere it appears in the app.
@@ -1172,6 +1173,7 @@
   - Current status:
     - In progress: the custom theme presets are being expanded with OLED Black and Deep Blue variants for darker display preferences.
     - In progress: the theme editor is moving advanced sliders into the right-side panel and using a more recognizable editor-style default palette.
+    - In progress: theme swatches are being tightened into stronger preset tiles so neutral and light colors read clearly at a glance.
   - Acceptance:
     - Starter themes include clearly differentiated OLED black and dark blue options.
     - The default palette is understandable at a glance as the app's core colors and accents.

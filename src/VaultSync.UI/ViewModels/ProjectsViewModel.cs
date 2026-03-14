@@ -53,11 +53,19 @@ public class ProjectsViewModel : ViewModelBase
             Hex = hex;
             Swatch = Color.Parse(hex);
             SwatchBrush = new SolidColorBrush(Swatch);
+            OutlineBrush = CreateOutlineBrush(Swatch);
         }
 
         public string Hex { get; }
         public Color Swatch { get; }
         public IBrush SwatchBrush { get; }
+        public IBrush OutlineBrush { get; }
+
+        private static IBrush CreateOutlineBrush(Color color)
+        {
+            var luminance = ((0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B)) / 255d;
+            return new SolidColorBrush(luminance > 0.62 ? Color.Parse("#24344A") : Color.Parse("#E2E8F0"));
+        }
     }
 
     /// <summary>
@@ -592,10 +600,11 @@ public class ProjectsViewModel : ViewModelBase
 
         foreach (var hex in new[]
                  {
-                     "#2563EB", "#4F8DFF", "#38BDF8", "#22D3EE", "#14B8A6",
-                     "#22CC88", "#84CC16", "#EAB308", "#F59E0B", "#F97316",
-                     "#EF4444", "#FF6B6B", "#F857A6", "#A855F7", "#7C3AED",
-                     "#6366F1", "#475569", "#94A3B8"
+                     "#111827", "#334155", "#64748B", "#E2E8F0",
+                     "#DC2626", "#F97316", "#F59E0B", "#EAB308",
+                     "#84CC16", "#22C55E", "#14B8A6", "#06B6D4",
+                     "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1",
+                     "#7C3AED", "#A855F7", "#EC4899", "#F43F5E"
                  })
         {
             ProjectTagColorSwatches.Add(new ProjectTagColorSwatchViewModel(hex));

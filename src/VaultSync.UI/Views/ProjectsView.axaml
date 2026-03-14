@@ -796,8 +796,8 @@
                       <WrapPanel Orientation="Horizontal"
                                  ItemSpacing="14"
                                  LineSpacing="14">
-                        <StackPanel Width="320"
-                                    MaxWidth="460"
+                        <StackPanel MinWidth="240"
+                                    MaxWidth="420"
                                     Spacing="4">
                           <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Label}"
                                      FontSize="12"
@@ -835,8 +835,8 @@
                       <WrapPanel Orientation="Horizontal"
                                  ItemSpacing="14"
                                  LineSpacing="14">
-                        <Border MinWidth="280"
-                                MaxWidth="400"
+                        <Border MinWidth="260"
+                                MaxWidth="360"
                                 Background="{DynamicResource Surface1}"
                                 BorderBrush="{DynamicResource DividerBrush}"
                                 BorderThickness="1"
@@ -857,14 +857,14 @@
                                                    IsColorSpectrumVisible="True"
                                                    IsColorSpectrumSliderVisible="True"
                                                    IsComponentSliderVisible="False"
-                                                   MaxWidth="300"
+                                                   MaxWidth="260"
                                                    HorizontalAlignment="Left"
                                                    ColorSpectrumShape="Ring" />
                           </StackPanel>
                         </Border>
 
-                        <Border MinWidth="240"
-                                MaxWidth="320"
+                        <Border MinWidth="220"
+                                MaxWidth="300"
                                 Background="{DynamicResource Surface1}"
                                 BorderBrush="{DynamicResource DividerBrush}"
                                 BorderThickness="1"
@@ -877,21 +877,21 @@
                             <ItemsControl ItemsSource="{Binding DataContext.ProjectTagColorSwatches, ElementName=Root}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                  <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="10" />
+                                  <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
                                 </ItemsPanelTemplate>
                               </ItemsControl.ItemsPanel>
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                   <Button Classes="color-swatch-button"
-                                          Width="44"
-                                          Height="44"
+                                          Width="46"
+                                          Height="34"
                                           Command="{Binding DataContext.ApplyProjectTagColorSwatchCommand, ElementName=Root}"
                                           CommandParameter="{Binding Hex}">
-                                    <Border Width="38"
-                                            Height="38"
-                                            CornerRadius="19"
+                                    <Border Width="40"
+                                            Height="28"
+                                            CornerRadius="10"
                                             Background="{Binding SwatchBrush}"
-                                            BorderBrush="#D9E6FF"
+                                            BorderBrush="{Binding OutlineBrush}"
                                             BorderThickness="1.5" />
                                   </Button>
                                 </DataTemplate>

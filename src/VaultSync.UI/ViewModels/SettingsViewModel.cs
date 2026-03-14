@@ -516,11 +516,19 @@ namespace VaultSync.UI
                 Hex = hex;
                 SwatchColor = Color.Parse(hex);
                 SwatchBrush = new SolidColorBrush(SwatchColor);
+                OutlineBrush = CreateOutlineBrush(SwatchColor);
             }
 
             public string Hex { get; }
             public Color SwatchColor { get; }
             public IBrush SwatchBrush { get; }
+            public IBrush OutlineBrush { get; }
+
+            private static IBrush CreateOutlineBrush(Color color)
+            {
+                var luminance = ((0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B)) / 255d;
+                return new SolidColorBrush(luminance > 0.62 ? Color.Parse("#24344A") : Color.Parse("#E2E8F0"));
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -1366,10 +1374,10 @@ namespace VaultSync.UI
         {
             return new[]
             {
-                "#000000", "#09111B", "#101218", "#181B24", "#222635", "#2F3548", "#475569", "#94A3B8",
-                "#CBD5E1", "#E2E8F0", "#FFFFFF", "#EF4444", "#F97316", "#F59E0B", "#EAB308", "#84CC16",
-                "#22CC88", "#14B8A6", "#22D3EE", "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1", "#7C3AED",
-                "#A855F7", "#F857A6"
+                "#000000", "#09111B", "#101218", "#181B24", "#222635", "#334155", "#64748B", "#94A3B8",
+                "#CBD5E1", "#E2E8F0", "#FFFFFF", "#DC2626", "#F97316", "#F59E0B", "#EAB308", "#84CC16",
+                "#22C55E", "#14B8A6", "#06B6D4", "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1", "#7C3AED",
+                "#A855F7", "#EC4899", "#F43F5E"
             };
         }
 
@@ -1379,12 +1387,12 @@ namespace VaultSync.UI
             {
                 "Background" or "Surface" or "SurfaceAlt" => new[]
                 {
-                    "#000000", "#09111B", "#101218", "#181B24", "#222635", "#2F3548",
-                    "#475569", "#94A3B8", "#CBD5E1", "#E2E8F0", "#FFFFFF"
+                    "#000000", "#09111B", "#101218", "#181B24", "#222635", "#334155",
+                    "#475569", "#64748B", "#94A3B8", "#CBD5E1", "#E2E8F0", "#FFFFFF"
                 },
                 "TextPrimary" => new[]
                 {
-                    "#000000", "#101218", "#181B24", "#2F3548", "#475569",
+                    "#000000", "#101218", "#181B24", "#334155", "#475569",
                     "#CBD5E1", "#E2E8F0", "#FFFFFF"
                 },
                 "TextSecondary" => new[]
@@ -1405,9 +1413,9 @@ namespace VaultSync.UI
                 },
                 _ => new[]
                 {
-                    "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1", "#7C3AED",
-                    "#A855F7", "#F857A6", "#EF4444", "#F97316", "#F59E0B",
-                    "#EAB308", "#84CC16", "#22CC88", "#14B8A6", "#22D3EE"
+                    "#DC2626", "#F97316", "#F59E0B", "#EAB308", "#84CC16",
+                    "#22C55E", "#14B8A6", "#06B6D4", "#0EA5E9", "#2563EB",
+                    "#4F8DFF", "#6366F1", "#7C3AED", "#A855F7", "#EC4899"
                 }
             };
         }
