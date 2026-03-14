@@ -378,7 +378,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
         AddSettingsStep(
             L("Onboarding.Tour.Step13.Title", "Appearance settings"),
-            L("Onboarding.Tour.Step13.Body", "Control theme, compact layout, and project avatars."),
+            L("Onboarding.Tour.Step13.Body", "Control theme, build custom palettes, and adjust compact layout or project avatars."),
             "SettingsAppearanceCard",
             autoAdvance: false);
 
@@ -406,6 +406,14 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             "ProjectSnapshotButton",
             "Projects",
             () => _app.ProjectsViewModel.Projects.Any(p => p.IsRegistered));
+
+        AddStep(
+            L("Onboarding.Tour.Step28.Title", "Project tag colors"),
+            L("Onboarding.Tour.Step28.Body", "Type or pick a tag in Projects, then open the color editor here to style that tag app-wide with a live preview."),
+            "ProjectTagsEditorSection",
+            "Projects",
+            () => true,
+            autoAdvance: false);
 
         AddStep(
             L("Onboarding.Tour.Step22.Title", "Project encryption policy"),

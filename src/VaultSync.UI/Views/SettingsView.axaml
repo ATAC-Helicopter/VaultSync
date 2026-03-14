@@ -1609,40 +1609,6 @@
                                 IsChecked="{Binding ShowProjectAvatars, Mode=TwoWay}" />
                 </Grid>
 
-                <Border Background="{DynamicResource ItemBg}"
-                        BorderBrush="{DynamicResource DividerBrush}"
-                        BorderThickness="1"
-                        CornerRadius="14"
-                        Padding="12"
-                        Margin="0,6,0,0">
-                  <StackPanel Spacing="10">
-                    <Grid ColumnDefinitions="*" ColumnSpacing="10">
-                      <StackPanel Grid.Column="0" Spacing="2">
-                        <TextBlock Text="{Binding TagColorsLabel}" />
-                        <TextBlock Text="{Binding TagColorsDescription}"
-                                   Foreground="{StaticResource TextSecondary}"
-                                   FontSize="11"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
-                    </Grid>
-
-                    <Border Background="{DynamicResource Surface2}"
-                            BorderBrush="{DynamicResource DividerBrush}"
-                            BorderThickness="1"
-                            CornerRadius="12"
-                            Padding="12">
-                      <StackPanel Spacing="8">
-                        <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.PrimaryLocation}"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.TagColors.PrimaryLocationHint}"
-                                   Foreground="{StaticResource TextSecondary}"
-                                   FontSize="11"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
-                    </Border>
-                  </StackPanel>
-                </Border>
-
               </StackPanel>
             </Border>
 

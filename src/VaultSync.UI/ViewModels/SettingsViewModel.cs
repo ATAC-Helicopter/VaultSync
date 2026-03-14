@@ -568,8 +568,6 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(MaintenanceWindowRepairDescription));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataLabel));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
-                OnPropertyChanged(nameof(TagColorsLabel));
-                OnPropertyChanged(nameof(TagColorsDescription));
             };
 
             ThemeOptions = new ObservableCollection<string>
@@ -2720,8 +2718,6 @@ namespace VaultSync.UI
         public string MaintenanceWindowRepairDescription => L("Settings.Advanced.MaintenanceRepairDryRunDescription", "Generate an exact repair plan without applying changes.");
         public string MaintenanceWindowMetadataLabel => L("Settings.Advanced.MaintenanceMetadataRefresh", "Refresh metadata history");
         public string MaintenanceWindowMetadataDescription => L("Settings.Advanced.MaintenanceMetadataRefreshDescription", "Import latest destination metadata during the maintenance run.");
-        public string TagColorsLabel => L("Settings.Appearance.TagColors", "Tag colors");
-        public string TagColorsDescription => L("Settings.Appearance.TagColors.Description", "Override app-wide tag chip colors with a visual picker.");
         public string ThemeEditorLabel => L("Settings.Appearance.ThemeEditor.Label", "Custom theme");
         public string ThemeEditorDescription => L("Settings.Appearance.ThemeEditor.Description", "Build a theme from stable app colors, apply a preset, then fine-tune it with the visual picker.");
         public string ThemePresetsLabel => L("Settings.Appearance.ThemeEditor.Presets", "Starter themes");

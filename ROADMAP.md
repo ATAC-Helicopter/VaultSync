@@ -1107,9 +1107,9 @@
     - preserve configured colors through settings export/import flows.
   - Current status:
     - In progress: shared tag appearance resolution now supports configurable colors, and Projects now hosts the primary visual editor with a ring picker, quick swatches, live preview, and app-wide save/reset flows.
-    - In progress: Settings now points users back to Projects for tag-color editing so the workflow stays in context instead of duplicating a second full editor.
+    - In progress: the leftover Settings reminder panel is being removed so tag-color editing lives only where users can actually do the work.
+    - In progress: onboarding is being updated to point new users at the Projects tag-color flow instead of a duplicate Settings surface.
     - In progress: Projects, Backups, and Dashboard activity are being aligned to render the same configured chips app-wide.
-    - In progress: the Settings > Appearance custom theme editor is being simplified into a clearer preset -> target -> pick -> preview workflow so the visual customization tools feel deliberate instead of crowded.
   - Acceptance:
     - Tag colors can be added, edited, reset, and removed from Projects without confusing duplicate entry points or broken layout.
     - The same tag uses the same colors anywhere it appears in the app.

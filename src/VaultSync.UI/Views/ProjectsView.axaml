@@ -714,7 +714,9 @@
                            FontSize="11"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                <StackPanel Grid.Row="7" Spacing="6">
+                <StackPanel x:Name="ProjectTagsEditorSection"
+                            Grid.Row="7"
+                            Spacing="6">
                   <ItemsControl ItemsSource="{Binding DataContext.SelectedProjectTags, ElementName=Root}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
