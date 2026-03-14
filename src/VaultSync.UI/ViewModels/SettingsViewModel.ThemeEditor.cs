@@ -428,6 +428,7 @@ namespace VaultSync.UI
         public string ThemeEditorDescription => L("Settings.Appearance.ThemeEditor.Description", "Build a theme from stable app colors, apply a preset, then fine-tune it with the visual picker.");
         public string ThemePresetsLabel => L("Settings.Appearance.ThemeEditor.Presets", "Starter themes");
         public string ThemePaletteLabel => L("Settings.Appearance.ThemeEditor.Palette", "Quick palette");
+        public string ThemePaletteHint => L("Settings.Appearance.ThemeEditor.PaletteHint", "Saved colors apply to the selected custom-theme section.");
         public string ThemeBaseLabel => L("Settings.Appearance.ThemeEditor.BaseTheme", "Base");
         public string ThemeNameLabel => L("Settings.Appearance.ThemeEditor.Name", "Theme name");
         public string ThemePickerLabel => L("Settings.Appearance.ThemeEditor.Picker", "Edit selected color");

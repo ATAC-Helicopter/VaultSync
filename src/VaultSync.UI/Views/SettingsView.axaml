@@ -1340,32 +1340,36 @@
                                          FontSize="11" />
                               <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.ThemeEditor.PaletteDescription}"
                                          Foreground="{DynamicResource TextMutedBrush}"
-                                         FontSize="11" />
+                                         FontSize="10"
+                                         TextWrapping="Wrap" />
                             </StackPanel>
                             <ItemsControl ItemsSource="{Binding SelectedThemePaletteSwatches}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                  <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="10" />
+                                  <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
                                 </ItemsPanelTemplate>
                               </ItemsControl.ItemsPanel>
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                  <ToggleButton Classes="color-swatch-button"
-                                                Width="46"
-                                                Height="34"
-                                                IsChecked="{Binding IsSelected, Mode=OneWay}"
-                                                Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
-                                                CommandParameter="{Binding}">
+                                  <Button Classes="color-swatch-button"
+                                          Width="46"
+                                          Height="34"
+                                          Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
+                                          CommandParameter="{Binding}">
                                     <Border Width="40"
                                             Height="28"
                                             CornerRadius="10"
                                             Background="{Binding SwatchBrush}"
                                             BorderBrush="{Binding DisplayOutlineBrush}"
                                             BorderThickness="{Binding DisplayBorderThickness}" />
-                                  </ToggleButton>
+                                  </Button>
                                 </DataTemplate>
                               </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <TextBlock Text="{Binding ThemePaletteHint}"
+                                       FontSize="10"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap" />
                           </StackPanel>
 
                           <StackPanel Spacing="6">
