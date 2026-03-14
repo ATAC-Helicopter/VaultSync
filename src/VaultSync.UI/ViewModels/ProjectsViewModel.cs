@@ -52,10 +52,12 @@ public class ProjectsViewModel : ViewModelBase
         {
             Hex = hex;
             Swatch = Color.Parse(hex);
+            SwatchBrush = new SolidColorBrush(Swatch);
         }
 
         public string Hex { get; }
         public Color Swatch { get; }
+        public IBrush SwatchBrush { get; }
     }
 
     /// <summary>
@@ -590,9 +592,11 @@ public class ProjectsViewModel : ViewModelBase
 
         foreach (var hex in new[]
                  {
-                     "#2563EB", "#4F8DFF", "#38BDF8", "#14B8A6", "#22CC88", "#84CC16",
-                     "#EAB308", "#F59E0B", "#F97316", "#FF6B6B", "#F857A6", "#A855F7",
-                     "#7C3AED", "#6366F1", "#475569", "#94A3B8"
+                     "#000000", "#FFFFFF", "#94A3B8", "#475569",
+                     "#EF4444", "#F97316", "#F59E0B", "#EAB308",
+                     "#84CC16", "#22CC88", "#14B8A6", "#22D3EE",
+                     "#38BDF8", "#4F8DFF", "#2563EB", "#6366F1",
+                     "#7C3AED", "#A855F7", "#F857A6", "#A16207"
                  })
         {
             ProjectTagColorSwatches.Add(new ProjectTagColorSwatchViewModel(hex));

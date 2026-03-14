@@ -515,10 +515,12 @@ namespace VaultSync.UI
             {
                 Hex = hex;
                 SwatchColor = Color.Parse(hex);
+                SwatchBrush = new SolidColorBrush(SwatchColor);
             }
 
             public string Hex { get; }
             public Color SwatchColor { get; }
+            public IBrush SwatchBrush { get; }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -1355,9 +1357,9 @@ namespace VaultSync.UI
             foreach (var hex in new[]
             {
                 "#000000", "#09111B", "#101218", "#181B24", "#222635", "#2F3548", "#475569", "#94A3B8",
-                "#CBD5E1", "#E2E8F0", "#FFFFFF", "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1", "#7C3AED",
-                "#A855F7", "#F857A6", "#FF6A6A", "#F97316", "#F59E0B", "#EAB308", "#84CC16", "#22CC88",
-                "#14B8A6", "#22D3EE"
+                "#CBD5E1", "#E2E8F0", "#FFFFFF", "#EF4444", "#F97316", "#F59E0B", "#EAB308", "#84CC16",
+                "#22CC88", "#14B8A6", "#22D3EE", "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1", "#7C3AED",
+                "#A855F7", "#F857A6"
             })
             {
                 ThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));

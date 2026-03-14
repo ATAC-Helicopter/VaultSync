@@ -1358,8 +1358,8 @@
                                     <Border Width="36"
                                             Height="36"
                                             CornerRadius="18"
-                                            Background="{Binding SwatchColor}"
-                                            BorderBrush="#E6F0FF"
+                                            Background="{Binding SwatchBrush}"
+                                            BorderBrush="#D9E6FF"
                                             BorderThickness="1.5" />
                                   </Button>
                                 </DataTemplate>
@@ -1426,7 +1426,7 @@
                                   CornerRadius="12"
                                   Padding="10">
                             <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                   MaxWidth="440"
+                                                   MaxWidth="360"
                                                    HorizontalAlignment="Left"
                                                    IsAlphaEnabled="False"
                                                    IsAlphaVisible="False"

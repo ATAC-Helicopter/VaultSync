@@ -835,8 +835,8 @@
                       <WrapPanel Orientation="Horizontal"
                                  ItemSpacing="14"
                                  LineSpacing="14">
-                        <Border MinWidth="300"
-                                MaxWidth="440"
+                        <Border MinWidth="280"
+                                MaxWidth="400"
                                 Background="{DynamicResource Surface1}"
                                 BorderBrush="{DynamicResource DividerBrush}"
                                 BorderThickness="1"
@@ -857,7 +857,7 @@
                                                    IsColorSpectrumVisible="True"
                                                    IsColorSpectrumSliderVisible="True"
                                                    IsComponentSliderVisible="False"
-                                                   MaxWidth="340"
+                                                   MaxWidth="300"
                                                    HorizontalAlignment="Left"
                                                    ColorSpectrumShape="Ring" />
                           </StackPanel>
@@ -890,8 +890,8 @@
                                     <Border Width="38"
                                             Height="38"
                                             CornerRadius="19"
-                                            Background="{Binding Swatch}"
-                                            BorderBrush="#E6F0FF"
+                                            Background="{Binding SwatchBrush}"
+                                            BorderBrush="#D9E6FF"
                                             BorderThickness="1.5" />
                                   </Button>
                                 </DataTemplate>
