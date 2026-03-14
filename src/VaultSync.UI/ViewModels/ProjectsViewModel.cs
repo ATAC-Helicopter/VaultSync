@@ -590,8 +590,8 @@ public class ProjectsViewModel : ViewModelBase
 
         foreach (var hex in new[]
                  {
-                     "#3A7AFE", "#4F8DFF", "#4CC9F0", "#22CC88", "#FFC766", "#FF8B4D",
-                     "#FF6B6B", "#F857A6", "#B983FF", "#8E8E93", "#FFFFFF", "#101218"
+                     "#2563EB", "#4F8DFF", "#38BDF8", "#14B8A6", "#22CC88", "#84CC16",
+                     "#F59E0B", "#FF8B4D", "#FF6B6B", "#F857A6", "#A855F7", "#7C8AA5"
                  })
         {
             ProjectTagColorSwatches.Add(new ProjectTagColorSwatchViewModel(hex));

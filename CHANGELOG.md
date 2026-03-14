@@ -27,6 +27,9 @@
 - [VS-1722] Custom themes now include OLED Black, Deep Blue, an editor-style palette, and side-panel advanced sliders.
 - [VS-1722] Appearance onboarding now calls out custom theme palettes instead of only basic layout options.
 - [BUG-17005] Simplified the custom theme editor with visible swatches and a cleaner spectrum-only picker.
+- [BUG-17006] Restore-readiness cards now offer a one-click review list with project names and reasons.
+- [BUG-17006] English summaries no longer show corrupted separator glyphs across Dashboard, Backups, and Projects.
+- [BUG-17006] Tightened the collapsed sidebar, shared toggle/checkbox styling, Backups spacing, and the Projects tag-color editor.
 - [VS-1713] Backups and Dashboard now show a restore-readiness scorecard.
 - [VS-1719] Dashboard now uses a more coherent wrap-based information layout.
 - [VS-1719] Dashboard sections were rebalanced for clearer fullscreen and windowed layouts.

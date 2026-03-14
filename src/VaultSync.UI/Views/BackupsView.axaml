@@ -710,9 +710,17 @@
 
                 <StackPanel Spacing="6"
                             Margin="0,4,0,0">
-                  <TextBlock Text="{infra:LocalizedString Key=Backups.RestoreReadiness.Title}"
-                             FontSize="11"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="10">
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.RestoreReadiness.Title}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Button Grid.Column="1"
+                            Classes="small-pill"
+                            Content="{infra:LocalizedString Key=RestoreReadiness.Review}"
+                            Command="{Binding ToggleRestoreReadinessIssuesCommand}"
+                            IsVisible="{Binding HasRestoreReadinessIssues}" />
+                  </Grid>
                   <TextBlock Text="{Binding RestoreReadinessHeadline}"
                              FontSize="10"
                              FontWeight="SemiBold" />
@@ -773,6 +781,62 @@
                                  Foreground="#7F8FA8"
                                  Background="{DynamicResource Surface2}" />
                   </Grid>
+                  <Border IsVisible="{Binding ShowRestoreReadinessIssues}"
+                          Margin="0,4,0,0"
+                          CornerRadius="12"
+                          Background="{DynamicResource Surface2}"
+                          BorderBrush="{DynamicResource BorderSoft}"
+                          BorderThickness="1"
+                          Padding="10">
+                    <StackPanel Spacing="8">
+                      <TextBlock Text="{infra:LocalizedString Key=RestoreReadiness.ReviewTitle}"
+                                 FontSize="10"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <ItemsControl ItemsSource="{Binding RestoreReadinessIssues}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border Background="{DynamicResource Surface1}"
+                                    CornerRadius="10"
+                                    Padding="10,8"
+                                    Margin="0,0,0,6">
+                              <Grid ColumnDefinitions="Auto,*,Auto"
+                                    ColumnSpacing="8"
+                                    RowDefinitions="Auto,Auto"
+                                    RowSpacing="4">
+                                <Border Width="8"
+                                        Height="8"
+                                        CornerRadius="4"
+                                        Background="{Binding StateBrush}"
+                                        Margin="0,5,0,0" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding ProjectName}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <Border Grid.Column="2"
+                                        Classes="stat-pill sm"
+                                        Background="{Binding StateBrush}"
+                                        BorderBrush="{Binding StateBrush}">
+                                  <TextBlock Text="{Binding StateLabel}"
+                                             FontSize="10"
+                                             Foreground="White" />
+                                </Border>
+                                <TextBlock Grid.Row="1"
+                                           Grid.Column="1"
+                                           Grid.ColumnSpan="2"
+                                           Text="{Binding Reason}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           MaxLines="3" />
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
                 </StackPanel>
               </StackPanel>
             </Border>
@@ -781,7 +845,7 @@
         <!-- MINI BACKUP STORAGE CARD (Backups page) -->
         <Border Classes="card"
                 Padding="{DynamicResource CardPaddingMedium}">
-          <StackPanel Spacing="6">
+          <StackPanel Spacing="8">
             <TextBlock Text="{infra:LocalizedString Key=Backups.Section.StorageLabel}"
                        FontSize="12"
                        FontWeight="SemiBold"
@@ -791,20 +855,16 @@
                        Foreground="{DynamicResource TextSecondaryBrush}" />
 
             <!-- Used percent + free/total summary -->
-            <StackPanel Orientation="Horizontal"
-                        Spacing="6"
-                        VerticalAlignment="Center">
+            <WrapPanel ItemSpacing="8"
+                       LineSpacing="4"
+                       VerticalAlignment="Center">
                 <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
                          FontSize="{DynamicResource SectionHeaderFontSize}"
                          FontWeight="SemiBold" />
-              <TextBlock Text="·"
-                         Margin="4,0"
-                         FontSize="12"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
               <TextBlock Text="{Binding BackupDiskFreeText}"
                          FontSize="12"
                          Foreground="{DynamicResource TextSecondaryBrush}" />
-            </StackPanel>
+            </WrapPanel>
 
             <!-- Usage bar -->
             <ProgressBar Minimum="0"

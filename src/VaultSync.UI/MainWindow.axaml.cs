@@ -153,6 +153,8 @@ public partial class MainWindow : Window
             ? new Thickness(0, 24, 0, 10)
             : new Thickness(0, 0, 0, 10);
 
+        SidebarRoot.Classes.Set("compact", collapsed);
+        ShellCompactBadge.IsVisible = collapsed;
         ShellBanner.IsVisible = !collapsed;
         NavigationHeader.IsVisible = !collapsed;
         SidebarDestinations.IsVisible = !collapsed;
@@ -161,7 +163,10 @@ public partial class MainWindow : Window
         SidebarToggleGlyph.Text = collapsed ? "\uE70D" : "\uE700";
         SidebarToggleButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Right;
         SidebarToggleButton.Margin = collapsed ? new Thickness(0, 0, 0, 4) : new Thickness(0, 0, 0, 2);
-        ToolTip.SetTip(SidebarToggleButton, collapsed ? "Expand sidebar" : "Collapse sidebar");
+        ToolTip.SetTip(
+            SidebarToggleButton,
+            LocalizationProvider.Service?.GetString(collapsed ? "Shell.SidebarExpand" : "Shell.SidebarCollapse")
+            ?? (collapsed ? "Expand sidebar" : "Collapse sidebar"));
         NavDashboardText.IsVisible = !collapsed;
         NavProjectsText.IsVisible = !collapsed;
         NavBackupsText.IsVisible = !collapsed;

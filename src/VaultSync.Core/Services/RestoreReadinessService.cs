@@ -48,7 +48,7 @@ public sealed class RestoreReadinessService
 
         var detail = string.Format(
             CultureInfo.InvariantCulture,
-            "Ready {0} · Attention {1} · Risk {2} · Unavailable {3}",
+            "Ready {0} | Attention {1} | Risk {2} | Unavailable {3}",
             ready,
             attention,
             risk,

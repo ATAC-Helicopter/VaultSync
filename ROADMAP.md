@@ -1166,6 +1166,20 @@
     - The default palette is understandable at a glance as the app's core colors and accents.
     - Advanced sliders are available in the spare right-side space without overwhelming the default theme editing flow.
 
+- [ ] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(In progress)_
+  - Scope:
+    - make restore-readiness risk states easy to inspect from Dashboard and Backups without hunting for the affected projects;
+    - remove corrupted English separator glyphs and tighten summary copy in Dashboard, Backups, Projects, and retention surfaces;
+    - improve collapsed sidebar presence, shared toggle/checkbox styling, Backups summary spacing, and the Projects tag-color editor layout.
+  - Current status:
+    - In progress: Dashboard and Backups restore-readiness cards now expose a one-click issue list with project names and reasons.
+    - In progress: English summary strings are being normalized to ASCII-safe separators so mojibake does not leak into release builds.
+    - In progress: the collapsed shell sidebar, shared toggles and checkboxes, Backups storage card spacing, and Projects tag-color editor are being visually tightened.
+  - Acceptance:
+    - Restore-readiness summaries can be expanded in place to show who is affected and why.
+    - English summaries no longer render broken separator glyphs anywhere in the updated surfaces.
+    - Shared controls and collapsed navigation feel intentional instead of default or placeholder-like.
+
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:

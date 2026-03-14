@@ -100,6 +100,10 @@
             <Setter Property="BorderThickness" Value="0,0,1,0" />
         </Style>
 
+        <Style Selector="Border.sidebar.compact">
+            <Setter Property="Background" Value="#0E1627" />
+        </Style>
+
         <Style Selector="Border.header">
             <Setter Property="Background" Value="{DynamicResource Surface0}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
@@ -137,7 +141,9 @@
             <Setter Property="CornerRadius" Value="14" />
             <Setter Property="Margin" Value="0,2,0,0" />
             <Setter Property="MinHeight" Value="48" />
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="#111B2F" />
+            <Setter Property="BorderBrush" Value="#22344F" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style Selector="Button.sidebar-toggle">
@@ -154,6 +160,10 @@
             <Setter Property="Background" Value="#1C2740" />
         </Style>
 
+        <Style Selector="Button.sidebar-toggle:pressed">
+            <Setter Property="Background" Value="#22304E" />
+        </Style>
+
         <Style Selector="Border.nav-icon-badge">
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />
@@ -167,7 +177,7 @@
             <Setter Property="Width" Value="34" />
             <Setter Property="Height" Value="34" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Background" Value="#172034" />
+            <Setter Property="Background" Value="#162643" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
@@ -382,6 +392,73 @@
             <Setter Property="CornerRadius" Value="16" />
             <Setter Property="Padding" Value="14,12" />
             <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+
+        <Style Selector="Border.shell-monogram">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Background" Value="#13213A" />
+            <Setter Property="BorderBrush" Value="#28456E" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2,0,12" />
+        </Style>
+
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="CheckBox /template/ Border#NormalRectangle">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <Style Selector="CheckBox:pointerover /template/ Border#NormalRectangle">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="CheckBox:checked /template/ Path#CheckGlyph">
+            <Setter Property="Fill" Value="White" />
+        </Style>
+
+        <Style Selector="ToggleSwitch">
+            <Setter Property="MinWidth" Value="54" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+
+        <Style Selector="ToggleSwitch /template/ Border#SwitchKnobBounds">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="ToggleSwitch:pointerover /template/ Border#SwitchKnobBounds">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+        </Style>
+
+        <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="ToggleSwitch /template/ Border#SwitchKnob">
+            <Setter Property="Background" Value="{DynamicResource Surface0}" />
+        </Style>
+
+        <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnob">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
         </Style>
 
         <!-- ListBox cleanup -->

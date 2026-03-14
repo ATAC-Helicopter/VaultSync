@@ -211,6 +211,7 @@ namespace VaultSync.UI.ViewModels
             new ObservableCollection<DestinationStatusItem>();
         public bool HasActiveDestinationStatuses => ActiveDestinationStatuses.Count > 0;
         public bool CanToggleDestinations => !_isBusy;
+        private readonly RelayCommand _toggleRestoreReadinessIssuesCommand;
         private bool _showDestinationToggles;
         public bool ShowDestinationToggles
         {
@@ -487,6 +488,19 @@ namespace VaultSync.UI.ViewModels
         public double RestoreReadinessUnavailablePercent { get; private set; }
         public string RestoreReadinessHeadline { get; private set; } = string.Empty;
         public string RestoreReadinessDetail { get; private set; } = string.Empty;
+        public ObservableCollection<RestoreReadinessIssueItem> RestoreReadinessIssues { get; } = new();
+        public bool HasRestoreReadinessIssues => RestoreReadinessIssues.Count > 0;
+        private bool _showRestoreReadinessIssues;
+        public bool ShowRestoreReadinessIssues
+        {
+            get => _showRestoreReadinessIssues;
+            private set
+            {
+                if (SetProperty(ref _showRestoreReadinessIssues, value))
+                    OnPropertyChanged(nameof(ShowRestoreReadinessIssues));
+            }
+        }
+        public ICommand ToggleRestoreReadinessIssuesCommand => _toggleRestoreReadinessIssuesCommand;
 
         // Mini backup storage card (for Backups page)
         private double _backupDiskUsedPercent;
@@ -924,6 +938,9 @@ namespace VaultSync.UI.ViewModels
             _compareSelectedSnapshotsRelayCommand = new RelayCommand(_ => CompareSelectedSnapshots(), _ => CanCompareSelectedSnapshots);
             CompareSelectedSnapshotsCommand = _compareSelectedSnapshotsRelayCommand;
             CloseSnapshotDiffPreviewCommand = new RelayCommand(_ => CloseSnapshotDiffPreview());
+            _toggleRestoreReadinessIssuesCommand = new RelayCommand(
+                _ => ShowRestoreReadinessIssues = !ShowRestoreReadinessIssues,
+                _ => HasRestoreReadinessIssues);
 
             // Per-project actions
             BackupProjectCommand      = new RelayCommand(p => BackupProject(p as ProjectBackupItem));
@@ -2556,10 +2573,11 @@ namespace VaultSync.UI.ViewModels
             {
                 SnapshotActivitySummary = Lf(
                     "Backups.Summary.ActivityTotals",
-                    "{0} backups total - {1} auto - {2} manual",
+                    "{0} backups total - {1} auto - {2} manual - {3} imported",
                     SnapshotsThisWeek,
                     AutoSnapshotsThisWeek,
-                    ManualSnapshotsThisWeek);
+                    ManualSnapshotsThisWeek,
+                    ImportedSnapshotsThisWeek);
             }
 
             if (_allSnapshots.Count > 0)
@@ -2887,6 +2905,10 @@ namespace VaultSync.UI.ViewModels
                 RestoreReadinessAttentionPercent = 0;
                 RestoreReadinessRiskPercent = 0;
                 RestoreReadinessUnavailablePercent = 0;
+                RestoreReadinessIssues.Clear();
+                ShowRestoreReadinessIssues = false;
+                OnPropertyChanged(nameof(HasRestoreReadinessIssues));
+                _toggleRestoreReadinessIssuesCommand.RaiseCanExecuteChanged();
                 return;
             }
 
@@ -2894,6 +2916,33 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessAttentionPercent = summary.AttentionCount * 100d / total;
             RestoreReadinessRiskPercent = summary.RiskCount * 100d / total;
             RestoreReadinessUnavailablePercent = summary.UnavailableCount * 100d / total;
+
+            RestoreReadinessIssues.Clear();
+            foreach (var item in summary.Projects
+                         .Where(project => project.State != RestoreReadinessState.Ready)
+                         .OrderByDescending(project => project.State == RestoreReadinessState.Risk)
+                         .ThenByDescending(project => project.State == RestoreReadinessState.Unavailable)
+                         .ThenBy(project => project.ProjectName, StringComparer.CurrentCultureIgnoreCase)
+                         .Take(6))
+            {
+                RestoreReadinessIssues.Add(new RestoreReadinessIssueItem(
+                    item.ProjectName,
+                    LocalizeRestoreReadinessLabel(item.State),
+                    item.Reason,
+                    item.State switch
+                    {
+                        RestoreReadinessState.Ready => FreshnessGoodBrush,
+                        RestoreReadinessState.Attention => FreshnessModerateBrush,
+                        RestoreReadinessState.Risk => FreshnessStaleBrush,
+                        _ => FreshnessUnknownBrush
+                    }));
+            }
+
+            if (RestoreReadinessIssues.Count == 0)
+                ShowRestoreReadinessIssues = false;
+
+            OnPropertyChanged(nameof(HasRestoreReadinessIssues));
+            _toggleRestoreReadinessIssuesCommand.RaiseCanExecuteChanged();
         }
 
         private static string LocalizeRestoreReadinessLabel(RestoreReadinessState state)
@@ -4945,6 +4994,22 @@ namespace VaultSync.UI.ViewModels
         public IBrush ImportedBrush { get; set; } = SnapshotImportedBrush;
         public IBrush EmptyBrush { get; set; } = SnapshotEmptyBrush;
         public string TooltipText { get; set; } = string.Empty;
+    }
+
+    public sealed class RestoreReadinessIssueItem
+    {
+        public RestoreReadinessIssueItem(string projectName, string stateLabel, string reason, IBrush stateBrush)
+        {
+            ProjectName = projectName;
+            StateLabel = stateLabel;
+            Reason = reason;
+            StateBrush = stateBrush;
+        }
+
+        public string ProjectName { get; }
+        public string StateLabel { get; }
+        public string Reason { get; }
+        public IBrush StateBrush { get; }
     }
 
     /// <summary>

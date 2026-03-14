@@ -50,6 +50,7 @@ namespace VaultSync.UI.ViewModels
         private string _restoreReadinessAttentionLabel = string.Empty;
         private string _restoreReadinessRiskLabel = string.Empty;
         private string _restoreReadinessUnavailableLabel = string.Empty;
+        private bool _showRestoreReadinessIssues;
 
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
@@ -315,10 +316,22 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public bool ShowRestoreReadinessIssues
+        {
+            get => _showRestoreReadinessIssues;
+            set
+            {
+                if (_showRestoreReadinessIssues == value) return;
+                _showRestoreReadinessIssues = value;
+                OnPropertyChanged();
+            }
+        }
+
         // Search / actions (your RelayCommand expects Action<object?>)
         public string? SearchText { get; set; }
         public RelayCommand RefreshCommand { get; }
         public RelayCommand NewSnapshotCommand { get; }
+        public RelayCommand ToggleRestoreReadinessIssuesCommand { get; }
 
         // Chart bindings
         public ISeries[] SnapshotSeries { get; private set; } = Array.Empty<ISeries>();
@@ -338,6 +351,8 @@ namespace VaultSync.UI.ViewModels
 
         // Activity items, populated from real data.
         public ObservableCollection<ActivityItem> ActivityItems { get; } = new();
+        public ObservableCollection<RestoreReadinessIssueItem> RestoreReadinessIssues { get; } = new();
+        public bool HasRestoreReadinessIssues => RestoreReadinessIssues.Count > 0;
 
         // Internal data for chart aggregation
         private string[] _days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
@@ -359,6 +374,7 @@ namespace VaultSync.UI.ViewModels
         {
             RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
             NewSnapshotCommand = new RelayCommand(_ => { /* wired later from dashboard actions */ });
+            ToggleRestoreReadinessIssuesCommand = new RelayCommand(_ => ShowRestoreReadinessIssues = !ShowRestoreReadinessIssues, _ => HasRestoreReadinessIssues);
 
             BuildStaticAxes();
             BuildDemoSeriesIfNeeded();
@@ -1973,6 +1989,49 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessAttentionLabel = Lf("RestoreReadiness.Count.Attention", "{0} attention", summary.AttentionCount);
             RestoreReadinessRiskLabel = Lf("RestoreReadiness.Count.Risk", "{0} risk", summary.RiskCount);
             RestoreReadinessUnavailableLabel = Lf("RestoreReadiness.Count.Unavailable", "{0} unavailable", summary.UnavailableCount);
+
+            RestoreReadinessIssues.Clear();
+            foreach (var item in summary.Projects
+                         .Where(project => project.State != RestoreReadinessState.Ready)
+                         .OrderByDescending(project => project.State == RestoreReadinessState.Risk)
+                         .ThenByDescending(project => project.State == RestoreReadinessState.Unavailable)
+                         .ThenBy(project => project.ProjectName, StringComparer.CurrentCultureIgnoreCase)
+                         .Take(6))
+            {
+                RestoreReadinessIssues.Add(new RestoreReadinessIssueItem(
+                    item.ProjectName,
+                    LocalizeRestoreReadinessState(item.State),
+                    item.Reason,
+                    GetRestoreReadinessBrush(item.State)));
+            }
+
+            if (RestoreReadinessIssues.Count == 0)
+                ShowRestoreReadinessIssues = false;
+
+            OnPropertyChanged(nameof(HasRestoreReadinessIssues));
+            ToggleRestoreReadinessIssuesCommand.RaiseCanExecuteChanged();
+        }
+
+        private static string LocalizeRestoreReadinessState(RestoreReadinessState state)
+        {
+            return state switch
+            {
+                RestoreReadinessState.Ready => L("RestoreReadiness.State.Ready", "Ready"),
+                RestoreReadinessState.Attention => L("RestoreReadiness.State.Attention", "Attention"),
+                RestoreReadinessState.Risk => L("RestoreReadiness.State.Risk", "Risk"),
+                _ => L("RestoreReadiness.State.Unavailable", "Unavailable")
+            };
+        }
+
+        private static IBrush GetRestoreReadinessBrush(RestoreReadinessState state)
+        {
+            return state switch
+            {
+                RestoreReadinessState.Ready => new ImmutableSolidColorBrush(Color.Parse("#22CC88")),
+                RestoreReadinessState.Attention => new ImmutableSolidColorBrush(Color.Parse("#FFB84C")),
+                RestoreReadinessState.Risk => new ImmutableSolidColorBrush(Color.Parse("#F56A5A")),
+                _ => new ImmutableSolidColorBrush(Color.Parse("#7F8FA8"))
+            };
         }
 
         private static string FormatRestoreReadinessHeadline(int ready, int attention, int risk, int unavailable, int projectCount)
@@ -2022,6 +2081,7 @@ namespace VaultSync.UI.ViewModels
         // Bindables
         public record LegendItem(string Label, string Tooltip, IBrush Brush);
         public record BackupUsageSegment(string Name, string ValueText, double SizeBytes, IBrush Brush, string Tooltip);
+        public record RestoreReadinessIssueItem(string ProjectName, string StateLabel, string Reason, IBrush StateBrush);
 
         public enum Dot { Green, Blue, Purple, Gray }
 

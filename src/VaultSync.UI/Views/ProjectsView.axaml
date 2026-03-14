@@ -793,7 +793,7 @@
                           BorderThickness="1"
                           Padding="14">
                     <Grid RowDefinitions="Auto,Auto,Auto"
-                          ColumnDefinitions="1.1*,0.9*"
+                          ColumnDefinitions="1.05*,0.95*"
                           RowSpacing="10"
                           ColumnSpacing="16">
                       <StackPanel Grid.Row="0"
@@ -848,10 +848,11 @@
                                                  IsColorPaletteVisible="False"
                                                  IsHexInputVisible="False"
                                                  IsComponentTextInputVisible="False"
-                                                 IsColorPreviewVisible="True"
+                                                 IsColorPreviewVisible="False"
                                                  IsColorSpectrumVisible="True"
                                                  IsColorSpectrumSliderVisible="True"
-                                                 IsComponentSliderVisible="True"
+                                                 IsComponentSliderVisible="False"
+                                                 MaxWidth="260"
                                                  ColorSpectrumShape="Ring" />
                         </Border>
                       </StackPanel>
@@ -870,10 +871,10 @@
                           </ItemsControl.ItemsPanel>
                           <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                              <Button Width="34"
-                                      Height="34"
+                              <Button Width="40"
+                                      Height="40"
                                       Padding="0"
-                                      CornerRadius="17"
+                                      CornerRadius="20"
                                       Background="{Binding Swatch}"
                                       BorderBrush="{DynamicResource BorderSoft}"
                                       BorderThickness="1"
@@ -1486,8 +1487,8 @@
                                   Padding="{DynamicResource CardPaddingSmall}">
                             <Grid ColumnDefinitions="Auto,*,Auto"
                                   RowDefinitions="Auto,Auto,Auto"
-                                  ColumnSpacing="10"
-                                  RowSpacing="4">
+                                  ColumnSpacing="12"
+                                  RowSpacing="6">
                               <Border Grid.RowSpan="3"
                                       Width="6"
                                       CornerRadius="3"

@@ -166,8 +166,15 @@
         </Border>
 
         <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="3" Background="#2A2239">
-          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
-            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker"/>
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker"/>
+              <Button Grid.Column="1"
+                      Classes="small-pill"
+                      Content="{infra:LocalizedString Key=RestoreReadiness.Review}"
+                      Command="{Binding ToggleRestoreReadinessIssuesCommand}"
+                      IsVisible="{Binding HasRestoreReadinessIssues}" />
+            </Grid>
             <TextBlock Grid.Row="1" Text="{Binding RestoreReadinessHeadline}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="3"/>
             <TextBlock Grid.Row="2" Text="{Binding RestoreReadinessDetail}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="2"/>
             <WrapPanel Grid.Row="3" ItemSpacing="6" LineSpacing="6" Margin="0,2,0,0">
@@ -184,6 +191,62 @@
                 <TextBlock Text="{Binding RestoreReadinessUnavailableLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="110" TextTrimming="CharacterEllipsis"/>
               </Border>
             </WrapPanel>
+            <Border Grid.Row="4"
+                    IsVisible="{Binding ShowRestoreReadinessIssues}"
+                    CornerRadius="14"
+                    Background="{DynamicResource ItemBg}"
+                    BorderBrush="{DynamicResource BorderSoft}"
+                    BorderThickness="1"
+                    Padding="12"
+                    Margin="0,4,0,0">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{infra:LocalizedString Key=RestoreReadiness.ReviewTitle}"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <ItemsControl ItemsSource="{Binding RestoreReadinessIssues}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="12"
+                              Background="{DynamicResource Surface2}"
+                              Padding="10,8"
+                              Margin="0,0,0,6">
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="8"
+                              RowDefinitions="Auto,Auto"
+                              RowSpacing="4">
+                          <Border Width="8"
+                                  Height="8"
+                                  CornerRadius="4"
+                                  Background="{Binding StateBrush}"
+                                  Margin="0,5,0,0" />
+                          <TextBlock Grid.Column="1"
+                                     Text="{Binding ProjectName}"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <Border Grid.Column="2"
+                                  Classes="stat-pill sm"
+                                  Background="{Binding StateBrush}"
+                                  BorderBrush="{Binding StateBrush}">
+                            <TextBlock Text="{Binding StateLabel}"
+                                       FontSize="10"
+                                       Foreground="White" />
+                          </Border>
+                          <TextBlock Grid.Row="1"
+                                     Grid.Column="1"
+                                     Grid.ColumnSpan="2"
+                                     Text="{Binding Reason}"
+                                     FontSize="11"
+                                     Foreground="{DynamicResource TextSecondaryBrush}"
+                                     TextWrapping="Wrap"
+                                     MaxLines="3" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
           </Grid>
         </Border>
       </Grid>
