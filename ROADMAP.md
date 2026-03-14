@@ -1160,11 +1160,11 @@
   - Scope: add more useful starter themes and an optional advanced editing mode without cluttering the default theme workflow.
   - Current status:
     - In progress: the custom theme presets are being expanded with OLED Black and Deep Blue variants for darker display preferences.
-    - In progress: the theme editor is adding an optional advanced-slider mode while keeping the default picker flow simple.
+    - In progress: the theme editor is moving advanced sliders into the right-side panel and using a more recognizable editor-style default palette.
   - Acceptance:
     - Starter themes include clearly differentiated OLED black and dark blue options.
     - The default palette is understandable at a glance as the app's core colors and accents.
-    - Advanced sliders are available on demand without overwhelming the default theme editing flow.
+    - Advanced sliders are available in the spare right-side space without overwhelming the default theme editing flow.
 
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.

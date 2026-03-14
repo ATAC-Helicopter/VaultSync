@@ -145,7 +145,6 @@ namespace VaultSync.UI
         private string _projectMetadataConflictStatus = string.Empty;
         private bool _isBackupIndexRepairBusy;
         private bool _showLegacyBackupLocation = true;
-        private bool _showAdvancedThemeControls;
         private string _customThemeName = "VaultSync Midnight";
         private string _customThemeBase = "Dark";
         private ThemeColorSlotViewModel? _selectedThemeColorSlot;
@@ -1357,9 +1356,9 @@ namespace VaultSync.UI
             ThemePaletteSwatches.Clear();
             foreach (var hex in new[]
             {
-                "#101218", "#181B24", "#222635", "#2E3447", "#3B425B", "#F4F5F9", "#FFFFFF", "#E6E9F2",
-                "#4F8DFF", "#2663FF", "#4CC9F0", "#5AC88F", "#B983FF", "#FF8B4D", "#F857A6", "#FFC766",
-                "#32DFA0", "#4FF2B6", "#FFBF5F", "#FF7676", "#FF6A6A", "#AFC4D9", "#B3B8C7", "#5C6275"
+                "#000000", "#09111B", "#101218", "#181B24", "#222635", "#2E3447", "#475569", "#94A3B8",
+                "#E2E8F0", "#FFFFFF", "#2663FF", "#4F8DFF", "#60A5FA", "#4CC9F0", "#22D3EE", "#14B8A6",
+                "#5AC88F", "#32DFA0", "#A3E635", "#FFC766", "#FF8B4D", "#FF6A6A", "#F857A6", "#B983FF"
             })
             {
                 ThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
@@ -1883,12 +1882,6 @@ namespace VaultSync.UI
         }
 
         public bool IsCustomThemeSelected => string.Equals(SelectedTheme, "Custom", StringComparison.Ordinal);
-
-        public bool ShowAdvancedThemeControls
-        {
-            get => _showAdvancedThemeControls;
-            set => SetField(ref _showAdvancedThemeControls, value);
-        }
 
         public string CustomThemeName
         {
@@ -2737,6 +2730,8 @@ namespace VaultSync.UI
         public string ThemeNameLabel => L("Settings.Appearance.ThemeEditor.Name", "Theme name");
         public string ThemePickerLabel => L("Settings.Appearance.ThemeEditor.Picker", "Edit selected color");
         public string ThemePreviewLabel => L("Settings.Appearance.ThemeEditor.Preview", "Preview");
+        public string ThemeAdvancedLabel => L("Settings.Appearance.ThemeEditor.AdvancedPanel", "Advanced tuning");
+        public string ThemeAdvancedDescription => L("Settings.Appearance.ThemeEditor.AdvancedDescription", "Fine-tune the selected color with direct component sliders.");
         public string ThemePreviewAccentLabel => L("Settings.Appearance.ThemeEditor.PreviewAccent", "Accent");
         public string ThemePreviewSurfaceLabel => L("Settings.Appearance.ThemeEditor.PreviewSurface", "Surface");
         public string ThemePreviewPrimaryLabel => L("Settings.Appearance.ThemeEditor.PreviewPrimary", "Primary text");

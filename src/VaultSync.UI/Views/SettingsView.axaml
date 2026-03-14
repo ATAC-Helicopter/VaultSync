@@ -1347,21 +1347,14 @@
                               Padding="12">
                         <StackPanel Spacing="12">
                           <StackPanel Spacing="6">
-                            <Grid ColumnDefinitions="*,Auto"
-                                  ColumnSpacing="12">
-                              <StackPanel Spacing="2">
-                                <TextBlock Text="{Binding ThemePaletteLabel}"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           FontSize="11" />
-                                <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.ThemeEditor.PaletteDescription}"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           FontSize="11" />
-                              </StackPanel>
-                              <CheckBox Grid.Column="1"
-                                        VerticalAlignment="Top"
-                                        IsChecked="{Binding ShowAdvancedThemeControls}"
-                                        Content="{infra:LocalizedString Key=Settings.Appearance.ThemeEditor.Advanced}" />
-                            </Grid>
+                            <StackPanel Spacing="2">
+                              <TextBlock Text="{Binding ThemePaletteLabel}"
+                                         Foreground="{StaticResource TextSecondary}"
+                                         FontSize="11" />
+                              <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.ThemeEditor.PaletteDescription}"
+                                         Foreground="{DynamicResource TextMutedBrush}"
+                                         FontSize="11" />
+                            </StackPanel>
                             <ItemsControl ItemsSource="{Binding ThemePaletteSwatches}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -1457,7 +1450,7 @@
                                                    HorizontalAlignment="Left"
                                                    IsAlphaEnabled="False"
                                                    IsAlphaVisible="False"
-                                                   IsColorComponentsVisible="{Binding ShowAdvancedThemeControls}"
+                                                   IsColorComponentsVisible="False"
                                                    IsColorModelVisible="False"
                                                    IsColorPaletteVisible="False"
                                                    IsHexInputVisible="False"
@@ -1465,7 +1458,7 @@
                                                    IsColorPreviewVisible="False"
                                                    IsColorSpectrumVisible="True"
                                                    IsColorSpectrumSliderVisible="True"
-                                                   IsComponentSliderVisible="{Binding ShowAdvancedThemeControls}"
+                                                   IsComponentSliderVisible="False"
                                                    SelectedIndex="0"
                                                    ColorSpectrumShape="Ring" />
                           </Border>
@@ -1552,6 +1545,36 @@
                               <TextBlock Text="{Binding SelectedThemeColorHex}"
                                          Foreground="{DynamicResource TextMutedBrush}"
                                          FontSize="11" />
+                            </StackPanel>
+                          </Border>
+
+                          <Border Background="{DynamicResource Surface1}"
+                                  BorderBrush="{DynamicResource DividerBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="12"
+                                  Padding="12">
+                            <StackPanel Spacing="8">
+                              <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding ThemeAdvancedLabel}"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           FontSize="11" />
+                                <TextBlock Text="{Binding ThemeAdvancedDescription}"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="11" />
+                              </StackPanel>
+                              <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
+                                                     IsAlphaEnabled="False"
+                                                     IsAlphaVisible="False"
+                                                     IsColorComponentsVisible="True"
+                                                     IsColorModelVisible="False"
+                                                     IsColorPaletteVisible="False"
+                                                     IsHexInputVisible="False"
+                                                     IsComponentTextInputVisible="False"
+                                                     IsColorPreviewVisible="False"
+                                                     IsColorSpectrumVisible="False"
+                                                     IsColorSpectrumSliderVisible="False"
+                                                     IsComponentSliderVisible="True"
+                                                     SelectedIndex="2" />
                             </StackPanel>
                           </Border>
                         </StackPanel>
