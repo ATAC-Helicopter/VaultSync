@@ -355,11 +355,27 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Template">
                 <ControlTemplate>
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center" />
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="12"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                    </Border>
                 </ControlTemplate>
             </Setter>
+        </Style>
+        <Style Selector="ToggleButton.color-swatch-button:checked">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="Padding" Value="1" />
+        </Style>
+        <Style Selector="ToggleButton.color-swatch-button:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <!-- Global ComboBox popup readability -->

@@ -88,8 +88,10 @@ namespace VaultSync.UI
             public required ThemePaletteConfig Palette { get; init; }
         }
 
-        public sealed class ThemePaletteSwatchViewModel
+        public sealed class ThemePaletteSwatchViewModel : INotifyPropertyChanged
         {
+            private bool _isSelected;
+
             public ThemePaletteSwatchViewModel(string hex)
             {
                 Hex = hex;
@@ -98,10 +100,24 @@ namespace VaultSync.UI
                 OutlineBrush = CreateOutlineBrush(SwatchColor);
             }
 
+            public event PropertyChangedEventHandler? PropertyChanged;
             public string Hex { get; }
             public Color SwatchColor { get; }
             public IBrush SwatchBrush { get; }
             public IBrush OutlineBrush { get; }
+
+            public bool IsSelected
+            {
+                get => _isSelected;
+                set
+                {
+                    if (_isSelected == value)
+                        return;
+
+                    _isSelected = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+                }
+            }
 
             private static IBrush CreateOutlineBrush(Color color)
             {
@@ -241,6 +257,8 @@ namespace VaultSync.UI
             SelectedThemePaletteSwatches.Clear();
             foreach (var hex in GetThemePaletteForSlot(SelectedThemeColorSlot?.Id))
                 SelectedThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
+
+            UpdateSelectedThemePaletteSwatchState();
         }
 
         private void ApplyThemePreset(ThemePresetOptionViewModel? preset)
@@ -259,6 +277,7 @@ namespace VaultSync.UI
                 return;
 
             SelectedThemeColorSlot.Hex = swatch.Hex;
+            UpdateSelectedThemePaletteSwatchState();
         }
 
         private void ResetCustomTheme()
@@ -344,6 +363,14 @@ namespace VaultSync.UI
             OnPropertyChanged(nameof(ThemePreviewAccent));
             OnPropertyChanged(nameof(ThemePreviewTextPrimary));
             OnPropertyChanged(nameof(ThemePreviewTextSecondary));
+            UpdateSelectedThemePaletteSwatchState();
+        }
+
+        private void UpdateSelectedThemePaletteSwatchState()
+        {
+            var selectedHex = SelectedThemeColorHex;
+            foreach (var swatch in SelectedThemePaletteSwatches)
+                swatch.IsSelected = string.Equals(swatch.Hex, selectedHex, StringComparison.OrdinalIgnoreCase);
         }
 
         public ThemeColorSlotViewModel? SelectedThemeColorSlot

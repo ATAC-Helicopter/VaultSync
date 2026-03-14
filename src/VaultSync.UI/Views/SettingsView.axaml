@@ -1350,18 +1350,27 @@
                               </ItemsControl.ItemsPanel>
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                  <Button Classes="color-swatch-button"
-                                          Width="46"
-                                          Height="34"
-                                          Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
-                                          CommandParameter="{Binding}">
-                                    <Border Width="40"
-                                            Height="28"
-                                            CornerRadius="10"
-                                            Background="{Binding SwatchBrush}"
-                                            BorderBrush="{Binding OutlineBrush}"
-                                            BorderThickness="1.5" />
-                                  </Button>
+                                  <ToggleButton Classes="color-swatch-button"
+                                                Width="46"
+                                                Height="34"
+                                                IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
+                                                CommandParameter="{Binding}">
+                                    <Border Width="44"
+                                            Height="32"
+                                            CornerRadius="12"
+                                            Background="{DynamicResource Surface1}"
+                                            BorderBrush="{DynamicResource BorderSoft}"
+                                            BorderThickness="1"
+                                            Padding="2">
+                                      <Border Width="40"
+                                              Height="28"
+                                              CornerRadius="10"
+                                              Background="{Binding SwatchBrush}"
+                                              BorderBrush="{Binding OutlineBrush}"
+                                              BorderThickness="1.5" />
+                                    </Border>
+                                  </ToggleButton>
                                 </DataTemplate>
                               </ItemsControl.ItemTemplate>
                             </ItemsControl>
