@@ -1176,6 +1176,7 @@
     - In progress: theme swatches are being tightened into stronger preset tiles so neutral and light colors read clearly at a glance.
     - In progress: palette clicks now follow the active theme slot explicitly so users can see which section they are editing.
     - In progress: theme quick colors are being visually aligned with the tag-color swatches so both editors feel like one system.
+    - In progress: the theme default palette is being unified with the tag picker presets instead of keeping a separate base row.
   - Acceptance:
     - Starter themes include clearly differentiated OLED black and dark blue options.
     - The default palette is understandable at a glance as the app's core colors and accents.
@@ -1185,6 +1186,7 @@
     - Theme quick colors stay usable for the selected slot category instead of requiring manual guesswork.
     - The active theme slot is obvious, and swatch clicks visibly apply to that slot instead of feeling ambiguous.
     - Theme and tag quick palettes share the same swatch language instead of feeling like different controls.
+    - The default theme palette row matches the tag picker presets instead of diverging into a separate neutral set.
 
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials. _(In progress)_
   - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.

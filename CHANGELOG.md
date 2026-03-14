@@ -36,6 +36,7 @@
 - [VS-1722] Theme quick colors now use standard picker-style presets and stronger contrast for light surface colors.
 - [VS-1722] Theme quick colors now visibly track and apply to the active custom-theme slot.
 - [VS-1722] Theme quick colors now use the same chip-style swatches as tag colors while keeping the theme slot selector.
+- [VS-1722] The theme default palette now matches the tag picker presets instead of using a separate neutral-only row.
 - [VS-1723] Settings theme-editor logic now lives in a dedicated partial viewmodel file to reduce risk before the macOS work.
 - [BUG-17006] Restore-readiness cards now offer a one-click review list with project names and reasons.
 - [BUG-17006] English summaries no longer show corrupted separator glyphs across Dashboard, Backups, and Projects.
