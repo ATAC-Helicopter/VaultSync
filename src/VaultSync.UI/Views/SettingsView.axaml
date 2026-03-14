@@ -1342,7 +1342,7 @@
                                          Foreground="{DynamicResource TextMutedBrush}"
                                          FontSize="11" />
                             </StackPanel>
-                            <ItemsControl ItemsSource="{Binding ThemePaletteSwatches}">
+                            <ItemsControl ItemsSource="{Binding SelectedThemePaletteSwatches}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                   <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="10" />

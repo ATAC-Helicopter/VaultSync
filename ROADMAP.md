@@ -1112,12 +1112,14 @@
     - In progress: Projects, Backups, and Dashboard activity are being aligned to render the same configured chips app-wide.
     - In progress: the Projects editor is being tightened into a wrap-friendly layout with stronger quick swatches so it still reads clearly in narrower windows.
     - In progress: the quick tag palette is being switched to a standard hard-coded color set so it behaves more like familiar color pickers.
+    - In progress: tag presets are being kept chip-friendly so the quick colors make sense for tags instead of mirroring generic theme slots.
   - Acceptance:
     - Tag colors can be added, edited, reset, and removed from Projects without confusing duplicate entry points or broken layout.
     - The same tag uses the same colors anywhere it appears in the app.
     - Support-bundle settings export/import preserves configured tag colors.
     - Quick swatches read as obvious colors instead of empty placeholders, and the editor keeps working across smaller window sizes.
     - Quick tag colors cover the common neutral and accent colors users expect from a picker preset row.
+    - Tag presets stay useful for chip styling instead of drifting into unrelated theme-only colors.
 - [ ] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(In progress)_
   - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
   - Current status:
@@ -1157,11 +1159,13 @@
     - In progress: the editor now follows a clearer preset -> target -> pick -> preview flow, and the picker is being stripped down to visible swatches plus a cleaner spectrum view.
     - In progress: the theme editor is being converted from a rigid split panel into wrap-based cards so the palette, picker, preview, and tuning controls scale better in windowed layouts.
     - In progress: theme swatches are being rendered from explicit brush-backed palette entries so they stop reading as empty circles.
+    - In progress: theme quick colors are being filtered by the selected slot so surface, text, accent, and status editing each get usable presets.
   - Acceptance:
     - The theme editor reads as one coherent workflow instead of a pile of equal-weight controls.
     - Presets, target selection, picker, and preview are visually distinct and easier to scan in windowed mode.
     - Quick swatches render as obvious colors instead of neutral placeholders, and the picker no longer wastes space on low-value chrome.
     - Theme editing remains usable on narrower windows without the preview or tuning panels collapsing awkwardly.
+    - Theme quick colors adapt to the selected slot instead of serving one generic palette for everything.
 
 - [ ] `VS-1722` `P2` Expand custom theme presets and advanced controls. _(In progress)_
   - Scope: add more useful starter themes and an optional advanced editing mode without cluttering the default theme workflow.
@@ -1174,6 +1178,7 @@
     - Advanced sliders are available in the spare right-side space without overwhelming the default theme editing flow.
     - Quick theme colors cover common editor-style neutrals and accents instead of looking sparse or placeholder-like.
     - Theme quick colors use familiar hard-coded presets instead of abstract placeholder swatches.
+    - Theme quick colors stay usable for the selected slot category instead of requiring manual guesswork.
 
 - [ ] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(In progress)_
   - Scope:

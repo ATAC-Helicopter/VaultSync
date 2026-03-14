@@ -529,6 +529,7 @@ namespace VaultSync.UI
         public ObservableCollection<ThemeColorSlotViewModel> ThemeColorSlots { get; } = new();
         public ObservableCollection<ThemePresetOptionViewModel> ThemePresets { get; } = new();
         public ObservableCollection<ThemePaletteSwatchViewModel> ThemePaletteSwatches { get; } = new();
+        public ObservableCollection<ThemePaletteSwatchViewModel> SelectedThemePaletteSwatches { get; } = new();
 
         private void RefreshLegacyVisibility()
         {
@@ -1354,18 +1355,68 @@ namespace VaultSync.UI
             }
 
             ThemePaletteSwatches.Clear();
-            foreach (var hex in new[]
+            foreach (var hex in GetAllThemePaletteHexes())
+                ThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
+
+            SelectedThemeColorSlot = ThemeColorSlots.FirstOrDefault();
+            RefreshSelectedThemePaletteSwatches();
+        }
+
+        private static IReadOnlyList<string> GetAllThemePaletteHexes()
+        {
+            return new[]
             {
                 "#000000", "#09111B", "#101218", "#181B24", "#222635", "#2F3548", "#475569", "#94A3B8",
                 "#CBD5E1", "#E2E8F0", "#FFFFFF", "#EF4444", "#F97316", "#F59E0B", "#EAB308", "#84CC16",
                 "#22CC88", "#14B8A6", "#22D3EE", "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1", "#7C3AED",
                 "#A855F7", "#F857A6"
-            })
-            {
-                ThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
-            }
+            };
+        }
 
-            SelectedThemeColorSlot = ThemeColorSlots.FirstOrDefault();
+        private static IReadOnlyList<string> GetThemePaletteForSlot(string? slotId)
+        {
+            return slotId switch
+            {
+                "Background" or "Surface" or "SurfaceAlt" => new[]
+                {
+                    "#000000", "#09111B", "#101218", "#181B24", "#222635", "#2F3548",
+                    "#475569", "#94A3B8", "#CBD5E1", "#E2E8F0", "#FFFFFF"
+                },
+                "TextPrimary" => new[]
+                {
+                    "#000000", "#101218", "#181B24", "#2F3548", "#475569",
+                    "#CBD5E1", "#E2E8F0", "#FFFFFF"
+                },
+                "TextSecondary" => new[]
+                {
+                    "#475569", "#64748B", "#94A3B8", "#B3B8C7", "#CBD5E1", "#E2E8F0"
+                },
+                "Success" => new[]
+                {
+                    "#166534", "#15803D", "#16A34A", "#22C55E", "#22CC88", "#4ADE80"
+                },
+                "Warning" => new[]
+                {
+                    "#92400E", "#B45309", "#D97706", "#F59E0B", "#EAB308", "#FCD34D"
+                },
+                "Danger" => new[]
+                {
+                    "#991B1B", "#B91C1C", "#DC2626", "#EF4444", "#F87171", "#FF6B6B"
+                },
+                _ => new[]
+                {
+                    "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1", "#7C3AED",
+                    "#A855F7", "#F857A6", "#EF4444", "#F97316", "#F59E0B",
+                    "#EAB308", "#84CC16", "#22CC88", "#14B8A6", "#22D3EE"
+                }
+            };
+        }
+
+        private void RefreshSelectedThemePaletteSwatches()
+        {
+            SelectedThemePaletteSwatches.Clear();
+            foreach (var hex in GetThemePaletteForSlot(SelectedThemeColorSlot?.Id))
+                SelectedThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
         }
 
         private void ApplyThemePreset(ThemePresetOptionViewModel? preset)
@@ -1931,6 +1982,7 @@ namespace VaultSync.UI
                 if (!_selectedThemeColorSlot.IsSelected)
                     _selectedThemeColorSlot.IsSelected = true;
 
+                RefreshSelectedThemePaletteSwatches();
                 RefreshThemeEditorPreview();
                 _applyThemePaletteSwatchCommand?.RaiseCanExecuteChanged();
                 OnPropertyChanged(nameof(SelectedThemeColorSlot));

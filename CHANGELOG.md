@@ -26,10 +26,12 @@
 - [VS-1721] Onboarding now points new users to Projects for tag-color editing, and Settings no longer shows a duplicate reminder panel.
 - [VS-1721] Tag-color editing now uses visible quick swatches and a wrap-friendly layout for smaller windows.
 - [VS-1721] Tag quick colors now use a standard hard-coded palette instead of sparse placeholder swatches.
+- [VS-1721] Tag quick colors now stay focused on chip-friendly accents instead of generic theme colors.
 - [VS-1722] Custom themes now include OLED Black, Deep Blue, an editor-style palette, and side-panel advanced sliders.
 - [VS-1722] Appearance onboarding now calls out custom theme palettes instead of only basic layout options.
 - [BUG-17005] Simplified the custom theme editor with visible swatches, responsive wrapping, and a cleaner spectrum-only picker.
 - [BUG-17005] Theme quick colors now use explicit brush-backed swatches so the default palette reads correctly at a glance.
+- [VS-1722] Theme quick colors now adapt to the selected slot so backgrounds, text, accents, and status colors get usable presets.
 - [BUG-17006] Restore-readiness cards now offer a one-click review list with project names and reasons.
 - [BUG-17006] English summaries no longer show corrupted separator glyphs across Dashboard, Backups, and Projects.
 - [BUG-17006] Tightened the collapsed sidebar, shared toggle/checkbox styling, Backups spacing, and the Projects tag-color editor.
