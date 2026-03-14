@@ -791,125 +791,140 @@
                           Background="{DynamicResource Surface2}"
                           BorderBrush="{DynamicResource DividerBrush}"
                           BorderThickness="1"
-                          Padding="14">
-                    <Grid RowDefinitions="Auto,Auto,Auto"
-                          ColumnDefinitions="1.05*,0.95*"
-                          RowSpacing="10"
-                          ColumnSpacing="16">
-                      <StackPanel Grid.Row="0"
-                                  Grid.Column="0"
-                                  Spacing="4">
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Label}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimaryBrush}" />
-                        <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Description}"
-                                   FontSize="10"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
-                      <Border Grid.Row="0"
-                              Grid.Column="1"
-                              CornerRadius="16"
-                              Padding="16,14"
-                              Background="{Binding DataContext.ProjectTagColorPreviewBackground, ElementName=Root}"
-                              BorderBrush="{Binding DataContext.ProjectTagColorPreviewBorder, ElementName=Root}"
-                              BorderThickness="1">
-                        <StackPanel Spacing="6"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center">
-                          <TextBlock Text="{Binding DataContext.ProjectTagColorTarget, ElementName=Root}"
-                                     Foreground="{Binding DataContext.ProjectTagColorPreviewForeground, ElementName=Root}"
-                                     FontSize="16"
-                                     FontWeight="Bold"
-                                     HorizontalAlignment="Center" />
-                          <TextBlock Text="{Binding DataContext.ProjectTagColorHex, ElementName=Root}"
-                                     Foreground="{Binding DataContext.ProjectTagColorPreviewForeground, ElementName=Root}"
-                                     FontSize="11"
-                                     HorizontalAlignment="Center" />
+                          Padding="16">
+                    <StackPanel Spacing="14">
+                      <WrapPanel Orientation="Horizontal"
+                                 ItemSpacing="14"
+                                 LineSpacing="14">
+                        <StackPanel Width="320"
+                                    MaxWidth="460"
+                                    Spacing="4">
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Label}"
+                                     FontSize="12"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextPrimaryBrush}" />
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Description}"
+                                     FontSize="10"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     TextWrapping="Wrap" />
                         </StackPanel>
-                      </Border>
 
-                      <StackPanel Grid.Row="1"
-                                  Grid.Column="0"
-                                  Spacing="8">
-                        <TextBlock Text="{Binding DataContext.ProjectTagColorPickerLabel, ElementName=Root}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <Border Background="{DynamicResource Surface1}"
+                        <Border MinWidth="220"
+                                MaxWidth="320"
+                                CornerRadius="16"
+                                Padding="16,14"
+                                Background="{Binding DataContext.ProjectTagColorPreviewBackground, ElementName=Root}"
+                                BorderBrush="{Binding DataContext.ProjectTagColorPreviewBorder, ElementName=Root}"
+                                BorderThickness="1">
+                          <StackPanel Spacing="6"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center">
+                            <TextBlock Text="{Binding DataContext.ProjectTagColorTarget, ElementName=Root}"
+                                       Foreground="{Binding DataContext.ProjectTagColorPreviewForeground, ElementName=Root}"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding DataContext.ProjectTagColorHex, ElementName=Root}"
+                                       Foreground="{Binding DataContext.ProjectTagColorPreviewForeground, ElementName=Root}"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center" />
+                          </StackPanel>
+                        </Border>
+                      </WrapPanel>
+
+                      <WrapPanel Orientation="Horizontal"
+                                 ItemSpacing="14"
+                                 LineSpacing="14">
+                        <Border MinWidth="300"
+                                MaxWidth="440"
+                                Background="{DynamicResource Surface1}"
                                 BorderBrush="{DynamicResource DividerBrush}"
                                 BorderThickness="1"
-                                CornerRadius="12"
-                                Padding="10">
-                          <colorpicker:ColorView Color="{Binding DataContext.SelectedProjectTagColor, ElementName=Root, Mode=TwoWay}"
-                                                 IsAlphaEnabled="False"
-                                                 IsAlphaVisible="False"
-                                                 IsColorModelVisible="False"
-                                                 IsColorPaletteVisible="False"
-                                                 IsHexInputVisible="False"
-                                                 IsComponentTextInputVisible="False"
-                                                 IsColorPreviewVisible="False"
-                                                 IsColorSpectrumVisible="True"
-                                                 IsColorSpectrumSliderVisible="True"
-                                                 IsComponentSliderVisible="False"
-                                                 MaxWidth="260"
-                                                 ColorSpectrumShape="Ring" />
+                                CornerRadius="14"
+                                Padding="12">
+                          <StackPanel Spacing="10">
+                            <TextBlock Text="{Binding DataContext.ProjectTagColorPickerLabel, ElementName=Root}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <colorpicker:ColorView Color="{Binding DataContext.SelectedProjectTagColor, ElementName=Root, Mode=TwoWay}"
+                                                   IsAlphaEnabled="False"
+                                                   IsAlphaVisible="False"
+                                                   IsColorModelVisible="False"
+                                                   IsColorPaletteVisible="False"
+                                                   IsHexInputVisible="False"
+                                                   IsComponentTextInputVisible="False"
+                                                   IsColorPreviewVisible="False"
+                                                   IsColorSpectrumVisible="True"
+                                                   IsColorSpectrumSliderVisible="True"
+                                                   IsComponentSliderVisible="False"
+                                                   MaxWidth="340"
+                                                   HorizontalAlignment="Left"
+                                                   ColorSpectrumShape="Ring" />
+                          </StackPanel>
                         </Border>
-                      </StackPanel>
 
-                      <StackPanel Grid.Row="1"
-                                  Grid.Column="1"
-                                  Spacing="8">
-                        <TextBlock Text="{Binding DataContext.ProjectTagColorPaletteLabel, ElementName=Root}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <ItemsControl ItemsSource="{Binding DataContext.ProjectTagColorSwatches, ElementName=Root}">
-                          <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                              <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
-                            </ItemsPanelTemplate>
-                          </ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                              <Button Width="40"
-                                      Height="40"
-                                      Padding="0"
-                                      CornerRadius="20"
-                                      Background="{Binding Swatch}"
-                                      BorderBrush="{DynamicResource BorderSoft}"
-                                      BorderThickness="1"
-                                      Command="{Binding DataContext.ApplyProjectTagColorSwatchCommand, ElementName=Root}"
-                                      CommandParameter="{Binding Hex}" />
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <TextBlock Text="{Binding DataContext.ProjectTagColorGlobalHint, ElementName=Root}"
-                                   FontSize="10"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
+                        <Border MinWidth="240"
+                                MaxWidth="320"
+                                Background="{DynamicResource Surface1}"
+                                BorderBrush="{DynamicResource DividerBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14"
+                                Padding="12">
+                          <StackPanel Spacing="10">
+                            <TextBlock Text="{Binding DataContext.ProjectTagColorPaletteLabel, ElementName=Root}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <ItemsControl ItemsSource="{Binding DataContext.ProjectTagColorSwatches, ElementName=Root}">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                  <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="10" />
+                                </ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                  <Button Classes="color-swatch-button"
+                                          Width="44"
+                                          Height="44"
+                                          Command="{Binding DataContext.ApplyProjectTagColorSwatchCommand, ElementName=Root}"
+                                          CommandParameter="{Binding Hex}">
+                                    <Border Width="38"
+                                            Height="38"
+                                            CornerRadius="19"
+                                            Background="{Binding Swatch}"
+                                            BorderBrush="#E6F0FF"
+                                            BorderThickness="1.5" />
+                                  </Button>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding DataContext.ProjectTagColorGlobalHint, ElementName=Root}"
+                                       FontSize="10"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Border>
+                      </WrapPanel>
 
-                      <StackPanel Grid.Row="2"
-                                  Grid.ColumnSpan="2"
-                                  Orientation="Horizontal"
-                                  HorizontalAlignment="Right"
-                                  Spacing="10">
+                      <WrapPanel Orientation="Horizontal"
+                                 HorizontalAlignment="Right"
+                                 ItemSpacing="10"
+                                 LineSpacing="10">
                         <Button Command="{Binding DataContext.ResetProjectTagColorCommand, ElementName=Root}"
-                                Padding="{DynamicResource ButtonPadding}"
+                                Padding="{DynamicResource ButtonTightPadding}"
                                 CornerRadius="12"
                                 Background="{DynamicResource Surface1}"
                                 Foreground="{DynamicResource TextPrimaryBrush}">
                           <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Reset}" />
                         </Button>
                         <Button Command="{Binding DataContext.ApplyProjectTagColorCommand, ElementName=Root}"
-                                Padding="{DynamicResource ButtonPadding}"
+                                Padding="{DynamicResource ButtonTightPadding}"
                                 CornerRadius="12"
                                 Background="{DynamicResource AccentBrush}"
                                 Foreground="White">
                           <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Apply}" />
                         </Button>
-                      </StackPanel>
-                    </Grid>
+                      </WrapPanel>
+                    </StackPanel>
                   </Border>
 
                   <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Help}"

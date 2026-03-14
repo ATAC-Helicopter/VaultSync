@@ -68,21 +68,6 @@
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <Style Selector="Button.theme-swatch-button">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="MinWidth" Value="0" />
-      <Setter Property="MinHeight" Value="0" />
-      <Setter Property="Template">
-        <ControlTemplate>
-          <ContentPresenter Content="{TemplateBinding Content}"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center" />
-        </ControlTemplate>
-      </Setter>
-    </Style>
   </UserControl.Styles>
 
     <UserControl.Resources>
@@ -1337,9 +1322,11 @@
                     </ItemsControl>
                     </StackPanel>
 
-                    <Grid ColumnDefinitions="1.15*,0.85*"
-                          ColumnSpacing="12">
-                      <Border Grid.Column="0"
+                    <WrapPanel Orientation="Horizontal"
+                               ItemSpacing="12"
+                               LineSpacing="12">
+                      <Border MinWidth="340"
+                              MaxWidth="560"
                               Background="{DynamicResource Surface2}"
                               BorderBrush="{DynamicResource DividerBrush}"
                               BorderThickness="1"
@@ -1358,29 +1345,22 @@
                             <ItemsControl ItemsSource="{Binding ThemePaletteSwatches}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                  <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                                  <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="10" />
                                 </ItemsPanelTemplate>
                               </ItemsControl.ItemsPanel>
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                  <Button Classes="theme-swatch-button"
-                                          Width="34"
-                                          Height="34"
+                                  <Button Classes="color-swatch-button"
+                                          Width="42"
+                                          Height="42"
                                           Command="{Binding DataContext.ApplyThemePaletteSwatchCommand, ElementName=Root}"
                                           CommandParameter="{Binding}">
-                                    <Border Width="30"
-                                            Height="30"
-                                            CornerRadius="15"
-                                            Background="{DynamicResource Surface0}"
-                                            BorderBrush="{DynamicResource BorderSoft}"
-                                            BorderThickness="1.5">
-                                      <Border Width="24"
-                                              Height="24"
-                                              CornerRadius="12"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Background="{Binding SwatchColor}" />
-                                    </Border>
+                                    <Border Width="36"
+                                            Height="36"
+                                            CornerRadius="18"
+                                            Background="{Binding SwatchColor}"
+                                            BorderBrush="#E6F0FF"
+                                            BorderThickness="1.5" />
                                   </Button>
                                 </DataTemplate>
                               </ItemsControl.ItemTemplate>
@@ -1465,7 +1445,8 @@
                         </StackPanel>
                       </Border>
 
-                      <Border Grid.Column="1"
+                      <Border MinWidth="300"
+                              MaxWidth="380"
                               Background="{DynamicResource Surface2}"
                               BorderBrush="{DynamicResource DividerBrush}"
                               BorderThickness="1"
@@ -1579,7 +1560,7 @@
                           </Border>
                         </StackPanel>
                       </Border>
-                    </Grid>
+                    </WrapPanel>
                   </StackPanel>
                 </Border>
 

@@ -1110,10 +1110,12 @@
     - In progress: the leftover Settings reminder panel is being removed so tag-color editing lives only where users can actually do the work.
     - In progress: onboarding is being updated to point new users at the Projects tag-color flow instead of a duplicate Settings surface.
     - In progress: Projects, Backups, and Dashboard activity are being aligned to render the same configured chips app-wide.
+    - In progress: the Projects editor is being tightened into a wrap-friendly layout with stronger quick swatches so it still reads clearly in narrower windows.
   - Acceptance:
     - Tag colors can be added, edited, reset, and removed from Projects without confusing duplicate entry points or broken layout.
     - The same tag uses the same colors anywhere it appears in the app.
     - Support-bundle settings export/import preserves configured tag colors.
+    - Quick swatches read as obvious colors instead of empty placeholders, and the editor keeps working across smaller window sizes.
 - [ ] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(In progress)_
   - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
   - Current status:
@@ -1151,10 +1153,12 @@
   - Scope: make the custom theme editor easier to understand visually by reducing duplicate emphasis, clarifying the edit order, and tightening the picker/preview layout.
   - Current status:
     - In progress: the editor now follows a clearer preset -> target -> pick -> preview flow, and the picker is being stripped down to visible swatches plus a cleaner spectrum view.
+    - In progress: the theme editor is being converted from a rigid split panel into wrap-based cards so the palette, picker, preview, and tuning controls scale better in windowed layouts.
   - Acceptance:
     - The theme editor reads as one coherent workflow instead of a pile of equal-weight controls.
     - Presets, target selection, picker, and preview are visually distinct and easier to scan in windowed mode.
     - Quick swatches render as obvious colors instead of neutral placeholders, and the picker no longer wastes space on low-value chrome.
+    - Theme editing remains usable on narrower windows without the preview or tuning panels collapsing awkwardly.
 
 - [ ] `VS-1722` `P2` Expand custom theme presets and advanced controls. _(In progress)_
   - Scope: add more useful starter themes and an optional advanced editing mode without cluttering the default theme workflow.
@@ -1165,6 +1169,7 @@
     - Starter themes include clearly differentiated OLED black and dark blue options.
     - The default palette is understandable at a glance as the app's core colors and accents.
     - Advanced sliders are available in the spare right-side space without overwhelming the default theme editing flow.
+    - Quick theme colors cover common editor-style neutrals and accents instead of looking sparse or placeholder-like.
 
 - [ ] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(In progress)_
   - Scope:

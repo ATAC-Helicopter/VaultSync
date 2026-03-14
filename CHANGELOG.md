@@ -24,9 +24,10 @@
 - [VS-1715] Diagnostics now include a non-blocking startup timeline summary.
 - [VS-1721] Tag-color editing now lives primarily in Projects instead of a duplicate Settings workflow.
 - [VS-1721] Onboarding now points new users to Projects for tag-color editing, and Settings no longer shows a duplicate reminder panel.
+- [VS-1721] Tag-color editing now uses visible quick swatches and a wrap-friendly layout for smaller windows.
 - [VS-1722] Custom themes now include OLED Black, Deep Blue, an editor-style palette, and side-panel advanced sliders.
 - [VS-1722] Appearance onboarding now calls out custom theme palettes instead of only basic layout options.
-- [BUG-17005] Simplified the custom theme editor with visible swatches and a cleaner spectrum-only picker.
+- [BUG-17005] Simplified the custom theme editor with visible swatches, responsive wrapping, and a cleaner spectrum-only picker.
 - [BUG-17006] Restore-readiness cards now offer a one-click review list with project names and reasons.
 - [BUG-17006] English summaries no longer show corrupted separator glyphs across Dashboard, Backups, and Projects.
 - [BUG-17006] Tightened the collapsed sidebar, shared toggle/checkbox styling, Backups spacing, and the Projects tag-color editor.

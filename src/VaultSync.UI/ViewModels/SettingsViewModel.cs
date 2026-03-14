@@ -1355,8 +1355,9 @@ namespace VaultSync.UI
             foreach (var hex in new[]
             {
                 "#000000", "#09111B", "#101218", "#181B24", "#222635", "#2F3548", "#475569", "#94A3B8",
-                "#E2E8F0", "#FFFFFF", "#1D4ED8", "#2563EB", "#4F8DFF", "#38BDF8", "#22D3EE", "#14B8A6",
-                "#22CC88", "#84CC16", "#EAB308", "#F59E0B", "#F97316", "#FF6A6A", "#F857A6", "#A855F7"
+                "#CBD5E1", "#E2E8F0", "#FFFFFF", "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1", "#7C3AED",
+                "#A855F7", "#F857A6", "#FF6A6A", "#F97316", "#F59E0B", "#EAB308", "#84CC16", "#22CC88",
+                "#14B8A6", "#22D3EE"
             })
             {
                 ThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
