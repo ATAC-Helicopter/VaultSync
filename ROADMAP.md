@@ -952,7 +952,7 @@
   - Acceptance:
     - Support diagnostics clearly show selected candidate release and why.
     - Channel mismatch scenarios are visible to operators without debug builds.
-  - [ ] `VS-1708` `P1` Patch chain compatibility preflight. _(In progress)_
+  - [x] `VS-1708` `P1` Patch chain compatibility preflight. _(Done)_
     - Scope: explicit preflight validation for `current -> target` patch chain and required assets before showing patch install option.
     - What it takes:
       - explicit patch-chain model (`current`, `intermediate`, `target`, `supported`, `missing asset`, `requires installer`).
@@ -961,11 +961,11 @@
     - Depends on:
       - `VS-1707` updater target diagnostics.
     - Current status:
-      - In progress: patch checks now validate base version, target version, manifest availability, and manifest file entries before exposing patch install.
-      - In progress: preflight outcomes now persist stable status codes/messages alongside update diagnostics and export through support bundles.
-      - In progress: Settings > Advanced shows the current patch preflight outcome as part of the updater diagnostics summary.
-      - In progress: prerelease labels are being compared explicitly so beta `1.7.0-*` builds do not collapse into stable `1.7.0` during patch matching.
-      - In progress: release asset workflow inputs are being guarded so beta builds run from `Dev` with prerelease targets and stable builds run from `Stable` without prerelease targets.
+      - Done: patch checks now validate base version, target version, manifest availability, and manifest file entries before exposing patch install.
+      - Done: preflight outcomes now persist stable status codes/messages alongside update diagnostics and export through support bundles.
+      - Done: Settings > Advanced shows the current patch preflight outcome as part of the updater diagnostics summary.
+      - Done: prerelease labels are compared explicitly so beta `1.7.0-*` builds do not collapse into stable `1.7.0` during patch matching.
+      - Done: release asset workflow inputs are guarded so beta builds run from `Dev` with prerelease targets and stable builds run from `Stable` without prerelease targets.
     - Acceptance:
       - Patch button appears only when chain/assets are valid.
       - Installer fallback messaging states precise incompatibility reason.
@@ -1103,21 +1103,21 @@
   - Current status:
     - In progress: first-pass dashboard redesign is in place with a stronger operations header, wrap-based KPI layout, a dedicated recent-activity rail, and rebalanced trend/storage cards that behave more predictably in windowed layouts.
     - In progress: header and lower information groups were refined to reduce the random/duplicated feel and make readiness, activity, trend, and storage read as one consistent dashboard hierarchy.
-- [ ] `VS-1721` `P2` App-wide tag color editor and chip styling. _(In progress)_
+ - [x] `VS-1721` `P2` App-wide tag color editor and chip styling. _(Done)_
   - Scope: add a complete app-wide tag-color system, edited primarily from Projects, and apply those colors consistently wherever project tags render.
   - What it takes:
     - persist per-tag background/foreground/border overrides in appearance settings.
     - render colored chips through one shared tag appearance helper across Projects, Backups, and Dashboard activity.
     - preserve configured colors through settings export/import flows.
-  - Current status:
-    - In progress: shared tag appearance resolution now supports configurable colors, and Projects now hosts the primary visual editor with a ring picker, quick swatches, live preview, and app-wide save/reset flows.
-    - In progress: the leftover Settings reminder panel is being removed so tag-color editing lives only where users can actually do the work.
-    - In progress: onboarding is being updated to point new users at the Projects tag-color flow instead of a duplicate Settings surface.
-    - In progress: Projects, Backups, and Dashboard activity are being aligned to render the same configured chips app-wide.
-    - In progress: the Projects editor is being tightened into a wrap-friendly layout with stronger quick swatches so it still reads clearly in narrower windows.
-    - In progress: the quick tag palette is being switched to a standard hard-coded color set so it behaves more like familiar color pickers.
-    - In progress: tag presets are being kept chip-friendly so the quick colors make sense for tags instead of mirroring generic theme slots.
-    - In progress: swatch borders are being made contrast-aware so light preset colors remain readable on dark surfaces.
+    - Current status:
+      - Done: shared tag appearance resolution supports configurable colors, and Projects hosts the primary visual editor with a ring picker, quick swatches, live preview, and app-wide save/reset flows.
+      - Done: the leftover Settings reminder panel was removed so tag-color editing lives only where users can actually do the work.
+      - Done: onboarding points new users at the Projects tag-color flow instead of a duplicate Settings surface.
+      - Done: Projects, Backups, and Dashboard activity render the same configured chips app-wide.
+      - Done: the Projects editor uses a wrap-friendly layout with stronger quick swatches so it still reads clearly in narrower windows.
+      - Done: the quick tag palette uses a standard hard-coded color set so it behaves more like familiar color pickers.
+      - Done: tag presets stay chip-friendly so the quick colors make sense for tags instead of mirroring generic theme slots.
+      - Done: swatch borders are contrast-aware so light preset colors remain readable on dark surfaces.
   - Acceptance:
     - Tag colors can be added, edited, reset, and removed from Projects without confusing duplicate entry points or broken layout.
     - The same tag uses the same colors anywhere it appears in the app.
@@ -1172,21 +1172,21 @@
     - Theme editing remains usable on narrower windows without the preview or tuning panels collapsing awkwardly.
     - Theme quick colors adapt to the selected slot instead of serving one generic palette for everything.
 
-- [ ] `VS-1722` `P2` Expand custom theme presets and advanced controls. _(In progress)_
+- [x] `VS-1722` `P2` Expand custom theme presets and advanced controls. _(Done)_
   - Scope: add more useful starter themes and an optional advanced editing mode without cluttering the default theme workflow.
-  - Current status:
-    - In progress: the custom theme presets are being expanded with OLED Black and Deep Blue variants for darker display preferences.
-    - In progress: the theme editor is moving advanced sliders into the right-side panel and using a more recognizable editor-style default palette.
-    - In progress: theme swatches are being tightened into stronger preset tiles so neutral and light colors read clearly at a glance.
-    - In progress: palette clicks now follow the active theme slot explicitly so users can see which section they are editing.
-    - In progress: theme quick colors are being visually aligned with the tag-color swatches so both editors feel like one system.
-    - In progress: the theme default palette is being unified with the tag picker presets instead of keeping a separate base row.
-    - In progress: the custom-theme palette block is being matched to the Projects tag-picker layout instead of using a near-duplicate variant.
-    - In progress: the theme swatches are being switched off their separate selected-state border so they render exactly like the Projects tag swatches.
-    - In progress: the theme editor is being switched from slot-filtered swatches to the same full quick palette used by the Projects tag editor.
-    - In progress: the theme section selector is being tightened so one visible target always stays active for palette clicks.
-    - In progress: the theme section chips are being changed from loose toggles to an explicit slot-selection path.
-    - In progress: theme palette clicks are being routed through an explicit immediate-apply path so the selected section updates instantly.
+    - Current status:
+      - Done: the custom theme presets include OLED Black and Deep Blue variants for darker display preferences.
+      - Done: the theme editor moves advanced sliders into the right-side panel and uses a more recognizable editor-style default palette.
+      - Done: theme swatches are tightened into stronger preset tiles so neutral and light colors read clearly at a glance.
+      - Done: palette clicks follow the active theme slot explicitly so users can see which section they are editing.
+      - Done: theme quick colors are visually aligned with the tag-color swatches so both editors feel like one system.
+      - Done: the theme default palette is unified with the tag picker presets instead of keeping a separate base row.
+      - Done: the custom-theme palette block matches the Projects tag-picker layout instead of using a near-duplicate variant.
+      - Done: the theme swatches no longer use a separate selected-state border and now render like the Projects tag swatches.
+      - Done: the theme editor uses the same full quick palette used by the Projects tag editor instead of slot-filtered swatches.
+      - Done: the theme section selector keeps one visible target active for palette clicks.
+      - Done: the theme section chips use an explicit slot-selection path instead of loose toggles.
+      - Done: theme palette clicks use an explicit immediate-apply path so the selected section updates instantly.
   - Acceptance:
     - Starter themes include clearly differentiated OLED black and dark blue options.
     - The default palette is understandable at a glance as the app's core colors and accents.
