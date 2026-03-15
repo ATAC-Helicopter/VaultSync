@@ -782,6 +782,7 @@
   "Settings.Appearance.ThemeEditor.PreviewSurface": "Surface",
   "Settings.Appearance.ThemeEditor.PaletteDescription": "Saved colors apply to the selected custom-theme section.",
   "Settings.Appearance.ThemeEditor.PaletteHint": "Saved colors apply to the selected custom-theme section.",
+  "Settings.Appearance.ThemePaletteApplied": "Applied {0} to {1}.",
   "Settings.Appearance.ThemePresets.deep-blue.Description": "Deeper blue night theme with stronger contrast and cooler surfaces.",
   "Settings.Appearance.ThemePresets.deep-blue.Name": "Deep Blue",
   "Settings.Appearance.ThemePresets.oled-black.Description": "Pure black dark theme for OLED displays with bright blue highlights.",

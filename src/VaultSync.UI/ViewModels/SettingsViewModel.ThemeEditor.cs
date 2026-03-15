@@ -236,6 +236,17 @@ namespace VaultSync.UI
                 return;
 
             SelectedThemeColorSlot.Hex = swatch.Hex;
+            RefreshThemeEditorPreview();
+
+            if (_isInitialized && IsCustomThemeSelected)
+                ApplyThemePreview();
+
+            SaveStatus = string.Format(
+                L("Settings.Appearance.ThemePaletteApplied", "Applied {0} to {1}."),
+                swatch.Hex,
+                SelectedThemeColorSlot.Label);
+
+            TriggerAutoSave();
             UpdateSelectedThemePaletteSwatchState();
         }
 

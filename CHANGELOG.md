@@ -42,6 +42,7 @@
 - [VS-1722] Theme quick colors now use the same full quick palette as the Projects tag editor.
 - [VS-1722] Theme quick colors now always apply to the actively selected theme section.
 - [VS-1722] Theme section chips now use an explicit selection path before palette colors are applied.
+- [VS-1722] Theme quick colors now update the selected section immediately instead of relying on indirect refresh side effects.
 - [VS-1723] Settings theme-editor logic now lives in a dedicated partial viewmodel file to reduce risk before the macOS work.
 - [BUG-17006] Restore-readiness cards now offer a one-click review list with project names and reasons.
 - [BUG-17006] English summaries no longer show corrupted separator glyphs across Dashboard, Backups, and Projects.
