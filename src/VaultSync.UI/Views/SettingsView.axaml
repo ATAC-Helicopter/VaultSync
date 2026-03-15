@@ -1385,6 +1385,8 @@
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                   <ToggleButton Classes="small-pill"
+                                                Command="{Binding DataContext.SelectThemeColorSlotCommand, ElementName=Root}"
+                                                CommandParameter="{Binding}"
                                                 IsChecked="{Binding IsSelected, Mode=TwoWay}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                       <Border Width="14"

@@ -132,6 +132,7 @@ namespace VaultSync.UI
         private RelayCommand? _resetTagColorRuleCommand;
         private RelayCommand? _applyThemePresetCommand;
         private RelayCommand? _applyThemePaletteSwatchCommand;
+        private RelayCommand? _selectThemeColorSlotCommand;
         private RelayCommand? _resetCustomThemeCommand;
         private RelayCommand? _scanBackupIndexRepairPlanCommand;
         private RelayCommand? _applyBackupIndexRepairPlanCommand;
@@ -510,6 +511,7 @@ namespace VaultSync.UI
             _resetTagColorRuleCommand    = new RelayCommand(p => ResetTagColorRule(p as TagColorRuleViewModel), p => p is TagColorRuleViewModel);
             _applyThemePresetCommand     = new RelayCommand(p => ApplyThemePreset(p as ThemePresetOptionViewModel), p => p is ThemePresetOptionViewModel);
             _applyThemePaletteSwatchCommand = new RelayCommand(p => ApplyThemePaletteSwatch(p as ThemePaletteSwatchViewModel), p => p is ThemePaletteSwatchViewModel && SelectedThemeColorSlot is not null);
+            _selectThemeColorSlotCommand = new RelayCommand(p => SelectThemeColorSlot(p as ThemeColorSlotViewModel), p => p is ThemeColorSlotViewModel);
             _resetCustomThemeCommand     = new RelayCommand(_ => ResetCustomTheme());
             OpenHelpCommand              = new RelayCommand(_ => OpenHelp());
             ExportTelemetryCommand       = new RelayCommand(_ => ExportTelemetry());

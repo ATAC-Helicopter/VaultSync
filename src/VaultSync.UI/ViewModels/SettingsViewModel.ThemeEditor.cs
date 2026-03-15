@@ -239,6 +239,14 @@ namespace VaultSync.UI
             UpdateSelectedThemePaletteSwatchState();
         }
 
+        private void SelectThemeColorSlot(ThemeColorSlotViewModel? slot)
+        {
+            if (slot is null)
+                return;
+
+            SelectedThemeColorSlot = slot;
+        }
+
         private void ResetCustomTheme()
         {
             LoadCustomTheme(ThemeManager.GetDefaultCustomTheme());
@@ -375,6 +383,7 @@ namespace VaultSync.UI
 
         public ICommand ApplyThemePresetCommand => _applyThemePresetCommand!;
         public ICommand ApplyThemePaletteSwatchCommand => _applyThemePaletteSwatchCommand!;
+        public ICommand SelectThemeColorSlotCommand => _selectThemeColorSlotCommand!;
         public ICommand ResetCustomThemeCommand => _resetCustomThemeCommand!;
 
         public string ThemeEditorLabel => L("Settings.Appearance.ThemeEditor.Label", "Custom theme");
