@@ -35,7 +35,6 @@ Use this page as the primary index for all project documentation.
 - Reporting bugs: `docs/wiki/Reporting-Bugs.md`
 
 ## Localization Operations
-- Missing-key report template/output: `docs/localization-missing-keys-report.md`
 
 ## Maintenance Notes
 - When behavior changes, update both:

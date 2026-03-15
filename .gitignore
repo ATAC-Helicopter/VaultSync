@@ -52,3 +52,8 @@ artifacts/
 .safety/*.bundle
 
 .wiki-sync-*
+
+# Local/generated docs not tracked in git
+docs/localization-missing-keys-report.md
+docs/PROJECT_OPERATIONS.md
+.codex_tmp_merge_locales.cs
