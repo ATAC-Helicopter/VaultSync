@@ -959,11 +959,12 @@
     - release tooling support so manifests expose enough chain metadata.
   - Depends on:
     - `VS-1707` updater target diagnostics.
-  - Current status:
-    - In progress: patch checks now validate base version, target version, manifest availability, and manifest file entries before exposing patch install.
-    - In progress: preflight outcomes now persist stable status codes/messages alongside update diagnostics and export through support bundles.
-    - In progress: Settings > Advanced shows the current patch preflight outcome as part of the updater diagnostics summary.
-  - Acceptance:
+    - Current status:
+      - In progress: patch checks now validate base version, target version, manifest availability, and manifest file entries before exposing patch install.
+      - In progress: preflight outcomes now persist stable status codes/messages alongside update diagnostics and export through support bundles.
+      - In progress: Settings > Advanced shows the current patch preflight outcome as part of the updater diagnostics summary.
+      - In progress: prerelease labels are being compared explicitly so beta `1.7.0-*` builds do not collapse into stable `1.7.0` during patch matching.
+    - Acceptance:
     - Patch button appears only when chain/assets are valid.
     - Installer fallback messaging states precise incompatibility reason.
 - [ ] `VS-1709` `P2` Support bundle update/repair telemetry expansion. _(In progress)_

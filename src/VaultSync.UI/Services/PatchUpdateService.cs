@@ -315,6 +315,8 @@ namespace VaultSync.UI.Services
 
         private static bool VersionsMatch(string? previousVersion, string? currentVersion)
         {
+            var normalizedPrevious = VersionHelper.NormalizeIdentity(previousVersion);
+            var normalizedCurrent = VersionHelper.NormalizeIdentity(currentVersion);
             var manifestVersion = VersionHelper.TryParse(previousVersion);
             var currentParsed = VersionHelper.TryParse(currentVersion);
 
@@ -331,18 +333,19 @@ namespace VaultSync.UI.Services
                 var revB = currentParsed.Revision;
 
                 // Treat missing revision (-1) as 0, but do not ignore non-zero revisions.
-                if (revA == revB)
-                    return true;
-
-                if ((revA == -1 && revB == 0) || (revB == -1 && revA == 0))
-                    return true;
+                if (revA == revB || (revA == -1 && revB == 0) || (revB == -1 && revA == 0))
+                {
+                    var prereleaseA = VersionHelper.GetPrereleaseLabel(previousVersion);
+                    var prereleaseB = VersionHelper.GetPrereleaseLabel(currentVersion);
+                    return string.Equals(prereleaseA, prereleaseB, StringComparison.OrdinalIgnoreCase);
+                }
 
                 return false;
             }
 
             return string.Equals(
-                previousVersion?.Trim(),
-                currentVersion?.Trim(),
+                normalizedPrevious,
+                normalizedCurrent,
                 StringComparison.OrdinalIgnoreCase);
         }
 
