@@ -1178,6 +1178,7 @@
     - In progress: theme quick colors are being visually aligned with the tag-color swatches so both editors feel like one system.
     - In progress: the theme default palette is being unified with the tag picker presets instead of keeping a separate base row.
     - In progress: the custom-theme palette block is being matched to the Projects tag-picker layout instead of using a near-duplicate variant.
+    - In progress: the theme swatches are being switched off their separate selected-state border so they render exactly like the Projects tag swatches.
   - Acceptance:
     - Starter themes include clearly differentiated OLED black and dark blue options.
     - The default palette is understandable at a glance as the app's core colors and accents.
@@ -1189,6 +1190,7 @@
     - Theme and tag quick palettes share the same swatch language instead of feeling like different controls.
     - The default theme palette row matches the tag picker presets instead of diverging into a separate neutral set.
     - The custom-theme palette block matches the Projects tag-picker layout instead of remaining a lookalike clone.
+    - Theme and tag swatches render the same borders instead of keeping subtly different selection chrome.
 
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials. _(In progress)_
   - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.

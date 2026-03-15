@@ -116,17 +116,8 @@ namespace VaultSync.UI
 
                     _isSelected = value;
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisplayOutlineBrush)));
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisplayBorderThickness)));
                 }
             }
-
-            public IBrush DisplayOutlineBrush =>
-                IsSelected
-                    ? new SolidColorBrush(Color.Parse("#4F8DFF"))
-                    : OutlineBrush;
-
-            public double DisplayBorderThickness => IsSelected ? 2.5d : 1.5d;
 
             private static IBrush CreateOutlineBrush(Color color)
             {
