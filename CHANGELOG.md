@@ -17,6 +17,7 @@
 - [VS-1707] Settings and support bundles now include updater release-target diagnostics.
 - [VS-1708] Patch updates now run explicit `current -> target` preflight checks before offering the patch path.
 - [VS-1708] Patch preflight now keeps prerelease labels distinct, so beta `1.7.0-*` builds do not collapse into stable `1.7.0`.
+- [VS-1708] Release asset builds now validate beta/stable branch and prerelease rules before generating patch files.
 - [VS-1709] Support bundles now include update, repair, and metadata-conflict telemetry.
 - [VS-1720] Archive transfers can now resume from verified checkpoints instead of restarting.
 - [VS-1716] Settings > Backups now includes a retention simulation preview.

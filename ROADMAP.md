@@ -951,22 +951,24 @@
   - Acceptance:
     - Support diagnostics clearly show selected candidate release and why.
     - Channel mismatch scenarios are visible to operators without debug builds.
-- [ ] `VS-1708` `P1` Patch chain compatibility preflight. _(In progress)_
-  - Scope: explicit preflight validation for `current -> target` patch chain and required assets before showing patch install option.
-  - What it takes:
-    - explicit patch-chain model (`current`, `intermediate`, `target`, `supported`, `missing asset`, `requires installer`).
-    - UI gate so patch CTA is shown only when eligibility is proven.
-    - release tooling support so manifests expose enough chain metadata.
-  - Depends on:
-    - `VS-1707` updater target diagnostics.
+  - [ ] `VS-1708` `P1` Patch chain compatibility preflight. _(In progress)_
+    - Scope: explicit preflight validation for `current -> target` patch chain and required assets before showing patch install option.
+    - What it takes:
+      - explicit patch-chain model (`current`, `intermediate`, `target`, `supported`, `missing asset`, `requires installer`).
+      - UI gate so patch CTA is shown only when eligibility is proven.
+      - release tooling support so manifests expose enough chain metadata.
+    - Depends on:
+      - `VS-1707` updater target diagnostics.
     - Current status:
       - In progress: patch checks now validate base version, target version, manifest availability, and manifest file entries before exposing patch install.
       - In progress: preflight outcomes now persist stable status codes/messages alongside update diagnostics and export through support bundles.
       - In progress: Settings > Advanced shows the current patch preflight outcome as part of the updater diagnostics summary.
       - In progress: prerelease labels are being compared explicitly so beta `1.7.0-*` builds do not collapse into stable `1.7.0` during patch matching.
+      - In progress: release asset workflow inputs are being guarded so beta builds run from `Dev` with prerelease targets and stable builds run from `Stable` without prerelease targets.
     - Acceptance:
-    - Patch button appears only when chain/assets are valid.
-    - Installer fallback messaging states precise incompatibility reason.
+      - Patch button appears only when chain/assets are valid.
+      - Installer fallback messaging states precise incompatibility reason.
+      - Release asset workflow rejects beta/stable branch mismatches and invalid prerelease target formats before build work starts.
 - [ ] `VS-1709` `P2` Support bundle update/repair telemetry expansion. _(In progress)_
   - Scope: include update candidate resolution trace, patch eligibility details, and orphan/repair summaries in redacted support exports.
   - What it takes:

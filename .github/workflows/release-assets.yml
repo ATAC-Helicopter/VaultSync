@@ -3,15 +3,76 @@ name: Build Release Assets
 on:
   workflow_dispatch:
     inputs:
+      release_channel:
+        description: "Release channel for this asset build"
+        required: true
+        type: choice
+        options:
+          - beta
+          - stable
       previous_version:
-        description: "Previous version for patch manifests (e.g., 1.3.0)"
+        description: "Previous version for patch manifests (e.g., 1.6.0 or 1.7.0-beta.1)"
         required: true
       target_version:
-        description: "Target version for patch manifests (e.g., 1.3.2)"
+        description: "Target version for patch manifests (e.g., 1.7.0-beta.2 or 1.7.0)"
         required: true
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          channel="${{ inputs.release_channel }}"
+          previous="${{ inputs.previous_version }}"
+          target="${{ inputs.target_version }}"
+          branch="${{ github.ref_name }}"
+
+          if [[ -z "$previous" || -z "$target" ]]; then
+            echo "previous_version and target_version are required."
+            exit 1
+          fi
+
+          if [[ "$previous" == "$target" ]]; then
+            echo "previous_version and target_version must be different."
+            exit 1
+          fi
+
+          if [[ "$channel" == "beta" ]]; then
+            if [[ "$branch" != "Dev" ]]; then
+              echo "Beta asset builds must be run from the Dev branch. Current branch: $branch"
+              exit 1
+            fi
+            if [[ "$target" != *-* ]]; then
+              echo "Beta target_version must include a prerelease suffix (example: 1.7.0-beta.1)."
+              exit 1
+            fi
+          fi
+
+          if [[ "$channel" == "stable" ]]; then
+            if [[ "$branch" != "Stable" ]]; then
+              echo "Stable asset builds must be run from the Stable branch. Current branch: $branch"
+              exit 1
+            fi
+            if [[ "$target" == *-* ]]; then
+              echo "Stable target_version must not include a prerelease suffix."
+              exit 1
+            fi
+          fi
+
+          cat <<EOF >> "$GITHUB_STEP_SUMMARY"
+          ## Release asset validation
+          - Channel: \`$channel\`
+          - Branch: \`$branch\`
+          - Previous version: \`$previous\`
+          - Target version: \`$target\`
+          EOF
+
   windows:
+    needs: validate
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -59,6 +120,7 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-windows.zip
 
   macos:
+    needs: validate
     runs-on: macos-latest
     steps:
       - name: Checkout
