@@ -865,11 +865,12 @@
 ### Revised planning notes
 - `VS-1704` is moved out of `1.7` and into `1.8` as a deliberate scope cut.
   - Reason: shared-vault access control and audit trails are a separate product stream and would dilute the reliability/repair focus of `1.7`.
-- `1.7` release should not ship until:
-  - orphan detection/remap is deterministic and idempotent,
-  - retention can prove it preserves at least one restorable point per project,
-  - updater diagnostics explain channel/target/patch eligibility without debug builds,
-  - doctor workflows provide dry-run before mutation.
+  - `1.7` release should not ship until:
+    - orphan detection/remap is deterministic and idempotent,
+    - retention can prove it preserves at least one restorable point per project,
+    - updater diagnostics explain channel/target/patch eligibility without debug builds,
+    - doctor workflows provide dry-run before mutation.
+  - Beta builds for the `1.7` cycle should use prerelease app versions such as `1.7.0-beta.1`, while the final Stable cut remains `1.7.0`.
 
 - [ ] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine. _(In progress)_
   - Scope: remap only through trusted exact links (`backup.snapshot_id -> snapshots.project_id` and exact external-id matches), never name/path heuristics.

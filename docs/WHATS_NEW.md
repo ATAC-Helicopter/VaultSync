@@ -1,6 +1,6 @@
 # What's New
 
-## [1.7.0]
+## [1.7.0-beta.1]
 
 Draft release notes. Final user-facing highlights will be curated at release cut.
 

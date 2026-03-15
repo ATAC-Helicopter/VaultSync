@@ -14,6 +14,7 @@
 - [VS-1703] Added per-destination soft quotas and cleanup suggestions.
 - [VS-1721] Added app-wide tag colors with visual editing from Projects.
 ### Changed
+- [VS-1708] Dev builds now identify as `1.7.0-beta.1`, while final Stable will remain `1.7.0`.
 - [VS-1707] Settings and support bundles now include updater release-target diagnostics.
 - [VS-1708] Patch updates now run explicit `current -> target` preflight checks before offering the patch path.
 - [VS-1708] Patch preflight now keeps prerelease labels distinct, so beta `1.7.0-*` builds do not collapse into stable `1.7.0`.
