@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +30,8 @@ internal static class Program
         DiagnosticsLogger.Record($"Process start. PID={Environment.ProcessId}, Args='{string.Join(' ', args)}'.");
         LogParentProcessInfo("startup");
         RegisterPosixSignals();
+        RegisterDiagnosticHooks();
+        DiagnosticsLogger.RecordStartupSnapshot(args, useSoftwareFallback: false);
         CrashHandler.RegisterEarly();
         if (PatchInstallService.TryParsePatchArgs(args, out var request))
         {
@@ -64,6 +67,7 @@ internal static class Program
             {
                 Console.WriteLine($"[Startup] Native render timer failed: {ex.Message}. Falling back to software rendering.");
                 DiagnosticsLogger.Record($"Native render timer failed. Falling back to software. Error={ex.Message}");
+                DiagnosticsLogger.RecordStartupSnapshot(args, useSoftwareFallback: true);
                 BuildAvaloniaApp(useSoftwareFallback: true).StartWithClassicDesktopLifetime(args);
             }
         }
@@ -80,6 +84,29 @@ internal static class Program
             _instanceMutex = null;
             DiagnosticsLogger.Record("Process exit cleanup complete.");
         }
+    }
+
+    private static void RegisterDiagnosticHooks()
+    {
+        try
+        {
+            AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
+            TaskScheduler.UnobservedTaskException += OnDiagnosticUnobservedTaskException;
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Diagnostic hooks registration failed: {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private static void OnFirstChanceException(object? sender, FirstChanceExceptionEventArgs e)
+    {
+        DiagnosticsLogger.RecordFirstChanceException(e.Exception, "AppDomain");
+    }
+
+    private static void OnDiagnosticUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        DiagnosticsLogger.RecordException("Diagnostic unobserved task exception", e.Exception, includeStack: true);
     }
 
     private static void TrySignalExistingInstance(string[] args)

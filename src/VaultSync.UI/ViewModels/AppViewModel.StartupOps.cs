@@ -23,7 +23,7 @@ namespace VaultSync.UI.ViewModels
             {
                 var systemLang = ResolveSystemLanguageCode(_localizationService);
                 _config.Advanced.Language = systemLang;
-                AppConfigStore.Save(_config);
+                _ = Task.Run(async () => await PersistStartupConfigAsync("initial-language"));
             }
 
             var targetLang = string.IsNullOrWhiteSpace(_config.Advanced.Language)
@@ -35,17 +35,6 @@ namespace VaultSync.UI.ViewModels
             RecordStartupPhase("localization-initialized");
 
             _repo = new SqliteRepository(_config.DbPath ?? string.Empty);
-            _ = Task.Run(() =>
-            {
-                try
-                {
-                    _repo.EnsureSchema();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[DB] EnsureSchema failed: {ex.Message}");
-                }
-            });
 
             _backupService = new BackupService(_repo);
             _backupService.BackupRetentionDeleted += OnBackupRetentionDeleted;
@@ -101,9 +90,7 @@ namespace VaultSync.UI.ViewModels
             UpdateLogConsoleSettings();
             ScheduleLogCaptureInstall();
 
-            _ = Task.Run(() => CleanupIncompleteBackupsOnStartup());
-            _ = Task.Run(() => EnforceRetentionOnStartup());
-            _ = Task.Run(() => CleanupUnusedCredentialSecretsOnStartup());
+            _ = Task.Run(RunStartupBackgroundWorkAsync);
             RecordStartupPhase("startup-cleanup-scheduled");
 
             // 3) BackupsViewModel is created lazily; wiring happens when instantiated.
@@ -121,8 +108,6 @@ namespace VaultSync.UI.ViewModels
             }
             RecordStartupPhase("initial-route-ready");
 
-            // Ensure launch-on-login matches config
-            _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(_config.Behavior.LaunchOnLogin));
             ConfigureAutoBackupTimer();
             ConfigureMaintenanceTimer();
             LogBackupPolicyTransitionIfChanged(_config, "startup");
@@ -147,6 +132,77 @@ namespace VaultSync.UI.ViewModels
 
             StartDeferredStartupTasks();
             RecordStartupPhase("deferred-startup-scheduled");
+        }
+
+        private async Task PersistStartupConfigAsync(string reason)
+        {
+            try
+            {
+                await AppConfigStore.SaveAsync(_config).ConfigureAwait(false);
+                DiagnosticsLogger.Record($"Startup config persisted ({reason}).");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Startup config persist failed ({reason}): {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        private async Task RunStartupBackgroundWorkAsync()
+        {
+            DiagnosticsLogger.Record("Startup background work begin.");
+
+            try
+            {
+                RecordStartupPhase("db-schema-begin");
+                await Task.Run(() => _repo.EnsureSchema()).ConfigureAwait(false);
+                RecordStartupPhase("db-schema-complete");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Startup schema ensure failed: {ex.GetType().Name} - {ex.Message}");
+            }
+
+            try
+            {
+                CleanupIncompleteBackupsOnStartup();
+                RecordStartupPhase("cleanup-incomplete-backups-complete");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Startup cleanup incomplete backups failed: {ex.GetType().Name} - {ex.Message}");
+            }
+
+            try
+            {
+                EnforceRetentionOnStartup();
+                RecordStartupPhase("startup-retention-complete");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Startup retention enforcement failed: {ex.GetType().Name} - {ex.Message}");
+            }
+
+            try
+            {
+                CleanupUnusedCredentialSecretsOnStartup();
+                RecordStartupPhase("cleanup-unused-secrets-complete");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Startup credential cleanup failed: {ex.GetType().Name} - {ex.Message}");
+            }
+
+            try
+            {
+                await Task.Run(() => AutoStartService.SetLaunchOnLogin(_config.Behavior.LaunchOnLogin)).ConfigureAwait(false);
+                RecordStartupPhase("launch-on-login-synced");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Startup launch-on-login sync failed: {ex.GetType().Name} - {ex.Message}");
+            }
+
+            DiagnosticsLogger.Record("Startup background work complete.");
         }
 
         private BackupsViewModel CreateBackupsViewModel()

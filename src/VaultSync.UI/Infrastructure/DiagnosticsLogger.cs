@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,8 +12,11 @@ namespace VaultSync.UI.Infrastructure;
 
 internal static class DiagnosticsLogger
 {
-    private const int MaxRecent = 200;
+    private const int MaxRecent = 1000;
+    private const int MaxFirstChanceTotal = 250;
+    private const int MaxFirstChancePerSignature = 5;
     private static readonly ConcurrentQueue<string> Recent = new();
+    private static readonly ConcurrentDictionary<string, int> FirstChanceCounts = new(StringComparer.Ordinal);
     private static int _recentCount;
     private static readonly object FileGate = new();
     private static string? _sessionPath;
@@ -19,6 +24,9 @@ internal static class DiagnosticsLogger
     private static Timer? _heartbeatTimer;
     private static int _dumpInFlight;
     private static int _dumpAttempted;
+    private static int _firstChanceTotal;
+    private static int _consoleMirroringInstalled;
+    private static int _traceListenerInstalled;
 
     public static string? SessionLogPath => _sessionPath;
 
@@ -38,6 +46,8 @@ internal static class DiagnosticsLogger
             _sessionPath = Path.Combine(dir, $"session-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
             _heartbeatPath = Path.Combine(dir, "heartbeat.txt");
             LogPreviousHeartbeat();
+            InstallTraceListener();
+            InstallConsoleMirroring();
             StartHeartbeat();
             Record("Diagnostics session started.");
         }
@@ -104,6 +114,96 @@ internal static class DiagnosticsLogger
         }
     }
 
+    public static void RecordStartupSnapshot(string[] args, bool useSoftwareFallback)
+    {
+        try
+        {
+            var osDescription = RuntimeInformation.OSDescription;
+            var framework = RuntimeInformation.FrameworkDescription;
+            var processPath = Environment.ProcessPath ?? string.Empty;
+            var baseDir = AppContext.BaseDirectory;
+            var envKeys = new[]
+            {
+                "DOTNET_ENVIRONMENT",
+                "DOTNET_ROOT",
+                "DOTNET_gcServer",
+                "DOTNET_gcConcurrent",
+                "DOTNET_DefaultDiagnosticPortSuspend",
+                "VAULTSYNC_IGNORE_SIGTERM",
+                "AVALONIA_SKIA",
+                "AVALONIA_RENDERER",
+                "PATH"
+            };
+
+            Record(
+                $"Startup snapshot: os='{osDescription}', framework='{framework}', arch='{RuntimeInformation.ProcessArchitecture}', " +
+                $"pid={Environment.ProcessId}, softwareFallback={useSoftwareFallback}, cwd='{Environment.CurrentDirectory}', " +
+                $"baseDir='{baseDir}', processPath='{processPath}', args='{string.Join(' ', args)}'.");
+
+            foreach (var key in envKeys)
+            {
+                var value = Environment.GetEnvironmentVariable(key);
+                if (string.IsNullOrWhiteSpace(value))
+                    continue;
+
+                if (string.Equals(key, "PATH", StringComparison.Ordinal))
+                {
+                    var segments = value
+                        .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Take(8);
+                    Record($"Environment {key}={string.Join(Path.PathSeparator, segments)}");
+                    continue;
+                }
+
+                Record($"Environment {key}={value}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Record($"Startup snapshot failed: {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    public static void RecordException(string context, Exception ex, bool includeStack = true)
+    {
+        if (ex is null)
+            return;
+
+        Record($"{context}: {ex.GetType().Name} - {ex.Message}");
+        if (!includeStack)
+            return;
+
+        try
+        {
+            Record(ex.ToString());
+        }
+        catch
+        {
+            // Best-effort.
+        }
+    }
+
+    public static void RecordFirstChanceException(Exception ex, string source)
+    {
+        if (ex is null)
+            return;
+
+        var total = Interlocked.Increment(ref _firstChanceTotal);
+        if (total > MaxFirstChanceTotal)
+            return;
+
+        var signature = $"{source}|{ex.GetType().FullName}|{ex.Message}";
+        var count = FirstChanceCounts.AddOrUpdate(signature, 1, static (_, current) => current + 1);
+        if (count > MaxFirstChancePerSignature)
+            return;
+
+        var topFrame = ex.StackTrace?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault() ?? "no-stack";
+
+        Record($"FirstChance[{source}] #{count}: {ex.GetType().Name} - {ex.Message} @ {topFrame}");
+    }
+
     public static string? GetRecentLog()
     {
         if (Recent.IsEmpty)
@@ -165,6 +265,7 @@ internal static class DiagnosticsLogger
             PruneByPattern(dir, "session-*.log", keep: 5);
             PruneByPattern(dir, "sample-*.txt", keep: 5);
             PruneByPattern(dir, "hangdump-*.dmp", keep: 5);
+            PruneByPattern(dir, "trace-*.log", keep: 5);
         }
         catch
         {
@@ -360,6 +461,135 @@ internal static class DiagnosticsLogger
         catch (Exception ex)
         {
             Record($"sample failed: {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private static void InstallTraceListener()
+    {
+        if (Interlocked.Exchange(ref _traceListenerInstalled, 1) == 1)
+            return;
+
+        try
+        {
+            Trace.Listeners.Add(new DiagnosticsTraceListener());
+            Record("Trace listener installed.");
+        }
+        catch (Exception ex)
+        {
+            Record($"Trace listener install failed: {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private static void InstallConsoleMirroring()
+    {
+        if (Interlocked.Exchange(ref _consoleMirroringInstalled, 1) == 1)
+            return;
+
+        try
+        {
+            Console.SetOut(new DiagnosticsTextWriter(Console.Out, "stdout"));
+            Console.SetError(new DiagnosticsTextWriter(Console.Error, "stderr"));
+            Record("Console mirroring installed.");
+        }
+        catch (Exception ex)
+        {
+            Record($"Console mirroring install failed: {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private sealed class DiagnosticsTraceListener : TraceListener
+    {
+        public override void Write(string? message)
+        {
+            if (!string.IsNullOrWhiteSpace(message))
+                Record($"TRACE {message.Trim()}");
+        }
+
+        public override void WriteLine(string? message)
+        {
+            if (!string.IsNullOrWhiteSpace(message))
+                Record($"TRACE {message.Trim()}");
+        }
+
+        public override void TraceEvent(TraceEventCache? eventCache, string? source, TraceEventType eventType, int id, string? message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            Record($"TRACE[{eventType}][{source ?? "unknown"}] {message.Trim()}");
+        }
+    }
+
+    private sealed class DiagnosticsTextWriter : TextWriter
+    {
+        private readonly TextWriter _inner;
+        private readonly string _streamName;
+        private readonly StringBuilder _buffer = new();
+        private readonly object _gate = new();
+
+        public DiagnosticsTextWriter(TextWriter inner, string streamName)
+        {
+            _inner = inner;
+            _streamName = streamName;
+        }
+
+        public override Encoding Encoding => _inner.Encoding;
+
+        public override void Write(char value)
+        {
+            _inner.Write(value);
+            Append(value);
+        }
+
+        public override void Write(string? value)
+        {
+            _inner.Write(value);
+            if (string.IsNullOrEmpty(value))
+                return;
+
+            lock (_gate)
+            {
+                foreach (var ch in value)
+                    AppendCore(ch);
+            }
+        }
+
+        public override void WriteLine(string? value)
+        {
+            _inner.WriteLine(value);
+            if (!string.IsNullOrEmpty(value))
+                Record($"CONSOLE[{_streamName}] {value}");
+        }
+
+        private void Append(char value)
+        {
+            lock (_gate)
+            {
+                AppendCore(value);
+            }
+        }
+
+        private void AppendCore(char value)
+        {
+            if (value == '\r')
+                return;
+
+            if (value == '\n')
+            {
+                FlushBuffer();
+                return;
+            }
+
+            _buffer.Append(value);
+        }
+
+        private void FlushBuffer()
+        {
+            if (_buffer.Length == 0)
+                return;
+
+            Record($"CONSOLE[{_streamName}] {_buffer}");
+            _buffer.Clear();
         }
     }
 }

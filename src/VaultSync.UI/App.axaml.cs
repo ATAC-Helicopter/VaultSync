@@ -1006,12 +1006,14 @@ public partial class App : Application
                 var ex = e.ExceptionObject as Exception;
                 if (ex is not null)
                 {
+                    DiagnosticsLogger.RecordException("Global unhandled exception", ex, includeStack: true);
                     Telemetry.Log("app_crash", b => b
                         .WithException(ex)
                         .WithCode("source", "unhandled"));
                 }
                 else
                 {
+                    DiagnosticsLogger.Record("Global unhandled exception: non-Exception object.");
                     Telemetry.Log("app_crash", b => b
                         .WithCode("source", "unhandled")
                         .WithCode("detail", "non_exception"));
@@ -1022,6 +1024,7 @@ public partial class App : Application
             {
                 try
                 {
+                    DiagnosticsLogger.RecordException("Global unobserved task exception", e.Exception, includeStack: true);
                     Telemetry.Log("app_crash", b => b
                         .WithException(e.Exception)
                         .WithCode("source", "unobserved_task"));

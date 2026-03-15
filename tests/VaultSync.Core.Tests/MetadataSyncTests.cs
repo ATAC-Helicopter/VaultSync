@@ -211,6 +211,87 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_PreservesRootHint_WhenNoLocalMappingIsAvailable()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        const string sourceRootHint = "/source-machine/Projects/Project Root";
+
+        var store = CreateStore(metaRoot);
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-preserve-hint",
+            Name = "Preserve Root Hint",
+            Preset = "dotnet",
+            RootPathHint = sourceRootHint,
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        var repo = CreateRepository(dbPath);
+        var cfg = AppConfigStore.Load();
+        var oldProjectsRoot = cfg.ProjectsRoot;
+        cfg.ProjectsRoot = string.Empty;
+        AppConfigStore.Save(cfg);
+
+        try
+        {
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, new MetadataSyncOptions(true, false));
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            var project = repo.GetProjectByName("Preserve Root Hint");
+            Assert.NotNull(project);
+            Assert.Equal(sourceRootHint, project!.RootPath);
+        }
+        finally
+        {
+            cfg.ProjectsRoot = oldProjectsRoot;
+            AppConfigStore.Save(cfg);
+        }
+    }
+
+    [Fact]
+    public void ImportFromStore_RepairsExistingProjectWithEmptyRootPath()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+
+        var store = CreateStore(metaRoot);
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-repair-root",
+            Name = "Repair Existing Root",
+            Preset = "unity",
+            RootPathHint = projectRoot,
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        var repo = CreateRepository(dbPath);
+        repo.AddProject(new Project
+        {
+            Name = "Repair Existing Root",
+            RootPath = string.Empty,
+            Preset = "unity",
+            CreatedUtc = DateTime.UtcNow
+        });
+
+        var service = new MetadataSyncService(repo);
+        var result = service.ImportFromStore(metaRoot, new MetadataSyncOptions(true, false));
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+        var project = repo.GetProjectByName("Repair Existing Root");
+        Assert.NotNull(project);
+        Assert.Equal(projectRoot, project!.RootPath);
+    }
+
+    [Fact]
     public void ImportFromStore_BlocksNewerSchema()
     {
         var metaRoot = CreateTempDir();

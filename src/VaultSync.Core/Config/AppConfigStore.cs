@@ -40,7 +40,7 @@ namespace VaultSync.Core.Config
                 }
                 else
                 {
-                    cfg = LoadBestAvailableConfig(CancellationToken.None);
+                    cfg = LoadBestAvailableConfig();
                 }
 
                 // ----- Ensure DbPath is always set -----
@@ -85,7 +85,7 @@ namespace VaultSync.Core.Config
         {
             Directory.CreateDirectory(ConfigDir);
             var json = JsonSerializer.Serialize(config, JsonOptions);
-            WriteConfigWithRetryAsync(json, CancellationToken.None).GetAwaiter().GetResult();
+            WriteConfigWithRetry(json);
             RememberLastKnownGood(config);
         }
 
@@ -103,6 +103,70 @@ namespace VaultSync.Core.Config
             var dir = Path.Combine(appData, "VaultSync");
             Directory.CreateDirectory(dir);
             return Path.Combine(dir, "vaultsync.db");
+        }
+
+        private static void WriteConfigWithRetry(string json)
+        {
+            const int maxAttempts = 5;
+            var delay = 40;
+
+            SaveGate.Wait();
+            try
+            {
+                for (var attempt = 1; attempt <= maxAttempts; attempt++)
+                {
+                    try
+                    {
+                        var tempPath = Path.Combine(ConfigDir, $"appsettings.tmp.{Guid.NewGuid():N}.json");
+                        try
+                        {
+                            File.WriteAllText(tempPath, json);
+                            if (File.Exists(ConfigFilePath))
+                            {
+                                File.Replace(tempPath, ConfigFilePath, ConfigBackupFilePath, ignoreMetadataErrors: true);
+                            }
+                            else
+                            {
+                                File.Move(tempPath, ConfigFilePath);
+                            }
+                        }
+                        finally
+                        {
+                            if (File.Exists(tempPath))
+                                File.Delete(tempPath);
+                        }
+                        return;
+                    }
+                    catch (IOException) when (attempt < maxAttempts)
+                    {
+                        Thread.Sleep(delay);
+                        delay *= 2;
+                    }
+                }
+
+                var finalTempPath = Path.Combine(ConfigDir, $"appsettings.tmp.{Guid.NewGuid():N}.json");
+                try
+                {
+                    File.WriteAllText(finalTempPath, json);
+                    if (File.Exists(ConfigFilePath))
+                    {
+                        File.Replace(finalTempPath, ConfigFilePath, ConfigBackupFilePath, ignoreMetadataErrors: true);
+                    }
+                    else
+                    {
+                        File.Move(finalTempPath, ConfigFilePath);
+                    }
+                }
+                finally
+                {
+                    if (File.Exists(finalTempPath))
+                        File.Delete(finalTempPath);
+                }
+            }
+            finally
+            {
+                SaveGate.Release();
+            }
         }
 
         private static async Task WriteConfigWithRetryAsync(string json, CancellationToken ct)
@@ -199,11 +263,38 @@ namespace VaultSync.Core.Config
             return await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
         }
 
-        private static AppConfig LoadBestAvailableConfig(CancellationToken ct)
+        private static string ReadConfigWithRetry(string path)
+        {
+            const int maxAttempts = 5;
+            var delay = 25;
+
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    using var fs = new FileStream(
+                        path,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.ReadWrite | FileShare.Delete);
+                    using var reader = new StreamReader(fs);
+                    return reader.ReadToEnd();
+                }
+                catch (IOException) when (attempt < maxAttempts)
+                {
+                    Thread.Sleep(delay);
+                    delay *= 2;
+                }
+            }
+
+            return File.ReadAllText(path);
+        }
+
+        private static AppConfig LoadBestAvailableConfig()
         {
             try
             {
-                var json = ReadConfigWithRetryAsync(ConfigFilePath, ct).GetAwaiter().GetResult();
+                var json = ReadConfigWithRetry(ConfigFilePath);
                 return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
             }
             catch
@@ -212,7 +303,7 @@ namespace VaultSync.Core.Config
                 {
                     try
                     {
-                        var backupJson = ReadConfigWithRetryAsync(ConfigBackupFilePath, ct).GetAwaiter().GetResult();
+                        var backupJson = ReadConfigWithRetry(ConfigBackupFilePath);
                         return JsonSerializer.Deserialize<AppConfig>(backupJson, JsonOptions) ?? new AppConfig();
                     }
                     catch

@@ -687,12 +687,39 @@ public sealed class MetadataStore
             return true;
 
         if (path.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
-            return true;
+        {
+            try
+            {
+                var root = GetVolumeRoot(path);
+                if (!string.IsNullOrWhiteSpace(root) && Directory.Exists(root))
+                {
+                    var driveInfo = new DriveInfo(root);
+                    return driveInfo.DriveType == DriveType.Network;
+                }
+            }
+            catch
+            {
+                // Fall through to non-network default.
+            }
+        }
 
         if (path.Contains("/Library/Application Support/VaultSync/mounts/", StringComparison.OrdinalIgnoreCase))
             return true;
 
         return false;
+    }
+
+    private static string GetVolumeRoot(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        var normalized = path.Replace('\\', '/').TrimEnd('/');
+        var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || !string.Equals(parts[0], "Volumes", StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+
+        return "/" + parts[0] + "/" + parts[1];
     }
 
     private static string ToUtcString(DateTime utc) =>

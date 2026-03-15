@@ -247,9 +247,22 @@ public sealed class MetadataSyncService
 
             if (existingByName != null)
             {
+                var importedRoot = ResolveImportedProjectRoot(
+                    metaProject.RootPathHint,
+                    config.ProjectsRoot,
+                    metaProject.Name,
+                    metaProject.ExternalId);
+
                 if (string.IsNullOrWhiteSpace(existingByName.ExternalId))
                 {
                     _repo.UpdateProjectExternalId(existingByName.Id, metaProject.ExternalId);
+                }
+
+                if (string.IsNullOrWhiteSpace(existingByName.RootPath) &&
+                    !string.IsNullOrWhiteSpace(importedRoot))
+                {
+                    _repo.UpdateProjectPath(existingByName.Name, importedRoot, out _);
+                    existingByName = existingByName with { RootPath = importedRoot };
                 }
 
                 metadataConflictChanged |= ApplyImportedProjectSettings(
@@ -915,7 +928,21 @@ public sealed class MetadataSyncService
             return Path.Combine(Path.GetFullPath(projectsRoot!), folderName);
         }
 
-        return string.Empty;
+        return PreserveImportedProjectRootHint(rootPathHint);
+    }
+
+    private static string PreserveImportedProjectRootHint(string? rootPathHint)
+    {
+        if (string.IsNullOrWhiteSpace(rootPathHint))
+            return string.Empty;
+
+        var trimmed = rootPathHint.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            return string.Empty;
+
+        // Preserve the original imported hint when we cannot safely map it
+        // to a local existing directory, so the path is never silently erased.
+        return trimmed;
     }
 
     private static bool IsAcceptableImportedProjectRoot(string? path)
