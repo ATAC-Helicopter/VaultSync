@@ -1057,7 +1057,7 @@ namespace VaultSync.UI.ViewModels
             var backup = _repo.GetBackupById(backupId);
             if (backup is null)
             {
-                Console.WriteLine($"[Restore] Backup id {backupId} not found.");
+                RuntimeLog.WriteVerbose($"[Restore] Backup id {backupId} not found.");
                 return RestoreBackupPreparation.Failure;
             }
 
@@ -1066,31 +1066,31 @@ namespace VaultSync.UI.ViewModels
             var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
             {
-                Console.WriteLine($"[Restore] No backup root found for id={backupId}, path='{backup.Path}', dest='{backup.DestinationPath}', alias='{backup.DestinationAlias}'.");
+                RuntimeLog.WriteVerbose($"[Restore] No backup root found for id={backupId}, path='{backup.Path}', dest='{backup.DestinationPath}', alias='{backup.DestinationAlias}'.");
                 return RestoreBackupPreparation.Failure;
             }
 
             if (string.IsNullOrWhiteSpace(backup.Path))
             {
-                Console.WriteLine($"[Restore] Backup path missing for id={backupId}. Root='{backupRoot}', rel='{backup.Path}'.");
+                RuntimeLog.WriteVerbose($"[Restore] Backup path missing for id={backupId}. Root='{backupRoot}', rel='{backup.Path}'.");
                 return RestoreBackupPreparation.Failure;
             }
 
             if (!TryCombinePathUnderRoot(backupRoot, backup.Path, out var backupFullPath, out var backupPathError))
             {
-                Console.WriteLine($"[Restore] Backup path rejected for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', error='{backupPathError}'.");
+                RuntimeLog.WriteVerbose($"[Restore] Backup path rejected for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', error='{backupPathError}'.");
                 return RestoreBackupPreparation.Failure;
             }
             if (!Directory.Exists(backupFullPath))
             {
-                Console.WriteLine($"[Restore] Backup path missing for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', full='{backupFullPath}'.");
+                RuntimeLog.WriteVerbose($"[Restore] Backup path missing for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', full='{backupFullPath}'.");
                 return RestoreBackupPreparation.Failure;
             }
 
             var project = _repo.GetProjectById(backup.ProjectId);
             if (project is null)
             {
-                Console.WriteLine($"[Restore] Project id {backup.ProjectId} not found for backup id {backupId}.");
+                RuntimeLog.WriteVerbose($"[Restore] Project id {backup.ProjectId} not found for backup id {backupId}.");
                 return RestoreBackupPreparation.Failure;
             }
 
@@ -1182,7 +1182,7 @@ namespace VaultSync.UI.ViewModels
                     stamp);
 
                 Directory.CreateDirectory(sandboxRoot);
-                Console.WriteLine($"[Restore] Sandbox mode active. Using sandbox path '{sandboxRoot}'.");
+                RuntimeLog.WriteVerbose($"[Restore] Sandbox mode active. Using sandbox path '{sandboxRoot}'.");
                 return sandboxRoot;
             }
 
@@ -1195,7 +1195,7 @@ namespace VaultSync.UI.ViewModels
                 var projectsRoot = Path.Combine(cfg.ProjectsRoot, project.Name);
                 Directory.CreateDirectory(projectsRoot);
                 _repo.UpdateProjectPath(project.Name, projectsRoot, out _);
-                Console.WriteLine($"[Restore] Project root missing. Using ProjectsRoot '{projectsRoot}'.");
+                RuntimeLog.WriteVerbose($"[Restore] Project root missing. Using ProjectsRoot '{projectsRoot}'.");
                 return projectsRoot;
             }
 
@@ -1207,7 +1207,7 @@ namespace VaultSync.UI.ViewModels
             Directory.CreateDirectory(fallbackRoot);
             _repo.UpdateProjectPath(project.Name, fallbackRoot, out _);
 
-            Console.WriteLine($"[Restore] Project root missing. Using fallback restore path '{fallbackRoot}'.");
+            RuntimeLog.WriteVerbose($"[Restore] Project root missing. Using fallback restore path '{fallbackRoot}'.");
             return fallbackRoot;
         }
 
@@ -2199,7 +2199,7 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.ShowNotification(
                     L("Backups.Status.RestoreFailed", "Restore failed."),
                     "Error");
-                Console.WriteLine($"[Restore] Restore preparation failed for backupId={backupId}.");
+                RuntimeLog.WriteVerbose($"[Restore] Restore preparation failed for backupId={backupId}.");
                 return;
             }
 
@@ -2216,7 +2216,7 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.ShowNotification(
                     L("Backups.Status.RestoreFailed", "Restore failed."),
                     "Error");
-                Console.WriteLine($"[Restore] Project not found during restore execution for backupId={backupId}.");
+                RuntimeLog.WriteVerbose($"[Restore] Project not found during restore execution for backupId={backupId}.");
                 return;
             }
 
@@ -2226,7 +2226,7 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.ShowNotification(
                     L("Backups.Status.RestoreFailed", "Restore failed."),
                     "Error");
-                Console.WriteLine($"[Restore] Restore target resolution failed for backupId={backupId}.");
+                RuntimeLog.WriteVerbose($"[Restore] Restore target resolution failed for backupId={backupId}.");
                 return;
             }
 
@@ -2305,10 +2305,10 @@ namespace VaultSync.UI.ViewModels
                 {
                     await Task.Run(() =>
                     {
-                        Console.WriteLine($"[Restore] Starting restore for '{preparation.ProjectName}'.");
-                        Console.WriteLine($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
+                        RuntimeLog.WriteVerbose($"[Restore] Starting restore for '{preparation.ProjectName}'.");
+                        RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
                         RunRestore(null);
-                        Console.WriteLine($"[Restore] Completed restore for '{preparation.ProjectName}'.");
+                        RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
                     });
                     restoreSucceeded = true;
                 }
@@ -2344,17 +2344,17 @@ namespace VaultSync.UI.ViewModels
                         {
                             await Task.Run(() =>
                             {
-                                Console.WriteLine($"[Restore] Starting restore for '{preparation.ProjectName}'.");
-                                Console.WriteLine($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
+                                RuntimeLog.WriteVerbose($"[Restore] Starting restore for '{preparation.ProjectName}'.");
+                                RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
                                 RunRestore(restorePassword);
-                                Console.WriteLine($"[Restore] Completed restore for '{preparation.ProjectName}'.");
+                                RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
                             });
                             restoreSucceeded = true;
                             break;
                         }
                         catch (Exception ex) when (IsEncryptedRestorePasswordError(ex))
                         {
-                            Console.WriteLine($"[Restore] Restore decryption attempt failed for '{preparation.ProjectName}'. Trying next credential source.");
+                            RuntimeLog.WriteVerbose($"[Restore] Restore decryption attempt failed for '{preparation.ProjectName}'. Trying next credential source.");
                         }
                     }
                 }

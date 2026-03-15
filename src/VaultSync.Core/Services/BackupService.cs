@@ -97,7 +97,7 @@ public sealed class BackupService
     {
         if (_cancelMap.TryGetValue(projectId, out var cts))
         {
-            Console.WriteLine($"[BackupService] Cancel requested for projectId={projectId}.");
+            RuntimeLog.WriteVerbose($"[BackupService] Cancel requested for projectId={projectId}.");
             try { cts.Cancel(); } catch { }
         }
     }
@@ -528,7 +528,7 @@ public sealed class BackupService
 
                     if (IsResumableArchiveBackup(backupDir))
                     {
-                        Console.WriteLine($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
+                        RuntimeLog.WriteVerbose($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
                         continue;
                     }
 
@@ -553,7 +553,7 @@ public sealed class BackupService
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
         {
-            Console.WriteLine($"[BackupService] Skipping directory scan for '{root}': {ex.Message}");
+            RuntimeLog.WriteVerbose($"[BackupService] Skipping directory scan for '{root}': {ex.Message}");
             return Array.Empty<string>();
         }
     }
@@ -634,7 +634,7 @@ public sealed class BackupService
         {
             // Encrypted backups currently require archive artifacts.
             useArchiveMode = true;
-            Console.WriteLine($"[BackupService] Encryption enabled; forcing archive mode for project '{project.Name}'.");
+            RuntimeLog.WriteVerbose($"[BackupService] Encryption enabled; forcing archive mode for project '{project.Name}'.");
         }
 
         var backupIsEncrypted = false;
@@ -652,11 +652,11 @@ public sealed class BackupService
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
         var linkedToken = linkedCts.Token;
         using var cancelLog = linkedToken.Register(() =>
-            Console.WriteLine($"[BackupService] Cancellation observed for project '{project.Name}' (Id={project.Id})."));
+            RuntimeLog.WriteVerbose($"[BackupService] Cancellation observed for project '{project.Name}' (Id={project.Id})."));
 
         linkedToken.ThrowIfCancellationRequested();
 
-        Console.WriteLine($"[BackupService] RunBackupAsync entered for project '{project.Name}' (Id={project.Id}), backupRoot='{backupRoot}', isAuto={isAuto}, useArchiveMode={useArchiveMode}");
+        RuntimeLog.WriteVerbose($"[BackupService] RunBackupAsync entered for project '{project.Name}' (Id={project.Id}), backupRoot='{backupRoot}', isAuto={isAuto}, useArchiveMode={useArchiveMode}");
         progressCallback?.Invoke(0, "Preparing backup...", string.Empty);
 
         // Normalise backup root and ensure it exists (e.g. mounted NAS/share).
@@ -683,7 +683,7 @@ public sealed class BackupService
                 if (volumeTotalBytes > 0)
                 {
                     var freePercent = (double)volumeFreeBytes / volumeTotalBytes * 100d;
-                    Console.WriteLine($"[BackupService] Backup target free space for '{project.Name}': {freePercent:0.0}% remaining (threshold={minimumFreeSpacePercent.Value:0.0}%).");
+                    RuntimeLog.WriteVerbose($"[BackupService] Backup target free space for '{project.Name}': {freePercent:0.0}% remaining (threshold={minimumFreeSpacePercent.Value:0.0}%).");
 
                     if (freePercent < minimumFreeSpacePercent.Value)
                     {
@@ -786,7 +786,7 @@ public sealed class BackupService
                 .ToArray();
         }
 
-        Console.WriteLine($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
+        RuntimeLog.WriteVerbose($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
 
         string? linkDest = null;
         if (!useArchiveMode && useIncrementalBackups)
@@ -794,11 +794,11 @@ public sealed class BackupService
             linkDest = TryGetPreviousBackupFolder(projectBackupRoot, backupFolder);
             if (linkDest is null)
             {
-                Console.WriteLine($"[BackupService] Incremental enabled but no previous backup found for '{project.Name}'.");
+                RuntimeLog.WriteVerbose($"[BackupService] Incremental enabled but no previous backup found for '{project.Name}'.");
             }
             else
             {
-                Console.WriteLine($"[BackupService] Using incremental link-dest '{linkDest}'.");
+                RuntimeLog.WriteVerbose($"[BackupService] Using incremental link-dest '{linkDest}'.");
             }
         }
 
@@ -848,7 +848,7 @@ public sealed class BackupService
         {
             if (linkedToken.IsCancellationRequested)
             {
-                Console.WriteLine($"[BackupService] Backup cancelled for '{project.Name}'. Cleaning up.");
+                RuntimeLog.WriteVerbose($"[BackupService] Backup cancelled for '{project.Name}'. Cleaning up.");
                 DeletePartialBackup(backupFolderUsed);
                 if (!string.Equals(backupFolderUsed, backupFolder, StringComparison.OrdinalIgnoreCase))
                     DeletePartialBackup(backupFolder);
@@ -979,7 +979,7 @@ public sealed class BackupService
             ? BackupModes.Incremental
             : BackupModes.Full;
 
-        Console.WriteLine($"[BackupService] Backup data written for '{project.Name}', creating backup metadata in database...");
+        RuntimeLog.WriteVerbose($"[BackupService] Backup data written for '{project.Name}', creating backup metadata in database...");
 
         var backupId = 0;
 
@@ -1005,7 +1005,7 @@ public sealed class BackupService
                 isEncrypted: backupIsEncrypted,
                 cryptoDescriptorJson: backupCryptoDescriptorJson);
 
-            Console.WriteLine($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
+            RuntimeLog.WriteVerbose($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
 
             // Apply simple retention: keep only the most recent N backups per project, if configured.
             try
@@ -1025,7 +1025,7 @@ public sealed class BackupService
         }
         else
         {
-            Console.WriteLine($"[BackupService] Skipping completion marker on network destination '{backupFolderUsed}'.");
+            RuntimeLog.WriteVerbose($"[BackupService] Skipping completion marker on network destination '{backupFolderUsed}'.");
         }
 
         var completedMessage = backupIsEncrypted
@@ -1087,7 +1087,7 @@ public sealed class BackupService
 
         if (useHybridMonitor)
         {
-            Console.WriteLine("[BackupService] Progress monitor enabled (destination scans for progress).");
+            RuntimeLog.WriteVerbose("[BackupService] Progress monitor enabled (destination scans for progress).");
             monitorCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             runnerState = new RunnerProgressState();
             monitorTask = MonitorCopyProgressAsync(destDir, filesForProgress!, totalBytes, progressCallback!, monitorCts.Token, runnerState);
@@ -1186,8 +1186,8 @@ public sealed class BackupService
                     var source = bundledRsync is null ? "PATH" : "bundled";
                     var rsyncPath = bundledRsync ?? "rsync";
                     var rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
-                    Console.WriteLine($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
-                    Console.WriteLine($"[BackupService] Using rsync on Windows ({source}).");
+                    RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
+                    RuntimeLog.WriteVerbose($"[BackupService] Using rsync on Windows ({source}).");
                     var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta, rsyncPath: rsyncPath);
                     exitCode = await runner.SyncAsync(
                         project,
@@ -1205,9 +1205,9 @@ public sealed class BackupService
                 {
                     // robocopy-based backup (multi-threaded, robust on Windows)
                     if ((effectiveUseRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath("rsync"))
-                        Console.WriteLine("[BackupService] rsync not found on PATH; falling back to robocopy.");
+                        RuntimeLog.WriteVerbose("[BackupService] rsync not found on PATH; falling back to robocopy.");
 
-                    Console.WriteLine($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}, bw={(maxBandwidthMbps is > 0 ? $"{maxBandwidthMbps}Mbps" : "unlimited")}).");
+                    RuntimeLog.WriteVerbose($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}, bw={(maxBandwidthMbps is > 0 ? $"{maxBandwidthMbps}Mbps" : "unlimited")}).");
                     var runner = new RobocopyRunner(isNetworkDestination);
                     exitCode = await runner.SyncAsync(
                         project,
@@ -1225,7 +1225,7 @@ public sealed class BackupService
             {
                 // rsync-based backup (fast, incremental on macOS/Linux)
                 var rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
-                Console.WriteLine($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
+                RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
                 var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta);
                 exitCode = await runner.SyncAsync(
                     project,
@@ -1254,7 +1254,7 @@ public sealed class BackupService
                 {
                     // expected when stopping monitor
                 }
-                Console.WriteLine("[BackupService] Progress monitor cancelled.");
+                RuntimeLog.WriteVerbose("[BackupService] Progress monitor cancelled.");
                 monitorCts.Dispose();
             }
         }
@@ -1299,7 +1299,7 @@ public sealed class BackupService
         if (totalEntries == 0)
             return;
 
-        Console.WriteLine($"[BackupService] Progress monitor started for '{destDir}' (entries={totalEntries}).");
+        RuntimeLog.WriteVerbose($"[BackupService] Progress monitor started for '{destDir}' (entries={totalEntries}).");
 
         var observedSizes = new long[totalEntries];
         var completed = new bool[totalEntries];
@@ -1446,14 +1446,14 @@ public sealed class BackupService
 
             if ((now - lastLog) >= logInterval)
             {
-                Console.WriteLine($"[BackupService] Copy progress: {completedFiles}/{totalEntries} files, {percent:0.0}% ({speedMbSec:0.0} MB/s).");
+                RuntimeLog.WriteVerbose($"[BackupService] Copy progress: {completedFiles}/{totalEntries} files, {percent:0.0}% ({speedMbSec:0.0} MB/s).");
                 lastLog = now;
             }
 
             await Task.Delay(minInterval, ct);
         }
 
-        Console.WriteLine($"[BackupService] Progress monitor stopped for '{destDir}'.");
+        RuntimeLog.WriteVerbose($"[BackupService] Progress monitor stopped for '{destDir}'.");
     }
 
     /// <summary>
@@ -1499,7 +1499,7 @@ public sealed class BackupService
         if (!srcInfo.Exists)
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
 
-        Console.WriteLine($"[BackupService] RunArchiveBackupAsync (LOCAL ZIP MODE, 2-PHASE) started for '{project.Name}', destDir='{destDir}', totalBytes={totalBytes}.");
+        RuntimeLog.WriteVerbose($"[BackupService] RunArchiveBackupAsync (LOCAL ZIP MODE, 2-PHASE) started for '{project.Name}', destDir='{destDir}', totalBytes={totalBytes}.");
 
         // 1. Build filter identical to snapshots.
         var filter = FilterService.FromPresetAndLocal(sourceDir, project.Preset);
@@ -1524,7 +1524,7 @@ public sealed class BackupService
             if (!string.IsNullOrWhiteSpace(resumableDir) &&
                 !string.Equals(resumableDir, destDir, StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"[BackupService] Resuming interrupted archive upload for '{project.Name}' from '{resumableDir}'.");
+                RuntimeLog.WriteVerbose($"[BackupService] Resuming interrupted archive upload for '{project.Name}' from '{resumableDir}'.");
                 DeletePartialBackup(destDir);
                 workingDestDir = resumableDir;
             }
@@ -1560,7 +1560,7 @@ public sealed class BackupService
                 RemoveArchiveResumeCheckpoint(workingDestDir);
 
                 var emptySize = new FileInfo(finalArchivePath).Length;
-                Console.WriteLine($"[BackupService] Created empty archive for '{project.Name}', size={emptySize} bytes.");
+                RuntimeLog.WriteVerbose($"[BackupService] Created empty archive for '{project.Name}', size={emptySize} bytes.");
                 return workingDestDir;
             }
 
@@ -1800,7 +1800,7 @@ public sealed class BackupService
                             var intervalSeconds = Math.Max(0.1, (now - lastLogTime).TotalSeconds);
                             var intervalBytes = uploaded - lastLogBytes;
                             var intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
-                            Console.WriteLine($"[BackupService] Archive upload (single) {uploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
+                            RuntimeLog.WriteVerbose($"[BackupService] Archive upload (single) {uploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
                             lastLogTime = now;
                             lastLogBytes = uploaded;
                         }
@@ -1840,7 +1840,7 @@ public sealed class BackupService
                         if (existingLength > 0 &&
                             !ValidateArchiveResumePrefix(localArchive, finalArchivePath, existingLength, bufferSize, ct))
                         {
-                            Console.WriteLine($"[BackupService] Existing archive checkpoint for '{finalArchivePath}' did not match the local archive prefix. Restarting upload from 0 bytes.");
+                            RuntimeLog.WriteVerbose($"[BackupService] Existing archive checkpoint for '{finalArchivePath}' did not match the local archive prefix. Restarting upload from 0 bytes.");
                             using var truncate = new FileStream(finalArchivePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
                             truncate.SetLength(0);
                             existingLength = 0;
@@ -1851,7 +1851,7 @@ public sealed class BackupService
                     }
                     catch (TimeoutException ex) when (attempt <= maxRetries)
                     {
-                        Console.WriteLine($"[BackupService] Single archive upload stalled (attempt {attempt}/{maxRetries}). Retrying from {existingLength} bytes.");
+                        RuntimeLog.WriteVerbose($"[BackupService] Single archive upload stalled (attempt {attempt}/{maxRetries}). Retrying from {existingLength} bytes.");
                         await Task.Delay(TimeSpan.FromSeconds(2), ct);
                     }
                 }
@@ -1861,13 +1861,13 @@ public sealed class BackupService
 
             if (enableCheckpointedRetry && preferParallelUpload)
             {
-                Console.WriteLine($"[BackupService] Parallel archive upload disabled for '{project.Name}' because checkpointed retry is enabled.");
+                RuntimeLog.WriteVerbose($"[BackupService] Parallel archive upload disabled for '{project.Name}' because checkpointed retry is enabled.");
                 preferParallelUpload = false;
             }
 
             if (preferParallelUpload && zipSize >= bufferSize * 8L)
             {
-                Console.WriteLine($"[BackupService] Uploading archive with parallel writer (parts={Math.Clamp(Environment.ProcessorCount / 2, 2, 4)}, buffer={bufferSize / (1024 * 1024)} MB).");
+                RuntimeLog.WriteVerbose($"[BackupService] Uploading archive with parallel writer (parts={Math.Clamp(Environment.ProcessorCount / 2, 2, 4)}, buffer={bufferSize / (1024 * 1024)} MB).");
                 try
                 {
                     await UploadArchiveParallelAsync(
@@ -1886,19 +1886,19 @@ public sealed class BackupService
             }
             else
             {
-                Console.WriteLine($"[BackupService] Uploading archive with single writer (buffer={bufferSize / (1024 * 1024)} MB).");
+                RuntimeLog.WriteVerbose($"[BackupService] Uploading archive with single writer (buffer={bufferSize / (1024 * 1024)} MB).");
                 await UploadSingleWithResumeAsync(2);
             }
 
             RemoveArchiveResumeCheckpoint(workingDestDir);
-            Console.WriteLine($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalZipSize={zipSize} bytes");
+            RuntimeLog.WriteVerbose($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalZipSize={zipSize} bytes");
             return workingDestDir;
         }
         catch
         {
             if (enableCheckpointedRetry && File.Exists(finalArchivePath))
             {
-                Console.WriteLine($"[BackupService] Preserving incomplete archive checkpoint in '{workingDestDir}' for later retry.");
+                RuntimeLog.WriteVerbose($"[BackupService] Preserving incomplete archive checkpoint in '{workingDestDir}' for later retry.");
             }
             else
             {
@@ -2169,7 +2169,7 @@ public sealed class BackupService
                             var intervalSeconds = Math.Max(0.1, (logNow - lastLogTime).TotalSeconds);
                             var intervalBytes = snapshotUploaded - lastLogBytes;
                             var intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
-                            Console.WriteLine($"[BackupService] Archive upload (parallel) {snapshotUploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
+                            RuntimeLog.WriteVerbose($"[BackupService] Archive upload (parallel) {snapshotUploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
                             lastLogTime = logNow;
                             lastLogBytes = snapshotUploaded;
                         }
@@ -2287,7 +2287,7 @@ public sealed class BackupService
             throw;
         }
 
-        Console.WriteLine($"[BackupService] Computed backup size for '{sourceDir}': {totalBytes} bytes across {totalFiles} files.");
+        RuntimeLog.WriteVerbose($"[BackupService] Computed backup size for '{sourceDir}': {totalBytes} bytes across {totalFiles} files.");
         return (totalFiles, totalBytes);
     }
 
@@ -2470,7 +2470,7 @@ public sealed class BackupService
         var preflight = EvaluateRetentionPreflight(projectId, backups, candidates, projectSnapshots, deleteQuota);
         if (!preflight.CanPrune)
         {
-            Console.WriteLine(
+            RuntimeLog.WriteVerbose(
                 $"[BackupService] Retention preflight blocked for projectId={projectId}: code={preflight.Code}; validRestorePoints={preflight.ValidRestorePointCount}; deleteQuota={preflight.DeletionQuota}; message={preflight.Message}");
             return;
         }
@@ -2489,7 +2489,7 @@ public sealed class BackupService
         var retentionPlan = BuildRetentionDeletionPlan(projectId, backups, candidates, projectSnapshots, deleteQuota);
         foreach (var skipped in retentionPlan.Where(static decision => !decision.Selected))
         {
-            Console.WriteLine(
+            RuntimeLog.WriteVerbose(
                 $"[BackupService] Retention candidate skipped for projectId={projectId}: backupId={skipped.BackupId}; code={skipped.Code}; message={skipped.Message}");
         }
 
@@ -2527,24 +2527,24 @@ public sealed class BackupService
                 if (!string.IsNullOrWhiteSpace(baseRoot) &&
                     !TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
                 {
-                    Console.WriteLine(
+                    RuntimeLog.WriteVerbose(
                         $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}); code=out-of-root.");
                     canDeleteDbRow = false;
                     diskDeleteSucceeded = false;
                 }
                 else if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
                 {
-                    Console.WriteLine($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
+                    RuntimeLog.WriteVerbose($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
                     var deleteResult = TryDeleteBackupFolder(fullPath, backup.Id);
                     diskDeleteSucceeded = deleteResult.Success;
                     if (!diskDeleteSucceeded)
                     {
-                        Console.WriteLine($"[BackupService] Retention delete failed for backupId={backup.Id}; code={deleteResult.Code}; trying next eligible unprotected candidate.");
+                        RuntimeLog.WriteVerbose($"[BackupService] Retention delete failed for backupId={backup.Id}; code={deleteResult.Code}; trying next eligible unprotected candidate.");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"[BackupService] Retention could not find backup folder '{fullPath}' on disk (backupId={backup.Id}), continuing with DB cleanup.");
+                    RuntimeLog.WriteVerbose($"[BackupService] Retention could not find backup folder '{fullPath}' on disk (backupId={backup.Id}), continuing with DB cleanup.");
                 }
             }
             catch (Exception ex)

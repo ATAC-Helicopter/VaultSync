@@ -304,7 +304,7 @@ namespace VaultSync.UI.ViewModels
                                     var preferParallelUpload = allowParallelUpload && isRemoteDestination;
                                     if (!allowParallelUpload)
                                     {
-                                        Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{labelPrefix}'.");
+                                        RuntimeLog.WriteVerbose($"[BackupService] Parallel archive upload disabled by user settings for '{labelPrefix}'.");
                                     }
                                     var sw = Stopwatch.StartNew();
                                     var result = await _backupService.RunBackupAsync(
@@ -939,7 +939,7 @@ namespace VaultSync.UI.ViewModels
                             var preferParallelUpload = allowParallelUpload && isRemoteDestination;
                             if (!allowParallelUpload)
                             {
-                                Console.WriteLine($"[BackupService] Parallel archive upload disabled by user settings for '{primaryAlias}'.");
+                                RuntimeLog.WriteVerbose($"[BackupService] Parallel archive upload disabled by user settings for '{primaryAlias}'.");
                             }
                             var sw = Stopwatch.StartNew();
                             var backupResult = await _backupService.RunBackupAsync(

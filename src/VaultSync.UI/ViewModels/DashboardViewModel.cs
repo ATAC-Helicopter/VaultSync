@@ -452,7 +452,7 @@ namespace VaultSync.UI.ViewModels
                     var remappedBackups = repo.RepairBackupProjectLinksFromSnapshots();
                     if (remappedBackups > 0)
                     {
-                        Console.WriteLine($"[Dashboard] Repaired {remappedBackups} backup-project links from snapshots.");
+                        RuntimeLog.WriteVerbose($"[Dashboard] Repaired {remappedBackups} backup-project links from snapshots.");
                     }
 
                     var projects = repo.GetAllProjects().ToList();
@@ -506,7 +506,7 @@ namespace VaultSync.UI.ViewModels
 
                         if (storageSlices.Count > 0)
                         {
-                            Console.WriteLine("[Dashboard] Backup totals were unmapped; using latest snapshot sizes as storage fallback.");
+                            RuntimeLog.WriteVerbose("[Dashboard] Backup totals were unmapped; using latest snapshot sizes as storage fallback.");
                         }
                     }
 

@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Text.Json;
 using System.Threading.Tasks;
+using VaultSync.Core.Services;
 
 
 namespace VaultSync.Core.Config
@@ -64,6 +65,7 @@ namespace VaultSync.Core.Config
                 }
 
                 RememberLastKnownGood(cfg);
+                RuntimeLog.UpdateFromConfig(cfg);
                 return cfg;
             }
             catch
@@ -77,6 +79,7 @@ namespace VaultSync.Core.Config
                 Directory.CreateDirectory(dir);
                 fallback.DbPath = Path.Combine(dir, "vaultsync.db");
 
+                RuntimeLog.UpdateFromConfig(fallback);
                 return fallback;
             }
         }
@@ -87,6 +90,7 @@ namespace VaultSync.Core.Config
             var json = JsonSerializer.Serialize(config, JsonOptions);
             WriteConfigWithRetry(json);
             RememberLastKnownGood(config);
+            RuntimeLog.UpdateFromConfig(config);
         }
 
         public static async Task SaveAsync(AppConfig config, CancellationToken ct = default)
@@ -95,6 +99,7 @@ namespace VaultSync.Core.Config
             var json = JsonSerializer.Serialize(config, JsonOptions);
             await WriteConfigWithRetryAsync(json, ct).ConfigureAwait(false);
             RememberLastKnownGood(config);
+            RuntimeLog.UpdateFromConfig(config);
         }
 
         public static string GetDefaultDbPath()

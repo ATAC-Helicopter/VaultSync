@@ -1228,6 +1228,18 @@
     - English summaries no longer render broken separator glyphs anywhere in the updated surfaces.
     - Shared controls and collapsed navigation feel intentional instead of default or placeholder-like.
 
+- [ ] `BUG-17008` `P2` Gate noisy dev logging behind verbose mode. _(In progress)_
+  - Scope:
+    - reduce backup, restore, destination, and dashboard runtime chatter that was useful during development and performance testing;
+    - keep real failures visible while moving flow/progress tracing behind the explicit verbose logging path.
+  - Current status:
+    - In progress: a shared runtime log gate now follows the current config and treats debug builds as verbose by default.
+    - In progress: high-churn backup, restore, transfer-progress, destination-resolution, and dashboard remap/fallback tracing is moving behind that gate.
+  - Acceptance:
+    - normal beta and release runs do not emit backup-progress and restore-path chatter by default.
+    - debug builds still surface the developer-oriented tracing.
+    - enabling verbose logging restores the gated runtime chatter for troubleshooting.
+
 - [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:
