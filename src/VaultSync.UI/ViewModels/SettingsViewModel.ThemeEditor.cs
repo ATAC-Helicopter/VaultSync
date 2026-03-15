@@ -154,7 +154,14 @@ namespace VaultSync.UI
             if (string.Equals(e.PropertyName, nameof(ThemeColorSlotViewModel.IsSelected), StringComparison.Ordinal))
             {
                 if (slot.IsSelected)
+                {
                     SelectedThemeColorSlot = slot;
+                }
+                else if (ReferenceEquals(slot, _selectedThemeColorSlot))
+                {
+                    // Keep one active target so palette clicks always apply to the visibly selected section.
+                    slot.IsSelected = true;
+                }
                 return;
             }
 
