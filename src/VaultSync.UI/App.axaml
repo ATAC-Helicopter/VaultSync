@@ -125,13 +125,23 @@
         </Style>
 
         <Style Selector="Button.nav:pointerover">
-            <Setter Property="Background" Value="#182033" />
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style Selector="Button.nav:pressed">
-            <Setter Property="Background" Value="#1D2940" />
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+        </Style>
+
+        <Style Selector="Button.nav:pointerover Border.nav-icon-badge">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="Button.nav:pressed Border.nav-icon-badge">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
         <Style Selector="Button.nav.compact">
@@ -141,8 +151,8 @@
             <Setter Property="CornerRadius" Value="14" />
             <Setter Property="Margin" Value="0,2,0,0" />
             <Setter Property="MinHeight" Value="48" />
-            <Setter Property="Background" Value="#111B2F" />
-            <Setter Property="BorderBrush" Value="#22344F" />
+            <Setter Property="Background" Value="{DynamicResource Surface1}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
@@ -151,24 +161,25 @@
             <Setter Property="Height" Value="40" />
             <Setter Property="CornerRadius" Value="14" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Background" Value="#172034" />
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style Selector="Button.sidebar-toggle:pointerover">
-            <Setter Property="Background" Value="#1C2740" />
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
         </Style>
 
         <Style Selector="Button.sidebar-toggle:pressed">
-            <Setter Property="Background" Value="#22304E" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
         <Style Selector="Border.nav-icon-badge">
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />
             <Setter Property="CornerRadius" Value="11" />
-            <Setter Property="Background" Value="#172034" />
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
@@ -177,17 +188,18 @@
             <Setter Property="Width" Value="34" />
             <Setter Property="Height" Value="34" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Background" Value="#162643" />
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style Selector="Button.nav.compact:pointerover Border.nav-icon-badge.compact">
-            <Setter Property="Background" Value="#1F2C48" />
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
         <Style Selector="Button.nav.compact:pressed Border.nav-icon-badge.compact">
-            <Setter Property="Background" Value="#233252" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
         <!-- Action buttons -->
@@ -229,12 +241,12 @@
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
         </Style>
         <Style Selector="Button.action-danger">
-            <Setter Property="Background" Value="#4A2B2B" />
-            <Setter Property="BorderBrush" Value="#8E4B4B" />
-            <Setter Property="Foreground" Value="#F4D9D9" />
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
         </Style>
         <Style Selector="Button.action-danger:pointerover">
-            <Setter Property="Background" Value="#5A3333" />
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
         </Style>
 
         <!-- Shared pills/tags -->
