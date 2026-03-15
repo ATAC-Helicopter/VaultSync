@@ -1343,7 +1343,7 @@
                                          FontSize="10"
                                          TextWrapping="Wrap" />
                             </StackPanel>
-                            <ItemsControl ItemsSource="{Binding SelectedThemePaletteSwatches}">
+                            <ItemsControl ItemsSource="{Binding ThemePaletteSwatches}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                   <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />

@@ -129,7 +129,6 @@ namespace VaultSync.UI
         public ObservableCollection<ThemeColorSlotViewModel> ThemeColorSlots { get; } = new();
         public ObservableCollection<ThemePresetOptionViewModel> ThemePresets { get; } = new();
         public ObservableCollection<ThemePaletteSwatchViewModel> ThemePaletteSwatches { get; } = new();
-        public ObservableCollection<ThemePaletteSwatchViewModel> SelectedThemePaletteSwatches { get; } = new();
         public ObservableCollection<string> CustomThemeBaseOptions { get; } = new() { "Dark", "Light" };
 
         private void OnThemeColorSlotsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -199,7 +198,7 @@ namespace VaultSync.UI
                 ThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
 
             SelectedThemeColorSlot = ThemeColorSlots.FirstOrDefault();
-            RefreshSelectedThemePaletteSwatches();
+            UpdateSelectedThemePaletteSwatchState();
         }
 
         private static IReadOnlyList<string> GetAllThemePaletteHexes()
@@ -212,49 +211,6 @@ namespace VaultSync.UI
                 "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1",
                 "#7C3AED", "#A855F7", "#EC4899", "#F43F5E"
             };
-        }
-
-        private static IReadOnlyList<string> GetThemePaletteForSlot(string? slotId)
-        {
-            return slotId switch
-            {
-                "Background" or "Surface" or "SurfaceAlt" => new[]
-                {
-                    "#111827", "#334155", "#64748B", "#E2E8F0",
-                    "#0F172A", "#1E293B", "#475569", "#94A3B8",
-                    "#CBD5E1", "#F8FAFC"
-                },
-                "TextPrimary" => new[]
-                {
-                    "#111827", "#334155", "#64748B", "#E2E8F0", "#F8FAFC"
-                },
-                "TextSecondary" => new[]
-                {
-                    "#334155", "#475569", "#64748B", "#94A3B8", "#CBD5E1", "#E2E8F0"
-                },
-                "Success" => new[]
-                {
-                    "#166534", "#15803D", "#16A34A", "#22C55E", "#4ADE80", "#86EFAC"
-                },
-                "Warning" => new[]
-                {
-                    "#92400E", "#B45309", "#D97706", "#F59E0B", "#FBBF24", "#FCD34D"
-                },
-                "Danger" => new[]
-                {
-                    "#991B1B", "#B91C1C", "#DC2626", "#EF4444", "#F87171", "#FCA5A5"
-                },
-                _ => GetAllThemePaletteHexes()
-            };
-        }
-
-        private void RefreshSelectedThemePaletteSwatches()
-        {
-            SelectedThemePaletteSwatches.Clear();
-            foreach (var hex in GetThemePaletteForSlot(SelectedThemeColorSlot?.Id))
-                SelectedThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
-
-            UpdateSelectedThemePaletteSwatchState();
         }
 
         private void ApplyThemePreset(ThemePresetOptionViewModel? preset)
@@ -365,7 +321,7 @@ namespace VaultSync.UI
         private void UpdateSelectedThemePaletteSwatchState()
         {
             var selectedHex = SelectedThemeColorHex;
-            foreach (var swatch in SelectedThemePaletteSwatches)
+            foreach (var swatch in ThemePaletteSwatches)
                 swatch.IsSelected = string.Equals(swatch.Hex, selectedHex, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -384,7 +340,6 @@ namespace VaultSync.UI
                 if (!_selectedThemeColorSlot.IsSelected)
                     _selectedThemeColorSlot.IsSelected = true;
 
-                RefreshSelectedThemePaletteSwatches();
                 RefreshThemeEditorPreview();
                 _applyThemePaletteSwatchCommand?.RaiseCanExecuteChanged();
                 OnPropertyChanged(nameof(SelectedThemeColorSlot));
