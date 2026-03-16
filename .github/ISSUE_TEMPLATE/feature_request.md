@@ -2,16 +2,15 @@
 name: Feature request
 about: Suggest an idea for this project
 title: "[Feature]"
-labels: bug
+labels: enhancement
 assignees: ATAC-Helicopter
-
 ---
 
 ### Problem
 What problem are you trying to solve?
 
 Describe:
-- What you’re currently trying to do
+- What you're currently trying to do
 - Where VaultSync falls short
 - Why this is frustrating, limiting, or inefficient
 
@@ -33,9 +32,9 @@ Mockups or rough ideas are welcome.
 ### Use Case
 Provide a realistic example:
 
-> “I manage 12 projects and need to…”
->  
-> “When restoring encrypted backups across machines…”
+> "I manage 12 projects and need to ..."
+>
+> "When restoring encrypted backups across machines ..."
 
 The more concrete, the better.
 

@@ -1,10 +1,9 @@
 ---
 name: Crash Report
-about: help me improve the app by providing crash info
+about: Help improve the app by providing crash information
 title: "[Crash]"
 labels: Crash
 assignees: ATAC-Helicopter
-
 ---
 
 ### When Did It Crash?
@@ -52,7 +51,8 @@ If not reproducible, describe what you were doing.
 
 ### Logs (Required)
 Attach:
-- `vaultsync.log`
+- Support bundle export from Settings > Advanced, if the app still opens
+- `vaultsync.log` or recent diagnostics log
 - Any crash dialog text
 - Event Viewer logs (Windows, if available)
 

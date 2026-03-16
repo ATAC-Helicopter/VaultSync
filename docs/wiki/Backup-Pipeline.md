@@ -4,8 +4,9 @@ This page explains the internal phases so you can interpret progress and logs.
 
 ## 1) Preparation
 - Reads the active destination settings.
-- Resolves network mounts (if configured).
+- Resolves network mounts, if configured.
 - Validates the backup path and available space.
+- For archive-mode uploads, validates whether checkpoint retry can resume from a preserved partial payload.
 
 ## 2) Copy phase
 - Copies data to the destination using the best available method:
@@ -20,8 +21,13 @@ This page explains the internal phases so you can interpret progress and logs.
 ## 4) Post-backup actions
 - Updates snapshot metadata and UI status.
 - Logs results for troubleshooting.
+- Exports metadata and history where configured and records retry or checkpoint diagnostics for support bundles.
+
+## Integrity guardrails
+- Startup consistency checks run separately from backup execution and persist a summary for diagnostics.
+- Retention preflight prevents cleanup from removing the last metadata-valid restore point for a project.
+- Repair flows are deterministic; VaultSync only applies exact remaps.
 
 ## How to read logs
-- Look for “Preparing destination”, “Copying”, and “Verification” entries.
+- Look for `Preparing destination`, `Copying`, and `Verification` entries.
 - For network shares, additional lines identify mount resolution and path selection.
-

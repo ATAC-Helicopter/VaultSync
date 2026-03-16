@@ -1,4 +1,4 @@
-﻿# VaultSync Wiki
+# VaultSync Wiki
 
 - [Home](Home)
 
@@ -17,6 +17,12 @@
 
 - Updates
   - [Updates](Updates)
+
+- 1.7 areas
+  - Integrity / Doctor: [Configuration](Configuration)
+  - Restore readiness / history: [Backups overview](Backups)
+  - Update flow: [Updates](Updates)
+  - Troubleshooting: [Troubleshooting](Troubleshooting)
 
 - Support
   - [Troubleshooting](Troubleshooting)
