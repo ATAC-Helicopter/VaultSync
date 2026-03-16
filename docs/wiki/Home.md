@@ -1,4 +1,4 @@
-﻿# VaultSync Wiki
+# VaultSync Wiki
 
 Use this wiki for user-facing workflows and troubleshooting.
 
@@ -17,6 +17,12 @@ Use this wiki for user-facing workflows and troubleshooting.
 
 ## Updates
 - [Updates](Updates)
+
+## 1.7 focus areas
+- Startup integrity checks and Doctor workflows for repair and conflict review
+- Restore-readiness summaries on Dashboard and Backups
+- Strict patch and update diagnostics with installer fallback for unsupported bases
+- Destination quota suggestions, retention simulation, and maintenance window jobs
 
 ## Support
 - [Troubleshooting](Troubleshooting)

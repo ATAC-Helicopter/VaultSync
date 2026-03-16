@@ -7,44 +7,44 @@
 </p>
 
 <p align="center">
-  <strong>Snapshot · Backup · Sync · Verify</strong><br/>
-  Cross-platform backup & snapshot manager built for project folders, NAS workflows, and reliable restores.
+  <strong>Snapshot | Backup | Sync | Verify</strong><br/>
+  Cross-platform backup and snapshot manager built for project folders, NAS workflows, and reliable restores.
 </p>
 
 <p align="center">
-  <a href="#installation-cli-only">Install</a> •
-  <a href="#features">Features</a> •
-  <a href="DOCUMENTATION.md">Documentation</a> •
-  <a href="ROADMAP.md">Roadmap</a> •
-  <a href="CHANGELOG.md">Changelog</a> •
-  <a href="SECURITY.md">Security</a> •
+  <a href="#installation-cli-only">Install</a> |
+  <a href="#features">Features</a> |
+  <a href="DOCUMENTATION.md">Documentation</a> |
+  <a href="ROADMAP.md">Roadmap</a> |
+  <a href="CHANGELOG.md">Changelog</a> |
+  <a href="SECURITY.md">Security</a> |
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 ---
 
 > [!WARNING]
-> ⚠️ **VaultSync installers are currently unsigned.**
+> VaultSync installers are currently unsigned.
 >
-> **Windows**
-> - SmartScreen will flag the installer
-> - Click **More info → Run anyway**
+> Windows
+> - SmartScreen will flag the installer.
+> - Click **More info -> Run anyway**.
 >
-> **macOS**
-> 1. Open the downloaded `.dmg`
-> 2. Drag the app into **Applications**
-> 3. Close the disk image
-> 4. Open **Applications**
-> 5. Right-click VaultSync → **Open**
+> macOS
+> 1. Open the downloaded `.dmg`.
+> 2. Drag the app into **Applications**.
+> 3. Close the disk image.
+> 4. Open **Applications**.
+> 5. Right-click VaultSync -> **Open**.
 >
 > If Gatekeeper still blocks it:
 >
-> **Apple Silicon (ARM64)**
+> Apple Silicon (ARM64)
 > ```sh
 > xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app
 > ```
 >
-> **Intel (x64)**
+> Intel (x64)
 > ```sh
 > xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app
 > ```
@@ -226,13 +226,13 @@ dotnet tool update --global vaultsync.cli
 
 ## Updates & installers
 
-VaultSync's updater polls the `stable` branch of the [ATAC-Helicopter/VaultSync](https://github.com/ATAC-Helicopter/VaultSync) repo each time the app starts (when "Check for updates on startup" is enabled). Every push to that branch is treated as an available update: the UI compares the metadata of the latest release with the running version, warns the user if a newer release exists, and lets the user decide when to download and install.
+VaultSync checks GitHub Releases according to the selected update channel and interval. Stable follows non-prerelease releases; the optional Beta channel can include prerelease builds from the `dev` branch.
 
-Desktop installers are published as assets on the repo's [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page, so you can grab the matching installer for your platform once you accept the update prompt. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script (compile it with the Inno Setup compiler after publishing the `win-x64` output). macOS builds are shipped as unsigned `.dmg` images containing the `.app` bundle; users may need to right-click → Open or clear quarantine (`xattr -dr com.apple.quarantine /Applications/VaultSync.app`). macOS/Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the same stable channel; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
+Desktop installers are published as assets on the repo's [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script after publishing the `win-x64` output. macOS builds are shipped as unsigned `.dmg` images containing the `.app` bundle; users may need to right-click -> Open or clear quarantine (`xattr -dr com.apple.quarantine /Applications/VaultSync.app`). macOS and Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the stable release line; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
 
 Patch updates are intentionally strict. A release manifest must explicitly list the installed version as an allowed base version before VaultSync offers the patch path. Unsupported or older versions fall back to the full installer instead of guessing compatibility.
 
-VaultSync now exposes a language selector under Settings -> Advanced; translations are loaded from the `Localization/` folder and can be extended to other languages in future releases. A new "Beta channel" toggle in the same section lets you opt into the `dev` branch: it still honors "Check for updates on startup", but selects releases where `target_commitish` equals `dev` and includes prerelease builds so you can try the latest dev work before it lands on `stable`.
+VaultSync exposes a language selector under Settings -> Advanced; translations are loaded from the `Localization/` folder. The same area now includes Doctor workflows, maintenance jobs, support-bundle export, strict patch diagnostics, and the Beta channel toggle for prerelease `dev` builds.
 
 ## Quick Start (CLI ONLY)
 

@@ -3,10 +3,10 @@
 VaultSync supports patch updates and full installer updates for macOS, Windows, and Linux.
 
 ## 1.7 highlights
-- Patch preflight now persists clearer diagnostics about why patching is allowed or blocked.
-- Patch manifests can now declare multiple exact allowed base versions for one target release.
-- Release tooling now distinguishes pre-publish warnings from post-publish hard failures.
-- Support bundles now include updater and patch preflight diagnostics for troubleshooting.
+- Patch preflight persists clearer diagnostics about why patching is allowed or blocked.
+- Patch manifests can declare multiple exact allowed base versions for one target release.
+- Release tooling distinguishes pre-publish warnings from post-publish hard failures.
+- Support bundles include updater and patch preflight diagnostics for troubleshooting.
 
 ## Patch updates
 - Smaller and faster when available.
@@ -16,7 +16,7 @@ VaultSync supports patch updates and full installer updates for macOS, Windows, 
 - Patch eligibility is exact:
   - the manifest must explicitly list the installed version as an allowed base version
   - unlisted or older installs fall back to the full installer
-- Multi-base patch manifests are still strict allowlists, not version ranges.
+- Multi-base patch manifests are strict allowlists, not version ranges.
 
 ## Manual update check
 - Settings > Advanced > Check for updates now.

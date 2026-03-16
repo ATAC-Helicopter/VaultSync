@@ -1,6 +1,6 @@
 # What's New
 
-## [1.7.0-beta.1]
+## [1.7.0]
 
 ### Integrity and repair
 - Added startup backup-index consistency checks so VaultSync can detect metadata drift early without blocking launch.

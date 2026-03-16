@@ -1,4 +1,4 @@
-﻿# VaultSync Documentation Map
+# VaultSync Documentation Map
 
 Use this page as the primary index for all project documentation.
 
@@ -36,9 +36,15 @@ Use this page as the primary index for all project documentation.
 - Reporting bugs: `docs/wiki/Reporting-Bugs.md`
 
 ## Localization Operations
+- UI strings live in `Localization/strings.en.json`.
+- Missing-key checks and translator context should be regenerated before localization sweeps.
+- When UI text changes, update:
+  - `Localization/strings.en.json`
+  - user-facing docs that mention the label or feature
+  - `CHANGELOG.md` and `docs/WHATS_NEW.md` when behavior changed
 
 ## Maintenance Notes
 - When behavior changes, update both:
-  - feature/usage docs (`docs/wiki/*`, `docs/HELP.md`)
+  - feature and usage docs (`docs/wiki/*`, `docs/HELP.md`)
   - release notes (`CHANGELOG.md`, `docs/WHATS_NEW.md`)
 - Keep IDs and naming aligned with `CONTRIBUTING.md`.

@@ -240,8 +240,16 @@ if ($null -eq $release) {
 
 $owner = ($Repository -split "/")[0]
 $projectItems = Get-GhJson -Command "gh project item-list $ProjectNumber --owner $owner --limit 500 --format json"
-$releaseItems = @($projectItems.items | Where-Object { $_.release -eq $ReleaseTrack })
-$incompleteItems = @($releaseItems | Where-Object { $_.status -ne "Done" })
+$releaseItems = @($projectItems.items | Where-Object {
+    $releaseProperty = $_.PSObject.Properties["release"]
+    $itemRelease = if ($null -ne $releaseProperty) { $releaseProperty.Value } else { $null }
+    $itemRelease -eq $ReleaseTrack
+})
+$incompleteItems = @($releaseItems | Where-Object {
+    $statusProperty = $_.PSObject.Properties["status"]
+    $itemStatus = if ($null -ne $statusProperty) { $statusProperty.Value } else { $null }
+    $itemStatus -ne "Done"
+})
 
 Add-CheckResult -Results $results -Code "project-release-items" -Condition ($releaseItems.Count -gt 0) `
     -PassMessage "Project release slice '$ReleaseTrack' contains $($releaseItems.Count) item(s)." `
