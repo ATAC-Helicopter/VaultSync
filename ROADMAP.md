@@ -1160,13 +1160,12 @@
     - `Projects root` persists across restart even if startup writes happen while the destination is unreachable or config reads are transiently busy.
     - transient config read failures no longer downgrade the in-memory config to defaults and then overwrite the saved root path.
 
-- [ ] `BUG-17005` `P2` Simplify custom theme editor hierarchy in Settings > Appearance. _(In progress)_
+- [x] `BUG-17005` `P2` Simplify custom theme editor hierarchy in Settings > Appearance. _(Done)_
   - Scope: make the custom theme editor easier to understand visually by reducing duplicate emphasis, clarifying the edit order, and tightening the picker/preview layout.
   - Current status:
-    - In progress: the editor now follows a clearer preset -> target -> pick -> preview flow, and the picker is being stripped down to visible swatches plus a cleaner spectrum view.
-    - In progress: the theme editor is being converted from a rigid split panel into wrap-based cards so the palette, picker, preview, and tuning controls scale better in windowed layouts.
-    - In progress: theme swatches are being rendered from explicit brush-backed palette entries so they stop reading as empty circles.
-    - In progress: theme quick colors are being filtered by the selected slot so surface, text, accent, and status editing each get usable presets.
+    - Done: the editor follows a clearer preset -> target -> pick -> preview flow with a cleaner spectrum-focused picker.
+    - Done: the theme editor uses wrap-based cards so the palette, picker, preview, and tuning controls scale better in windowed layouts.
+    - Done: theme swatches render from explicit brush-backed palette entries, and quick colors stay usable for the selected slot.
   - Acceptance:
     - The theme editor reads as one coherent workflow instead of a pile of equal-weight controls.
     - Presets, target selection, picker, and preview are visually distinct and easier to scan in windowed mode.
