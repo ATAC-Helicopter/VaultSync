@@ -2,23 +2,21 @@
 
 VaultSync supports patch updates and full installer updates for macOS, Windows, and Linux.
 
-## 1.5.1 highlights
-- Startup selector persistence on the Backups page was fixed so project cards reopen with the saved destination and encryption policy.
-- Backup action-state and deletion flows were hardened to reduce gray-button stalls and exception noise.
-- Consumer-friendly presets (`Photos`, `Documents`, `Steam mods`, `Creative suites`) were added with in-app guidance.
-- Localization coverage, release notes, and update-facing copy were refreshed for the release.
-
-## 1.5.0 highlights
-- Backup encryption with global and per-project policy controls is now available.
-- Backup bandwidth limits and quiet-hours scheduling were added.
-- Backup history now shows `Full` / `Incremental` / `Imported` labels and retention outcomes.
-- Snapshot diff summaries now include preview and export actions.
+## 1.7 highlights
+- Patch preflight now persists clearer diagnostics about why patching is allowed or blocked.
+- Patch manifests can now declare multiple exact allowed base versions for one target release.
+- Release tooling now distinguishes pre-publish warnings from post-publish hard failures.
+- Support bundles now include updater and patch preflight diagnostics for troubleshooting.
 
 ## Patch updates
 - Smaller and faster when available.
 - If a patch fails, the installer fallback is offered.
 - Patch assets are named `vaultsync-patch-<platform>.json` and `vaultsync-patch-<platform>.zip`.
   - macOS checks for arch-specific assets first (`vaultsync-patch-macos-apple-silicon.*` or `vaultsync-patch-macos-intel.*`).
+- Patch eligibility is exact:
+  - the manifest must explicitly list the installed version as an allowed base version
+  - unlisted or older installs fall back to the full installer
+- Multi-base patch manifests are still strict allowlists, not version ranges.
 
 ## Manual update check
 - Settings > Advanced > Check for updates now.
@@ -38,3 +36,10 @@ Switch channels in Settings > Advanced.
 - Windows: `.exe` installer (Inno Setup).
 - macOS: unsigned `.dmg` of the `.app` bundle.
 - Linux: `.AppImage` or `.tar.gz` assets.
+
+## Safe update expectation
+- Use patch updates only for versions explicitly supported by the release manifest.
+- Use the installer for:
+  - major version jumps
+  - very old versions
+  - blocked or incompatible patch preflight results

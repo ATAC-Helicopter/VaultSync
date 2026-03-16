@@ -11,6 +11,7 @@ Use this page as the primary index for all project documentation.
 ## Planning and Release
 - Roadmap: `ROADMAP.md`
 - Changelog: `CHANGELOG.md`
+- Current release highlights: `docs/WHATS_NEW.md`
 - Release process: `docs/RELEASING.md`
 - Updater and patch assets: `docs/UPDATER.md`
 

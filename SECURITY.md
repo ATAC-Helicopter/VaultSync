@@ -27,3 +27,6 @@ Backports to older versions are best-effort and depend on risk and implementatio
 ## Scope Notes
 - Do not post exploit details publicly before a fix is available.
 - Non-security bugs should be reported through `docs/wiki/Reporting-Bugs.md`.
+- Patch-update compatibility is intentionally strict:
+  - VaultSync only applies patch manifests to explicitly listed base versions
+  - unsupported or older versions must use the installer fallback

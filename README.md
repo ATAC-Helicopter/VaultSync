@@ -154,6 +154,9 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 - Backup policy controls (bandwidth limit + quiet hours) with policy state shown in cards/tray/logs
 - Metadata sync across machines (`.vaultsync/meta`) with source-machine tracking on imported backups
 - Retention with protected (`Keep`) backups and integrated cleanup behavior
+- Startup integrity scan, Doctor repair flow, metadata conflict review, and restore-readiness summaries
+- Destination quota suggestions, retention simulation, and maintenance window jobs
+- Update diagnostics, support-bundle export, and strict multi-base patch compatibility
 - Cross-platform desktop support: macOS, Windows, Linux
 
 ### Smart Presets
@@ -226,6 +229,8 @@ dotnet tool update --global vaultsync.cli
 VaultSync's updater polls the `stable` branch of the [ATAC-Helicopter/VaultSync](https://github.com/ATAC-Helicopter/VaultSync) repo each time the app starts (when "Check for updates on startup" is enabled). Every push to that branch is treated as an available update: the UI compares the metadata of the latest release with the running version, warns the user if a newer release exists, and lets the user decide when to download and install.
 
 Desktop installers are published as assets on the repo's [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page, so you can grab the matching installer for your platform once you accept the update prompt. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script (compile it with the Inno Setup compiler after publishing the `win-x64` output). macOS builds are shipped as unsigned `.dmg` images containing the `.app` bundle; users may need to right-click → Open or clear quarantine (`xattr -dr com.apple.quarantine /Applications/VaultSync.app`). macOS/Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the same stable channel; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
+
+Patch updates are intentionally strict. A release manifest must explicitly list the installed version as an allowed base version before VaultSync offers the patch path. Unsupported or older versions fall back to the full installer instead of guessing compatibility.
 
 VaultSync now exposes a language selector under Settings -> Advanced; translations are loaded from the `Localization/` folder and can be extended to other languages in future releases. A new "Beta channel" toggle in the same section lets you opt into the `dev` branch: it still honors "Check for updates on startup", but selects releases where `target_commitish` equals `dev` and includes prerelease builds so you can try the latest dev work before it lands on `stable`.
 

@@ -2,7 +2,33 @@
 
 ## [1.7.0-beta.1]
 
-Draft release notes. Final user-facing highlights will be curated at release cut.
+### Integrity and repair
+- Added startup backup-index consistency checks so VaultSync can detect metadata drift early without blocking launch.
+- Added deterministic backup-index repair planning plus a Doctor workflow for dry-run and exact fix-now actions.
+- Added retention chain preflight and safer retention delete planning so cleanup does not remove the last metadata-valid restore point.
+- Added cross-machine metadata conflict capture and resolution for project destination, restore mode, verification policy, and tags.
+
+### Transfer resilience and storage
+- Added destination quotas and cleanup suggestions in Backups.
+- Added checkpointed archive retry so interrupted archive uploads can resume from validated checkpoints instead of always restarting.
+- Added retention simulation preview in Settings.
+- Added restore-readiness scorecards in Dashboard and Backups.
+
+### Updates and serviceability
+- Added updater release-target diagnostics, patch preflight diagnostics, and richer support-bundle telemetry.
+- Added a release-readiness gate script for pre-publish and post-publish verification.
+- Added strict multi-base patch manifest support so one patch manifest can safely allow multiple exact tested base versions.
+
+### UI and workflow improvements
+- Redesigned the Dashboard information layout for clearer KPI, activity, storage, and readiness scanning.
+- Added app-wide tag color styling and in-Projects tag color editing.
+- Improved Projects empty-state and no-selection behavior instead of rendering broken blank detail panes.
+
+### Fixes
+- Fixed Projects root persistence across restart/config race conditions.
+- Fixed Doctor workflow command-state updates crossing onto invalid threads.
+- Fixed noisy backup/restore/dashboard trace chatter so normal runs stay clean unless verbose logging is enabled.
+- Restored corrupted bundled font assets used by the UI.
 
 ## [1.6.0]
 

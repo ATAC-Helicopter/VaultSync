@@ -67,6 +67,7 @@ When changing behavior, update all relevant artifacts in the same PR:
 2. `CHANGELOG.md`
 3. `docs/RELEASING.md`
 4. `docs/UPDATER.md`
+5. `docs/WHATS_NEW.md`
 
 ### Contributor feature flow
 1. `CONTRIBUTING.md`
@@ -90,3 +91,9 @@ Before merging documentation updates:
 ## 7. Related References
 - Full docs index: `docs/README.md`
 - Wiki sidebar: `docs/wiki/_Sidebar.md`
+
+## 8. 1.7 Documentation Focus
+For the `1.7` release line, keep these areas aligned:
+- update/patch behavior (`docs/UPDATER.md`, `docs/wiki/Updates.md`, `docs/RELEASING.md`)
+- integrity and Doctor workflows (`docs/HELP.md`, `README.md`)
+- release highlights (`docs/WHATS_NEW.md`, `CHANGELOG.md`)
