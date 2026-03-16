@@ -16,17 +16,22 @@ internal static class DiagnosticsLogger
     private const int MaxFirstChanceTotal = 250;
     private const int MaxFirstChancePerSignature = 5;
     private static readonly ConcurrentQueue<string> Recent = new();
+    private static readonly ConcurrentQueue<string> PendingWrites = new();
     private static readonly ConcurrentDictionary<string, int> FirstChanceCounts = new(StringComparer.Ordinal);
     private static int _recentCount;
     private static readonly object FileGate = new();
     private static string? _sessionPath;
     private static string? _heartbeatPath;
     private static Timer? _heartbeatTimer;
+    private static Task? _writerTask;
+    private static CancellationTokenSource? _writerCts;
+    private static readonly AutoResetEvent WriterSignal = new(false);
     private static int _dumpInFlight;
     private static int _dumpAttempted;
     private static int _firstChanceTotal;
     private static int _consoleMirroringInstalled;
     private static int _traceListenerInstalled;
+    private static int _writerStarted;
 
     public static string? SessionLogPath => _sessionPath;
 
@@ -45,6 +50,7 @@ internal static class DiagnosticsLogger
             PruneDiagnostics(dir);
             _sessionPath = Path.Combine(dir, $"session-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
             _heartbeatPath = Path.Combine(dir, "heartbeat.txt");
+            StartWriter();
             LogPreviousHeartbeat();
             InstallTraceListener();
             InstallConsoleMirroring();
@@ -74,20 +80,8 @@ internal static class DiagnosticsLogger
         if (string.IsNullOrWhiteSpace(path))
             return;
 
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                lock (FileGate)
-                {
-                    File.AppendAllText(path, line + Environment.NewLine);
-                }
-            }
-            catch
-            {
-                // Best-effort diagnostics.
-            }
-        });
+        PendingWrites.Enqueue(line);
+        WriterSignal.Set();
     }
 
     public static void RecordWithStack(string message, int maxLines = 10)
@@ -256,6 +250,65 @@ internal static class DiagnosticsLogger
                 // best-effort
             }
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+    }
+
+    private static void StartWriter()
+    {
+        if (Interlocked.Exchange(ref _writerStarted, 1) == 1)
+            return;
+
+        _writerCts = new CancellationTokenSource();
+        _writerTask = Task.Run(() => WriterLoop(_writerCts.Token));
+    }
+
+    private static void WriterLoop(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                WriterSignal.WaitOne(TimeSpan.FromMilliseconds(250));
+                FlushPendingWrites();
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch
+            {
+                // Best-effort diagnostics writer.
+            }
+        }
+
+        FlushPendingWrites();
+    }
+
+    private static void FlushPendingWrites()
+    {
+        var path = _sessionPath;
+        if (string.IsNullOrWhiteSpace(path) || PendingWrites.IsEmpty)
+            return;
+
+        var batch = new StringBuilder();
+        while (PendingWrites.TryDequeue(out var line))
+        {
+            batch.AppendLine(line);
+        }
+
+        if (batch.Length == 0)
+            return;
+
+        try
+        {
+            lock (FileGate)
+            {
+                File.AppendAllText(path, batch.ToString());
+            }
+        }
+        catch
+        {
+            // Best-effort diagnostics.
+        }
     }
 
     private static void PruneDiagnostics(string dir)

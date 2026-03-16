@@ -507,6 +507,7 @@ public class ProjectsViewModel : ViewModelBase
             : L("Projects.Sort.Name", "Sort: Name");
 
     private readonly List<ProjectItemViewModel> _allProjects = new();
+    private HashSet<int> _autoBackupDisabledProjectIds = new();
     private string _searchText = string.Empty;
     private ProjectGroupOption? _selectedGroup;
     public ProjectGroupOption? SelectedGroup
@@ -614,6 +615,7 @@ public class ProjectsViewModel : ViewModelBase
         RefreshEncryptionPolicyOptions();
         LoadGroupOptions();
         RefreshReusableProjectTags();
+        RefreshGroupAutoBackupStateFromConfig();
 
         _ = RefreshAsync();
     }
@@ -681,6 +683,7 @@ public class ProjectsViewModel : ViewModelBase
             IsLoading = true;
 
             var config = await Task.Run(AppConfigStore.Load);
+            RefreshGroupAutoBackupStateFromConfig(config);
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             RefreshDestinationOptionsInternal(config);
@@ -1604,9 +1607,7 @@ public class ProjectsViewModel : ViewModelBase
         if (ids.Count == 0)
             return false;
 
-        var cfg = AppConfigStore.Load();
-        var disabled = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
-        return ids.Any(id => !disabled.Contains(id));
+        return ids.Any(id => !_autoBackupDisabledProjectIds.Contains(id));
     }
 
     private bool CanEnableAutoBackupForSelectedGroup()
@@ -1615,9 +1616,16 @@ public class ProjectsViewModel : ViewModelBase
         if (ids.Count == 0)
             return false;
 
-        var cfg = AppConfigStore.Load();
-        var disabled = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
-        return ids.Any(disabled.Contains);
+        return ids.Any(_autoBackupDisabledProjectIds.Contains);
+    }
+
+    private void RefreshGroupAutoBackupStateFromConfig(AppConfig? config = null)
+    {
+        config ??= AppConfigStore.Load();
+        _autoBackupDisabledProjectIds = new HashSet<int>(
+            config.Backups.AutoBackupDisabledProjects ?? new List<int>());
+        _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
+        _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
     }
 
     private List<int> GetSelectedGroupRegisteredProjectIds()
@@ -1814,6 +1822,11 @@ public class ProjectsViewModel : ViewModelBase
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            if (enabled)
+                _autoBackupDisabledProjectIds.ExceptWith(ids);
+            else
+                _autoBackupDisabledProjectIds.UnionWith(ids);
+
             ShowNotification(
                 enabled
                     ? Lf("Projects.Group.AutoBackupEnabled", "Enabled auto backups for {0} projects.", ids.Count)

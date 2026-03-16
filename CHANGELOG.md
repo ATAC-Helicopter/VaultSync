@@ -61,6 +61,8 @@
 - [BUG-17003] Projects now show explicit empty and no-selection placeholders.
 - [BUG-17004] Projects root now survives startup config read/write races.
 - [BUG-17008] Backup, restore, and dashboard trace chatter now stays behind debug or explicit verbose logging.
+- [BUG-17009] Diagnostics logging now batches session-log writes through a single background writer instead of spawning one task per log line.
+- [BUG-17010] Projects group auto-backup actions no longer re-read app config during command-state evaluation and now use refreshed cached preferences instead.
 - [BUG-17007] Metadata import no longer creates or leaves projects with an empty `RootPath`; imported root hints are preserved and existing blank paths are repaired when metadata provides a usable root.
 - [BUG-17001] Doctor repair workflows now marshal state updates onto the UI thread.
 - [BUG-16023] Restore status no longer falls back to raw localization keys.
