@@ -15,7 +15,7 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest().upper()
 
 
-def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str, previous: str, target: str) -> None:
+def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str, previous_versions: list[str], target: str) -> None:
     files = []
     base_dir = base_dir.resolve()
     paths = [p for p in base_dir.rglob("*") if p.is_file()]
@@ -43,8 +43,21 @@ def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str
                 }
             )
 
+    normalized_previous = []
+    seen_previous = set()
+    for previous in previous_versions:
+        trimmed = previous.strip()
+        if not trimmed or trimmed in seen_previous:
+            continue
+        seen_previous.add(trimmed)
+        normalized_previous.append(trimmed)
+
+    if not normalized_previous:
+        raise ValueError("At least one --previous version is required.")
+
     manifest = {
-        "previousVersion": previous,
+        "previousVersion": normalized_previous[0],
+        "baseVersions": normalized_previous,
         "targetVersion": target,
         "archiveSha256": sha256_file(out_zip),
         "archiveSize": out_zip.stat().st_size,
@@ -60,7 +73,7 @@ def main() -> None:
     parser.add_argument("--out-zip", required=True)
     parser.add_argument("--out-manifest", required=True)
     parser.add_argument("--platform", choices=["windows", "macos", "linux"], required=True)
-    parser.add_argument("--previous", required=True)
+    parser.add_argument("--previous", action="append", required=True)
     parser.add_argument("--target", required=True)
     args = parser.parse_args()
 

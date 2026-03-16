@@ -21,6 +21,7 @@
 - [VS-1708] Release asset builds now validate beta/stable branch and prerelease rules before generating patch files.
 - [VS-1709] Support bundles now include update, repair, and metadata-conflict telemetry.
 - [VS-1720] Archive transfers can now resume from verified checkpoints instead of restarting.
+- [VS-1724] Patch manifests can now declare multiple exact allowed base versions for one target release.
 - [VS-1716] Settings > Backups now includes a retention simulation preview.
 - [VS-1718] Added a scripted release-readiness gate with human and JSON output.
 - [VS-1718] Release gate now separates `PrePublish` warnings from `PostPublish` failures.

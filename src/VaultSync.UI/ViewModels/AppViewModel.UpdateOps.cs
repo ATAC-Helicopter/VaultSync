@@ -463,6 +463,7 @@ namespace VaultSync.UI.ViewModels
                         StatusCode = "no-patch-assets",
                         Message = "Release does not provide patch assets.",
                         CurrentVersion = _currentVersionString,
+                        ManifestAllowedBaseVersions = new System.Collections.Generic.List<string>(),
                         Eligible = false,
                         RequiresInstaller = result.HasInstaller,
                         HasManifest = false,
@@ -686,6 +687,22 @@ namespace VaultSync.UI.ViewModels
                 Message = preflight.Message,
                 CurrentVersion = currentVersion,
                 ManifestPreviousVersion = preflight.Manifest?.PreviousVersion ?? string.Empty,
+                ManifestAllowedBaseVersions = PatchUpdateService.TryGetAllowedBaseVersions(
+                    preflight.Manifest ?? new PatchManifest(),
+                    out var allowedBaseVersions,
+                    out _,
+                    out _)
+                    ? new System.Collections.Generic.List<string>(allowedBaseVersions)
+                    : new System.Collections.Generic.List<string>(),
+                MatchedBaseVersion = PatchUpdateService.TryValidateAllowedBaseVersions(
+                    preflight.Manifest ?? new PatchManifest(),
+                    currentVersion,
+                    out _,
+                    out var matchedBaseVersion,
+                    out _,
+                    out _)
+                    ? matchedBaseVersion
+                    : string.Empty,
                 ManifestTargetVersion = preflight.Manifest?.TargetVersion ?? string.Empty,
                 Eligible = preflight.Eligible,
                 RequiresInstaller = preflight.RequiresInstaller,

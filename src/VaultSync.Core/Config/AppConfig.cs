@@ -416,6 +416,8 @@ namespace VaultSync.Core.Config
         public string Message { get; set; } = string.Empty;
         public string CurrentVersion { get; set; } = string.Empty;
         public string ManifestPreviousVersion { get; set; } = string.Empty;
+        public List<string> ManifestAllowedBaseVersions { get; set; } = new();
+        public string MatchedBaseVersion { get; set; } = string.Empty;
         public string ManifestTargetVersion { get; set; } = string.Empty;
         public bool Eligible { get; set; }
         public bool RequiresInstaller { get; set; }

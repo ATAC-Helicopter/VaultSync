@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Reflection;
 
 namespace VaultSync.UI.Services
 {
@@ -321,6 +322,7 @@ namespace VaultSync.UI.Services
                 var manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(request.ManifestPath));
                 if (manifest is null)
                     throw new InvalidOperationException("Unable to parse patch manifest.");
+                VerifyBaseVersionCompatibility(manifest);
                 VerifyArchivePreflight(request.ArchivePath, manifest);
 
                 var stagingDir = Path.Combine(Path.GetTempPath(), "VaultSync", $"patch-{Guid.NewGuid():N}");
@@ -464,6 +466,33 @@ namespace VaultSync.UI.Services
                 if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Patch archive checksum mismatch.");
             }
+        }
+
+        private static void VerifyBaseVersionCompatibility(PatchManifest manifest)
+        {
+            var currentVersion = GetCurrentVersionString();
+            if (!PatchUpdateService.TryValidateAllowedBaseVersions(
+                    manifest,
+                    currentVersion,
+                    out _,
+                    out _,
+                    out var statusCode,
+                    out var message))
+            {
+                throw new InvalidOperationException($"Patch manifest rejected for helper apply ({statusCode}): {message}");
+            }
+        }
+
+        private static string GetCurrentVersionString()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var informationalVersion = assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+            if (!string.IsNullOrWhiteSpace(informationalVersion))
+                return informationalVersion.Trim();
+
+            return assembly.GetName().Version?.ToString() ?? "0.0.0";
         }
 
         private static bool IsUnderTrustedPatchTempRoot(string path)

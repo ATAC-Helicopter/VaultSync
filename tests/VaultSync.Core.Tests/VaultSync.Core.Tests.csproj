@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\VaultSync.Core\VaultSync.Core.csproj" />
+    <ProjectReference Include="..\..\src\VaultSync.UI\VaultSync.UI.csproj" />
   </ItemGroup>
 
 </Project>

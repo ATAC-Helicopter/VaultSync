@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -28,6 +29,9 @@ namespace VaultSync.UI.Services
     {
         [JsonPropertyName("previousVersion")]
         public string PreviousVersion { get; set; } = string.Empty;
+
+        [JsonPropertyName("baseVersions")]
+        public List<string> BaseVersions { get; set; } = new();
 
         [JsonPropertyName("targetVersion")]
         public string TargetVersion { get; set; } = string.Empty;
@@ -145,13 +149,13 @@ namespace VaultSync.UI.Services
                     hasInstaller: hasInstaller);
             }
 
-            if (!VersionsMatch(manifest.PreviousVersion, currentVersion))
+            if (!TryValidateAllowedBaseVersions(manifest, currentVersion, out _, out var matchedBaseVersion, out var baseVersionStatusCode, out var baseVersionMessage))
             {
                 return new PatchPreflightResult(
                     eligible: false,
                     requiresInstaller: true,
-                    statusCode: "base-version-mismatch",
-                    message: "Patch manifest does not match the current installed version.",
+                    statusCode: baseVersionStatusCode,
+                    message: baseVersionMessage,
                     plan: null,
                     manifest: manifest,
                     hasManifest: hasManifest,
@@ -196,7 +200,7 @@ namespace VaultSync.UI.Services
                 eligible: true,
                 requiresInstaller: false,
                 statusCode: "eligible",
-                message: "Patch chain is compatible with the current install.",
+                message: $"Patch chain is compatible with base {matchedBaseVersion}.",
                 plan: plan,
                 manifest: manifest,
                 hasManifest: hasManifest,
@@ -347,6 +351,105 @@ namespace VaultSync.UI.Services
                 normalizedPrevious,
                 normalizedCurrent,
                 StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static bool TryGetAllowedBaseVersions(
+            PatchManifest manifest,
+            out IReadOnlyList<string> allowedBaseVersions,
+            out string statusCode,
+            out string message)
+        {
+            allowedBaseVersions = Array.Empty<string>();
+            statusCode = string.Empty;
+            message = string.Empty;
+
+            if (manifest is null)
+            {
+                statusCode = "manifest-invalid-base-allowlist";
+                message = "Patch manifest is missing.";
+                return false;
+            }
+
+            var normalized = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var raw in manifest.BaseVersions ?? new List<string>())
+            {
+                var normalizedVersion = VersionHelper.NormalizeIdentity(raw);
+                if (string.IsNullOrWhiteSpace(normalizedVersion))
+                {
+                    statusCode = "manifest-invalid-base-allowlist";
+                    message = "Patch manifest contains an empty allowed base version entry.";
+                    return false;
+                }
+
+                if (!seen.Add(normalizedVersion))
+                    continue;
+
+                normalized.Add(normalizedVersion);
+            }
+
+            var legacyBase = VersionHelper.NormalizeIdentity(manifest.PreviousVersion);
+            if (!string.IsNullOrWhiteSpace(legacyBase))
+            {
+                if (normalized.Count == 0)
+                {
+                    normalized.Add(legacyBase);
+                }
+                else if (!normalized.Contains(legacyBase, StringComparer.OrdinalIgnoreCase))
+                {
+                    statusCode = "manifest-invalid-base-allowlist";
+                    message = "Patch manifest previousVersion is not included in the allowed base version list.";
+                    return false;
+                }
+            }
+
+            if (normalized.Count == 0)
+            {
+                statusCode = "manifest-invalid-base-allowlist";
+                message = "Patch manifest does not declare any allowed base versions.";
+                return false;
+            }
+
+            allowedBaseVersions = normalized
+                .OrderBy(static value => value, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            return true;
+        }
+
+        internal static bool TryValidateAllowedBaseVersions(
+            PatchManifest manifest,
+            string currentVersion,
+            out IReadOnlyList<string> allowedBaseVersions,
+            out string matchedBaseVersion,
+            out string statusCode,
+            out string message)
+        {
+            matchedBaseVersion = string.Empty;
+
+            if (!TryGetAllowedBaseVersions(manifest, out allowedBaseVersions, out statusCode, out message))
+                return false;
+
+            var normalizedCurrent = VersionHelper.NormalizeIdentity(currentVersion);
+            if (string.IsNullOrWhiteSpace(normalizedCurrent))
+            {
+                statusCode = "base-version-not-allowed";
+                message = "Current installed version is empty or invalid for patch matching.";
+                return false;
+            }
+
+            matchedBaseVersion = allowedBaseVersions
+                .FirstOrDefault(value => VersionsMatch(value, normalizedCurrent)) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(matchedBaseVersion))
+            {
+                statusCode = "base-version-not-allowed";
+                message = $"Patch manifest allows [{string.Join(", ", allowedBaseVersions)}], but current version is {normalizedCurrent}.";
+                return false;
+            }
+
+            statusCode = "eligible";
+            message = string.Empty;
+            return true;
         }
 
         private static HttpClient CreateHttpClient()

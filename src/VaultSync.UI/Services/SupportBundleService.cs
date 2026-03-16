@@ -211,6 +211,8 @@ public sealed class SupportBundleService
                         config.Advanced.UpdateDiagnostics.PatchPreflight.Message,
                         config.Advanced.UpdateDiagnostics.PatchPreflight.CurrentVersion,
                         config.Advanced.UpdateDiagnostics.PatchPreflight.ManifestPreviousVersion,
+                        manifestAllowedBaseVersions = config.Advanced.UpdateDiagnostics.PatchPreflight.ManifestAllowedBaseVersions.ToList(),
+                        config.Advanced.UpdateDiagnostics.PatchPreflight.MatchedBaseVersion,
                         config.Advanced.UpdateDiagnostics.PatchPreflight.ManifestTargetVersion,
                         config.Advanced.UpdateDiagnostics.PatchPreflight.Eligible,
                         config.Advanced.UpdateDiagnostics.PatchPreflight.RequiresInstaller,

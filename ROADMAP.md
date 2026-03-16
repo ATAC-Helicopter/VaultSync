@@ -1,4 +1,4 @@
-﻿# Roadmap
+# Roadmap
 
 ## Priority legend
 - `P0` Critical: core reliability/security and release blockers.
@@ -360,7 +360,7 @@
   - Acceptance tests:
     - Integration: opening `.vse` triggers password dialog and opens extracted temp folder on success.
     - Integration: wrong password shows explicit error and leaves no partial extracted data.
-    - Regression: standard “open backup folder” behavior remains unchanged.
+    - Regression: standard �open backup folder� behavior remains unchanged.
 - [x] `VS-1536` Existing-backup key rotation job.
   - Scope: explicit user-triggered re-encryption of existing encrypted backups from old key to new key (project or global scope) with atomic replacement.
   - Depends on: `VS-1533`, `VS-1534`.
@@ -683,7 +683,7 @@
 - [x] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
   - Scope: per-project growth metrics, top storage consumers, and clearer dashboard/backups storage summaries.
   - Current status:
-    - Done: Backups per-project cards now surface storage delta (`Δ`) versus the previous backup snapshot size for each project.
+    - Done: Backups per-project cards now surface storage delta (`?`) versus the previous backup snapshot size for each project.
     - Done: Backups summary now includes top storage consumers (top projects by local backup storage share).
   - Acceptance tests:
     - UI: metrics align with stored backup/snapshot data.
@@ -820,7 +820,7 @@
   - Done:
     - Projects details control panel now uses a 2x2 responsive grid for destination/encryption/health blocks.
     - Settings Advanced action rows now wrap buttons and copy in narrow widths.
-    - Near-zero storage delta now displays neutral `Δ ~0 B` for sub-1KB changes.
+    - Near-zero storage delta now displays neutral `? ~0 B` for sub-1KB changes.
 - [x] `VS-1624` `P2` Backups activity chart card empty-space collapse.
   - Scope: remove oversized empty space under the Backups 7-day bars in windowed mode.
   - Done:
@@ -900,12 +900,12 @@
   - Acceptance:
     - UI shows what will be relinked before apply.
     - User can run safe repair without touching valid mappings.
-- [ ] `VS-1703` `P1` Destination quotas + cleanup suggestions. _(In progress)_
+- [x] `VS-1703` `P1` Destination quotas + cleanup suggestions. _(Done)_
   - Scope: per-destination quota targets, warning thresholds, and suggested cleanup candidates by age/size/protection status.
   - What it takes:
     - persist per-destination quota/threshold settings.
     - rank cleanup candidates from existing retention metadata without suggesting protected backups.
-    - surface “space to recover” estimates and tie into health/readiness panels.
+    - surface �space to recover� estimates and tie into health/readiness panels.
   - Current status:
     - Settings > Advanced now persists per-destination soft quota and warning-threshold values.
     - Backups destination cards now show stored bytes plus cleanup suggestions derived from unprotected backup candidates only.
@@ -926,7 +926,7 @@
   - Acceptance:
     - Retention does not halt on first non-protected delete failure when other eligible entries exist.
     - Protected backups are always skipped.
-- [ ] `VS-1706` `P1` Startup backup-index consistency checks. _(In progress)_
+- [x] `VS-1706` `P1` Startup backup-index consistency checks. _(Done)_
   - Scope: lightweight integrity scan for backup/snapshot/project links and destination-path consistency with non-blocking warnings.
   - What it takes:
     - add a cheap startup scan model with bounded work (sampled/full depending on vault size).
@@ -939,7 +939,7 @@
   - Acceptance:
     - Startup scan surfaces actionable warnings without blocking app launch.
     - Scan output is available in diagnostics/support bundle.
-- [ ] `VS-1707` `P1` Updater channel and release-target diagnostics hardening. _(In progress)_
+- [x] `VS-1707` `P1` Updater channel and release-target diagnostics hardening. _(Done)_
   - Scope: expose candidate channel/branch resolution and release-target diagnostics to reduce mis-publish ambiguity.
   - What it takes:
     - persist update resolution trace (`channel`, `branch`, `tag`, `asset`, `why rejected`).
@@ -970,7 +970,7 @@
       - Patch button appears only when chain/assets are valid.
       - Installer fallback messaging states precise incompatibility reason.
       - Release asset workflow rejects beta/stable branch mismatches and invalid prerelease target formats before build work starts.
-- [ ] `VS-1709` `P2` Support bundle update/repair telemetry expansion. _(In progress)_
+- [x] `VS-1709` `P2` Support bundle update/repair telemetry expansion. _(Done)_
   - Scope: include update candidate resolution trace, patch eligibility details, and orphan/repair summaries in redacted support exports.
   - What it takes:
     - extend support-bundle schema with stable redacted sections for updater/repair outcomes.
@@ -981,7 +981,7 @@
     - In progress: metadata conflict tracking now persists conflict-resolution telemetry and exports pending conflict summaries for cross-machine triage.
   - Acceptance:
     - New telemetry sections are redacted and stable for support use.
-- [ ] `VS-1710` `P2` Scheduled maintenance window jobs. _(In progress)_
+- [x] `VS-1710` `P2` Scheduled maintenance window jobs. _(Done)_
   - Scope: optional scheduled health/repair/cleanup routines with summary notifications.
   - What it takes:
     - background scheduler model that reuses quiet-hours and retry policy concepts.
@@ -992,10 +992,10 @@
     - In progress: App startup/settings reload now wire a maintenance timer that runs only inside the configured window and records last-run status in advanced config.
   - Acceptance:
     - Maintenance jobs run only within configured windows and emit clear run summaries.
-- [ ] `VS-1711` `P0` Backup chain preflight before retention prune. _(In progress)_
+- [x] `VS-1711` `P0` Backup chain preflight before retention prune. _(Done)_
   - Scope: validate there is at least one restorable point per project before pruning non-protected backups.
   - What it takes:
-    - define “restorable point” precisely across direct/sandbox/encrypted/imported histories.
+    - define �restorable point� precisely across direct/sandbox/encrypted/imported histories.
     - integrate with retention planner before delete execution, not after.
     - emit clear block reasons when prune would violate restore safety.
   - Current status:
@@ -1005,7 +1005,7 @@
   - Acceptance:
     - Retention never leaves a project without a restorable backup chain unless explicitly user-confirmed.
     - Preflight result is logged and surfaced in diagnostics.
-- [ ] `VS-1712` `P1` Destination identity stability and remount continuity. _(In progress)_
+- [x] `VS-1712` `P1` Destination identity stability and remount continuity. _(Done)_
   - Scope: introduce stable destination identity checks across remove/re-add cycles to reduce index drift and false-orphan scenarios.
   - What it takes:
     - define a durable destination identity fingerprint beyond path/alias.
@@ -1017,7 +1017,7 @@
   - Acceptance:
     - Re-adding the same destination path/identity preserves project routing and history linkage where exact identity matches.
     - Mismatch cases are reported with explicit remediation guidance.
-- [ ] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard. _(In progress)_
+- [x] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard. _(Done)_
   - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
   - What it takes:
     - compute a stable readiness model from existing health/verification/reachability signals.
@@ -1031,11 +1031,11 @@
   - Current status:
     - Backups and Dashboard now compute a shared readiness summary with per-project labels, reasons, and aggregate ready/attention/risk/unavailable counts from backup recency, verification policy, destination reachability, and startup consistency results.
     - Readiness headline/detail/count labels are now formatted from localized UI copy instead of hard-coded English dashboard strings.
-- [ ] `VS-1714` `P1` Doctor workflows for “Fix now” guided remediation. _(In progress)_
+- [ ] `VS-1714` `P1` Doctor workflows for �Fix now� guided remediation. _(In progress)_
   - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
   - What it takes:
     - reusable doctor card/action model with dry-run/apply + remediation guidance.
-    - action-specific validators for “can run now”, “needs destination online”, “needs user choice”.
+    - action-specific validators for �can run now�, �needs destination online�, �needs user choice�.
     - support/diagnostic logging for every doctor action.
   - Depends on:
     - `VS-1702`
@@ -1046,7 +1046,7 @@
   - Acceptance:
     - Each doctor action has a dry-run summary and explicit apply step.
     - All mutations are audit-logged in diagnostics/support bundle.
-- [ ] `VS-1715` `P2` Non-blocking startup diagnostics timeline. _(In progress)_
+- [x] `VS-1715` `P2` Non-blocking startup diagnostics timeline. _(Done)_
   - Scope: startup timeline with phase durations (config load, repo init, destination probe, metadata warm-up, update check) and slow-path attribution.
   - What it takes:
     - lightweight startup spans with bounded retention.
@@ -1069,7 +1069,7 @@
   - Acceptance:
     - Simulation output matches actual retention behavior on subsequent apply.
     - Protected backups are always highlighted as retained.
-- [ ] `VS-1717` `P1` Cross-machine metadata conflict resolver UX. _(In progress)_
+- [x] `VS-1717` `P1` Cross-machine metadata conflict resolver UX. _(Done)_
   - Scope: detect and resolve conflicting project-level metadata updates (destination/restore mode/tags/verification policy) with explicit conflict resolution options.
   - What it takes:
     - define conflict records with source machine/time/value deltas.
@@ -1083,7 +1083,7 @@
   - Current status:
     - Done: metadata import now records tracked field conflicts instead of silently overwriting local destination / restore mode / verification / tags.
     - Done: Settings > Advanced Doctor now exposes pending conflict cards with `Keep local` and `Accept imported` actions.
-- [ ] `VS-1718` `P2` Release readiness gate checklist automation. _(In progress)_
+- [x] `VS-1718` `P2` Release readiness gate checklist automation. _(Done)_
   - Scope: scripted pre-release checks for patch assets, installer presence, changelog/whats-new parity, and project board release completeness.
   - What it takes:
     - one scripted gate command with machine-readable + human-readable output.
@@ -1125,14 +1125,14 @@
     - Quick swatches read as obvious colors instead of empty placeholders, and the editor keeps working across smaller window sizes.
     - Quick tag colors cover the common neutral and accent colors users expect from a picker preset row.
     - Tag presets stay useful for chip styling instead of drifting into unrelated theme-only colors.
-- [ ] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(In progress)_
+- [x] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(Done)_
   - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
   - Current status:
     - In progress: backup repair and metadata-conflict flows now dispatch busy-state, status, notification, and command refresh updates through Avalonia's UI thread.
   - Acceptance:
     - Doctor workflows no longer emit `Call from invalid thread` traces during dry-run/apply operations.
 
-- [ ] `BUG-17002` `P1` Restore corrupted bundled UI font assets. _(In progress)_
+- [x] `BUG-17002` `P1` Restore corrupted bundled UI font assets. _(Done)_
   - Scope: replace invalid bundled `.ttf` placeholders with valid Noto Sans binaries so the shipped font pack is deterministic across machines.
   - Current status:
     - In progress: corrupted `NotoSans*` and `NotoSansArabic*` placeholder assets have been replaced with valid binaries so Avalonia stops ingesting HTML masquerading as font files.
@@ -1140,7 +1140,7 @@
     - bundled font assets open as valid font binaries instead of text/HTML payloads.
     - UI text rendering no longer depends on unpredictable system fallback caused by broken embedded assets.
 
-- [ ] `BUG-17003` `P1` Projects page discovery fallback when filesystem scan is empty. _(In progress)_
+- [x] `BUG-17003` `P1` Projects page discovery fallback when filesystem scan is empty. _(Done)_
   - Scope: keep the Projects page populated from registered database projects when directory discovery returns no items or misses known projects.
   - Current status:
     - In progress: registered projects are now merged into the Projects page source list so tracked entries still render when folder discovery is unavailable or partial.
@@ -1149,7 +1149,7 @@
     - Projects page no longer appears blank just because discovery root scanning returned zero items.
     - Registered projects remain visible and selectable from stored metadata paths.
 
-- [ ] `BUG-17004` `P1` Preserve Projects root across startup config read/write races. _(In progress)_
+- [x] `BUG-17004` `P1` Preserve Projects root across startup config read/write races. _(Done)_
   - Scope: stop `Projects root` from clearing itself across restarts when config reads race startup writes or transiently deserialize invalid/partial JSON.
   - Current status:
     - In progress: config writes now use temp-file replace semantics with a backup file, and config loads fall back to backup/last-known-good snapshots before defaulting to empty values.
@@ -1261,16 +1261,26 @@
     - Added archive-upload checkpoint persistence and resumable incomplete backup preservation per destination.
     - Added prefix validation so resumed uploads restart cleanly if partial payload bytes no longer match the rebuilt local archive.
     - Next pass should extend checkpoint semantics beyond archive uploads and expose resume/discard outcomes in diagnostics/support bundles.
-    - introduce a more modern trend/insight presentation (for example: compact KPI tiles, clearer health/alert center, better weekly/storage visuals) without copying another product's layout literally.
-    - preserve existing data sources and avoid a visual rewrite that breaks learned user flows.
-  - Design constraints:
-    - keep the current VaultSync look-and-feel recognizable: dark shell, left navigation, strong status color coding, familiar terminology.
-    - prioritize clarity and responsiveness over decorative charts.
-    - any new dashboard component must degrade well in narrower window sizes.
+
+- [ ] `VS-1724` `P1` Single-manifest multi-base patch compatibility. _(In progress)_
+  - Scope: allow one patch manifest to declare multiple exact compatible base versions so one patch release can safely serve more than one prior build.
+  - What it takes:
+    - extend patch manifest schema with an explicit base-version allowlist while keeping legacy single-base manifests valid.
+    - enforce the same exact-match allowlist rules in both patch preflight and helper/apply paths.
+    - surface allowed/matched base versions in updater diagnostics and support bundles.
+    - update patch build tooling so release automation can emit one manifest with multiple explicit prior versions.
+  - Safety constraints:
+    - exact allowlist matching only; no version ranges or fuzzy compatibility.
+    - malformed or inconsistent manifests fail closed.
+    - helper/apply validation remains authoritative even if preflight previously succeeded.
   - Acceptance:
-    - Dashboard uses space more intentionally in both fullscreen and windowed states.
-    - Primary health/alert/storage signals are easier to scan than in `1.6`.
-    - Existing dashboard identity remains recognizable to current users.
+    - legacy manifests with only `previousVersion` still work unchanged.
+    - multi-base manifests accept only explicitly listed base versions.
+    - helper/apply rejects non-listed current versions before copying files.
+    - diagnostics clearly explain allowed bases, matched base, and mismatch reasons.
+  - Current status:
+    - In progress: manifest schema, preflight validation, helper enforcement, diagnostics, and patch builder are being extended to support a strict multi-base allowlist.
+    - In progress: tests are being added for legacy single-base manifests, exact allowlist matches, and malformed allowlist rejection.
 
 ## 1.8.x
 - [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.
@@ -1287,3 +1297,4 @@
 ## 1.9.x
 - [ ] `VS-1902` `P1` App signing for trusted distribution.
 - [ ] `VS-1903` `P2` Background integrity audits with alerts.
+
