@@ -143,8 +143,12 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="16" Margin="4,8,4,0">
-        <Border Classes="card" Padding="0" Grid.Column="0" Background="{DynamicResource Surface2}">
+      <WrapPanel Grid.Row="1"
+                 Margin="4,8,4,0"
+                 Orientation="Horizontal"
+                 ItemSpacing="16"
+                 LineSpacing="16">
+        <Border Classes="card" Padding="0" Background="{DynamicResource Surface2}" Width="372" MinHeight="184">
           <Grid ColumnDefinitions="6,*">
             <Border Background="#4C7CFF" CornerRadius="18,0,0,18"/>
             <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
@@ -159,7 +163,7 @@
           </Grid>
         </Border>
 
-        <Border Classes="card" Padding="0" Grid.Column="1" Background="{DynamicResource Surface2}">
+        <Border Classes="card" Padding="0" Background="{DynamicResource Surface2}" Width="372" MinHeight="184">
           <Grid ColumnDefinitions="6,*">
             <Border Background="#22CC88" CornerRadius="18,0,0,18"/>
             <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
@@ -174,7 +178,7 @@
           </Grid>
         </Border>
 
-        <Border Classes="card" Padding="0" Grid.Column="2" Background="{DynamicResource Surface2}">
+        <Border Classes="card" Padding="0" Background="{DynamicResource Surface2}" Width="372" MinHeight="184">
           <Grid ColumnDefinitions="6,*">
             <Border Background="#47B3FF" CornerRadius="18,0,0,18"/>
             <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
@@ -190,7 +194,7 @@
           </Grid>
         </Border>
 
-        <Border Classes="card" Padding="0" Grid.Column="3" Background="{DynamicResource Surface2}">
+        <Border Classes="card" Padding="0" Background="{DynamicResource Surface2}" Width="420" MinHeight="184">
           <Grid ColumnDefinitions="6,*">
             <Border Background="#A05CFF" CornerRadius="18,0,0,18"/>
             <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
@@ -223,7 +227,7 @@
             </Border>
           </Grid>
         </Border>
-      </Grid>
+      </WrapPanel>
 
       <Border Grid.Row="2"
               Classes="card"
