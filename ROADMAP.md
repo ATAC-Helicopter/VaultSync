@@ -1228,16 +1228,16 @@
     - English summaries no longer render broken separator glyphs anywhere in the updated surfaces.
     - Shared controls and collapsed navigation feel intentional instead of default or placeholder-like.
 
-- [ ] `BUG-17008` `P2` Gate noisy dev logging behind verbose mode. _(In progress)_
+- [x] `BUG-17008` `P2` Gate noisy dev logging behind verbose mode. _(Done)_
   - Scope:
     - reduce backup, restore, destination, and dashboard runtime chatter that was useful during development and performance testing;
     - keep real failures visible while moving flow/progress tracing behind the explicit verbose logging path.
   - Current status:
-    - In progress: a shared runtime log gate now follows the current config and treats debug builds as verbose by default.
-    - In progress: high-churn backup, restore, transfer-progress, destination-resolution, and dashboard remap/fallback tracing is moving behind that gate.
+    - Done: the shared runtime log gate now follows config instead of enabling verbose trace output automatically in debug builds.
+    - Done: developers can still force full trace output with `VAULTSYNC_FORCE_VERBOSE=1` when they need raw flow logs without flipping app settings.
   - Acceptance:
     - normal beta and release runs do not emit backup-progress and restore-path chatter by default.
-    - debug builds still surface the developer-oriented tracing.
+    - developers can explicitly re-enable the developer-oriented tracing when needed.
     - enabling verbose logging restores the gated runtime chatter for troubleshooting.
 
 - [x] `BUG-17009` `P1` Batch diagnostics session-log writes behind one background writer. _(Done)_

@@ -5,15 +5,12 @@ namespace VaultSync.Core.Services;
 
 public static class RuntimeLog
 {
-#if DEBUG
-    private const bool IsDebugBuild = true;
-#else
-    private const bool IsDebugBuild = false;
-#endif
-
     private static volatile bool _verboseEnabled;
+    private static readonly bool ForceVerbose =
+        string.Equals(Environment.GetEnvironmentVariable("VAULTSYNC_FORCE_VERBOSE"), "1", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Environment.GetEnvironmentVariable("VAULTSYNC_FORCE_VERBOSE"), "true", StringComparison.OrdinalIgnoreCase);
 
-    public static bool ShouldEmitVerbose => IsDebugBuild || _verboseEnabled;
+    public static bool ShouldEmitVerbose => ForceVerbose || _verboseEnabled;
 
     public static void UpdateFromConfig(AppConfig? config)
     {

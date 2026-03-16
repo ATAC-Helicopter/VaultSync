@@ -61,7 +61,7 @@
 - [BUG-17003] Projects now fall back to registered entries when discovery is empty or partial.
 - [BUG-17003] Projects now show explicit empty and no-selection placeholders.
 - [BUG-17004] Projects root now survives startup config read/write races.
-- [BUG-17008] Backup, restore, and dashboard trace chatter now stays behind debug or explicit verbose logging.
+- [BUG-17008] Backup, restore, and dashboard trace chatter now stays behind explicit verbose logging, with `VAULTSYNC_FORCE_VERBOSE` available as a developer override.
 - [BUG-17009] Diagnostics logging now batches session-log writes through a single background writer instead of spawning one task per log line.
 - [BUG-17010] Projects group auto-backup actions no longer re-read app config during command-state evaluation and now use refreshed cached preferences instead.
 - [BUG-17007] Metadata import no longer creates or leaves projects with an empty `RootPath`; imported root hints are preserved and existing blank paths are repaired when metadata provides a usable root.
