@@ -56,6 +56,7 @@
 - [VS-1719] Dashboard now uses a more coherent wrap-based information layout.
 - [VS-1719] Dashboard sections were rebalanced for clearer fullscreen and windowed layouts.
 - [VS-1719] Dashboard summary cards now use a cleaner accent-strip hierarchy with less duplicated header content.
+- [VS-1719] Restore-readiness review moved out of the KPI row, and backup storage cards now explain why free-space capacity is currently at risk.
 - [VS-1713] Restore-readiness summaries and dashboard pills now use localized copy.
 ### Fixed
 - [BUG-17002] Restored corrupted bundled Noto Sans font assets.

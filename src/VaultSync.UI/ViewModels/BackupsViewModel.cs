@@ -2228,7 +2228,7 @@ namespace VaultSync.UI.ViewModels
                 try
                 {
                     var config = AppConfigStore.Load();
-                    var (usedPercent, freeText, thresholdText, isBelowThreshold, status) =
+                    var (usedPercent, freeText, thresholdText, isBelowThreshold, _, status) =
                         DashboardViewModel.ComputeBackupDiskUsageDetailed(config);
                     var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
 

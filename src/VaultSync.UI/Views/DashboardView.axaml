@@ -14,7 +14,7 @@
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
           MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
-          RowDefinitions="Auto,Auto,Auto,Auto"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
           RowSpacing="{DynamicResource PageRowSpacing}">
 
       <Border Grid.Row="0"
@@ -123,6 +123,10 @@
                            FontSize="16"
                            FontWeight="SemiBold"
                            TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding BackupDiskRiskReason}"
+                           Classes="metric-hint"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasBackupDiskRiskReason}"/>
                 <ProgressBar Minimum="0"
                              Maximum="100"
                              Value="{Binding BackupDiskUsedPercent}"
@@ -190,7 +194,7 @@
           <Grid ColumnDefinitions="6,*">
             <Border Background="#A05CFF" CornerRadius="18,0,0,18"/>
             <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
-              <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="8">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker"/>
                   <Button Grid.Column="1"
@@ -215,69 +219,85 @@
                     <TextBlock Text="{Binding RestoreReadinessUnavailableLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="110" TextTrimming="CharacterEllipsis"/>
                   </Border>
                 </WrapPanel>
-                <Border Grid.Row="4"
-                        IsVisible="{Binding ShowRestoreReadinessIssues}"
-                        CornerRadius="14"
-                        Background="{DynamicResource ItemBg}"
-                        BorderBrush="{DynamicResource BorderSoft}"
-                        BorderThickness="1"
-                        Padding="12"
-                        Margin="0,4,0,0">
-                  <StackPanel Spacing="8">
-                    <TextBlock Text="{infra:LocalizedString Key=RestoreReadiness.ReviewTitle}"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <ItemsControl ItemsSource="{Binding RestoreReadinessIssues}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Border CornerRadius="12"
-                                  Background="{DynamicResource Surface2}"
-                                  Padding="10,8"
-                                  Margin="0,0,0,6">
-                            <Grid ColumnDefinitions="Auto,*,Auto"
-                                  ColumnSpacing="8"
-                                  RowDefinitions="Auto,Auto"
-                                  RowSpacing="4">
-                              <Border Width="8"
-                                      Height="8"
-                                      CornerRadius="4"
-                                      Background="{Binding StateBrush}"
-                                      Margin="0,5,0,0" />
-                              <TextBlock Grid.Column="1"
-                                         Text="{Binding ProjectName}"
-                                         FontWeight="SemiBold"
-                                         TextTrimming="CharacterEllipsis" />
-                              <Border Grid.Column="2"
-                                      Classes="stat-pill sm"
-                                      Background="{Binding StateBrush}"
-                                      BorderBrush="{Binding StateBrush}">
-                                <TextBlock Text="{Binding StateLabel}"
-                                           FontSize="10"
-                                           Foreground="White" />
-                              </Border>
-                              <TextBlock Grid.Row="1"
-                                         Grid.Column="1"
-                                         Grid.ColumnSpan="2"
-                                         Text="{Binding Reason}"
-                                         FontSize="11"
-                                         Foreground="{DynamicResource TextSecondaryBrush}"
-                                         TextWrapping="Wrap"
-                                         MaxLines="3" />
-                            </Grid>
-                          </Border>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </StackPanel>
-                </Border>
               </Grid>
             </Border>
           </Grid>
         </Border>
       </Grid>
 
-      <Grid Grid.Row="2" ColumnDefinitions="1.65*,0.85*" ColumnSpacing="16" Margin="4,12,4,0">
+      <Border Grid.Row="2"
+              Classes="card"
+              IsVisible="{Binding ShowRestoreReadinessIssues}"
+              Padding="{DynamicResource CardPaddingSmall}"
+              Margin="4,8,4,0"
+              Background="{DynamicResource Surface2}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{infra:LocalizedString Key=RestoreReadiness.ReviewTitle}" Classes="section-title"/>
+              <TextBlock Text="{Binding RestoreReadinessDetail}" Classes="metric-hint" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="small-pill"
+                    Content="{infra:LocalizedString Key=RestoreReadiness.Review}"
+                    Command="{Binding ToggleRestoreReadinessIssuesCommand}"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"/>
+          </Grid>
+
+          <ItemsControl ItemsSource="{Binding RestoreReadinessIssues}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="10" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Width="320"
+                        MinHeight="96"
+                        CornerRadius="14"
+                        Background="{DynamicResource ItemBg}"
+                        BorderBrush="{DynamicResource BorderSoft}"
+                        BorderThickness="1"
+                        Padding="12">
+                  <Grid ColumnDefinitions="Auto,*,Auto"
+                        ColumnSpacing="10"
+                        RowDefinitions="Auto,Auto"
+                        RowSpacing="6">
+                    <Border Width="8"
+                            Height="8"
+                            CornerRadius="4"
+                            Background="{Binding StateBrush}"
+                            Margin="0,5,0,0" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding ProjectName}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                    <Border Grid.Column="2"
+                            Classes="stat-pill sm"
+                            Background="{Binding StateBrush}"
+                            BorderBrush="{Binding StateBrush}">
+                      <TextBlock Text="{Binding StateLabel}"
+                                 FontSize="10"
+                                 Foreground="White" />
+                    </Border>
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding Reason}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               MaxLines="3" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <Grid Grid.Row="3" ColumnDefinitions="1.65*,0.85*" ColumnSpacing="16" Margin="4,12,4,0">
         <Border Grid.Column="0"
                 Classes="card"
                 Background="{DynamicResource Surface2}"
@@ -446,7 +466,7 @@
         </Border>
       </Grid>
 
-      <Grid Grid.Row="3" ColumnDefinitions="1.15*,0.85*" ColumnSpacing="16" Margin="4,12,4,0">
+      <Grid Grid.Row="4" ColumnDefinitions="1.15*,0.85*" ColumnSpacing="16" Margin="4,12,4,0">
         <Border Grid.Column="0"
                 Classes="card"
                 Padding="{DynamicResource CardPaddingSmall}"
@@ -509,6 +529,10 @@
           <StackPanel Spacing="8">
             <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupStorage}" Classes="section-title"/>
             <TextBlock Text="{Binding BackupDiskFreeText}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding BackupDiskRiskReason}"
+                       Classes="metric-hint"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasBackupDiskRiskReason}"/>
 
             <Grid Margin="0,4,0,0" Height="12" ClipToBounds="True" Background="{DynamicResource ItemBg}">
               <ProgressBar Minimum="0" Maximum="100" Value="{Binding BackupDiskUsedPercent}" Height="12" Margin="0" Foreground="{DynamicResource TextSecondaryBrush}" Background="{DynamicResource Surface2}" IsVisible="{Binding HasBackupUsageSegments, Converter={StaticResource BoolInvertConverter}}"/>

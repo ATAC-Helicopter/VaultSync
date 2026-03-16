@@ -37,6 +37,7 @@ namespace VaultSync.UI.ViewModels
         private double _backupDiskUsedPercent;
         private string _backupDiskFreeText = string.Empty;
         private string _backupDiskThresholdText = string.Empty;
+        private string _backupDiskRiskReason = string.Empty;
         private bool _backupDiskIsBelowThreshold;
         private string _snapshotActivitySummary = string.Empty;
         private string _snapshotsSummaryLine = string.Empty;
@@ -182,6 +183,20 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged();
             }
         }
+
+        public string BackupDiskRiskReason
+        {
+            get => _backupDiskRiskReason;
+            private set
+            {
+                if (_backupDiskRiskReason == value) return;
+                _backupDiskRiskReason = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasBackupDiskRiskReason));
+            }
+        }
+
+        public bool HasBackupDiskRiskReason => !string.IsNullOrWhiteSpace(BackupDiskRiskReason);
 
         // Summary pills shown in the dashboard backups section.
         public string SnapshotActivitySummary
@@ -436,7 +451,7 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     var cfg = AppConfigStore.Load();
-                    var diskUsage = ComputeBackupDiskUsage(cfg);
+                    var diskUsage = ComputeBackupDiskUsageDetailed(cfg);
 
                     var dbPath = !string.IsNullOrWhiteSpace(cfg.DbPath)
                         ? cfg.DbPath
@@ -583,6 +598,7 @@ namespace VaultSync.UI.ViewModels
                 BackupDiskFreeText         = data.DiskUsage.FreeText;
                 BackupDiskThresholdText    = data.DiskUsage.ThresholdText;
                 BackupDiskIsBelowThreshold = data.DiskUsage.IsBelowThreshold;
+                BackupDiskRiskReason       = data.DiskUsage.RiskReason;
 
                 ProjectCount = data.Projects.Count;
                 SnapshotCount = data.BackupCount;
@@ -756,7 +772,7 @@ namespace VaultSync.UI.ViewModels
         private sealed class DashboardData
         {
             public AppConfig Config { get; init; } = new();
-            public (double UsedPercent, string FreeText, string ThresholdText, bool IsBelowThreshold) DiskUsage;
+            public (double UsedPercent, string FreeText, string ThresholdText, bool IsBelowThreshold, string RiskReason, BackupDiskUsageStatus Status) DiskUsage;
             public List<Project> Projects { get; init; } = new();
             public List<(int? ProjectId, DateTime WhenUtc, string Subtitle)> Activities { get; init; } = new();
             public List<(Project project, long bytes)> StorageSlices { get; init; } = new();
@@ -1403,7 +1419,7 @@ namespace VaultSync.UI.ViewModels
         /// Computes backup disk usage with an availability status so callers can avoid
         /// resetting UI to 0% on transient target issues.
         /// </summary>
-        public static (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, BackupDiskUsageStatus status)
+        public static (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string riskReason, BackupDiskUsageStatus status)
             ComputeBackupDiskUsageDetailed(AppConfig config)
         {
             try
@@ -1421,6 +1437,7 @@ namespace VaultSync.UI.ViewModels
                         L("Dashboard.Storage.NotConfigured", "Backup root not configured"),
                         thresholdText,
                         false,
+                        L("Dashboard.Storage.Risk.NotConfigured", "VaultSync cannot assess free space until a backup root is configured."),
                         BackupDiskUsageStatus.NotConfigured
                     );
                 }
@@ -1434,6 +1451,7 @@ namespace VaultSync.UI.ViewModels
                             L("Dashboard.Storage.TargetUnavailable", "Backup target not available"),
                             thresholdText,
                             false,
+                            L("Dashboard.Storage.Risk.TargetUnavailable", "The configured backup destination is currently unreachable, so free space and restore capacity cannot be verified."),
                             BackupDiskUsageStatus.TargetUnavailable
                         );
                     }
@@ -1452,6 +1470,7 @@ namespace VaultSync.UI.ViewModels
                         L("Dashboard.Storage.TargetUnavailable", "Backup target not available"),
                         thresholdText,
                         false,
+                        L("Dashboard.Storage.Risk.TargetUnavailable", "The configured backup destination is currently unreachable, so free space and restore capacity cannot be verified."),
                         BackupDiskUsageStatus.TargetUnavailable
                     );
                 }
@@ -1463,6 +1482,7 @@ namespace VaultSync.UI.ViewModels
                         L("Dashboard.Storage.SizeUnknown", "Backup target size unknown"),
                         thresholdText,
                         false,
+                        L("Dashboard.Storage.Risk.SizeUnknown", "VaultSync reached the backup target but could not determine total capacity."),
                         BackupDiskUsageStatus.SizeUnknown
                     );
                 }
@@ -1478,7 +1498,13 @@ namespace VaultSync.UI.ViewModels
                     freePercent.ToString("0.#"));
                 var isBelowThreshold = freePercent < config.Storage.MinFreeSpacePercent;
 
-                return (usedPercent, freeText, thresholdText, isBelowThreshold, BackupDiskUsageStatus.Ok);
+                var riskReason = isBelowThreshold
+                    ? string.Format(
+                        L("Dashboard.Storage.Risk.LowFreeSpace", "Free space dropped below the configured {0}% safety threshold, so future backups may fail or force retention cleanup."),
+                        config.Storage.MinFreeSpacePercent)
+                    : string.Empty;
+
+                return (usedPercent, freeText, thresholdText, isBelowThreshold, riskReason, BackupDiskUsageStatus.Ok);
             }
             catch (Exception)
             {
@@ -1487,6 +1513,7 @@ namespace VaultSync.UI.ViewModels
                     L("Dashboard.Storage.UsageUnavailable", "Backup storage usage unavailable"),
                     string.Empty,
                     false,
+                    L("Dashboard.Storage.Risk.Error", "VaultSync could not read backup storage usage because the destination check failed unexpectedly."),
                     BackupDiskUsageStatus.Error
                 );
             }
@@ -1495,7 +1522,7 @@ namespace VaultSync.UI.ViewModels
         public static (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold)
             ComputeBackupDiskUsage(AppConfig config)
         {
-            var (usedPercent, freeText, thresholdText, isBelowThreshold, _) = ComputeBackupDiskUsageDetailed(config);
+            var (usedPercent, freeText, thresholdText, isBelowThreshold, _, _) = ComputeBackupDiskUsageDetailed(config);
             return (usedPercent, freeText, thresholdText, isBelowThreshold);
         }
 
@@ -1843,13 +1870,14 @@ namespace VaultSync.UI.ViewModels
 
         private void UpdateBackupDiskUsage(AppConfig config)
         {
-            var (usedPercent, freeText, thresholdText, isBelowThreshold) =
-                ComputeBackupDiskUsage(config);
+            var (usedPercent, freeText, thresholdText, isBelowThreshold, riskReason, _) =
+                ComputeBackupDiskUsageDetailed(config);
 
             BackupDiskUsedPercent      = usedPercent;
             BackupDiskFreeText         = freeText;
             BackupDiskThresholdText    = thresholdText;
             BackupDiskIsBelowThreshold = isBelowThreshold;
+            BackupDiskRiskReason       = riskReason;
         }
 
         private void UpdateBackupSummaryPills()
