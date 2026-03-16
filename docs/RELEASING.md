@@ -27,6 +27,25 @@ This document defines the current release packaging flow.
 ## 3) Patch/Updater Assets
 Create patch manifest and patch archives as described in `docs/UPDATER.md`.
 
+For `VS-1724` multi-base patch support:
+- use `previous_version` as the primary legacy base version
+- optionally provide `previous_versions` as a comma/newline separated exact allowlist
+- only include versions you have actually validated against the same patch payload
+- do not use ranges or inferred compatibility
+
+Example multi-base input:
+- `previous_version = 1.6.2`
+- `previous_versions =`
+  - `1.6.0`
+  - `1.6.1`
+  - `1.6.2`
+
+This produces one manifest with:
+- `previousVersion` for backward compatibility
+- `baseVersions` as the exact allowed base-version list
+
+Older or unlisted installs must fall back to the full installer.
+
 ## 4) Release Checklist
 - Run the release gate before publishing:
   ```powershell

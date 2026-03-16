@@ -13,6 +13,9 @@ on:
       previous_version:
         description: "Previous version for patch manifests (e.g., 1.6.0 or 1.7.0-beta.1)"
         required: true
+      previous_versions:
+        description: "Optional comma/newline separated exact base-version allowlist for one manifest (defaults to previous_version only)"
+        required: false
       target_version:
         description: "Target version for patch manifests (e.g., 1.7.0-beta.2 or 1.7.0)"
         required: true
@@ -20,14 +23,18 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      patch_base_versions: ${{ steps.validate_inputs.outputs.patch_base_versions }}
     steps:
       - name: Validate release inputs
+        id: validate_inputs
         shell: bash
         run: |
           set -euo pipefail
 
           channel="${{ inputs.release_channel }}"
           previous="${{ inputs.previous_version }}"
+          previous_versions_raw="${{ inputs.previous_versions }}"
           target="${{ inputs.target_version }}"
           branch="${{ github.ref_name }}"
 
@@ -40,6 +47,31 @@ jobs:
             echo "previous_version and target_version must be different."
             exit 1
           fi
+
+          mapfile -t requested_versions < <(
+            {
+              printf '%s\n' "$previous"
+              printf '%s' "$previous_versions_raw" | tr ',;' '\n'
+            } | sed 's/\r//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | awk 'NF' | awk '!seen[$0]++'
+          )
+
+          if [[ ${#requested_versions[@]} -eq 0 ]]; then
+            echo "At least one previous/base version is required."
+            exit 1
+          fi
+
+          for base in "${requested_versions[@]}"; do
+            if [[ "$base" == "$target" ]]; then
+              echo "Base version '$base' must not equal target_version '$target'."
+              exit 1
+            fi
+          done
+
+          {
+            echo "patch_base_versions<<EOF"
+            printf '%s\n' "${requested_versions[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
           if [[ "$channel" == "beta" ]]; then
             if [[ "$branch" != "Dev" ]]; then
@@ -68,6 +100,12 @@ jobs:
           - Channel: \`$channel\`
           - Branch: \`$branch\`
           - Previous version: \`$previous\`
+          - Base allow-list:
+          EOF
+          for base in "${requested_versions[@]}"; do
+            echo "  - \`$base\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+          cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           - Target version: \`$target\`
           EOF
 
@@ -102,12 +140,21 @@ jobs:
         run: |
           $patchDir = "patches/v${{ inputs.target_version }}"
           New-Item -ItemType Directory -Force $patchDir | Out-Null
+          $baseVersions = @()
+          foreach ($line in @"
+${{ needs.validate.outputs.patch_base_versions }}
+"@ -split "`r?`n")
+          {
+            $trimmed = $line.Trim()
+            if ($trimmed) { $baseVersions += $trimmed }
+          }
+          $previousArgs = foreach ($baseVersion in $baseVersions) { "--previous"; $baseVersion }
           python scripts/build_patch.py `
             --base-dir "src/VaultSync.UI/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish" `
             --out-zip "$patchDir/vaultsync-patch-windows.zip" `
             --out-manifest "$patchDir/vaultsync-patch-windows.json" `
             --platform windows `
-            --previous "${{ inputs.previous_version }}" `
+            @previousArgs `
             --target "${{ inputs.target_version }}"
 
       - name: Upload Windows artifacts
@@ -155,19 +202,25 @@ jobs:
       - name: Build patch assets
         run: |
           mkdir -p "patches/v${{ inputs.target_version }}"
+          mapfile -t patch_bases < <(printf '%s\n' "${{ needs.validate.outputs.patch_base_versions }}")
+          previous_args=()
+          for base in "${patch_bases[@]}"; do
+            [[ -n "$base" ]] || continue
+            previous_args+=( --previous "$base" )
+          done
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net8.0/osx-arm64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.json" \
             --platform macos \
-            --previous "${{ inputs.previous_version }}" \
+            "${previous_args[@]}" \
             --target "${{ inputs.target_version }}"
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net8.0/osx-x64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.json" \
             --platform macos \
-            --previous "${{ inputs.previous_version }}" \
+            "${previous_args[@]}" \
             --target "${{ inputs.target_version }}"
 
       - name: Upload macOS artifacts
