@@ -55,6 +55,7 @@
 - [VS-1713] Backups and Dashboard now show a restore-readiness scorecard.
 - [VS-1719] Dashboard now uses a more coherent wrap-based information layout.
 - [VS-1719] Dashboard sections were rebalanced for clearer fullscreen and windowed layouts.
+- [VS-1719] Dashboard summary cards now use a cleaner accent-strip hierarchy with less duplicated header content.
 - [VS-1713] Restore-readiness summaries and dashboard pills now use localized copy.
 ### Fixed
 - [BUG-17002] Restored corrupted bundled Noto Sans font assets.

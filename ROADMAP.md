@@ -1103,6 +1103,7 @@
   - Current status:
     - In progress: first-pass dashboard redesign is in place with a stronger operations header, wrap-based KPI layout, a dedicated recent-activity rail, and rebalanced trend/storage cards that behave more predictably in windowed layouts.
     - In progress: header and lower information groups were refined to reduce the random/duplicated feel and make readiness, activity, trend, and storage read as one consistent dashboard hierarchy.
+    - In progress: summary cards now use accent-strip hierarchy and the header focuses on operational context instead of repeating the same KPI blocks.
  - [x] `VS-1721` `P2` App-wide tag color editor and chip styling. _(Done)_
   - Scope: add a complete app-wide tag-color system, edited primarily from Projects, and apply those colors consistently wherever project tags render.
   - What it takes:

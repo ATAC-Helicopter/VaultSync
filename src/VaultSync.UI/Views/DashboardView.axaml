@@ -22,12 +22,12 @@
               Padding="{DynamicResource CardPaddingLarge}"
               Margin="0,0,0,4"
               CornerRadius="20">
-        <Grid ColumnDefinitions="2.1*,1*" ColumnSpacing="16">
+        <Grid ColumnDefinitions="2.2*,1*" ColumnSpacing="16">
           <Border Grid.Column="0"
                   Background="{DynamicResource Surface2}"
                   CornerRadius="18"
                   Padding="20">
-            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
               <StackPanel Spacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Dashboard.Title}"
                            Classes="section-title"
@@ -52,22 +52,28 @@
                 </Border>
               </WrapPanel>
 
-              <Grid Grid.Row="2" ColumnDefinitions="1.25*,0.75*" ColumnSpacing="12">
+              <Grid Grid.Row="2" ColumnDefinitions="1.1*,0.9*" ColumnSpacing="12">
                 <Border Background="{DynamicResource ItemBg}" CornerRadius="14" Padding="14,12">
                   <StackPanel Spacing="4">
                     <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupsThisWeek}" Classes="kicker"/>
                     <TextBlock Text="{Binding SnapshotActivitySummary}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2"/>
                     <TextBlock Text="{Binding SnapshotsSummaryLine}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="2"/>
-                    <Border Margin="0,4,0,0" Background="{DynamicResource Surface2}" CornerRadius="10" Padding="8,6">
-                      <TextBlock Text="{Binding WeeklyAverageLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    </Border>
+                    <WrapPanel Margin="0,4,0,0" ItemSpacing="8" LineSpacing="6">
+                      <Border Background="{DynamicResource Surface2}" CornerRadius="10" Padding="8,6">
+                        <TextBlock Text="{Binding WeeklyAverageLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                      </Border>
+                      <Border Background="{DynamicResource Surface2}" CornerRadius="10" Padding="8,6">
+                        <TextBlock Text="{Binding TotalSnapshotsWeekLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                      </Border>
+                    </WrapPanel>
                   </StackPanel>
                 </Border>
                 <Border Grid.Column="1" Background="{DynamicResource ItemBg}" CornerRadius="14" Padding="14,12">
                   <StackPanel Spacing="4">
-                    <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.RecentActivity}" Classes="kicker"/>
-                    <TextBlock Text="{Binding SnapshotActivitySummary}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2"/>
-                    <TextBlock Text="{Binding SnapshotsSummaryLine}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="2"/>
+                    <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Storage}" Classes="kicker"/>
+                    <TextBlock Text="{Binding StorageUsedLocal}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2"/>
+                    <TextBlock Text="{Binding StorageHint}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="2"/>
+                    <TextBlock Text="{Binding BackupDiskThresholdText}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="2"/>
                   </StackPanel>
                 </Border>
               </Grid>
@@ -134,118 +140,138 @@
       </Border>
 
       <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="16" Margin="4,8,4,0">
-        <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="0" Background="#1E2740">
-          <Grid RowDefinitions="Auto,*">
-            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Projects}" Classes="kicker"/>
-            <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Stretch">
-              <TextBlock Text="{Binding ProjectCount}" FontSize="{DynamicResource MetricFontSize}" FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding ProjectsHint}" Classes="metric-hint" TextWrapping="Wrap"/>
-            </StackPanel>
+        <Border Classes="card" Padding="0" Grid.Column="0" Background="{DynamicResource Surface2}">
+          <Grid ColumnDefinitions="6,*">
+            <Border Background="#4C7CFF" CornerRadius="18,0,0,18"/>
+            <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
+              <Grid RowDefinitions="Auto,*">
+                <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Projects}" Classes="kicker"/>
+                <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Stretch">
+                  <TextBlock Text="{Binding ProjectCount}" FontSize="{DynamicResource MetricFontSize}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding ProjectsHint}" Classes="metric-hint" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Grid>
+            </Border>
           </Grid>
         </Border>
 
-        <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="1" Background="#1F2B37">
-          <Grid RowDefinitions="Auto,*">
-            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Backups}" Classes="kicker"/>
-            <StackPanel Grid.Row="1" Spacing="6">
-              <TextBlock Text="{Binding SnapshotCount}" FontSize="{DynamicResource MetricFontSize}" FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding SnapshotsHint}" Classes="metric-hint" TextWrapping="Wrap"/>
-            </StackPanel>
+        <Border Classes="card" Padding="0" Grid.Column="1" Background="{DynamicResource Surface2}">
+          <Grid ColumnDefinitions="6,*">
+            <Border Background="#22CC88" CornerRadius="18,0,0,18"/>
+            <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
+              <Grid RowDefinitions="Auto,*">
+                <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Backups}" Classes="kicker"/>
+                <StackPanel Grid.Row="1" Spacing="6">
+                  <TextBlock Text="{Binding SnapshotCount}" FontSize="{DynamicResource MetricFontSize}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding SnapshotsHint}" Classes="metric-hint" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Grid>
+            </Border>
           </Grid>
         </Border>
 
-        <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="2" Background="#20263D">
-          <Grid RowDefinitions="Auto,*">
-            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Storage}" Classes="kicker"/>
-            <StackPanel Grid.Row="1" Spacing="6">
-              <TextBlock Text="{Binding StorageUsed}" FontSize="{DynamicResource MetricFontSize}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-              <TextBlock Text="{Binding StorageUsedLocal}" Classes="metric-hint" TextWrapping="Wrap"/>
-              <TextBlock Text="{Binding StorageHint}" Classes="metric-hint" TextWrapping="Wrap"/>
-            </StackPanel>
+        <Border Classes="card" Padding="0" Grid.Column="2" Background="{DynamicResource Surface2}">
+          <Grid ColumnDefinitions="6,*">
+            <Border Background="#47B3FF" CornerRadius="18,0,0,18"/>
+            <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
+              <Grid RowDefinitions="Auto,*">
+                <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.Storage}" Classes="kicker"/>
+                <StackPanel Grid.Row="1" Spacing="6">
+                  <TextBlock Text="{Binding StorageUsed}" FontSize="{DynamicResource MetricFontSize}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                  <TextBlock Text="{Binding StorageUsedLocal}" Classes="metric-hint" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding StorageHint}" Classes="metric-hint" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Grid>
+            </Border>
           </Grid>
         </Border>
 
-        <Border Classes="card" Padding="{DynamicResource CardPaddingLarge}" Grid.Column="3" Background="#2A2239">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="8">
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker"/>
-              <Button Grid.Column="1"
-                      Classes="small-pill"
-                      Content="{infra:LocalizedString Key=RestoreReadiness.Review}"
-                      Command="{Binding ToggleRestoreReadinessIssuesCommand}"
-                      IsVisible="{Binding HasRestoreReadinessIssues}" />
-            </Grid>
-            <TextBlock Grid.Row="1" Text="{Binding RestoreReadinessHeadline}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="3"/>
-            <TextBlock Grid.Row="2" Text="{Binding RestoreReadinessDetail}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="2"/>
-            <WrapPanel Grid.Row="3" ItemSpacing="6" LineSpacing="6" Margin="0,2,0,0">
-              <Border Classes="stat-pill sm success">
-                <TextBlock Text="{Binding RestoreReadinessReadyLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
-              </Border>
-              <Border Classes="stat-pill sm warning">
-                <TextBlock Text="{Binding RestoreReadinessAttentionLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
-              </Border>
-              <Border Classes="stat-pill sm danger">
-                <TextBlock Text="{Binding RestoreReadinessRiskLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
-              </Border>
-              <Border Classes="stat-pill sm info">
-                <TextBlock Text="{Binding RestoreReadinessUnavailableLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="110" TextTrimming="CharacterEllipsis"/>
-              </Border>
-            </WrapPanel>
-            <Border Grid.Row="4"
-                    IsVisible="{Binding ShowRestoreReadinessIssues}"
-                    CornerRadius="14"
-                    Background="{DynamicResource ItemBg}"
-                    BorderBrush="{DynamicResource BorderSoft}"
-                    BorderThickness="1"
-                    Padding="12"
-                    Margin="0,4,0,0">
-              <StackPanel Spacing="8">
-                <TextBlock Text="{infra:LocalizedString Key=RestoreReadiness.ReviewTitle}"
-                           FontSize="11"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextSecondaryBrush}" />
-                <ItemsControl ItemsSource="{Binding RestoreReadinessIssues}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Border CornerRadius="12"
-                              Background="{DynamicResource Surface2}"
-                              Padding="10,8"
-                              Margin="0,0,0,6">
-                        <Grid ColumnDefinitions="Auto,*,Auto"
-                              ColumnSpacing="8"
-                              RowDefinitions="Auto,Auto"
-                              RowSpacing="4">
-                          <Border Width="8"
-                                  Height="8"
-                                  CornerRadius="4"
-                                  Background="{Binding StateBrush}"
-                                  Margin="0,5,0,0" />
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding ProjectName}"
-                                     FontWeight="SemiBold"
-                                     TextTrimming="CharacterEllipsis" />
-                          <Border Grid.Column="2"
-                                  Classes="stat-pill sm"
-                                  Background="{Binding StateBrush}"
-                                  BorderBrush="{Binding StateBrush}">
-                            <TextBlock Text="{Binding StateLabel}"
-                                       FontSize="10"
-                                       Foreground="White" />
+        <Border Classes="card" Padding="0" Grid.Column="3" Background="{DynamicResource Surface2}">
+          <Grid ColumnDefinitions="6,*">
+            <Border Background="#A05CFF" CornerRadius="18,0,0,18"/>
+            <Border Grid.Column="1" Padding="{DynamicResource CardPaddingLarge}" Background="Transparent">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="8">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker"/>
+                  <Button Grid.Column="1"
+                          Classes="small-pill"
+                          Content="{infra:LocalizedString Key=RestoreReadiness.Review}"
+                          Command="{Binding ToggleRestoreReadinessIssuesCommand}"
+                          IsVisible="{Binding HasRestoreReadinessIssues}" />
+                </Grid>
+                <TextBlock Grid.Row="1" Text="{Binding RestoreReadinessHeadline}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="3"/>
+                <TextBlock Grid.Row="2" Text="{Binding RestoreReadinessDetail}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="2"/>
+                <WrapPanel Grid.Row="3" ItemSpacing="6" LineSpacing="6" Margin="0,2,0,0">
+                  <Border Classes="stat-pill sm success">
+                    <TextBlock Text="{Binding RestoreReadinessReadyLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
+                  </Border>
+                  <Border Classes="stat-pill sm warning">
+                    <TextBlock Text="{Binding RestoreReadinessAttentionLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
+                  </Border>
+                  <Border Classes="stat-pill sm danger">
+                    <TextBlock Text="{Binding RestoreReadinessRiskLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
+                  </Border>
+                  <Border Classes="stat-pill sm info">
+                    <TextBlock Text="{Binding RestoreReadinessUnavailableLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="110" TextTrimming="CharacterEllipsis"/>
+                  </Border>
+                </WrapPanel>
+                <Border Grid.Row="4"
+                        IsVisible="{Binding ShowRestoreReadinessIssues}"
+                        CornerRadius="14"
+                        Background="{DynamicResource ItemBg}"
+                        BorderBrush="{DynamicResource BorderSoft}"
+                        BorderThickness="1"
+                        Padding="12"
+                        Margin="0,4,0,0">
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="{infra:LocalizedString Key=RestoreReadiness.ReviewTitle}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ItemsControl ItemsSource="{Binding RestoreReadinessIssues}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="12"
+                                  Background="{DynamicResource Surface2}"
+                                  Padding="10,8"
+                                  Margin="0,0,0,6">
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="8"
+                                  RowDefinitions="Auto,Auto"
+                                  RowSpacing="4">
+                              <Border Width="8"
+                                      Height="8"
+                                      CornerRadius="4"
+                                      Background="{Binding StateBrush}"
+                                      Margin="0,5,0,0" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding ProjectName}"
+                                         FontWeight="SemiBold"
+                                         TextTrimming="CharacterEllipsis" />
+                              <Border Grid.Column="2"
+                                      Classes="stat-pill sm"
+                                      Background="{Binding StateBrush}"
+                                      BorderBrush="{Binding StateBrush}">
+                                <TextBlock Text="{Binding StateLabel}"
+                                           FontSize="10"
+                                           Foreground="White" />
+                              </Border>
+                              <TextBlock Grid.Row="1"
+                                         Grid.Column="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding Reason}"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                         TextWrapping="Wrap"
+                                         MaxLines="3" />
+                            </Grid>
                           </Border>
-                          <TextBlock Grid.Row="1"
-                                     Grid.Column="1"
-                                     Grid.ColumnSpan="2"
-                                     Text="{Binding Reason}"
-                                     FontSize="11"
-                                     Foreground="{DynamicResource TextSecondaryBrush}"
-                                     TextWrapping="Wrap"
-                                     MaxLines="3" />
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </Grid>
             </Border>
           </Grid>
         </Border>
