@@ -1095,17 +1095,16 @@
   - Acceptance:
     - One command emits pass/fail with actionable errors.
     - Gate output is attachable to release notes/support workflows.
-- [ ] `VS-1719` `P2` Dashboard information architecture and visual modernization pass. _(In progress)_
+- [x] `VS-1719` `P2` Dashboard information architecture and visual modernization pass. _(Done)_
   - Scope: revisit the Dashboard layout so it feels more modern and operationally useful while keeping VaultSync's dark visual identity, navigation model, and familiar core cards.
   - What it takes:
     - redesign KPI/card hierarchy so the most actionable signals land first (`backups`, `restore readiness`, `alerts`, `storage`, `recent activity`).
     - replace the current stretched/empty-space-prone sections with responsive card groups that scale cleanly in both maximized and windowed modes.
   - Current status:
-    - In progress: first-pass dashboard redesign is in place with a stronger operations header, wrap-based KPI layout, a dedicated recent-activity rail, and rebalanced trend/storage cards that behave more predictably in windowed layouts.
-    - In progress: header and lower information groups were refined to reduce the random/duplicated feel and make readiness, activity, trend, and storage read as one consistent dashboard hierarchy.
-    - In progress: summary cards now use accent-strip hierarchy and the header focuses on operational context instead of repeating the same KPI blocks.
-    - In progress: restore-readiness review now sits in its own section instead of stretching the KPI row, and backup storage cards explain why capacity is currently at risk.
-    - In progress: the KPI row now wraps into stable-width cards so fullscreen layouts stop leaving oversized dead space and narrower windows keep a predictable card rhythm.
+    - Done: the dashboard redesign is in place with a stronger operations header, dedicated recent-activity rail, and responsive trend/storage groups that behave predictably in windowed layouts.
+    - Done: header and lower information groups were refined to remove random duplication and make readiness, activity, trend, and storage read as one consistent hierarchy.
+    - Done: summary cards use accent-strip hierarchy, restore-readiness review sits in its own section, and backup storage cards explain why capacity is currently at risk.
+    - Done: the KPI row wraps into stable-width cards so fullscreen layouts avoid oversized dead space and narrower windows keep a predictable card rhythm.
  - [x] `VS-1721` `P2` App-wide tag color editor and chip styling. _(Done)_
   - Scope: add a complete app-wide tag-color system, edited primarily from Projects, and apply those colors consistently wherever project tags render.
   - What it takes:
