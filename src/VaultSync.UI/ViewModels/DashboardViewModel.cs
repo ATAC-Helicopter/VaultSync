@@ -347,6 +347,7 @@ namespace VaultSync.UI.ViewModels
         public RelayCommand RefreshCommand { get; }
         public RelayCommand NewSnapshotCommand { get; }
         public RelayCommand ToggleRestoreReadinessIssuesCommand { get; }
+        public RelayCommand OpenBackupsCommand { get; }
 
         // Chart bindings
         public ISeries[] SnapshotSeries { get; private set; } = Array.Empty<ISeries>();
@@ -390,6 +391,9 @@ namespace VaultSync.UI.ViewModels
             RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
             NewSnapshotCommand = new RelayCommand(_ => { /* wired later from dashboard actions */ });
             ToggleRestoreReadinessIssuesCommand = new RelayCommand(_ => ShowRestoreReadinessIssues = !ShowRestoreReadinessIssues, _ => HasRestoreReadinessIssues);
+            OpenBackupsCommand = new RelayCommand(
+                _ => App.AppViewModelInstance?.NavigateBackups?.Execute(null),
+                _ => App.AppViewModelInstance?.NavigateBackups?.CanExecute(null) == true);
 
             BuildStaticAxes();
             BuildDemoSeriesIfNeeded();

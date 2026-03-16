@@ -236,12 +236,18 @@
               Margin="4,8,4,0"
               Background="{DynamicResource Surface2}">
         <StackPanel Spacing="10">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
             <StackPanel Spacing="4">
               <TextBlock Text="{infra:LocalizedString Key=RestoreReadiness.ReviewTitle}" Classes="section-title"/>
               <TextBlock Text="{Binding RestoreReadinessDetail}" Classes="metric-hint" TextWrapping="Wrap"/>
             </StackPanel>
             <Button Grid.Column="1"
+                    Classes="small-pill"
+                    Content="{infra:LocalizedString Key=RestoreReadiness.ReviewOpenBackups}"
+                    Command="{Binding OpenBackupsCommand}"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"/>
+            <Button Grid.Column="2"
                     Classes="small-pill"
                     Content="{infra:LocalizedString Key=RestoreReadiness.Review}"
                     Command="{Binding ToggleRestoreReadinessIssuesCommand}"

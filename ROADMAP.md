@@ -1208,15 +1208,15 @@
     - Theme quick colors update the selected section immediately instead of appearing to do nothing.
 
 
-- [ ] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(In progress)_
+- [x] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(Done)_
   - Scope:
     - make restore-readiness risk states easy to inspect from Dashboard and Backups without hunting for the affected projects;
     - remove corrupted English separator glyphs and tighten summary copy in Dashboard, Backups, Projects, and retention surfaces;
     - improve collapsed sidebar presence, shared toggle/checkbox styling, Backups summary spacing, and the Projects tag-color editor layout.
   - Current status:
-    - In progress: Dashboard and Backups restore-readiness cards now expose a one-click issue list with project names and reasons.
-    - In progress: English summary strings are being normalized to ASCII-safe separators so mojibake does not leak into release builds.
-    - In progress: the collapsed shell sidebar, shared toggles and checkboxes, Backups storage card spacing, and Projects tag-color editor are being visually tightened.
+    - Done: Dashboard and Backups restore-readiness cards expose an in-place issue list with direct navigation back to Backups for action.
+    - Done: corrupted English glyphs now use ASCII-safe fallbacks so mojibake does not leak into release builds.
+    - Done: the shared shell/sidebar, toggle styling, Backups spacing, and Projects tag-color editor polish landed across the 1.7 UI passes.
   - Acceptance:
     - Restore-readiness summaries can be expanded in place to show who is affected and why.
     - English summaries no longer render broken separator glyphs anywhere in the updated surfaces.

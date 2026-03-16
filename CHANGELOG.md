@@ -60,6 +60,7 @@
 - [VS-1719] Restore-readiness review moved out of the KPI row, and backup storage cards now explain why free-space capacity is currently at risk.
 - [VS-1713] Restore-readiness summaries and dashboard pills now use localized copy.
 ### Fixed
+- [BUG-17006] Dashboard restore-readiness review now links directly to Backups, and the corrupted English notification dismiss glyph was replaced with an ASCII-safe fallback.
 - [BUG-17002] Restored corrupted bundled Noto Sans font assets.
 - [BUG-17003] Projects now fall back to registered entries when discovery is empty or partial.
 - [BUG-17003] Projects now show explicit empty and no-selection placeholders.
