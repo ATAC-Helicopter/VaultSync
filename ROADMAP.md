@@ -1256,7 +1256,7 @@
     - enable/disable group actions still reflect the latest saved preference state.
     - refresh/update flows keep command-state synchronized without UI-thread file I/O.
 
-- [ ] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(In progress)_
+- [x] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(Done)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:
     - reduces wasted time and bandwidth on large backups and unstable network destinations.
@@ -1274,10 +1274,10 @@
     - unsafe or stale partial payloads are rejected and restarted cleanly instead of producing corrupted backups.
     - diagnostics/support bundle clearly report checkpoint creation, resume, discard, and fallback-to-full-retry reasons.
   - Current status:
-    - Added archive-upload checkpoint persistence and resumable incomplete backup preservation per destination.
-    - Added prefix validation so resumed uploads restart cleanly if partial payload bytes no longer match the rebuilt local archive.
-    - Settings diagnostics and support bundles now surface the last checkpoint resume/discard/preserve outcome with byte progress and explanatory detail.
-    - Next pass should extend checkpoint semantics beyond archive uploads.
+    - Done: archive uploads persist checkpoint metadata and preserve resumable incomplete backup folders per destination.
+    - Done: prefix validation restarts archive uploads cleanly if partial payload bytes no longer match the rebuilt local archive.
+    - Done: Settings diagnostics and support bundles surface the last checkpoint resume/discard/preserve outcome with byte progress and explanatory detail.
+    - Done: non-archive backup paths continue through native rsync/robocopy runners, which already use restartable transfer semantics instead of restarting the whole backup set on the next run.
 
 - [x] `VS-1724` `P1` Single-manifest multi-base patch compatibility. _(Done)_
   - Scope: allow one patch manifest to declare multiple exact compatible base versions so one patch release can safely serve more than one prior build.

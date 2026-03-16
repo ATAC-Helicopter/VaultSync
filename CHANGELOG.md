@@ -23,6 +23,7 @@
 - [VS-1709] Support bundles now include update, repair, and metadata-conflict telemetry.
 - [VS-1720] Archive transfers can now resume from verified checkpoints instead of restarting.
 - [VS-1720] Settings diagnostics and support bundles now record checkpoint resume, discard, cleanup-preserve, and fallback outcomes for interrupted archive uploads.
+- [VS-1720] Native rsync/robocopy backup paths keep their restartable transfer semantics, so non-archive retries do not restart the whole backup set on the next run.
 - [VS-1724] Patch manifests can now declare multiple exact allowed base versions for one target release.
 - [VS-1716] Settings > Backups now includes a retention simulation preview.
 - [VS-1718] Added a scripted release-readiness gate with human and JSON output.
