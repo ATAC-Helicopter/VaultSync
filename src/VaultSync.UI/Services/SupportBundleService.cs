@@ -303,6 +303,18 @@ public sealed class SupportBundleService
                             phase.ElapsedMs
                         })
                         .ToList()
+                },
+                checkpointResumeTelemetry = new
+                {
+                    config.Advanced.CheckpointResumeTelemetry.LastUpdatedUtc,
+                    config.Advanced.CheckpointResumeTelemetry.LastStatus,
+                    config.Advanced.CheckpointResumeTelemetry.LastProjectName,
+                    config.Advanced.CheckpointResumeTelemetry.LastBackupFolder,
+                    config.Advanced.CheckpointResumeTelemetry.LastArchivePath,
+                    config.Advanced.CheckpointResumeTelemetry.LastResumeOffsetBytes,
+                    config.Advanced.CheckpointResumeTelemetry.LastArchiveSizeBytes,
+                    config.Advanced.CheckpointResumeTelemetry.LastSourceFingerprint,
+                    config.Advanced.CheckpointResumeTelemetry.LastMessage
                 }
             },
             behavior = new

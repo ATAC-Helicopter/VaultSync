@@ -116,6 +116,7 @@ namespace VaultSync.UI
         private string _updateCheckErrorText = string.Empty;
         private string _updateDiagnosticsText = string.Empty;
         private string _startupDiagnosticsText = string.Empty;
+        private string _checkpointResumeDiagnosticsText = string.Empty;
         private string _retentionSimulationStatus = string.Empty;
         private string _retentionSimulationSummary = string.Empty;
         private string _retentionSimulationDetails = string.Empty;
@@ -745,6 +746,7 @@ namespace VaultSync.UI
             _maintenanceRunMetadataRefresh = cfg.Advanced.Maintenance.RunMetadataRefresh;
             RefreshUpdateDiagnostics(cfg.Advanced.UpdateDiagnostics);
             RefreshStartupDiagnostics(cfg.Advanced.StartupDiagnostics);
+            RefreshCheckpointResumeDiagnostics(cfg.Advanced.CheckpointResumeTelemetry);
             RefreshProjectMetadataConflicts(cfg.Advanced.ProjectMetadataConflicts);
 
             // Apply theme + layout when loading config (in case Settings view is opened first)
@@ -1957,6 +1959,12 @@ namespace VaultSync.UI
             private set => SetField(ref _startupDiagnosticsText, value);
         }
 
+        public string CheckpointResumeDiagnosticsText
+        {
+            get => _checkpointResumeDiagnosticsText;
+            private set => SetField(ref _checkpointResumeDiagnosticsText, value);
+        }
+
         public bool HasUpdateCheckError => !string.IsNullOrWhiteSpace(_updateCheckErrorText);
 
         public IReadOnlyList<LanguageOption> LanguageOptions => _localizationService.SupportedLanguages;
@@ -2025,6 +2033,11 @@ namespace VaultSync.UI
         public void ReloadStartupDiagnostics()
         {
             RefreshStartupDiagnostics(AppConfigStore.Load().Advanced.StartupDiagnostics);
+        }
+
+        public void ReloadCheckpointResumeDiagnostics()
+        {
+            RefreshCheckpointResumeDiagnostics(AppConfigStore.Load().Advanced.CheckpointResumeTelemetry);
         }
 
         private void RefreshUpdateCheckStatus()
@@ -2135,6 +2148,40 @@ namespace VaultSync.UI
                 completedText,
                 diagnostics.TotalDurationMs,
                 phaseSummary);
+        }
+
+        private void RefreshCheckpointResumeDiagnostics(CheckpointResumeTelemetry? diagnostics)
+        {
+            diagnostics ??= new CheckpointResumeTelemetry();
+            if (string.IsNullOrWhiteSpace(diagnostics.LastStatus))
+            {
+                CheckpointResumeDiagnosticsText = L(
+                    "Settings.Advanced.CheckpointResumeDiagnosticsEmpty",
+                    "No checkpointed retry diagnostics captured yet.");
+                return;
+            }
+
+            var updatedText = DateTimeOffset.TryParse(diagnostics.LastUpdatedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var updatedUtc)
+                ? updatedUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+                : diagnostics.LastUpdatedUtc;
+
+            var projectText = string.IsNullOrWhiteSpace(diagnostics.LastProjectName)
+                ? L("Settings.Advanced.CheckpointResumeUnknownProject", "unknown project")
+                : diagnostics.LastProjectName;
+
+            CheckpointResumeDiagnosticsText = string.Format(
+                CultureInfo.CurrentCulture,
+                L(
+                    "Settings.Advanced.CheckpointResumeDiagnosticsTemplate",
+                    "Checkpoint retry: {0} | Project: {1} | Progress: {2:0.0}/{3:0.0} MB | Updated: {4} | Detail: {5}"),
+                diagnostics.LastStatus,
+                projectText,
+                diagnostics.LastResumeOffsetBytes / (1024d * 1024d),
+                diagnostics.LastArchiveSizeBytes / (1024d * 1024d),
+                updatedText,
+                string.IsNullOrWhiteSpace(diagnostics.LastMessage)
+                    ? L("Settings.Advanced.CheckpointResumeDiagnosticsNoDetail", "No detail recorded.")
+                    : diagnostics.LastMessage);
         }
 
         private void RefreshRsyncStatusHint()

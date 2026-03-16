@@ -49,6 +49,61 @@ public sealed class BackupService
         long ArchiveSizeBytes,
         DateTime LastUpdatedUtc);
 
+    internal static void UpdateCheckpointResumeTelemetry(
+        AppConfig config,
+        string status,
+        string projectName,
+        string backupFolder,
+        string archivePath,
+        long resumeOffsetBytes,
+        long archiveSizeBytes,
+        string sourceFingerprint,
+        string message)
+    {
+        config.Advanced.CheckpointResumeTelemetry ??= new CheckpointResumeTelemetry();
+        var telemetry = config.Advanced.CheckpointResumeTelemetry;
+        telemetry.LastUpdatedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+        telemetry.LastStatus = status;
+        telemetry.LastProjectName = projectName;
+        telemetry.LastBackupFolder = backupFolder;
+        telemetry.LastArchivePath = archivePath;
+        telemetry.LastResumeOffsetBytes = Math.Max(0, resumeOffsetBytes);
+        telemetry.LastArchiveSizeBytes = Math.Max(0, archiveSizeBytes);
+        telemetry.LastSourceFingerprint = sourceFingerprint;
+        telemetry.LastMessage = message;
+    }
+
+    private static void PersistCheckpointResumeTelemetry(
+        string status,
+        string projectName,
+        string backupFolder,
+        string archivePath,
+        long resumeOffsetBytes,
+        long archiveSizeBytes,
+        string sourceFingerprint,
+        string message)
+    {
+        try
+        {
+            var cfg = AppConfigStore.Load();
+            UpdateCheckpointResumeTelemetry(
+                cfg,
+                status,
+                projectName,
+                backupFolder,
+                archivePath,
+                resumeOffsetBytes,
+                archiveSizeBytes,
+                sourceFingerprint,
+                message);
+            AppConfigStore.Save(cfg);
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[BackupService] Failed to persist checkpoint resume telemetry: {ex.Message}");
+        }
+    }
+
     public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
     public sealed record BackupPreflightResult(
         long TotalBytes,
@@ -529,6 +584,18 @@ public sealed class BackupService
                     if (IsResumableArchiveBackup(backupDir))
                     {
                         RuntimeLog.WriteVerbose($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
+                        var checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
+                        PersistCheckpointResumeTelemetry(
+                            status: "cleanup-preserved",
+                            projectName: Path.GetFileName(projectDir),
+                            backupFolder: backupDir,
+                            archivePath: Path.Combine(backupDir, BackupArchiveCryptoService.PlainArchiveFileName),
+                            resumeOffsetBytes: File.Exists(Path.Combine(backupDir, BackupArchiveCryptoService.PlainArchiveFileName))
+                                ? new FileInfo(Path.Combine(backupDir, BackupArchiveCryptoService.PlainArchiveFileName)).Length
+                                : 0,
+                            archiveSizeBytes: checkpoint?.ArchiveSizeBytes ?? 0,
+                            sourceFingerprint: checkpoint?.SourceFingerprint ?? string.Empty,
+                            message: "Preserved interrupted archive backup because checkpoint resume metadata is valid.");
                         continue;
                     }
 
@@ -1527,6 +1594,17 @@ public sealed class BackupService
                 RuntimeLog.WriteVerbose($"[BackupService] Resuming interrupted archive upload for '{project.Name}' from '{resumableDir}'.");
                 DeletePartialBackup(destDir);
                 workingDestDir = resumableDir;
+                PersistCheckpointResumeTelemetry(
+                    status: "resume-discovered",
+                    projectName: project.Name,
+                    backupFolder: workingDestDir,
+                    archivePath: Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName),
+                    resumeOffsetBytes: File.Exists(Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName))
+                        ? new FileInfo(Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName)).Length
+                        : 0,
+                    archiveSizeBytes: 0,
+                    sourceFingerprint: fingerprint,
+                    message: "Found interrupted archive backup with matching fingerprint and will attempt resume.");
             }
         }
 
@@ -1841,9 +1919,31 @@ public sealed class BackupService
                             !ValidateArchiveResumePrefix(localArchive, finalArchivePath, existingLength, bufferSize, ct))
                         {
                             RuntimeLog.WriteVerbose($"[BackupService] Existing archive checkpoint for '{finalArchivePath}' did not match the local archive prefix. Restarting upload from 0 bytes.");
+                            PersistCheckpointResumeTelemetry(
+                                status: "resume-prefix-mismatch",
+                                projectName: project.Name,
+                                backupFolder: workingDestDir,
+                                archivePath: finalArchivePath,
+                                resumeOffsetBytes: existingLength,
+                                archiveSizeBytes: zipSize,
+                                sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                                message: "Discarded partial archive because the existing destination prefix no longer matched the rebuilt local archive.");
                             using var truncate = new FileStream(finalArchivePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
                             truncate.SetLength(0);
                             existingLength = 0;
+                        }
+
+                        if (existingLength > 0)
+                        {
+                            PersistCheckpointResumeTelemetry(
+                                status: "resume-attempt",
+                                projectName: project.Name,
+                                backupFolder: workingDestDir,
+                                archivePath: finalArchivePath,
+                                resumeOffsetBytes: existingLength,
+                                archiveSizeBytes: zipSize,
+                                sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                                message: "Resuming archive upload from a validated existing prefix.");
                         }
 
                         await UploadSingleAttemptAsync(existingLength);
@@ -1891,6 +1991,15 @@ public sealed class BackupService
             }
 
             RemoveArchiveResumeCheckpoint(workingDestDir);
+            PersistCheckpointResumeTelemetry(
+                status: "resume-complete",
+                projectName: project.Name,
+                backupFolder: workingDestDir,
+                archivePath: finalArchivePath,
+                resumeOffsetBytes: zipSize,
+                archiveSizeBytes: zipSize,
+                sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                message: "Archive upload completed and checkpoint metadata was cleared.");
             RuntimeLog.WriteVerbose($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalZipSize={zipSize} bytes");
             return workingDestDir;
         }
@@ -1899,10 +2008,28 @@ public sealed class BackupService
             if (enableCheckpointedRetry && File.Exists(finalArchivePath))
             {
                 RuntimeLog.WriteVerbose($"[BackupService] Preserving incomplete archive checkpoint in '{workingDestDir}' for later retry.");
+                PersistCheckpointResumeTelemetry(
+                    status: "resume-preserved-after-failure",
+                    projectName: project.Name,
+                    backupFolder: workingDestDir,
+                    archivePath: finalArchivePath,
+                    resumeOffsetBytes: new FileInfo(finalArchivePath).Length,
+                    archiveSizeBytes: resumeCheckpoint?.ArchiveSizeBytes ?? 0,
+                    sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                    message: "Preserved interrupted archive upload for a future checkpointed retry.");
             }
             else
             {
                 // Cleanup: remove incomplete destination folder and rethrow.
+                PersistCheckpointResumeTelemetry(
+                    status: "resume-discarded-after-failure",
+                    projectName: project.Name,
+                    backupFolder: workingDestDir,
+                    archivePath: finalArchivePath,
+                    resumeOffsetBytes: File.Exists(finalArchivePath) ? new FileInfo(finalArchivePath).Length : 0,
+                    archiveSizeBytes: resumeCheckpoint?.ArchiveSizeBytes ?? 0,
+                    sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                    message: "Discarded incomplete archive upload because checkpointed retry was not active or no resumable archive was present.");
                 DeletePartialBackup(workingDestDir);
             }
 

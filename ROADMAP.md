@@ -1282,7 +1282,8 @@
   - Current status:
     - Added archive-upload checkpoint persistence and resumable incomplete backup preservation per destination.
     - Added prefix validation so resumed uploads restart cleanly if partial payload bytes no longer match the rebuilt local archive.
-    - Next pass should extend checkpoint semantics beyond archive uploads and expose resume/discard outcomes in diagnostics/support bundles.
+    - Settings diagnostics and support bundles now surface the last checkpoint resume/discard/preserve outcome with byte progress and explanatory detail.
+    - Next pass should extend checkpoint semantics beyond archive uploads.
 
 - [ ] `VS-1724` `P1` Single-manifest multi-base patch compatibility. _(In progress)_
   - Scope: allow one patch manifest to declare multiple exact compatible base versions so one patch release can safely serve more than one prior build.

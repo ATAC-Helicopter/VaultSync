@@ -2074,6 +2074,10 @@
                              Foreground="{StaticResource TextSecondary}"
                              FontSize="11"
                              TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding CheckpointResumeDiagnosticsText}"
+                             Foreground="{StaticResource TextSecondary}"
+                             FontSize="11"
+                             TextWrapping="Wrap" />
                   <TextBlock Text="{Binding UpdateCheckErrorText}"
                              Foreground="{DynamicResource WarningTextBrush}"
                              FontSize="11"

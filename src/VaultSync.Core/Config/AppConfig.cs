@@ -343,6 +343,7 @@ namespace VaultSync.Core.Config
         public MetadataConflictTelemetry MetadataConflictTelemetry { get; set; } = new();
         public MaintenanceConfig Maintenance { get; set; } = new();
         public StartupDiagnosticsSummary StartupDiagnostics { get; set; } = new();
+        public CheckpointResumeTelemetry CheckpointResumeTelemetry { get; set; } = new();
     }
 
     public sealed class MaintenanceConfig
@@ -451,6 +452,19 @@ namespace VaultSync.Core.Config
         public string LastCompletedUtc { get; set; } = string.Empty;
         public long TotalDurationMs { get; set; }
         public List<StartupDiagnosticsPhase> Phases { get; set; } = new();
+    }
+
+    public sealed class CheckpointResumeTelemetry
+    {
+        public string LastUpdatedUtc { get; set; } = string.Empty;
+        public string LastStatus { get; set; } = string.Empty;
+        public string LastProjectName { get; set; } = string.Empty;
+        public string LastBackupFolder { get; set; } = string.Empty;
+        public string LastArchivePath { get; set; } = string.Empty;
+        public long LastResumeOffsetBytes { get; set; }
+        public long LastArchiveSizeBytes { get; set; }
+        public string LastSourceFingerprint { get; set; } = string.Empty;
+        public string LastMessage { get; set; } = string.Empty;
     }
 
     public sealed class StartupDiagnosticsPhase

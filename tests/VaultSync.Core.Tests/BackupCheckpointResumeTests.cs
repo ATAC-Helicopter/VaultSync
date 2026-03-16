@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using Xunit;
@@ -89,6 +90,30 @@ public sealed class BackupCheckpointResumeTests : IDisposable
         Assert.Equal(1, removed);
         Assert.True(Directory.Exists(resumableDir));
         Assert.False(Directory.Exists(staleDir));
+    }
+
+    [Fact]
+    public void UpdateCheckpointResumeTelemetry_StoresExpectedSummary()
+    {
+        var cfg = new AppConfig();
+
+        BackupService.UpdateCheckpointResumeTelemetry(
+            cfg,
+            status: "resume-attempt",
+            projectName: "VaultSync",
+            backupFolder: @"C:\backups\vaultsync\2026-03-16_12-00-00",
+            archivePath: @"C:\backups\vaultsync\2026-03-16_12-00-00\backup.zip",
+            resumeOffsetBytes: 5242880,
+            archiveSizeBytes: 10485760,
+            sourceFingerprint: "ABC123",
+            message: "Resuming archive upload from a validated existing prefix.");
+
+        Assert.Equal("resume-attempt", cfg.Advanced.CheckpointResumeTelemetry.LastStatus);
+        Assert.Equal("VaultSync", cfg.Advanced.CheckpointResumeTelemetry.LastProjectName);
+        Assert.Equal(5242880, cfg.Advanced.CheckpointResumeTelemetry.LastResumeOffsetBytes);
+        Assert.Equal(10485760, cfg.Advanced.CheckpointResumeTelemetry.LastArchiveSizeBytes);
+        Assert.Equal("ABC123", cfg.Advanced.CheckpointResumeTelemetry.LastSourceFingerprint);
+        Assert.False(string.IsNullOrWhiteSpace(cfg.Advanced.CheckpointResumeTelemetry.LastUpdatedUtc));
     }
 
     public void Dispose()
