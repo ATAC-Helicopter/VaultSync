@@ -1240,23 +1240,23 @@
     - debug builds still surface the developer-oriented tracing.
     - enabling verbose logging restores the gated runtime chatter for troubleshooting.
 
-- [ ] `BUG-17009` `P1` Batch diagnostics session-log writes behind one background writer. _(In progress)_
+- [x] `BUG-17009` `P1` Batch diagnostics session-log writes behind one background writer. _(Done)_
   - Scope:
     - replace per-line `Task.Run` session-log writes in `DiagnosticsLogger` with a queued single-writer flush path;
     - keep heartbeat and crash logging behavior unchanged while reducing log-path thread-pool churn.
   - Current status:
-    - In progress: session-log writes are now queued and flushed in batches through one background writer loop.
+    - Done: session-log writes are now queued and flushed in batches through one background writer loop.
   - Acceptance:
     - verbose/debug sessions no longer spawn one background task per log line.
     - session logs still capture lifecycle, crash, doctor, maintenance, and updater events reliably.
     - diagnostics logging no longer becomes a performance bottleneck under noisy runs.
 
-- [ ] `BUG-17010` `P1` Remove synchronous config reads from Projects group auto-backup command-state checks. _(In progress)_
+- [x] `BUG-17010` `P1` Remove synchronous config reads from Projects group auto-backup command-state checks. _(Done)_
   - Scope:
     - stop calling `AppConfigStore.Load()` during Projects page `CanExecute` evaluation for group auto-backup actions;
     - use refreshed cached preference state instead so group command enablement stays responsive.
   - Current status:
-    - In progress: Projects group auto-backup command-state now uses a cached disabled-project id set refreshed from config on load/refresh and after updates.
+    - Done: Projects group auto-backup command-state now uses a cached disabled-project id set refreshed from config on load/refresh and after updates.
   - Acceptance:
     - Projects group action enablement stays responsive even when config I/O is contended.
     - enable/disable group actions still reflect the latest saved preference state.
