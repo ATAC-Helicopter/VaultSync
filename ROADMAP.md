@@ -872,21 +872,22 @@
     - doctor workflows provide dry-run before mutation.
   - Beta builds for the `1.7` cycle should use prerelease app versions such as `1.7.0-beta.1`, while the final Stable cut remains `1.7.0`.
 
-- [ ] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine. _(In progress)_
+- [x] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine. _(Done)_
   - Scope: remap only through trusted exact links (`backup.snapshot_id -> snapshots.project_id` and exact external-id matches), never name/path heuristics.
   - What it takes:
     - introduce a repair-evidence model (`exact snapshot link`, `exact external-id match`, `destination identity match`, `rejected heuristic`).
     - persist remap job results and reasons so re-runs are idempotent and diagnosable.
     - expose unresolved buckets (`missing snapshot`, `missing project`, `ambiguous match`, `identity mismatch`) for doctor/support surfaces.
   - Current status:
-    - In progress: first pass builds deterministic dry-run repair plans for exact backup->project remaps from authoritative snapshot ownership and reports unresolved orphan buckets.
+    - Done: deterministic dry-run repair plans derive exact backup->project remaps from authoritative snapshot ownership and report unresolved orphan buckets with stable codes.
+    - Done: repair planning remains exact-link only and can be rerun idempotently without introducing name/path heuristics.
   - Depends on:
     - `VS-1706` startup consistency scan signals.
     - `VS-1712` stable destination identity model.
   - Acceptance:
     - Orphan remap jobs are deterministic and idempotent.
     - Diagnostics/support bundle include remapped/unresolved counts and reasons.
-- [ ] `VS-1702` `P0` Manual repair action for backup/project links. _(In progress)_
+- [x] `VS-1702` `P0` Manual repair action for backup/project links. _(Done)_
   - Scope: add `Settings/Doctor` repair flow with dry-run and apply modes.
   - What it takes:
     - reusable repair-plan DTOs shared by UI, diagnostics export, and future CLI flows.
@@ -895,8 +896,8 @@
   - Depends on:
     - `VS-1701` deterministic repair engine.
   - Current status:
-    - Settings > Advanced now exposes a manual backup-index repair panel with dry-run scan and exact-fix apply actions.
-    - First pass reports exact remap counts and blocked orphan buckets, then reapplies a fresh scan after apply.
+    - Done: Settings > Advanced exposes a manual backup-index repair panel with dry-run scan and exact-fix apply actions.
+    - Done: repair runs report exact remap counts, blocked orphan buckets, and post-apply rescans without mutating valid mappings.
   - Acceptance:
     - UI shows what will be relinked before apply.
     - User can run safe repair without touching valid mappings.
@@ -912,7 +913,7 @@
   - Acceptance:
     - Quota warnings are visible before destination exhaustion.
     - Cleanup suggestions never include protected backups as auto-candidates.
-- [ ] `VS-1705` `P0` Retention delete resilience v2. _(In progress)_
+- [x] `VS-1705` `P0` Retention delete resilience v2. _(Done)_
   - Scope: when oldest non-protected delete fails, continue to next eligible non-protected entry and report structured failure reasons.
   - What it takes:
     - refactor retention candidate evaluation into a reusable ordered plan.
@@ -921,8 +922,8 @@
   - Depends on:
     - `VS-1711` chain preflight.
   - Current status:
-    - Retention now builds an ordered deletion plan that can skip the oldest candidate when deleting it would remove the last metadata-valid restore point.
-    - Delete failures now emit structured reason codes so later diagnostics and user-facing summaries can reuse stable failure classifications.
+    - Done: retention now builds an ordered deletion plan that can skip the oldest candidate when deleting it would remove the last metadata-valid restore point.
+    - Done: delete failures emit structured reason codes so diagnostics and later summaries can reuse stable failure classifications.
   - Acceptance:
     - Retention does not halt on first non-protected delete failure when other eligible entries exist.
     - Protected backups are always skipped.
@@ -1031,7 +1032,7 @@
   - Current status:
     - Backups and Dashboard now compute a shared readiness summary with per-project labels, reasons, and aggregate ready/attention/risk/unavailable counts from backup recency, verification policy, destination reachability, and startup consistency results.
     - Readiness headline/detail/count labels are now formatted from localized UI copy instead of hard-coded English dashboard strings.
-- [ ] `VS-1714` `P1` Doctor workflows for �Fix now� guided remediation. _(In progress)_
+- [x] `VS-1714` `P1` Doctor workflows for guided remediation. _(Done)_
   - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
   - What it takes:
     - reusable doctor card/action model with dry-run/apply + remediation guidance.
@@ -1041,8 +1042,8 @@
     - `VS-1702`
     - `VS-1706`
   - Current status:
-    - Settings > Advanced now frames backup-index repair as a Doctor workflow with dry-run and Fix now actions plus guided remediation copy.
-    - Every doctor repair scan/apply action now writes structured diagnostics log entries for support-bundle auditability.
+    - Done: Settings > Advanced frames backup-index repair as a Doctor workflow with dry-run and Fix now actions plus guided remediation copy.
+    - Done: every doctor repair scan/apply action writes structured diagnostics log entries for support-bundle auditability.
   - Acceptance:
     - Each doctor action has a dry-run summary and explicit apply step.
     - All mutations are audit-logged in diagnostics/support bundle.
@@ -1057,15 +1058,14 @@
   - Current status:
     - In progress: startup now records stable constructor/deferred-startup phase checkpoints and persists the latest timeline summary in advanced config.
     - In progress: Settings diagnostics and support bundles now surface the last startup timeline with total duration and per-phase elapsed milliseconds.
-- [ ] `VS-1716` `P2` Retention simulation mode in settings. _(In progress)_
+- [x] `VS-1716` `P2` Retention simulation mode in settings. _(Done)_
     - Scope: preview retention outcomes per project/destination without deleting data.
     - What it takes:
       - reuse the same retention planner as real delete flow.
       - make simulation output diffable against current protected/kept/deleted buckets.
     - Current status:
-      - Added a retention simulation service that reuses the retention preflight and delete planner without mutating data.
-      - Added Settings > Backups simulation UI with per-project reclaim/block summaries.
-      - Next pass should add richer bucket breakdowns and destination-aware grouping in the preview output.
+      - Done: retention simulation reuses the retention preflight and delete planner without mutating data.
+      - Done: Settings > Backups exposes a simulation preview with per-project reclaim/block summaries and protected backups highlighted as retained.
   - Acceptance:
     - Simulation output matches actual retention behavior on subsequent apply.
     - Protected backups are always highlighted as retained.
@@ -1206,15 +1206,6 @@
     - Theme section selection is explicit before palette colors are applied.
     - Theme quick colors update the selected section immediately instead of appearing to do nothing.
 
-- [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials. _(In progress)_
-  - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.
-  - Current status:
-    - In progress: the custom theme editor models, commands, labels, and helper methods are being extracted out of the main `SettingsViewModel` file into a dedicated partial.
-    - In progress: the refactor is intentionally behavior-preserving so the existing Settings bindings and saved appearance data stay unchanged.
-  - Acceptance:
-    - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
-    - Existing Settings bindings continue to work without regressions.
-    - The split makes later platform-specific settings work lower-risk and easier to review.
 
 - [ ] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(In progress)_
   - Scope:
@@ -1308,6 +1299,16 @@
     - In progress: tests are being added for legacy single-base manifests, exact allowlist matches, and malformed allowlist rejection.
 
 ## 1.8.x
+- [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
+  - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.
+  - Current status:
+    - Deferred from `1.7.x`: this remains a behavior-preserving refactor, not a release-critical shipping item.
+    - The partial split can continue after `1.7` stabilization without blocking the release.
+  - Acceptance:
+    - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
+    - Existing Settings bindings continue to work without regressions.
+    - The split makes later platform-specific settings work lower-risk and easier to review.
+
 - [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.
 - [ ] `VS-1802` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
 - [ ] `VS-1803` `P2` Automation hooks (webhooks/scripts on backup/restore events).
