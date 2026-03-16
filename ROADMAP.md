@@ -1278,7 +1278,7 @@
     - Settings diagnostics and support bundles now surface the last checkpoint resume/discard/preserve outcome with byte progress and explanatory detail.
     - Next pass should extend checkpoint semantics beyond archive uploads.
 
-- [ ] `VS-1724` `P1` Single-manifest multi-base patch compatibility. _(In progress)_
+- [x] `VS-1724` `P1` Single-manifest multi-base patch compatibility. _(Done)_
   - Scope: allow one patch manifest to declare multiple exact compatible base versions so one patch release can safely serve more than one prior build.
   - What it takes:
     - extend patch manifest schema with an explicit base-version allowlist while keeping legacy single-base manifests valid.
@@ -1295,8 +1295,8 @@
     - helper/apply rejects non-listed current versions before copying files.
     - diagnostics clearly explain allowed bases, matched base, and mismatch reasons.
   - Current status:
-    - In progress: manifest schema, preflight validation, helper enforcement, diagnostics, and patch builder are being extended to support a strict multi-base allowlist.
-    - In progress: tests are being added for legacy single-base manifests, exact allowlist matches, and malformed allowlist rejection.
+    - Done: manifest schema, preflight validation, helper enforcement, diagnostics, and patch builder all support a strict exact-base allowlist while preserving legacy single-base manifests.
+    - Done: release workflow inputs now author multi-base manifests explicitly, and tests cover legacy manifests, exact allowlist matches, malformed allowlist rejection, and non-listed base rejection.
 
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
