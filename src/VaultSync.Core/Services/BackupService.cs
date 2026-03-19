@@ -2841,7 +2841,8 @@ public sealed class BackupService
             }
             catch (Exception fallbackEx)
             {
-                Console.WriteLine($"[BackupService] Retention fallback delete failed for '{fullPath}' (backupId={backupId}): {fallbackEx}");
+                RuntimeLog.WriteVerbose(
+                    $"[BackupService] Retention fallback delete failed for '{fullPath}' (backupId={backupId}): {fallbackEx.GetType().Name} - {fallbackEx.Message}");
                 return new RetentionDeleteAttemptResult(false, ClassifyRetentionDeleteFailure(fallbackEx), fallbackEx.Message);
             }
         }
@@ -2872,6 +2873,7 @@ public sealed class BackupService
             Path.Combine(rootPath, ".vaultsync_keep"),
         };
 
+        var failedMarkers = new List<string>();
         foreach (var markerPath in markerFiles)
         {
             try
@@ -2884,8 +2886,14 @@ public sealed class BackupService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[BackupService] Retention could not remove marker file '{markerPath}': {ex.Message}");
+                failedMarkers.Add($"{Path.GetFileName(markerPath)} ({ex.GetType().Name})");
             }
+        }
+
+        if (failedMarkers.Count > 0)
+        {
+            RuntimeLog.WriteVerbose(
+                $"[BackupService] Retention could not remove {failedMarkers.Count} marker file(s) under '{rootPath}': {string.Join(", ", failedMarkers)}.");
         }
     }
 
@@ -2933,6 +2941,10 @@ public sealed class BackupService
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
             return;
 
+        var failedFiles = 0;
+        var failedDirs = 0;
+        var failedSamples = new List<string>();
+
         foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
         {
             try
@@ -2942,7 +2954,9 @@ public sealed class BackupService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[BackupService] Retention fallback file delete failed for '{file}': {ex.Message}");
+                failedFiles++;
+                if (failedSamples.Count < 3)
+                    failedSamples.Add($"{Path.GetFileName(file)} ({ex.GetType().Name})");
             }
         }
 
@@ -2960,8 +2974,16 @@ public sealed class BackupService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[BackupService] Retention fallback directory delete failed for '{dir}': {ex.Message}");
+                failedDirs++;
+                if (failedSamples.Count < 3)
+                    failedSamples.Add($"{Path.GetFileName(dir)} ({ex.GetType().Name})");
             }
+        }
+
+        if (failedFiles > 0 || failedDirs > 0)
+        {
+            RuntimeLog.WriteVerbose(
+                $"[BackupService] Retention fallback cleanup for '{rootPath}' had {failedFiles} file failure(s) and {failedDirs} directory failure(s). Samples: {string.Join(", ", failedSamples)}.");
         }
 
         File.SetAttributes(rootPath, FileAttributes.Normal);
