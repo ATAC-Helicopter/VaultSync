@@ -12,4 +12,10 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="artifacts\**\*.cs" />
+    <EmbeddedResource Remove="artifacts\**\*" />
+    <None Remove="artifacts\**\*" />
+  </ItemGroup>
+
 </Project>
