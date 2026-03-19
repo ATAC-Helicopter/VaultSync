@@ -1432,22 +1432,27 @@
                                   BorderThickness="1"
                                   CornerRadius="12"
                                   Padding="10">
-                            <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                   MaxWidth="320"
-                                                   HorizontalAlignment="Left"
-                                                   IsAlphaEnabled="False"
-                                                   IsAlphaVisible="False"
-                                                   IsColorComponentsVisible="False"
-                                                   IsColorModelVisible="False"
-                                                   IsColorPaletteVisible="False"
-                                                   IsHexInputVisible="False"
-                                                   IsComponentTextInputVisible="False"
-                                                   IsColorPreviewVisible="False"
-                                                   IsColorSpectrumVisible="True"
-                                                   IsColorSpectrumSliderVisible="True"
-                                                   IsComponentSliderVisible="False"
-                                                   SelectedIndex="0"
-                                                   ColorSpectrumShape="Ring" />
+                            <Border ClipToBounds="True"
+                                    Background="Transparent">
+                              <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
+                                                     Margin="6,-34,6,6"
+                                                     MaxWidth="320"
+                                                     HorizontalAlignment="Left"
+                                                     ClipToBounds="False"
+                                                     IsAlphaEnabled="False"
+                                                     IsAlphaVisible="False"
+                                                     IsColorComponentsVisible="False"
+                                                     IsColorModelVisible="False"
+                                                     IsColorPaletteVisible="False"
+                                                     IsHexInputVisible="False"
+                                                     IsComponentTextInputVisible="False"
+                                                     IsColorPreviewVisible="False"
+                                                     IsColorSpectrumVisible="True"
+                                                     IsColorSpectrumSliderVisible="True"
+                                                     IsComponentSliderVisible="False"
+                                                     SelectedIndex="0"
+                                                     ColorSpectrumShape="Ring" />
+                            </Border>
                           </Border>
                         </StackPanel>
                       </Border>
@@ -1550,19 +1555,24 @@
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            FontSize="11" />
                               </StackPanel>
-                              <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                     IsAlphaEnabled="False"
-                                                     IsAlphaVisible="False"
-                                                     IsColorComponentsVisible="True"
-                                                     IsColorModelVisible="False"
-                                                     IsColorPaletteVisible="False"
-                                                     IsHexInputVisible="False"
-                                                     IsComponentTextInputVisible="False"
-                                                     IsColorPreviewVisible="False"
-                                                     IsColorSpectrumVisible="False"
-                                                     IsColorSpectrumSliderVisible="False"
-                                                     IsComponentSliderVisible="True"
-                                                     SelectedIndex="2" />
+                              <Border ClipToBounds="True"
+                                      Background="Transparent">
+                                <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
+                                                       Margin="6,-34,6,6"
+                                                       ClipToBounds="False"
+                                                       IsAlphaEnabled="False"
+                                                       IsAlphaVisible="False"
+                                                       IsColorComponentsVisible="True"
+                                                       IsColorModelVisible="False"
+                                                       IsColorPaletteVisible="False"
+                                                       IsHexInputVisible="False"
+                                                       IsComponentTextInputVisible="False"
+                                                       IsColorPreviewVisible="False"
+                                                       IsColorSpectrumVisible="False"
+                                                       IsColorSpectrumSliderVisible="False"
+                                                       IsComponentSliderVisible="True"
+                                                       SelectedIndex="2" />
+                              </Border>
                             </StackPanel>
                           </Border>
                         </StackPanel>
