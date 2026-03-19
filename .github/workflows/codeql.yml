@@ -12,10 +12,11 @@
 name: "CodeQL Advanced"
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ "Stable" ]
+    branches: [ "Dev", "Stable" ]
   pull_request:
-    branches: [ "Stable" ]
+    branches: [ "Dev", "Stable" ]
   schedule:
     - cron: '31 14 * * 4'
 
@@ -84,8 +85,8 @@ jobs:
     # "We were unable to automatically build your code", modify the matrix above
     # to set the build mode to "manual" for that language. Then modify this step
     # to build your code.
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
+    # ?? Command-line programs to run using the OS shell.
+    # ?? See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
     - name: Run manual build steps
       if: matrix.build-mode == 'manual'
       shell: bash
@@ -101,3 +102,4 @@ jobs:
       uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{matrix.language}}"
+
