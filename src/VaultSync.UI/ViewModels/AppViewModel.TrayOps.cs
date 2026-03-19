@@ -540,7 +540,7 @@ namespace VaultSync.UI.ViewModels
                 var processed = 0;
                 foreach (var entry in archive.Entries)
                 {
-                    var destinationPath = Path.Combine(extractDir, entry.FullName);
+                    var destinationPath = GetSafeArchiveEntryPath(extractDir, entry.FullName);
                     if (string.IsNullOrEmpty(entry.Name))
                     {
                         Directory.CreateDirectory(destinationPath);

@@ -1927,9 +1927,9 @@ namespace VaultSync.UI.ViewModels
                 using var archive = ZipFile.OpenRead(archivePath);
                 foreach (var entry in archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)))
                 {
-                    var relative = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                    var relative = GetSafeArchiveEntryRelativePath(entry.FullName);
                     sourceRelative.Add(relative);
-                    var topLevel = GetTopLevelSegment(entry.FullName);
+                    var topLevel = GetTopLevelSegment(relative);
                     if (!string.IsNullOrWhiteSpace(topLevel))
                         topLevelTargets.Add(topLevel);
                     totalFiles++;
@@ -2538,7 +2538,7 @@ namespace VaultSync.UI.ViewModels
 
             foreach (var entry in entries)
             {
-                var destinationPath = Path.Combine(targetDir, entry.FullName);
+                var destinationPath = GetSafeArchiveEntryPath(targetDir, entry.FullName);
                 if (string.IsNullOrEmpty(entry.Name))
                 {
                     Directory.CreateDirectory(destinationPath);
@@ -2562,6 +2562,42 @@ namespace VaultSync.UI.ViewModels
                     processedBytes,
                     totalBytes));
             }
+        }
+
+
+        private static string GetSafeArchiveEntryRelativePath(string entryFullName)
+        {
+            var normalized = (entryFullName ?? string.Empty)
+                .Replace('/', Path.DirectorySeparatorChar)
+                .Trim();
+
+            if (string.IsNullOrWhiteSpace(normalized))
+                return string.Empty;
+
+            if (Path.IsPathFullyQualified(normalized))
+                throw new InvalidDataException($"Archive entry '{entryFullName}' is absolute.");
+
+            var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "vaultsync-archive-root"))
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            var candidate = Path.GetFullPath(Path.Combine(root, normalized));
+            if (!candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the extraction root.");
+
+            return Path.GetRelativePath(root, candidate);
+        }
+
+        private static string GetSafeArchiveEntryPath(string root, string entryFullName)
+        {
+            var relative = GetSafeArchiveEntryRelativePath(entryFullName);
+            var normalizedRoot = Path.GetFullPath(root)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relative));
+            if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the extraction destination.");
+
+            return candidate;
         }
 
         private static void RestoreEncryptedArchiveWithProgress(
