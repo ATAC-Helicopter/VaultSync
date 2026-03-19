@@ -34,6 +34,8 @@ public partial class App : Application
 {
     // Test hook: enabled while onboarding UX is being validated every startup.
     private static bool ForceOnboardingAtStartupForTesting = false;
+    private static readonly string OnboardingSentinelPath =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync", "onboarding.seen");
 
     public static bool IsShuttingDown { get; private set; }
     public static bool IsCrashing { get; private set; }
@@ -447,24 +449,61 @@ public partial class App : Application
 
         var cfg = AppConfigStore.Load();
         var showForTesting = IsOnboardingAlwaysEnabledForTesting();
-        if (!showForTesting && cfg.Advanced.HasSeenOnboarding)
-            return false;
+        if (!showForTesting)
+        {
+            var isFreshInstall = AppConfigStore.WasConfigMissingOnFirstLoad;
+            var sentinelExists = File.Exists(OnboardingSentinelPath);
+
+            if (!isFreshInstall || sentinelExists || cfg.Advanced.HasSeenOnboarding)
+            {
+                EnsureOnboardingSuppressed(cfg);
+                return false;
+            }
+
+            MarkOnboardingSeen(cfg);
+        }
 
         void Finish()
         {
             AppViewModelInstance.OnboardingTour.TourCompleted -= Finish;
-            if (!showForTesting)
-            {
-                var latestCfg = AppConfigStore.Load();
-                latestCfg.Advanced.HasSeenOnboarding = true;
-                AppConfigStore.Save(latestCfg);
-            }
             TryShowWhatsNew(desktop);
         }
 
         AppViewModelInstance.OnboardingTour.TourCompleted += Finish;
         AppViewModelInstance.OnboardingTour.Start();
         return true;
+    }
+
+    private static void EnsureOnboardingSuppressed(AppConfig cfg)
+    {
+        var needsConfigUpdate = !cfg.Advanced.HasSeenOnboarding;
+        var needsSentinel = !File.Exists(OnboardingSentinelPath);
+        if (!needsConfigUpdate && !needsSentinel)
+            return;
+
+        MarkOnboardingSeen(cfg);
+    }
+
+    private static void MarkOnboardingSeen(AppConfig cfg)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(OnboardingSentinelPath);
+            if (!string.IsNullOrWhiteSpace(dir))
+                Directory.CreateDirectory(dir);
+            if (!File.Exists(OnboardingSentinelPath))
+                File.WriteAllText(OnboardingSentinelPath, DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+        }
+        catch
+        {
+            // Best effort sentinel.
+        }
+
+        if (!cfg.Advanced.HasSeenOnboarding)
+        {
+            cfg.Advanced.HasSeenOnboarding = true;
+            AppConfigStore.Save(cfg);
+        }
     }
 
     private static bool IsOnboardingAlwaysEnabledForTesting()

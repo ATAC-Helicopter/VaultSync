@@ -14,6 +14,7 @@ namespace VaultSync.Core.Config
         private static readonly object LastKnownGoodGate = new();
         private static readonly string ConfigDir =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync");
+        private static int _firstLoadState; // 0=unknown, 1=missing config, 2=existing config
 
         private static readonly string ConfigFilePath =
             Path.Combine(ConfigDir, "appsettings.json");
@@ -28,6 +29,8 @@ namespace VaultSync.Core.Config
             WriteIndented = true
         };
 
+        public static bool WasConfigMissingOnFirstLoad => Volatile.Read(ref _firstLoadState) == 1;
+
         public static AppConfig Load()
         {
             try
@@ -37,10 +40,12 @@ namespace VaultSync.Core.Config
                 // If config file does not exist, create a new default config
                 if (!File.Exists(ConfigFilePath))
                 {
+                    TrySetFirstLoadState(missingConfig: true);
                     cfg = new AppConfig();
                 }
                 else
                 {
+                    TrySetFirstLoadState(missingConfig: false);
                     cfg = LoadBestAvailableConfig();
                 }
 
@@ -82,6 +87,12 @@ namespace VaultSync.Core.Config
                 RuntimeLog.UpdateFromConfig(fallback);
                 return fallback;
             }
+        }
+
+        private static void TrySetFirstLoadState(bool missingConfig)
+        {
+            var state = missingConfig ? 1 : 2;
+            Interlocked.CompareExchange(ref _firstLoadState, state, 0);
         }
 
         public static void Save(AppConfig config)
