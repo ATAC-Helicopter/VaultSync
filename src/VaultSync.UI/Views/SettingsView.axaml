@@ -1392,7 +1392,7 @@
                                       <Border Width="14"
                                               Height="14"
                                               CornerRadius="7"
-                                              Background="{Binding SwatchColor}"
+                                              Background="{Binding SwatchBrush}"
                                               BorderBrush="{DynamicResource BorderSoft}"
                                               BorderThickness="1" />
                                       <TextBlock Text="{Binding Label}" />

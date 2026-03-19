@@ -17,12 +17,14 @@ namespace VaultSync.UI
         {
             private string _hex;
             private bool _isSelected;
+            private IBrush _swatchBrush;
 
             public ThemeColorSlotViewModel(string id, string label, string hex)
             {
                 Id = id;
                 Label = label;
                 _hex = hex;
+                _swatchBrush = new SolidColorBrush(Color.Parse(_hex));
             }
 
             public event PropertyChangedEventHandler? PropertyChanged;
@@ -40,8 +42,10 @@ namespace VaultSync.UI
                         return;
 
                     _hex = normalized;
+                    _swatchBrush = new SolidColorBrush(Color.Parse(_hex));
                     RaiseProperty(nameof(Hex));
                     RaiseProperty(nameof(SwatchColor));
+                    RaiseProperty(nameof(SwatchBrush));
                 }
             }
 
@@ -59,6 +63,7 @@ namespace VaultSync.UI
             }
 
             public Color SwatchColor => Color.Parse(_hex);
+            public IBrush SwatchBrush => _swatchBrush;
 
             private static string NormalizeHex(string? value, string fallback)
             {

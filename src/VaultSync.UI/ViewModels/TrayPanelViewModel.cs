@@ -147,6 +147,10 @@ public sealed class TrayPanelViewModel : ViewModelBase
     {
         public string Name { get; }
         public string Path { get; }
+        public string StoredBytesText => string.Empty;
+        public bool HasStoredBytesText => false;
+        public string CleanupSuggestionText => string.Empty;
+        public bool HasCleanupSuggestionText => false;
 
         private bool _reachable;
         public bool Reachable
