@@ -16,9 +16,14 @@
 
     <!-- Search box: keep focus visuals clean -->
     <Style Selector="TextBox#ProjectSearch">
-      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Padding" Value="{DynamicResource InputPadding}" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="Focusable" Value="True" />
     </Style>
 
@@ -206,25 +211,10 @@
           </Grid>
 
           <Grid ColumnDefinitions="*,Auto" Row="1" ColumnSpacing="8">
-            <Border CornerRadius="12"
-                    Background="{DynamicResource InputBackgroundBrush}"
-                    BorderBrush="{DynamicResource DividerBrush}"
-                    BorderThickness="1"
-                    Padding="0,0,6,0">
-              <Grid ColumnDefinitions="Auto,*">
-                <Border Width="12" />
-                <TextBox
-                  x:Name="ProjectSearch"
-                  Margin="0"
-                  Padding="{DynamicResource InputPadding}"
-                  Watermark="{infra:LocalizedString Key=Projects.Page.SearchWatermark}"
-                  BorderThickness="0"
-                  Background="Transparent"
-                  Foreground="{DynamicResource TextPrimaryBrush}"
-                  Text="{Binding SearchText, Mode=TwoWay}"
-                  CaretBrush="{DynamicResource TextPrimaryBrush}" />
-              </Grid>
-            </Border>
+            <TextBox
+              x:Name="ProjectSearch"
+              Watermark="{infra:LocalizedString Key=Projects.Page.SearchWatermark}"
+              Text="{Binding SearchText, Mode=TwoWay}" />
 
             <Button Grid.Column="1"
                     Padding="{DynamicResource ButtonTightPadding}"

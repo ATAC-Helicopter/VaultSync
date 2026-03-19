@@ -380,6 +380,21 @@
             <Setter Property="Opacity" Value="0.96" />
         </Style>
 
+        <Style Selector="TextBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="FocusAdorner" Value="{x:Null}" />
+        </Style>
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="TextBox /template/ TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
         <!-- Global ComboBox popup readability -->
         <Style Selector="ComboBox /template/ Popup Border">
             <Setter Property="CornerRadius" Value="12" />
