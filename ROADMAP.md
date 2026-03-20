@@ -1263,6 +1263,16 @@
     - Dashboard KPI cards align to the left in wide layouts.
     - existing wrap behavior is preserved on narrower windows.
 
+- [x] `BUG-17012` `P1` Preserve Projects-managed tag colors when saving custom themes. _(Done)_
+  - Scope:
+    - stop Settings > Appearance from overwriting app-wide tag-color mappings while saving theme changes now that tag-color editing lives in Projects.
+  - Current status:
+    - Done: Settings no longer rewrites `Appearance.TagColors` during theme saves, so custom theme changes preserve the latest tag colors already stored in config.
+  - Acceptance:
+    - Saving a custom theme does not reset or replace existing tag colors.
+    - Projects remains the authoritative editor for app-wide tag colors.
+    - tag chips keep their saved colors after theme changes and app restart.
+
 - [x] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(Done)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:

@@ -939,7 +939,6 @@ namespace VaultSync.UI
             cfg.Appearance.Theme              = NormalizeThemeOption(SelectedTheme);
             cfg.Appearance.CompactLayout      = UseCompactLayout;
             cfg.Appearance.ShowProjectAvatars = ShowProjectAvatars;
-            cfg.Appearance.TagColors          = BuildTagColorConfig();
             cfg.Appearance.CustomTheme        = BuildCustomThemeConfig();
 
             cfg.Notifications.OnBackupSuccess    = NotifyOnBackupSuccess;
