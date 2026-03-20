@@ -1,0 +1,74 @@
+name: Download stats snapshot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+
+    env:
+      STATS_BRANCH: download-stats
+      REPO_OWNER: ATAC-Helicopter
+      REPO_NAME: VaultSync
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Prepare stats branch worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${STATS_BRANCH}" || true
+
+          if git show-ref --verify --quiet "refs/remotes/origin/${STATS_BRANCH}"; then
+            git worktree add stats-worktree "origin/${STATS_BRANCH}"
+          else
+            git worktree add --detach stats-worktree
+            cd stats-worktree
+            git checkout --orphan "${STATS_BRANCH}"
+            git rm -rf . || true
+          fi
+
+      - name: Generate download stats snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/download_stats.py --output-dir stats-worktree
+
+      - name: Commit updated stats
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd stats-worktree
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet && exit 0
+          git commit -m "Update download stats snapshot"
+          git push origin HEAD:${STATS_BRANCH}
+
+      - name: Workflow summary
+        shell: bash
+        run: |
+          {
+            echo "## Download stats snapshot"
+            echo ""
+            echo "- Branch: \`${STATS_BRANCH}\`"
+            echo "- Summary: \`README.md\` in \`${STATS_BRANCH}\`"
+            echo "- HTML report: \`index.html\` in \`${STATS_BRANCH}\`"
+            echo "- Raw snapshot: \`latest.json\` in \`${STATS_BRANCH}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
