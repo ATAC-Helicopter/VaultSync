@@ -1254,6 +1254,15 @@
     - enable/disable group actions still reflect the latest saved preference state.
     - refresh/update flows keep command-state synchronized without UI-thread file I/O.
 
+- [x] `BUG-17011` `P2` Left-align the Dashboard KPI card strip. _(Done)_
+  - Scope:
+    - keep the top Dashboard KPI cards anchored to the left edge instead of centering them within wide windows.
+  - Current status:
+    - Done: the Dashboard KPI `WrapPanel` now left-aligns its card row, so the cards stay anchored to the content edge instead of floating in the middle.
+  - Acceptance:
+    - Dashboard KPI cards align to the left in wide layouts.
+    - existing wrap behavior is preserved on narrower windows.
+
 - [x] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(Done)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:

@@ -70,6 +70,7 @@
 - [BUG-17008] Backup, restore, and dashboard trace chatter now stays behind explicit verbose logging, with `VAULTSYNC_FORCE_VERBOSE` available as a developer override.
 - [BUG-17009] Diagnostics logging now batches session-log writes through a single background writer instead of spawning one task per log line.
 - [BUG-17010] Projects group auto-backup actions no longer re-read app config during command-state evaluation and now use refreshed cached preferences instead.
+- [BUG-17011] Dashboard KPI cards now align to the left instead of centering within the available row width.
 - [BUG-17007] Metadata import no longer creates or leaves projects with an empty `RootPath`; imported root hints are preserved and existing blank paths are repaired when metadata provides a usable root.
 - [BUG-17001] Doctor repair workflows now marshal state updates onto the UI thread.
 - [BUG-16023] Restore status no longer falls back to raw localization keys.
