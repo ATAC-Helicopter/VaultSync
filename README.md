@@ -1,8 +1,8 @@
 <p align="center">
   <img
-    width="780"
-    alt="VaultSync"
-    src="https://github-readme-stats-theta-ten-38.vercel.app/api/pin/?username=ATAC-Helicopter&repo=VaultSync&theme=github_dark&hide_border=true"
+    width="960"
+    alt="VaultSync dashboard"
+    src="docs/images/Dashboard.png"
   />
 </p>
 
@@ -15,6 +15,7 @@
   <a href="#installation-cli-only">Install</a> |
   <a href="#features">Features</a> |
   <a href="DOCUMENTATION.md">Documentation</a> |
+  <a href="docs/DOWNLOAD_STATS.md">Download Stats</a> |
   <a href="ROADMAP.md">Roadmap</a> |
   <a href="CHANGELOG.md">Changelog</a> |
   <a href="SECURITY.md">Security</a> |
@@ -67,26 +68,33 @@
   <a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
     <img src="https://img.shields.io/github/downloads/ATAC-Helicopter/VaultSync/total?style=for-the-badge" />
   </a>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/tree/download-stats">
+    <img src="https://img.shields.io/badge/Download%20Stats-Live%20History-1f6feb?style=for-the-badge" />
+  </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/issues">
     <img src="https://img.shields.io/github/issues/ATAC-Helicopter/VaultSync?style=for-the-badge" />
   </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/pulls">
     <img src="https://img.shields.io/github/issues-pr/ATAC-Helicopter/VaultSync?style=for-the-badge" />
   </a>
-  <p align="center">
   <a href="https://www.reddit.com/r/VaultSync/">
     <img src="https://img.shields.io/reddit/subreddit-subscribers/VaultSync?style=for-the-badge&logo=reddit&label=r%2FVaultSync&color=FF4500" />
   </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/discussions">
     <img src="https://img.shields.io/badge/GitHub-Discussions-24292f?style=for-the-badge&logo=github" />
   </a>
-    
 </p>
-</p>
+
 <p align="center">
-<a href="https://www.producthunt.com/products/vaultsync?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-vaultsync" target="_blank" rel="noopener noreferrer"><img alt="VaultSync - Open-source backup manager with visibility into your data | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1094807&amp;theme=dark&amp;t=1773182638071">
-<p>
-</a>
+  <a href="https://www.producthunt.com/products/vaultsync?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-vaultsync" target="_blank" rel="noopener noreferrer">
+    <img alt="VaultSync - Open-source backup manager with visibility into your data | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1094807&amp;theme=dark&amp;t=1773182638071">
+  </a>
+</p>
+
+<p align="center">
+  <sub>GitHub badge counters can lag due to third-party caching. For a persistent release-download history, use the <a href="https://github.com/ATAC-Helicopter/VaultSync/tree/download-stats">download-stats branch</a>.</sub>
+</p>
+
 ---
 
 ##  Project Activity

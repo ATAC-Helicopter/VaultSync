@@ -35,6 +35,9 @@ Even without Pages, the branch still provides:
 - raw JSON snapshots
 - a static `index.html` that can be downloaded or served later
 
+Current branch link:
+- `https://github.com/ATAC-Helicopter/VaultSync/tree/download-stats`
+
 ## Notes
 - This tracks GitHub release asset downloads only.
 - It does not count installs from mirrors, package managers, or cloned source trees.

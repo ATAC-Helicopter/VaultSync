@@ -1342,6 +1342,7 @@
   - Current status:
     - Done: a scheduled/manual GitHub Actions workflow now snapshots GitHub Releases asset download counts into a dedicated `download-stats` branch.
     - Done: the generator writes `latest.json`, timestamped `history/*.json`, `README.md`, and `index.html` so the same data is inspectable both as raw JSON and as a public-friendly report.
+    - Done: README now links to the stats branch directly and no longer depends on the stale third-party repo card for the top banner.
   - Acceptance:
     - Main branches remain free of daily stats commits.
     - Snapshot history persists across workflow runs.
