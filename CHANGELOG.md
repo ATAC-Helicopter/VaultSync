@@ -16,7 +16,7 @@
 ### Changed
 - [VS-1719] Dashboard KPI cards now use stable-width wrapping so fullscreen layouts avoid oversized dead space while narrower windows keep a predictable card rhythm.
 - [VS-1719] The 1.7 dashboard pass is now complete with a stable responsive KPI row, dedicated restore-readiness review section, and explicit backup-storage risk explanations.
-- [VS-1708] Dev builds now identify as `1.7.0-beta.1`, while final Stable will remain `1.7.0`.
+- [VS-1708] Prerelease builds now identify with an explicit suffix, while Stable uses `1.7.0`.
 - [VS-1707] Settings and support bundles now include updater release-target diagnostics.
 - [VS-1708] Patch updates now run explicit `current -> target` preflight checks before offering the patch path.
 - [VS-1708] Patch preflight now keeps prerelease labels distinct, so beta `1.7.0-*` builds do not collapse into stable `1.7.0`.

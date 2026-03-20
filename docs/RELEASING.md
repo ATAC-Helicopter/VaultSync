@@ -6,7 +6,7 @@ This document defines the current release packaging flow.
 - .NET 8 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- Beta builds must use prerelease versions such as `1.7.0-beta.1`; the final Stable cut remains `1.7.0`
+- Beta builds must use prerelease versions such as `1.7.x-beta.N`; the final Stable cut remains `1.7.0`
 
 ## 1) Windows Installer
 1. Publish:
@@ -38,7 +38,7 @@ Beta example:
 - branch: `Dev`
 - release channel: `beta`
 - `previous_version = 1.6.0`
-- `target_version = 1.7.0-beta.1`
+- `target_version = 1.7.x-beta.N`
 
 Stable example:
 - branch: `Stable`

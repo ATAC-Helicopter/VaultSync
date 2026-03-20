@@ -226,7 +226,7 @@ dotnet tool update --global vaultsync.cli
 
 ## Updates & installers
 
-VaultSync checks GitHub Releases according to the selected update channel and interval. Stable follows non-prerelease releases; the optional Beta channel can include prerelease builds from the `Dev` branch such as `1.7.0-beta.1`.
+VaultSync checks GitHub Releases according to the selected update channel and interval. Stable follows non-prerelease releases; the optional Beta channel can include prerelease builds from the `Dev` branch.
 
 Desktop installers are published as assets on the repo's [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script after publishing the `win-x64` output. macOS builds are shipped as unsigned `.dmg` images containing the `.app` bundle; users may need to right-click -> Open or clear quarantine (`xattr -dr com.apple.quarantine /Applications/VaultSync.app`). macOS and Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the stable release line; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
 

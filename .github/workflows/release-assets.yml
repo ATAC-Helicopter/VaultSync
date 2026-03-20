@@ -11,7 +11,7 @@ on:
           - beta
           - stable
       previous_version:
-        description: "Previous version for patch manifests (e.g., 1.6.0 or 1.7.0-beta.1)"
+        description: "Previous version for patch manifests (e.g., 1.6.0 or 1.7.x-beta.N)"
         required: true
       previous_versions:
         description: "Optional comma/newline separated exact base-version allowlist for one manifest (defaults to previous_version only)"
@@ -82,7 +82,7 @@ jobs:
               exit 1
             fi
             if [[ "$target" != *-* ]]; then
-              echo "Beta target_version must include a prerelease suffix (example: 1.7.0-beta.1)."
+              echo "Beta target_version must include a prerelease suffix (example: 1.7.x-beta.N)."
               exit 1
             fi
           fi
@@ -140,13 +140,13 @@ jobs:
 
       - name: Build patch assets
         shell: pwsh
+        env:
+          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
         run: |
           $patchDir = "patches/v${{ inputs.target_version }}"
           New-Item -ItemType Directory -Force $patchDir | Out-Null
           $baseVersions = @()
-          foreach ($line in @"
-${{ needs.validate.outputs.patch_base_versions }}
-"@ -split "`r?`n")
+          foreach ($line in $env:PATCH_BASE_VERSIONS -split "`r?`n")
           {
             $trimmed = $line.Trim()
             if ($trimmed) { $baseVersions += $trimmed }

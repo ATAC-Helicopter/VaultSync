@@ -870,7 +870,7 @@
     - retention can prove it preserves at least one restorable point per project,
     - updater diagnostics explain channel/target/patch eligibility without debug builds,
     - doctor workflows provide dry-run before mutation.
-  - Beta builds for the `1.7` cycle should use prerelease app versions such as `1.7.0-beta.1`, while the final Stable cut remains `1.7.0`.
+  - Beta builds for the `1.7` cycle should use prerelease app versions such as `1.7.x-beta.N`, while the final Stable cut remains `1.7.0`.
 
 - [x] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine. _(Done)_
   - Scope: remap only through trusted exact links (`backup.snapshot_id -> snapshots.project_id` and exact external-id matches), never name/path heuristics.
