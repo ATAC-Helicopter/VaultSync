@@ -80,9 +80,13 @@
   <a href="https://github.com/ATAC-Helicopter/VaultSync/discussions">
     <img src="https://img.shields.io/badge/GitHub-Discussions-24292f?style=for-the-badge&logo=github" />
   </a>
+    
 </p>
 </p>
-
+<p align="center">
+<a href="https://www.producthunt.com/products/vaultsync?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-vaultsync" target="_blank" rel="noopener noreferrer"><img alt="VaultSync - Open-source backup manager with visibility into your data | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1094807&amp;theme=dark&amp;t=1773182638071">
+<p>
+</a>
 ---
 
 ##  Project Activity
