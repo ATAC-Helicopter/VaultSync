@@ -2,6 +2,8 @@
 
 ## [1.7.0]
 
+Current `1.7` release-train highlights, including the beta-preview work around repair tooling, safer updates, transfer resilience, dashboard clarity, and in-context appearance customization.
+
 ### Integrity and repair
 - Added startup backup-index consistency checks so VaultSync can detect metadata drift early without blocking launch.
 - Added deterministic backup-index repair planning plus a Doctor workflow for dry-run and exact fix-now actions.
@@ -22,12 +24,14 @@
 ### UI and workflow improvements
 - Redesigned the Dashboard information layout for clearer KPI, activity, storage, and readiness scanning.
 - Added app-wide tag color styling and in-Projects tag color editing.
+- Added custom theme presets, quick palettes, and slot-based theme editing in Settings > Appearance.
 - Improved Projects empty-state and no-selection behavior instead of rendering broken blank detail panes.
 
 ### Fixes
 - Fixed Projects root persistence across restart/config race conditions.
 - Fixed Doctor workflow command-state updates crossing onto invalid threads.
 - Fixed noisy backup/restore/dashboard trace chatter so normal runs stay clean unless verbose logging is enabled.
+- Fixed theme saves so they no longer overwrite tag colors managed from Projects.
 - Restored corrupted bundled font assets used by the UI.
 
 ## [1.6.0]

@@ -4,7 +4,7 @@ VaultSync uses GitHub Releases for update discovery and supports patch assets to
 
 ## Channels
 - Stable: latest non-prerelease release.
-- Beta/Dev: prerelease-capable flow for `dev` branch builds (when enabled in app settings).
+- Beta/Dev: prerelease-capable flow for `Dev` branch builds such as `1.7.0-beta.1` (when enabled in app settings).
 
 ## Required Release Assets
 - Patch manifest:
@@ -31,6 +31,7 @@ macOS can use architecture-specific patch names:
 - `baseVersions` is an exact allowlist, not a version range.
 - Patch preflight and helper apply both require the installed version to match one listed base exactly.
 - If the installed version is not listed, VaultSync must fall back to the installer.
+- Prerelease labels are part of the exact version identity, so `1.7.0-beta.1` and `1.7.0` are treated as different bases.
 
 This is required because patch archives are partial target payloads. Files omitted from the patch are assumed to already be correct on every listed base version.
 
