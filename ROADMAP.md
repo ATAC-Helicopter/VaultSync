@@ -1336,6 +1336,17 @@
     - Done: manifest schema, preflight validation, helper enforcement, diagnostics, and patch builder all support a strict exact-base allowlist while preserving legacy single-base manifests.
     - Done: release workflow inputs now author multi-base manifests explicitly, and tests cover legacy manifests, exact allowlist matches, malformed allowlist rejection, and non-listed base rejection.
 
+## 1.7.1
+- [x] `VS-1725` `P2` GitHub release download stats snapshots and public report. _(Done)_
+  - Scope: capture release asset download counts on a schedule, keep persistent history off `Dev`/`Stable`, and generate a human-readable public summary from the same JSON snapshots.
+  - Current status:
+    - Done: a scheduled/manual GitHub Actions workflow now snapshots GitHub Releases asset download counts into a dedicated `download-stats` branch.
+    - Done: the generator writes `latest.json`, timestamped `history/*.json`, `README.md`, and `index.html` so the same data is inspectable both as raw JSON and as a public-friendly report.
+  - Acceptance:
+    - Main branches remain free of daily stats commits.
+    - Snapshot history persists across workflow runs.
+    - Public summary output is easy to inspect without manually querying the GitHub API.
+
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
   - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.
@@ -1346,16 +1357,6 @@
     - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
     - Existing Settings bindings continue to work without regressions.
     - The split makes later platform-specific settings work lower-risk and easier to review.
-
-- [x] `VS-1805` `P2` GitHub release download stats snapshots and public report. _(Done)_
-  - Scope: capture release asset download counts on a schedule, keep persistent history off `Dev`/`Stable`, and generate a human-readable public summary from the same JSON snapshots.
-  - Current status:
-    - Done: a scheduled/manual GitHub Actions workflow now snapshots GitHub Releases asset download counts into a dedicated `download-stats` branch.
-    - Done: the generator writes `latest.json`, timestamped `history/*.json`, `README.md`, and `index.html` so the same data is inspectable both as raw JSON and as a public-friendly report.
-  - Acceptance:
-    - Main branches remain free of daily stats commits.
-    - Snapshot history persists across workflow runs.
-    - Public summary output is easy to inspect without manually querying the GitHub API.
 
 - [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.
 - [ ] `VS-1802` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.

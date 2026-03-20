@@ -1,9 +1,9 @@
 ﻿# Changelog
-## [1.8.0] - Unreleased
+## [1.7.1] - Unreleased
 ### Added
-- [VS-1805] Added scheduled GitHub release download snapshots with a dedicated public stats branch and JSON history.
+- [VS-1725] Added scheduled GitHub release download snapshots with a dedicated public stats branch and JSON history.
 ### Changed
-- [VS-1805] Download stats now generate both a readable HTML/Markdown summary and raw release-asset history from the same workflow.
+- [VS-1725] Download stats now generate both a readable HTML/Markdown summary and raw release-asset history from the same workflow.
 
 ## [1.7.0] - 20.03.2026
 ### Added
