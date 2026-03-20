@@ -241,12 +241,17 @@
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
         </Style>
         <Style Selector="Button.action-danger">
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="Background" Value="#12FF6A6A" />
             <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.action-danger:pointerover">
-            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+            <Setter Property="Background" Value="#1EFF6A6A" />
+        </Style>
+        <Style Selector="Button.action-danger:pressed">
+            <Setter Property="Background" Value="#28FF6A6A" />
         </Style>
 
         <!-- Shared pills/tags -->

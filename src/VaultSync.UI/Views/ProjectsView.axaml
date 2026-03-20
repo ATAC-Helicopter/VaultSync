@@ -631,9 +631,8 @@
                     Classes="action-ghost action-danger"
                     Padding="{DynamicResource ButtonPillPadding}"
                     CornerRadius="999"
-                    Command="{Binding DataContext.RemoveProjectCommand, ElementName=Root}">
-              <TextBlock Text="{infra:LocalizedString Key=Projects.Detail.RemoveProject}" />
-            </Button>
+                    Command="{Binding DataContext.RemoveProjectCommand, ElementName=Root}"
+                    Content="{infra:LocalizedString Key=Projects.Detail.RemoveProject}" />
           </WrapPanel>
 
           <!-- Project controls + key stats -->

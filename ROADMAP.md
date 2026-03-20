@@ -1273,6 +1273,16 @@
     - Projects remains the authoritative editor for app-wide tag colors.
     - tag chips keep their saved colors after theme changes and app restart.
 
+- [x] `BUG-17013` `P2` Fix destructive Projects button label alignment and danger styling. _(Done)_
+  - Scope:
+    - center the destructive Projects action label correctly and tighten the outlined danger treatment so the button looks intentional instead of off-balance.
+  - Current status:
+    - Done: the Projects destructive action now uses the normal button content presenter path and the shared `action-danger` style centers content with a clearer red outline/fill treatment.
+  - Acceptance:
+    - the Projects destructive button label is centered cleanly.
+    - the danger button reads clearly against dark surfaces without looking washed out.
+    - shared outlined danger buttons keep consistent alignment and hover/pressed behavior.
+
 - [x] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(Done)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:
