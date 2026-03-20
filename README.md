@@ -7,14 +7,6 @@
 </p>
 
 <p align="center">
-  <img
-    width="960"
-    alt="VaultSync dashboard"
-    src="docs/images/Dashboard.png"
-  />
-</p>
-
-<p align="center">
   <strong>Snapshot | Backup | Sync | Verify</strong><br/>
   Cross-platform backup and snapshot manager built for project folders, NAS workflows, and reliable restores.
 </p>
