@@ -1283,6 +1283,16 @@
     - the danger button reads clearly against dark surfaces without looking washed out.
     - shared outlined danger buttons keep consistent alignment and hover/pressed behavior.
 
+- [x] `BUG-17014` `P1` Make macOS release-assets patch generation portable without `mapfile`. _(Done)_
+  - Scope:
+    - replace the macOS workflow's Bash-4-only `mapfile` usage with a portable base-version loop that still expands the same `--previous` arguments.
+  - Current status:
+    - Done: the macOS patch step now reads base versions through a portable heredoc loop, so hosted macOS runners can build patch assets without `mapfile`.
+  - Acceptance:
+    - the macOS release-assets workflow no longer fails on `mapfile: command not found`.
+    - multiple exact base versions still expand into repeated `--previous` arguments.
+    - Windows and macOS keep matching manifest behavior.
+
 - [x] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(Done)_
   - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
   - Why it matters:

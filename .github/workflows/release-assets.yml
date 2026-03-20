@@ -203,14 +203,17 @@ jobs:
           bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net8.0/osx-x64/publish
 
       - name: Build patch assets
+        env:
+          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
         run: |
           mkdir -p "patches/v${{ inputs.target_version }}"
-          mapfile -t patch_bases < <(printf '%s\n' "${{ needs.validate.outputs.patch_base_versions }}")
           previous_args=()
-          for base in "${patch_bases[@]}"; do
+          while IFS= read -r base; do
             [[ -n "$base" ]] || continue
             previous_args+=( --previous "$base" )
-          done
+          done <<'EOF'
+          ${{ needs.validate.outputs.patch_base_versions }}
+          EOF
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net8.0/osx-arm64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.zip" \

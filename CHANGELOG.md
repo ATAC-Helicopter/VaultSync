@@ -73,6 +73,7 @@
 - [BUG-17011] Dashboard KPI cards now align to the left instead of centering within the available row width.
 - [BUG-17012] Saving a custom theme no longer overwrites tag-color mappings that are now managed from Projects.
 - [BUG-17013] The Projects destructive action button now uses centered text and a cleaner danger outline/fill treatment.
+- [BUG-17014] The macOS release-assets workflow now builds patch manifests without Bash `mapfile`, so the hosted runner can finish patch packaging.
 - [BUG-17007] Metadata import no longer creates or leaves projects with an empty `RootPath`; imported root hints are preserved and existing blank paths are repaired when metadata provides a usable root.
 - [BUG-17001] Doctor repair workflows now marshal state updates onto the UI thread.
 - [BUG-16023] Restore status no longer falls back to raw localization keys.
