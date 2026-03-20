@@ -1,4 +1,4 @@
-{
+﻿{
     "Backups.Action.BackupAll":  "Создать резервные копии всех проектов",
     "Backups.Activity.Tooltip":  "{0}: {1} резервных копий · {2}",
     "Backups.Activity.TooltipNone":  "{0}: нет резервных копий",
@@ -1146,5 +1146,14 @@
     "Backups.Compare.NewerModified":  "~ изменено {0}",
     "Backups.Compare.NewerDeleted":  "- удалено {0}",
     "Backups.Compare.NewerNet":  "Δ чистое {0}",
-    "Projects.Tags.Color.Close":  "Закрыть"
+    "Projects.Tags.Color.Close":  "Закрыть",
+    "Dashboard.Storage.Risk.Error": "Ошибка",
+    "Dashboard.Storage.Risk.LowFreeSpace": "Недостаточно места",
+    "Dashboard.Storage.Risk.NotConfigured": "Не настроено",
+    "Dashboard.Storage.Risk.SizeUnknown": "Размер неизвестен",
+    "Dashboard.Storage.Risk.TargetUnavailable": "Назначение недоступно",
+    "Settings.Advanced.CheckpointResumeDiagnosticsEmpty": "Нет записей диагностики контрольных точек.",
+    "Settings.Advanced.CheckpointResumeDiagnosticsTemplate": "Последний запуск: {0} | Контрольные точки: {1} | Результаты: {2}",
+    "Settings.Advanced.CheckpointResumeDiagnosticsNoDetail": "Нет доступных деталей.",
+    "Settings.Advanced.CheckpointResumeUnknownProject": "Неизвестный проект"
 }

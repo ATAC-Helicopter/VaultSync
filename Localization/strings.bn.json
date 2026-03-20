@@ -1,4 +1,4 @@
-{
+﻿{
     "Backups.Action.BackupAll":  "সব প্রকল্প ব্যাকআপ করুন",
     "Backups.Activity.Tooltip":  "{0}: {1} ব্যাকআপ · {2}",
     "Backups.Activity.TooltipNone":  "{0}: কোনো ব্যাকআপ নেই",
@@ -1146,5 +1146,14 @@
     "Backups.Compare.NewerModified":  "~ পরিবর্তিত হয়েছে {0}",
     "Backups.Compare.NewerDeleted":  "- মুছে ফেলা হয়েছে {0}",
     "Backups.Compare.NewerNet":  "Δ নেট {0}",
-    "Projects.Tags.Color.Close":  "রঙ বন্ধ করুন"
+    "Projects.Tags.Color.Close":  "রঙ বন্ধ করুন",
+    "Dashboard.Storage.Risk.Error": "ত্রুটি",
+    "Dashboard.Storage.Risk.LowFreeSpace": "স্টোরেজ স্পেস কম",
+    "Dashboard.Storage.Risk.NotConfigured": "কনফিগার করা হয়নি",
+    "Dashboard.Storage.Risk.SizeUnknown": "সাইজ অজানা",
+    "Dashboard.Storage.Risk.TargetUnavailable": "গন্তব্য উপলব্ধ নয়",
+    "Settings.Advanced.CheckpointResumeDiagnosticsEmpty": "কোনো চেকপয়েন্ট ডায়াগনস্টিক রেকর্ড নেই।",
+    "Settings.Advanced.CheckpointResumeDiagnosticsTemplate": "শেষ রান: {0} | চেকপয়েন্ট: {1} | ফলাফল: {2}",
+    "Settings.Advanced.CheckpointResumeDiagnosticsNoDetail": "কোনো বিস্তারিত পাওয়া যায়নি।",
+    "Settings.Advanced.CheckpointResumeUnknownProject": "অজানা প্রজেক্ট"
 }

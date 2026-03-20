@@ -1,4 +1,4 @@
-{
+﻿{
     "Backups.Action.BackupAll":  "Esegui il backup di tutti i progetti",
     "Backups.Activity.Tooltip":  "{0}: {1} backup · {2}",
     "Backups.Activity.TooltipNone":  "{0}: Nessun backup",
@@ -1146,5 +1146,14 @@
     "Backups.Compare.NewerModified":  "~ modificati {0}",
     "Backups.Compare.NewerDeleted":  "- eliminati {0}",
     "Backups.Compare.NewerNet":  "Δ netto {0}",
-    "Projects.Tags.Color.Close":  "Chiudi"
+    "Projects.Tags.Color.Close":  "Chiudi",
+    "Dashboard.Storage.Risk.Error": "Errore",
+    "Dashboard.Storage.Risk.LowFreeSpace": "Spazio insufficiente",
+    "Dashboard.Storage.Risk.NotConfigured": "Non configurato",
+    "Dashboard.Storage.Risk.SizeUnknown": "Dimensione sconosciuta",
+    "Dashboard.Storage.Risk.TargetUnavailable": "Destinazione non disponibile",
+    "Settings.Advanced.CheckpointResumeDiagnosticsEmpty": "Nessuna diagnostica checkpoint registrata.",
+    "Settings.Advanced.CheckpointResumeDiagnosticsTemplate": "Ultima esecuzione: {0} | Checkpoint: {1} | Risultati: {2}",
+    "Settings.Advanced.CheckpointResumeDiagnosticsNoDetail": "Nessun dettaglio disponibile.",
+    "Settings.Advanced.CheckpointResumeUnknownProject": "Progetto sconosciuto"
 }

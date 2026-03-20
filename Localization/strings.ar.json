@@ -1,4 +1,4 @@
-{
+﻿{
     "Backups.Action.BackupAll":  "عمل نسخة احتياطية لجميع المشاريع",
     "Backups.Activity.Tooltip":  "{0}: {1} نسخة احتياطية · {2}",
     "Backups.Activity.TooltipNone":  "{0}: لا توجد نسخ احتياطية",
@@ -1146,5 +1146,14 @@
     "Backups.Compare.NewerModified":  "~ تم تعديل {0}",
     "Backups.Compare.NewerDeleted":  "- تم حذف {0}",
     "Backups.Compare.NewerNet":  "Δ الصافي {0}",
-    "Projects.Tags.Color.Close":  "إغلاق اللون"
+    "Projects.Tags.Color.Close":  "إغلاق اللون",
+    "Dashboard.Storage.Risk.Error": "خطأ",
+    "Dashboard.Storage.Risk.LowFreeSpace": "مساحة تخزين منخفضة",
+    "Dashboard.Storage.Risk.NotConfigured": "غير مُهيأ",
+    "Dashboard.Storage.Risk.SizeUnknown": "الحجم غير معروف",
+    "Dashboard.Storage.Risk.TargetUnavailable": "الوجهة غير متاحة",
+    "Settings.Advanced.CheckpointResumeDiagnosticsEmpty": "لا توجد سجلات تشخيص لنقاط الاستئناف.",
+    "Settings.Advanced.CheckpointResumeDiagnosticsTemplate": "آخر تشغيل: {0} | نقاط الاستئناف: {1} | النتائج: {2}",
+    "Settings.Advanced.CheckpointResumeDiagnosticsNoDetail": "لا توجد تفاصيل متاحة.",
+    "Settings.Advanced.CheckpointResumeUnknownProject": "مشروع غير معروف"
 }

@@ -1,4 +1,4 @@
-{
+﻿{
     "Backups.Action.BackupAll":  "备份所有项目",
     "Backups.Activity.Tooltip":  "{0}：{1} 个备份 · {2}",
     "Backups.Activity.TooltipNone":  "{0}：无备份",
@@ -1146,5 +1146,14 @@
     "Backups.Compare.NewerModified":  "~ 修改 {0}",
     "Backups.Compare.NewerDeleted":  "- 删除 {0}",
     "Backups.Compare.NewerNet":  "Δ 净变化 {0}",
-    "Projects.Tags.Color.Close":  "关闭"
+    "Projects.Tags.Color.Close":  "关闭",
+    "Dashboard.Storage.Risk.Error": "错误",
+    "Dashboard.Storage.Risk.LowFreeSpace": "存储空间不足",
+    "Dashboard.Storage.Risk.NotConfigured": "未配置",
+    "Dashboard.Storage.Risk.SizeUnknown": "大小未知",
+    "Dashboard.Storage.Risk.TargetUnavailable": "目标不可用",
+    "Settings.Advanced.CheckpointResumeDiagnosticsEmpty": "没有检查点诊断记录。",
+    "Settings.Advanced.CheckpointResumeDiagnosticsTemplate": "最近运行：{0} | 检查点：{1} | 结果：{2}",
+    "Settings.Advanced.CheckpointResumeDiagnosticsNoDetail": "没有可用详情。",
+    "Settings.Advanced.CheckpointResumeUnknownProject": "未知项目"
 }

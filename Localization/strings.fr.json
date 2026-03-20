@@ -1,4 +1,4 @@
-{
+﻿{
     "Backups.Action.BackupAll":  "Sauvegarder tous les projets",
     "Backups.Activity.Tooltip":  "{0} : {1} sauvegardes · {2}",
     "Backups.Activity.TooltipNone":  "{0} : Aucune sauvegarde",
@@ -1146,5 +1146,14 @@
     "Backups.Compare.NewerModified":  "~ modifiés {0}",
     "Backups.Compare.NewerDeleted":  "- supprimés {0}",
     "Backups.Compare.NewerNet":  "Δ net {0}",
-    "Projects.Tags.Color.Close":  "Fermer"
+    "Projects.Tags.Color.Close":  "Fermer",
+    "Dashboard.Storage.Risk.Error": "Erreur",
+    "Dashboard.Storage.Risk.LowFreeSpace": "Espace insuffisant",
+    "Dashboard.Storage.Risk.NotConfigured": "Non configuré",
+    "Dashboard.Storage.Risk.SizeUnknown": "Taille inconnue",
+    "Dashboard.Storage.Risk.TargetUnavailable": "Destination indisponible",
+    "Settings.Advanced.CheckpointResumeDiagnosticsEmpty": "Aucun diagnostic de reprise enregistré.",
+    "Settings.Advanced.CheckpointResumeDiagnosticsTemplate": "Dernière exécution : {0} | Points de reprise : {1} | Résultats : {2}",
+    "Settings.Advanced.CheckpointResumeDiagnosticsNoDetail": "Aucun détail disponible.",
+    "Settings.Advanced.CheckpointResumeUnknownProject": "Projet inconnu"
 }

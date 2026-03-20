@@ -1,4 +1,4 @@
-{
+﻿{
     "Backups.Action.BackupAll":  "सभी प्रोजेक्ट का बैकअप लें",
     "Backups.Activity.Tooltip":  "{0}: {1} बैकअप · {2}",
     "Backups.Activity.TooltipNone":  "{0}: कोई बैकअप नहीं",
@@ -1146,5 +1146,14 @@
     "Backups.Compare.NewerModified":  "~ संशोधित {0}",
     "Backups.Compare.NewerDeleted":  "- हटाए गए {0}",
     "Backups.Compare.NewerNet":  "Δ शुद्ध {0}",
-    "Projects.Tags.Color.Close":  "बंद करें"
-}
+    "Projects.Tags.Color.Close":  "बंद करें",
+    "Dashboard.Storage.Risk.Error": "त्रुटि",
+    "Dashboard.Storage.Risk.LowFreeSpace": "कम स्टोरेज स्पेस",
+    "Dashboard.Storage.Risk.NotConfigured": "कॉन्फ़िगर नहीं किया गया",
+    "Dashboard.Storage.Risk.SizeUnknown": "आकार अज्ञात",
+    "Dashboard.Storage.Risk.TargetUnavailable": "गंतव्य उपलब्ध नहीं",
+    "Settings.Advanced.CheckpointResumeDiagnosticsEmpty": "कोई चेकपॉइंट डायग्नोस्टिक रिकॉर्ड नहीं।",
+    "Settings.Advanced.CheckpointResumeDiagnosticsTemplate": "अंतिम रन: {0} | चेकपॉइंट: {1} | परिणाम: {2}",
+    "Settings.Advanced.CheckpointResumeDiagnosticsNoDetail": "कोई विवरण उपलब्ध नहीं।",
+    "Settings.Advanced.CheckpointResumeUnknownProject": "अज्ञात प्रोजेक्ट"
+    }
