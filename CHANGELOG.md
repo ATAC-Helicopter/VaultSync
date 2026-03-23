@@ -5,6 +5,9 @@
 ### Changed
 - [VS-1725] Download stats now generate both a readable HTML/Markdown summary and raw release-asset history from the same workflow.
 - [VS-1725] README now uses repo-owned visuals and links to the download-stats branch instead of relying on a stale third-party repo card.
+### Fixed
+- [BUG-17015] Dashboard header title, subtitle, and summary pills now stay left-aligned so the top overview block reads consistently with the rest of the page.
+- [BUG-17016] Dashboard backup-storage card now uses a ranked top-consumers list instead of an oversized pill cloud, making the lower-right space useful and readable.
 
 ## [1.7.0] - 20.03.2026
 ### Added

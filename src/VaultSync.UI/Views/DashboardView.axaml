@@ -32,15 +32,19 @@
                 <TextBlock Text="{infra:LocalizedString Key=Dashboard.Title}"
                            Classes="section-title"
                            FontSize="{DynamicResource PageTitleFontSize}"
-                           FontWeight="SemiBold"/>
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Left"
+                           TextAlignment="Left"/>
                 <TextBlock Text="{infra:LocalizedString Key=Dashboard.Description}"
                            Classes="kicker"
                            FontSize="{DynamicResource PageSubtitleFontSize}"
                            MaxWidth="760"
-                           TextWrapping="Wrap"/>
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Left"
+                           TextAlignment="Left"/>
               </StackPanel>
 
-              <WrapPanel Grid.Row="1" ItemSpacing="8" LineSpacing="8">
+              <WrapPanel Grid.Row="1" ItemSpacing="8" LineSpacing="8" HorizontalAlignment="Left">
                 <Border Classes="stat-pill sm">
                   <TextBlock Text="{Binding ProjectsHint}" FontWeight="SemiBold" MaxWidth="220" TextTrimming="CharacterEllipsis"/>
                 </Border>
@@ -587,15 +591,17 @@
         <Border Grid.Column="1"
                 Classes="card"
                 Padding="{DynamicResource CardPaddingSmall}">
-          <StackPanel Spacing="8">
-            <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupStorage}" Classes="section-title"/>
-            <TextBlock Text="{Binding BackupDiskFreeText}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding BackupDiskRiskReason}"
-                       Classes="metric-hint"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding HasBackupDiskRiskReason}"/>
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.BackupStorage}" Classes="section-title"/>
+              <TextBlock Text="{Binding BackupDiskFreeText}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding BackupDiskRiskReason}"
+                         Classes="metric-hint"
+                         TextWrapping="Wrap"
+                         IsVisible="{Binding HasBackupDiskRiskReason}"/>
+            </StackPanel>
 
-            <Grid Margin="0,4,0,0" Height="12" ClipToBounds="True" Background="{DynamicResource ItemBg}">
+            <Grid Grid.Row="1" Margin="0,2,0,0" Height="12" ClipToBounds="True" Background="{DynamicResource ItemBg}">
               <ProgressBar Minimum="0" Maximum="100" Value="{Binding BackupDiskUsedPercent}" Height="12" Margin="0" Foreground="{DynamicResource TextSecondaryBrush}" Background="{DynamicResource Surface2}" IsVisible="{Binding HasBackupUsageSegments, Converter={StaticResource BoolInvertConverter}}"/>
               <lvc:CartesianChart Series="{Binding BackupUsageSeries}"
                                   XAxes="{Binding BackupUsageXAxes}"
@@ -608,37 +614,60 @@
                                   Padding="0"/>
             </Grid>
 
-            <ItemsControl ItemsSource="{Binding BackupUsageSegments}" Margin="0,6,0,0">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8"/>
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Border Background="{DynamicResource Surface2}"
-                          BorderBrush="{DynamicResource DividerBrush}"
-                          BorderThickness="1"
-                          CornerRadius="999"
-                          Padding="10,6"
-                          ToolTip.Tip="{Binding Tooltip}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Brush}" VerticalAlignment="Center"/>
-                      <TextBlock Text="{Binding Name}"
-                                 FontSize="11"
-                                 FontWeight="SemiBold"
-                                 MaxWidth="150"
-                                 TextTrimming="CharacterEllipsis"
-                                 VerticalAlignment="Center"/>
-                      <TextBlock Text="{Binding ValueText}"
-                                 Classes="metric-hint"
-                                 VerticalAlignment="Center"/>
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
+            <Border Grid.Row="2"
+                    Background="{DynamicResource ItemBg}"
+                    CornerRadius="12"
+                    Padding="10"
+                    MinHeight="180">
+              <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                <TextBlock Text="Top consumers"
+                           Classes="kicker"
+                           Margin="0"/>
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              MaxHeight="220">
+                  <ItemsControl ItemsSource="{Binding BackupUsageSegments}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel/>
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Background="{DynamicResource Surface2}"
+                                BorderBrush="{DynamicResource BorderSoft}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="10,8"
+                                Margin="0,0,0,8"
+                                ToolTip.Tip="{Binding Tooltip}">
+                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Border Width="10"
+                                    Height="10"
+                                    CornerRadius="5"
+                                    Background="{Binding Brush}"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Name}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding ValueText}"
+                                       Classes="metric-hint"
+                                       VerticalAlignment="Center"
+                                       Margin="12,0,0,0"/>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Grid>
+            </Border>
+          </Grid>
         </Border>
       </Grid>
     </Grid>
