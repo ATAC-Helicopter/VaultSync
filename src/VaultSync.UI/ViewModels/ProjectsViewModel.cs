@@ -1398,7 +1398,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void RefreshProjectTagAppearance(AppConfig? config = null)
     {
-        config ??= AppConfigStore.Load();
+        config ??= AppConfigStore.GetSnapshot();
         RefreshSelectedProjectTags();
         RefreshReusableProjectTags();
         foreach (var project in _allProjects)
@@ -1416,7 +1416,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void SyncProjectTagColorDraft(string tag)
     {
-        var cfg = AppConfigStore.Load();
+        var cfg = AppConfigStore.GetSnapshot();
         var accent = ProjectTagAppearance.Resolve(tag, cfg.Appearance.TagColors).Background;
 
         _projectTagColorSyncing = true;

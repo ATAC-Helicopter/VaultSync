@@ -239,14 +239,22 @@ public partial class MainWindow : Window
 
     // -------- navigation handlers --------
     private void OnNavDashboard(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SetDashboard();
-    private void OnNavProjects (object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SetPlaceholder("Projects", "Manage tracked Unity projects");
-    private void OnNavBackups  (object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SetPlaceholder("Backups", "Run and review snapshot jobs");
-    private void OnNavSettings (object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SetPlaceholder("Settings", "Theme, NAS paths, schedules");
+    private void OnNavProjects (object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SetPlaceholder(
+        Localized("Shell.Nav.Projects", "Projects"),
+        Localized("Shell.Header.ProjectsKicker", "Manage tracked Unity projects"));
+    private void OnNavBackups  (object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SetPlaceholder(
+        Localized("Shell.Nav.Backups", "Backups"),
+        Localized("Shell.Header.BackupsKicker", "Run and review snapshot jobs"));
+    private void OnNavSettings (object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SetPlaceholder(
+        Localized("Shell.Nav.Settings", "Settings"),
+        Localized("Shell.Header.SettingsKicker", "Theme, NAS paths, schedules"));
 
     // -------- helpers --------
     private void SetDashboard()
     {
-        SetHeader("Dashboard", "minimal boot");
+        SetHeader(
+            Localized("Shell.Nav.Dashboard", "Dashboard"),
+            Localized("Shell.Header.DashboardKicker", "minimal boot"));
 
         // Prefer the DashboardViewModel instance owned by AppViewModel, if available.
         object? vm = null;
@@ -277,10 +285,14 @@ public partial class MainWindow : Window
     {
         SetHeader(title, kicker);
 
+        var placeholderText = string.Format(
+            Localized("Shell.Placeholder.ComingSoon", "{0} view coming soon..."),
+            title);
+
         // If CurrentView exists, set a plain string or the VM and let ViewLocator handle it.
-        if (!TrySetCurrentView(new TextBlock { Text = $"{title} view coming soon...", Margin = new Thickness(16) }))
+        if (!TrySetCurrentView(new TextBlock { Text = placeholderText, Margin = new Thickness(16) }))
         {
-            MainContent.Content = new TextBlock { Text = $"{title} view coming soon...", Margin = new Thickness(16) };
+            MainContent.Content = new TextBlock { Text = placeholderText, Margin = new Thickness(16) };
         }
     }
 

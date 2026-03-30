@@ -970,7 +970,7 @@ namespace VaultSync.UI.ViewModels
             RefreshEncryptionPolicyOptions();
             RefreshRestoreModeOptions();
             RefreshVerificationPolicyOptions();
-            RefreshDestinationOptionsInternal(AppConfigStore.Load());
+            RefreshDestinationOptionsInternal(AppConfigStore.GetSnapshot());
             RefreshProjectSortOptions();
         }
 
@@ -2227,7 +2227,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    var config = AppConfigStore.Load();
+                    var config = AppConfigStore.GetSnapshot();
                     var (usedPercent, freeText, thresholdText, isBelowThreshold, _, status) =
                         DashboardViewModel.ComputeBackupDiskUsageDetailed(config);
                     var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));

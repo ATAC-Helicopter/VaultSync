@@ -56,11 +56,14 @@ namespace VaultSync.UI.ViewModels
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
             Array.Empty<BackupUsageSegment>();
+        public IReadOnlyList<BackupUsageSegment> BackupTopConsumers { get; private set; } =
+            Array.Empty<BackupUsageSegment>();
 
         public ISeries[] BackupUsageSeries { get; private set; } = Array.Empty<ISeries>();
         public Axis[] BackupUsageXAxes { get; private set; } = Array.Empty<Axis>();
         public Axis[] BackupUsageYAxes { get; private set; } = Array.Empty<Axis>();
         public bool HasBackupUsageSegments => BackupUsageSegments.Count > 0;
+        public bool HasBackupTopConsumers => BackupTopConsumers.Count > 0;
 
         public int ProjectCount
         {
@@ -984,7 +987,7 @@ namespace VaultSync.UI.ViewModels
             ApplyRestoreReadinessSummary(new RestoreReadinessSummary());
 
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             BuildBackupUsageBar(cfg, Array.Empty<(Project project, long bytes)>());
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
@@ -999,11 +1002,14 @@ namespace VaultSync.UI.ViewModels
         if (string.IsNullOrWhiteSpace(backupRoot))
         {
             BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+            BackupTopConsumers = Array.Empty<BackupUsageSegment>();
             BackupUsageSeries   = Array.Empty<ISeries>();
             BackupUsageXAxes    = Array.Empty<Axis>();
             BackupUsageYAxes    = Array.Empty<Axis>();
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
             OnPropertyChanged(nameof(BackupUsageYAxes));
@@ -1134,7 +1140,9 @@ namespace VaultSync.UI.ViewModels
         }
 
         BackupUsageSegments = segments;
+        BackupTopConsumers = BuildTopConsumerList(segments);
         OnPropertyChanged(nameof(HasBackupUsageSegments));
+        OnPropertyChanged(nameof(HasBackupTopConsumers));
 
         // Build stacked RowSeries for the colored bar (Other + VaultSync projects).
         if (segments.Count == 0)
@@ -1158,6 +1166,8 @@ namespace VaultSync.UI.ViewModels
             };
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
             OnPropertyChanged(nameof(HasBackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
@@ -1187,6 +1197,8 @@ namespace VaultSync.UI.ViewModels
             };
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
             OnPropertyChanged(nameof(HasBackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
@@ -1263,16 +1275,19 @@ namespace VaultSync.UI.ViewModels
         {
             if (vaultSyncBytes <= 0 || perProject == null || perProject.Count == 0)
             {
-                BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-                BackupUsageSeries   = Array.Empty<ISeries>();
-                BackupUsageXAxes    = Array.Empty<Axis>();
-                BackupUsageYAxes    = Array.Empty<Axis>();
+            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+            BackupTopConsumers = Array.Empty<BackupUsageSegment>();
+            BackupUsageSeries   = Array.Empty<ISeries>();
+            BackupUsageXAxes    = Array.Empty<Axis>();
+            BackupUsageYAxes    = Array.Empty<Axis>();
 
-                OnPropertyChanged(nameof(BackupUsageSegments));
-                OnPropertyChanged(nameof(BackupUsageSeries));
-                OnPropertyChanged(nameof(BackupUsageXAxes));
-                OnPropertyChanged(nameof(BackupUsageYAxes));
-                return;
+            OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
+            OnPropertyChanged(nameof(BackupUsageSeries));
+            OnPropertyChanged(nameof(BackupUsageXAxes));
+            OnPropertyChanged(nameof(BackupUsageYAxes));
+            return;
             }
 
             var segments = new List<BackupUsageSegment>();
@@ -1325,7 +1340,9 @@ namespace VaultSync.UI.ViewModels
             }
 
             BackupUsageSegments = segments;
+            BackupTopConsumers = BuildTopConsumerList(segments);
             OnPropertyChanged(nameof(HasBackupUsageSegments));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
 
             if (segments.Count == 0)
             {
@@ -1348,6 +1365,8 @@ namespace VaultSync.UI.ViewModels
                 };
 
                 OnPropertyChanged(nameof(BackupUsageSegments));
+                OnPropertyChanged(nameof(BackupTopConsumers));
+                OnPropertyChanged(nameof(HasBackupTopConsumers));
                 OnPropertyChanged(nameof(HasBackupUsageSegments));
                 OnPropertyChanged(nameof(BackupUsageSeries));
                 OnPropertyChanged(nameof(BackupUsageXAxes));
@@ -1399,10 +1418,24 @@ namespace VaultSync.UI.ViewModels
             };
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
             OnPropertyChanged(nameof(HasBackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
             OnPropertyChanged(nameof(BackupUsageYAxes));
+        }
+
+        private IReadOnlyList<BackupUsageSegment> BuildTopConsumerList(IReadOnlyList<BackupUsageSegment> segments)
+        {
+            if (segments.Count == 0)
+                return Array.Empty<BackupUsageSegment>();
+
+            var projectSegments = segments
+                .Where(s => !string.Equals(s.Name, L("Dashboard.Storage.Other", "Other"), StringComparison.Ordinal))
+                .ToList();
+
+            return projectSegments.Count == 0 ? Array.Empty<BackupUsageSegment>() : projectSegments;
         }
 
 

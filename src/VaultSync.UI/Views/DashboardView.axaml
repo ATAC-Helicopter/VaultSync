@@ -620,51 +620,52 @@
                     Padding="10"
                     MinHeight="180">
               <Grid RowDefinitions="Auto,*" RowSpacing="8">
-                <TextBlock Text="Top consumers"
+                <TextBlock Text="{infra:LocalizedString Key=Dashboard.Storage.TopConsumers}"
                            Classes="kicker"
                            Margin="0"/>
-                <ScrollViewer Grid.Row="1"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              MaxHeight="220">
-                  <ItemsControl ItemsSource="{Binding BackupUsageSegments}">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate>
-                        <StackPanel/>
-                      </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Border Background="{DynamicResource Surface2}"
-                                BorderBrush="{DynamicResource BorderSoft}"
-                                BorderThickness="1"
-                                CornerRadius="10"
-                                Padding="10,8"
-                                Margin="0,0,0,8"
-                                ToolTip.Tip="{Binding Tooltip}">
-                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                            <Border Width="10"
-                                    Height="10"
-                                    CornerRadius="5"
-                                    Background="{Binding Brush}"
-                                    VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Name}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding ValueText}"
-                                       Classes="metric-hint"
-                                       VerticalAlignment="Center"
-                                       Margin="12,0,0,0"/>
-                          </Grid>
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
+                <TextBlock Grid.Row="1"
+                           Text="{infra:LocalizedString Key=Dashboard.Storage.TopConsumersEmpty}"
+                           Classes="metric-hint"
+                           IsVisible="{Binding HasBackupTopConsumers, Converter={StaticResource BoolInvertConverter}}"/>
+                <ItemsControl Grid.Row="1"
+                              ItemsSource="{Binding BackupTopConsumers}"
+                              IsVisible="{Binding HasBackupTopConsumers}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel/>
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Background="{DynamicResource Surface2}"
+                              BorderBrush="{DynamicResource BorderSoft}"
+                              BorderThickness="1"
+                              CornerRadius="10"
+                              Padding="10,8"
+                              Margin="0,0,0,8"
+                              ToolTip.Tip="{Binding Tooltip}">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                          <Border Width="10"
+                                  Height="10"
+                                  CornerRadius="5"
+                                  Background="{Binding Brush}"
+                                  VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="1"
+                                     Text="{Binding Name}"
+                                     FontSize="12"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis"
+                                     VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="2"
+                                     Text="{Binding ValueText}"
+                                     Classes="metric-hint"
+                                     VerticalAlignment="Center"
+                                     Margin="12,0,0,0"/>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
               </Grid>
             </Border>
           </Grid>

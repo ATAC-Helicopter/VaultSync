@@ -85,13 +85,13 @@ public sealed class TrayPanelService : IDisposable
 
     private TrayPanelViewModel CreateViewModel(AppViewModel appVm)
     {
-        var title = "VaultSync";
+        var title = LocalizationProvider.Service?.GetString("Shell.Title") ?? "VaultSync";
         var version = appVm.CurrentVersionDisplay;
         var header = string.IsNullOrWhiteSpace(version) ? title : $"{title} {version}";
 
         return new TrayPanelViewModel(
             header,
-            LocalizationProvider.Service?.GetString("Tray.Tooltip") ?? "VaultSync - snapshots & backups",
+            LocalizationProvider.Service?.GetString("Tray.Tooltip") ?? "VaultSync - snapshots and backups",
             openApp: () =>
             {
                 BringMainWindowToFront();
