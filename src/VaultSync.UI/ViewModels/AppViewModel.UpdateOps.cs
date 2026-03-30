@@ -217,7 +217,7 @@ namespace VaultSync.UI.ViewModels
                     await Task.Delay(delay);
                     RecordStartupPhase("deferred-startup-begin");
 
-                    var cfg = AppConfigStore.Load();
+                    var cfg = AppConfigStore.GetSnapshot();
                     EnsureDestinationProbeStarted();
                     RecordStartupPhase("destination-probe-ready");
 

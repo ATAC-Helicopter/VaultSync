@@ -135,7 +135,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var destinations = GetActiveDestinations(cfg);
 
                 var now = DateTime.UtcNow;
