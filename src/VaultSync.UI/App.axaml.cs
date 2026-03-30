@@ -1119,7 +1119,7 @@ public partial class App : Application
     {
         try
         {
-            var cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.Load();
+            var cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.GetSnapshot();
             var backupRoot = cfg.Backups.BackupLocation ?? string.Empty;
             var driveLabel = FormatDriveLabel(backupRoot);
             if (_cachedDriveHealthIsNetwork)
@@ -1886,7 +1886,7 @@ public partial class App : Application
         {
             try
             {
-                var cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.Load();
+                var cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.GetSnapshot();
                 var backupRoot = cfg.Backups.BackupRoot ?? string.Empty;
                 var driveLabel = FormatDriveLabel(backupRoot);
 
