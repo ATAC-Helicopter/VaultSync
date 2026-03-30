@@ -627,7 +627,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void NotifySnapshotOutcome(string message, bool success)
     {
-        var cfg = AppConfigStore.Load();
+        var cfg = AppConfigStore.GetSnapshot();
 
         var wants = success
             ? cfg.Notifications.OnSnapshotSuccess
@@ -682,7 +682,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             IsLoading = true;
 
-            var config = await Task.Run(AppConfigStore.Load);
+            var config = await Task.Run(AppConfigStore.GetSnapshot);
             RefreshGroupAutoBackupStateFromConfig(config);
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
@@ -1623,7 +1623,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void RefreshGroupAutoBackupStateFromConfig(AppConfig? config = null)
     {
-        config ??= AppConfigStore.Load();
+        config ??= AppConfigStore.GetSnapshot();
         _autoBackupDisabledProjectIds = new HashSet<int>(
             config.Backups.AutoBackupDisabledProjects ?? new List<int>());
         _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
@@ -1652,7 +1652,7 @@ public class ProjectsViewModel : ViewModelBase
 
         await Task.Run(() =>
         {
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
@@ -1705,7 +1705,7 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            var config = await Task.Run(AppConfigStore.Load).ConfigureAwait(false);
+            var config = await Task.Run(AppConfigStore.GetSnapshot).ConfigureAwait(false);
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
@@ -2099,7 +2099,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             try
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
                     : GetDefaultDbPath();
@@ -2158,7 +2158,7 @@ public class ProjectsViewModel : ViewModelBase
         try
         {
             // 1. Resolve DB path from shared AppConfig (with a sensible default).
-            var config = await Task.Run(AppConfigStore.Load);
+            var config = await Task.Run(AppConfigStore.GetSnapshot);
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
@@ -2433,7 +2433,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             try
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
                     : GetDefaultDbPath();
@@ -2491,7 +2491,7 @@ public class ProjectsViewModel : ViewModelBase
                     SelectedProject.PreferredDestinationId = preferredDestinationId;
                     SelectedProject.EncryptionPolicy = encryptionPolicy;
                     SelectedProject.EncryptionKeyRef = encryptionKeyRef;
-                    var cfg = AppConfigStore.Load();
+                    var cfg = AppConfigStore.GetSnapshot();
                     UpdateProjectDestinationDisplay(SelectedProject, cfg);
                     UpdateProjectEncryptionDisplay(SelectedProject, cfg);
                     UpdateProjectPresetDisplay(SelectedProject);
@@ -2526,7 +2526,7 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
@@ -2592,7 +2592,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             try
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
                     : GetDefaultDbPath();
@@ -2690,7 +2690,7 @@ public class ProjectsViewModel : ViewModelBase
             ? L("Snapshots.Action.Default", "Snapshot now")
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
-        var config = AppConfigStore.Load();
+        var config = AppConfigStore.GetSnapshot();
         RefreshEncryptionPolicyOptions();
         RefreshDestinationOptionsInternal(config);
         foreach (var project in _allProjects)
