@@ -406,7 +406,7 @@ public partial class App : Application
         if (AppViewModelInstance is null)
             return;
 
-        var cfg = AppConfigStore.Load();
+        var cfg = AppConfigStore.GetSnapshot();
         var currentVersion = AppViewModelInstance.CurrentVersionDisplay.TrimStart('v');
         if (string.IsNullOrWhiteSpace(currentVersion))
             return;
@@ -447,7 +447,7 @@ public partial class App : Application
         if (AppViewModelInstance is null)
             return false;
 
-        var cfg = AppConfigStore.Load();
+        var cfg = AppConfigStore.GetSnapshot();
         var showForTesting = IsOnboardingAlwaysEnabledForTesting();
         if (!showForTesting)
         {
@@ -608,7 +608,7 @@ public partial class App : Application
 
     private void UpdateTrayIconVisibility(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        var cfg = AppConfigStore.Load();
+        var cfg = AppConfigStore.GetSnapshot();
         if (cfg.Behavior?.ShowTrayIcon == true)
         {
             if (_trayIcon is null)
@@ -641,7 +641,7 @@ public partial class App : Application
         var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
                                    ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
 
-        var cfg = AppConfigStore.Load();
+        var cfg = AppConfigStore.GetSnapshot();
         var configuredDestinations = GetConfiguredDestinations(cfg);
 
         var (destinationsTitle, destinationsStatus) =
@@ -1295,7 +1295,7 @@ public partial class App : Application
         if (window is null)
             return;
 
-        var config = AppConfigStore.Load();
+        var config = AppConfigStore.GetSnapshot();
         if (config.Behavior?.ShowWindowOnTrayActions != true)
             return;
 
@@ -1761,7 +1761,7 @@ public partial class App : Application
     {
         try
         {
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             var minutes = Math.Clamp(
                 cfg?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes,
                 1,
@@ -1827,7 +1827,7 @@ public partial class App : Application
 
     private void ApplyThemeFromConfig()
     {
-        var config = AppConfigStore.Load();
+        var config = AppConfigStore.GetSnapshot();
         ThemeManager.ApplyAppearance(config.Appearance);
         ThemeManager.ApplyCompactLayout(config.Appearance.CompactLayout);
     }

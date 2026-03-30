@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Avalonia.Controls;
@@ -217,7 +217,7 @@ public partial class MainWindow : Window
         // and keep VaultSync running in the background.
         try
         {
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             if (config.Behavior?.RunInBackground == true)
             {
                 e.Cancel = true;
