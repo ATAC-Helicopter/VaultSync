@@ -31,6 +31,7 @@
 - [BUG-17034] Projects page refresh, snapshot history loads, group actions, localization refresh, and read-only project display updates now use cached config snapshots instead of reloading config during normal UI workflows.
 - [BUG-17035] Dashboard backup storage now caps the top-consumers card to a small ranked list while preserving the aggregate '+ more' row when additional projects exist.
 - [BUG-17036] Metadata post-import retention checks, NAS monitoring, delete/restore preparation, auto-backup preparation, and restore password resolution now use cached config snapshots instead of reloading config during read-only background and backup-history flows.
+- [BUG-17037] Projects search now supports multi-term matching across project names, paths, and tags so narrower searches are easier without changing views.
 
 ## [1.7.0] - 20.03.2026
 ### Added

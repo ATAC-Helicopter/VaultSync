@@ -1123,12 +1123,14 @@ public class ProjectsViewModel : ViewModelBase
 
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            var term = SearchText.Trim();
-            filtered = filtered.Where(p =>
+            var terms = SearchText
+                .Split((char[])null!, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            filtered = filtered.Where(p => terms.All(term =>
                 (!string.IsNullOrEmpty(p.Name) && p.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
                 (!string.IsNullOrEmpty(p.Path) && p.Path.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
                 p.TagChips.Any(tag => !string.IsNullOrWhiteSpace(tag.Value) && tag.Value.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(p.TagsDisplay) && p.TagsDisplay.Contains(term, StringComparison.OrdinalIgnoreCase)));
+                (!string.IsNullOrEmpty(p.TagsDisplay) && p.TagsDisplay.Contains(term, StringComparison.OrdinalIgnoreCase))));
         }
 
         IOrderedEnumerable<ProjectItemViewModel> ordered = SortMode switch
