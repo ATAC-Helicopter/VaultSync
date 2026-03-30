@@ -1125,7 +1125,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
                 if (maxSnapshotsToKeep <= 0)
                     return;
@@ -1228,7 +1228,7 @@ namespace VaultSync.UI.ViewModels
                 if (latestBackup is null || latestBackup.Id <= 0)
                     return;
 
-                var cfg = await Task.Run(() => AppConfigStore.Load());
+                var cfg = await Task.Run(() => AppConfigStore.GetSnapshot());
                 var destinations = ResolveDestinationsForProject(project, cfg).Destinations;
                 if (destinations.Count == 0)
                     return;
@@ -1322,7 +1322,7 @@ namespace VaultSync.UI.ViewModels
                 if (BackupsViewModel.IsBusy)
                     return Task.CompletedTask;
 
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
 
                 if (_settingsViewModel?.PreferExternalDrives != true)
                     return Task.CompletedTask;
