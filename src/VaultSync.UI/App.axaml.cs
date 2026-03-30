@@ -199,7 +199,7 @@ public partial class App : Application
                 CreateSystemNotificationService() ?? new StubSystemNotificationService();
             GlobalNotificationCenter.Instance.ShouldShowSystemNotification = request =>
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 if (!cfg.Notifications.UseOsNotifications)
                     return false;
                 if (!cfg.Notifications.OnBackupSuccess &&
@@ -216,7 +216,7 @@ public partial class App : Application
             };
 
             // Read behavior config and, if enabled, create a tray/menu-bar icon.
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             if (config.Behavior?.ShowTrayIcon == true)
             {
                 CreateTrayIcon(desktop);
@@ -239,7 +239,7 @@ public partial class App : Application
         try
         {
             var localizationService = new LocalizationService();
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(cfg.Advanced.Language))
             {
                 localizationService.SetLanguage(cfg.Advanced.Language);

@@ -263,7 +263,7 @@ namespace VaultSync.UI.ViewModels
         {
             _ = Task.Run(() =>
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var last = string.IsNullOrWhiteSpace(cfg.LastView)
                     ? "Dashboard"
                     : cfg.LastView;
