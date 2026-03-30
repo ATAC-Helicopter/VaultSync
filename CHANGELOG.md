@@ -21,6 +21,7 @@
 - [BUG-17024] Read-only dashboard, backups, and tag-color UI paths now use cached config snapshots instead of reloading config from disk each time.
 - [BUG-17025] Settings diagnostics refresh and tag-chip appearance reads now also use cached config snapshots instead of hitting config storage for every read-only refresh.
 - [BUG-17026] Dashboard refresh and backup view read-only display refreshes now also use cached config snapshots instead of reloading config from disk during normal UI updates.
+- [BUG-17027] Support bundle export now reads the cached config snapshot for report generation instead of reloading config from disk during a read-only export.
 
 ## [1.7.0] - 20.03.2026
 ### Added

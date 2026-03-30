@@ -35,7 +35,7 @@ public sealed class SupportBundleService
             Directory.CreateDirectory(exportRoot);
             Directory.CreateDirectory(stagingRoot);
 
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             var report = BuildBundleReport(config, timestamp);
 
             var reportJson = JsonSerializer.Serialize(report, new JsonSerializerOptions
