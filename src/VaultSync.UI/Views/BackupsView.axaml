@@ -433,7 +433,7 @@
                            FontSize="{DynamicResource SectionHeaderFontSize}"
                            FontWeight="SemiBold" />
                 <Grid ColumnDefinitions="*,*"
-                      RowDefinitions="Auto,Auto"
+                      RowDefinitions="Auto,Auto,Auto,Auto"
                       ColumnSpacing="12"
                       RowSpacing="10">
                   <Border Classes="summary-stat" Grid.Row="0" Grid.Column="0">
@@ -478,6 +478,58 @@
                                  Text="{Binding SnapshotsThisWeek}"
                                  FontSize="14"
                                  FontWeight="SemiBold" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="2" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.ProjectLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding LastBackupProjectName}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis"
+                                 MaxWidth="180" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="2" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.TypeLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding LastBackupTypeDisplay}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis"
+                                 MaxWidth="160" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="3" Grid.Column="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.DestinationLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding LastBackupDestinationDisplay}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis"
+                                 MaxWidth="180" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="summary-stat" Grid.Row="3" Grid.Column="1">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Summary.SecurityLabel}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding LastBackupSecurityDisplay}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis"
+                                 MaxWidth="160" />
                     </Grid>
                   </Border>
                 </Grid>

@@ -36,6 +36,12 @@
 - [BUG-17039] Projects search term matching now routes through a dedicated helper, reducing inline filter complexity without changing behavior.
 - [BUG-17040] Projects discovery now loads lazily when the Projects view is opened instead of refreshing during app construction, reducing startup work on cold launch.
 - [BUG-17041] Dashboard and backups warm-loads now wait briefly after startup instead of competing immediately with shell initialization, reducing perceived startup hangs and startup impact.
+- [BUG-17042] Dashboard no longer renders a duplicate top overview block above the KPI row, removing the broken double-summary layout while keeping the detailed sections intact.
+- [BUG-17043] Deferred startup now refreshes projects discovery shortly after launch, so Dashboard content repopulates without bringing back the old eager startup hit.
+- [BUG-17044] Dashboard refresh now applies chart and collection updates on the UI thread, fixing the empty post-startup dashboard caused by invalid-thread refresh failures.
+- [BUG-17045] Storage usage now defaults to a largest-first legend and exposes a compact sort selector so users can switch between size-based and alphabetical ordering.
+- [BUG-17046] Backup storage now raises top-consumer property updates reliably after dashboard refreshes, fixing the empty right-hand consumer list despite valid usage data.
+- [BUG-17047] Backups now use the center summary card for project, type, destination, and storage/security context from the latest backup so the page wastes less space.
 
 ## [1.7.0] - 20.03.2026
 ### Added

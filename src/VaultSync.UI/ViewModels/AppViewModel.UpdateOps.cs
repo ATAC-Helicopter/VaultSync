@@ -237,6 +237,7 @@ namespace VaultSync.UI.ViewModels
                     RecordStartupPhase("update-check-started");
                     ConfigureUpdateCheckTimer();
                     RecordStartupPhase("update-timer-configured");
+                    QueueDeferredProjectsRefresh();
                     RecordStartupPhase("startup-complete");
                 }
                 catch (Exception ex)
@@ -249,6 +250,24 @@ namespace VaultSync.UI.ViewModels
                     PersistStartupDiagnosticsSummary();
                 }
             });
+        }
+
+        private void QueueDeferredProjectsRefresh()
+        {
+            RunDetached(async () =>
+            {
+                var delay = TimeSpan.FromSeconds(4) - (DateTime.UtcNow - _appStartUtc);
+                if (delay > TimeSpan.Zero)
+                    await Task.Delay(delay).ConfigureAwait(false);
+
+                await _projectsViewModel.RefreshAsync(forceDiscovery: false).ConfigureAwait(false);
+
+                if (string.Equals(CurrentViewKey, "Dashboard", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(CurrentViewKey, "Projects", StringComparison.OrdinalIgnoreCase))
+                {
+                    await DashboardViewModel.RefreshAsync(force: true).ConfigureAwait(false);
+                }
+            }, nameof(QueueDeferredProjectsRefresh));
         }
 
         private void ScheduleLogCaptureInstall()
