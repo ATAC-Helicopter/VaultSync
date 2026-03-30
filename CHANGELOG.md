@@ -26,6 +26,7 @@
 - [BUG-17029] WhatsNew checks, onboarding gating, tray-menu reads, close-to-tray behavior, drive-health timing, and theme bootstrap now also use cached config snapshots instead of reloading config during read-only UI flows.
 - [BUG-17030] Deferred startup update/metadata checks and background destination probing now also use cached config snapshots instead of reloading config during read-only background refresh flows.
 - [BUG-17031] Tray health/menu fallback reads now consistently use cached config snapshots when the shared app view-model snapshot is unavailable, avoiding unnecessary disk reads in shell refresh paths.
+- [BUG-17032] Onboarding step refreshes now use cached config snapshots instead of reloading config during read-only tour-state checks.
 
 ## [1.7.0] - 20.03.2026
 ### Added
