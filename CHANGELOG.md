@@ -8,6 +8,17 @@
 ### Fixed
 - [BUG-17015] Dashboard header title, subtitle, and summary pills now stay left-aligned so the top overview block reads consistently with the rest of the page.
 - [BUG-17016] Dashboard backup-storage card now uses a ranked top-consumers list instead of an oversized pill cloud, making the lower-right space useful and readable.
+- [BUG-17017] Dashboard, Projects, and Settings now route the remaining hardcoded 1.7.x UI copy through English localization keys instead of shipping raw literals.
+- [BUG-17017] Theme option labels and settings log/export status text now also use English localization keys instead of hardcoded literals.
+- [BUG-17017] Crash dialog, placeholder fallback, and missing-view fallback text now also resolve through English localization keys instead of raw literals.
+- [BUG-17017] Shell navigation titles and header fallback copy now also resolve through English localization keys instead of raw literals.
+- [BUG-17018] Dashboard backup storage now shows a bounded top-consumers list instead of mixing project rows with the generic 'Other' storage segment.
+- [BUG-17019] Diagnostics now suppress expected first-chance missing-path and retention permission exceptions so verbose logs stay focused on actionable faults.
+- [BUG-17020] Added regression tests for the download-stats snapshot script so release totals, deltas, highlights, and history output stay stable.
+- [BUG-17021] Download stats history now prunes older daily snapshots while keeping recent runs and monthly checkpoints, preventing the stats branch from growing without bounds.
+- [BUG-17022] The download-stats workflow now runs its regression tests before publishing snapshots, so broken report logic fails fast instead of pushing bad history.
+- [BUG-17023] Tray panel header and tooltip now use localized shell copy instead of raw English fallbacks.
+- [BUG-17024] Read-only dashboard, backups, and tag-color UI paths now use cached config snapshots instead of reloading config from disk each time.
 
 ## [1.7.0] - 20.03.2026
 ### Added
