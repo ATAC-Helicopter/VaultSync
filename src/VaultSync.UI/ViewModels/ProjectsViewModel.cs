@@ -1111,6 +1111,17 @@ public class ProjectsViewModel : ViewModelBase
             : ProjectSortMode.LastSnapshot;
     }
 
+    private static bool MatchesSearchTerms(ProjectItemViewModel project, IEnumerable<string> terms)
+    {
+        return terms.All(term =>
+            (!string.IsNullOrEmpty(project.Name) && project.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(project.Path) && project.Path.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(project.TagsDisplay) && project.TagsDisplay.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+            project.TagChips.Any(tag =>
+                !string.IsNullOrWhiteSpace(tag.Value) &&
+                tag.Value.Contains(term, StringComparison.OrdinalIgnoreCase)));
+    }
+
     private void ApplyFilterAndSort(bool autoSelectIfNone = true)
     {
         IEnumerable<ProjectItemViewModel> filtered = _allProjects;
@@ -1126,11 +1137,7 @@ public class ProjectsViewModel : ViewModelBase
             var terms = SearchText
                 .Split((char[])null!, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            filtered = filtered.Where(p => terms.All(term =>
-                (!string.IsNullOrEmpty(p.Name) && p.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(p.Path) && p.Path.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                p.TagChips.Any(tag => !string.IsNullOrWhiteSpace(tag.Value) && tag.Value.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(p.TagsDisplay) && p.TagsDisplay.Contains(term, StringComparison.OrdinalIgnoreCase))));
+            filtered = filtered.Where(p => MatchesSearchTerms(p, terms));
         }
 
         IOrderedEnumerable<ProjectItemViewModel> ordered = SortMode switch

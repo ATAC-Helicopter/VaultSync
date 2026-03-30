@@ -32,6 +32,8 @@
 - [BUG-17035] Dashboard backup storage now caps the top-consumers card to a small ranked list while preserving the aggregate '+ more' row when additional projects exist.
 - [BUG-17036] Metadata post-import retention checks, NAS monitoring, delete/restore preparation, auto-backup preparation, and restore password resolution now use cached config snapshots instead of reloading config during read-only background and backup-history flows.
 - [BUG-17037] Projects search now supports multi-term matching across project names, paths, and tags so narrower searches are easier without changing views.
+- [BUG-17038] Backup-all preparation now uses the cached config snapshot instead of reloading config during read-only orchestration setup.
+- [BUG-17039] Projects search term matching now routes through a dedicated helper, reducing inline filter complexity without changing behavior.
 
 ## [1.7.0] - 20.03.2026
 ### Added
