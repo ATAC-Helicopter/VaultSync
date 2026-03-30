@@ -19,6 +19,8 @@
 - [BUG-17022] The download-stats workflow now runs its regression tests before publishing snapshots, so broken report logic fails fast instead of pushing bad history.
 - [BUG-17023] Tray panel header and tooltip now use localized shell copy instead of raw English fallbacks.
 - [BUG-17024] Read-only dashboard, backups, and tag-color UI paths now use cached config snapshots instead of reloading config from disk each time.
+- [BUG-17025] Settings diagnostics refresh and tag-chip appearance reads now also use cached config snapshots instead of hitting config storage for every read-only refresh.
+- [BUG-17026] Dashboard refresh and backup view read-only display refreshes now also use cached config snapshots instead of reloading config from disk during normal UI updates.
 
 ## [1.7.0] - 20.03.2026
 ### Added

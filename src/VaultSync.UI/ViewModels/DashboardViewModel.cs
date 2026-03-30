@@ -457,7 +457,7 @@ namespace VaultSync.UI.ViewModels
                         return _lastDashboardData;
                     }
 
-                    var cfg = AppConfigStore.Load();
+                    var cfg = AppConfigStore.GetSnapshot();
                     var diskUsage = ComputeBackupDiskUsageDetailed(cfg);
 
                     var dbPath = !string.IsNullOrWhiteSpace(cfg.DbPath)

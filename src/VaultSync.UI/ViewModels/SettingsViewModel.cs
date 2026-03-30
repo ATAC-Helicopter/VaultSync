@@ -2084,17 +2084,17 @@ namespace VaultSync.UI
 
         public void ReloadUpdateDiagnostics()
         {
-            RefreshUpdateDiagnostics(AppConfigStore.Load().Advanced.UpdateDiagnostics);
+            RefreshUpdateDiagnostics(AppConfigStore.GetSnapshot().Advanced.UpdateDiagnostics);
         }
 
         public void ReloadStartupDiagnostics()
         {
-            RefreshStartupDiagnostics(AppConfigStore.Load().Advanced.StartupDiagnostics);
+            RefreshStartupDiagnostics(AppConfigStore.GetSnapshot().Advanced.StartupDiagnostics);
         }
 
         public void ReloadCheckpointResumeDiagnostics()
         {
-            RefreshCheckpointResumeDiagnostics(AppConfigStore.Load().Advanced.CheckpointResumeTelemetry);
+            RefreshCheckpointResumeDiagnostics(AppConfigStore.GetSnapshot().Advanced.CheckpointResumeTelemetry);
         }
 
         private void RefreshUpdateCheckStatus()

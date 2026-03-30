@@ -3106,7 +3106,7 @@ namespace VaultSync.UI.ViewModels
             if (projects is null) throw new ArgumentNullException(nameof(projects));
             if (backups  is null) throw new ArgumentNullException(nameof(backups));
 
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             RefreshEncryptionPolicyOptions();
@@ -3564,7 +3564,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
                 UpdateAutoBackupFlags(disabled);
                 _lastAutoBackupSignature = ComputeAutoBackupSignature(disabled);
@@ -3701,7 +3701,7 @@ namespace VaultSync.UI.ViewModels
 
             _ = Task.Run(() =>
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
                 {
                     UpdateProjectDestinationDisplay(item, config);
@@ -3717,7 +3717,7 @@ namespace VaultSync.UI.ViewModels
 
             _ = Task.Run(() =>
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
                 {
                     UpdateProjectEncryptionDisplay(item, config);
