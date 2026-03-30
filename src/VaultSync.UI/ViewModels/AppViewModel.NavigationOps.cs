@@ -95,6 +95,7 @@ namespace VaultSync.UI.ViewModels
             {
                 case "Projects":
                     BackupsViewModel.IsActiveView = false;
+                    _projectsViewModel.EnsureLoaded();
                     CurrentView = _projectsViewModel;
                     HeaderTitle = L("Nav.Projects", "Projects");
                     HeaderKicker = L("Main.HeaderProjects", "All repositories");

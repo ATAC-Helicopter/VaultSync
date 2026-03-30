@@ -509,6 +509,7 @@ public class ProjectsViewModel : ViewModelBase
     private readonly List<ProjectItemViewModel> _allProjects = new();
     private HashSet<int> _autoBackupDisabledProjectIds = new();
     private string _searchText = string.Empty;
+    private int _initialLoadQueued;
     private ProjectGroupOption? _selectedGroup;
     public ProjectGroupOption? SelectedGroup
     {
@@ -617,7 +618,20 @@ public class ProjectsViewModel : ViewModelBase
         RefreshReusableProjectTags();
         RefreshGroupAutoBackupStateFromConfig();
 
-        _ = RefreshAsync();
+    }
+
+    public void EnsureLoaded()
+    {
+        if (_allProjects.Count > 0 || IsLoading)
+            return;
+
+        if (Interlocked.Exchange(ref _initialLoadQueued, 1) == 1)
+            return;
+
+        _ = RefreshAsync(forceDiscovery: false).ContinueWith(_ =>
+        {
+            Interlocked.Exchange(ref _initialLoadQueued, 0);
+        });
     }
 
     private void ShowNotification(string message, NotificationSeverity severity = NotificationSeverity.Info)

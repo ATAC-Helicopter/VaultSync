@@ -34,6 +34,8 @@
 - [BUG-17037] Projects search now supports multi-term matching across project names, paths, and tags so narrower searches are easier without changing views.
 - [BUG-17038] Backup-all preparation now uses the cached config snapshot instead of reloading config during read-only orchestration setup.
 - [BUG-17039] Projects search term matching now routes through a dedicated helper, reducing inline filter complexity without changing behavior.
+- [BUG-17040] Projects discovery now loads lazily when the Projects view is opened instead of refreshing during app construction, reducing startup work on cold launch.
+- [BUG-17041] Dashboard and backups warm-loads now wait briefly after startup instead of competing immediately with shell initialization, reducing perceived startup hangs and startup impact.
 
 ## [1.7.0] - 20.03.2026
 ### Added

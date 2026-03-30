@@ -158,7 +158,7 @@ namespace VaultSync.UI.ViewModels
         private bool _backupsCachePartial;
         private static readonly TimeSpan BackupsCacheTtl = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan DashboardRefreshTtl = TimeSpan.FromSeconds(5);
-        private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.Zero;
+        private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.FromMilliseconds(750);
         private int _dashboardWarmLoadQueued;
         private int _backupsWarmLoadQueued;
         private readonly GitHubUpdateService _updateService = new();
@@ -175,7 +175,7 @@ namespace VaultSync.UI.ViewModels
         private readonly DateTime _appStartUtc = DateTime.UtcNow;
         private int _dashboardWarmLoadScheduled;
         private int _backupsWarmLoadScheduled;
-        private static readonly TimeSpan WarmLoadStartupDelay = TimeSpan.Zero;
+        private static readonly TimeSpan WarmLoadStartupDelay = TimeSpan.FromSeconds(2);
         private DateTime _lastUpdateCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan UpdateCheckMinInterval = TimeSpan.FromMinutes(2);
         private readonly ConcurrentDictionary<string, DateTime> _metadataImportRetryAfter = new();
