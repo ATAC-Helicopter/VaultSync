@@ -29,6 +29,7 @@
 - [BUG-17032] Onboarding step refreshes now use cached config snapshots instead of reloading config during read-only tour-state checks.
 - [BUG-17033] Opening backup folders from tray actions now uses cached config snapshots instead of reloading config during read-only destination resolution.
 - [BUG-17034] Projects page refresh, snapshot history loads, group actions, localization refresh, and read-only project display updates now use cached config snapshots instead of reloading config during normal UI workflows.
+- [BUG-17035] Dashboard backup storage now caps the top-consumers card to a small ranked list while preserving the aggregate '+ more' row when additional projects exist.
 
 ## [1.7.0] - 20.03.2026
 ### Added

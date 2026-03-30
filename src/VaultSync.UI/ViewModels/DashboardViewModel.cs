@@ -1435,7 +1435,20 @@ namespace VaultSync.UI.ViewModels
                 .Where(s => !string.Equals(s.Name, L("Dashboard.Storage.Other", "Other"), StringComparison.Ordinal))
                 .ToList();
 
-            return projectSegments.Count == 0 ? Array.Empty<BackupUsageSegment>() : projectSegments;
+            if (projectSegments.Count == 0)
+                return Array.Empty<BackupUsageSegment>();
+
+            const int maxVisibleRows = 5;
+            if (projectSegments.Count <= maxVisibleRows)
+                return projectSegments;
+
+            var hasAggregateTail = projectSegments[^1].Name.StartsWith("+ ", StringComparison.Ordinal);
+            if (!hasAggregateTail)
+                return projectSegments.Take(maxVisibleRows).ToList();
+
+            var visible = projectSegments.Take(maxVisibleRows - 1).ToList();
+            visible.Add(projectSegments[^1]);
+            return visible;
         }
 
 
