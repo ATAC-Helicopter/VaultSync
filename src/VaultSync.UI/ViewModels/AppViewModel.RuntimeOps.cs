@@ -54,8 +54,8 @@ namespace VaultSync.UI.ViewModels
                 TimeSpan.FromMinutes(10),
                 TimeSpan.FromMinutes(10));
 
-            var initialDelay = DateTime.UtcNow - _appStartUtc < TimeSpan.FromSeconds(10)
-                ? TimeSpan.FromSeconds(10)
+            var initialDelay = DateTime.UtcNow - _appStartUtc < DestinationProbeStartupDelay
+                ? DestinationProbeStartupDelay
                 : TimeSpan.Zero;
             _ = Task.Run(async () =>
             {
@@ -149,6 +149,13 @@ namespace VaultSync.UI.ViewModels
                     if (previous is not null &&
                         previous.Reachable &&
                         (now - previous.LastChecked) < DestinationProbeMinInterval)
+                    {
+                        continue;
+                    }
+
+                    if (previous is not null &&
+                        !previous.Reachable &&
+                        (now - previous.LastChecked) < DestinationProbeFailureBackoff)
                     {
                         continue;
                     }

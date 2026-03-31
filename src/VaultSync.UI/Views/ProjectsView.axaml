@@ -838,7 +838,7 @@
                             <Border ClipToBounds="True"
                                     Background="Transparent">
                               <colorpicker:ColorView Color="{Binding DataContext.SelectedProjectTagColor, ElementName=Root, Mode=TwoWay}"
-                                                     Margin="6,-34,6,6"
+                                                     Margin="6,-48,6,6"
                                                      IsAlphaEnabled="False"
                                                      IsAlphaVisible="False"
                                                      IsColorModelVisible="False"

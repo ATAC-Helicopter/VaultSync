@@ -821,7 +821,8 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                PatchStatusMessage = L("Update.Installer.Launched", "Installer launched. Close VaultSync if prompted.");
+                PatchStatusMessage = L("Update.Installer.Launched", "Installer launched. VaultSync will close so setup can continue.");
+                ShutdownForInstallerLaunch();
             }
             catch (TaskCanceledException)
             {
@@ -856,6 +857,28 @@ namespace VaultSync.UI.ViewModels
             {
                 return false;
             }
+        }
+
+        private void ShutdownForInstallerLaunch()
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(750).ConfigureAwait(false);
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    DiagnosticsLogger.RecordWithStack("Shutdown for installer launch requested.");
+                    App.MarkShuttingDown();
+                    if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                    {
+                        desktop.Shutdown();
+                    }
+                    else
+                    {
+                        Environment.Exit(0);
+                    }
+                });
+            });
         }
 
         private void TryOpenUrl(string url)

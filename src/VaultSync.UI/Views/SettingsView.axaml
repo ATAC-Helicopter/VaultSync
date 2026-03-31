@@ -1435,7 +1435,7 @@
                             <Border ClipToBounds="True"
                                     Background="Transparent">
                               <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                     Margin="6,-34,6,6"
+                                                     Margin="6,-48,6,6"
                                                      MaxWidth="320"
                                                      HorizontalAlignment="Left"
                                                      ClipToBounds="False"
@@ -1558,7 +1558,7 @@
                               <Border ClipToBounds="True"
                                       Background="Transparent">
                                 <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                       Margin="6,-34,6,6"
+                                                       Margin="6,-48,6,6"
                                                        ClipToBounds="False"
                                                        IsAlphaEnabled="False"
                                                        IsAlphaVisible="False"

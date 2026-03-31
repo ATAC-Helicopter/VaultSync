@@ -124,6 +124,8 @@ namespace VaultSync.UI.ViewModels
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
         private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
+        private static readonly TimeSpan DestinationProbeFailureBackoff = TimeSpan.FromMinutes(15);
+        private static readonly TimeSpan DestinationProbeStartupDelay = TimeSpan.FromSeconds(45);
         private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
         private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
         private const int DefaultEncryptedOpenTimeoutMinutes = 10;
