@@ -289,6 +289,11 @@ vaultsync watch Game --dest /Backups/Game --sync --verify --debounce-ms 2500
 Licensed under the MIT License.  
 See the full license here: [LICENSE](LICENSE).
 
+Bundled helper tools may ship under their own licenses. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Current stable desktop release line: `1.7.1`.
+
 ## Credits
 
 Created by **Flavio Giacchetti**

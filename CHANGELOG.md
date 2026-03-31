@@ -42,6 +42,14 @@
 - [BUG-17045] Storage usage now defaults to a largest-first legend and exposes a compact sort selector so users can switch between size-based and alphabetical ordering.
 - [BUG-17046] Backup storage now raises top-consumer property updates reliably after dashboard refreshes, fixing the empty right-hand consumer list despite valid usage data.
 - [BUG-17047] Backups now use the center summary card for project, type, destination, and storage/security context from the latest backup so the page wastes less space.
+- [BUG-17048] Repository licensing text is now cleaned up and consistent across the root license, README, and CLI package metadata, removing stale placeholders and broken encoding.
+- [BUG-17049] Added a top-level third-party notices index so bundled rsync helper licenses are easier to audit before release.
+- [BUG-17050] Installer-based updates now shut down VaultSync automatically after the installer is launched, so Windows setup can continue without a manual close step.
+- [BUG-17051] Release-facing docs and metadata now target `1.7.1`, including app versioning, What's New, updater/releasing docs, and issue-template examples.
+- [BUG-17052] Startup and Backups destination probing now back off after recent failures and avoid immediate rescans of known-offline remote targets, reducing hangs when a NAS/server is unavailable.
+- [BUG-17053] Embedded color pickers now fully offset the stock tab strip height, fixing the visible clipped header chrome in Settings and Projects.
+- [BUG-17081] Replaced the production `.ico`, tray PNG, and macOS `.icns` assets with renders of `docs/branding/vaultsync-logo-icon.svg` while preserving the previous assets under `src/VaultSync.UI/Assets/backup/2026-03-31-icon-refresh/`.
+- [BUG-17083] Rebalanced the new production SVG icon so the safe composition sits centered within the icon tile instead of reading top-left heavy.
 
 ## [1.7.0] - 20.03.2026
 ### Added
@@ -896,12 +904,3 @@
 ## [0.1.0] - 2025-10-15
 ### Added
 - Project initialized, foundational scaffolding set up for CLI + SQLite architecture.
-
----
-
-? 2026 VaultSync Project. MIT Licensed.
-
-
-
-
-

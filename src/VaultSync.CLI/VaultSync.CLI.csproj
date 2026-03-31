@@ -28,48 +28,25 @@
     <FileVersion>0.8.1.0</FileVersion>
     <AssemblyInformationalVersion>0.8.1</AssemblyInformationalVersion>
     <!-- Package info -->
-    <Authors>VaultSync</Authors>
-    <Company>VaultSync</Company>
+    <Authors>Flavio Giacchetti</Authors>
+    <Company>Flavio Giacchetti</Company>
+    <Copyright>Copyright (c) 2025-2026 Flavio Giacchetti</Copyright>
     <Description>VaultSync CLI — snapshot, sync, and verify project folders with rsync-backed mirroring.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageOutputPath>bin/ToolPackages</PackageOutputPath>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-  </PropertyGroup>
-
-  <!--
-  <PropertyGroup>
-    <RepositoryUrl>https://github.com/<you>/VaultSync</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/<you>/VaultSync</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ATAC-Helicopter/VaultSync</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/ATAC-Helicopter/VaultSync</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
-
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-    <Deterministic>true</Deterministic>
-
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-  </ItemGroup>
-  -->
 
   <ItemGroup>
     <!-- Ensure README is included in the package -->
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-  <!--
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-  </ItemGroup>
-  -->
-
-
-<ItemGroup>
     <Content Include="..\presets\*.vaultsyncignore">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>presets\%(Filename)%(Extension)</Link>
