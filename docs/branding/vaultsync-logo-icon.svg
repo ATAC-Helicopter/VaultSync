@@ -1,0 +1,74 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tile" x1="76" y1="70" x2="438" y2="442" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1C2E49"/>
+      <stop offset="1" stop-color="#0C1421"/>
+    </linearGradient>
+    <linearGradient id="safeFace" x1="78" y1="86" x2="322" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#253B59"/>
+      <stop offset="1" stop-color="#132131"/>
+    </linearGradient>
+    <linearGradient id="safeInner" x1="96" y1="110" x2="290" y2="388" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#08111E"/>
+      <stop offset="1" stop-color="#0B1524"/>
+    </linearGradient>
+    <linearGradient id="doorFace" x1="308" y1="112" x2="456" y2="388" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#203554"/>
+      <stop offset="1" stop-color="#132235"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="336" y1="172" x2="430" y2="306" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD95C"/>
+      <stop offset="1" stop-color="#E1A400"/>
+    </linearGradient>
+    <linearGradient id="fileA" x1="170" y1="250" x2="250" y2="346" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2BA8F7"/>
+      <stop offset="1" stop-color="#1692E3"/>
+    </linearGradient>
+    <linearGradient id="fileB" x1="214" y1="270" x2="298" y2="356" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3DC6FF"/>
+      <stop offset="1" stop-color="#21AEEF"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="36" y="36" width="440" height="440" rx="96" fill="url(#tile)"/>
+  <rect x="36.5" y="36.5" width="439" height="439" rx="95.5" stroke="#2D4770"/>
+
+  <g transform="translate(-7 11) scale(0.95)">
+  <ellipse cx="252" cy="420" rx="134" ry="18" fill="#07101C" fill-opacity="0.42"/>
+
+  <rect x="78" y="78" width="284" height="312" rx="34" fill="url(#safeFace)"/>
+  <rect x="78.5" y="78.5" width="283" height="311" rx="33.5" stroke="#304F79" stroke-width="5"/>
+  <rect x="104" y="102" width="236" height="270" rx="24" fill="#091321"/>
+  <rect x="104.5" y="102.5" width="235" height="269" rx="23.5" stroke="#17314F" stroke-width="5"/>
+
+  <rect x="118" y="116" width="206" height="240" rx="18" fill="url(#safeInner)"/>
+
+  <rect x="136" y="136" width="126" height="110" rx="18" fill="#0E1E34"/>
+  <rect x="148" y="150" width="28" height="66" rx="8" fill="#27D24C"/>
+  <rect x="180" y="150" width="28" height="66" rx="8" fill="#F2F6FC"/>
+  <rect x="212" y="150" width="28" height="66" rx="8" fill="#27D24C"/>
+  <rect x="250" y="152" width="30" height="18" rx="9" fill="#132742"/>
+  <rect x="250" y="182" width="30" height="18" rx="9" fill="#132742"/>
+
+  <rect x="134" y="262" width="92" height="92" rx="18" fill="url(#fileA)"/>
+  <rect x="192" y="282" width="110" height="86" rx="18" fill="url(#fileB)"/>
+  <rect x="220" y="306" width="54" height="12" rx="6" fill="#CFE9FB"/>
+  <rect x="220" y="330" width="42" height="12" rx="6" fill="#CFE9FB"/>
+
+  <rect x="316" y="156" width="16" height="46" rx="8" fill="#F2B72C"/>
+  <rect x="316" y="272" width="16" height="46" rx="8" fill="#F2B72C"/>
+
+  <g transform="rotate(3 286 236)">
+    <rect x="278" y="92" width="190" height="286" rx="24" fill="#0B1524"/>
+    <rect x="286" y="86" width="190" height="286" rx="24" fill="url(#doorFace)"/>
+    <rect x="286.5" y="86.5" width="189" height="285" rx="23.5" stroke="#2E4A70" stroke-width="5"/>
+    <rect x="304" y="104" width="154" height="250" rx="18" stroke="#44658F" stroke-width="5"/>
+
+    <circle cx="382" cy="230" r="46" fill="#101C2B"/>
+    <circle cx="382" cy="230" r="40" stroke="url(#gold)" stroke-width="12"/>
+    <circle cx="382" cy="230" r="8" fill="#FFE9A8"/>
+    <path d="M382 196V264" stroke="url(#gold)" stroke-width="12" stroke-linecap="round"/>
+    <path d="M348 230H416" stroke="url(#gold)" stroke-width="12" stroke-linecap="round"/>
+  </g>
+  </g>
+</svg>
