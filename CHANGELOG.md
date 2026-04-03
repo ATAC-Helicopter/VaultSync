@@ -50,6 +50,7 @@
 - [BUG-17053] Embedded color pickers now fully offset the stock tab strip height, fixing the visible clipped header chrome in Settings and Projects.
 - [BUG-17081] Replaced the production `.ico`, tray PNG, and macOS `.icns` assets with renders of `docs/branding/vaultsync-logo-icon.svg` while preserving the previous assets under `src/VaultSync.UI/Assets/backup/2026-03-31-icon-refresh/`.
 - [BUG-17083] Rebalanced the new production SVG icon so the safe composition sits centered within the icon tile instead of reading top-left heavy.
+- [BUG-17084] Updated the safe .NET and Avalonia dependency set to current patch releases for `1.7.1`, including SQLite, cryptography, JSON, Dapper, Namotion.Reflection, the test JSON package, and the Avalonia 11.3.13 stack.
 
 ## [1.7.0] - 20.03.2026
 ### Added
