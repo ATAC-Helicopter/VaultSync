@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.7.1] - Unreleased
+## [1.7.1] - 04.04.2026
 ### Added
 - [VS-1725] Added scheduled GitHub release download snapshots with a dedicated public stats branch and JSON history.
 ### Changed
