@@ -548,7 +548,7 @@
               CornerRadius="24"
               Padding="24"
               DataContext="{Binding SelectedProject}"
-              IsVisible="{Binding HasSelectedProject}">
+              IsVisible="{Binding DataContext.HasSelectedProject, ElementName=Root}">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
           <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">

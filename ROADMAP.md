@@ -1338,9 +1338,13 @@
 
 ## 1.7.1
 - [x] `VS-1725` `P2` GitHub release download stats snapshots and public report. _(Done)_
+- [x] `BUG-17086` `P1` Fix Projects details binding noise and selected-project tag editing reliability. _(Done)_
+  - Scope: correct the selected-project details-card visibility binding and keep selected-project tag entry fully separate from the bulk-tag toolbar.
+  - Acceptance: Projects no longer logs `HasSelectedProject` binding errors, duplicate tags cannot be saved through the selected-project editor, and adding multiple different tags behaves predictably.
 - [x] `BUG-17085` `P1` Group repeated backup advisories and stabilize OS notification identity. _(Done)_
   - Scope: batch repeated project-level restore/root-missing/low-disk alerts into grouped notifications and use stable OS notification grouping keys.
   - Acceptance: backup-all runs no longer emit one OS alert per project for the same warning reason; grouped notifications stay branded as VaultSync instead of raw `VaultSync.UI` attribution where the platform honors app identity metadata.
+- [x] `VS-1725` `P2` GitHub release download stats snapshots and public report. _(Done)_
   - Scope: capture release asset download counts on a schedule, keep persistent history off `Dev`/`Stable`, and generate a human-readable public summary from the same JSON snapshots.
   - Current status:
     - Done: a scheduled/manual GitHub Actions workflow now snapshots GitHub Releases asset download counts into a dedicated `download-stats` branch.

@@ -244,6 +244,7 @@ public class ProjectsViewModel : ViewModelBase
                 return;
 
             ConsumeProjectTagInputDelimiters();
+            _addExistingTagToSelectedProjectCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(CanEditProjectTagColor));
             OnPropertyChanged(nameof(ProjectTagColorTarget));
             OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
@@ -560,7 +561,7 @@ public class ProjectsViewModel : ViewModelBase
         _addExistingTagToSelectedProjectCommand = new RelayCommand(
             tag => AddExistingTagToSelectedProject(tag as string),
             tag => SelectedProject is not null &&
-                   (!string.IsNullOrWhiteSpace(tag as string) || !string.IsNullOrWhiteSpace(GroupTagInput)));
+                   (!string.IsNullOrWhiteSpace(tag as string) || !string.IsNullOrWhiteSpace(ProjectTagInput)));
         _toggleProjectTagColorEditorCommand = new RelayCommand(_ => ToggleProjectTagColorEditor(), _ => CanEditProjectTagColor);
         _applyProjectTagColorCommand = new RelayCommand(_ => ApplyProjectTagColor(), _ => CanEditProjectTagColor);
         _resetProjectTagColorCommand = new RelayCommand(_ => ResetProjectTagColor(), _ => CanEditProjectTagColor);
@@ -1303,11 +1304,15 @@ public class ProjectsViewModel : ViewModelBase
         if (SelectedProject is null)
             return;
 
+        ConsumeProjectTagInputDelimiters();
         var token = (ProjectTagInput ?? string.Empty).Trim();
-        if (!TryAddTagChip(token))
+        var added = TryAddTagChip(token);
+        if (!string.IsNullOrWhiteSpace(ProjectTagInput))
+            ProjectTagInput = string.Empty;
+
+        if (!added)
             return;
 
-        ProjectTagInput = string.Empty;
         SyncSelectedProjectTagsToProject();
     }
 
@@ -1347,7 +1352,10 @@ public class ProjectsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(token))
             return false;
 
-        token = token.Trim();
+        token = NormalizeTag(token);
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+
         if (SelectedProjectTags.Any(t => string.Equals(t.Value, token, StringComparison.OrdinalIgnoreCase)))
             return false;
 
@@ -1361,8 +1369,9 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         var csv = string.Join(", ", SelectedProjectTags
-            .Select(t => t.Value.Trim())
-            .Where(v => !string.IsNullOrWhiteSpace(v)));
+            .Select(t => NormalizeTag(t.Value))
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase));
 
         if (!string.Equals(SelectedProject.TagsCsv, csv, StringComparison.Ordinal))
             SelectedProject.TagsCsv = csv;
@@ -1370,12 +1379,19 @@ public class ProjectsViewModel : ViewModelBase
 
     private void AddExistingTagToSelectedProject(string? tag)
     {
-        var token = string.IsNullOrWhiteSpace(tag) ? GroupTagInput : tag;
+        var token = string.IsNullOrWhiteSpace(tag) ? ProjectTagInput : tag;
         if (SelectedProject is null || string.IsNullOrWhiteSpace(token))
             return;
 
-        if (TryAddTagChip(token))
+        var normalized = NormalizeTag(token);
+        if (TryAddTagChip(normalized))
             SyncSelectedProjectTagsToProject();
+
+        if (string.IsNullOrWhiteSpace(tag) ||
+            string.Equals((ProjectTagInput ?? string.Empty).Trim(), normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            ProjectTagInput = string.Empty;
+        }
     }
 
     private void ToggleProjectTagColorEditor()
@@ -1611,6 +1627,16 @@ public class ProjectsViewModel : ViewModelBase
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static string NormalizeTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+            return string.Empty;
+
+        return string.Join(" ", tag
+            .Trim()
+            .Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries));
     }
 
     private bool CanSnapshotSelectedGroup()
