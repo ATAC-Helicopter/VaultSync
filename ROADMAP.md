@@ -1341,6 +1341,9 @@
 - [x] `BUG-17086` `P1` Fix Projects details binding noise and selected-project tag editing reliability. _(Done)_
   - Scope: correct the selected-project details-card visibility binding and keep selected-project tag entry fully separate from the bulk-tag toolbar.
   - Acceptance: Projects no longer logs `HasSelectedProject` binding errors, duplicate tags cannot be saved through the selected-project editor, and adding multiple different tags behaves predictably.
+- [x] `BUG-17087` `P1` Fix Projects bulk-tag chip behavior and refresh diagnostics. _(Done)_
+  - Scope: make the top-of-page bulk tag toolbar treat each selected tag independently and record the real exception when a Projects refresh fails.
+  - Acceptance: multiple pending bulk tags are visible and removable individually, apply/remove acts on each tag separately, and refresh failures write useful diagnostics instead of only showing the generic banner.
 - [x] `BUG-17085` `P1` Group repeated backup advisories and stabilize OS notification identity. _(Done)_
   - Scope: batch repeated project-level restore/root-missing/low-disk alerts into grouped notifications and use stable OS notification grouping keys.
   - Acceptance: backup-all runs no longer emit one OS alert per project for the same warning reason; grouped notifications stay branded as VaultSync instead of raw `VaultSync.UI` attribution where the platform honors app identity metadata.

@@ -8,6 +8,7 @@
 ### Fixed
 - [BUG-17085] Backup advisories now batch repeated project warnings into grouped notifications, and OS notifications use stable grouping keys instead of stacking one alert per project.
 - [BUG-17086] Projects details no longer log a broken `HasSelectedProject` binding, and project tags now dedupe, normalize, and add reliably without borrowing the bulk-tag input.
+- [BUG-17087] Projects bulk tag actions now treat multiple tags as separate chips, so apply/remove no longer bundles them into one opaque value and refresh failures now write the underlying exception to diagnostics.
 - [BUG-17015] Dashboard header title, subtitle, and summary pills now stay left-aligned so the top overview block reads consistently with the rest of the page.
 - [BUG-17016] Dashboard backup-storage card now uses a ranked top-consumers list instead of an oversized pill cloud, making the lower-right space useful and readable.
 - [BUG-17017] Dashboard, Projects, and Settings now route the remaining hardcoded 1.7.x UI copy through English localization keys instead of shipping raw literals.
