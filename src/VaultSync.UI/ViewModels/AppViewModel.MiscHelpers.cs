@@ -325,25 +325,117 @@ namespace VaultSync.UI.ViewModels
                 _ => L("Backups.Notification.InfoTitle", "Backup info")
             };
 
-            if (IsOnBackupsPage)
+            ShowBackupNotification(message, severity, title);
+        }
+
+        private void ShowBackupNotification(
+            string message,
+            NotificationSeverity severity,
+            string title,
+            string? groupKey = null)
+        {
+            Dispatcher.UIThread.Post(() =>
             {
-                BackupsViewModel.ShowNotification(message, severity.ToString());
-            }
-            else
+                if (IsOnBackupsPage)
+                {
+                    BackupsViewModel.ShowNotification(message, severity.ToString());
+                }
+                else
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        message,
+                        severity,
+                        title,
+                        groupKey: groupKey);
+                }
+
+                if (ShouldRaiseSystemNotification)
+                {
+                    GlobalNotificationCenter.Instance.ShowSystem(
+                        message,
+                        severity,
+                        title,
+                        groupKey: groupKey);
+                }
+            });
+        }
+
+        private void QueueGroupedBackupProjectNotification(
+            string key,
+            string projectName,
+            NotificationSeverity severity,
+            string title,
+            Func<IReadOnlyList<string>, string> messageFactory)
+        {
+            if (string.IsNullOrWhiteSpace(projectName))
+                return;
+
+            var shouldSchedule = false;
+
+            lock (_groupedBackupNotificationGate)
             {
-                GlobalNotificationCenter.Instance.Show(
-                    message,
-                    severity,
-                    title);
+                if (!_groupedBackupNotifications.TryGetValue(key, out var batch))
+                {
+                    batch = new GroupedBackupNotificationBatch
+                    {
+                        Key = key,
+                        Severity = severity,
+                        Title = title,
+                        MessageFactory = messageFactory
+                    };
+                    _groupedBackupNotifications[key] = batch;
+                    shouldSchedule = true;
+                }
+
+                if (batch.ProjectNameSet.Add(projectName))
+                {
+                    batch.ProjectNames.Add(projectName);
+                }
             }
 
-            if (ShouldRaiseSystemNotification)
+            if (shouldSchedule)
             {
-                GlobalNotificationCenter.Instance.ShowSystem(
-                    message,
-                    severity,
-                    title);
+                _ = FlushGroupedBackupProjectNotificationAsync(key);
             }
+        }
+
+        private async Task FlushGroupedBackupProjectNotificationAsync(string key)
+        {
+            await Task.Delay(GroupedBackupNotificationDelay).ConfigureAwait(false);
+
+            GroupedBackupNotificationBatch? batch = null;
+            lock (_groupedBackupNotificationGate)
+            {
+                if (_groupedBackupNotifications.TryGetValue(key, out batch))
+                {
+                    _groupedBackupNotifications.Remove(key);
+                }
+            }
+
+            if (batch is null || batch.ProjectNames.Count == 0)
+                return;
+
+            var message = batch.MessageFactory(batch.ProjectNames);
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            ShowBackupNotification(
+                message,
+                batch.Severity,
+                batch.Title,
+                groupKey: key);
+        }
+
+        private static string FormatGroupedProjectNames(IReadOnlyList<string> names, int visibleLimit = 3)
+        {
+            if (names.Count == 0)
+                return string.Empty;
+
+            if (names.Count <= visibleLimit)
+                return string.Join(", ", names);
+
+            var visible = string.Join(", ", names.Take(visibleLimit));
+            return $"{visible} +{names.Count - visibleLimit} more";
         }
 
         private void MaybeNotifyRestoreRecommended(Project project)
@@ -354,11 +446,24 @@ namespace VaultSync.UI.ViewModels
             if (!_restoreAdvisoryShown.TryAdd(project.Id, 0))
                 return;
 
-            var message = Lf(
+            var title = L("Backups.Notification.RestoreRecommendedTitle", "Restore recommended");
+            var singleMessage = Lf(
                 "Backups.Notification.RestoreRequiredForProject",
                 "Imported history is newer for '{0}'. Consider restoring before creating new backups.",
                 project.Name);
-            ShowBackupSkipNotification(message, NotificationSeverity.Warning);
+
+            QueueGroupedBackupProjectNotification(
+                "backup-restore-recommended",
+                project.Name,
+                NotificationSeverity.Warning,
+                title,
+                names => names.Count == 1
+                    ? singleMessage
+                    : Lf(
+                        "Backups.Notification.RestoreRequiredMultiple",
+                        "Imported history is newer for {0} projects: {1}. Review restore recommendations before creating new backups.",
+                        names.Count,
+                        FormatGroupedProjectNames(names)));
         }
 
         private bool TryResolveProjectRoot(Project project, AppConfig cfg, out Project resolvedProject, out string errorMessage)
@@ -409,7 +514,20 @@ namespace VaultSync.UI.ViewModels
             if (!_projectRootMissingNotified.TryAdd(project.Id, 0))
                 return;
 
-            ShowBackupSkipNotification(message, NotificationSeverity.Error);
+            var title = L("Backups.Notification.ProjectUnavailableTitle", "Projects unavailable");
+
+            QueueGroupedBackupProjectNotification(
+                "backup-project-root-missing",
+                project.Name,
+                NotificationSeverity.Error,
+                title,
+                names => names.Count == 1
+                    ? message
+                    : Lf(
+                        "Backups.Notification.ProjectRootMissingMultiple",
+                        "{0} projects aren't available on this machine: {1}. Update their paths or restore them.",
+                        names.Count,
+                        FormatGroupedProjectNames(names)));
         }
     }
 }

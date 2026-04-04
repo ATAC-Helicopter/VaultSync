@@ -598,39 +598,26 @@ namespace VaultSync.UI.ViewModels
 
                     if (NotificationsEnabled && _settingsViewModel.NotifyOnLowDiskSpace)
                     {
-                        var msg = Lf("Backups.Notification.LowDiskMessage", "Backup for '{0}' was skipped due to low disk space on the backup target.", project.Name);
                         var title = L("Backups.Notification.LowDiskTitle", "Low disk space");
+                        var singleMessage = Lf(
+                            "Backups.Notification.LowDiskMessage",
+                            "Backup for '{0}' was skipped due to low disk space on the backup target.",
+                            project.Name);
 
-                        // Always go through the central notification service so we get
-                        // consistent logging and behavior.
-                        _notificationService.ShowWarning(
-                            title,
-                            msg,
-                            NotificationKind.Backup);
-
-                        if (IsOnBackupsPage)
+                        if (_lowDiskWarningShown.TryAdd(project.Id, 0))
                         {
-                            // When the user is on the Backups page, also show an in-page banner
-                            // so the warning is clearly visible where the action happened.
-                            BackupsViewModel.ShowNotification(
-                                msg,
-                                "Warning");
-                        }
-                        else
-                        {
-                            // When the user is elsewhere, show a global toast.
-                            GlobalNotificationCenter.Instance.Show(
-                                msg,
+                            QueueGroupedBackupProjectNotification(
+                                "backup-low-disk",
+                                project.Name,
                                 NotificationSeverity.Warning,
-                                title);
-                        }
-
-                        if (ShouldRaiseSystemNotification)
-                        {
-                            GlobalNotificationCenter.Instance.ShowSystem(
-                                msg,
-                                NotificationSeverity.Warning,
-                                title);
+                                title,
+                                names => names.Count == 1
+                                    ? singleMessage
+                                    : Lf(
+                                        "Backups.Notification.LowDiskMultiple",
+                                        "Backups for {0} projects were skipped due to low disk space on the backup target: {1}.",
+                                        names.Count,
+                                        FormatGroupedProjectNames(names)));
                         }
                     }
 

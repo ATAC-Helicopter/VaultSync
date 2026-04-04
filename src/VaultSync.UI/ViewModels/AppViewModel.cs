@@ -141,6 +141,10 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
         private readonly ConcurrentDictionary<int, byte> _restoreAdvisoryShown = new();
         private readonly ConcurrentDictionary<int, byte> _projectRootMissingNotified = new();
+        private readonly ConcurrentDictionary<int, byte> _lowDiskWarningShown = new();
+        private readonly object _groupedBackupNotificationGate = new();
+        private readonly Dictionary<string, GroupedBackupNotificationBatch> _groupedBackupNotifications = new(StringComparer.Ordinal);
+        private static readonly TimeSpan GroupedBackupNotificationDelay = TimeSpan.FromMilliseconds(900);
         private int _metadataUiRefreshInFlight;
         private int _metadataUiRefreshQueued;
         private readonly ConcurrentDictionary<int, DateTime> _backupProgressLogTimestamps = new();
@@ -158,6 +162,16 @@ namespace VaultSync.UI.ViewModels
         private HashSet<int>? _backupsCacheDisabledAuto;
         private DateTime _backupsCacheUpdatedUtc;
         private bool _backupsCachePartial;
+
+        private sealed class GroupedBackupNotificationBatch
+        {
+            public required string Key { get; init; }
+            public required NotificationSeverity Severity { get; init; }
+            public required string Title { get; init; }
+            public required Func<IReadOnlyList<string>, string> MessageFactory { get; init; }
+            public List<string> ProjectNames { get; } = new();
+            public HashSet<string> ProjectNameSet { get; } = new(StringComparer.OrdinalIgnoreCase);
+        }
         private static readonly TimeSpan BackupsCacheTtl = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan DashboardRefreshTtl = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.FromMilliseconds(750);
