@@ -1344,6 +1344,9 @@
 - [x] `BUG-17087` `P1` Fix Projects bulk-tag chip behavior and refresh diagnostics. _(Done)_
   - Scope: make the top-of-page bulk tag toolbar treat each selected tag independently and record the real exception when a Projects refresh fails.
   - Acceptance: multiple pending bulk tags are visible and removable individually, apply/remove acts on each tag separately, and refresh failures write useful diagnostics instead of only showing the generic banner.
+- [x] `BUG-17088` `P1` Restore locale key ordering and full pre-release localization parity. _(Done)_
+  - Scope: reorder non-English locale files to match English without changing translated values and rerun the release key diff.
+  - Acceptance: locale files follow English key order and the key diff returns `0 missing / 0 extra` for every shipped non-English locale.
 - [x] `BUG-17085` `P1` Group repeated backup advisories and stabilize OS notification identity. _(Done)_
   - Scope: batch repeated project-level restore/root-missing/low-disk alerts into grouped notifications and use stable OS notification grouping keys.
   - Acceptance: backup-all runs no longer emit one OS alert per project for the same warning reason; grouped notifications stay branded as VaultSync instead of raw `VaultSync.UI` attribution where the platform honors app identity metadata.
