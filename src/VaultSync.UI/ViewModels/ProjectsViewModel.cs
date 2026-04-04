@@ -118,6 +118,7 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _applyTagToGroupCommand;
     private readonly RelayCommand _removeTagFromGroupCommand;
     private readonly RelayCommand _selectGroupTagCommand;
+    private readonly RelayCommand _removeGroupTagCommand;
     private bool _isProjectTagColorEditorOpen;
     private bool _projectTagColorSyncing;
     private string _projectTagColorHex = "#3A7AFE";
@@ -202,6 +203,7 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand ApplyTagToGroupCommand { get; }
     public ICommand RemoveTagFromGroupCommand { get; }
     public ICommand SelectGroupTagCommand { get; }
+    public ICommand RemoveGroupTagCommand { get; }
     public ICommand TakeSnapshotCommand => SnapshotCommand;
     public ICommand ManageProjectEncryptionCommand { get; }
     public ICommand ApplyPresetRecommendationCommand { get; }
@@ -219,6 +221,7 @@ public class ProjectsViewModel : ViewModelBase
     public event Action<IReadOnlyList<int>>? BackupGroupRequested;
     public event Action<IReadOnlyList<int>, bool>? AutoBackupGroupPreferenceChanged;
     public ObservableCollection<ProjectTagChip> SelectedProjectTags { get; } = new ObservableCollection<ProjectTagChip>();
+    public ObservableCollection<ProjectTagChip> SelectedGroupTags { get; } = new ObservableCollection<ProjectTagChip>();
     public ObservableCollection<ProjectTagChip> ReusableProjectTags { get; } = new ObservableCollection<ProjectTagChip>();
     private string _groupTagInput = string.Empty;
     public string GroupTagInput
@@ -229,6 +232,7 @@ public class ProjectsViewModel : ViewModelBase
             if (!SetProperty(ref _groupTagInput, value ?? string.Empty))
                 return;
 
+            ConsumeGroupTagInputDelimiters();
             _applyTagToGroupCommand.RaiseCanExecuteChanged();
             _removeTagFromGroupCommand.RaiseCanExecuteChanged();
             _addExistingTagToSelectedProjectCommand.RaiseCanExecuteChanged();
@@ -244,6 +248,7 @@ public class ProjectsViewModel : ViewModelBase
                 return;
 
             ConsumeProjectTagInputDelimiters();
+            _addExistingTagToSelectedProjectCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(CanEditProjectTagColor));
             OnPropertyChanged(nameof(ProjectTagColorTarget));
             OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
@@ -509,6 +514,7 @@ public class ProjectsViewModel : ViewModelBase
     private readonly List<ProjectItemViewModel> _allProjects = new();
     private HashSet<int> _autoBackupDisabledProjectIds = new();
     private string _searchText = string.Empty;
+    private int _initialLoadQueued;
     private ProjectGroupOption? _selectedGroup;
     public ProjectGroupOption? SelectedGroup
     {
@@ -559,7 +565,7 @@ public class ProjectsViewModel : ViewModelBase
         _addExistingTagToSelectedProjectCommand = new RelayCommand(
             tag => AddExistingTagToSelectedProject(tag as string),
             tag => SelectedProject is not null &&
-                   (!string.IsNullOrWhiteSpace(tag as string) || !string.IsNullOrWhiteSpace(GroupTagInput)));
+                   (!string.IsNullOrWhiteSpace(tag as string) || !string.IsNullOrWhiteSpace(ProjectTagInput)));
         _toggleProjectTagColorEditorCommand = new RelayCommand(_ => ToggleProjectTagColorEditor(), _ => CanEditProjectTagColor);
         _applyProjectTagColorCommand = new RelayCommand(_ => ApplyProjectTagColor(), _ => CanEditProjectTagColor);
         _resetProjectTagColorCommand = new RelayCommand(_ => ResetProjectTagColor(), _ => CanEditProjectTagColor);
@@ -571,6 +577,7 @@ public class ProjectsViewModel : ViewModelBase
             _ => _ = RunDetachedAsync(() => SetTagForSelectedGroupAsync(add: false), "remove-tag-selected-group"),
             _ => CanSetTagForSelectedGroup());
         _selectGroupTagCommand = new RelayCommand(tag => SelectGroupTag(tag as string));
+        _removeGroupTagCommand = new RelayCommand(tag => RemoveGroupTag(tag as string), _ => true);
         OpenFolderCommand = _openFolderCommand;
         RemoveProjectCommand = _removeProjectCommand;
         ApplyPresetRecommendationCommand = _applyPresetRecommendationCommand;
@@ -595,6 +602,7 @@ public class ProjectsViewModel : ViewModelBase
         ApplyTagToGroupCommand = _applyTagToGroupCommand;
         RemoveTagFromGroupCommand = _removeTagFromGroupCommand;
         SelectGroupTagCommand = _selectGroupTagCommand;
+        RemoveGroupTagCommand = _removeGroupTagCommand;
         SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
         ManageProjectEncryptionCommand = new RelayCommand(p => RequestProjectEncryptionPasswordEdit(p as ProjectItemViewModel ?? SelectedProject));
         ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());
@@ -617,7 +625,20 @@ public class ProjectsViewModel : ViewModelBase
         RefreshReusableProjectTags();
         RefreshGroupAutoBackupStateFromConfig();
 
-        _ = RefreshAsync();
+    }
+
+    public void EnsureLoaded()
+    {
+        if (_allProjects.Count > 0 || IsLoading)
+            return;
+
+        if (Interlocked.Exchange(ref _initialLoadQueued, 1) == 1)
+            return;
+
+        _ = RefreshAsync(forceDiscovery: false).ContinueWith(_ =>
+        {
+            Interlocked.Exchange(ref _initialLoadQueued, 0);
+        });
     }
 
     private void ShowNotification(string message, NotificationSeverity severity = NotificationSeverity.Info)
@@ -627,7 +648,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void NotifySnapshotOutcome(string message, bool success)
     {
-        var cfg = AppConfigStore.Load();
+        var cfg = AppConfigStore.GetSnapshot();
 
         var wants = success
             ? cfg.Notifications.OnSnapshotSuccess
@@ -682,7 +703,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             IsLoading = true;
 
-            var config = await Task.Run(AppConfigStore.Load);
+            var config = await Task.Run(AppConfigStore.GetSnapshot);
             RefreshGroupAutoBackupStateFromConfig(config);
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
@@ -714,6 +735,7 @@ public class ProjectsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            DiagnosticsLogger.Record($"Projects refresh failed: {ex.GetType().Name} - {ex.Message}");
             ShowNotification(L("Projects.Notification.RefreshError", "Error refreshing projects. Check logs for details."), NotificationSeverity.Error);
         }
         finally
@@ -1111,6 +1133,17 @@ public class ProjectsViewModel : ViewModelBase
             : ProjectSortMode.LastSnapshot;
     }
 
+    private static bool MatchesSearchTerms(ProjectItemViewModel project, IEnumerable<string> terms)
+    {
+        return terms.All(term =>
+            (!string.IsNullOrEmpty(project.Name) && project.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(project.Path) && project.Path.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(project.TagsDisplay) && project.TagsDisplay.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+            project.TagChips.Any(tag =>
+                !string.IsNullOrWhiteSpace(tag.Value) &&
+                tag.Value.Contains(term, StringComparison.OrdinalIgnoreCase)));
+    }
+
     private void ApplyFilterAndSort(bool autoSelectIfNone = true)
     {
         IEnumerable<ProjectItemViewModel> filtered = _allProjects;
@@ -1123,12 +1156,10 @@ public class ProjectsViewModel : ViewModelBase
 
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            var term = SearchText.Trim();
-            filtered = filtered.Where(p =>
-                (!string.IsNullOrEmpty(p.Name) && p.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(p.Path) && p.Path.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                p.TagChips.Any(tag => !string.IsNullOrWhiteSpace(tag.Value) && tag.Value.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(p.TagsDisplay) && p.TagsDisplay.Contains(term, StringComparison.OrdinalIgnoreCase)));
+            var terms = SearchText
+                .Split((char[])null!, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            filtered = filtered.Where(p => MatchesSearchTerms(p, terms));
         }
 
         IOrderedEnumerable<ProjectItemViewModel> ordered = SortMode switch
@@ -1242,6 +1273,28 @@ public class ProjectsViewModel : ViewModelBase
         GroupTagInput = string.Empty;
     }
 
+    private void ConsumeGroupTagInputDelimiters()
+    {
+        var input = GroupTagInput;
+        if (string.IsNullOrWhiteSpace(input))
+            return;
+
+        var separators = new[] { ',', '\n', '\r', ';' };
+        if (input.IndexOfAny(separators) < 0)
+            return;
+
+        var trailingDelimiter = separators.Contains(input[^1]);
+        var parts = input.Split(separators, StringSplitOptions.None);
+        var completeCount = trailingDelimiter ? parts.Length : Math.Max(parts.Length - 1, 0);
+
+        for (var i = 0; i < completeCount; i++)
+            TryAddGroupTagChip(parts[i]);
+
+        var remainder = trailingDelimiter ? string.Empty : parts.LastOrDefault()?.Trim() ?? string.Empty;
+        if (!string.Equals(GroupTagInput, remainder, StringComparison.Ordinal))
+            GroupTagInput = remainder;
+    }
+
     private void ConsumeProjectTagInputDelimiters()
     {
         if (SelectedProject is null)
@@ -1280,11 +1333,15 @@ public class ProjectsViewModel : ViewModelBase
         if (SelectedProject is null)
             return;
 
+        ConsumeProjectTagInputDelimiters();
         var token = (ProjectTagInput ?? string.Empty).Trim();
-        if (!TryAddTagChip(token))
+        var added = TryAddTagChip(token);
+        if (!string.IsNullOrWhiteSpace(ProjectTagInput))
+            ProjectTagInput = string.Empty;
+
+        if (!added)
             return;
 
-        ProjectTagInput = string.Empty;
         SyncSelectedProjectTagsToProject();
     }
 
@@ -1324,7 +1381,10 @@ public class ProjectsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(token))
             return false;
 
-        token = token.Trim();
+        token = NormalizeTag(token);
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+
         if (SelectedProjectTags.Any(t => string.Equals(t.Value, token, StringComparison.OrdinalIgnoreCase)))
             return false;
 
@@ -1338,8 +1398,9 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         var csv = string.Join(", ", SelectedProjectTags
-            .Select(t => t.Value.Trim())
-            .Where(v => !string.IsNullOrWhiteSpace(v)));
+            .Select(t => NormalizeTag(t.Value))
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase));
 
         if (!string.Equals(SelectedProject.TagsCsv, csv, StringComparison.Ordinal))
             SelectedProject.TagsCsv = csv;
@@ -1347,12 +1408,19 @@ public class ProjectsViewModel : ViewModelBase
 
     private void AddExistingTagToSelectedProject(string? tag)
     {
-        var token = string.IsNullOrWhiteSpace(tag) ? GroupTagInput : tag;
+        var token = string.IsNullOrWhiteSpace(tag) ? ProjectTagInput : tag;
         if (SelectedProject is null || string.IsNullOrWhiteSpace(token))
             return;
 
-        if (TryAddTagChip(token))
+        var normalized = NormalizeTag(token);
+        if (TryAddTagChip(normalized))
             SyncSelectedProjectTagsToProject();
+
+        if (string.IsNullOrWhiteSpace(tag) ||
+            string.Equals((ProjectTagInput ?? string.Empty).Trim(), normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            ProjectTagInput = string.Empty;
+        }
     }
 
     private void ToggleProjectTagColorEditor()
@@ -1398,7 +1466,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void RefreshProjectTagAppearance(AppConfig? config = null)
     {
-        config ??= AppConfigStore.Load();
+        config ??= AppConfigStore.GetSnapshot();
         RefreshSelectedProjectTags();
         RefreshReusableProjectTags();
         foreach (var project in _allProjects)
@@ -1416,7 +1484,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void SyncProjectTagColorDraft(string tag)
     {
-        var cfg = AppConfigStore.Load();
+        var cfg = AppConfigStore.GetSnapshot();
         var accent = ProjectTagAppearance.Resolve(tag, cfg.Appearance.TagColors).Background;
 
         _projectTagColorSyncing = true;
@@ -1552,7 +1620,60 @@ public class ProjectsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(tag))
             return;
 
-        GroupTagInput = tag.Trim();
+        TryAddGroupTagChip(tag);
+        if (!string.IsNullOrWhiteSpace(GroupTagInput))
+            GroupTagInput = string.Empty;
+    }
+
+    private void RemoveGroupTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+            return;
+
+        var existing = SelectedGroupTags.FirstOrDefault(t =>
+            string.Equals(t.Value, tag, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+            return;
+
+        SelectedGroupTags.Remove(existing);
+        _applyTagToGroupCommand.RaiseCanExecuteChanged();
+        _removeTagFromGroupCommand.RaiseCanExecuteChanged();
+    }
+
+    private bool TryAddGroupTagChip(string? token)
+    {
+        token = NormalizeTag(token);
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+
+        if (SelectedGroupTags.Any(t => string.Equals(t.Value, token, StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        SelectedGroupTags.Add(ProjectTagChip.Create(token, ProjectTagAppearance.TryLoadConfig()));
+        _applyTagToGroupCommand.RaiseCanExecuteChanged();
+        _removeTagFromGroupCommand.RaiseCanExecuteChanged();
+        return true;
+    }
+
+    private List<string> GetPendingGroupTags()
+    {
+        var tags = SelectedGroupTags
+            .Select(t => NormalizeTag(t.Value))
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .ToList();
+
+        var input = GroupTagInput;
+        if (!string.IsNullOrWhiteSpace(input))
+        {
+            tags.AddRange(input
+                .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(NormalizeTag)
+                .Where(t => !string.IsNullOrWhiteSpace(t)));
+        }
+
+        return tags
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static bool ProjectMatchesGroup(ProjectItemViewModel project, string groupId)
@@ -1590,6 +1711,16 @@ public class ProjectsViewModel : ViewModelBase
             .ToList();
     }
 
+    private static string NormalizeTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+            return string.Empty;
+
+        return string.Join(" ", tag
+            .Trim()
+            .Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries));
+    }
+
     private bool CanSnapshotSelectedGroup()
     {
         return GetSelectedGroupRegisteredProjectIds().Count > 0;
@@ -1600,7 +1731,7 @@ public class ProjectsViewModel : ViewModelBase
     private bool CanSetTagForSelectedGroup()
     {
         return GetSelectedGroupRegisteredProjectIds().Count > 0 &&
-               !string.IsNullOrWhiteSpace(GroupTagInput);
+               GetPendingGroupTags().Count > 0;
     }
 
     private bool CanDisableAutoBackupForSelectedGroup()
@@ -1623,7 +1754,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void RefreshGroupAutoBackupStateFromConfig(AppConfig? config = null)
     {
-        config ??= AppConfigStore.Load();
+        config ??= AppConfigStore.GetSnapshot();
         _autoBackupDisabledProjectIds = new HashSet<int>(
             config.Backups.AutoBackupDisabledProjects ?? new List<int>());
         _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
@@ -1646,13 +1777,13 @@ public class ProjectsViewModel : ViewModelBase
     private async Task SetTagForSelectedGroupAsync(bool add)
     {
         var ids = GetSelectedGroupRegisteredProjectIds();
-        var tag = (GroupTagInput ?? string.Empty).Trim();
-        if (ids.Count == 0 || string.IsNullOrWhiteSpace(tag))
+        var tagsToProcess = GetPendingGroupTags();
+        if (ids.Count == 0 || tagsToProcess.Count == 0)
             return;
 
         await Task.Run(() =>
         {
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
@@ -1665,18 +1796,26 @@ public class ProjectsViewModel : ViewModelBase
                     continue;
 
                 var tags = ParseTags(project.Tags);
-                if (add)
+                var changed = false;
+                foreach (var tag in tagsToProcess)
                 {
-                    if (tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
-                        continue;
-                    tags.Add(tag);
+                    if (add)
+                    {
+                        if (tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+                            continue;
+                        tags.Add(tag);
+                        changed = true;
+                    }
+                    else
+                    {
+                        var removed = tags.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
+                        if (removed > 0)
+                            changed = true;
+                    }
                 }
-                else
-                {
-                    var removed = tags.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
-                    if (removed == 0)
-                        continue;
-                }
+
+                if (!changed)
+                    continue;
 
                 var csv = string.Join(", ", tags);
                 repo.UpdateProjectTags(projectId, csv);
@@ -1688,12 +1827,16 @@ public class ProjectsViewModel : ViewModelBase
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            SelectedGroupTags.Clear();
+            GroupTagInput = string.Empty;
+            _applyTagToGroupCommand.RaiseCanExecuteChanged();
+            _removeTagFromGroupCommand.RaiseCanExecuteChanged();
             RefreshReusableProjectTags();
             ApplyFilterAndSort(autoSelectIfNone: false);
             ShowNotification(
                 add
-                    ? Lf("Projects.Group.TagApplied", "Applied tag '{0}' to {1} projects.", tag, ids.Count)
-                    : Lf("Projects.Group.TagRemoved", "Removed tag '{0}' from {1} projects.", tag, ids.Count),
+                    ? Lf("Projects.Group.TagApplied", "Applied {0} tag(s) to {1} projects.", tagsToProcess.Count, ids.Count)
+                    : Lf("Projects.Group.TagRemoved", "Removed {0} tag(s) from {1} projects.", tagsToProcess.Count, ids.Count),
                 NotificationSeverity.Info);
         });
     }
@@ -1705,7 +1848,7 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            var config = await Task.Run(AppConfigStore.Load).ConfigureAwait(false);
+            var config = await Task.Run(AppConfigStore.GetSnapshot).ConfigureAwait(false);
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
@@ -2099,7 +2242,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             try
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
                     : GetDefaultDbPath();
@@ -2158,7 +2301,7 @@ public class ProjectsViewModel : ViewModelBase
         try
         {
             // 1. Resolve DB path from shared AppConfig (with a sensible default).
-            var config = await Task.Run(AppConfigStore.Load);
+            var config = await Task.Run(AppConfigStore.GetSnapshot);
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
@@ -2433,7 +2576,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             try
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
                     : GetDefaultDbPath();
@@ -2491,7 +2634,7 @@ public class ProjectsViewModel : ViewModelBase
                     SelectedProject.PreferredDestinationId = preferredDestinationId;
                     SelectedProject.EncryptionPolicy = encryptionPolicy;
                     SelectedProject.EncryptionKeyRef = encryptionKeyRef;
-                    var cfg = AppConfigStore.Load();
+                    var cfg = AppConfigStore.GetSnapshot();
                     UpdateProjectDestinationDisplay(SelectedProject, cfg);
                     UpdateProjectEncryptionDisplay(SelectedProject, cfg);
                     UpdateProjectPresetDisplay(SelectedProject);
@@ -2526,7 +2669,7 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                 ? config.DbPath
                 : GetDefaultDbPath();
@@ -2592,7 +2735,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             try
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
                     : GetDefaultDbPath();
@@ -2690,7 +2833,7 @@ public class ProjectsViewModel : ViewModelBase
             ? L("Snapshots.Action.Default", "Snapshot now")
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
-        var config = AppConfigStore.Load();
+        var config = AppConfigStore.GetSnapshot();
         RefreshEncryptionPolicyOptions();
         RefreshDestinationOptionsInternal(config);
         foreach (var project in _allProjects)

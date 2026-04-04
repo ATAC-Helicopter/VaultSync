@@ -9,6 +9,8 @@ namespace VaultSync.UI.Notifications
 {
     public sealed class WindowsSystemNotificationService : ISystemNotificationService
     {
+        private const string WindowsToastGroup = "VaultSync";
+
         public void ShowSystemNotification(NotificationRequest request)
         {
             var title = string.IsNullOrWhiteSpace(request.Title)
@@ -33,6 +35,12 @@ namespace VaultSync.UI.Notifications
 
                 var toastContent = builder.GetToastContent();
                 var toast        = new ToastNotification(toastContent.GetXml());
+                toast.Group = WindowsToastGroup;
+
+                if (!string.IsNullOrWhiteSpace(request.GroupKey))
+                {
+                    toast.Tag = SanitizeTag(request.GroupKey);
+                }
 
                 // Use the compat notifier so unpackaged Win32 builds can still raise toasts.
                 var notifier = ToastNotificationManagerCompat.CreateToastNotifier();
@@ -45,5 +53,32 @@ namespace VaultSync.UI.Notifications
             // Non-Windows targets fall back to logging only
 #endif
         }
+
+#if WINDOWS
+        private static string SanitizeTag(string groupKey)
+        {
+            Span<char> buffer = stackalloc char[Math.Min(groupKey.Length, 60)];
+            var length = 0;
+
+            foreach (var ch in groupKey)
+            {
+                if (char.IsLetterOrDigit(ch) || ch is '-' or '_' or '.')
+                {
+                    buffer[length++] = ch;
+                }
+                else if (length == 0 || buffer[length - 1] != '-')
+                {
+                    buffer[length++] = '-';
+                }
+
+                if (length >= buffer.Length)
+                    break;
+            }
+
+            return length == 0
+                ? WindowsToastGroup
+                : new string(buffer[..length]).Trim('-');
+        }
+#endif
     }
 }

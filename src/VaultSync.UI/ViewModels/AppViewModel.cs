@@ -124,6 +124,8 @@ namespace VaultSync.UI.ViewModels
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
         private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
+        private static readonly TimeSpan DestinationProbeFailureBackoff = TimeSpan.FromMinutes(15);
+        private static readonly TimeSpan DestinationProbeStartupDelay = TimeSpan.FromSeconds(45);
         private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
         private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
         private const int DefaultEncryptedOpenTimeoutMinutes = 10;
@@ -139,6 +141,10 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
         private readonly ConcurrentDictionary<int, byte> _restoreAdvisoryShown = new();
         private readonly ConcurrentDictionary<int, byte> _projectRootMissingNotified = new();
+        private readonly ConcurrentDictionary<int, byte> _lowDiskWarningShown = new();
+        private readonly object _groupedBackupNotificationGate = new();
+        private readonly Dictionary<string, GroupedBackupNotificationBatch> _groupedBackupNotifications = new(StringComparer.Ordinal);
+        private static readonly TimeSpan GroupedBackupNotificationDelay = TimeSpan.FromMilliseconds(900);
         private int _metadataUiRefreshInFlight;
         private int _metadataUiRefreshQueued;
         private readonly ConcurrentDictionary<int, DateTime> _backupProgressLogTimestamps = new();
@@ -156,9 +162,19 @@ namespace VaultSync.UI.ViewModels
         private HashSet<int>? _backupsCacheDisabledAuto;
         private DateTime _backupsCacheUpdatedUtc;
         private bool _backupsCachePartial;
+
+        private sealed class GroupedBackupNotificationBatch
+        {
+            public required string Key { get; init; }
+            public required NotificationSeverity Severity { get; init; }
+            public required string Title { get; init; }
+            public required Func<IReadOnlyList<string>, string> MessageFactory { get; init; }
+            public List<string> ProjectNames { get; } = new();
+            public HashSet<string> ProjectNameSet { get; } = new(StringComparer.OrdinalIgnoreCase);
+        }
         private static readonly TimeSpan BackupsCacheTtl = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan DashboardRefreshTtl = TimeSpan.FromSeconds(5);
-        private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.Zero;
+        private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.FromMilliseconds(750);
         private int _dashboardWarmLoadQueued;
         private int _backupsWarmLoadQueued;
         private readonly GitHubUpdateService _updateService = new();
@@ -175,7 +191,7 @@ namespace VaultSync.UI.ViewModels
         private readonly DateTime _appStartUtc = DateTime.UtcNow;
         private int _dashboardWarmLoadScheduled;
         private int _backupsWarmLoadScheduled;
-        private static readonly TimeSpan WarmLoadStartupDelay = TimeSpan.Zero;
+        private static readonly TimeSpan WarmLoadStartupDelay = TimeSpan.FromSeconds(2);
         private DateTime _lastUpdateCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan UpdateCheckMinInterval = TimeSpan.FromMinutes(2);
         private readonly ConcurrentDictionary<string, DateTime> _metadataImportRetryAfter = new();

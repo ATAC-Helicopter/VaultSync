@@ -79,7 +79,6 @@ namespace VaultSync.UI.ViewModels
                     vm.ResetDestinationStatuses(destinations, allowToggle);
 
                     EnsureDestinationProbeStarted();
-                    _ = Task.Run(ProbeDestinationsAsync);
 
                     var summaries = GetDestinationProbeSummaries(cfg);
                     foreach (var summary in summaries)
@@ -378,6 +377,9 @@ namespace VaultSync.UI.ViewModels
 
                 foreach (var dest in destinations)
                 {
+                    if (!ShouldScanDestination(dest))
+                        continue;
+
                     var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                         ? null
                         : cfg.Network.Credentials.FirstOrDefault(c =>
@@ -464,6 +466,27 @@ namespace VaultSync.UI.ViewModels
             {
                 Interlocked.Exchange(ref _destinationScanInFlight, 0);
             }
+        }
+
+        private bool ShouldScanDestination(BackupDestination dest)
+        {
+            if (dest is null)
+                return false;
+
+            if (!IsRemoteDestinationPath(dest.Path))
+                return true;
+
+            var id = DestinationStatusItem.GetId(dest);
+            if (_destinationProbeSummaries.TryGetValue(id, out var summary))
+            {
+                if (summary.Reachable)
+                    return true;
+
+                if ((DateTime.UtcNow - summary.LastChecked) < DestinationProbeFailureBackoff)
+                    return false;
+            }
+
+            return false;
         }
 
         private static HashSet<string> BuildExistingBackupKeys(IEnumerable<Backup> backups)

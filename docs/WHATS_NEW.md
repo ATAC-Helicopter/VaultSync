@@ -1,5 +1,24 @@
 # What's New
 
+## [1.7.1]
+
+Current `1.7.1` patch-release highlights focused on startup responsiveness, offline-destination resilience, UI polish, diagnostics cleanup, and release/documentation hygiene.
+
+### Performance and startup
+- Reduced avoidable read-only config reloads across startup, tray, dashboard, projects, settings, support export, and backup-prep flows.
+- Deferred non-essential warm-load work so Dashboard and shell startup do less work up front.
+- Added multi-term project search and simplified search matching logic.
+
+### UI and workflow polish
+- Refined Dashboard storage ordering, top-consumer presentation, and backup-summary behavior.
+- Improved the Backups summary card so the latest backup shows project, type, destination, and storage/security context.
+- Cleaned up localization across Dashboard, Projects, Settings, tray, crash/fallback surfaces, and theme labels.
+
+### Diagnostics and tooling
+- Suppressed expected diagnostics noise from common missing-path and permission-denied filesystem cases.
+- Added tests and retention/pruning for download-stats reporting, then gated the workflow on those tests.
+- Cleaned up release/legal metadata, including license text consistency and third-party notices indexing.
+
 ## [1.7.0]
 
 Current `1.7` release-train highlights, including the beta-preview work around repair tooling, safer updates, transfer resilience, dashboard clarity, and in-context appearance customization.

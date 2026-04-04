@@ -171,7 +171,7 @@ internal static class CrashHandler
 
         var title = new TextBlock
         {
-            Text = "VaultSync crashed",
+            Text = L("Crash.Title", "VaultSync crashed"),
             FontSize = 18,
             FontWeight = FontWeight.SemiBold
         };
@@ -179,7 +179,7 @@ internal static class CrashHandler
 
         var message = new TextBlock
         {
-            Text = "VaultSync hit an unexpected error and must close.",
+            Text = L("Crash.Message", "VaultSync hit an unexpected error and must close."),
             TextWrapping = TextWrapping.Wrap
         };
         if (GetBrush("TextSecondary") is { } messageBrush)
@@ -201,7 +201,7 @@ internal static class CrashHandler
         {
             content.Children.Add(new TextBlock
             {
-                Text = "Crash log path:",
+                Text = L("Crash.LogPath", "Crash log path:"),
                 FontWeight = FontWeight.Medium
             });
 
@@ -224,7 +224,7 @@ internal static class CrashHandler
 
         var headerTitle = new TextBlock
         {
-            Text = "VaultSync",
+            Text = L("Crash.HeaderTitle", "VaultSync"),
             FontWeight = FontWeight.SemiBold
         };
         if (GetBrush("TextPrimary") is { } headerBrush)
@@ -234,7 +234,7 @@ internal static class CrashHandler
 
         var headerSubTitle = new TextBlock
         {
-            Text = "Crash report",
+            Text = L("Crash.HeaderSubtitle", "Crash report"),
             FontSize = 12
         };
         if (GetBrush("TextSecondary") is { } headerSubBrush)

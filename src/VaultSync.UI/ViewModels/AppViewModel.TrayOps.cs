@@ -407,7 +407,7 @@ namespace VaultSync.UI.ViewModels
             if (backup is null)
                 return BackupFolderOpenPreparation.Failure;
 
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             var destinations = GetAllDestinations(cfg);
             var destinationRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(destinationRoot))

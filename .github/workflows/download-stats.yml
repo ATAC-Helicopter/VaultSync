@@ -28,6 +28,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Run download-stats tests
+        run: |
+          python -m unittest tests.scripts.test_download_stats
+
       - name: Prepare stats branch worktree
         shell: bash
         run: |

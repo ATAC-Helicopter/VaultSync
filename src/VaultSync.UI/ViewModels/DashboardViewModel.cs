@@ -25,6 +25,12 @@ namespace VaultSync.UI.ViewModels
 {
     public class DashboardViewModel : ViewModelBase
     {
+        public enum StorageLegendSortMode
+        {
+            LargestFirst,
+            Alphabetical
+        }
+
         // KPIs (bindable, backed by fields)
         private int _projectCount;
         private string _projectsHint = string.Empty;
@@ -56,11 +62,14 @@ namespace VaultSync.UI.ViewModels
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
             Array.Empty<BackupUsageSegment>();
+        public IReadOnlyList<BackupUsageSegment> BackupTopConsumers { get; private set; } =
+            Array.Empty<BackupUsageSegment>();
 
         public ISeries[] BackupUsageSeries { get; private set; } = Array.Empty<ISeries>();
         public Axis[] BackupUsageXAxes { get; private set; } = Array.Empty<Axis>();
         public Axis[] BackupUsageYAxes { get; private set; } = Array.Empty<Axis>();
         public bool HasBackupUsageSegments => BackupUsageSegments.Count > 0;
+        public bool HasBackupTopConsumers => BackupTopConsumers.Count > 0;
 
         public int ProjectCount
         {
@@ -364,6 +373,25 @@ namespace VaultSync.UI.ViewModels
         public ISeries[] StorageSeries { get; private set; } = Array.Empty<ISeries>();
         public bool HasStorageSeries => StorageSeries is { Length: > 0 };
         public IEnumerable<LegendItem> StorageLegend { get; private set; } = Array.Empty<LegendItem>();
+        public ObservableCollection<StorageLegendSortOption> StorageSortOptions { get; } = new();
+
+        private StorageLegendSortOption? _selectedStorageSortOption;
+        public StorageLegendSortOption? SelectedStorageSortOption
+        {
+            get => _selectedStorageSortOption;
+            set
+            {
+                if (!Equals(_selectedStorageSortOption, value))
+                {
+                    _selectedStorageSortOption = value;
+                    OnPropertyChanged();
+                    if (value is not null)
+                    {
+                        RebuildStorageDonut();
+                    }
+                }
+            }
+        }
 
         // Activity items, populated from real data.
         public ObservableCollection<ActivityItem> ActivityItems { get; } = new();
@@ -385,6 +413,7 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan DashboardDataTtl = TimeSpan.FromSeconds(30);
         private SqliteRepository? _repo;
         private string? _repoDbPath;
+        private IReadOnlyList<(Project project, long bytes)> _lastStorageSlices = Array.Empty<(Project project, long bytes)>();
 
         public DashboardViewModel()
         {
@@ -396,6 +425,7 @@ namespace VaultSync.UI.ViewModels
                 _ => App.AppViewModelInstance?.NavigateBackups?.CanExecute(null) == true);
 
             BuildStaticAxes();
+            RebuildStorageSortOptions();
             BuildDemoSeriesIfNeeded();
         }
 
@@ -454,7 +484,7 @@ namespace VaultSync.UI.ViewModels
                         return _lastDashboardData;
                     }
 
-                    var cfg = AppConfigStore.Load();
+                    var cfg = AppConfigStore.GetSnapshot();
                     var diskUsage = ComputeBackupDiskUsageDetailed(cfg);
 
                     var dbPath = !string.IsNullOrWhiteSpace(cfg.DbPath)
@@ -597,166 +627,162 @@ namespace VaultSync.UI.ViewModels
                     return dashboardData;
                 });
 
-                // Apply results on UI thread
-                BackupDiskUsedPercent      = data.DiskUsage.UsedPercent;
-                BackupDiskFreeText         = data.DiskUsage.FreeText;
-                BackupDiskThresholdText    = data.DiskUsage.ThresholdText;
-                BackupDiskIsBelowThreshold = data.DiskUsage.IsBelowThreshold;
-                BackupDiskRiskReason       = data.DiskUsage.RiskReason;
-
-                ProjectCount = data.Projects.Count;
-                SnapshotCount = data.BackupCount;
-                _backupsThisWeekCount = data.BackupsThisWeekCount;
-                SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
-
-                _activeProjectsCount = data.StorageSlices.Count;
-                StorageUsed = FormatBytes(data.TotalLatestBytes);
-                StorageUsedLocal = Lf("Dashboard.Kpi.StorageLocal", "Local: {0}", FormatBytes(data.TotalLocalBytes));
-
-                if (data.Projects.Count == 0)
+                await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    ProjectsHint = L("Dashboard.Hint.NoProjects", "No projects yet");
-                }
-                else if (_activeProjectsCount == 0)
-                {
-                    ProjectsHint = L("Dashboard.Hint.NoSnapshots", "No snapshots yet");
-                }
-                else
-                {
-                    ProjectsHint = _activeProjectsCount == 1
-                        ? L("Dashboard.Hint.ActiveProjects.One", "1 active project")
-                        : string.Format(L("Dashboard.Hint.ActiveProjects.Many", "{0} active projects"), _activeProjectsCount);
-                }
+                    BackupDiskUsedPercent      = data.DiskUsage.UsedPercent;
+                    BackupDiskFreeText         = data.DiskUsage.FreeText;
+                    BackupDiskThresholdText    = data.DiskUsage.ThresholdText;
+                    BackupDiskIsBelowThreshold = data.DiskUsage.IsBelowThreshold;
+                    BackupDiskRiskReason       = data.DiskUsage.RiskReason;
 
-                StorageHint = _activeProjectsCount == 0
-                    ? L("Dashboard.Hint.StorageEmpty", "No storage used")
-                    : L("Dashboard.Hint.StorageTotal", "Total across all backups");
-                ApplyRestoreReadinessSummary(data.RestoreReadiness);
+                    ProjectCount = data.Projects.Count;
+                    SnapshotCount = data.BackupCount;
+                    _backupsThisWeekCount = data.BackupsThisWeekCount;
+                    SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
 
-                // Activity
-                var activityItems = new List<ActivityItem>();
-                var projectPalette = new[]
-                {
-                    Color.Parse("#4C8DFF"),
-                    Color.Parse("#22CC88"),
-                    Color.Parse("#FFB84C"),
-                    Color.Parse("#FF6B6B"),
-                    Color.Parse("#9B6BFF")
-                };
-                var projectDotBrushes = new Dictionary<int, IBrush>();
-                var paletteIndex = 0;
+                    _activeProjectsCount = data.StorageSlices.Count;
+                    StorageUsed = FormatBytes(data.TotalLatestBytes);
+                    StorageUsedLocal = Lf("Dashboard.Kpi.StorageLocal", "Local: {0}", FormatBytes(data.TotalLocalBytes));
 
-                IBrush GetBrush(Color color) => new ImmutableSolidColorBrush(color);
-
-                foreach (var a in data.Activities
-                             .OrderByDescending(a => a.WhenUtc)
-                             .Take(5))
-                {
-                    Project? project = null;
-                    if (a.ProjectId.HasValue)
+                    if (data.Projects.Count == 0)
                     {
-                        project = data.Projects.FirstOrDefault(p => p.Id == a.ProjectId.Value);
+                        ProjectsHint = L("Dashboard.Hint.NoProjects", "No projects yet");
                     }
-
-                    var title = project != null ? project.Name : L("Dashboard.Activity.UnknownProject", "Unknown project");
-                    var subtitle = a.Subtitle switch
+                    else if (_activeProjectsCount == 0)
                     {
-                        "auto"     => L("Dashboard.Activity.AutoBackup", "Auto backup created"),
-                        "manual"   => L("Dashboard.Activity.ManualBackup", "Manual backup created"),
-                        _          => L("Dashboard.Activity.SnapshotCreated", "Snapshot created")
-                    };
-                    var tagsDisplay = string.Empty;
-                    var tagChips = Array.Empty<ProjectTagChip>();
-                    if (project is not null)
-                    {
-                        var tags = (project.Tags ?? string.Empty)
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(t => t.Trim())
-                            .Where(t => !string.IsNullOrWhiteSpace(t))
-                            .Distinct(StringComparer.OrdinalIgnoreCase)
-                            .Take(3)
-                            .ToArray();
-                        if (tags.Length > 0)
-                            tagsDisplay = string.Join(" - ", tags);
-                        tagChips = ProjectTagAppearance.CreateChips(project.Tags, max: 3).ToArray();
-                    }
-                    var when = a.WhenUtc.ToLocalTime().ToString("g");
-
-                    IBrush dotBrush;
-                    if (project != null)
-                    {
-                        if (!projectDotBrushes.TryGetValue(project.Id, out dotBrush!))
-                        {
-                            var color = projectPalette[paletteIndex % projectPalette.Length];
-                            dotBrush = GetBrush(color);
-                            projectDotBrushes[project.Id] = dotBrush;
-                            paletteIndex++;
-                        }
+                        ProjectsHint = L("Dashboard.Hint.NoSnapshots", "No snapshots yet");
                     }
                     else
                     {
-                        dotBrush = GetBrush(Colors.Gray);
+                        ProjectsHint = _activeProjectsCount == 1
+                            ? L("Dashboard.Hint.ActiveProjects.One", "1 active project")
+                            : string.Format(L("Dashboard.Hint.ActiveProjects.Many", "{0} active projects"), _activeProjectsCount);
                     }
 
-                    activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush, tagsDisplay, tagChips));
-                }
+                    StorageHint = _activeProjectsCount == 0
+                        ? L("Dashboard.Hint.StorageEmpty", "No storage used")
+                        : L("Dashboard.Hint.StorageTotal", "Total across all backups");
+                    ApplyRestoreReadinessSummary(data.RestoreReadiness);
 
-                ActivityItems.Clear();
-                foreach (var item in activityItems)
-                {
-                    ActivityItems.Add(item);
-                }
+                    var activityItems = new List<ActivityItem>();
+                    var projectPalette = new[]
+                    {
+                        Color.Parse("#4C8DFF"),
+                        Color.Parse("#22CC88"),
+                        Color.Parse("#FFB84C"),
+                        Color.Parse("#FF6B6B"),
+                        Color.Parse("#9B6BFF")
+                    };
+                    var projectDotBrushes = new Dictionary<int, IBrush>();
+                    var paletteIndex = 0;
 
-                // Backup chart
-                for (var i = 0; i < _days.Length && i < data.DayLabels.Length; i++)
-                {
-                    _days[i] = data.DayLabels[i];
-                }
-                Array.Clear(_snapshotCountsByDay, 0, _snapshotCountsByDay.Length);
-                for (var i = 0; i < _snapshotCountsByDay.Length && i < data.SnapshotCounts.Length; i++)
-                {
-                    _snapshotCountsByDay[i] = data.SnapshotCounts[i];
-                }
-                Array.Clear(_autoCountsByDay, 0, _autoCountsByDay.Length);
-                Array.Clear(_manualCountsByDay, 0, _manualCountsByDay.Length);
-                Array.Clear(_importedCountsByDay, 0, _importedCountsByDay.Length);
-                for (var i = 0; i < _autoCountsByDay.Length && i < data.AutoCounts.Length; i++)
-                {
-                    _autoCountsByDay[i] = data.AutoCounts[i];
-                }
-                for (var i = 0; i < _manualCountsByDay.Length && i < data.ManualCounts.Length; i++)
-                {
-                    _manualCountsByDay[i] = data.ManualCounts[i];
-                }
-                for (var i = 0; i < _importedCountsByDay.Length && i < data.ImportedCounts.Length; i++)
-                {
-                    _importedCountsByDay[i] = data.ImportedCounts[i];
-                }
+                    IBrush GetBrush(Color color) => new ImmutableSolidColorBrush(color);
 
-                // Compute textual summary after chart arrays are populated.
-                UpdateBackupSummaryPills();
+                    foreach (var a in data.Activities
+                                 .OrderByDescending(a => a.WhenUtc)
+                                 .Take(5))
+                    {
+                        Project? project = null;
+                        if (a.ProjectId.HasValue)
+                        {
+                            project = data.Projects.FirstOrDefault(p => p.Id == a.ProjectId.Value);
+                        }
 
-                BuildSnapshotSeries();
-                BuildWeeklyActivity();
-                BuildStorageDonut(data.StorageSlices);
-                BuildBackupUsageBar(data.Config, data.StorageSlices);
-                // Final guard: if we have project slices but the usage bar still resolved to
-                // only "Other", force the project-relative breakdown so users always see
-                // per-project storage in this card.
-                if (data.StorageSlices.Count > 0 &&
-                    (BackupUsageSegments.Count == 0 ||
-                     (BackupUsageSegments.Count == 1 &&
-                      BackupUsageSegments[0].Name.StartsWith(
-                          L("Dashboard.Storage.Other", "Other"),
-                          StringComparison.OrdinalIgnoreCase))))
-                {
-                    BuildBackupUsageBarFromVaultSync(
-                        data.StorageSlices,
-                        data.StorageSlices.Sum(x => Math.Max(0L, x.bytes)));
-                }
+                        var title = project != null ? project.Name : L("Dashboard.Activity.UnknownProject", "Unknown project");
+                        var subtitle = a.Subtitle switch
+                        {
+                            "auto"     => L("Dashboard.Activity.AutoBackup", "Auto backup created"),
+                            "manual"   => L("Dashboard.Activity.ManualBackup", "Manual backup created"),
+                            _          => L("Dashboard.Activity.SnapshotCreated", "Snapshot created")
+                        };
+                        var tagsDisplay = string.Empty;
+                        var tagChips = Array.Empty<ProjectTagChip>();
+                        if (project is not null)
+                        {
+                            var tags = (project.Tags ?? string.Empty)
+                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(t => t.Trim())
+                                .Where(t => !string.IsNullOrWhiteSpace(t))
+                                .Distinct(StringComparer.OrdinalIgnoreCase)
+                                .Take(3)
+                                .ToArray();
+                            if (tags.Length > 0)
+                                tagsDisplay = string.Join(" - ", tags);
+                            tagChips = ProjectTagAppearance.CreateChips(project.Tags, max: 3).ToArray();
+                        }
+                        var when = a.WhenUtc.ToLocalTime().ToString("g");
 
-                OnPropertyChanged(nameof(TotalSnapshotsWeek));
-                OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
+                        IBrush dotBrush;
+                        if (project != null)
+                        {
+                            if (!projectDotBrushes.TryGetValue(project.Id, out dotBrush!))
+                            {
+                                var color = projectPalette[paletteIndex % projectPalette.Length];
+                                dotBrush = GetBrush(color);
+                                projectDotBrushes[project.Id] = dotBrush;
+                                paletteIndex++;
+                            }
+                        }
+                        else
+                        {
+                            dotBrush = GetBrush(Colors.Gray);
+                        }
+
+                        activityItems.Add(new ActivityItem(title, subtitle, when, dotBrush, tagsDisplay, tagChips));
+                    }
+
+                    ActivityItems.Clear();
+                    foreach (var item in activityItems)
+                    {
+                        ActivityItems.Add(item);
+                    }
+
+                    for (var i = 0; i < _days.Length && i < data.DayLabels.Length; i++)
+                    {
+                        _days[i] = data.DayLabels[i];
+                    }
+                    Array.Clear(_snapshotCountsByDay, 0, _snapshotCountsByDay.Length);
+                    for (var i = 0; i < _snapshotCountsByDay.Length && i < data.SnapshotCounts.Length; i++)
+                    {
+                        _snapshotCountsByDay[i] = data.SnapshotCounts[i];
+                    }
+                    Array.Clear(_autoCountsByDay, 0, _autoCountsByDay.Length);
+                    Array.Clear(_manualCountsByDay, 0, _manualCountsByDay.Length);
+                    Array.Clear(_importedCountsByDay, 0, _importedCountsByDay.Length);
+                    for (var i = 0; i < _autoCountsByDay.Length && i < data.AutoCounts.Length; i++)
+                    {
+                        _autoCountsByDay[i] = data.AutoCounts[i];
+                    }
+                    for (var i = 0; i < _manualCountsByDay.Length && i < data.ManualCounts.Length; i++)
+                    {
+                        _manualCountsByDay[i] = data.ManualCounts[i];
+                    }
+                    for (var i = 0; i < _importedCountsByDay.Length && i < data.ImportedCounts.Length; i++)
+                    {
+                        _importedCountsByDay[i] = data.ImportedCounts[i];
+                    }
+
+                    UpdateBackupSummaryPills();
+
+                    BuildSnapshotSeries();
+                    BuildWeeklyActivity();
+                    BuildStorageDonut(data.StorageSlices);
+                    BuildBackupUsageBar(data.Config, data.StorageSlices);
+                    if (data.StorageSlices.Count > 0 &&
+                        (BackupUsageSegments.Count == 0 ||
+                         (BackupUsageSegments.Count == 1 &&
+                          BackupUsageSegments[0].Name.StartsWith(
+                              L("Dashboard.Storage.Other", "Other"),
+                              StringComparison.OrdinalIgnoreCase))))
+                    {
+                        BuildBackupUsageBarFromVaultSync(
+                            data.StorageSlices,
+                            data.StorageSlices.Sum(x => Math.Max(0L, x.bytes)));
+                    }
+
+                    OnPropertyChanged(nameof(TotalSnapshotsWeek));
+                    OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
+                });
             }
             catch (Exception ex)
             {
@@ -887,8 +913,10 @@ namespace VaultSync.UI.ViewModels
 
         private void BuildStorageDonut(IReadOnlyList<(Project project, long bytes)> perProject)
         {
+            _lastStorageSlices = perProject ?? Array.Empty<(Project project, long bytes)>();
+
             // If we have no per-project data, show an empty donut.
-            if (perProject == null || perProject.Count == 0)
+            if (_lastStorageSlices.Count == 0)
             {
                 StorageSeries = Array.Empty<ISeries>();
                 StorageLegend = Array.Empty<LegendItem>();
@@ -898,7 +926,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var total = perProject.Sum(p => p.bytes);
+            var total = _lastStorageSlices.Sum(p => p.bytes);
             if (total <= 0)
             {
                 StorageSeries = Array.Empty<ISeries>();
@@ -908,13 +936,24 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(StorageLegend));
                 return;
             }
+            var orderedSlices = (_selectedStorageSortOption?.Mode ?? StorageLegendSortMode.LargestFirst) switch
+            {
+                StorageLegendSortMode.Alphabetical => _lastStorageSlices
+                    .OrderBy(x => x.project.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .ThenByDescending(x => x.bytes)
+                    .ToList(),
+                _ => _lastStorageSlices
+                    .OrderByDescending(x => x.bytes)
+                    .ThenBy(x => x.project.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .ToList()
+            };
 
             var series = new List<ISeries>();
-                var legend = new List<LegendItem>();
+            var legend = new List<LegendItem>();
 
-            for (int i = 0; i < perProject.Count; i++)
+            for (int i = 0; i < orderedSlices.Count; i++)
             {
-                var (project, bytes) = perProject[i];
+                var (project, bytes) = orderedSlices[i];
                 if (bytes <= 0) continue;
 
                 var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
@@ -960,6 +999,11 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(StorageLegend));
         }
 
+        private void RebuildStorageDonut()
+        {
+            BuildStorageDonut(_lastStorageSlices);
+        }
+
         private void BuildDemoSeriesIfNeeded()
         {
             if (SnapshotSeries is { Length: > 0 } && StorageSeries is { Length: > 0 })
@@ -984,7 +1028,7 @@ namespace VaultSync.UI.ViewModels
             ApplyRestoreReadinessSummary(new RestoreReadinessSummary());
 
             BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             BuildBackupUsageBar(cfg, Array.Empty<(Project project, long bytes)>());
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
@@ -999,11 +1043,14 @@ namespace VaultSync.UI.ViewModels
         if (string.IsNullOrWhiteSpace(backupRoot))
         {
             BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+            BackupTopConsumers = Array.Empty<BackupUsageSegment>();
             BackupUsageSeries   = Array.Empty<ISeries>();
             BackupUsageXAxes    = Array.Empty<Axis>();
             BackupUsageYAxes    = Array.Empty<Axis>();
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
             OnPropertyChanged(nameof(BackupUsageYAxes));
@@ -1134,7 +1181,9 @@ namespace VaultSync.UI.ViewModels
         }
 
         BackupUsageSegments = segments;
+        BackupTopConsumers = BuildTopConsumerList(segments);
         OnPropertyChanged(nameof(HasBackupUsageSegments));
+        OnPropertyChanged(nameof(HasBackupTopConsumers));
 
         // Build stacked RowSeries for the colored bar (Other + VaultSync projects).
         if (segments.Count == 0)
@@ -1158,6 +1207,8 @@ namespace VaultSync.UI.ViewModels
             };
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
             OnPropertyChanged(nameof(HasBackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
@@ -1187,6 +1238,8 @@ namespace VaultSync.UI.ViewModels
             };
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
             OnPropertyChanged(nameof(HasBackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
@@ -1238,6 +1291,8 @@ namespace VaultSync.UI.ViewModels
         };
 
         OnPropertyChanged(nameof(BackupUsageSegments));
+        OnPropertyChanged(nameof(BackupTopConsumers));
+        OnPropertyChanged(nameof(HasBackupTopConsumers));
         OnPropertyChanged(nameof(HasBackupUsageSegments));
         OnPropertyChanged(nameof(BackupUsageSeries));
         OnPropertyChanged(nameof(BackupUsageXAxes));
@@ -1248,11 +1303,14 @@ namespace VaultSync.UI.ViewModels
         Console.WriteLine($"[Dashboard] Backup usage bar failed: {ex.Message}");
 
         BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+        BackupTopConsumers = Array.Empty<BackupUsageSegment>();
         BackupUsageSeries   = Array.Empty<ISeries>();
         BackupUsageXAxes    = Array.Empty<Axis>();
         BackupUsageYAxes    = Array.Empty<Axis>();
 
         OnPropertyChanged(nameof(BackupUsageSegments));
+        OnPropertyChanged(nameof(BackupTopConsumers));
+        OnPropertyChanged(nameof(HasBackupTopConsumers));
         OnPropertyChanged(nameof(BackupUsageSeries));
         OnPropertyChanged(nameof(BackupUsageXAxes));
         OnPropertyChanged(nameof(BackupUsageYAxes));
@@ -1263,16 +1321,19 @@ namespace VaultSync.UI.ViewModels
         {
             if (vaultSyncBytes <= 0 || perProject == null || perProject.Count == 0)
             {
-                BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-                BackupUsageSeries   = Array.Empty<ISeries>();
-                BackupUsageXAxes    = Array.Empty<Axis>();
-                BackupUsageYAxes    = Array.Empty<Axis>();
+            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
+            BackupTopConsumers = Array.Empty<BackupUsageSegment>();
+            BackupUsageSeries   = Array.Empty<ISeries>();
+            BackupUsageXAxes    = Array.Empty<Axis>();
+            BackupUsageYAxes    = Array.Empty<Axis>();
 
-                OnPropertyChanged(nameof(BackupUsageSegments));
-                OnPropertyChanged(nameof(BackupUsageSeries));
-                OnPropertyChanged(nameof(BackupUsageXAxes));
-                OnPropertyChanged(nameof(BackupUsageYAxes));
-                return;
+            OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
+            OnPropertyChanged(nameof(BackupUsageSeries));
+            OnPropertyChanged(nameof(BackupUsageXAxes));
+            OnPropertyChanged(nameof(BackupUsageYAxes));
+            return;
             }
 
             var segments = new List<BackupUsageSegment>();
@@ -1325,7 +1386,9 @@ namespace VaultSync.UI.ViewModels
             }
 
             BackupUsageSegments = segments;
+            BackupTopConsumers = BuildTopConsumerList(segments);
             OnPropertyChanged(nameof(HasBackupUsageSegments));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
 
             if (segments.Count == 0)
             {
@@ -1348,6 +1411,8 @@ namespace VaultSync.UI.ViewModels
                 };
 
                 OnPropertyChanged(nameof(BackupUsageSegments));
+                OnPropertyChanged(nameof(BackupTopConsumers));
+                OnPropertyChanged(nameof(HasBackupTopConsumers));
                 OnPropertyChanged(nameof(HasBackupUsageSegments));
                 OnPropertyChanged(nameof(BackupUsageSeries));
                 OnPropertyChanged(nameof(BackupUsageXAxes));
@@ -1399,10 +1464,37 @@ namespace VaultSync.UI.ViewModels
             };
 
             OnPropertyChanged(nameof(BackupUsageSegments));
+            OnPropertyChanged(nameof(BackupTopConsumers));
+            OnPropertyChanged(nameof(HasBackupTopConsumers));
             OnPropertyChanged(nameof(HasBackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
             OnPropertyChanged(nameof(BackupUsageXAxes));
             OnPropertyChanged(nameof(BackupUsageYAxes));
+        }
+
+        private IReadOnlyList<BackupUsageSegment> BuildTopConsumerList(IReadOnlyList<BackupUsageSegment> segments)
+        {
+            if (segments.Count == 0)
+                return Array.Empty<BackupUsageSegment>();
+
+            var projectSegments = segments
+                .Where(s => !string.Equals(s.Name, L("Dashboard.Storage.Other", "Other"), StringComparison.Ordinal))
+                .ToList();
+
+            if (projectSegments.Count == 0)
+                return Array.Empty<BackupUsageSegment>();
+
+            const int maxVisibleRows = 5;
+            if (projectSegments.Count <= maxVisibleRows)
+                return projectSegments;
+
+            var hasAggregateTail = projectSegments[^1].Name.StartsWith("+ ", StringComparison.Ordinal);
+            if (!hasAggregateTail)
+                return projectSegments.Take(maxVisibleRows).ToList();
+
+            var visible = projectSegments.Take(maxVisibleRows - 1).ToList();
+            visible.Add(projectSegments[^1]);
+            return visible;
         }
 
 
@@ -1959,6 +2051,7 @@ namespace VaultSync.UI.ViewModels
 
         public void ReapplyLocalization()
         {
+            RebuildStorageSortOptions();
             SnapshotsHint = string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), _backupsThisWeekCount);
             UpdateBackupSummaryPills();
 
@@ -1998,6 +2091,23 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessUnavailableLabel = Lf("RestoreReadiness.Count.Unavailable", "{0} unavailable", RestoreReadinessUnavailableCount);
 
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
+        }
+
+        private void RebuildStorageSortOptions()
+        {
+            var selectedMode = _selectedStorageSortOption?.Mode ?? StorageLegendSortMode.LargestFirst;
+            StorageSortOptions.Clear();
+            StorageSortOptions.Add(new StorageLegendSortOption(
+                StorageLegendSortMode.LargestFirst,
+                L("Dashboard.Storage.Sort.Largest", "Largest first")));
+            StorageSortOptions.Add(new StorageLegendSortOption(
+                StorageLegendSortMode.Alphabetical,
+                L("Dashboard.Storage.Sort.Alphabetical", "A-Z")));
+
+            var match = StorageSortOptions.FirstOrDefault(x => x.Mode == selectedMode) ?? StorageSortOptions[0];
+            _selectedStorageSortOption = match;
+            OnPropertyChanged(nameof(SelectedStorageSortOption));
+            RebuildStorageDonut();
         }
 
         private void ApplyRestoreReadinessSummary(RestoreReadinessSummary summary)
@@ -2112,6 +2222,7 @@ namespace VaultSync.UI.ViewModels
 
         // Bindables
         public record LegendItem(string Label, string Tooltip, IBrush Brush);
+        public record StorageLegendSortOption(StorageLegendSortMode Mode, string Label);
         public record BackupUsageSegment(string Name, string ValueText, double SizeBytes, IBrush Brush, string Tooltip);
         public record RestoreReadinessIssueItem(string ProjectName, string StateLabel, string Reason, IBrush StateBrush);
 

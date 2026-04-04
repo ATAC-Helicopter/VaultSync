@@ -1,4 +1,61 @@
 ﻿# Changelog
+## [1.7.1] - 04.04.2026
+### Added
+- [VS-1725] Added scheduled GitHub release download snapshots with a dedicated public stats branch and JSON history.
+### Changed
+- [VS-1725] Download stats now generate both a readable HTML/Markdown summary and raw release-asset history from the same workflow.
+- [VS-1725] README now uses repo-owned visuals and links to the download-stats branch instead of relying on a stale third-party repo card.
+### Fixed
+- [BUG-17085] Backup advisories now batch repeated project warnings into grouped notifications, and OS notifications use stable grouping keys instead of stacking one alert per project.
+- [BUG-17086] Projects details no longer log a broken `HasSelectedProject` binding, and project tags now dedupe, normalize, and add reliably without borrowing the bulk-tag input.
+- [BUG-17087] Projects bulk tag actions now treat multiple tags as separate chips, so apply/remove no longer bundles them into one opaque value and refresh failures now write the underlying exception to diagnostics.
+- [BUG-17088] Non-English locale files now follow English key order again and the pre-release key diff is back to `0 missing / 0 extra` across all shipped languages.
+- [BUG-17015] Dashboard header title, subtitle, and summary pills now stay left-aligned so the top overview block reads consistently with the rest of the page.
+- [BUG-17016] Dashboard backup-storage card now uses a ranked top-consumers list instead of an oversized pill cloud, making the lower-right space useful and readable.
+- [BUG-17017] Dashboard, Projects, and Settings now route the remaining hardcoded 1.7.x UI copy through English localization keys instead of shipping raw literals.
+- [BUG-17017] Theme option labels and settings log/export status text now also use English localization keys instead of hardcoded literals.
+- [BUG-17017] Crash dialog, placeholder fallback, and missing-view fallback text now also resolve through English localization keys instead of raw literals.
+- [BUG-17017] Shell navigation titles and header fallback copy now also resolve through English localization keys instead of raw literals.
+- [BUG-17018] Dashboard backup storage now shows a bounded top-consumers list instead of mixing project rows with the generic 'Other' storage segment.
+- [BUG-17019] Diagnostics now suppress expected first-chance missing-path and retention permission exceptions so verbose logs stay focused on actionable faults.
+- [BUG-17020] Added regression tests for the download-stats snapshot script so release totals, deltas, highlights, and history output stay stable.
+- [BUG-17021] Download stats history now prunes older daily snapshots while keeping recent runs and monthly checkpoints, preventing the stats branch from growing without bounds.
+- [BUG-17022] The download-stats workflow now runs its regression tests before publishing snapshots, so broken report logic fails fast instead of pushing bad history.
+- [BUG-17023] Tray panel header and tooltip now use localized shell copy instead of raw English fallbacks.
+- [BUG-17024] Read-only dashboard, backups, and tag-color UI paths now use cached config snapshots instead of reloading config from disk each time.
+- [BUG-17025] Settings diagnostics refresh and tag-chip appearance reads now also use cached config snapshots instead of hitting config storage for every read-only refresh.
+- [BUG-17026] Dashboard refresh and backup view read-only display refreshes now also use cached config snapshots instead of reloading config from disk during normal UI updates.
+- [BUG-17027] Support bundle export now reads the cached config snapshot for report generation instead of reloading config from disk during a read-only export.
+- [BUG-17028] Startup localization, updater theme bootstrap, tray visibility checks, and last-view restore now also use cached config snapshots instead of reloading config during read-only startup flows.
+- [BUG-17029] WhatsNew checks, onboarding gating, tray-menu reads, close-to-tray behavior, drive-health timing, and theme bootstrap now also use cached config snapshots instead of reloading config during read-only UI flows.
+- [BUG-17030] Deferred startup update/metadata checks and background destination probing now also use cached config snapshots instead of reloading config during read-only background refresh flows.
+- [BUG-17031] Tray health/menu fallback reads now consistently use cached config snapshots when the shared app view-model snapshot is unavailable, avoiding unnecessary disk reads in shell refresh paths.
+- [BUG-17032] Onboarding step refreshes now use cached config snapshots instead of reloading config during read-only tour-state checks.
+- [BUG-17033] Opening backup folders from tray actions now uses cached config snapshots instead of reloading config during read-only destination resolution.
+- [BUG-17034] Projects page refresh, snapshot history loads, group actions, localization refresh, and read-only project display updates now use cached config snapshots instead of reloading config during normal UI workflows.
+- [BUG-17035] Dashboard backup storage now caps the top-consumers card to a small ranked list while preserving the aggregate '+ more' row when additional projects exist.
+- [BUG-17036] Metadata post-import retention checks, NAS monitoring, delete/restore preparation, auto-backup preparation, and restore password resolution now use cached config snapshots instead of reloading config during read-only background and backup-history flows.
+- [BUG-17037] Projects search now supports multi-term matching across project names, paths, and tags so narrower searches are easier without changing views.
+- [BUG-17038] Backup-all preparation now uses the cached config snapshot instead of reloading config during read-only orchestration setup.
+- [BUG-17039] Projects search term matching now routes through a dedicated helper, reducing inline filter complexity without changing behavior.
+- [BUG-17040] Projects discovery now loads lazily when the Projects view is opened instead of refreshing during app construction, reducing startup work on cold launch.
+- [BUG-17041] Dashboard and backups warm-loads now wait briefly after startup instead of competing immediately with shell initialization, reducing perceived startup hangs and startup impact.
+- [BUG-17042] Dashboard no longer renders a duplicate top overview block above the KPI row, removing the broken double-summary layout while keeping the detailed sections intact.
+- [BUG-17043] Deferred startup now refreshes projects discovery shortly after launch, so Dashboard content repopulates without bringing back the old eager startup hit.
+- [BUG-17044] Dashboard refresh now applies chart and collection updates on the UI thread, fixing the empty post-startup dashboard caused by invalid-thread refresh failures.
+- [BUG-17045] Storage usage now defaults to a largest-first legend and exposes a compact sort selector so users can switch between size-based and alphabetical ordering.
+- [BUG-17046] Backup storage now raises top-consumer property updates reliably after dashboard refreshes, fixing the empty right-hand consumer list despite valid usage data.
+- [BUG-17047] Backups now use the center summary card for project, type, destination, and storage/security context from the latest backup so the page wastes less space.
+- [BUG-17048] Repository licensing text is now cleaned up and consistent across the root license, README, and CLI package metadata, removing stale placeholders and broken encoding.
+- [BUG-17049] Added a top-level third-party notices index so bundled rsync helper licenses are easier to audit before release.
+- [BUG-17050] Installer-based updates now shut down VaultSync automatically after the installer is launched, so Windows setup can continue without a manual close step.
+- [BUG-17051] Release-facing docs and metadata now target `1.7.1`, including app versioning, What's New, updater/releasing docs, and issue-template examples.
+- [BUG-17052] Startup and Backups destination probing now back off after recent failures and avoid immediate rescans of known-offline remote targets, reducing hangs when a NAS/server is unavailable.
+- [BUG-17053] Embedded color pickers now fully offset the stock tab strip height, fixing the visible clipped header chrome in Settings and Projects.
+- [BUG-17081] Replaced the production `.ico`, tray PNG, and macOS `.icns` assets with renders of `docs/branding/vaultsync-logo-icon.svg` while preserving the previous assets under `src/VaultSync.UI/Assets/backup/2026-03-31-icon-refresh/`.
+- [BUG-17083] Rebalanced the new production SVG icon so the safe composition sits centered within the icon tile instead of reading top-left heavy.
+- [BUG-17084] Updated the safe .NET and Avalonia dependency set to current patch releases for `1.7.1`, including SQLite, cryptography, JSON, Dapper, Namotion.Reflection, the test JSON package, and the Avalonia 11.3.13 stack.
+
 ## [1.7.0] - 20.03.2026
 ### Added
 - [VS-1706] Added a non-blocking startup backup-index consistency scan.
@@ -852,12 +909,3 @@
 ## [0.1.0] - 2025-10-15
 ### Added
 - Project initialized, foundational scaffolding set up for CLI + SQLite architecture.
-
----
-
-? 2026 VaultSync Project. MIT Licensed.
-
-
-
-
-

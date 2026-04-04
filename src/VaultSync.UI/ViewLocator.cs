@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI
 {
@@ -11,6 +12,9 @@ namespace VaultSync.UI
     /// </summary>
     public sealed class ViewLocator : IDataTemplate
     {
+        private static string L(string key, string fallback) =>
+            LocalizationProvider.Service?.GetString(key) ?? fallback;
+
         public Control? Build(object? data)
         {
             if (data is null) return new ContentControl();
@@ -42,7 +46,12 @@ namespace VaultSync.UI
             }
 
             // Fallback so the app doesn’t explode if a mapping is missing
-            return new TextBlock { Text = $"View not found for {vmType.Name}" };
+            return new TextBlock
+            {
+                Text = string.Format(
+                    L("Shell.ViewNotFound", "View not found for {0}"),
+                    vmType.Name)
+            };
         }
 
         public bool Match(object? data)

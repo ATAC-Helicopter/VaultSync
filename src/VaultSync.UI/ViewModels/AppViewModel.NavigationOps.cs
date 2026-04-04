@@ -95,6 +95,7 @@ namespace VaultSync.UI.ViewModels
             {
                 case "Projects":
                     BackupsViewModel.IsActiveView = false;
+                    _projectsViewModel.EnsureLoaded();
                     CurrentView = _projectsViewModel;
                     HeaderTitle = L("Nav.Projects", "Projects");
                     HeaderKicker = L("Main.HeaderProjects", "All repositories");
@@ -263,7 +264,7 @@ namespace VaultSync.UI.ViewModels
         {
             _ = Task.Run(() =>
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var last = string.IsNullOrWhiteSpace(cfg.LastView)
                     ? "Dashboard"
                     : cfg.LastView;

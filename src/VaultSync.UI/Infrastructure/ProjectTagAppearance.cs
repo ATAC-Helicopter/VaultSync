@@ -53,7 +53,7 @@ public static class ProjectTagAppearance
     {
         try
         {
-            return AppConfigStore.Load();
+            return AppConfigStore.GetSnapshot();
         }
         catch
         {

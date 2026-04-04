@@ -142,11 +142,21 @@ namespace VaultSync.UI.Services
         {
             var items = new List<(string, string, ThemePaletteConfig)>(ThemePresets.Length);
             foreach (var preset in ThemePresets)
-                items.Add((preset.Id, preset.Description, preset.Palette.Clone()));
+            {
+                var palette = preset.Palette.Clone();
+                palette.Name = L($"Settings.Appearance.ThemePresets.{preset.Id}.Name", palette.Name);
+                var description = L($"Settings.Appearance.ThemePresets.{preset.Id}.Description", preset.Description);
+                items.Add((preset.Id, description, palette));
+            }
             return items;
         }
 
-        public static ThemePaletteConfig GetDefaultCustomTheme() => ThemePresets[0].Palette.Clone();
+        public static ThemePaletteConfig GetDefaultCustomTheme()
+        {
+            var palette = ThemePresets[0].Palette.Clone();
+            palette.Name = L("Settings.Appearance.ThemePresets.vaultsync-midnight.Name", palette.Name);
+            return palette;
+        }
 
         public static void ApplyAppearance(AppearanceConfig appearance)
         {
@@ -223,6 +233,14 @@ namespace VaultSync.UI.Services
                 "Custom" => ThemeVariant.Dark,
                 _ => ThemeVariant.Default
             };
+        }
+
+        private static string L(string key, string fallback)
+        {
+            var value = LocalizationProvider.Service?.GetString(key);
+            return string.Equals(value, key, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(value)
+                ? fallback
+                : value;
         }
 
         private static void ApplyPaletteOverrides(Application app, string themeName, ThemePaletteConfig? customTheme)

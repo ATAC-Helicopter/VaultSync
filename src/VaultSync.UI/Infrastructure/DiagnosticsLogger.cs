@@ -182,6 +182,9 @@ internal static class DiagnosticsLogger
         if (ex is null)
             return;
 
+        if (ShouldSuppressFirstChanceException(ex))
+            return;
+
         var total = Interlocked.Increment(ref _firstChanceTotal);
         if (total > MaxFirstChanceTotal)
             return;
@@ -196,6 +199,27 @@ internal static class DiagnosticsLogger
             .FirstOrDefault() ?? "no-stack";
 
         Record($"FirstChance[{source}] #{count}: {ex.GetType().Name} - {ex.Message} @ {topFrame}");
+    }
+
+    private static bool ShouldSuppressFirstChanceException(Exception ex)
+    {
+        if (ex is DirectoryNotFoundException)
+            return true;
+
+        if (ex is UnauthorizedAccessException && IsExpectedRetentionDeleteException(ex.StackTrace))
+            return true;
+
+        return false;
+    }
+
+    private static bool IsExpectedRetentionDeleteException(string? stackTrace)
+    {
+        if (string.IsNullOrWhiteSpace(stackTrace))
+            return false;
+
+        return stackTrace.Contains("VaultSync.Core.Services.BackupService.FallbackDeleteDirectory", StringComparison.Ordinal)
+            || stackTrace.Contains("VaultSync.Core.Services.BackupService.TryDeleteBackupFolder", StringComparison.Ordinal)
+            || stackTrace.Contains("VaultSync.UI.ViewModels.AppViewModel.BackupHistoryHandlers", StringComparison.Ordinal);
     }
 
     public static string? GetRecentLog()

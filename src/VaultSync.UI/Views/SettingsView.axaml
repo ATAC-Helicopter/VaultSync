@@ -146,7 +146,7 @@
                            Grid.Column="0"
                            Margin="0,2,0,0"
                            Text="{Binding ProjectsRootPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           Watermark="Leave empty to use OS default" />
+                           Watermark="{infra:LocalizedString Key=Settings.General.ProjectsRootWatermark}" />
 
                   <Button Grid.Row="1"
                           Grid.Column="1"
@@ -555,8 +555,8 @@
                            Grid.Column="0"
                            VerticalAlignment="Center"
                            Text="{Binding BackupLocationPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           ToolTip.Tip="Simple mode: VaultSync writes backups under this folder (one destination)."
-                           Watermark="Leave empty to store backups next to projects" />
+                           ToolTip.Tip="{infra:LocalizedString Key=Settings.Backups.FallbackLocationTooltip}"
+                           Watermark="{infra:LocalizedString Key=Settings.Backups.FallbackLocationWatermark}" />
 
                   <StackPanel Grid.Row="1"
                               Grid.Column="1"
@@ -1435,7 +1435,7 @@
                             <Border ClipToBounds="True"
                                     Background="Transparent">
                               <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                     Margin="6,-34,6,6"
+                                                     Margin="6,-48,6,6"
                                                      MaxWidth="320"
                                                      HorizontalAlignment="Left"
                                                      ClipToBounds="False"
@@ -1558,7 +1558,7 @@
                               <Border ClipToBounds="True"
                                       Background="Transparent">
                                 <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
-                                                       Margin="6,-34,6,6"
+                                                       Margin="6,-48,6,6"
                                                        ClipToBounds="False"
                                                        IsAlphaEnabled="False"
                                                        IsAlphaVisible="False"

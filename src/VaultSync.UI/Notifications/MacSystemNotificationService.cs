@@ -24,7 +24,7 @@ namespace VaultSync.UI.Notifications
                 var escapedMessage = EscapeAppleScriptString(message);
                 var iconPath = ResolveNotificationIconPath();
 
-                if (TryShowWithTerminalNotifier(title, message, iconPath))
+                if (TryShowWithTerminalNotifier(request, title, message, iconPath))
                     return;
 
                 var script =
@@ -49,7 +49,7 @@ namespace VaultSync.UI.Notifications
             }
         }
 
-        private static bool TryShowWithTerminalNotifier(string title, string message, string? iconPath)
+        private static bool TryShowWithTerminalNotifier(NotificationRequest request, string title, string message, string? iconPath)
         {
             try
             {
@@ -71,7 +71,9 @@ namespace VaultSync.UI.Notifications
                 psi.ArgumentList.Add("-message");
                 psi.ArgumentList.Add(message);
                 psi.ArgumentList.Add("-group");
-                psi.ArgumentList.Add("VaultSync");
+                psi.ArgumentList.Add(string.IsNullOrWhiteSpace(request.GroupKey)
+                    ? "VaultSync"
+                    : $"VaultSync.{request.GroupKey}");
 
                 if (!string.IsNullOrWhiteSpace(iconPath) && File.Exists(iconPath))
                 {

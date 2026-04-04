@@ -217,7 +217,7 @@ namespace VaultSync.UI.ViewModels
                     await Task.Delay(delay);
                     RecordStartupPhase("deferred-startup-begin");
 
-                    var cfg = AppConfigStore.Load();
+                    var cfg = AppConfigStore.GetSnapshot();
                     EnsureDestinationProbeStarted();
                     RecordStartupPhase("destination-probe-ready");
 
@@ -237,6 +237,7 @@ namespace VaultSync.UI.ViewModels
                     RecordStartupPhase("update-check-started");
                     ConfigureUpdateCheckTimer();
                     RecordStartupPhase("update-timer-configured");
+                    QueueDeferredProjectsRefresh();
                     RecordStartupPhase("startup-complete");
                 }
                 catch (Exception ex)
@@ -249,6 +250,24 @@ namespace VaultSync.UI.ViewModels
                     PersistStartupDiagnosticsSummary();
                 }
             });
+        }
+
+        private void QueueDeferredProjectsRefresh()
+        {
+            RunDetached(async () =>
+            {
+                var delay = TimeSpan.FromSeconds(4) - (DateTime.UtcNow - _appStartUtc);
+                if (delay > TimeSpan.Zero)
+                    await Task.Delay(delay).ConfigureAwait(false);
+
+                await _projectsViewModel.RefreshAsync(forceDiscovery: false).ConfigureAwait(false);
+
+                if (string.Equals(CurrentViewKey, "Dashboard", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(CurrentViewKey, "Projects", StringComparison.OrdinalIgnoreCase))
+                {
+                    await DashboardViewModel.RefreshAsync(force: true).ConfigureAwait(false);
+                }
+            }, nameof(QueueDeferredProjectsRefresh));
         }
 
         private void ScheduleLogCaptureInstall()
@@ -802,7 +821,8 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                PatchStatusMessage = L("Update.Installer.Launched", "Installer launched. Close VaultSync if prompted.");
+                PatchStatusMessage = L("Update.Installer.Launched", "Installer launched. VaultSync will close so setup can continue.");
+                ShutdownForInstallerLaunch();
             }
             catch (TaskCanceledException)
             {
@@ -837,6 +857,28 @@ namespace VaultSync.UI.ViewModels
             {
                 return false;
             }
+        }
+
+        private void ShutdownForInstallerLaunch()
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(750).ConfigureAwait(false);
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    DiagnosticsLogger.RecordWithStack("Shutdown for installer launch requested.");
+                    App.MarkShuttingDown();
+                    if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                    {
+                        desktop.Shutdown();
+                    }
+                    else
+                    {
+                        Environment.Exit(0);
+                    }
+                });
+            });
         }
 
         private void TryOpenUrl(string url)

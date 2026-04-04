@@ -50,7 +50,7 @@ namespace VaultSync.UI.ViewModels
 
             var deleteContext = await Task.Run(() =>
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var destinations = GetAllDestinations(cfg);
                 var matchedDestination = FindDestinationForBackup(backup, destinations, backupRoot);
                 var hasCredentialProfile = HasCredentialProfile(cfg, matchedDestination);
@@ -983,7 +983,7 @@ namespace VaultSync.UI.ViewModels
             if (backup is null)
                 return DeleteBackupPreparation.Failure;
 
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             var destinations = GetAllDestinations(cfg);
             var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
@@ -1061,7 +1061,7 @@ namespace VaultSync.UI.ViewModels
                 return RestoreBackupPreparation.Failure;
             }
 
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             var destinations = GetAllDestinations(cfg);
             var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
@@ -1143,7 +1143,7 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
                 return new List<string>();
 
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             var keyRefs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg.Backups.Encryption);
             if (keyRefs.Count == 0)
                 return new List<string>();
@@ -1189,7 +1189,7 @@ namespace VaultSync.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
                 return project.RootPath;
 
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(cfg.ProjectsRoot))
             {
                 var projectsRoot = Path.Combine(cfg.ProjectsRoot, project.Name);
@@ -1213,7 +1213,7 @@ namespace VaultSync.UI.ViewModels
 
         private AutoBackupPreparation PrepareAutoBackupRun()
         {
-            var cfg = AppConfigStore.Load();
+                    var cfg = AppConfigStore.GetSnapshot();
             if (!cfg.Backups.EnableAutoBackups)
                 return AutoBackupPreparation.Failure("disabled");
 

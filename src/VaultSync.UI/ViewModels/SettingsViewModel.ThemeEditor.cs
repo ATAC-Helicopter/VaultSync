@@ -134,7 +134,7 @@ namespace VaultSync.UI
         public ObservableCollection<ThemeColorSlotViewModel> ThemeColorSlots { get; } = new();
         public ObservableCollection<ThemePresetOptionViewModel> ThemePresets { get; } = new();
         public ObservableCollection<ThemePaletteSwatchViewModel> ThemePaletteSwatches { get; } = new();
-        public ObservableCollection<string> CustomThemeBaseOptions { get; } = new() { "Dark", "Light" };
+        public ObservableCollection<string> CustomThemeBaseOptions { get; } = new();
 
         private void OnThemeColorSlotsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
@@ -230,7 +230,7 @@ namespace VaultSync.UI
             if (preset is null)
                 return;
 
-            SelectedTheme = "Custom";
+            SelectedTheme = ThemeOptionCustomLabel;
             LoadCustomTheme(preset.Palette.Clone());
             SaveStatus = string.Format(L("Settings.Appearance.ThemePresetApplied", "Theme preset applied: {0}."), preset.Name);
         }
@@ -275,7 +275,9 @@ namespace VaultSync.UI
             _customThemeName = string.IsNullOrWhiteSpace(theme.Name)
                 ? L("Settings.Appearance.ThemePresets.vaultsync-midnight.Name", "VaultSync Midnight")
                 : theme.Name.Trim();
-            _customThemeBase = string.Equals(theme.BaseTheme, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+            _customThemeBase = string.Equals(theme.BaseTheme, "Light", StringComparison.OrdinalIgnoreCase)
+                ? ThemeBaseLightLabel
+                : ThemeBaseDarkLabel;
 
             SetThemeSlotHex("Background", theme.Background);
             SetThemeSlotHex("Surface", theme.Surface);
@@ -312,7 +314,7 @@ namespace VaultSync.UI
             return new ThemePaletteConfig
             {
                 Name = string.IsNullOrWhiteSpace(CustomThemeName) ? L("Settings.Appearance.ThemeNameDefault", "Custom theme") : CustomThemeName.Trim(),
-                BaseTheme = string.Equals(CustomThemeBase, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark",
+                BaseTheme = IsLightThemeBaseOption(CustomThemeBase) ? "Light" : "Dark",
                 Background = Get("Background", "#101218"),
                 Surface = Get("Surface", "#181B24"),
                 SurfaceAlt = Get("SurfaceAlt", "#222635"),

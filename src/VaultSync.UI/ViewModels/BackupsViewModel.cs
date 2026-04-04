@@ -448,6 +448,10 @@ namespace VaultSync.UI.ViewModels
         public string LastBackupSecondaryLine { get; private set; } =
             L("Backups.Summary.LastBackupSize", "Size -");
         public string LastBackupSizeValueFormatted { get; private set; } = "0 B";
+        public string LastBackupProjectName { get; private set; } = "-";
+        public string LastBackupTypeDisplay { get; private set; } = "-";
+        public string LastBackupDestinationDisplay { get; private set; } = "-";
+        public string LastBackupSecurityDisplay { get; private set; } = "-";
         public string TotalBackupSizeFormatted { get; private set; } = "0 B";
         public int LocalSnapshotsCount { get; private set; }
         public string TotalStoredLocalLine { get; private set; } =
@@ -970,7 +974,7 @@ namespace VaultSync.UI.ViewModels
             RefreshEncryptionPolicyOptions();
             RefreshRestoreModeOptions();
             RefreshVerificationPolicyOptions();
-            RefreshDestinationOptionsInternal(AppConfigStore.Load());
+            RefreshDestinationOptionsInternal(AppConfigStore.GetSnapshot());
             RefreshProjectSortOptions();
         }
 
@@ -2227,7 +2231,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    var config = AppConfigStore.Load();
+                    var config = AppConfigStore.GetSnapshot();
                     var (usedPercent, freeText, thresholdText, isBelowThreshold, _, status) =
                         DashboardViewModel.ComputeBackupDiskUsageDetailed(config);
                     var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
@@ -2593,6 +2597,28 @@ namespace VaultSync.UI.ViewModels
                     "Size {0}",
                     BackupSnapshotItem.FormatSize(last.SizeBytes));
                 LastBackupSizeValueFormatted = BackupSnapshotItem.FormatSize(last.SizeBytes);
+                var lastProjectName = ResolveProjectNameFromSnapshot(last);
+                LastBackupProjectName = string.IsNullOrWhiteSpace(lastProjectName)
+                    ? L("Backups.Summary.UnknownProject", "Unknown project")
+                    : lastProjectName;
+                LastBackupTypeDisplay = !string.IsNullOrWhiteSpace(last.TypeLabel)
+                    ? last.TypeLabel
+                    : last.Type;
+                LastBackupDestinationDisplay = string.IsNullOrWhiteSpace(last.DestinationDisplay)
+                    ? L("Backups.Summary.UnknownDestination", "Unknown")
+                    : last.DestinationDisplay;
+                if (last.IsImported)
+                {
+                    LastBackupSecurityDisplay = last.IsEncrypted
+                        ? L("Backups.Summary.ImportedEncrypted", "Imported - Encrypted")
+                        : L("Backups.Summary.ImportedPlain", "Imported - Plain");
+                }
+                else
+                {
+                    LastBackupSecurityDisplay = last.IsEncrypted
+                        ? L("Backups.Summary.LocalEncrypted", "Local - Encrypted")
+                        : L("Backups.Summary.LocalPlain", "Local - Plain");
+                }
                 var ageHours = Math.Max(0, (now - last.Timestamp).TotalHours);
                 var freshness = Math.Clamp(100d - (ageHours / 72d * 100d), 0d, 100d);
                 LastBackupFreshnessPercent = freshness;
@@ -2617,6 +2643,10 @@ namespace VaultSync.UI.ViewModels
                 LastBackupRelative = "-";
                 LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
                 LastBackupSizeValueFormatted = "0 B";
+                LastBackupProjectName = "-";
+                LastBackupTypeDisplay = "-";
+                LastBackupDestinationDisplay = "-";
+                LastBackupSecurityDisplay = "-";
                 LastBackupFreshnessPercent = 0;
                 LastBackupFreshnessLabel = L("Backups.Summary.NoBackups", "No backups yet");
                 LastBackupFreshnessTooltip = L("Backups.Summary.NoBackups", "No backups yet");
@@ -2697,6 +2727,10 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(LastBackupRelative));
             OnPropertyChanged(nameof(LastBackupSecondaryLine));
             OnPropertyChanged(nameof(LastBackupSizeValueFormatted));
+            OnPropertyChanged(nameof(LastBackupProjectName));
+            OnPropertyChanged(nameof(LastBackupTypeDisplay));
+            OnPropertyChanged(nameof(LastBackupDestinationDisplay));
+            OnPropertyChanged(nameof(LastBackupSecurityDisplay));
             OnPropertyChanged(nameof(LastBackupFreshnessPercent));
             OnPropertyChanged(nameof(LastBackupFreshnessLabel));
             OnPropertyChanged(nameof(LastBackupFreshnessTooltip));
@@ -3106,7 +3140,7 @@ namespace VaultSync.UI.ViewModels
             if (projects is null) throw new ArgumentNullException(nameof(projects));
             if (backups  is null) throw new ArgumentNullException(nameof(backups));
 
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             RefreshEncryptionPolicyOptions();
@@ -3564,7 +3598,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
                 UpdateAutoBackupFlags(disabled);
                 _lastAutoBackupSignature = ComputeAutoBackupSignature(disabled);
@@ -3701,7 +3735,7 @@ namespace VaultSync.UI.ViewModels
 
             _ = Task.Run(() =>
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
                 {
                     UpdateProjectDestinationDisplay(item, config);
@@ -3717,7 +3751,7 @@ namespace VaultSync.UI.ViewModels
 
             _ = Task.Run(() =>
             {
-                var config = AppConfigStore.Load();
+                var config = AppConfigStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
                 {
                     UpdateProjectEncryptionDisplay(item, config);

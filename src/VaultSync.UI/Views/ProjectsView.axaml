@@ -232,7 +232,7 @@
                   BorderBrush="{DynamicResource DividerBrush}"
                   BorderThickness="1"
                   Padding="12,10">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                   ColumnDefinitions="Auto,*"
                   ColumnSpacing="8"
                   RowSpacing="8">
@@ -299,7 +299,44 @@
                        BorderBrush="{DynamicResource DividerBrush}"
                        BorderThickness="1"
                        Padding="{DynamicResource InputPadding}" />
-              <WrapPanel Grid.Row="3"
+              <ItemsControl Grid.Row="3"
+                            Grid.ColumnSpan="2"
+                            ItemsSource="{Binding SelectedGroupTags}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="999"
+                            Background="{Binding Background}"
+                            BorderBrush="{Binding Border}"
+                            BorderThickness="1"
+                            Padding="10,4">
+                      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Value}"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   Foreground="{Binding Foreground}"
+                                   VerticalAlignment="Center" />
+                        <Button Content="x"
+                                Classes="small-button"
+                                Padding="4,0"
+                                MinWidth="18"
+                                MinHeight="18"
+                                VerticalAlignment="Center"
+                                Background="#00000000"
+                                Foreground="{Binding Foreground}"
+                                BorderThickness="0"
+                                Command="{Binding DataContext.RemoveGroupTagCommand, ElementName=Root}"
+                                CommandParameter="{Binding Value}" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <WrapPanel Grid.Row="4"
                          Grid.ColumnSpan="2"
                          Orientation="Horizontal"
                          ItemSpacing="8"
@@ -323,7 +360,7 @@
                            FontSize="11"
                            Text="{infra:LocalizedString Key=Projects.Group.TagHelp}" />
               </WrapPanel>
-              <ItemsControl Grid.Row="4"
+              <ItemsControl Grid.Row="5"
                             Grid.ColumnSpan="2"
                             ItemsSource="{Binding ReusableProjectTags}">
                 <ItemsControl.ItemsPanel>
@@ -348,7 +385,7 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Grid.Row="5"
+              <TextBlock Grid.Row="6"
                          Grid.Column="0"
                          Grid.ColumnSpan="2"
                          Text="{infra:LocalizedString Key=Projects.Group.Help}"
@@ -527,11 +564,11 @@
                     Padding="20"
                     VerticalAlignment="Top">
               <StackPanel Spacing="8">
-                <TextBlock Text="No projects are available yet."
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Empty.Title}"
                            FontSize="18"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                <TextBlock Text="Set a projects root in Settings or re-add a tracked project so the Projects page can rebuild its list."
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Empty.Description}"
                            FontSize="12"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" />
@@ -548,7 +585,7 @@
               CornerRadius="24"
               Padding="24"
               DataContext="{Binding SelectedProject}"
-              IsVisible="{Binding HasSelectedProject}">
+              IsVisible="{Binding DataContext.HasSelectedProject, ElementName=Root}">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
           <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
@@ -838,7 +875,7 @@
                             <Border ClipToBounds="True"
                                     Background="Transparent">
                               <colorpicker:ColorView Color="{Binding DataContext.SelectedProjectTagColor, ElementName=Root, Mode=TwoWay}"
-                                                     Margin="6,-34,6,6"
+                                                     Margin="6,-48,6,6"
                                                      IsAlphaEnabled="False"
                                                      IsAlphaVisible="False"
                                                      IsColorModelVisible="False"
@@ -1015,12 +1052,12 @@
                                   BorderThickness="0,0,0,1">
                             <Grid ColumnDefinitions="*,Auto"
                                   ColumnSpacing="8">
-                              <TextBlock Text="Rule editor"
+                              <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.PanelTitle}"
                                          FontSize="11"
                                          FontWeight="SemiBold"
                                          Foreground="{DynamicResource TextSecondaryBrush}" />
                               <TextBlock Grid.Column="1"
-                                         Text="One pattern per line"
+                                         Text="{infra:LocalizedString Key=Projects.Preset.Editor.PanelSubtitle}"
                                          FontSize="10"
                                          Foreground="{DynamicResource TextMutedBrush}" />
                             </Grid>
@@ -1042,7 +1079,7 @@
                                   Spacing="12">
                         <Border Classes="preset-editor-section">
                           <StackPanel Spacing="10">
-                            <TextBlock Text="Quick actions"
+                            <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.ActionsTitle}"
                                        FontSize="11"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -1071,11 +1108,11 @@
 
                         <Border Classes="preset-editor-section">
                           <StackPanel Spacing="8">
-                            <TextBlock Text="Import from file"
+                            <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.ImportTitle}"
                                        FontSize="11"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
-                            <TextBlock Text="Load rules from another preset file into the editor."
+                            <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.ImportDescription}"
                                        FontSize="10"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        TextWrapping="Wrap" />
@@ -1095,11 +1132,11 @@
 
                         <Border Classes="preset-editor-section">
                           <StackPanel Spacing="8">
-                            <TextBlock Text="Clone as a new preset"
+                            <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.CloneTitle}"
                                        FontSize="11"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
-                            <TextBlock Text="Create a reusable copy with a new preset id."
+                            <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.CloneDescription}"
                                        FontSize="10"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        TextWrapping="Wrap" />
@@ -1132,7 +1169,7 @@
                                 Margin="0,3,0,0" />
                         <StackPanel Grid.Column="1"
                                     Spacing="2">
-                          <TextBlock Text="Editor status"
+                          <TextBlock Text="{infra:LocalizedString Key=Projects.Preset.Editor.StatusTitle}"
                                      FontSize="10"
                                      FontWeight="SemiBold"
                                      Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -1566,11 +1603,11 @@
               IsVisible="{Binding ShowSelectedProjectEmptyState}">
         <StackPanel Spacing="10"
                     VerticalAlignment="Top">
-          <TextBlock Text="Select a project to inspect details."
+          <TextBlock Text="{infra:LocalizedString Key=Projects.Details.EmptyTitle}"
                      FontSize="{DynamicResource PageTitleFontSize}"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
-          <TextBlock Text="The detail pane will show presets, destinations, encryption, tags, and snapshot history after a project is available."
+          <TextBlock Text="{infra:LocalizedString Key=Projects.Details.EmptyDescription}"
                      FontSize="12"
                      Foreground="{DynamicResource TextSecondaryBrush}"
                      TextWrapping="Wrap" />

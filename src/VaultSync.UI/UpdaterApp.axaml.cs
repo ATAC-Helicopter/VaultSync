@@ -57,7 +57,7 @@ public sealed partial class UpdaterApp : Application
 
         try
         {
-            var config = AppConfigStore.Load();
+            var config = AppConfigStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(config.Advanced.Language))
             {
                 localizationService.SetLanguage(config.Advanced.Language);
@@ -71,7 +71,7 @@ public sealed partial class UpdaterApp : Application
 
     private void ApplyThemeFromConfig()
     {
-        var config = AppConfigStore.Load();
+        var config = AppConfigStore.GetSnapshot();
         ThemeManager.ApplyAppearance(config.Appearance);
     }
 }

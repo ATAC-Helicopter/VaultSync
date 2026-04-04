@@ -31,6 +31,11 @@ namespace VaultSync.Core.Config
 
         public static bool WasConfigMissingOnFirstLoad => Volatile.Read(ref _firstLoadState) == 1;
 
+        public static AppConfig GetSnapshot()
+        {
+            return GetLastKnownGoodClone() ?? Load();
+        }
+
         public static AppConfig Load()
         {
             try

@@ -535,7 +535,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                 {
                     try
                     {
-                        var cfg = AppConfigStore.Load();
+                        var cfg = AppConfigStore.GetSnapshot();
                         Dispatcher.UIThread.Post(() =>
                         {
                             _cachedConfig = cfg;
@@ -552,7 +552,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             return _cachedConfig;
         }
 
-        var fresh = AppConfigStore.Load();
+        var fresh = AppConfigStore.GetSnapshot();
         _cachedConfig = fresh;
         _lastConfigAt = now;
         return fresh;

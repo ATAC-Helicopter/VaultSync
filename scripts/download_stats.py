@@ -13,6 +13,7 @@ from typing import Any
 
 
 SCHEMA_VERSION = 1
+KEEP_RECENT_HISTORY = 90
 
 
 def github_get_json(url: str, token: str) -> Any:
@@ -510,6 +511,30 @@ def ensure_history_index(history_dir: Path) -> None:
     (history_dir / "index.html").write_text("\n".join(index_html) + "\n", encoding="utf-8")
 
 
+def prune_history(history_dir: Path, keep_recent: int = KEEP_RECENT_HISTORY) -> list[str]:
+    snapshots = sorted(history_dir.glob("*.json"), key=lambda path: path.name, reverse=True)
+    if len(snapshots) <= keep_recent:
+        return []
+
+    retained: set[Path] = set(snapshots[:keep_recent])
+    monthly_kept: set[str] = set()
+
+    for path in snapshots[keep_recent:]:
+        month_key = path.name[:7]
+        if month_key not in monthly_kept:
+            retained.add(path)
+            monthly_kept.add(month_key)
+
+    removed: list[str] = []
+    for path in snapshots:
+        if path in retained:
+            continue
+        path.unlink(missing_ok=True)
+        removed.append(path.name)
+
+    return removed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Snapshot GitHub release download stats and generate a public summary.")
     parser.add_argument("--owner", default=os.environ.get("REPO_OWNER"))
@@ -535,6 +560,7 @@ def main() -> int:
     timestamp_slug = snapshot["captured_at"].replace(":", "-")
     write_json(latest_path, snapshot)
     write_json(history_dir / f"{timestamp_slug}.json", snapshot)
+    prune_history(history_dir)
     (output_dir / "README.md").write_text(build_markdown(snapshot), encoding="utf-8")
     (output_dir / "index.html").write_text(build_html(snapshot), encoding="utf-8")
     (output_dir / ".nojekyll").write_text("", encoding="utf-8")

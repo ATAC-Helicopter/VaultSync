@@ -88,7 +88,7 @@ namespace VaultSync.UI.ViewModels
 
         private BackupAllPreparationResult PrepareBackupAll()
         {
-            var cfg = AppConfigStore.Load();
+            var cfg = AppConfigStore.GetSnapshot();
             var destinations = GetAllDestinations(cfg);
             if (destinations.Count == 0)
             {

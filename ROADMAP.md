@@ -1336,6 +1336,67 @@
     - Done: manifest schema, preflight validation, helper enforcement, diagnostics, and patch builder all support a strict exact-base allowlist while preserving legacy single-base manifests.
     - Done: release workflow inputs now author multi-base manifests explicitly, and tests cover legacy manifests, exact allowlist matches, malformed allowlist rejection, and non-listed base rejection.
 
+## 1.7.1
+- [x] `VS-1725` `P2` GitHub release download stats snapshots and public report. _(Done)_
+- [x] `BUG-17086` `P1` Fix Projects details binding noise and selected-project tag editing reliability. _(Done)_
+  - Scope: correct the selected-project details-card visibility binding and keep selected-project tag entry fully separate from the bulk-tag toolbar.
+  - Acceptance: Projects no longer logs `HasSelectedProject` binding errors, duplicate tags cannot be saved through the selected-project editor, and adding multiple different tags behaves predictably.
+- [x] `BUG-17087` `P1` Fix Projects bulk-tag chip behavior and refresh diagnostics. _(Done)_
+  - Scope: make the top-of-page bulk tag toolbar treat each selected tag independently and record the real exception when a Projects refresh fails.
+  - Acceptance: multiple pending bulk tags are visible and removable individually, apply/remove acts on each tag separately, and refresh failures write useful diagnostics instead of only showing the generic banner.
+- [x] `BUG-17088` `P1` Restore locale key ordering and full pre-release localization parity. _(Done)_
+  - Scope: reorder non-English locale files to match English without changing translated values and rerun the release key diff.
+  - Acceptance: locale files follow English key order and the key diff returns `0 missing / 0 extra` for every shipped non-English locale.
+- [x] `BUG-17085` `P1` Group repeated backup advisories and stabilize OS notification identity. _(Done)_
+  - Scope: batch repeated project-level restore/root-missing/low-disk alerts into grouped notifications and use stable OS notification grouping keys.
+  - Acceptance: backup-all runs no longer emit one OS alert per project for the same warning reason; grouped notifications stay branded as VaultSync instead of raw `VaultSync.UI` attribution where the platform honors app identity metadata.
+- [x] `VS-1725` `P2` GitHub release download stats snapshots and public report. _(Done)_
+  - Scope: capture release asset download counts on a schedule, keep persistent history off `Dev`/`Stable`, and generate a human-readable public summary from the same JSON snapshots.
+  - Current status:
+    - Done: a scheduled/manual GitHub Actions workflow now snapshots GitHub Releases asset download counts into a dedicated `download-stats` branch.
+    - Done: the generator writes `latest.json`, timestamped `history/*.json`, `README.md`, and `index.html` so the same data is inspectable both as raw JSON and as a public-friendly report.
+    - Done: README now links to the stats branch directly and no longer depends on the stale third-party repo card for the top banner.
+  - Acceptance:
+    - Main branches remain free of daily stats commits.
+    - Snapshot history persists across workflow runs.
+    - Public summary output is easy to inspect without manually querying the GitHub API.
+
+## Microsoft Store readiness track
+- [ ] `VS-1726` `P1` Add Windows distribution-channel awareness for `Direct` vs `Store`.
+  - Scope: introduce explicit channel detection/config/diagnostics so Store builds can disable GitHub self-update and installer handoff while Direct builds keep the current updater flow.
+  - Acceptance:
+    - the app can distinguish `Direct` and `Store` at runtime
+    - diagnostics/support bundles show channel and update source
+    - Store builds do not invoke GitHub updater or installer-based update flows
+
+- [ ] `VS-1727` `P1` Add Microsoft Store packaging pipeline and artifact separation.
+  - Scope: produce a Store-ready Windows package separately from the GitHub/Inno Setup installer flow, with clear CI/release separation between Direct and Store artifacts.
+  - Acceptance:
+    - CI can build the Direct Windows installer and the Store package independently
+    - Store packaging does not reuse Direct-only updater/install assumptions
+    - release docs describe the two Windows artifact paths clearly
+
+- [ ] `VS-1728` `P0` Validate Store-packaged filesystem, restore, and NAS behavior.
+  - Scope: test packaged-app behavior for local folders, removable drives, restore targets, UNC/NAS paths, and helper-tool execution so VaultSync's core backup workflows remain viable in the Store build.
+  - Acceptance:
+    - local backup and restore flows work in the packaged build
+    - removable-drive and UNC/NAS scenarios are explicitly validated
+    - capability or packaging blockers are documented with mitigation decisions
+
+- [ ] `VS-1729` `P1` Add Store-specific update UX, docs, and support messaging.
+  - Scope: replace Direct-channel update prompts/help text with Store-managed update wording, and make channel-specific support guidance visible in app/docs.
+  - Acceptance:
+    - Store builds show Store-managed update messaging instead of GitHub updater UI
+    - README/help/wiki/release docs explain Direct vs Store behavior cleanly
+    - support guidance can distinguish Store installs from Direct installs quickly
+
+- [ ] `VS-1730` `P2` Prepare Partner Center submission assets and compliance checklist.
+  - Scope: gather Store listing copy, screenshots, capability rationale, policy/privacy checks, and a submission checklist so release submission can happen without last-minute scrambling.
+  - Acceptance:
+    - Store submission assets are prepared and versioned
+    - capability/privacy/licensing notes are ready for submission review
+    - a repeatable submission checklist exists for future Store releases
+
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
   - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.

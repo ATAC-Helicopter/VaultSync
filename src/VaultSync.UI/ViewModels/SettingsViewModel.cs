@@ -452,7 +452,15 @@ namespace VaultSync.UI
             _selectedLanguageCode = localizationService.CurrentLanguage;
             _localizationService.LanguageChanged += () =>
             {
+                var normalizedTheme = NormalizeThemeOption(_selectedTheme);
+                var normalizedBaseTheme = NormalizeThemeBaseOption(_customThemeBase);
+                RefreshThemeOptions();
+                RefreshCustomThemeBaseOptions();
+                _selectedTheme = DisplayThemeOption(normalizedTheme);
+                _customThemeBase = DisplayThemeBaseOption(normalizedBaseTheme);
                 OnPropertyChanged(nameof(SelectedLanguage));
+                OnPropertyChanged(nameof(SelectedTheme));
+                OnPropertyChanged(nameof(CustomThemeBase));
                 RefreshUpdateCheckStatus();
                 RefreshRsyncStatusHint();
                 OnPropertyChanged(nameof(EnrollProjectEncryptionPasswordLabel));
@@ -483,16 +491,12 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
             };
 
-            ThemeOptions = new ObservableCollection<string>
-            {
-                "Follow system",
-                "Dark",
-                "Light",
-                "Custom"
-            };
+            ThemeOptions = new ObservableCollection<string>();
+            RefreshThemeOptions();
 
             _selectedTheme = ThemeOptions[0];
             InitializeThemeEditor();
+            RefreshCustomThemeBaseOptions();
 
             BrowseProjectsRootCommand    = new RelayCommand(_ => BrowseProjectsRoot());
             BrowseBackupLocationCommand  = new RelayCommand(_ => BrowseBackupLocation());
@@ -753,7 +757,7 @@ namespace VaultSync.UI
             ApplyThemeFromSelected();
             ThemeManager.ApplyCompactLayout(_useCompactLayout);
 
-            SaveStatus = "Settings loaded";
+            SaveStatus = L("Settings.Status.Loaded", "Settings loaded");
 
             // Update UI
             OnPropertyChanged(null);
@@ -971,9 +975,12 @@ namespace VaultSync.UI
 
             await AppConfigStore.SaveAsync(cfg);
 
-            SaveStatus = credentialSave.hadPlaintextFallback
-                ? $"Saved (with credential fallback) at {DateTime.Now:HH:mm:ss}"
-                : $"Saved at {DateTime.Now:HH:mm:ss}";
+            SaveStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                credentialSave.hadPlaintextFallback
+                    ? L("Settings.Status.SavedFallback", "Saved (with credential fallback) at {0}")
+                    : L("Settings.Status.Saved", "Saved at {0}"),
+                DateTime.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture));
         }
 
         private bool ValidateDestinations(bool notifyOnError)
@@ -986,11 +993,11 @@ namespace VaultSync.UI
                 {
                     if (notifyOnError)
                     {
-                        SaveStatus = "Destination path is required.";
+                        SaveStatus = L("Settings.Destinations.ValidationPathRequired", "Destination path is required.");
                         GlobalNotificationCenter.Instance.Show(
                             SaveStatus,
                             NotificationSeverity.Error,
-                            "Destination validation");
+                            L("Settings.Destinations.ValidationTitle", "Destination validation"));
                     }
                     return false;
                 }
@@ -999,11 +1006,14 @@ namespace VaultSync.UI
                 {
                     if (notifyOnError)
                     {
-                        SaveStatus = $"Duplicate destination alias '{dest.Alias}'.";
+                        SaveStatus = string.Format(
+                            CultureInfo.CurrentCulture,
+                            L("Settings.Destinations.ValidationDuplicateAlias", "Duplicate destination alias '{0}'."),
+                            dest.Alias);
                         GlobalNotificationCenter.Instance.Show(
                             SaveStatus,
                             NotificationSeverity.Error,
-                            "Destination validation");
+                            L("Settings.Destinations.ValidationTitle", "Destination validation"));
                     }
                     return false;
                 }
@@ -1012,11 +1022,11 @@ namespace VaultSync.UI
                 {
                     if (notifyOnError)
                     {
-                        SaveStatus = "Destination quota must be 0 GB or higher.";
+                        SaveStatus = L("Settings.Destinations.ValidationQuotaNonNegative", "Destination quota must be 0 GB or higher.");
                         GlobalNotificationCenter.Instance.Show(
                             SaveStatus,
                             NotificationSeverity.Error,
-                            "Destination validation");
+                            L("Settings.Destinations.ValidationTitle", "Destination validation"));
                     }
                     return false;
                 }
@@ -1176,7 +1186,10 @@ namespace VaultSync.UI
             catch (Exception ex)
             {
                 // Prevent background save exceptions from crashing the app; surface in status + debug output.
-                SaveStatus = $"Save failed: {ex.Message}";
+                SaveStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Status.SaveFailed", "Save failed: {0}"),
+                    ex.Message);
                 Debug.WriteLine($"[SettingsViewModel] Auto-save failed: {ex}");
             }
             finally
@@ -1289,10 +1302,14 @@ namespace VaultSync.UI
             });
         }
 
-        private static string NormalizeThemeOption(string theme)
+        private string NormalizeThemeOption(string theme)
         {
             return theme switch
             {
+                var value when string.Equals(value, ThemeOptionDarkLabel, StringComparison.OrdinalIgnoreCase) => "Dark",
+                var value when string.Equals(value, ThemeOptionLightLabel, StringComparison.OrdinalIgnoreCase) => "Light",
+                var value when string.Equals(value, ThemeOptionCustomLabel, StringComparison.OrdinalIgnoreCase) => "Custom",
+                var value when string.Equals(value, ThemeOptionSystemLabel, StringComparison.OrdinalIgnoreCase) => "System",
                 "Dark"          => "Dark",
                 "Light"         => "Light",
                 "Custom"        => "Custom",
@@ -1302,16 +1319,57 @@ namespace VaultSync.UI
             };
         }
 
-        private static string DisplayThemeOption(string storedTheme)
+        private string DisplayThemeOption(string storedTheme)
         {
             return storedTheme switch
             {
-                "Dark"  => "Dark",
-                "Light" => "Light",
-                "Custom" => "Custom",
-                _       => "Follow system"
+                "Dark" => ThemeOptionDarkLabel,
+                "Light" => ThemeOptionLightLabel,
+                "Custom" => ThemeOptionCustomLabel,
+                _ => ThemeOptionSystemLabel
             };
         }
+
+        private string NormalizeThemeBaseOption(string value)
+        {
+            return value switch
+            {
+                var candidate when string.Equals(candidate, ThemeBaseLightLabel, StringComparison.OrdinalIgnoreCase) => "Light",
+                "Light" => "Light",
+                _ => "Dark"
+            };
+        }
+
+        private string DisplayThemeBaseOption(string value)
+            => string.Equals(value, "Light", StringComparison.OrdinalIgnoreCase)
+                ? ThemeBaseLightLabel
+                : ThemeBaseDarkLabel;
+
+        private bool IsLightThemeBaseOption(string value)
+            => string.Equals(NormalizeThemeBaseOption(value), "Light", StringComparison.OrdinalIgnoreCase);
+
+        private void RefreshThemeOptions()
+        {
+            ThemeOptions.Clear();
+            ThemeOptions.Add(ThemeOptionSystemLabel);
+            ThemeOptions.Add(ThemeOptionDarkLabel);
+            ThemeOptions.Add(ThemeOptionLightLabel);
+            ThemeOptions.Add(ThemeOptionCustomLabel);
+        }
+
+        private void RefreshCustomThemeBaseOptions()
+        {
+            CustomThemeBaseOptions.Clear();
+            CustomThemeBaseOptions.Add(ThemeBaseDarkLabel);
+            CustomThemeBaseOptions.Add(ThemeBaseLightLabel);
+        }
+
+        private string ThemeOptionSystemLabel => L("Settings.Appearance.ThemeOption.System", "Follow system");
+        private string ThemeOptionDarkLabel => L("Settings.Appearance.ThemeOption.Dark", "Dark");
+        private string ThemeOptionLightLabel => L("Settings.Appearance.ThemeOption.Light", "Light");
+        private string ThemeOptionCustomLabel => L("Settings.Appearance.ThemeOption.Custom", "Custom");
+        private string ThemeBaseDarkLabel => L("Settings.Appearance.ThemeBase.Dark", "Dark");
+        private string ThemeBaseLightLabel => L("Settings.Appearance.ThemeBase.Light", "Light");
 
         private static int ClampInt(int value, int min, int max, int fallback)
         {
@@ -1615,7 +1673,7 @@ namespace VaultSync.UI
             }
         }
 
-        public bool IsCustomThemeSelected => string.Equals(SelectedTheme, "Custom", StringComparison.Ordinal);
+        public bool IsCustomThemeSelected => string.Equals(NormalizeThemeOption(SelectedTheme), "Custom", StringComparison.Ordinal);
 
         public string CustomThemeName
         {
@@ -1638,7 +1696,7 @@ namespace VaultSync.UI
             get => _customThemeBase;
             set
             {
-                var normalized = string.Equals(value, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+                var normalized = DisplayThemeBaseOption(NormalizeThemeBaseOption(value));
                 if (!SetField(ref _customThemeBase, normalized))
                     return;
 
@@ -2026,17 +2084,17 @@ namespace VaultSync.UI
 
         public void ReloadUpdateDiagnostics()
         {
-            RefreshUpdateDiagnostics(AppConfigStore.Load().Advanced.UpdateDiagnostics);
+            RefreshUpdateDiagnostics(AppConfigStore.GetSnapshot().Advanced.UpdateDiagnostics);
         }
 
         public void ReloadStartupDiagnostics()
         {
-            RefreshStartupDiagnostics(AppConfigStore.Load().Advanced.StartupDiagnostics);
+            RefreshStartupDiagnostics(AppConfigStore.GetSnapshot().Advanced.StartupDiagnostics);
         }
 
         public void ReloadCheckpointResumeDiagnostics()
         {
-            RefreshCheckpointResumeDiagnostics(AppConfigStore.Load().Advanced.CheckpointResumeTelemetry);
+            RefreshCheckpointResumeDiagnostics(AppConfigStore.GetSnapshot().Advanced.CheckpointResumeTelemetry);
         }
 
         private void RefreshUpdateCheckStatus()
@@ -2661,13 +2719,16 @@ namespace VaultSync.UI
 
             if (removed == 0 && failed == 0)
             {
-                SaveStatus = "No local cache data to clear.";
+                SaveStatus = L("Settings.Status.CacheNothingToClear", "No local cache data to clear.");
                 return;
             }
 
-            SaveStatus = failed == 0
-                ? $"Local cache cleared ({removed} item(s))."
-                : $"Cache cleared with {failed} error(s).";
+            SaveStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                failed == 0
+                    ? L("Settings.Status.CacheCleared", "Local cache cleared ({0} item(s)).")
+                    : L("Settings.Status.CacheClearedWithErrors", "Cache cleared with {0} error(s)."),
+                failed == 0 ? removed : failed);
         }
 
         private void TestBackupLocation()
@@ -2753,7 +2814,11 @@ namespace VaultSync.UI
 
             if (!result.success)
             {
-                SaveStatus = $"Destination '{display}' failed: {result.message}";
+                SaveStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Destinations.TestFailed", "Destination '{0}' failed: {1}"),
+                    display,
+                    result.message);
                 dest.LastTestStatus   = result.message;
                 dest.LastTestSeverity = "Error";
                 var actionLabel = LocalizationProvider.Service?.GetString("Logs.CopySnippet") ?? "Copy log snippet";
@@ -2767,7 +2832,10 @@ namespace VaultSync.UI
                 return;
             }
 
-            SaveStatus = $"Destination '{display}' is reachable.";
+            SaveStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                L("Settings.Destinations.TestReachable", "Destination '{0}' is reachable."),
+                display);
             dest.LastTestStatus   = result.message;
             dest.LastTestSeverity = result.writable ? "Info" : "Warning";
             GlobalNotificationCenter.Instance.Show(
@@ -3082,19 +3150,22 @@ namespace VaultSync.UI
             var result = Telemetry.ExportToZip();
             if (!result.Success || string.IsNullOrWhiteSpace(result.ZipPath))
             {
-                SaveStatus = result.Message ?? "Telemetry export failed.";
+                SaveStatus = result.Message ?? L("Settings.Advanced.TelemetryExportFailed", "Telemetry export failed.");
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Warning,
-                    "Telemetry export");
+                    L("Settings.Advanced.TelemetryExportTitle", "Telemetry export"));
                 return;
             }
 
-            SaveStatus = $"Telemetry exported to {result.ZipPath}";
+            SaveStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                L("Settings.Advanced.TelemetryExportedTo", "Telemetry exported to {0}"),
+                result.ZipPath);
             GlobalNotificationCenter.Instance.Show(
-                "Telemetry export ready. You can share the zip file.",
+                L("Settings.Advanced.TelemetryExportReady", "Telemetry export ready. You can share the zip file."),
                 NotificationSeverity.Info,
-                "Telemetry export");
+                L("Settings.Advanced.TelemetryExportTitle", "Telemetry export"));
 
             try
             {
@@ -3131,19 +3202,22 @@ namespace VaultSync.UI
 
             if (string.IsNullOrWhiteSpace(path))
             {
-                SaveStatus = "Log export failed.";
+                SaveStatus = L("LogConsole.ExportFailed", "Log export failed.");
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Warning,
-                    "Log export");
+                    L("LogConsole.ExportTitle", "Log export"));
                 return;
             }
 
-            SaveStatus = $"Log exported to {path}";
+            SaveStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                L("LogConsole.ExportedTo", "Log exported to {0}"),
+                path);
             GlobalNotificationCenter.Instance.Show(
-                "Log export ready. You can share the file.",
+                L("LogConsole.ExportReady", "Log export ready. You can share the file."),
                 NotificationSeverity.Info,
-                "Log export");
+                L("LogConsole.ExportTitle", "Log export"));
         }
 
         private void ExportSupportBundle()

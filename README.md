@@ -1,8 +1,8 @@
 <p align="center">
   <img
-    width="780"
-    alt="VaultSync repository overview"
-    src="https://github-readme-stats-theta-ten-38.vercel.app/api/pin/?username=ATAC-Helicopter&repo=VaultSync&theme=github_dark&hide_border=true"
+    width="960"
+    alt="VaultSync dashboard"
+    src="docs/images/Dashboard.png"
   />
 </p>
 
@@ -92,7 +92,7 @@
 </p>
 
 <p align="center">
-  <sub>The repo card and GitHub badge counters can lag due to third-party caching. For a persistent release-download history, use the <a href="https://github.com/ATAC-Helicopter/VaultSync/tree/download-stats">download-stats branch</a>.</sub>
+  <sub>GitHub badge counters can lag due to third-party caching. For a persistent release-download history, use the <a href="https://github.com/ATAC-Helicopter/VaultSync/tree/download-stats">download-stats branch</a>.</sub>
 </p>
 
 ---
@@ -288,6 +288,11 @@ vaultsync watch Game --dest /Backups/Game --sync --verify --debounce-ms 2500
 
 Licensed under the MIT License.  
 See the full license here: [LICENSE](LICENSE).
+
+Bundled helper tools may ship under their own licenses. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Current stable desktop release line: `1.7.1`.
 
 ## Credits
 

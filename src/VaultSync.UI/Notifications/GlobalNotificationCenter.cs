@@ -24,6 +24,7 @@ namespace VaultSync.UI.Notifications
         public TimeSpan Duration { get; }
         public string? ActionLabel { get; }
         public ICommand? ActionCommand { get; }
+        public string? GroupKey { get; }
 
         public NotificationRequest(
             string message,
@@ -31,7 +32,8 @@ namespace VaultSync.UI.Notifications
             string? title,
             TimeSpan duration,
             string? actionLabel,
-            ICommand? actionCommand)
+            ICommand? actionCommand,
+            string? groupKey = null)
         {
             Message  = message ?? throw new ArgumentNullException(nameof(message));
             Severity = severity;
@@ -39,6 +41,7 @@ namespace VaultSync.UI.Notifications
             Duration = duration;
             ActionLabel = actionLabel;
             ActionCommand = actionCommand;
+            GroupKey = groupKey;
         }
     }
 
@@ -74,7 +77,8 @@ namespace VaultSync.UI.Notifications
             string? title = null,
             TimeSpan? duration = null,
             string? actionLabel = null,
-            ICommand? actionCommand = null)
+            ICommand? actionCommand = null,
+            string? groupKey = null)
         {
             if (SuppressNotifications)
                 return;
@@ -85,7 +89,8 @@ namespace VaultSync.UI.Notifications
                 title,
                 duration ?? TimeSpan.FromSeconds(4),
                 actionLabel,
-                actionCommand);
+                actionCommand,
+                groupKey);
 
             NotificationRequested?.Invoke(request);
         }
@@ -98,7 +103,8 @@ namespace VaultSync.UI.Notifications
             string message,
             NotificationSeverity severity = NotificationSeverity.Info,
             string? title = null,
-            TimeSpan? duration = null)
+            TimeSpan? duration = null,
+            string? groupKey = null)
         {
             if (SuppressNotifications)
                 return;
@@ -109,7 +115,8 @@ namespace VaultSync.UI.Notifications
                 title,
                 duration ?? TimeSpan.FromSeconds(4),
                 actionLabel: null,
-                actionCommand: null);
+                actionCommand: null,
+                groupKey: groupKey);
 
             if (ShouldShowSystemNotification is not null && !ShouldShowSystemNotification(request))
                 return;

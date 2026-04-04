@@ -54,8 +54,8 @@ namespace VaultSync.UI.ViewModels
                 TimeSpan.FromMinutes(10),
                 TimeSpan.FromMinutes(10));
 
-            var initialDelay = DateTime.UtcNow - _appStartUtc < TimeSpan.FromSeconds(10)
-                ? TimeSpan.FromSeconds(10)
+            var initialDelay = DateTime.UtcNow - _appStartUtc < DestinationProbeStartupDelay
+                ? DestinationProbeStartupDelay
                 : TimeSpan.Zero;
             _ = Task.Run(async () =>
             {
@@ -135,7 +135,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var destinations = GetActiveDestinations(cfg);
 
                 var now = DateTime.UtcNow;
@@ -149,6 +149,13 @@ namespace VaultSync.UI.ViewModels
                     if (previous is not null &&
                         previous.Reachable &&
                         (now - previous.LastChecked) < DestinationProbeMinInterval)
+                    {
+                        continue;
+                    }
+
+                    if (previous is not null &&
+                        !previous.Reachable &&
+                        (now - previous.LastChecked) < DestinationProbeFailureBackoff)
                     {
                         continue;
                     }
@@ -1125,7 +1132,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
                 var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
                 if (maxSnapshotsToKeep <= 0)
                     return;
@@ -1228,7 +1235,7 @@ namespace VaultSync.UI.ViewModels
                 if (latestBackup is null || latestBackup.Id <= 0)
                     return;
 
-                var cfg = await Task.Run(() => AppConfigStore.Load());
+                var cfg = await Task.Run(() => AppConfigStore.GetSnapshot());
                 var destinations = ResolveDestinationsForProject(project, cfg).Destinations;
                 if (destinations.Count == 0)
                     return;
@@ -1322,7 +1329,7 @@ namespace VaultSync.UI.ViewModels
                 if (BackupsViewModel.IsBusy)
                     return Task.CompletedTask;
 
-                var cfg = AppConfigStore.Load();
+                var cfg = AppConfigStore.GetSnapshot();
 
                 if (_settingsViewModel?.PreferExternalDrives != true)
                     return Task.CompletedTask;
