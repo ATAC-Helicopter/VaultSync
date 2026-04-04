@@ -1355,6 +1355,42 @@
     - Snapshot history persists across workflow runs.
     - Public summary output is easy to inspect without manually querying the GitHub API.
 
+## Microsoft Store readiness track
+- [ ] `VS-1726` `P1` Add Windows distribution-channel awareness for `Direct` vs `Store`.
+  - Scope: introduce explicit channel detection/config/diagnostics so Store builds can disable GitHub self-update and installer handoff while Direct builds keep the current updater flow.
+  - Acceptance:
+    - the app can distinguish `Direct` and `Store` at runtime
+    - diagnostics/support bundles show channel and update source
+    - Store builds do not invoke GitHub updater or installer-based update flows
+
+- [ ] `VS-1727` `P1` Add Microsoft Store packaging pipeline and artifact separation.
+  - Scope: produce a Store-ready Windows package separately from the GitHub/Inno Setup installer flow, with clear CI/release separation between Direct and Store artifacts.
+  - Acceptance:
+    - CI can build the Direct Windows installer and the Store package independently
+    - Store packaging does not reuse Direct-only updater/install assumptions
+    - release docs describe the two Windows artifact paths clearly
+
+- [ ] `VS-1728` `P0` Validate Store-packaged filesystem, restore, and NAS behavior.
+  - Scope: test packaged-app behavior for local folders, removable drives, restore targets, UNC/NAS paths, and helper-tool execution so VaultSync's core backup workflows remain viable in the Store build.
+  - Acceptance:
+    - local backup and restore flows work in the packaged build
+    - removable-drive and UNC/NAS scenarios are explicitly validated
+    - capability or packaging blockers are documented with mitigation decisions
+
+- [ ] `VS-1729` `P1` Add Store-specific update UX, docs, and support messaging.
+  - Scope: replace Direct-channel update prompts/help text with Store-managed update wording, and make channel-specific support guidance visible in app/docs.
+  - Acceptance:
+    - Store builds show Store-managed update messaging instead of GitHub updater UI
+    - README/help/wiki/release docs explain Direct vs Store behavior cleanly
+    - support guidance can distinguish Store installs from Direct installs quickly
+
+- [ ] `VS-1730` `P2` Prepare Partner Center submission assets and compliance checklist.
+  - Scope: gather Store listing copy, screenshots, capability rationale, policy/privacy checks, and a submission checklist so release submission can happen without last-minute scrambling.
+  - Acceptance:
+    - Store submission assets are prepared and versioned
+    - capability/privacy/licensing notes are ready for submission review
+    - a repeatable submission checklist exists for future Store releases
+
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
   - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.
