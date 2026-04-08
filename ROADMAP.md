@@ -1393,7 +1393,7 @@
   - Scope: replace Direct-channel update prompts/help text with Store-managed update wording, and make channel-specific support guidance visible in app/docs.
   - Current status:
     - In progress: Store builds now suppress GitHub update checks and self-update banners at runtime.
-    - In progress: Settings > Advanced now swaps GitHub updater controls for Store-managed update messaging in Store builds.
+    - In progress: Settings > Advanced now swaps GitHub updater controls for Store-managed update messaging and an `Open Microsoft Store` action in Store builds.
   - Acceptance:
     - Store builds show Store-managed update messaging instead of GitHub updater UI
     - README/help/wiki/release docs explain Direct vs Store behavior cleanly

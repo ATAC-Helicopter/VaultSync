@@ -2041,6 +2041,12 @@
                       <Run Text=": " />
                       <Run Text="{Binding DistributionChannelLabel}" />
                     </TextBlock>
+                    <Button Margin="0,8,0,0"
+                            HorizontalAlignment="Left"
+                            Classes="action-primary"
+                            Command="{Binding OpenMicrosoftStoreCommand}">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateManagedByStoreOpen}" />
+                    </Button>
                   </StackPanel>
                 </Border>
 

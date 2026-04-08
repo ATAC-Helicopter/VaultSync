@@ -789,6 +789,12 @@ namespace VaultSync.UI.ViewModels
             if (IsInstallerDownloading)
                 return;
 
+            if (!CanUseSelfUpdate)
+            {
+                OpenMicrosoftStoreListing();
+                return;
+            }
+
             if (_pendingUpdateResult?.HasInstaller == true && _pendingUpdateResult.InstallerUrl is not null)
             {
                 await DownloadAndLaunchInstallerAsync(_pendingUpdateResult.InstallerUrl, _pendingUpdateResult.InstallerName);
@@ -799,6 +805,17 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             TryOpenUrl(_updateReleaseUrl);
+        }
+
+        private void OpenMicrosoftStoreListing()
+        {
+            const string storeProtocolUrl = "ms-windows-store://pdp/?productid=9N9HRX4JCLCP";
+            const string webStoreUrl = "https://apps.microsoft.com/detail/9N9HRX4JCLCP";
+
+            if (OperatingSystem.IsWindows() && TryOpenUrl(storeProtocolUrl, showError: false))
+                return;
+
+            TryOpenUrl(webStoreUrl);
         }
 
         private async Task DownloadAndLaunchInstallerAsync(Uri installerUrl, string? installerName)
@@ -916,7 +933,7 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        private void TryOpenUrl(string url)
+        private bool TryOpenUrl(string url, bool showError = true)
         {
             try
             {
@@ -925,11 +942,17 @@ namespace VaultSync.UI.ViewModels
                     FileName = url,
                     UseShellExecute = true
                 });
+                return true;
             }
             catch
             {
-                var message = L("Update.Failed.Message", "Unable to open the release page; visit the GitHub releases manually.");
-                ShowUpdateError(message);
+                if (showError)
+                {
+                    var message = L("Update.Failed.Message", "Unable to open the release page; visit the GitHub releases manually.");
+                    ShowUpdateError(message);
+                }
+
+                return false;
             }
         }
 

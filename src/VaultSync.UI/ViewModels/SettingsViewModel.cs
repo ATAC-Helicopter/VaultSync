@@ -525,6 +525,7 @@ namespace VaultSync.UI
             ExportSupportBundleCommand   = new RelayCommand(_ => ExportSupportBundle());
             ImportSupportBundleCommand   = new RelayCommand(_ => ImportSupportBundle());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
+            OpenMicrosoftStoreCommand    = new RelayCommand(_ => OpenMicrosoftStoreListing());
             _scanBackupIndexRepairPlanCommand = new RelayCommand(_ => ScanBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy);
             _applyBackupIndexRepairPlanCommand = new RelayCommand(_ => ApplyBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy && HasBackupIndexRepairActions);
             _acceptProjectMetadataConflictCommand = new RelayCommand(
@@ -2503,6 +2504,7 @@ namespace VaultSync.UI
         public ICommand ExportSupportBundleCommand { get; }
         public ICommand ImportSupportBundleCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
+        public ICommand OpenMicrosoftStoreCommand { get; }
         public ICommand ScanBackupIndexRepairPlanCommand => _scanBackupIndexRepairPlanCommand!;
         public ICommand ApplyBackupIndexRepairPlanCommand => _applyBackupIndexRepairPlanCommand!;
         public ICommand AcceptProjectMetadataConflictCommand => _acceptProjectMetadataConflictCommand!;
@@ -3232,6 +3234,29 @@ namespace VaultSync.UI
             }
 
             UpdateCheckRequested?.Invoke();
+        }
+
+        private void OpenMicrosoftStoreListing()
+        {
+            var target = OperatingSystem.IsWindows()
+                ? "ms-windows-store://pdp/?productid=9N9HRX4JCLCP"
+                : "https://apps.microsoft.com/detail/9N9HRX4JCLCP";
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+            }
+            catch
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo("https://apps.microsoft.com/detail/9N9HRX4JCLCP") { UseShellExecute = true });
+                }
+                catch
+                {
+                    SaveStatus = L("Settings.Advanced.UpdateManagedByStoreOpenFailed", "Could not open the Microsoft Store listing.");
+                }
+            }
         }
 
         private void ExportLogConsole()

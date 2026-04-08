@@ -518,7 +518,9 @@ namespace VaultSync.UI.ViewModels
             ? L("Patch.InstallButton.Preparing", "Preparing patch...")
             : L("Patch.InstallButton.Install", "Install patch");
 
-        public string ReleaseActionText => _pendingUpdateResult?.HasInstaller == true
+        public string ReleaseActionText => !CanUseSelfUpdate
+            ? L("Update.Store.OpenStore", "Open Microsoft Store")
+            : _pendingUpdateResult?.HasInstaller == true
             ? (IsInstallerDownloading
                 ? L("Shell.OpenInstaller.Downloading", "Downloading installer...")
                 : L("Shell.OpenInstaller", "Install update"))
