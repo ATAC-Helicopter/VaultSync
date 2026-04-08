@@ -1463,6 +1463,13 @@
   - Acceptance:
     - network or mapped backup destinations no longer render an empty health line
     - local healthy/warning/failing health states still display normally
+- [x] `BUG-17095` `P0` Override vulnerable `Tmds.DBus.Protocol` transitive package on Windows builds. _(Done)_
+  - Scope: pin `Tmds.DBus.Protocol` `0.21.3` explicitly until the upstream Avalonia dependency graph ships the patched transitive version itself.
+  - Current status:
+    - Done: `VaultSync.UI.csproj` now adds a top-level `Tmds.DBus.Protocol` `0.21.3` reference, overriding the vulnerable `0.21.2` transitively pulled by `Avalonia.Desktop 11.3.13`.
+  - Acceptance:
+    - dependency graph resolves `Tmds.DBus.Protocol` `0.21.3` or newer for Windows desktop builds
+    - the Dependabot security alert is addressed without regressing Avalonia desktop startup
 
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
