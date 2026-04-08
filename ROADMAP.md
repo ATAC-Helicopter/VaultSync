@@ -1371,6 +1371,9 @@
 
 - [ ] `VS-1727` `P1` Add Microsoft Store packaging pipeline and artifact separation.
   - Scope: produce a Store-ready Windows package separately from the GitHub/Inno Setup installer flow, with clear CI/release separation between Direct and Store artifacts.
+  - Current status:
+    - In progress: an initial Store packaging scaffold now exists under `packaging/VaultSync.Store` with the reserved Partner Center identity values and placeholder package assets.
+    - Next: keep this out of the main solution until packaged-app behavior and channel gating are validated.
   - Acceptance:
     - CI can build the Direct Windows installer and the Store package independently
     - Store packaging does not reuse Direct-only updater/install assumptions

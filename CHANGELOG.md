@@ -1,4 +1,8 @@
 ﻿# Changelog
+## [1.7.2] - Unreleased
+### Added
+- [VS-1727] Added an initial Microsoft Store packaging scaffold with the reserved Partner Center identity values, separate from the Direct installer path.
+
 ## [1.7.1] - 04.04.2026
 ### Added
 - [VS-1725] Added scheduled GitHub release download snapshots with a dedicated public stats branch and JSON history.

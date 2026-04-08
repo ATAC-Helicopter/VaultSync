@@ -14,6 +14,7 @@ Use this page as the primary index for all project documentation.
 - Current release highlights: `docs/WHATS_NEW.md`
 - Release process: `docs/RELEASING.md`
 - Updater and patch assets: `docs/UPDATER.md`
+- Microsoft Store planning and packaging notes: `docs/MICROSOFT_STORE.md`
 - Download stats snapshots: `docs/DOWNLOAD_STATS.md`
 
 ## Contribution and Governance
