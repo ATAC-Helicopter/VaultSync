@@ -1439,6 +1439,14 @@
   - Acceptance:
     - Settings can scroll to the bottom on smaller screens/high scaling
     - lower advanced and danger-zone controls remain reachable without clipped layouts
+- [x] `BUG-17092` `P1` Bound the Settings diagnostics block so it cannot dominate the page. _(Done)_
+  - Scope: keep long updater/startup/checkpoint diagnostics readable without letting the diagnostics area consume most of the Settings page height.
+  - Current status:
+    - Done: the diagnostics region inside Settings > Advanced now has its own bounded scroll area.
+    - Done: lower controls remain in practical reach even when diagnostics are verbose.
+  - Acceptance:
+    - lower Settings controls remain reachable when diagnostics are long
+    - diagnostics remain readable without taking over the page
 
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.

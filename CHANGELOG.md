@@ -9,6 +9,7 @@
 - [VS-1729] Help, installation, and update docs now explain the Direct-vs-Store Windows split instead of assuming every Windows install uses GitHub updater flows.
 - [VS-1730] Added a Microsoft Store submission checklist that tracks Partner Center fields, restricted capability review notes, and remaining packaging validation gaps.
 - [BUG-17090] Development metadata and What's New now target `1.7.2`, and Settings diagnostics use multiline summaries instead of unreadable single-line dumps.
+- [BUG-17092] Settings now bounds the diagnostics panel with its own scroll area so lower controls remain reachable on smaller screens and higher scaling.
 ### Fixed
 - [BUG-17089] In-app toasts now dedupe repeated alerts, cap the visible stack, keep actions clickable, and present clearer severity-first cards.
 - [BUG-17091] Settings now uses a single-column responsive layout so high scaling and shorter screens can still reach lower destructive/advanced controls without clipping.
