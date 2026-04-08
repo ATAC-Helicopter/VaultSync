@@ -2200,7 +2200,7 @@ namespace VaultSync.UI
                             : L("Settings.Advanced.UpdateDiagnosticsPatchBlocked", "blocked")));
             }
 
-            UpdateDiagnosticsText = summary;
+            UpdateDiagnosticsText = summary.Replace(" | ", Environment.NewLine, StringComparison.Ordinal);
         }
 
         private void RefreshStartupDiagnostics(StartupDiagnosticsSummary? diagnostics)
@@ -2223,7 +2223,7 @@ namespace VaultSync.UI
             }
 
             var phaseSummary = string.Join(
-                " | ",
+                Environment.NewLine,
                 diagnostics.Phases
                     .OrderBy(phase => phase.ElapsedMs)
                     .Select(phase => string.Format(
@@ -2237,7 +2237,7 @@ namespace VaultSync.UI
                 L("Settings.Advanced.StartupDiagnosticsTemplate", "Last startup: {0} | Total: {1} ms | Phases: {2}"),
                 completedText,
                 diagnostics.TotalDurationMs,
-                phaseSummary);
+                phaseSummary).Replace(" | ", Environment.NewLine, StringComparison.Ordinal);
         }
 
         private void RefreshCheckpointResumeDiagnostics(CheckpointResumeTelemetry? diagnostics)
@@ -2271,7 +2271,7 @@ namespace VaultSync.UI
                 updatedText,
                 string.IsNullOrWhiteSpace(diagnostics.LastMessage)
                     ? L("Settings.Advanced.CheckpointResumeDiagnosticsNoDetail", "No detail recorded.")
-                    : diagnostics.LastMessage);
+                    : diagnostics.LastMessage).Replace(" | ", Environment.NewLine, StringComparison.Ordinal);
         }
 
         private void RefreshRsyncStatusHint()

@@ -1422,6 +1422,15 @@
     - repeated backup/update/runtime alerts collapse into one toast when appropriate
     - toast action and dismiss buttons remain clickable
     - old hidden toasts do not accumulate in the host collection
+- [x] `BUG-17090` `P2` Open the `1.7.2` development line and clean the Settings update diagnostics presentation. _(Done)_
+  - Scope: align app/install/store version markers to `1.7.2`, refresh What's New for the new cycle, and reformat Settings diagnostics so long updater/startup lines remain readable.
+  - Current status:
+    - Done: desktop app, installer, Store package, workflow defaults, and issue-template examples now target `1.7.2`.
+    - Done: What's New and README now distinguish the `1.7.2` development line from the `1.7.1` stable line.
+    - Done: update, startup, and checkpoint diagnostics in Settings now render as multiline summaries instead of one long wrapped line.
+  - Acceptance:
+    - repo version markers are aligned to `1.7.2` for active development
+    - Settings diagnostics remain readable without horizontal soup
 
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
@@ -1446,6 +1455,9 @@
     - Shared workflows stay optional and do not regress solo mode defaults.
 
 ## 1.9.x
+- Planning note:
+  - Default path after `1.9` is to continue with `1.10` / `1.11` unless a genuinely breaking product or distribution shift justifies `2.0`.
+  - Revisit the `2.0` decision near the end of `1.9` based on actual scope, not milestone vanity.
 - [ ] `VS-1902` `P1` App signing for trusted distribution.
 - [ ] `VS-1903` `P2` Background integrity audits with alerts.
 

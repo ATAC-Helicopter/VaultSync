@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       package_version:
-        description: "Store package version (four-part, e.g. 1.7.1.0)"
+        description: "Store package version (four-part, e.g. 1.7.2.0)"
         required: true
-        default: "1.7.1.0"
+        default: "1.7.2.0"
       configuration:
         description: "Build configuration"
         required: true

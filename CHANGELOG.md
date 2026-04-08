@@ -8,6 +8,7 @@
 - [VS-1729] Microsoft Store builds now disable the GitHub self-updater, offer an `Open Microsoft Store` action, and report Store-managed updates in Settings/support bundles.
 - [VS-1729] Help, installation, and update docs now explain the Direct-vs-Store Windows split instead of assuming every Windows install uses GitHub updater flows.
 - [VS-1730] Added a Microsoft Store submission checklist that tracks Partner Center fields, restricted capability review notes, and remaining packaging validation gaps.
+- [BUG-17090] Development metadata and What's New now target `1.7.2`, and Settings diagnostics use multiline summaries instead of unreadable single-line dumps.
 ### Fixed
 - [BUG-17089] In-app toasts now dedupe repeated alerts, cap the visible stack, keep actions clickable, and present clearer severity-first cards.
 
