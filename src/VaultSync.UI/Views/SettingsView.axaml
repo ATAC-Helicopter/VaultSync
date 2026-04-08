@@ -86,7 +86,8 @@
           HorizontalAlignment="Stretch"
           MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
           RowDefinitions="Auto,Auto"
-          RowSpacing="{DynamicResource PageRowSpacing}">
+          RowSpacing="{DynamicResource PageRowSpacing}"
+          Margin="0,0,0,40">
 
         <!-- Header -->
         <Border Grid.Row="0"
@@ -104,11 +105,14 @@
 
         <!-- Content -->
         <Grid Grid.Row="1"
-              RowDefinitions="Auto,Auto"
-              RowSpacing="{DynamicResource PageRowSpacing}">
+              ColumnDefinitions="1.35*,0.85*"
+              RowDefinitions="Auto"
+              ColumnSpacing="{DynamicResource PageRowSpacing}"
+              RowSpacing="{DynamicResource PageRowSpacing}"
+              Margin="0,0,0,28">
 
           <!-- LEFT COLUMN -->
-          <StackPanel Grid.Row="0"
+          <StackPanel Grid.Column="0"
                       Spacing="{DynamicResource PageRowSpacing}">
 
             <!-- General -->
@@ -1224,8 +1228,9 @@
           </StackPanel>
 
           <!-- RIGHT COLUMN -->
-          <StackPanel Grid.Row="1"
-                      Spacing="{DynamicResource PageRowSpacing}">
+          <StackPanel Grid.Column="1"
+                      Spacing="{DynamicResource PageRowSpacing}"
+                      Margin="0,0,0,28">
 
             <!-- Appearance -->
             <Border x:Name="SettingsAppearanceCard"
@@ -2197,7 +2202,8 @@
             <Border x:Name="SettingsDangerCard"
                     Classes="card"
                     CornerRadius="18"
-                    Padding="16">
+                    Padding="16"
+                    Margin="0,0,0,12">
               <StackPanel Spacing="10">
 
                 <StackPanel Spacing="2">
