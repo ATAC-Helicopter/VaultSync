@@ -259,9 +259,34 @@ public sealed class BackupService
 
         foreach (var file in orderedFiles)
         {
-            var info = new FileInfo(file);
+            FileInfo info;
+            try
+            {
+                info = new FileInfo(file);
+                if (!info.Exists)
+                {
+                    RuntimeLog.WriteVerbose($"[BackupService] Skipping fingerprint entry for missing file '{file}'.");
+                    continue;
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose($"[BackupService] Skipping fingerprint entry for inaccessible file '{file}': {ex.Message}");
+                continue;
+            }
+
             var relative = Path.GetRelativePath(sourceDir, file).Replace('\\', '/');
-            var line = $"{relative}|{info.Length.ToString(CultureInfo.InvariantCulture)}|{info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture)}\n";
+            string line;
+            try
+            {
+                line = $"{relative}|{info.Length.ToString(CultureInfo.InvariantCulture)}|{info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture)}\n";
+            }
+            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is IOException || ex is UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose($"[BackupService] Skipping fingerprint entry after stat failure for '{file}': {ex.Message}");
+                continue;
+            }
+
             var bytes = Encoding.UTF8.GetBytes(line);
             sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
         }

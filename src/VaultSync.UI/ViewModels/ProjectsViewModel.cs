@@ -2065,7 +2065,22 @@ public class ProjectsViewModel : ViewModelBase
         {
             try
             {
-                return Directory.EnumerateFiles(projectPath, pattern, SearchOption.AllDirectories).Take(1).Any();
+                if (!Directory.Exists(projectPath))
+                {
+                    return false;
+                }
+
+                return Directory.EnumerateFiles(
+                        projectPath,
+                        pattern,
+                        new EnumerationOptions
+                        {
+                            RecurseSubdirectories = true,
+                            IgnoreInaccessible = true,
+                            ReturnSpecialDirectories = false
+                        })
+                    .Take(1)
+                    .Any();
             }
             catch
             {

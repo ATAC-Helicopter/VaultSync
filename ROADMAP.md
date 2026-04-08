@@ -1447,6 +1447,22 @@
   - Acceptance:
     - lower Settings controls remain reachable when diagnostics are long
     - diagnostics remain readable without taking over the page
+- [x] `BUG-17093` `P1` Harden backup fingerprinting and project preset probes against disappearing paths. _(Done)_
+  - Scope: prevent transient file/path disappearance from causing noisy debugger exceptions or backup failures during fingerprinting and preset recommendation probes.
+  - Current status:
+    - Done: archive resume fingerprinting now skips files that disappear or become inaccessible during stat collection.
+    - Done: project preset probing now exits early when the root path is missing and uses inaccessible-safe recursive enumeration.
+  - Acceptance:
+    - transient file disappearance during backup fingerprinting no longer fails the backup
+    - missing project roots no longer trigger noisy recursive enumeration exceptions during preset detection
+- [x] `BUG-17094` `P2` Show explicit drive-health unavailable status for network backup destinations. _(Done)_
+  - Scope: keep the Backups drive-health row visible for network or mapped destinations and show the returned unavailable status instead of blanking the field.
+  - Current status:
+    - Done: Backups no longer hides the health row when the health service returns `Unknown` for network/mapped paths.
+    - Done: users now see an explicit unavailable message for network-backed destinations.
+  - Acceptance:
+    - network or mapped backup destinations no longer render an empty health line
+    - local healthy/warning/failing health states still display normally
 
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.

@@ -2266,24 +2266,16 @@ namespace VaultSync.UI.ViewModels
                         var backupPath = config.Backups.BackupRoot ?? string.Empty;
                         var health = healthService.CheckPath(backupPath);
 
-                        if (health.Status == DriveHealthStatus.Unknown && IsNetworkHealthPath(health))
+                        var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
+                            ? L("Backups.Health.NotAvailable", "not available")
+                            : health.Message!;
+                        (healthText, healthBrush) = health.Status switch
                         {
-                            healthText = string.Empty;
-                            healthBrush = HealthUnknownBrush;
-                        }
-                        else
-                        {
-                            var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
-                                ? L("Backups.Health.NotAvailable", "not available")
-                                : health.Message!;
-                            (healthText, healthBrush) = health.Status switch
-                            {
-                                DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, health.Message ?? fallbackMessage), HealthOkBrush),
-                                DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthWarningBrush),
-                                DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthFailingBrush),
-                                _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, fallbackMessage), HealthUnknownBrush)
-                            };
-                        }
+                            DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, health.Message ?? fallbackMessage), HealthOkBrush),
+                            DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthWarningBrush),
+                            DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthFailingBrush),
+                            _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, fallbackMessage), HealthUnknownBrush)
+                        };
                     }
 
                     var displayUsedPercent = usedPercent;
