@@ -15,6 +15,7 @@ Use this page as the primary index for all project documentation.
 - Release process: `docs/RELEASING.md`
 - Updater and patch assets: `docs/UPDATER.md`
 - Microsoft Store planning and packaging notes: `docs/MICROSOFT_STORE.md`
+- Microsoft Store submission checklist: `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md`
 - Download stats snapshots: `docs/DOWNLOAD_STATS.md`
 
 ## Contribution and Governance

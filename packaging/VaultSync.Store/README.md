@@ -14,6 +14,7 @@ Current scope:
 - separate Windows packaging layer for Microsoft Store distribution
 - no changes to the Direct installer or GitHub updater path
 - placeholder package assets copied from the current VaultSync branding preview
+- manual Store package workflow at `.github/workflows/store-package.yml`
 
 Important notes:
 
@@ -24,7 +25,7 @@ Important notes:
 
 Expected next steps:
 
-1. add channel-aware update behavior (`Direct` vs `Store`)
-2. validate packaged app behavior for local folders, external drives, and network paths
-3. replace placeholder Store package assets with final submission-ready sizes if needed
-4. wire Store packaging into CI only after the packaged app behavior is validated
+1. validate packaged app behavior for local folders, external drives, and network paths
+2. replace placeholder Store package assets with final submission-ready sizes if needed
+3. prepare Partner Center listing fields and restricted capability rationale
+4. keep the submission checklist in `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md` current

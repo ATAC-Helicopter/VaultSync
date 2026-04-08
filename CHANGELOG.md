@@ -3,8 +3,11 @@
 ### Added
 - [VS-1727] Added an initial Microsoft Store packaging scaffold with the reserved Partner Center identity values, separate from the Direct installer path.
 - [VS-1726] Added runtime distribution-channel detection so VaultSync can distinguish Direct installs from the reserved Microsoft Store package identity.
+- [VS-1727] Added a dedicated GitHub Actions workflow for building Microsoft Store package artifacts separately from the Direct release pipeline.
 ### Changed
 - [VS-1729] Microsoft Store builds now disable the GitHub self-updater, offer an `Open Microsoft Store` action, and report Store-managed updates in Settings/support bundles.
+- [VS-1729] Help, installation, and update docs now explain the Direct-vs-Store Windows split instead of assuming every Windows install uses GitHub updater flows.
+- [VS-1730] Added a Microsoft Store submission checklist that tracks Partner Center fields, restricted capability review notes, and remaining packaging validation gaps.
 ### Fixed
 - [BUG-17089] In-app toasts now dedupe repeated alerts, cap the visible stack, keep actions clickable, and present clearer severity-first cards.
 

@@ -17,6 +17,13 @@ Core actions:
   - `dotnet pack src/VaultSync.CLI -c Release`
   - `dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli`
 
+Windows distribution channels:
+- Direct build:
+  - GitHub installer and GitHub-managed updater
+- Microsoft Store build:
+  - Store-managed updates
+  - no GitHub self-update or installer fallback from inside the app
+
 ## UI Primer
 - Dashboard: global status, restore readiness, storage, and recent activity.
 - Projects: project list, snapshot controls, per-project details, and tag management.
@@ -61,6 +68,7 @@ VaultSync supports two destination modes:
 - Multi-base patch manifests are still exact allowlists, not version ranges.
 - If your installed version is not explicitly allowed, VaultSync falls back to the installer.
 - Support bundles include updater and patch preflight diagnostics for troubleshooting.
+- Microsoft Store builds do not use the GitHub updater path and instead open the Store listing for update management.
 
 ## Troubleshooting (Quick)
 - Mount or auth failures: verify path, credentials, and destination options.
@@ -78,5 +86,7 @@ See full troubleshooting page: `docs/wiki/Troubleshooting.md`.
 - Docs index: `docs/README.md`
 - Documentation hub: `DOCUMENTATION.md`
 - Wiki home: `docs/wiki/Home.md`
+- Microsoft Store notes: `docs/MICROSOFT_STORE.md`
+- Microsoft Store submission checklist: `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md`
 - Roadmap: `ROADMAP.md`
 - Changelog: `CHANGELOG.md`

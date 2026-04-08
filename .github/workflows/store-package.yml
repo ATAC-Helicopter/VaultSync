@@ -1,0 +1,69 @@
+name: Build Microsoft Store Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: "Store package version (four-part, e.g. 1.7.1.0)"
+        required: true
+        default: "1.7.1.0"
+      configuration:
+        description: "Build configuration"
+        required: true
+        type: choice
+        options:
+          - Release
+          - Debug
+
+permissions:
+  contents: read
+
+jobs:
+  build-store-package:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore UI project
+        run: dotnet restore src/VaultSync.UI/VaultSync.UI.csproj
+
+      - name: Build Microsoft Store package
+        shell: pwsh
+        run: |
+          $packageDir = Join-Path $env:GITHUB_WORKSPACE "dist\store\"
+          New-Item -ItemType Directory -Force $packageDir | Out-Null
+
+          msbuild packaging\VaultSync.Store\VaultSync.Store.wapproj `
+            /restore `
+            /p:Configuration=${{ inputs.configuration }} `
+            /p:Platform=x64 `
+            /p:UapAppxPackageBuildMode=StoreUpload `
+            /p:AppxBundle=Never `
+            /p:AppxPackageSigningEnabled=false `
+            /p:PackageVersion=${{ inputs.package_version }} `
+            /p:AppxPackageDir="$packageDir"
+
+      - name: Upload Store package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: store-package-assets
+          path: |
+            dist/store/**/*.msixupload
+            dist/store/**/*.msixbundle
+            dist/store/**/*.msix
+            dist/store/**/*.appxupload
+            dist/store/**/*.appxbundle
+            dist/store/**/*.appx
+            dist/store/**/*.cer
+            dist/store/**/*.xml
+            packaging/VaultSync.Store/Package.appxmanifest

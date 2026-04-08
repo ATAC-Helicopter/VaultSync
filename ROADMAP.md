@@ -1376,7 +1376,8 @@
   - Scope: produce a Store-ready Windows package separately from the GitHub/Inno Setup installer flow, with clear CI/release separation between Direct and Store artifacts.
   - Current status:
     - In progress: an initial Store packaging scaffold now exists under `packaging/VaultSync.Store` with the reserved Partner Center identity values and placeholder package assets.
-    - Next: keep this out of the main solution until packaged-app behavior and channel gating are validated.
+    - In progress: a manual GitHub Actions workflow now builds Store package artifacts separately from the Direct release-assets flow.
+    - Next: confirm the exact upload artifact shape from workflow output and keep this out of the main solution until packaged-app behavior is validated.
   - Acceptance:
     - CI can build the Direct Windows installer and the Store package independently
     - Store packaging does not reuse Direct-only updater/install assumptions
@@ -1394,6 +1395,7 @@
   - Current status:
     - In progress: Store builds now suppress GitHub update checks and self-update banners at runtime.
     - In progress: Settings > Advanced now swaps GitHub updater controls for Store-managed update messaging and an `Open Microsoft Store` action in Store builds.
+    - In progress: Help/wiki docs now explain the Store-vs-Direct update split and uninstall/switch-channel expectations.
   - Acceptance:
     - Store builds show Store-managed update messaging instead of GitHub updater UI
     - README/help/wiki/release docs explain Direct vs Store behavior cleanly
@@ -1401,6 +1403,9 @@
 
 - [ ] `VS-1730` `P2` Prepare Partner Center submission assets and compliance checklist.
   - Scope: gather Store listing copy, screenshots, capability rationale, policy/privacy checks, and a submission checklist so release submission can happen without last-minute scrambling.
+  - Current status:
+    - In progress: `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md` now tracks the Microsoft Learn submission checklist against the current VaultSync Store state.
+    - Next: replace placeholder package assets with final Store assets and fill the Partner Center listing fields/certification notes.
   - Acceptance:
     - Store submission assets are prepared and versioned
     - capability/privacy/licensing notes are ready for submission review

@@ -18,6 +18,12 @@ Channel model:
   - Microsoft Store package and Store-managed updates
   - GitHub self-update must stay disabled
 
+Current package/build entry points:
+
+- Packaging project: `packaging/VaultSync.Store/VaultSync.Store.wapproj`
+- Manifest: `packaging/VaultSync.Store/Package.appxmanifest`
+- Manual package workflow: `.github/workflows/store-package.yml`
+
 Before submission, the following still need to be completed:
 
 - packaged-app validation for local folders, removable drives, restore targets, and UNC/NAS paths
@@ -28,5 +34,10 @@ Current implementation status:
 - done: initial Store packaging scaffold with reserved identity values
 - done: runtime `Direct` vs `Store` channel detection
 - done: Store builds disable the GitHub self-updater, show Store-managed update messaging, and offer an `Open Microsoft Store` action
+- done: a dedicated Store package workflow now exists for manual MSIX/AppX upload artifact generation
 - packaged-app validation for local folders, removable drives, restore targets, and UNC/NAS paths
 - remaining: full docs/help/wiki pass for Store-specific update/support guidance
+
+Compliance checklist:
+
+- `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md`

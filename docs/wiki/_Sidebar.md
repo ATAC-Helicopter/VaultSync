@@ -17,6 +17,7 @@
 
 - Updates
   - [Updates](Updates)
+  - [Installation](Installation)
 
 - 1.7 areas
   - Integrity / Doctor: [Configuration](Configuration)
@@ -32,6 +33,8 @@
 - Repository Docs
   - [Docs index](../README.md)
   - [Documentation](../../DOCUMENTATION.md)
+  - [Microsoft Store](../MICROSOFT_STORE.md)
+  - [Store submission checklist](../MICROSOFT_STORE_SUBMISSION_CHECKLIST.md)
   - [Roadmap](../../ROADMAP.md)
   - [Changelog](../../CHANGELOG.md)
   - [Contributing](../../CONTRIBUTING.md)

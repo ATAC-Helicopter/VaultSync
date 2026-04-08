@@ -1,6 +1,8 @@
 # Updates
 
-VaultSync supports patch updates and full installer updates for macOS, Windows, and Linux.
+VaultSync supports two Windows update models:
+- Direct builds use GitHub patch and installer updates.
+- Microsoft Store builds use Store-managed updates.
 
 ## 1.7 highlights
 - Patch preflight persists clearer diagnostics about why patching is allowed or blocked.
@@ -17,10 +19,12 @@ VaultSync supports patch updates and full installer updates for macOS, Windows, 
   - the manifest must explicitly list the installed version as an allowed base version
   - unlisted or older installs fall back to the full installer
 - Multi-base patch manifests are strict allowlists, not version ranges.
+- Patch + installer fallback applies to Direct builds only.
 
 ## Manual update check
 - Settings > Advanced > Check for updates now.
 - The update banner shows the channel and current status.
+- Microsoft Store builds replace GitHub update actions with `Open Microsoft Store`.
 
 ## Skipping a version
 - Use the Skip version action in the update banner.
@@ -36,6 +40,7 @@ Switch channels in Settings > Advanced.
 - Windows: `.exe` installer (Inno Setup).
 - macOS: unsigned `.dmg` of the `.app` bundle.
 - Linux: `.AppImage` or `.tar.gz` assets.
+- Windows Store: packaged Microsoft Store build when published.
 
 ## Safe update expectation
 - Use patch updates only for versions explicitly supported by the release manifest.
@@ -43,3 +48,4 @@ Switch channels in Settings > Advanced.
   - major version jumps
   - very old versions
   - blocked or incompatible patch preflight results
+- For Microsoft Store builds, use the Store listing and Store app update flow instead of the GitHub installer.
