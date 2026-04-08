@@ -3,8 +3,7 @@
              xmlns:vm="clr-namespace:VaultSync.UI.ViewModels.Notifications"
              xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
              x:Class="VaultSync.UI.Views.Controls.ToastHost"
-             x:DataType="vm:ToastHostViewModel"
-             Background="Transparent">
+             x:DataType="vm:ToastHostViewModel">
 
   <UserControl.DataContext>
     <!-- This host has its own VM because it is global, not tied to a page VM -->
@@ -12,18 +11,14 @@
   </UserControl.DataContext>
 
   <!-- Full overlay, anchored bottom-right -->
-  <Grid Background="Transparent">
+  <Grid>
     <ItemsControl ItemsSource="{Binding Toasts}"
-                  Background="Transparent"
-                  HorizontalAlignment="Stretch"
-                  VerticalAlignment="Stretch">
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Bottom"
+                  Margin="0,0,20,20">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
-          <!-- Panel gets full size and then aligns its content bottom-right -->
           <StackPanel Orientation="Vertical"
-                      HorizontalAlignment="Right"
-                      VerticalAlignment="Bottom"
-                      Margin="0,0,20,20"
                       Spacing="12" />
         </ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
@@ -32,7 +27,6 @@
         <DataTemplate x:DataType="vm:NotificationState">
           <!-- Toast wrapper: on-theme card, but with shadow and max width -->
           <Border MaxWidth="460"
-                  Background="Transparent"
                   BorderThickness="0"
                   CornerRadius="12"
                   Padding="0"
