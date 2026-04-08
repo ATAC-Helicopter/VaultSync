@@ -551,6 +551,10 @@ namespace VaultSync.UI
             // AUTO-LOAD CONFIG ON STARTUP
             LoadFromConfig();
             UpdateUpdateCheckStatus(null, null);
+            if (IsStoreDistribution)
+            {
+                SetStoreManagedUpdatesStatus();
+            }
             _isInitialized = true;
         }
 
@@ -1930,6 +1934,13 @@ namespace VaultSync.UI
             set => SetField(ref _checkForUpdatesOnStartup, value);
         }
 
+        public bool IsStoreDistribution => DistributionChannelService.Current.IsStore;
+        public bool CanUseSelfUpdate => !IsStoreDistribution;
+
+        public string DistributionChannelLabel => IsStoreDistribution
+            ? L("Settings.Advanced.ChannelStore", "Microsoft Store")
+            : L("Settings.Advanced.ChannelDirect", "Direct");
+
         public int UpdateCheckIntervalMinutes
         {
             get => _updateCheckIntervalMinutes;
@@ -2099,6 +2110,13 @@ namespace VaultSync.UI
 
         private void RefreshUpdateCheckStatus()
         {
+            if (IsStoreDistribution)
+            {
+                UpdateCheckStatusText = L("Settings.Advanced.UpdateManagedByStoreStatus", "Updates are managed by Microsoft Store for this build.");
+                UpdateCheckErrorText = string.Empty;
+                return;
+            }
+
             var neverText = L("Settings.Advanced.UpdateStatusNever", "Never checked");
             var lastTemplate = L("Settings.Advanced.UpdateStatusLast", "Last check: {0}");
             var errorTemplate = L("Settings.Advanced.UpdateStatusError", "Last error: {0}");
@@ -2118,8 +2136,22 @@ namespace VaultSync.UI
                 : string.Format(CultureInfo.CurrentCulture, errorTemplate, _lastUpdateCheckError);
         }
 
+        public void SetStoreManagedUpdatesStatus()
+        {
+            _lastUpdateCheckAt = null;
+            _lastUpdateCheckError = null;
+            UpdateDiagnosticsText = L("Settings.Advanced.UpdateManagedByStoreDiagnostics", "GitHub self-update is disabled because this build is managed by Microsoft Store.");
+            RefreshUpdateCheckStatus();
+        }
+
         private void RefreshUpdateDiagnostics(UpdateCheckDiagnostics? diagnostics)
         {
+            if (IsStoreDistribution)
+            {
+                UpdateDiagnosticsText = L("Settings.Advanced.UpdateManagedByStoreDiagnostics", "GitHub self-update is disabled because this build is managed by Microsoft Store.");
+                return;
+            }
+
             diagnostics ??= new UpdateCheckDiagnostics();
             if (string.IsNullOrWhiteSpace(diagnostics.Decision))
             {
@@ -3192,6 +3224,13 @@ namespace VaultSync.UI
 
         private void CheckUpdatesNow()
         {
+            if (IsStoreDistribution)
+            {
+                SetStoreManagedUpdatesStatus();
+                SaveStatus = L("Settings.Advanced.UpdateManagedByStoreStatus", "Updates are managed by Microsoft Store for this build.");
+                return;
+            }
+
             UpdateCheckRequested?.Invoke();
         }
 

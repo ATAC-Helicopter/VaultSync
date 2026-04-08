@@ -2,6 +2,9 @@
 ## [1.7.2] - Unreleased
 ### Added
 - [VS-1727] Added an initial Microsoft Store packaging scaffold with the reserved Partner Center identity values, separate from the Direct installer path.
+- [VS-1726] Added runtime distribution-channel detection so VaultSync can distinguish Direct installs from the reserved Microsoft Store package identity.
+### Changed
+- [VS-1729] Microsoft Store builds now disable the GitHub self-updater, report Store-managed updates in Settings, and include channel/package identity in support bundles.
 
 ## [1.7.1] - 04.04.2026
 ### Added

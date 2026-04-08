@@ -2023,8 +2023,30 @@
                     </StackPanel>
                   </Border>
 
+                <Border Classes="subtle-card"
+                        Padding="12"
+                        CornerRadius="12"
+                        Margin="0,4,0,0"
+                        IsVisible="{Binding IsStoreDistribution}">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateManagedByStoreTitle}"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateManagedByStoreDescription}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+                    <TextBlock FontSize="11"
+                               Foreground="{StaticResource TextSecondary}">
+                      <Run Text="{infra:LocalizedString Key=Settings.Advanced.UpdateChannelLabel}" />
+                      <Run Text=": " />
+                      <Run Text="{Binding DistributionChannelLabel}" />
+                    </TextBlock>
+                  </StackPanel>
+                </Border>
+
                 <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
+                      Margin="0,4,0,0"
+                      IsVisible="{Binding CanUseSelfUpdate}">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesDescription}"
@@ -2037,7 +2059,8 @@
                 </Grid>
 
                 <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
+                      Margin="0,4,0,0"
+                      IsVisible="{Binding CanUseSelfUpdate}">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateInterval}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateIntervalDescription}"
@@ -2054,7 +2077,8 @@
 
                 <Grid ColumnDefinitions="*"
                       RowDefinitions="Auto,Auto"
-                      Margin="0,4,0,0">
+                      Margin="0,4,0,0"
+                      IsVisible="{Binding CanUseSelfUpdate}">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNowDescription}"
@@ -2095,7 +2119,8 @@
                 </StackPanel>
 
                 <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
+                      Margin="0,4,0,0"
+                      IsVisible="{Binding CanUseSelfUpdate}">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BetaChannel}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BetaChannelDescription}"
@@ -2111,7 +2136,8 @@
                            Foreground="{DynamicResource WarningTextBrush}"
                            FontSize="11"
                            Margin="0,6,0,0"
-                           TextWrapping="Wrap" />
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding CanUseSelfUpdate}" />
 
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,4,0,0">

@@ -1364,6 +1364,9 @@
 ## Microsoft Store readiness track
 - [ ] `VS-1726` `P1` Add Windows distribution-channel awareness for `Direct` vs `Store`.
   - Scope: introduce explicit channel detection/config/diagnostics so Store builds can disable GitHub self-update and installer handoff while Direct builds keep the current updater flow.
+  - Current status:
+    - In progress: runtime distribution-channel detection now recognizes the reserved Store package family name and keeps Direct installs unchanged.
+    - In progress: support bundles now export distribution channel, detection source, and package identity details.
   - Acceptance:
     - the app can distinguish `Direct` and `Store` at runtime
     - diagnostics/support bundles show channel and update source
@@ -1388,6 +1391,9 @@
 
 - [ ] `VS-1729` `P1` Add Store-specific update UX, docs, and support messaging.
   - Scope: replace Direct-channel update prompts/help text with Store-managed update wording, and make channel-specific support guidance visible in app/docs.
+  - Current status:
+    - In progress: Store builds now suppress GitHub update checks and self-update banners at runtime.
+    - In progress: Settings > Advanced now swaps GitHub updater controls for Store-managed update messaging in Store builds.
   - Acceptance:
     - Store builds show Store-managed update messaging instead of GitHub updater UI
     - README/help/wiki/release docs explain Direct vs Store behavior cleanly

@@ -373,6 +373,8 @@ namespace VaultSync.UI.ViewModels
                 ? GitHubReleaseChannel.Beta
                 : GitHubReleaseChannel.Stable;
 
+        private bool CanUseSelfUpdate => !DistributionChannelService.Current.IsStore;
+
         public SettingsViewModel SettingsViewModel => _settingsViewModel;
         public BackupsViewModel BackupsViewModel => _backupsViewModel ??= CreateBackupsViewModel();
 
@@ -489,7 +491,7 @@ namespace VaultSync.UI.ViewModels
             private set => SetField(ref _isUpdateAvailable, value);
         }
 
-        public bool ShowUpdateBanner => IsUpdateAvailable && !_isUpdateBannerDismissed;
+        public bool ShowUpdateBanner => CanUseSelfUpdate && IsUpdateAvailable && !_isUpdateBannerDismissed;
 
         public string UpdateBannerMessage
         {
@@ -501,11 +503,12 @@ namespace VaultSync.UI.ViewModels
             ? L("Shell.OpenReleaseTooltip", "Open the latest release on GitHub")
             : _updateReleaseNotes;
 
-        public bool IsPatchAvailable => (_pendingUpdateResult?.HasPatch ?? false) && !_patchBlocked;
+        public bool IsPatchAvailable => CanUseSelfUpdate && (_pendingUpdateResult?.HasPatch ?? false) && !_patchBlocked;
 
         public bool ShowPatchButton => IsPatchAvailable;
 
         public bool ShowInstallerFallback =>
+            CanUseSelfUpdate &&
             _pendingUpdateResult is not null &&
             (!IsPatchAvailable || _patchFailed || _patchBlocked);
 

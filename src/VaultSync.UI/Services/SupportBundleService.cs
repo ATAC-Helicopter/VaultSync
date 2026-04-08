@@ -86,7 +86,12 @@ public sealed class SupportBundleService
                 runtime = Environment.Version.ToString(),
                 os = Environment.OSVersion.ToString(),
                 processArch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
-                osArch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString()
+                osArch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
+                distributionChannel = DistributionChannelService.Current.Channel.ToString(),
+                distributionDetectionSource = DistributionChannelService.Current.DetectionSource,
+                isPackaged = DistributionChannelService.Current.IsPackaged,
+                packageFamilyName = DistributionChannelService.Current.PackageFamilyName,
+                packageFullName = DistributionChannelService.Current.PackageFullName
             },
             redactedConfig = BuildRedactedConfig(config),
             localMetadata,

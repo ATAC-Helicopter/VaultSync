@@ -20,7 +20,13 @@ Channel model:
 
 Before submission, the following still need to be completed:
 
-- runtime distribution-channel awareness
-- Store-specific update UI and support messaging
 - packaged-app validation for local folders, removable drives, restore targets, and UNC/NAS paths
 - Partner Center submission assets and compliance checklist
+
+Current implementation status:
+
+- done: initial Store packaging scaffold with reserved identity values
+- done: runtime `Direct` vs `Store` channel detection
+- done: Store builds disable the GitHub self-updater and show Store-managed update messaging
+- packaged-app validation for local folders, removable drives, restore targets, and UNC/NAS paths
+- remaining: full docs/help/wiki pass for Store-specific update/support guidance

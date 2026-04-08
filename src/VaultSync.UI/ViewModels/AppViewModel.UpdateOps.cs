@@ -23,6 +23,14 @@ namespace VaultSync.UI.ViewModels
     {
         private void OnUpdateCheckRequested()
         {
+            if (!CanUseSelfUpdate)
+            {
+                DiagnosticsLogger.Record("Manual update check ignored for Store distribution.");
+                _settingsViewModel.SetStoreManagedUpdatesStatus();
+                ClearUpdateState();
+                return;
+            }
+
             DiagnosticsLogger.Record("Manual update check requested.");
             Console.WriteLine("[Update] Manual update check requested.");
             StartUpdateCheck(ignoreSettings: true);
@@ -139,6 +147,14 @@ namespace VaultSync.UI.ViewModels
 
         private void StartUpdateCheck(bool ignoreSettings = false)
         {
+            if (!CanUseSelfUpdate)
+            {
+                DiagnosticsLogger.Record("GitHub update checks disabled for Store distribution.");
+                _settingsViewModel.SetStoreManagedUpdatesStatus();
+                ClearUpdateState();
+                return;
+            }
+
             DiagnosticsLogger.Record($"Update check start (ignoreSettings={ignoreSettings}, channel={CurrentUpdateChannel}).");
             CancelUpdateCheck();
             CancelUpdateRetry();
@@ -179,6 +195,9 @@ namespace VaultSync.UI.ViewModels
             _updateCheckTimer?.Dispose();
             _updateCheckTimer = null;
             CancelUpdateRetry();
+
+            if (!CanUseSelfUpdate)
+                return;
 
             if (!_settingsViewModel.CheckForUpdatesOnStartup)
                 return;
@@ -292,6 +311,16 @@ namespace VaultSync.UI.ViewModels
 
         private async Task StartPatchInstallAsync()
         {
+            if (!CanUseSelfUpdate)
+            {
+                PatchStatusMessage = L("Update.Store.ManagedDescription", "Updates are managed by Microsoft Store for this build.");
+                _patchBlocked = true;
+                _patchFailed = true;
+                NotifyPatchAvailabilityChanged();
+                OnPropertyChanged(nameof(ShowInstallerFallback));
+                return;
+            }
+
             if (!IsPatchAvailable || _pendingUpdateResult is null || IsPatchInstalling)
                 return;
 
@@ -536,6 +565,12 @@ namespace VaultSync.UI.ViewModels
 
         private void ApplyUpdateResult(UpdateCheckResult result)
         {
+            if (!CanUseSelfUpdate)
+            {
+                ClearUpdateState();
+                return;
+            }
+
             if (App.IsCrashing)
                 return;
 
