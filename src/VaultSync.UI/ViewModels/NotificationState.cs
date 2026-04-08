@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Threading;
+using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels;
 using VaultSync.UI.Infrastructure;
 
@@ -26,6 +28,12 @@ namespace VaultSync.UI.ViewModels.Notifications
         private string _actionLabel = string.Empty;
         private ICommand? _actionCommand;
         private CancellationTokenSource? _cts;
+        private string _groupKey = string.Empty;
+        private int _repeatCount = 1;
+        private DateTimeOffset _createdUtc = DateTimeOffset.UtcNow;
+        private DateTimeOffset _updatedUtc = DateTimeOffset.UtcNow;
+
+        public event Action<NotificationState>? Closed;
 
         public string Message
         {
@@ -80,6 +88,40 @@ namespace VaultSync.UI.ViewModels.Notifications
 
         public bool HasAction => !string.IsNullOrWhiteSpace(ActionLabel) && ActionCommand is not null;
 
+        public string GroupKey
+        {
+            get => _groupKey;
+            private set => SetField(ref _groupKey, value);
+        }
+
+        public int RepeatCount
+        {
+            get => _repeatCount;
+            private set
+            {
+                if (SetField(ref _repeatCount, value))
+                {
+                    OnPropertyChanged(nameof(HasRepeatCount));
+                    OnPropertyChanged(nameof(RepeatCountLabel));
+                }
+            }
+        }
+
+        public bool HasRepeatCount => RepeatCount > 1;
+        public string RepeatCountLabel => $"x{RepeatCount}";
+
+        public DateTimeOffset CreatedUtc
+        {
+            get => _createdUtc;
+            private set => SetField(ref _createdUtc, value);
+        }
+
+        public DateTimeOffset UpdatedUtc
+        {
+            get => _updatedUtc;
+            private set => SetField(ref _updatedUtc, value);
+        }
+
         public ICommand DismissCommand { get; }
 
         public NotificationState()
@@ -96,16 +138,32 @@ namespace VaultSync.UI.ViewModels.Notifications
             string? title = null,
             TimeSpan? duration = null,
             string? actionLabel = null,
-            ICommand? actionCommand = null)
+            ICommand? actionCommand = null,
+            string? groupKey = null,
+            bool incrementRepeat = false)
         {
-            Message  = message;
-            Title    = title ?? string.Empty;
-            Severity = severity;
-            ActionLabel = actionLabel ?? string.Empty;
-            ActionCommand = actionCommand;
-            IsVisible = true;
+            RunOnUiThread(() =>
+            {
+                Message = message;
+                Title = title ?? string.Empty;
+                Severity = severity;
+                ActionLabel = actionLabel ?? string.Empty;
+                ActionCommand = actionCommand;
+                GroupKey = groupKey ?? string.Empty;
+                if (!incrementRepeat || !IsVisible)
+                {
+                    RepeatCount = 1;
+                    CreatedUtc = DateTimeOffset.UtcNow;
+                }
+                else
+                {
+                    RepeatCount += 1;
+                }
 
-            StartAutoDismiss(duration ?? TimeSpan.FromSeconds(9));
+                UpdatedUtc = DateTimeOffset.UtcNow;
+                IsVisible = true;
+                StartAutoDismiss(duration ?? TimeSpan.FromSeconds(9));
+            });
         }
 
         /// <summary>
@@ -113,11 +171,24 @@ namespace VaultSync.UI.ViewModels.Notifications
         /// </summary>
         public void Clear()
         {
-            Message  = string.Empty;
-            Title    = string.Empty;
-            ActionLabel = string.Empty;
-            ActionCommand = null;
-            IsVisible = false;
+            RunOnUiThread(() =>
+            {
+                if (!IsVisible && string.IsNullOrWhiteSpace(Message))
+                    return;
+
+                var previous = Interlocked.Exchange(ref _cts, null);
+                previous?.Cancel();
+                previous?.Dispose();
+
+                Message = string.Empty;
+                Title = string.Empty;
+                ActionLabel = string.Empty;
+                ActionCommand = null;
+                GroupKey = string.Empty;
+                RepeatCount = 1;
+                IsVisible = false;
+                Closed?.Invoke(this);
+            });
         }
 
         private void StartAutoDismiss(TimeSpan duration)
@@ -138,7 +209,7 @@ namespace VaultSync.UI.ViewModels.Notifications
                 if (local.IsCancellationRequested)
                     return;
 
-                Clear();
+                RunOnUiThread(Clear);
             }
             catch (OperationCanceledException ex) when (ex.CancellationToken == local.Token || local.IsCancellationRequested)
             {
@@ -152,6 +223,30 @@ namespace VaultSync.UI.ViewModels.Notifications
                     local.Dispose();
                     _cts = null;
                 }
+            }
+        }
+
+        public bool Matches(NotificationRequest request)
+        {
+            var requestKey = request.GroupKey ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(requestKey) && string.Equals(GroupKey, requestKey, StringComparison.Ordinal))
+                return true;
+
+            return string.Equals(Title, request.Title ?? string.Empty, StringComparison.Ordinal)
+                   && string.Equals(Message, request.Message, StringComparison.Ordinal)
+                   && Severity == request.Severity
+                   && string.Equals(ActionLabel, request.ActionLabel ?? string.Empty, StringComparison.Ordinal);
+        }
+
+        private static void RunOnUiThread(Action action)
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                action();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(action);
             }
         }
     }

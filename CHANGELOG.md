@@ -5,6 +5,8 @@
 - [VS-1726] Added runtime distribution-channel detection so VaultSync can distinguish Direct installs from the reserved Microsoft Store package identity.
 ### Changed
 - [VS-1729] Microsoft Store builds now disable the GitHub self-updater, offer an `Open Microsoft Store` action, and report Store-managed updates in Settings/support bundles.
+### Fixed
+- [BUG-17089] In-app toasts now dedupe repeated alerts, cap the visible stack, keep actions clickable, and present clearer severity-first cards.
 
 ## [1.7.1] - 04.04.2026
 ### Added

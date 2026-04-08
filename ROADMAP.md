@@ -1406,6 +1406,18 @@
     - capability/privacy/licensing notes are ready for submission review
     - a repeatable submission checklist exists for future Store releases
 
+## 1.7.2 polish track
+- [x] `BUG-17089` `P1` Rework in-app toast notifications for smarter grouping, clearer hierarchy, and bounded stack behavior. _(Done)_
+  - Scope: dedupe repeated global notifications by group key/content, keep toast actions clickable, cap visible toast count, and improve notification-card readability without breaking inline page banners.
+  - Current status:
+    - Done: repeated toast requests now refresh and increment an existing toast instead of spawning duplicates when the payload or explicit group key matches.
+    - Done: closed toasts now remove themselves from the host collection, the visible stack trims to four items, and repeated alerts surface a visible repeat badge.
+    - Done: notification cards now use a stronger severity accent rail, cleaner header hierarchy, and a more explicit dismiss/action layout.
+  - Acceptance:
+    - repeated backup/update/runtime alerts collapse into one toast when appropriate
+    - toast action and dismiss buttons remain clickable
+    - old hidden toasts do not accumulate in the host collection
+
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
   - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.

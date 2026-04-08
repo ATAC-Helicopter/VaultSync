@@ -7,25 +7,46 @@
              x:DataType="vm:NotificationState">
   <UserControl.Resources>
     <controls:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+    <controls:NotificationSeverityAccentConverter x:Key="NotificationSeverityAccentConverter" />
   </UserControl.Resources>
   <UserControl.Styles>
     <!-- Card look -->
     <Style Selector="Border.notification-card">
       <Setter Property="CornerRadius" Value="16" />
       <Setter Property="Padding" Value="{DynamicResource CardPaddingMedium}" />
-      <!-- Use app card background to stay on-theme -->
-      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceCardBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <!-- Severity pill -->
     <Style Selector="Border.notification-pill">
       <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="{DynamicResource StatPillPadding}" />
+      <Setter Property="Padding" Value="10,4" />
       <Setter Property="Margin" Value="0,0,8,0" />
-      <!-- Subtle, on-theme pill instead of custom dark/blue -->
-      <Setter Property="Background" Value="{DynamicResource CardBorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="Border.notification-repeat">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Margin" Value="8,0,0,0" />
+    </Style>
+
+    <Style Selector="TextBlock.notification-title">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.notification-message">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="LineHeight" Value="16" />
+      <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
     <!-- Dismiss button -->
@@ -33,9 +54,11 @@
       <Setter Property="Width" Value="28" />
       <Setter Property="Height" Value="28" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
+      <Setter Property="CornerRadius" Value="999" />
     </Style>
 
     <!-- Optional action button -->
@@ -49,48 +72,56 @@
 
   <Border Classes="notification-card"
           IsVisible="{Binding IsVisible}">
-    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
-          ColumnSpacing="12"
-          VerticalAlignment="Center">
+    <Grid ColumnDefinitions="4,*,Auto"
+          ColumnSpacing="12">
+      <Border Grid.Column="0"
+              CornerRadius="999"
+              Background="{Binding Severity, Converter={StaticResource NotificationSeverityAccentConverter}}" />
 
-      <!-- Severity pill -->
-      <Border Classes="notification-pill"
-              VerticalAlignment="Center">
-        <TextBlock Text="{Binding Severity}"
-                   FontSize="11"
-                   FontWeight="SemiBold" />
-      </Border>
-
-      <!-- Message -->
       <StackPanel Grid.Column="1"
-                  Spacing="4"
+                  Spacing="8">
+        <Grid ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="8">
+          <Border Classes="notification-pill"
                   VerticalAlignment="Center">
-        <TextBlock Text="{Binding Title}"
-                   FontSize="13"
-                   FontWeight="SemiBold"
-                   IsVisible="{Binding Title, Converter={StaticResource StringNotEmptyConverter}}"
-                   TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Severity}"
+                       FontSize="11"
+                       FontWeight="SemiBold" />
+          </Border>
+
+          <TextBlock Grid.Column="1"
+                     Classes="notification-title"
+                     Text="{Binding Title}"
+                     IsVisible="{Binding Title, Converter={StaticResource StringNotEmptyConverter}}"
+                     />
+
+          <Border Grid.Column="2"
+                  Classes="notification-repeat"
+                  IsVisible="{Binding HasRepeatCount}"
+                  VerticalAlignment="Center">
+            <TextBlock Text="{Binding RepeatCountLabel}"
+                       FontSize="11"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextOnPillBrush}" />
+          </Border>
+        </Grid>
+
         <TextBlock Text="{Binding Message}"
-                   FontSize="12"
-                   LineHeight="16"
-                   TextWrapping="Wrap" />
+                   Classes="notification-message" />
+
+        <Button Classes="notification-action"
+                Command="{Binding ActionCommand}"
+                Content="{Binding ActionLabel}"
+                IsVisible="{Binding HasAction}"
+                HorizontalAlignment="Left" />
       </StackPanel>
 
-      <!-- Optional action button -->
       <Button Grid.Column="2"
-              Classes="notification-action"
-              Command="{Binding ActionCommand}"
-              Content="{Binding ActionLabel}"
-              IsVisible="{Binding HasAction}"
-              VerticalAlignment="Center" />
-
-      <!-- Dismiss button -->
-      <Button Grid.Column="3"
               Classes="notification-dismiss"
               Command="{Binding DismissCommand}"
               Content="{infra:LocalizedString Key=Notifications.DismissGlyph}"
               HorizontalAlignment="Right"
-              VerticalAlignment="Center" />
+              VerticalAlignment="Top" />
     </Grid>
   </Border>
 </UserControl>

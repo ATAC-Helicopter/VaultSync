@@ -4,8 +4,7 @@
              xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
              x:Class="VaultSync.UI.Views.Controls.ToastHost"
              x:DataType="vm:ToastHostViewModel"
-             Background="Transparent"
-             IsHitTestVisible="False">
+             Background="Transparent">
 
   <UserControl.DataContext>
     <!-- This host has its own VM because it is global, not tied to a page VM -->

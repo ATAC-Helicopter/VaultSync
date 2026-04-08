@@ -87,7 +87,7 @@ namespace VaultSync.UI.Notifications
                 message,
                 severity,
                 title,
-                duration ?? TimeSpan.FromSeconds(4),
+                duration ?? ComputeSmartDuration(message, severity, actionLabel, actionCommand),
                 actionLabel,
                 actionCommand,
                 groupKey);
@@ -113,7 +113,7 @@ namespace VaultSync.UI.Notifications
                 message,
                 severity,
                 title,
-                duration ?? TimeSpan.FromSeconds(4),
+                duration ?? ComputeSmartDuration(message, severity, actionLabel: null, actionCommand: null),
                 actionLabel: null,
                 actionCommand: null,
                 groupKey: groupKey);
@@ -122,6 +122,31 @@ namespace VaultSync.UI.Notifications
                 return;
 
             SystemNotificationService?.ShowSystemNotification(request);
+        }
+
+        private static TimeSpan ComputeSmartDuration(
+            string message,
+            NotificationSeverity severity,
+            string? actionLabel,
+            ICommand? actionCommand)
+        {
+            var seconds = severity switch
+            {
+                NotificationSeverity.Error => 9,
+                NotificationSeverity.Warning => 7,
+                _ => 5
+            };
+
+            if (!string.IsNullOrWhiteSpace(actionLabel) && actionCommand is not null)
+                seconds += 2;
+
+            var length = message?.Length ?? 0;
+            if (length > 180)
+                seconds += 2;
+            else if (length > 90)
+                seconds += 1;
+
+            return TimeSpan.FromSeconds(Math.Clamp(seconds, 4, 12));
         }
     }
 }
