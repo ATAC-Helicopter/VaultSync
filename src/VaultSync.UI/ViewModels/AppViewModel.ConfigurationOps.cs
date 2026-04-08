@@ -1031,6 +1031,10 @@ namespace VaultSync.UI.ViewModels
                         _backupsViewModel?.RefreshAutoBackupFlagsFromConfig();
                         ConfigureAutoBackupTimer();
                     });
+
+                    RunDetached(
+                        () => ExportMetadataForProjectSettingsChangeAsync(projectId),
+                        nameof(ExportMetadataForProjectSettingsChangeAsync));
                 }
                 catch (Exception ex)
                 {
@@ -1041,8 +1045,13 @@ namespace VaultSync.UI.ViewModels
 
         private void OnAutoBackupGroupPreferenceChanged(IReadOnlyList<int>? projectIds, bool enabled)
         {
-            _ = projectIds;
-            _ = enabled;
+            var ids = projectIds?
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray() ?? Array.Empty<int>();
+
+            if (ids.Length == 0)
+                return;
 
             Task.Run(() =>
             {
@@ -1050,16 +1059,82 @@ namespace VaultSync.UI.ViewModels
                 {
                     var cfg = AppConfigStore.Load();
                     var list = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+                    foreach (var projectId in ids)
+                    {
+                        if (enabled)
+                        {
+                            list.Remove(projectId);
+                        }
+                        else if (!list.Contains(projectId))
+                        {
+                            list.Add(projectId);
+                        }
+                    }
+
+                    cfg.Backups.AutoBackupDisabledProjects = list;
+                    AppConfigStore.Save(cfg);
+
                     Dispatcher.UIThread.Post(() =>
                     {
                         _config.Backups.AutoBackupDisabledProjects = list;
                         _backupsViewModel?.RefreshAutoBackupFlagsFromConfig();
                         ConfigureAutoBackupTimer();
                     });
+
+                    foreach (var projectId in ids)
+                    {
+                        RunDetached(
+                            () => ExportMetadataForProjectSettingsChangeAsync(projectId),
+                            $"{nameof(ExportMetadataForProjectSettingsChangeAsync)}-{projectId}");
+                    }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[AutoBackup] Failed to sync grouped preference update: {ex.Message}");
+                }
+            });
+        }
+
+        private void OnProjectSettingsMetadataChanged(int projectId)
+        {
+            RunDetached(
+                () => ExportMetadataForProjectSettingsChangeAsync(projectId),
+                nameof(OnProjectSettingsMetadataChanged));
+        }
+
+        private void OnProjectRemovedFromDatabase(int projectId, string externalId)
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(externalId))
+                        return;
+
+                    var cfg = AppConfigStore.Load();
+                    if (cfg.Backups.AutoBackupDisabledProjects?.Remove(projectId) == true)
+                    {
+                        AppConfigStore.Save(cfg);
+                    }
+
+                    foreach (var dest in GetAllDestinations(cfg))
+                    {
+                        if (!IsMetadataSyncEnabled(cfg, dest))
+                            continue;
+
+                        var resolution = await PrepareDestinationAsync(dest, cfg).ConfigureAwait(false);
+                        if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                            continue;
+
+                        MetadataSyncService.TryExportProjectTombstone(
+                            resolution.EffectivePath,
+                            externalId,
+                            Environment.MachineName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MetadataSync] Project tombstone export failed for projectId={projectId}: {ex.Message}");
                 }
             });
         }

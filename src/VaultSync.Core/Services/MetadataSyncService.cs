@@ -223,9 +223,32 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
         }
 
+        var tombstonedProjectIds = metaTombstones
+            .Where(t => string.Equals(t.EntityType, "project", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.EntityId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tombstonedProjectId in tombstonedProjectIds)
+        {
+            if (!projectMap.TryGetValue(tombstonedProjectId, out var existingId))
+                continue;
+
+            _repo.RemoveProject(existingId);
+            config.Backups.AutoBackupDisabledProjects?.Remove(existingId);
+            RemoveProjectMetadataConflict(existingId, pendingConflicts);
+            projectMap.Remove(tombstonedProjectId);
+            localProjects.RemoveAll(project => project.Id == existingId);
+            appliedTombstones++;
+            metadataConflictChanged = true;
+        }
+
         foreach (var metaProject in metaProjects)
         {
             if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
+                continue;
+
+            if (tombstonedProjectIds.Contains(metaProject.ExternalId))
                 continue;
 
             var parsedSettings = ParseProjectSettings(metaProject.SettingsJson);
@@ -235,6 +258,7 @@ public sealed class MetadataSyncService
             {
                 metadataConflictChanged |= ApplyImportedProjectSettings(
                     mappedProjectId,
+                    config,
                     metaProject,
                     metaInfo?.WriterMachineId,
                     parsedSettings,
@@ -267,6 +291,7 @@ public sealed class MetadataSyncService
 
                 metadataConflictChanged |= ApplyImportedProjectSettings(
                     existingByName.Id,
+                    config,
                     metaProject,
                     metaInfo?.WriterMachineId,
                     parsedSettings,
@@ -313,6 +338,8 @@ public sealed class MetadataSyncService
             };
 
             var newId = _repo.AddProject(project);
+            if (parsedSettings.HasAutoBackupEnabled)
+                metadataConflictChanged |= ApplyImportedProjectAutoBackupSetting(config, newId, parsedSettings.AutoBackupEnabled);
             projectMap[metaProject.ExternalId] = newId;
             importedProjects++;
         }
@@ -1117,6 +1144,59 @@ public sealed class MetadataSyncService
         }
     }
 
+    public static void TryExportProjectTombstone(string rootPath, string projectExternalId, string? originMachineId = null)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(projectExternalId))
+            return;
+
+        var store = new MetadataStore(rootPath);
+        try
+        {
+            store.EnsureSchema();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Project tombstone export failed: store init error at '{rootPath}': {ex.Message}");
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
+        var metaInfo = store.GetMetaInfo();
+        if (metaInfo == null)
+        {
+            metaInfo = new MetaInfo
+            {
+                SchemaVersion = MetadataStore.CurrentSchemaVersion,
+                CreatedUtc = now,
+                LastWriteUtc = now,
+                WriterAppVersion = "unknown",
+                WriterMachineId = machineId
+            };
+        }
+        else
+        {
+            metaInfo.LastWriteUtc = now;
+            metaInfo.WriterMachineId = machineId;
+        }
+
+        try
+        {
+            store.UpsertMetaInfo(metaInfo);
+            store.AddTombstone(new MetaTombstone
+            {
+                EntityType = "project",
+                EntityId = projectExternalId,
+                DeletedUtc = now,
+                OriginMachineId = machineId
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Project tombstone export failed writing store '{rootPath}': {ex.Message}");
+        }
+    }
+
     public MetadataSyncResult ExportBackupToStore(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill = false)
     {
         return ExportBackupToStoreAsync(rootPath, backupId, appVersion, machineId, forceBackfill, CancellationToken.None)
@@ -1739,6 +1819,8 @@ public sealed class MetadataSyncService
                 : project.PreferredDestinationId;
             settings["restoreMode"] = ProjectRestoreMode.Normalize(project.RestoreMode);
             settings["verificationPolicy"] = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
+            var disabledProjects = AppConfigStore.GetSnapshot().Backups.AutoBackupDisabledProjects ?? new List<int>();
+            settings["autoBackupEnabled"] = !disabledProjects.Contains(project.Id);
             settings["tags"] = string.IsNullOrWhiteSpace(project.Tags)
                 ? string.Empty
                 : project.Tags.Trim();
@@ -1757,12 +1839,14 @@ public sealed class MetadataSyncService
         string PreferredDestinationId,
         string RestoreMode,
         string VerificationPolicy,
+        bool AutoBackupEnabled,
         string Tags,
         bool HasEncryptionPolicy,
         bool HasEncryptionKeyRef,
         bool HasPreferredDestinationId,
         bool HasRestoreMode,
         bool HasVerificationPolicy,
+        bool HasAutoBackupEnabled,
         bool HasTags);
 
     private static ParsedProjectSettings ParseProjectSettings(string? settingsJson)
@@ -1775,12 +1859,14 @@ public sealed class MetadataSyncService
                 string.Empty,
                 ProjectRestoreMode.Direct,
                 ProjectVerificationPolicy.Always,
+                true,
                 string.Empty,
                 HasEncryptionPolicy: false,
                 HasEncryptionKeyRef: false,
                 HasPreferredDestinationId: false,
                 HasRestoreMode: false,
                 HasVerificationPolicy: false,
+                HasAutoBackupEnabled: false,
                 HasTags: false);
         }
 
@@ -1792,12 +1878,14 @@ public sealed class MetadataSyncService
             var preferredDestinationId = string.Empty;
             var restoreMode = ProjectRestoreMode.Direct;
             var verificationPolicy = ProjectVerificationPolicy.Always;
+            var autoBackupEnabled = true;
             var tags = string.Empty;
             var hasPolicy = false;
             var hasKeyRef = false;
             var hasPreferredDestinationId = false;
             var hasRestoreMode = false;
             var hasVerificationPolicy = false;
+            var hasAutoBackupEnabled = false;
             var hasTags = false;
 
             if (doc.RootElement.TryGetProperty("encryptionPolicy", out var policyProp))
@@ -1833,6 +1921,17 @@ public sealed class MetadataSyncService
                 hasRestoreMode = true;
             }
 
+            if (doc.RootElement.TryGetProperty("autoBackupEnabled", out var autoBackupEnabledProp))
+            {
+                autoBackupEnabled = autoBackupEnabledProp.ValueKind switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    _ => autoBackupEnabled
+                };
+                hasAutoBackupEnabled = autoBackupEnabledProp.ValueKind is JsonValueKind.True or JsonValueKind.False;
+            }
+
             if (doc.RootElement.TryGetProperty("tags", out var tagsProp))
             {
                 var rawTags = tagsProp.GetString();
@@ -1846,12 +1945,14 @@ public sealed class MetadataSyncService
                 preferredDestinationId,
                 restoreMode,
                 verificationPolicy,
+                autoBackupEnabled,
                 tags,
                 HasEncryptionPolicy: hasPolicy,
                 HasEncryptionKeyRef: hasKeyRef,
                 HasPreferredDestinationId: hasPreferredDestinationId,
                 HasRestoreMode: hasRestoreMode,
                 HasVerificationPolicy: hasVerificationPolicy,
+                HasAutoBackupEnabled: hasAutoBackupEnabled,
                 HasTags: hasTags);
         }
         catch
@@ -1862,18 +1963,21 @@ public sealed class MetadataSyncService
                 string.Empty,
                 ProjectRestoreMode.Direct,
                 ProjectVerificationPolicy.Always,
+                true,
                 string.Empty,
                 HasEncryptionPolicy: false,
                 HasEncryptionKeyRef: false,
                 HasPreferredDestinationId: false,
                 HasRestoreMode: false,
                 HasVerificationPolicy: false,
+                HasAutoBackupEnabled: false,
                 HasTags: false);
         }
     }
 
     private bool ApplyImportedProjectSettings(
         int projectId,
+        AppConfig config,
         MetaProject metaProject,
         string? sourceMachineId,
         ParsedProjectSettings parsedSettings,
@@ -1884,6 +1988,7 @@ public sealed class MetadataSyncService
             !parsedSettings.HasPreferredDestinationId &&
             !parsedSettings.HasRestoreMode &&
             !parsedSettings.HasVerificationPolicy &&
+            !parsedSettings.HasAutoBackupEnabled &&
             !parsedSettings.HasTags)
             return false;
 
@@ -1919,6 +2024,11 @@ public sealed class MetadataSyncService
         var nextRestoreMode = parsedSettings.HasRestoreMode
             ? ProjectRestoreMode.Normalize(parsedSettings.RestoreMode)
             : currentRestoreMode;
+        config.Backups.AutoBackupDisabledProjects ??= new List<int>();
+        var currentAutoBackupEnabled = !config.Backups.AutoBackupDisabledProjects.Contains(projectId);
+        var nextAutoBackupEnabled = parsedSettings.HasAutoBackupEnabled
+            ? parsedSettings.AutoBackupEnabled
+            : currentAutoBackupEnabled;
         var currentTags = current.Tags?.Trim() ?? string.Empty;
         var nextTags = parsedSettings.HasTags
             ? (parsedSettings.Tags?.Trim() ?? string.Empty)
@@ -1931,6 +2041,7 @@ public sealed class MetadataSyncService
             string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) &&
+            nextAutoBackupEnabled == currentAutoBackupEnabled &&
             string.Equals(nextTags, currentTags, StringComparison.Ordinal))
         {
             return RemoveProjectMetadataConflict(projectId, pendingConflicts);
@@ -1950,6 +2061,10 @@ public sealed class MetadataSyncService
             _repo.UpdateProjectRestoreMode(projectId, nextRestoreMode);
             _repo.UpdateProjectVerificationPolicy(projectId, nextVerificationPolicy);
             _repo.UpdateProjectTags(projectId, nextTags);
+            if (parsedSettings.HasAutoBackupEnabled)
+            {
+                ApplyImportedProjectAutoBackupSetting(config, projectId, nextAutoBackupEnabled);
+            }
             return RemoveProjectMetadataConflict(projectId, pendingConflicts);
         }
 
@@ -1966,6 +2081,25 @@ public sealed class MetadataSyncService
             nextVerificationPolicy,
             nextTags,
             pendingConflicts);
+    }
+
+    private static bool ApplyImportedProjectAutoBackupSetting(AppConfig config, int projectId, bool enabled)
+    {
+        config.Backups.AutoBackupDisabledProjects ??= new List<int>();
+        var disabled = config.Backups.AutoBackupDisabledProjects;
+        var changed = false;
+
+        if (enabled)
+        {
+            changed = disabled.Remove(projectId);
+        }
+        else if (!disabled.Contains(projectId))
+        {
+            disabled.Add(projectId);
+            changed = true;
+        }
+
+        return changed;
     }
 
     private static bool RemoveProjectMetadataConflict(int projectId, IList<ProjectMetadataConflictRecord> pendingConflicts)

@@ -1704,8 +1704,55 @@ public sealed class BackupService
                             ArchiveFileStreamBufferBytes,
                             FileOptions.SequentialScan))
                         {
-                            await input.CopyToAsync(entryStream, ArchiveCopyBufferBytes, ct);
-                            processedBytes += input.Length;
+                            var buffer = new byte[ArchiveCopyBufferBytes];
+                            int read;
+                            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                            {
+                                await entryStream.WriteAsync(buffer.AsMemory(0, read), ct);
+                                processedBytes += read;
+
+                                if (progressCallback is null)
+                                    continue;
+
+                                var compressPercent = (totalBytes > 0)
+                                    ? Math.Min(100d, (processedBytes * 100d / totalBytes))
+                                    : 0d;
+
+                                var overallPercent = compressPercent * 0.9;
+                                var now = DateTime.UtcNow;
+                                if (overallPercent < 90d && (now - lastUiUpdate) < minUiInterval)
+                                    continue;
+
+                                lastUiUpdate = now;
+
+                                var elapsed = now - startTime;
+                                var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                                var speedBytesSec = processedBytes / elapsedSeconds;
+                                var speedMbSec = speedBytesSec / (1024 * 1024);
+
+                                string etaText;
+                                if (overallPercent > 0 && overallPercent < 90)
+                                {
+                                    var remainingFraction = (90d - overallPercent) / overallPercent;
+                                    var remainingSeconds = elapsedSeconds * remainingFraction;
+                                    var eta = TimeSpan.FromSeconds(remainingSeconds);
+                                    etaText = archiveTotalFiles > 0
+                                        ? $"Compressing {processedFiles + 1}/{archiveTotalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}"
+                                        : $"{speedMbSec:0.0} MB/s - Compressing - ETA {eta:mm\\:ss}";
+                                }
+                                else if (overallPercent >= 90)
+                                {
+                                    etaText = archiveTotalFiles > 0
+                                        ? $"Compressing {processedFiles + 1}/{archiveTotalFiles} files - {speedMbSec:0.0} MB/s"
+                                        : $"{speedMbSec:0.0} MB/s - Compressing";
+                                }
+                                else
+                                {
+                                    etaText = string.Empty;
+                                }
+
+                                progressCallback(overallPercent, relative, etaText);
+                            }
                         }
                     }
                     catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -1714,10 +1761,10 @@ public sealed class BackupService
                         continue;
                     }
 
+                    processedFiles++;
+
                     if (progressCallback is not null)
                     {
-                        processedFiles++;
-
                         // Map compression progress into 0-90% of overall progress.
                         double compressPercent = (totalBytes > 0)
                             ? Math.Min(100d, (processedBytes * 100d / totalBytes))

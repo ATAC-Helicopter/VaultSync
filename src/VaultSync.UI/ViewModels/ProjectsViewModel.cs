@@ -218,8 +218,10 @@ public class ProjectsViewModel : ViewModelBase
     public ObservableCollection<ProjectTagColorSwatchViewModel> ProjectTagColorSwatches { get; } = new();
     public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
     public event Action<int, string>? ProjectEncryptionPolicyChanged;
+    public event Action<int>? ProjectSettingsMetadataChanged;
     public event Action<IReadOnlyList<int>>? BackupGroupRequested;
     public event Action<IReadOnlyList<int>, bool>? AutoBackupGroupPreferenceChanged;
+    public event Action<int, string>? ProjectRemovedFromDatabase;
     public ObservableCollection<ProjectTagChip> SelectedProjectTags { get; } = new ObservableCollection<ProjectTagChip>();
     public ObservableCollection<ProjectTagChip> SelectedGroupTags { get; } = new ObservableCollection<ProjectTagChip>();
     public ObservableCollection<ProjectTagChip> ReusableProjectTags { get; } = new ObservableCollection<ProjectTagChip>();
@@ -2273,8 +2275,16 @@ public class ProjectsViewModel : ViewModelBase
                 }
                 else
                 {
+                    var projectExternalId = existing.ExternalId;
+                    if (string.IsNullOrWhiteSpace(projectExternalId))
+                    {
+                        projectExternalId = Guid.NewGuid().ToString("N");
+                        repo.UpdateProjectExternalId(existing.Id, projectExternalId);
+                    }
+
                     repo.RemoveProject(existing.Id);
                     HideProjectPathInConfig(removedProjectPath);
+                    ProjectRemovedFromDatabase?.Invoke(existing.Id, projectExternalId);
                     Dispatcher.UIThread.Post(() =>
                         ShowNotification(Lf("Projects.Notification.RemoveSuccess", "Removed project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Info));
                 }
@@ -2718,6 +2728,9 @@ public class ProjectsViewModel : ViewModelBase
                 if (ReferenceEquals(vm, SelectedProject))
                     RefreshSelectedProjectTags();
             }
+
+            if (changedDestination || changedTags)
+                ProjectSettingsMetadataChanged?.Invoke(project.Id);
         }
         catch (Exception ex)
         {

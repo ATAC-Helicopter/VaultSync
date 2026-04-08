@@ -434,6 +434,49 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_ProjectSettings_AppliesAutoBackupPreference()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var cfg = CloneConfig(originalConfig);
+            cfg.Backups.AutoBackupDisabledProjects.Clear();
+            AppConfigStore.Save(cfg);
+
+            var store = CreateStore(metaRoot);
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = "proj-settings-auto",
+                Name = "Project Auto Backup",
+                Preset = "unity",
+                RootPathHint = projectRoot,
+                CreatedUtc = DateTime.UtcNow,
+                SettingsJson = "{\"autoBackupEnabled\":false}",
+                UpdatedUtc = DateTime.UtcNow
+            });
+
+            var repo = CreateRepository(dbPath);
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+            var project = repo.GetProjectByName("Project Auto Backup");
+            Assert.NotNull(project);
+
+            var refreshedConfig = AppConfigStore.Load();
+            Assert.Contains(project!.Id, refreshedConfig.Backups.AutoBackupDisabledProjects);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
     public void ImportFromStore_ProjectSettings_UpdatesExistingProjectKeyRef()
     {
         var metaRoot = CreateTempDir();
@@ -663,6 +706,102 @@ public sealed class MetadataSyncTests : IDisposable
         Assert.Equal(ProjectEncryptionPolicy.Encrypted, policy.GetString());
         Assert.True(doc.RootElement.TryGetProperty("encryptionKeyRef", out var keyRef));
         Assert.Equal(JsonValueKind.Null, keyRef.ValueKind);
+    }
+
+    [Fact]
+    public void ExportBackupToStore_ProjectSettings_IncludeAutoBackupEnabledWhenDisabled()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var repo = CreateRepository(dbPath);
+            var projectId = repo.AddProject(new Project
+            {
+                Name = "Project Export Auto Backup",
+                RootPath = CreateTempDir(),
+                Preset = "unity",
+                CreatedUtc = DateTime.UtcNow
+            });
+
+            var cfg = CloneConfig(originalConfig);
+            cfg.Backups.AutoBackupDisabledProjects = new List<int> { projectId };
+            AppConfigStore.Save(cfg);
+
+            var snapshotId = repo.CreateSnapshot(projectId, 2, 500);
+            var backupId = repo.CreateBackup(
+                projectId,
+                snapshotId,
+                "manual",
+                500,
+                "project-export-auto-backup/2025-01-01_00-00-00",
+                metaRoot,
+                "Primary");
+
+            var service = new MetadataSyncService(repo);
+            var result = service.ExportBackupToStore(metaRoot, backupId, "1.7.2", "machine-settings");
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            var store = new MetadataStore(metaRoot);
+            var metaProject = store.ListProjects().Single();
+            using var doc = JsonDocument.Parse(metaProject.SettingsJson);
+            Assert.True(doc.RootElement.TryGetProperty("autoBackupEnabled", out var autoBackupEnabled));
+            Assert.False(autoBackupEnabled.GetBoolean());
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
+    public void ImportFromStore_AppliesProjectTombstone()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var repo = CreateRepository(dbPath);
+            var projectId = repo.AddProject(new Project
+            {
+                ExternalId = "proj-remove-me",
+                Name = "Project Remove Me",
+                RootPath = projectRoot,
+                Preset = "unity",
+                CreatedUtc = DateTime.UtcNow
+            });
+
+            var cfg = CloneConfig(originalConfig);
+            cfg.Backups.AutoBackupDisabledProjects = new List<int> { projectId };
+            AppConfigStore.Save(cfg);
+
+            var store = CreateStore(metaRoot);
+            store.AddTombstone(new MetaTombstone
+            {
+                EntityType = "project",
+                EntityId = "proj-remove-me",
+                DeletedUtc = DateTime.UtcNow,
+                OriginMachineId = "machine-delete"
+            });
+
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot);
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+            Assert.Null(repo.GetProjectById(projectId));
+
+            var refreshedConfig = AppConfigStore.Load();
+            Assert.DoesNotContain(projectId, refreshedConfig.Backups.AutoBackupDisabledProjects);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
     }
 
     [Fact]

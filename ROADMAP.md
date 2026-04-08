@@ -1470,6 +1470,30 @@
   - Acceptance:
     - dependency graph resolves `Tmds.DBus.Protocol` `0.21.3` or newer for Windows desktop builds
     - the Dependabot security alert is addressed without regressing Avalonia desktop startup
+- [x] `BUG-17096` `P1` Sync per-project backup preferences through metadata exports. _(Done)_
+  - Scope: carry project-specific auto-backup state through metadata, and export project-setting changes from the Projects page instead of leaving them machine-local.
+  - Current status:
+    - Done: metadata project settings now include `autoBackupEnabled`.
+    - Done: importing metadata applies the local auto-backup disabled list by the imported local project id.
+    - Done: Projects page destination and tag edits now trigger metadata export for the latest backup.
+  - Acceptance:
+    - project-specific backup preferences survive export/import across machines
+    - changing tags or preferred destination from Projects no longer drifts between machines after metadata sync
+- [x] `BUG-17097` `P1` Prevent removed projects from reappearing from metadata sync. _(Done)_
+  - Scope: export project tombstones on local removal and honor those tombstones during import, including cleanup of stale per-project auto-backup config.
+  - Current status:
+    - Done: removing a project now exports a `project` tombstone to metadata-enabled destinations.
+    - Done: importing metadata applies project tombstones before project/snapshot/backup recreation.
+    - Done: stale auto-backup disabled ids and metadata conflicts are cleared when a tombstoned project is removed locally.
+  - Acceptance:
+    - deleted projects no longer return in the Per-project backup view after metadata import
+    - removing a project does not leave stale auto-backup disabled ids behind
+- [x] `BUG-17098` `P2` Stream archive compression progress for large files. _(Done)_
+  - Scope: replace per-file-only compression progress updates with chunk-level progress so the UI does not appear stuck on large archive entries.
+  - Current status:
+    - Done: archive compression now reads and writes in chunks while updating progress continuously.
+  - Acceptance:
+    - compression progress continues moving on large files instead of freezing until the file completes
 
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.

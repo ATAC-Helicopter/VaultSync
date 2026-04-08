@@ -13,6 +13,9 @@
 - [BUG-17093] Backup fingerprinting now skips files that disappear mid-scan, and project preset probing no longer throws noisy missing-path exceptions.
 - [BUG-17094] Backups now shows an explicit drive-health unavailable message for network or mapped destinations instead of hiding the health line entirely.
 - [BUG-17095] Windows builds now pin `Tmds.DBus.Protocol` `0.21.3` explicitly to override the vulnerable transitive `0.21.2` pulled by `Avalonia.Desktop 11.3.13`.
+- [BUG-17096] Metadata sync now round-trips per-project auto-backup state, tags, and preferred destination changes more reliably so project-specific settings stop drifting between machines.
+- [BUG-17097] Removing a project now exports a project tombstone and clears stale auto-backup disables, preventing deleted projects from reappearing from destination metadata.
+- [BUG-17098] Archive compression now reports chunk-level progress while reading large files, so compression no longer appears frozen on long-running entries.
 ### Fixed
 - [BUG-17089] In-app toasts now dedupe repeated alerts, cap the visible stack, keep actions clickable, and present clearer severity-first cards.
 - [BUG-17091] Settings now uses a single-column responsive layout so high scaling and shorter screens can still reach lower destructive/advanced controls without clipping.

@@ -56,8 +56,10 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel = new ProjectsViewModel();
             _projectsViewModel.EditProjectEncryptionRequested += OnProjectEncryptionRequestedFromProjects;
             _projectsViewModel.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
+            _projectsViewModel.ProjectSettingsMetadataChanged += OnProjectSettingsMetadataChanged;
             _projectsViewModel.BackupGroupRequested += OnBackupGroupRequested;
             _projectsViewModel.AutoBackupGroupPreferenceChanged += OnAutoBackupGroupPreferenceChanged;
+            _projectsViewModel.ProjectRemovedFromDatabase += OnProjectRemovedFromDatabase;
             _backupsViewModel = null;
             _settingsViewModel = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
