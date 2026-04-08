@@ -11,6 +11,7 @@
 - [BUG-17090] Development metadata and What's New now target `1.7.2`, and Settings diagnostics use multiline summaries instead of unreadable single-line dumps.
 ### Fixed
 - [BUG-17089] In-app toasts now dedupe repeated alerts, cap the visible stack, keep actions clickable, and present clearer severity-first cards.
+- [BUG-17091] Settings now uses a single-column responsive layout so high scaling and shorter screens can still reach lower destructive/advanced controls without clipping.
 
 ## [1.7.1] - 04.04.2026
 ### Added

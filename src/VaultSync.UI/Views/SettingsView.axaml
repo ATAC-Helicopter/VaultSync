@@ -104,11 +104,11 @@
 
         <!-- Content -->
         <Grid Grid.Row="1"
-              ColumnDefinitions="*,*"
-              ColumnSpacing="{DynamicResource PageRowSpacing}">
+              RowDefinitions="Auto,Auto"
+              RowSpacing="{DynamicResource PageRowSpacing}">
 
           <!-- LEFT COLUMN -->
-          <StackPanel Grid.Column="0"
+          <StackPanel Grid.Row="0"
                       Spacing="{DynamicResource PageRowSpacing}">
 
             <!-- General -->
@@ -1224,8 +1224,8 @@
           </StackPanel>
 
           <!-- RIGHT COLUMN -->
-          <StackPanel Grid.Column="1"
-                      Spacing="12">
+          <StackPanel Grid.Row="1"
+                      Spacing="{DynamicResource PageRowSpacing}">
 
             <!-- Appearance -->
             <Border x:Name="SettingsAppearanceCard"

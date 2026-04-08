@@ -1431,6 +1431,14 @@
   - Acceptance:
     - repo version markers are aligned to `1.7.2` for active development
     - Settings diagnostics remain readable without horizontal soup
+- [x] `BUG-17091` `P1` Make Settings reliably reachable on smaller windows and higher scaling. _(Done)_
+  - Scope: remove the fragile two-column Settings content split so lower sections such as the danger zone remain reachable through normal page scrolling across smaller displays and higher DPI scaling.
+  - Current status:
+    - Done: the Settings content area now stacks its former left/right columns vertically inside the page scroll viewer.
+    - Done: destructive and advanced controls stay in the same scroll flow instead of depending on a wide two-column layout.
+  - Acceptance:
+    - Settings can scroll to the bottom on smaller screens/high scaling
+    - lower advanced and danger-zone controls remain reachable without clipped layouts
 
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
