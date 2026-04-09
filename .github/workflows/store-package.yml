@@ -71,7 +71,7 @@ jobs:
           }
 
           Write-Host "Using UAP SDK version: $selected"
-          \"uap_sdk_version=$selected\" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "uap_sdk_version=$selected" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Build Microsoft Store package
         shell: pwsh
