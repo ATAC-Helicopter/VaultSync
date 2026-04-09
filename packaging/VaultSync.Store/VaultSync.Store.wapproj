@@ -30,7 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\VaultSync.UI\VaultSync.UI.csproj">
-      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <AdditionalProperties>TargetFramework=net8.0-windows10.0.19041.0</AdditionalProperties>
     </ProjectReference>
   </ItemGroup>
 
