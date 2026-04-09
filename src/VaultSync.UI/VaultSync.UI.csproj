@@ -50,7 +50,9 @@
 
   <!-- Reference to core project -->
   <ItemGroup>
-    <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj" />
+    <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj">
+      <SetTargetFramework>TargetFramework=net8.0</SetTargetFramework>
+    </ProjectReference>
   </ItemGroup>
 
   <!-- Copy presets into output -->
