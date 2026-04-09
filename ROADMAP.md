@@ -1494,6 +1494,15 @@
     - Done: archive compression now reads and writes in chunks while updating progress continuously.
   - Acceptance:
     - compression progress continues moving on large files instead of freezing until the file completes
+- [x] `BUG-17099` `P1` Let checkpointed retry resume parallel archive uploads. _(Done)_
+  - Scope: stop treating parallel archive upload and checkpointed retry as mutually exclusive by tracking validated completed upload chunks in checkpoint metadata.
+  - Current status:
+    - Done: parallel archive uploads now persist chunk-level checkpoint state with completed chunk indexes.
+    - Done: retries validate completed chunks against the rebuilt local archive and only re-upload missing chunks when the checkpoint matches.
+    - Done: the old forced downgrade from parallel upload to single-stream upload was removed when checkpoint resume is enabled.
+  - Acceptance:
+    - enabling checkpointed retry no longer silently disables parallel archive uploads
+    - interrupted parallel uploads can resume safely without re-sending already validated chunks
 
 ## 1.8.x
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.

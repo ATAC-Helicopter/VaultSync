@@ -47,7 +47,11 @@ public sealed class BackupService
         string Mode,
         string SourceFingerprint,
         long ArchiveSizeBytes,
-        DateTime LastUpdatedUtc);
+        DateTime LastUpdatedUtc,
+        bool UsesParallelUpload = false,
+        long ChunkSizeBytes = 0,
+        int Parallelism = 0,
+        List<int>? CompletedChunkIndexes = null);
 
     internal static void UpdateCheckpointResumeTelemetry(
         AppConfig config,
@@ -248,6 +252,55 @@ public sealed class BackupService
         {
             Console.WriteLine($"[BackupService] Failed to remove archive resume checkpoint in '{backupFolder}': {ex.Message}");
         }
+    }
+
+    private static bool ValidateArchiveRange(
+        string localArchive,
+        string destinationArchive,
+        long startOffset,
+        long length,
+        int bufferSize,
+        CancellationToken ct)
+    {
+        if (length <= 0)
+        {
+            return true;
+        }
+
+        var remaining = length;
+        var compareBuffer = Math.Max(64 * 1024, bufferSize);
+        var left = new byte[compareBuffer];
+        var right = new byte[compareBuffer];
+
+        using var src = new FileStream(localArchive, FileMode.Open, FileAccess.Read, FileShare.Read, compareBuffer, FileOptions.SequentialScan);
+        using var dst = new FileStream(destinationArchive, FileMode.Open, FileAccess.Read, FileShare.Read, compareBuffer, FileOptions.SequentialScan);
+
+        src.Seek(startOffset, SeekOrigin.Begin);
+        dst.Seek(startOffset, SeekOrigin.Begin);
+
+        while (remaining > 0)
+        {
+            ct.ThrowIfCancellationRequested();
+            var toRead = (int)Math.Min(compareBuffer, remaining);
+            var srcRead = src.Read(left, 0, toRead);
+            var dstRead = dst.Read(right, 0, toRead);
+            if (srcRead != dstRead || srcRead != toRead)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < toRead; i++)
+            {
+                if (left[i] != right[i])
+                {
+                    return false;
+                }
+            }
+
+            remaining -= toRead;
+        }
+
+        return true;
     }
 
     internal static string BuildArchiveResumeFingerprint(string sourceDir, IEnumerable<string> files)
@@ -2031,12 +2084,6 @@ public sealed class BackupService
 
             await EnsureDestinationWriteReadyAsync(workingDestDir, ct);
 
-            if (enableCheckpointedRetry && preferParallelUpload)
-            {
-                RuntimeLog.WriteVerbose($"[BackupService] Parallel archive upload disabled for '{project.Name}' because checkpointed retry is enabled.");
-                preferParallelUpload = false;
-            }
-
             if (preferParallelUpload && zipSize >= bufferSize * 8L)
             {
                 RuntimeLog.WriteVerbose($"[BackupService] Uploading archive with parallel writer (parts={Math.Clamp(Environment.ProcessorCount / 2, 2, 4)}, buffer={bufferSize / (1024 * 1024)} MB).");
@@ -2048,6 +2095,10 @@ public sealed class BackupService
                         zipSize,
                         bufferSize,
                         progressCallback,
+                        workingDestDir,
+                        project.Name,
+                        enableCheckpointedRetry,
+                        resumeCheckpoint,
                         ct);
                 }
                 catch (TimeoutException ex)
@@ -2143,6 +2194,10 @@ public sealed class BackupService
         long zipSize,
         int bufferSize,
         Action<double, string, string>? progressCallback,
+        string backupFolder,
+        string projectName,
+        bool enableCheckpointedRetry,
+        ArchiveResumeCheckpoint? resumeCheckpoint,
         CancellationToken ct)
     {
         if (zipSize <= 0)
@@ -2156,10 +2211,12 @@ public sealed class BackupService
 
         var parallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
         var chunkSize = (long)Math.Ceiling(zipSize / (double)parallelism);
+        var resumableChunkIndexes = new HashSet<int>();
         var fileName = Path.GetFileName(finalArchivePath);
         var uploadStart = DateTime.UtcNow;
         var minUiInterval = TimeSpan.FromMilliseconds(150);
         var progressLock = new object();
+        var checkpointLock = new object();
         var lastUiUpdate = uploadStart;
         long lastUiBytes = 0;
         long uploaded = 0;
@@ -2169,17 +2226,85 @@ public sealed class BackupService
         var stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
         var lastProgressTicks = uploadStart.Ticks;
         var stalled = 0;
+        var destinationHasExpectedSize = File.Exists(finalArchivePath) && new FileInfo(finalArchivePath).Length == zipSize;
 
-        using (var init = new FileStream(
-                   finalArchivePath,
-                   FileMode.Create,
-                   FileAccess.Write,
-                   FileShare.Write,
-                   1,
-                   FileOptions.Asynchronous))
+        if (enableCheckpointedRetry &&
+            resumeCheckpoint is not null &&
+            destinationHasExpectedSize &&
+            resumeCheckpoint.UsesParallelUpload &&
+            resumeCheckpoint.ArchiveSizeBytes == zipSize &&
+            resumeCheckpoint.ChunkSizeBytes == chunkSize &&
+            resumeCheckpoint.Parallelism == parallelism &&
+            resumeCheckpoint.CompletedChunkIndexes is { Count: > 0 })
         {
-            init.SetLength(zipSize);
+            foreach (var chunkIndex in resumeCheckpoint.CompletedChunkIndexes
+                         .Where(index => index >= 0 && index < parallelism)
+                         .Distinct()
+                         .OrderBy(index => index))
+            {
+                var start = chunkSize * chunkIndex;
+                if (start >= zipSize)
+                    continue;
+
+                var length = Math.Min(chunkSize, zipSize - start);
+                if (ValidateArchiveRange(localArchive, finalArchivePath, start, length, bufferSize, ct))
+                {
+                    resumableChunkIndexes.Add(chunkIndex);
+                }
+                else
+                {
+                    RuntimeLog.WriteVerbose($"[BackupService] Parallel archive checkpoint chunk {chunkIndex} for '{projectName}' did not validate and will be re-uploaded.");
+                }
+            }
         }
+
+        if (!destinationHasExpectedSize || resumableChunkIndexes.Count == 0)
+        {
+            using var init = new FileStream(
+                finalArchivePath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.Write,
+                1,
+                FileOptions.Asynchronous);
+            init.SetLength(zipSize);
+            resumableChunkIndexes.Clear();
+        }
+        else if (resumableChunkIndexes.Count > 0)
+        {
+            uploaded = resumableChunkIndexes.Sum(index => Math.Min(chunkSize, zipSize - (chunkSize * index)));
+            lastUiBytes = uploaded;
+            PersistCheckpointResumeTelemetry(
+                status: "parallel-resume-attempt",
+                projectName: projectName,
+                backupFolder: backupFolder,
+                archivePath: finalArchivePath,
+                resumeOffsetBytes: uploaded,
+                archiveSizeBytes: zipSize,
+                sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                message: $"Resuming parallel archive upload with {resumableChunkIndexes.Count} validated chunks already present.");
+        }
+
+        void PersistParallelCheckpoint(HashSet<int> completedIndexes)
+        {
+            if (!enableCheckpointedRetry || resumeCheckpoint is null)
+                return;
+
+            WriteArchiveResumeCheckpoint(
+                backupFolder,
+                resumeCheckpoint with
+                {
+                    Version = 2,
+                    ArchiveSizeBytes = zipSize,
+                    LastUpdatedUtc = DateTime.UtcNow,
+                    UsesParallelUpload = true,
+                    ChunkSizeBytes = chunkSize,
+                    Parallelism = parallelism,
+                    CompletedChunkIndexes = completedIndexes.OrderBy(index => index).ToList()
+                });
+        }
+
+        PersistParallelCheckpoint(resumableChunkIndexes);
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var monitor = Task.Run(async () =>
@@ -2261,6 +2386,9 @@ public sealed class BackupService
             {
                 var start = chunkSize * index;
                 if (start >= zipSize)
+                    return Task.CompletedTask;
+
+                if (resumableChunkIndexes.Contains(index))
                     return Task.CompletedTask;
 
                 var length = Math.Min(chunkSize, zipSize - start);
@@ -2357,6 +2485,15 @@ public sealed class BackupService
                         }
 
                         progressCallback(overallPercent, fileName, etaText);
+                    }
+
+                    if (enableCheckpointedRetry && resumeCheckpoint is not null)
+                    {
+                        lock (checkpointLock)
+                        {
+                            resumableChunkIndexes.Add(index);
+                            PersistParallelCheckpoint(resumableChunkIndexes);
+                        }
                     }
 
                     var logNow = DateTime.UtcNow;

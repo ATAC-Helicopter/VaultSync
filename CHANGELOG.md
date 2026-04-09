@@ -16,6 +16,7 @@
 - [BUG-17096] Metadata sync now round-trips per-project auto-backup state, tags, and preferred destination changes more reliably so project-specific settings stop drifting between machines.
 - [BUG-17097] Removing a project now exports a project tombstone and clears stale auto-backup disables, preventing deleted projects from reappearing from destination metadata.
 - [BUG-17098] Archive compression now reports chunk-level progress while reading large files, so compression no longer appears frozen on long-running entries.
+- [BUG-17099] Checkpointed retry can now resume parallel archive uploads chunk-by-chunk instead of silently disabling the parallel upload path when both features are enabled.
 ### Fixed
 - [BUG-17089] In-app toasts now dedupe repeated alerts, cap the visible stack, keep actions clickable, and present clearer severity-first cards.
 - [BUG-17091] Settings now uses a single-column responsive layout so high scaling and shorter screens can still reach lower destructive/advanced controls without clipping.
