@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VaultSync – Open Source Backup Tool for NAS, External Drives and Local Storage</title>
+  <meta name="description" content="VaultSync is an open-source backup tool for NAS, external drives and local storage. Cross-platform, encrypted, transparent, and built for reliable backups without cloud lock-in." />
+  <meta name="keywords" content="VaultSync, backup tool, open source backup, NAS backup, local backup, external drive backup, encrypted backups, cross-platform backup, backup software" />
+  <meta name="author" content="ATAC-Helicopter" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://github.com/ATAC-Helicopter/VaultSync" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="VaultSync – Open Source Backup Tool" />
+  <meta property="og:description" content="Cross-platform backup tool for NAS, external drives and local storage. Encrypted, open-source, and no cloud required." />
+  <meta property="og:url" content="https://atac-helicopter.github.io/VaultSync/" />
+  <meta property="og:site_name" content="VaultSync" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/main/assets/store/store-banner-2160.png" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="VaultSync – Open Source Backup Tool" />
+  <meta name="twitter:description" content="Reliable backups for NAS, external drives and local storage. Open-source, cross-platform, encrypted." />
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/main/assets/store/store-banner-2160.png" />
+
+  <meta name="theme-color" content="#0f172a" />
+
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-soft: #0f172a;
+      --card: rgba(15, 23, 42, 0.78);
+      --card-strong: rgba(15, 23, 42, 0.95);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #e5eefb;
+      --muted: #9fb1cc;
+      --accent: #60a5fa;
+      --accent-2: #22c55e;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      --radius: 22px;
+      --max: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(96, 165, 250, 0.14), transparent 28%),
+        radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.10), transparent 18%),
+        linear-gradient(180deg, #08111d 0%, #0b1220 52%, #08101a 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    .wrap {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      background: rgba(7, 17, 31, 0.72);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+    }
+
+    .topbar-inner {
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(34, 197, 94, 0.18));
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      box-shadow: var(--shadow);
+      font-size: 1.1rem;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav a,
+    .button {
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      background: rgba(15, 23, 42, 0.60);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      transition: 160ms ease;
+    }
+
+    .nav a:hover,
+    .button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(96, 165, 250, 0.35);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(96, 165, 250, 0.12));
+      border-color: rgba(96, 165, 250, 0.34);
+    }
+
+    .hero {
+      padding: 76px 0 42px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.10);
+      border: 1px solid rgba(96, 165, 250, 0.20);
+      color: #cfe3ff;
+      font-size: 0.92rem;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: clamp(2.6rem, 5vw, 4.6rem);
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.12rem;
+      max-width: 720px;
+    }
+
+    .hero-actions {
+      margin-top: 28px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta {
+      margin-top: 26px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .mini-card,
+    .card,
+    .feature,
+    .faq-item,
+    .cta,
+    .screenshot,
+    .quote {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .mini-card {
+      padding: 16px 18px;
+    }
+
+    .mini-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .mini-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .hero-panel {
+      padding: 18px;
+    }
+
+    .window {
+      overflow: hidden;
+      border-radius: 20px;
+      background: rgba(2, 6, 23, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .window-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .window-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.35);
+    }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 470px;
+    }
+
+    .panel-side {
+      padding: 18px;
+      border-right: 1px solid rgba(148, 163, 184, 0.10);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.72));
+    }
+
+    .panel-side h3,
+    .panel-main h3,
+    .section h2,
+    .cta h2,
+    .faq h2 {
+      margin: 0 0 14px;
+      letter-spacing: -0.03em;
+    }
+
+    .side-item {
+      padding: 12px 13px;
+      border-radius: 14px;
+      background: rgba(148, 163, 184, 0.06);
+      border: 1px solid transparent;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .side-item.active {
+      color: var(--text);
+      border-color: rgba(96, 165, 250, 0.28);
+      background: rgba(96, 165, 250, 0.10);
+    }
+
+    .panel-main {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+      background: linear-gradient(180deg, rgba(9, 15, 27, 0.96), rgba(8, 12, 22, 0.92));
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat-box {
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      background: rgba(148, 163, 184, 0.05);
+    }
+
+    .stat-box strong {
+      display: block;
+      font-size: 1.35rem;
+      margin-bottom: 4px;
+    }
+
+    .stat-box span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .chart {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(148, 163, 184, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.10);
+    }
+
+    .bars {
+      height: 180px;
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .bar {
+      flex: 1;
+      border-radius: 14px 14px 4px 4px;
+      background: linear-gradient(180deg, rgba(96, 165, 250, 0.95), rgba(96, 165, 250, 0.18));
+      border: 1px solid rgba(96, 165, 250, 0.20);
+      min-height: 24px;
+    }
+
+    .bar.small { height: 38%; }
+    .bar.medium { height: 58%; }
+    .bar.large { height: 78%; }
+    .bar.xlarge { height: 92%; }
+
+    .tag-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.18);
+      color: #d7ffe3;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    section {
+      padding: 28px 0;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .section-head p,
+    .card p,
+    .feature p,
+    .quote p,
+    .faq-item p,
+    .footer p {
+      color: var(--muted);
+    }
+
+    .grid-3,
+    .grid-2,
+    .screens {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card,
+    .feature,
+    .faq-item,
+    .quote,
+    .cta {
+      padding: 22px;
+    }
+
+    .feature h3,
+    .card h3,
+    .faq-item h3 {
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .list {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .screens {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .screenshot {
+      overflow: hidden;
+    }
+
+    .shot-top {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+      color: var(--muted);
+      background: rgba(15, 23, 42, 0.95);
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .shot-body {
+      padding: 18px;
+      min-height: 240px;
+      background: linear-gradient(180deg, rgba(8, 12, 22, 0.95), rgba(13, 19, 33, 0.92));
+    }
+
+    .mock-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .mock-box {
+      height: 58px;
+      border-radius: 16px;
+      background: rgba(148, 163, 184, 0.07);
+      border: 1px solid rgba(148, 163, 184, 0.10);
+    }
+
+    .mock-box.tall { height: 132px; }
+    .mock-box.medium { height: 88px; }
+
+    .quote {
+      position: relative;
+    }
+
+    .quote strong {
+      display: block;
+      margin-top: 12px;
+    }
+
+    .faq {
+      padding-top: 18px;
+    }
+
+    .faq-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .cta {
+      margin: 24px 0 40px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 16px;
+      background: linear-gradient(135deg, rgba(96, 165, 250, 0.14), rgba(15, 23, 42, 0.96));
+      border-color: rgba(96, 165, 250, 0.20);
+    }
+
+    footer {
+      padding: 16px 0 46px;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1080px) {
+      .hero-grid,
+      .cta,
+      .grid-3,
+      .screens,
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-meta,
+      .stat-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar-inner,
+      .section-head,
+      .footer {
+        align-items: flex-start;
+      }
+
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-side {
+        border-right: 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+      }
+
+      .hero {
+        padding-top: 46px;
+      }
+
+      .hero-meta,
+      .stat-row {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        display: none;
+      }
+    }
+  </style>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "VaultSync",
+      "applicationCategory": "Backup Software",
+      "operatingSystem": "Windows, macOS",
+      "url": "https://github.com/ATAC-Helicopter/VaultSync",
+      "downloadUrl": "https://github.com/ATAC-Helicopter/VaultSync/releases",
+      "description": "VaultSync is an open-source backup tool for NAS, external drives and local storage. It focuses on transparent, reliable, cross-platform backups without cloud lock-in.",
+      "creator": {
+        "@type": "Organization",
+        "name": "ATAC-Helicopter"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#top" aria-label="VaultSync home">
+        <span class="brand-mark">VS</span>
+        <span>VaultSync</span>
+      </a>
+
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="#features">Features</a>
+        <a href="#why">Why VaultSync</a>
+        <a href="#screens">Screens</a>
+        <a href="#faq">FAQ</a>
+        <a class="button primary" href="https://github.com/ATAC-Helicopter/VaultSync" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <div class="eyebrow">Open-source backup tool for NAS, external drives and local storage</div>
+          <h1>Backups you can actually trust.</h1>
+          <p>
+            VaultSync is a cross-platform backup tool built for people who want reliable backups without cloud lock-in, hidden complexity, or fragile workflows. Back up to NAS, external drives, and local storage with clear visibility, encryption support, and a modern desktop interface.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/ATAC-Helicopter/VaultSync/releases" target="_blank" rel="noopener noreferrer">Download latest release</a>
+            <a class="button" href="https://github.com/ATAC-Helicopter/VaultSync" target="_blank" rel="noopener noreferrer">Star the project</a>
+          </div>
+
+          <div class="hero-meta">
+            <div class="mini-card">
+              <div class="mini-label">Platforms</div>
+              <div class="mini-value">Windows and macOS</div>
+            </div>
+            <div class="mini-card">
+              <div class="mini-label">Storage targets</div>
+              <div class="mini-value">NAS, local, external</div>
+            </div>
+            <div class="mini-card">
+              <div class="mini-label">License</div>
+              <div class="mini-value">Open source</div>
+            </div>
+            <div class="mini-card">
+              <div class="mini-label">Approach</div>
+              <div class="mini-value">No cloud required</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-panel card">
+          <div class="window">
+            <div class="window-bar">
+              <div class="window-dots" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <div>VaultSync dashboard preview</div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-side">
+                <h3>Navigation</h3>
+                <div class="side-item active">Dashboard</div>
+                <div class="side-item">Projects</div>
+                <div class="side-item">Backups</div>
+                <div class="side-item">Destinations</div>
+                <div class="side-item">Settings</div>
+              </div>
+
+              <div class="panel-main">
+                <div>
+                  <h3>Protected storage at a glance</h3>
+                  <div class="tag-row">
+                    <span class="tag">Encrypted backups</span>
+                    <span class="tag">NAS ready</span>
+                    <span class="tag">Cross-platform</span>
+                  </div>
+                </div>
+
+                <div class="stat-row">
+                  <div class="stat-box">
+                    <strong>12</strong>
+                    <span>Projects protected</span>
+                  </div>
+                  <div class="stat-box">
+                    <strong>94%</strong>
+                    <span>Restore readiness</span>
+                  </div>
+                  <div class="stat-box">
+                    <strong>2.4 TB</strong>
+                    <span>Tracked backup storage</span>
+                  </div>
+                </div>
+
+                <div class="chart">
+                  <strong>Recent backup activity</strong>
+                  <div class="bars" aria-hidden="true">
+                    <div class="bar medium"></div>
+                    <div class="bar large"></div>
+                    <div class="bar small"></div>
+                    <div class="bar xlarge"></div>
+                    <div class="bar medium"></div>
+                    <div class="bar large"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>What VaultSync is built for</h2>
+            <p>Simple enough to use daily, serious enough to trust with important data.</p>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <article class="feature">
+            <h3>Backup to real storage you control</h3>
+            <p>Protect data on NAS devices, local drives, and external storage without forcing everything through a cloud platform.</p>
+          </article>
+
+          <article class="feature">
+            <h3>Cross-platform desktop workflow</h3>
+            <p>Use the same backup tool across supported systems with a clean desktop UI focused on clarity, status visibility, and restore confidence.</p>
+          </article>
+
+          <article class="feature">
+            <h3>Encryption where it matters</h3>
+            <p>Keep backup data protected with encryption support designed for secure storage and safer recovery workflows.</p>
+          </article>
+
+          <article class="feature">
+            <h3>Built for large project folders</h3>
+            <p>VaultSync is designed for creators, developers, and power users handling large directories, evolving projects, and long-term archives.</p>
+          </article>
+
+          <article class="feature">
+            <h3>Transparent backup history</h3>
+            <p>See what has been backed up, what changed, and what state your protection is in instead of guessing behind a black box.</p>
+          </article>
+
+          <article class="feature">
+            <h3>No cloud lock-in</h3>
+            <p>Your backup strategy stays yours. Choose your destination, keep your data visible, and avoid being trapped inside subscription-only ecosystems.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="why">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>Why people search for VaultSync</h2>
+            <p>This page is designed to make it obvious what the project does and why it is different.</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>Good fit if you want</h3>
+            <ul class="list">
+              <li>Open-source backup software</li>
+              <li>NAS backup without cloud dependency</li>
+              <li>External drive and local backup support</li>
+              <li>A more transparent backup workflow</li>
+              <li>Cross-platform backup software with encryption</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Designed around real backup pain points</h3>
+            <p>
+              Many backup tools either feel too limited, too opaque, or too enterprise-heavy for everyday use. VaultSync focuses on visibility, safer restore paths, and practical storage workflows for people who want control without unnecessary friction.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="screens">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>Interface previews</h2>
+            <p>Replace these mock sections with real screenshots later to strengthen ranking, conversions, and trust.</p>
+          </div>
+        </div>
+
+        <div class="screens">
+          <article class="screenshot">
+            <div class="shot-top">Dashboard overview</div>
+            <div class="shot-body">
+              <div class="mock-grid">
+                <div class="mock-box medium"></div>
+                <div class="mock-box tall"></div>
+                <div class="mock-box"></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="screenshot">
+            <div class="shot-top">Projects and destinations</div>
+            <div class="shot-body">
+              <div class="mock-grid">
+                <div class="mock-box"></div>
+                <div class="mock-box"></div>
+                <div class="mock-box tall"></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="screenshot">
+            <div class="shot-top">Backup history and status</div>
+            <div class="shot-body">
+              <div class="mock-grid">
+                <div class="mock-box tall"></div>
+                <div class="mock-box"></div>
+                <div class="mock-box medium"></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap grid-2">
+        <article class="quote">
+          <h3>Built for trust, not hype</h3>
+          <p>
+            VaultSync is positioned for users who care about dependable backups, clear backup state, real storage targets, and honest control over their data.
+          </p>
+          <strong>Open-source. Direct. Practical.</strong>
+        </article>
+
+        <article class="quote">
+          <h3>Built for search engines too</h3>
+          <p>
+            This page gives Google a clean explanation of what VaultSync is: open-source backup software for NAS, local storage, and external drives, with encryption and cross-platform support.
+          </p>
+          <strong>That helps the GitHub repo rank better over time.</strong>
+        </article>
+      </div>
+    </section>
+
+    <section id="faq" class="faq">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>FAQ</h2>
+            <p>Keep this section. It helps both users and search engines.</p>
+          </div>
+        </div>
+
+        <div class="faq-list">
+          <article class="faq-item">
+            <h3>What is VaultSync?</h3>
+            <p>VaultSync is an open-source backup tool for NAS, local storage, and external drives. It is designed to make backups more transparent, reliable, and easier to manage from a desktop app.</p>
+          </article>
+
+          <article class="faq-item">
+            <h3>Is VaultSync a cloud backup service?</h3>
+            <p>No. VaultSync is centered around storage you control directly, such as NAS devices, local disks, and external drives.</p>
+          </article>
+
+          <article class="faq-item">
+            <h3>Does VaultSync support encrypted backups?</h3>
+            <p>Yes. VaultSync includes encryption support to help protect stored backup data while keeping the workflow practical and visible.</p>
+          </article>
+
+          <article class="faq-item">
+            <h3>Where can I download VaultSync?</h3>
+            <p>You can get the latest releases from the GitHub releases page linked below.</p>
+          </article>
+        </div>
+
+        <div class="cta">
+          <div>
+            <h2>Ready to give VaultSync more ranking power?</h2>
+            <p>Publish this page with GitHub Pages, verify it in Search Console, then request indexing. That gives Google a controlled page that points directly at your main repository.</p>
+          </div>
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/ATAC-Helicopter/VaultSync/releases" target="_blank" rel="noopener noreferrer">Download</a>
+            <a class="button" href="https://github.com/ATAC-Helicopter/VaultSync" target="_blank" rel="noopener noreferrer">Repository</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer">
+      <p>VaultSync by ATAC-Helicopter</p>
+      <div class="footer-links">
+        <a href="https://github.com/ATAC-Helicopter/VaultSync" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://github.com/ATAC-Helicopter/VaultSync/releases" target="_blank" rel="noopener noreferrer">Releases</a>
+        <a href="https://github.com/ATAC-Helicopter/VaultSync/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
