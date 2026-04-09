@@ -1227,14 +1227,13 @@
   "Backups.Compare.NewerDeleted": "- 删除 {0}",
   "Backups.Compare.NewerNet": "Δ 净变化 {0}",
   "Projects.Tags.Color.Close": "关闭",
-  "Settings.Advanced.ChannelDirect": "Прямой",
-  "Settings.Advanced.ChannelStore": "Магазин",
-  "Settings.Advanced.UpdateChannelLabel": "Канал обновлений",
-  "Settings.Advanced.UpdateManagedByStoreDescription": "Обновления управляются магазином.",
-  "Settings.Advanced.UpdateManagedByStoreDiagnostics": "Диагностика обновлений через магазин",
-  "Settings.Advanced.UpdateManagedByStoreOpen": "Открыть страницу магазина",
-  "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Не удалось открыть страницу магазина",
-  "Settings.Advanced.UpdateManagedByStoreStatus": "Статус",
-  "Settings.Advanced.UpdateManagedByStoreTitle": "Обновления через магазин",
-  "Update.Store.ManagedDescription": "Эта установка управляется магазином"
+  "Settings.Advanced.ChannelStore": "商店",
+  "Settings.Advanced.UpdateChannelLabel": "更新渠道",
+  "Settings.Advanced.UpdateManagedByStoreDescription": "更新由应用商店管理。",
+  "Settings.Advanced.UpdateManagedByStoreDiagnostics": "商店管理更新诊断",
+  "Settings.Advanced.UpdateManagedByStoreOpen": "打开商店页面",
+  "Settings.Advanced.UpdateManagedByStoreOpenFailed": "无法打开商店页面",
+  "Settings.Advanced.UpdateManagedByStoreStatus": "状态",
+  "Settings.Advanced.UpdateManagedByStoreTitle": "由商店管理的更新",
+  "Update.Store.ManagedDescription": "此安装由应用商店管理"
 }
