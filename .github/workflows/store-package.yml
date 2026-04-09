@@ -34,8 +34,8 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Restore UI project
-        run: dotnet restore src/VaultSync.UI/VaultSync.UI.csproj
+      - name: Restore UI project for Store packaging
+        run: dotnet restore src/VaultSync.UI/VaultSync.UI.csproj -p:TargetFramework=net8.0-windows10.0.19041.0 -p:RuntimeIdentifier=win-x64
 
       - name: Detect installed UAP SDK
         id: detect_uap_sdk
