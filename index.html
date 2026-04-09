@@ -6,7 +6,7 @@
   <title>VaultSync – Open Source Backup Tool for NAS, External Drives and Local Storage</title>
   <meta name="description" content="VaultSync is an open-source backup tool for NAS, external drives and local storage. Cross-platform, encrypted, transparent, and built for reliable backups without cloud lock-in." />
   <meta name="keywords" content="VaultSync, backup tool, open source backup, NAS backup, local backup, external drive backup, encrypted backups, cross-platform backup, backup software" />
-  <meta name="author" content="ATAC-Helicopter" />
+  <meta name="author" content="Flavio Giacchetti" />
   <meta name="robots" content="index,follow" />
   <link rel="canonical" href="https://github.com/ATAC-Helicopter/VaultSync" />
 
@@ -15,14 +15,15 @@
   <meta property="og:description" content="Cross-platform backup tool for NAS, external drives and local storage. Encrypted, open-source, and no cloud required." />
   <meta property="og:url" content="https://atac-helicopter.github.io/VaultSync/" />
   <meta property="og:site_name" content="VaultSync" />
-  <meta property="og:image" content="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/main/assets/store/store-banner-2160.png" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/Stable/docs/images/Dashboard.png" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="VaultSync – Open Source Backup Tool" />
   <meta name="twitter:description" content="Reliable backups for NAS, external drives and local storage. Open-source, cross-platform, encrypted." />
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/main/assets/store/store-banner-2160.png" />
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/Stable/docs/images/Dashboard.png" />
 
   <meta name="theme-color" content="#0f172a" />
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/Stable/docs/branding/vaultsync-logo-icon-preview.png" />
 
   <style>
     :root {
@@ -97,16 +98,13 @@
       letter-spacing: 0.02em;
     }
 
-    .brand-mark {
+    .brand-logo {
       width: 40px;
       height: 40px;
-      border-radius: 14px;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(34, 197, 94, 0.18));
-      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 12px;
+      object-fit: cover;
       box-shadow: var(--shadow);
-      font-size: 1.1rem;
+      flex: 0 0 40px;
     }
 
     .nav {
@@ -409,6 +407,62 @@
       padding: 22px;
     }
 
+    .hero-screenshot,
+    .screen-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #08111d;
+    }
+
+    .hero-screenshot {
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      object-position: top center;
+    }
+
+    .screen-image {
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      object-position: top center;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .step-number {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(96, 165, 250, 0.16);
+      border: 1px solid rgba(96, 165, 250, 0.24);
+      color: #dbeafe;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .compare-list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .compare-list li + li,
+    .list li + li {
+      margin-top: 8px;
+    }
+
     .feature h3,
     .card h3,
     .faq-item h3 {
@@ -512,7 +566,9 @@
       .cta,
       .grid-3,
       .screens,
-      .grid-2 {
+      .grid-2,
+      .steps,
+      .compare-grid {
         grid-template-columns: 1fr;
       }
 
@@ -564,8 +620,8 @@
       "downloadUrl": "https://github.com/ATAC-Helicopter/VaultSync/releases",
       "description": "VaultSync is an open-source backup tool for NAS, external drives and local storage. It focuses on transparent, reliable, cross-platform backups without cloud lock-in.",
       "creator": {
-        "@type": "Organization",
-        "name": "ATAC-Helicopter"
+        "@type": "Person",
+        "name": "Flavio Giacchetti"
       },
       "offers": {
         "@type": "Offer",
@@ -579,7 +635,7 @@
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="#top" aria-label="VaultSync home">
-        <span class="brand-mark">VS</span>
+        <img class="brand-logo" src="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/Stable/docs/branding/vaultsync-logo-icon-preview.png" alt="VaultSync logo" />
         <span>VaultSync</span>
       </a>
 
@@ -600,7 +656,7 @@
           <div class="eyebrow">Open-source backup tool for NAS, external drives and local storage</div>
           <h1>Backups you can actually trust.</h1>
           <p>
-            VaultSync is a cross-platform backup tool built for people who want reliable backups without cloud lock-in, hidden complexity, or fragile workflows. Back up to NAS, external drives, and local storage with clear visibility, encryption support, and a modern desktop interface.
+            VaultSync is a cross-platform backup tool built for people who want reliable backups without cloud lock-in, hidden complexity, or fragile workflows. Back up to NAS, external drives, and local storage with clear visibility, encryption support, and a modern desktop interface. A Microsoft Store version is also on the way, with the same core application and feature set in a more practical install and update path for everyday use.
           </p>
 
           <div class="hero-actions">
@@ -618,8 +674,8 @@
               <div class="mini-value">NAS, local, external</div>
             </div>
             <div class="mini-card">
-              <div class="mini-label">License</div>
-              <div class="mini-value">Open source</div>
+              <div class="mini-label">Store release</div>
+              <div class="mini-value">Microsoft Store soon</div>
             </div>
             <div class="mini-card">
               <div class="mini-label">Approach</div>
@@ -634,57 +690,9 @@
               <div class="window-dots" aria-hidden="true">
                 <span></span><span></span><span></span>
               </div>
-              <div>VaultSync dashboard preview</div>
+              <div>VaultSync dashboard</div>
             </div>
-
-            <div class="panel-grid">
-              <div class="panel-side">
-                <h3>Navigation</h3>
-                <div class="side-item active">Dashboard</div>
-                <div class="side-item">Projects</div>
-                <div class="side-item">Backups</div>
-                <div class="side-item">Destinations</div>
-                <div class="side-item">Settings</div>
-              </div>
-
-              <div class="panel-main">
-                <div>
-                  <h3>Protected storage at a glance</h3>
-                  <div class="tag-row">
-                    <span class="tag">Encrypted backups</span>
-                    <span class="tag">NAS ready</span>
-                    <span class="tag">Cross-platform</span>
-                  </div>
-                </div>
-
-                <div class="stat-row">
-                  <div class="stat-box">
-                    <strong>12</strong>
-                    <span>Projects protected</span>
-                  </div>
-                  <div class="stat-box">
-                    <strong>94%</strong>
-                    <span>Restore readiness</span>
-                  </div>
-                  <div class="stat-box">
-                    <strong>2.4 TB</strong>
-                    <span>Tracked backup storage</span>
-                  </div>
-                </div>
-
-                <div class="chart">
-                  <strong>Recent backup activity</strong>
-                  <div class="bars" aria-hidden="true">
-                    <div class="bar medium"></div>
-                    <div class="bar large"></div>
-                    <div class="bar small"></div>
-                    <div class="bar xlarge"></div>
-                    <div class="bar medium"></div>
-                    <div class="bar large"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <img class="hero-screenshot" src="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/Stable/docs/images/Dashboard.png" alt="VaultSync dashboard screenshot" />
           </div>
         </div>
       </div>
@@ -737,28 +745,64 @@
       <div class="wrap">
         <div class="section-head">
           <div>
-            <h2>Why people search for VaultSync</h2>
-            <p>This page is designed to make it obvious what the project does and why it is different.</p>
+            <h2>Why VaultSync stands out</h2>
+            <p>Built around clarity, ownership, and practical backup workflows instead of opaque black-box behavior.</p>
           </div>
         </div>
 
-        <div class="grid-2">
+        <div class="compare-grid">
           <article class="card">
             <h3>Good fit if you want</h3>
-            <ul class="list">
-              <li>Open-source backup software</li>
-              <li>NAS backup without cloud dependency</li>
-              <li>External drive and local backup support</li>
-              <li>A more transparent backup workflow</li>
-              <li>Cross-platform backup software with encryption</li>
+            <ul class="compare-list">
+              <li>Open-source backup software you can inspect and trust</li>
+              <li>NAS, local, and external drive backups in one workflow</li>
+              <li>Clear backup state and restore-readiness visibility</li>
+              <li>Encryption support without turning the tool into a maze</li>
+              <li>A desktop-first experience instead of a cloud-first product</li>
             </ul>
           </article>
 
           <article class="card">
             <h3>Designed around real backup pain points</h3>
             <p>
-              Many backup tools either feel too limited, too opaque, or too enterprise-heavy for everyday use. VaultSync focuses on visibility, safer restore paths, and practical storage workflows for people who want control without unnecessary friction.
+              Many backup tools are either too limited for serious storage workflows, too opaque when something goes wrong, or too enterprise-heavy for everyday use. VaultSync focuses on visibility, safer restores, project-level control, and storage destinations you actually own.
             </p>
+            <ul class="compare-list">
+              <li>No cloud lock-in</li>
+              <li>No hidden backup state</li>
+              <li>No guesswork about what is protected</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="how-it-works">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>How VaultSync works</h2>
+            <p>A straightforward workflow designed to stay readable even as projects and storage setups grow.</p>
+          </div>
+        </div>
+
+        <div class="steps">
+          <article class="card">
+            <div class="step-number">1</div>
+            <h3>Add your projects</h3>
+            <p>Register the folders you actually care about, apply presets and tags, and keep project health visible from one place.</p>
+          </article>
+
+          <article class="card">
+            <div class="step-number">2</div>
+            <h3>Choose your destination</h3>
+            <p>Back up to NAS devices, local disks, or external drives with project-level control instead of one rigid destination model.</p>
+          </article>
+
+          <article class="card">
+            <div class="step-number">3</div>
+            <h3>Run backups and restore confidently</h3>
+            <p>Track history, see backup state clearly, and restore with better visibility into what is available and what needs attention.</p>
           </article>
         </div>
       </div>
@@ -769,42 +813,24 @@
         <div class="section-head">
           <div>
             <h2>Interface previews</h2>
-            <p>Replace these mock sections with real screenshots later to strengthen ranking, conversions, and trust.</p>
+            <p>Real VaultSync screenshots showing the actual application experience.</p>
           </div>
         </div>
 
         <div class="screens">
           <article class="screenshot">
             <div class="shot-top">Dashboard overview</div>
-            <div class="shot-body">
-              <div class="mock-grid">
-                <div class="mock-box medium"></div>
-                <div class="mock-box tall"></div>
-                <div class="mock-box"></div>
-              </div>
-            </div>
+            <img class="screen-image" src="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/Stable/docs/images/Dashboard.png" alt="VaultSync dashboard" loading="lazy" />
           </article>
 
           <article class="screenshot">
-            <div class="shot-top">Projects and destinations</div>
-            <div class="shot-body">
-              <div class="mock-grid">
-                <div class="mock-box"></div>
-                <div class="mock-box"></div>
-                <div class="mock-box tall"></div>
-              </div>
-            </div>
+            <div class="shot-top">Projects management</div>
+            <img class="screen-image" src="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/Stable/docs/images/Projects_Page.png" alt="VaultSync projects page" loading="lazy" />
           </article>
 
           <article class="screenshot">
             <div class="shot-top">Backup history and status</div>
-            <div class="shot-body">
-              <div class="mock-grid">
-                <div class="mock-box tall"></div>
-                <div class="mock-box"></div>
-                <div class="mock-box medium"></div>
-              </div>
-            </div>
+            <img class="screen-image" src="https://raw.githubusercontent.com/ATAC-Helicopter/VaultSync/Stable/docs/images/Backup_Page.png" alt="VaultSync backup history" loading="lazy" />
           </article>
         </div>
       </div>
@@ -815,18 +841,52 @@
         <article class="quote">
           <h3>Built for trust, not hype</h3>
           <p>
-            VaultSync is positioned for users who care about dependable backups, clear backup state, real storage targets, and honest control over their data.
+            VaultSync is made for users who care about dependable backups, clear backup state, real storage targets, and honest control over their data.
           </p>
           <strong>Open-source. Direct. Practical.</strong>
+          <p>The Microsoft Store release is coming soon and is intended to deliver the same core experience through a more convenient install and update path.</p>
         </article>
 
         <article class="quote">
-          <h3>Built for search engines too</h3>
+          <h3>Same app, more convenient distribution</h3>
           <p>
-            This page gives Google a clean explanation of what VaultSync is: open-source backup software for NAS, local storage, and external drives, with encryption and cross-platform support.
+            The upcoming Microsoft Store version is not a separate edition. It is VaultSync delivered in a more practical way for users who want simpler installation and built-in update handling.
           </p>
-          <strong>That helps the GitHub repo rank better over time.</strong>
+          <strong>Same core application. Easier delivery.</strong>
         </article>
+      </div>
+    </section>
+
+    <section id="download-options">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>Download options</h2>
+            <p>Choose the path that fits your setup today. Both are intended to provide the same VaultSync experience.</p>
+          </div>
+        </div>
+
+        <div class="compare-grid">
+          <article class="card">
+            <h3>GitHub releases</h3>
+            <p>Best for users who want direct access to releases, changelogs, and manual downloads from the main project repository.</p>
+            <ul class="compare-list">
+              <li>Direct downloads from the project</li>
+              <li>Ideal for early adopters and release followers</li>
+              <li>Best place to track updates and development progress</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Microsoft Store</h3>
+            <p>Coming soon. Intended for users who prefer a more practical install and update experience with the same application underneath.</p>
+            <ul class="compare-list">
+              <li>Simpler installation flow</li>
+              <li>More convenient update path</li>
+              <li>Same VaultSync core app and feature direction</li>
+            </ul>
+          </article>
+        </div>
       </div>
     </section>
 
@@ -835,7 +895,7 @@
         <div class="section-head">
           <div>
             <h2>FAQ</h2>
-            <p>Keep this section. It helps both users and search engines.</p>
+            <p>Answers to the main questions new users tend to have before downloading.</p>
           </div>
         </div>
 
@@ -857,18 +917,23 @@
 
           <article class="faq-item">
             <h3>Where can I download VaultSync?</h3>
-            <p>You can get the latest releases from the GitHub releases page linked below.</p>
+            <p>You can download the latest version from the GitHub releases page. A Microsoft Store version is also on the way for users who prefer a more convenient installation path.</p>
+          </article>
+
+          <article class="faq-item">
+            <h3>Will the Microsoft Store version be different?</h3>
+            <p>No. The Store release is intended to be the same core VaultSync application, just delivered through a more practical install and update channel.</p>
           </article>
         </div>
 
         <div class="cta">
           <div>
-            <h2>Ready to give VaultSync more ranking power?</h2>
-            <p>Publish this page with GitHub Pages, verify it in Search Console, then request indexing. That gives Google a controlled page that points directly at your main repository.</p>
+            <h2>Ready to try VaultSync?</h2>
+            <p>Download the latest release and start protecting your data with a transparent, reliable backup workflow. A Microsoft Store version is also coming soon for an even easier install experience.</p>
           </div>
           <div class="hero-actions">
             <a class="button primary" href="https://github.com/ATAC-Helicopter/VaultSync/releases" target="_blank" rel="noopener noreferrer">Download</a>
-            <a class="button" href="https://github.com/ATAC-Helicopter/VaultSync" target="_blank" rel="noopener noreferrer">Repository</a>
+            <a class="button" href="https://github.com/ATAC-Helicopter/VaultSync" target="_blank" rel="noopener noreferrer">View on GitHub</a>
           </div>
         </div>
       </div>
@@ -877,7 +942,7 @@
 
   <footer>
     <div class="wrap footer">
-      <p>VaultSync by ATAC-Helicopter</p>
+      <p>VaultSync by Flavio Giacchetti</p>
       <div class="footer-links">
         <a href="https://github.com/ATAC-Helicopter/VaultSync" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="https://github.com/ATAC-Helicopter/VaultSync/releases" target="_blank" rel="noopener noreferrer">Releases</a>
