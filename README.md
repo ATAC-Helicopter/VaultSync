@@ -22,6 +22,13 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
+<p align="center">
+  🌐 <strong>Website:</strong>  
+  <a href="https://atac-helicopter.github.io/VaultSync/">
+    https://atac-helicopter.github.io/VaultSync/
+  </a>
+</p>
+
 ---
 
 > [!WARNING]
