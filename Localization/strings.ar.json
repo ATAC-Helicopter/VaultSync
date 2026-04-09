@@ -1226,5 +1226,15 @@
   "Backups.Compare.NewerModified": "~ تم تعديل {0}",
   "Backups.Compare.NewerDeleted": "- تم حذف {0}",
   "Backups.Compare.NewerNet": "Δ الصافي {0}",
-  "Projects.Tags.Color.Close": "إغلاق اللون"
+  "Projects.Tags.Color.Close": "إغلاق اللون",
+  "Settings.Advanced.ChannelDirect": "مباشر",
+  "Settings.Advanced.ChannelStore": "المتجر",
+  "Settings.Advanced.UpdateChannelLabel": "قناة التحديث",
+  "Settings.Advanced.UpdateManagedByStoreDescription": "يتم إدارة التحديثات بواسطة المتجر.",
+  "Settings.Advanced.UpdateManagedByStoreDiagnostics": "تشخيص إدارة التحديث عبر المتجر",
+  "Settings.Advanced.UpdateManagedByStoreOpen": "فتح صفحة المتجر",
+  "Settings.Advanced.UpdateManagedByStoreOpenFailed": "فشل فتح صفحة المتجر",
+  "Settings.Advanced.UpdateManagedByStoreStatus": "الحالة",
+  "Settings.Advanced.UpdateManagedByStoreTitle": "إدارة التحديث عبر المتجر",
+  "Update.Store.ManagedDescription": "يتم إدارة هذا التثبيت بواسطة المتجر"
 }

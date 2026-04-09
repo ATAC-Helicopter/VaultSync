@@ -1226,5 +1226,15 @@
   "Backups.Compare.NewerModified": "~ modificati {0}",
   "Backups.Compare.NewerDeleted": "- eliminati {0}",
   "Backups.Compare.NewerNet": "Δ netto {0}",
-  "Projects.Tags.Color.Close": "Chiudi"
+  "Projects.Tags.Color.Close": "Chiudi",
+  "Settings.Advanced.ChannelDirect": "Diretto",
+  "Settings.Advanced.ChannelStore": "Store",
+  "Settings.Advanced.UpdateChannelLabel": "Canale di aggiornamento",
+  "Settings.Advanced.UpdateManagedByStoreDescription": "Gli aggiornamenti sono gestiti dallo store.",
+  "Settings.Advanced.UpdateManagedByStoreDiagnostics": "Diagnostica aggiornamenti gestiti dallo store",
+  "Settings.Advanced.UpdateManagedByStoreOpen": "Apri pagina dello store",
+  "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Impossibile aprire la pagina dello store",
+  "Settings.Advanced.UpdateManagedByStoreStatus": "Stato",
+  "Settings.Advanced.UpdateManagedByStoreTitle": "Aggiornamenti gestiti dallo store",
+  "Update.Store.ManagedDescription": "Questa installazione è gestita dallo store"
 }

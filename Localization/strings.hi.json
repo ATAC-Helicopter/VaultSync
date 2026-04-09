@@ -1226,5 +1226,15 @@
   "Backups.Compare.NewerModified": "~ संशोधित {0}",
   "Backups.Compare.NewerDeleted": "- हटाए गए {0}",
   "Backups.Compare.NewerNet": "Δ शुद्ध {0}",
-  "Projects.Tags.Color.Close": "बंद करें"
+  "Projects.Tags.Color.Close": "बंद करें",
+  "Settings.Advanced.ChannelDirect": "डायरेक्ट",
+  "Settings.Advanced.ChannelStore": "स्टोर",
+  "Settings.Advanced.UpdateChannelLabel": "अपडेट चैनल",
+  "Settings.Advanced.UpdateManagedByStoreDescription": "अपडेट स्टोर द्वारा प्रबंधित किए जाते हैं।",
+  "Settings.Advanced.UpdateManagedByStoreDiagnostics": "स्टोर-प्रबंधित अपडेट डायग्नोस्टिक्स",
+  "Settings.Advanced.UpdateManagedByStoreOpen": "स्टोर पेज खोलें",
+  "Settings.Advanced.UpdateManagedByStoreOpenFailed": "स्टोर पेज खोलने में विफल",
+  "Settings.Advanced.UpdateManagedByStoreStatus": "स्थिति",
+  "Settings.Advanced.UpdateManagedByStoreTitle": "स्टोर-प्रबंधित अपडेट",
+  "Update.Store.ManagedDescription": "यह इंस्टॉलेशन स्टोर द्वारा प्रबंधित है"
 }

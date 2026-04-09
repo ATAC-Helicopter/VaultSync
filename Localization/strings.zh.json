@@ -1226,5 +1226,15 @@
   "Backups.Compare.NewerModified": "~ 修改 {0}",
   "Backups.Compare.NewerDeleted": "- 删除 {0}",
   "Backups.Compare.NewerNet": "Δ 净变化 {0}",
-  "Projects.Tags.Color.Close": "关闭"
+  "Projects.Tags.Color.Close": "关闭",
+  "Settings.Advanced.ChannelDirect": "Прямой",
+  "Settings.Advanced.ChannelStore": "Магазин",
+  "Settings.Advanced.UpdateChannelLabel": "Канал обновлений",
+  "Settings.Advanced.UpdateManagedByStoreDescription": "Обновления управляются магазином.",
+  "Settings.Advanced.UpdateManagedByStoreDiagnostics": "Диагностика обновлений через магазин",
+  "Settings.Advanced.UpdateManagedByStoreOpen": "Открыть страницу магазина",
+  "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Не удалось открыть страницу магазина",
+  "Settings.Advanced.UpdateManagedByStoreStatus": "Статус",
+  "Settings.Advanced.UpdateManagedByStoreTitle": "Обновления через магазин",
+  "Update.Store.ManagedDescription": "Эта установка управляется магазином"
 }

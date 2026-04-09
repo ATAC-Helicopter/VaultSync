@@ -1226,5 +1226,15 @@
   "Backups.Compare.NewerModified": "~ modifiés {0}",
   "Backups.Compare.NewerDeleted": "- supprimés {0}",
   "Backups.Compare.NewerNet": "Δ net {0}",
-  "Projects.Tags.Color.Close": "Fermer"
+  "Projects.Tags.Color.Close": "Fermer",
+  "Settings.Advanced.ChannelDirect": "Direct",
+  "Settings.Advanced.ChannelStore": "Boutique",
+  "Settings.Advanced.UpdateChannelLabel": "Canal de mise à jour",
+  "Settings.Advanced.UpdateManagedByStoreDescription": "Les mises à jour sont gérées par la boutique.",
+  "Settings.Advanced.UpdateManagedByStoreDiagnostics": "Diagnostic des mises à jour gérées par la boutique",
+  "Settings.Advanced.UpdateManagedByStoreOpen": "Ouvrir la page de la boutique",
+  "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Échec de l'ouverture de la page de la boutique",
+  "Settings.Advanced.UpdateManagedByStoreStatus": "Statut",
+  "Settings.Advanced.UpdateManagedByStoreTitle": "Mises à jour gérées par la boutique",
+  "Update.Store.ManagedDescription": "Cette installation est gérée par la boutique"
 }
