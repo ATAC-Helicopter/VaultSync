@@ -21,6 +21,7 @@
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Square44x44Logo.png" />
     <Content Include="Assets\Square150x150Logo.png" />
+    <Content Include="Assets\Square310x310Logo.png" />
     <Content Include="Assets\Wide310x150Logo.png" />
     <Content Include="Assets\SplashScreen.png" />
   </ItemGroup>
