@@ -1227,6 +1227,7 @@
   "Backups.Compare.NewerDeleted": "- 删除 {0}",
   "Backups.Compare.NewerNet": "Δ 净变化 {0}",
   "Projects.Tags.Color.Close": "关闭",
+  "Settings.Advanced.ChannelDirect": "直接",
   "Settings.Advanced.ChannelStore": "商店",
   "Settings.Advanced.UpdateChannelLabel": "更新渠道",
   "Settings.Advanced.UpdateManagedByStoreDescription": "更新由应用商店管理。",
