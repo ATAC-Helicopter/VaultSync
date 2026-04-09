@@ -80,7 +80,6 @@ jobs:
           New-Item -ItemType Directory -Force $packageDir | Out-Null
 
           msbuild packaging\VaultSync.Store\VaultSync.Store.wapproj `
-            /restore `
             /p:Configuration=${{ inputs.configuration }} `
             /p:Platform=x64 `
             /p:UapAppxPackageBuildMode=StoreUpload `
