@@ -37,6 +37,42 @@ jobs:
       - name: Restore UI project
         run: dotnet restore src/VaultSync.UI/VaultSync.UI.csproj
 
+      - name: Detect installed UAP SDK
+        id: detect_uap_sdk
+        shell: pwsh
+        run: |
+          $roots = @(
+            'C:\Program Files (x86)\Windows Kits\10\DesignTime\CommonConfiguration\Neutral\UAP',
+            'C:\Program Files (x86)\Windows Kits\10\Platforms\UAP'
+          )
+
+          $versions = foreach ($root in $roots) {
+            if (-not (Test-Path $root)) {
+              continue
+            }
+
+            Get-ChildItem -Path $root -Recurse -Filter UAP.props -File -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                $versionName = Split-Path -Leaf $_.DirectoryName
+                $parsedVersion = $null
+                if ([version]::TryParse($versionName, [ref]$parsedVersion)) {
+                  $versionName
+                }
+              }
+          }
+
+          $selected = $versions |
+            Sort-Object -Unique |
+            Sort-Object { [version]$_ } -Descending |
+            Select-Object -First 1
+
+          if ([string]::IsNullOrWhiteSpace($selected)) {
+            throw 'No installed UAP SDK version was found on the runner.'
+          }
+
+          Write-Host "Using UAP SDK version: $selected"
+          \"uap_sdk_version=$selected\" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Build Microsoft Store package
         shell: pwsh
         run: |
@@ -50,6 +86,7 @@ jobs:
             /p:UapAppxPackageBuildMode=StoreUpload `
             /p:AppxBundle=Never `
             /p:AppxPackageSigningEnabled=false `
+            /p:TargetPlatformVersion=${{ steps.detect_uap_sdk.outputs.uap_sdk_version }} `
             /p:PackageVersion=${{ inputs.package_version }} `
             /p:AppxPackageDir="$packageDir"
 
