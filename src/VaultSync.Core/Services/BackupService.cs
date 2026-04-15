@@ -3284,9 +3284,12 @@ public sealed class BackupService
                 return null;
             }
 
-            var unixSpace = TryGetUnixDiskSpace(fullPath);
-            if (unixSpace is not null)
-                return unixSpace.Value;
+            if (OperatingSystem.IsMacOS())
+            {
+                var unixSpace = TryGetUnixDiskSpace(fullPath);
+                if (unixSpace is not null)
+                    return unixSpace.Value;
+            }
 
             // Non-Windows fallback: DriveInfo can handle full paths and mount points.
             var driveInfo = new DriveInfo(fullPath);
