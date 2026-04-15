@@ -261,28 +261,24 @@ public sealed class TrayPanelService : IDisposable
         int x;
         int y;
 
+        var minX = left + margin;
+        var maxX = right - width - margin;
+        var minY = top + margin;
+        var maxY = bottom - height - margin;
+
         if (IsLinux)
         {
-            x = right - width - margin;
-            y = bottom - height - margin;
+            x = Clamp(right - width - margin, minX, maxX);
+            y = Clamp(bottom - height - margin, minY, maxY);
         }
         else
         {
-
-            // Bottom-right, but clamp to working area to avoid off-screen placement.
-            var minX = left + margin;
-            var maxX = right - width - margin;
-            var minY = top + margin;
-            var maxY = bottom - height - margin;
-
             // Prefer a centered-lower-right placement (not flush to the corner).
-            var desiredX = left + margin + inset;
-            var desiredY = top + (int)Math.Round((bottom - top - height) * 0.60);
-
-            window.Position = new PixelPoint(
-                Clamp(desiredX, minX, maxX),
-                Clamp(desiredY, minY, maxY));
+            x = Clamp(left + margin + inset, minX, maxX);
+            y = Clamp(top + (int)Math.Round((bottom - top - height) * 0.60), minY, maxY);
         }
+
+        window.Position = new PixelPoint(x, y);
     }
 
     private static int Clamp(int value, int min, int max)
