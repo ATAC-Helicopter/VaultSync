@@ -1,4 +1,8 @@
 ﻿# Changelog
+## [1.8.0] - Unreleased
+### Fixed
+- [BUG-17100] Tray panel screen detection, reopen behavior, and Linux/Wayland positioning are now resilient on Hyprland-class environments. Contributed by @JustH8Me in PR #216.
+
 ## [1.7.2] - Unreleased
 ### Added
 - [VS-1727] Added an initial Microsoft Store packaging scaffold with the reserved Partner Center identity values, separate from the Direct installer path.
