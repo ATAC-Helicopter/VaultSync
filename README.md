@@ -8,7 +8,7 @@
 
 <p align="center">
   <strong>Snapshot | Backup | Sync | Verify</strong><br/>
-  Cross-platform backup and snapshot manager built for project folders, NAS workflows, and reliable restores.
+  Backups you can actually understand — and actually trust.
 </p>
 
 <p align="center">
@@ -23,39 +23,70 @@
 </p>
 
 <p align="center">
-  🌐 <strong>Website:</strong>  
-  <a href="https://www.fglabs.dev/vaultsync">
-    https://www.fglabs.dev/vaultsync
+  <strong>Website:</strong><br/>
+  <a href="https://fglabs.dev/vaultsync">
+    https://fglabs.dev/vaultsync
   </a>
 </p>
 
 ---
 
+> Most backup tools either hide everything… or expect you to script your life away.  
+>  
+> VaultSync sits in the middle:  
+> **full visibility, real control, and backups that don’t fall apart when you need them.**
+
+---
+
+## Why VaultSync
+
+Most backup tools fail in the same ways:
+
+- You don’t really know what got backed up
+- Restores feel risky or unclear
+- NAS / external drives break silently
+- History becomes messy or unusable
+
+VaultSync focuses on fixing that:
+
+- See exactly what changed (snapshot diffs)
+- Know what’s safe to restore (integrity + readiness checks)
+- Control where data goes (per-project destinations)
+- Keep history clean and usable (retention + metadata sync)
+
+---
+
 > [!WARNING]
-> VaultSync installers are currently unsigned.
+> VaultSync installers are currently unsigned (code signing is planned).
 >
-> Windows
-> - SmartScreen will flag the installer.
-> - Click **More info -> Run anyway**.
+> This means:
+> - Windows may show a SmartScreen warning
+> - macOS may require manual confirmation
 >
-> macOS
-> 1. Open the downloaded `.dmg`.
-> 2. Drag the app into **Applications**.
-> 3. Close the disk image.
-> 4. Open **Applications**.
-> 5. Right-click VaultSync -> **Open**.
->
-> If Gatekeeper still blocks it:
->
-> Apple Silicon (ARM64)
-> ```sh
-> xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app
-> ```
->
-> Intel (x64)
-> ```sh
-> xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app
-> ```
+> The app itself is safe and open-source — these are standard OS security checks.
+
+### Windows
+- SmartScreen will flag the installer  
+- Click **More info → Run anyway**
+
+### macOS
+1. Open the downloaded `.dmg`
+2. Drag the app into **Applications**
+3. Close the disk image
+4. Open **Applications**
+5. Right-click VaultSync → **Open**
+
+If Gatekeeper still blocks it:
+
+**Apple Silicon (ARM64)**
+```sh
+xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app
+```
+
+**Intel (x64)**
+```sh
+xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app
+```
 
 ---
 
@@ -95,19 +126,9 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="https://www.producthunt.com/products/vaultsync?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-vaultsync" target="_blank" rel="noopener noreferrer">
-    <img alt="VaultSync - Open-source backup manager with visibility into your data | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1094807&amp;theme=dark&amp;t=1773182638071">
-  </a>
-</p>
-
-<p align="center">
-  <sub>GitHub badge counters can lag due to third-party caching. For a persistent release-download history, use the <a href="https://github.com/ATAC-Helicopter/VaultSync/tree/download-stats">download-stats branch</a>.</sub>
-</p>
-
 ---
 
-##  Project Activity
+## Project Activity
 
 <p align="center">
   <img
@@ -116,43 +137,51 @@
   />
 </p>
 
-<p align="center">
-  <a href="https://github.com/ATAC-Helicopter/VaultSync/graphs/contributors">
-    <img
-      alt="Contributors"
-      src="https://contrib.rocks/image?repo=ATAC-Helicopter/VaultSync"
-    />
-  </a>
-</p>
-
 ---
 
 # VaultSync
 
-### Snapshot | Backup | Sync | Verify - for Projects & Workspaces
+### Snapshot | Backup | Sync | Verify — for projects & real workflows
 
-VaultSync is a cross-platform backup and snapshot manager built for developers, creators, and power-users working with large project folders.  
-It provides fast snapshots, filtering via presets, and a modern desktop UI.
+VaultSync is a cross-platform backup and snapshot manager built for developers, creators, and power-users working with real project folders.
+
+Not system images.  
+Not cloud lock-in.  
+Just reliable backups you can inspect, understand, and restore.
 
 ---
 
-## Docs & Links
+## App Screenshots
 
-- Website: [www.fglabs.dev/vaultsync](https://www.fglabs.dev/vaultsync)
-- Documentation overview: [DOCUMENTATION.md](DOCUMENTATION.md)
-- Wiki (how-to guides): [docs/wiki/Home.md](docs/wiki/Home.md)
-- Roadmap: [ROADMAP.md](ROADMAP.md)
-- Changelog: [CHANGELOG.md](CHANGELOG.md)
-- Updater details: [docs/UPDATER.md](docs/UPDATER.md)
-- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Security: [SECURITY.md](SECURITY.md)
-- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-
-## App screenshots
-
+**Dashboard — see activity, storage, and backup health at a glance**  
 ![Dashboard page](docs/images/Dashboard.png)
+
+**Projects — manage what matters, not your whole system**  
 ![Projects page](docs/images/Projects_Page.png)
+
+**Backups — history, restore points, and status in one place**  
 ![Backups page](docs/images/Backup_Page.png)
+
+---
+
+## Core Features
+
+- Snapshot-based backups with full change tracking
+- Reliable restores with integrity checks and safety prompts
+- Designed for NAS and external storage workflows
+- Per-project configuration and routing
+- Desktop UI + CLI for automation
+
+---
+
+## Typical Use Cases
+
+- Backing up development projects to a NAS
+- Keeping versioned backups of creative work (Blender, video, audio)
+- Syncing workspaces across multiple machines
+- Maintaining clean restore points without full system images
+
+---
 
 ## Features
 
@@ -164,73 +193,42 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 - Watch mode for automatic syncing
 - JSON output for scripting
 - Customizable preset rules per project
-- Works headless for servers or automation scripts
 
 ### Desktop UI
 
-- One-click snapshots and backups (manual + scheduled)
-- Per-project destination routing (`Auto`, specific destination, multi-destination support)
-- Global and per-project encryption policies with secure credential-store integration
-- Password-gated encrypted backup open/restore flow with auto-lock timeout and manual `Lock now`
-- Backup history with type and encryption context (`Full`, `Incremental`, `Imported`, `Encrypted/Plain`)
-- Snapshot diff summaries (`added`, `modified`, `deleted`, net size, top changed paths) with export (`text` / `JSON`)
-- Backup policy controls (bandwidth limit + quiet hours) with policy state shown in cards/tray/logs
-- Metadata sync across machines (`.vaultsync/meta`) with source-machine tracking on imported backups
-- Retention with protected (`Keep`) backups and integrated cleanup behavior
-- Startup integrity scan, Doctor repair flow, metadata conflict review, and restore-readiness summaries
-- Destination quota suggestions, retention simulation, and maintenance window jobs
-- Update diagnostics, support-bundle export, and strict multi-base patch compatibility
-- Cross-platform desktop support: macOS, Windows, Linux
-
-### Smart Presets
-
-Presets define what gets included/excluded (like `.gitignore`).  
-Common presets included:
-
-- Unity
-- .NET / C#
-- Game engines (Godot, Unreal, GameMaker)
-- Common programming stacks (Node, Python, Rust, Java, Go)
-- Creative tools (Blender, Video Editing, Music DAWs)
-- General development presets (VSCode, JetBrains, Docker, etc.)
-
-or choose **No preset** if no presets apply or you want no file exclusion.
-
-### Snapshot System
-
-- Fast directory scanner with filtering
-- Tracks added / modified / deleted / unchanged files
-- Stores snapshots in SQLite
-- View snapshot history per project
-
-### Backup System
-
-- Backup any snapshot to local or external storage
-- Timestamped folders (e.g., 2025-11-16_20-41-43)
-- Per-project or "backup all"
-- Automatic backups (optional)
-- Progress, file count, and failure handling (NAS sleep detection)
-- Adaptive archive compression policy for better speed/ratio balance by file type
-- Retention: keep the newest N backups per project; protected ("Keep") backups are never pruned
-- Integrated snapshot creation: every backup captures a fresh snapshot; orphan snapshots are cleaned up when backups are pruned
-- Backup history terminology:
-  - `Full`: complete backup payload
-  - `Incremental`: backup created using incremental copy mode
-  - `Imported`: history discovered/imported from metadata sync or destination scan
-- Restore flow now shows a "What happens next" confirmation block before running restore.
-
-### Network shares (SMB/NFS)
-
-- SMB auto-mount is supported on Windows and macOS using credential profiles.
-- NFS auto-mount is **not** supported on macOS (requires admin privileges). Pre-mount the share and set the destination
-  to the local mount path with **Pre-mounted** enabled and **Auto-mount** disabled.
-- Example NFS destination on macOS:
-  - Mount: `sudo /sbin/mount_nfs -o rw,resvport 192.168.1.138:/export/Flavio_Share "/Users/flavio/Library/Application Support/VaultSync/mounts/nfs-share"`
-  - Destination path: `/Users/flavio/Library/Application Support/VaultSync/mounts/nfs-share/Dev`
+- One-click snapshots and backups
+- Per-project destination routing
+- Encryption support (global + per-project)
+- Backup history with clear context
+- Snapshot diff summaries
+- Retention policies with protected backups
+- Integrity scan + Doctor repair tools
+- Metadata sync across machines
+- Support bundle export for debugging
 
 ---
 
-## Installation (CLI)
+## Snapshot System
+
+- Fast directory scanning with filtering
+- Tracks added / modified / deleted files
+- SQLite-backed history
+- Per-project snapshot timeline
+
+---
+
+## Backup System
+
+- Backup any snapshot to local or external storage
+- Timestamped backups
+- Automatic or manual execution
+- NAS-aware handling and retries
+- Retention with protected backups
+- Integrated snapshot + backup lifecycle
+
+---
+
+## Installation (CLI ONLY)
 
 ```sh
 cd ~/Desktop/Dev/VaultSync
@@ -247,16 +245,6 @@ dotnet tool update --global vaultsync.cli
 
 ---
 
-## Updates & installers
-
-VaultSync checks GitHub Releases according to the selected update channel and interval. Stable follows non-prerelease releases; the optional Beta channel can include prerelease builds from the `Dev` branch.
-
-Desktop installers are published as assets on the repo's [Releases](https://github.com/ATAC-Helicopter/VaultSync/releases) page. Windows installers are produced with the `installer/VaultSyncInstaller.iss` Inno Setup script after publishing the `win-x64` output. macOS builds are shipped as unsigned `.dmg` images containing the `.app` bundle; users may need to right-click -> Open or clear quarantine (`xattr -dr com.apple.quarantine /Applications/VaultSync.app`). macOS and Linux patches are delivered via platform-specific delta archives (see `docs/UPDATER.md`). The CLI follows the stable release line; run `dotnet tool update --global vaultsync.cli` after a release is published to stay in sync.
-
-Patch updates are intentionally strict. A release manifest must explicitly list the installed version as an allowed base version before VaultSync offers the patch path. Unsupported or older versions fall back to the full installer instead of guessing compatibility.
-
-VaultSync exposes a language selector under Settings -> Advanced; translations are loaded from the `Localization/` folder. The same area now includes Doctor workflows, maintenance jobs, support-bundle export, strict patch diagnostics, and the Beta channel toggle for prerelease `Dev` builds.
-
 ## Quick Start (CLI ONLY)
 
 ```sh
@@ -271,37 +259,48 @@ vaultsync verify Demo ~/Backup/Demo --full
 
 ## Useful CLI Commands
 
-### Core
+| Command | Description |
+|--------|------------|
+| `vaultsync init` | Initialize config |
+| `vaultsync add-project` | Register project |
+| `vaultsync snapshot` | Create snapshot |
+| `vaultsync sync` | Backup project |
+| `vaultsync verify` | Validate backup |
+| `vaultsync restore` | Restore snapshot |
+| `vaultsync doctor` | Run diagnostics |
 
-| Command                               | Description                    |
-| ------------------------------------- | ------------------------------ |
-| `vaultsync init`                      | Initialize config + database   |
-| `vaultsync add-project <name> <path>` | Register a new project         |
-| `vaultsync list-projects`             | Show all tracked projects      |
-| `vaultsync snapshot <name>`           | Create snapshot                |
-| `vaultsync sync <name> <dest>`        | Mirror project to destination  |
-| `vaultsync verify <name> <dest>`      | Hash-compare project vs backup |
-| `vaultsync history <name>`            | Show snapshots                 |
-| `vaultsync diff <name>`               | Compare two snapshots          |
-| `vaultsync prune <name>`              | Remove old snapshots           |
-| `vaultsync restore <name> <dest>`     | Restore a previous snapshot    |
-| `vaultsync doctor`                    | Check environment              |
+---
 
-### Watch Mode
+## Updates & Installers
 
-```sh
-vaultsync watch Game --dest /Backups/Game --sync --verify --debounce-ms 2500
-```
+VaultSync uses GitHub Releases for updates.
+
+- Stable → production releases  
+- Beta → optional prerelease builds  
+
+Installers:
+- Windows → Inno Setup
+- macOS → `.dmg` (unsigned)
+- Linux → planned / in progress
+
+---
+
+## Get Started
+
+- Download the latest release
+- Try it on a real project
+- See what actually changes
+
+If something feels off, open an issue or drop feedback.  
+That’s how VaultSync gets better.
 
 ---
 
 ## License
 
-Licensed under the MIT License.  
-See the full license here: [LICENSE](LICENSE).
+MIT License — see [LICENSE](LICENSE)
 
-Bundled helper tools may ship under their own licenses. See
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+---
 
 ## Credits
 
