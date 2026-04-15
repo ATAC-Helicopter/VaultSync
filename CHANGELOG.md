@@ -2,6 +2,7 @@
 ## [1.8.0] - Unreleased
 ### Fixed
 - [BUG-17100] Tray panel screen detection, reopen behavior, and Linux/Wayland positioning are now resilient on Hyprland-class environments. Contributed by @JustH8Me in PR #216.
+- [BUG-17101] Fixed tooltip flickering and focus issues on Linux/Wayland by enabling overlay popups PR #217 (thanks @JustH8Me)
 
 ## [1.7.2] - Unreleased
 ### Added
