@@ -2,13 +2,15 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    xmlns:views="clr-namespace:VaultSync.UI.Views"
     xmlns:viewsControls="clr-namespace:VaultSync.UI.Views.Controls"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
+    xmlns:ui="clr-namespace:VaultSync.UI"
     x:Class="VaultSync.UI.MainWindow"
     x:DataType="vm:AppViewModel"
     Width="1200" Height="800"
-    MinWidth="1180" MinHeight="720"
+    MinWidth="600" MinHeight="500"
     Title="{infra:LocalizedString Key=Shell.Title}">
 
   <Window.Styles>
@@ -295,7 +297,20 @@
     </Border>
 
     <Border Grid.Row="1" Grid.Column="1" Padding="16">
-      <ContentControl x:Name="MainContent" Content="{CompiledBinding CurrentView}"/>
+      <Grid>
+        <Panel IsVisible="{Binding IsDashboardActive}">
+          <views:DashboardView DataContext="{Binding DashboardViewModel}" />
+        </Panel>
+        <Panel IsVisible="{Binding IsProjectsViewActive}">
+          <views:ProjectsView DataContext="{Binding ProjectsViewModel}" />
+        </Panel>
+        <Panel IsVisible="{Binding IsBackupsViewActive}">
+          <views:BackupsView DataContext="{Binding BackupsViewModel}" />
+        </Panel>
+        <Panel IsVisible="{Binding IsSettingsActive}">
+          <ui:SettingsView DataContext="{Binding SettingsViewModel}" />
+        </Panel>
+      </Grid>
     </Border>
 
     <!-- Global bottom-right toast notifications covering the whole window -->
