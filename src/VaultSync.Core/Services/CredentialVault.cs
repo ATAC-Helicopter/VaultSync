@@ -141,7 +141,8 @@ public sealed class CredentialVault
                 }
                 else
                 {
-                    throw new InvalidOperationException("Failed to store secret in secret service (libsecret).");
+                    //Linux secret-tool failed. 99% not installed secret-tool packages.
+                    throw new InvalidOperationException("LINUX_SECRET_TOOL_MISSING");
                 }
             }
             else if (OperatingSystem.IsWindows())
@@ -419,7 +420,7 @@ public sealed class CredentialVault
                 return null;
 
             var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5_000);
+            proc.WaitForExit(30_000);
             return proc.ExitCode == 0 ? output.Trim() : null;
         }
         catch
@@ -464,6 +465,7 @@ public sealed class CredentialVault
                 FileName               = "secret-tool",
                 RedirectStandardError  = true,
                 RedirectStandardOutput = true,
+                RedirectStandardInput = true,
                 UseShellExecute        = false
             };
 
@@ -480,7 +482,7 @@ public sealed class CredentialVault
                 return false;
             proc.StandardInput.Write(secret);
             proc.StandardInput.Close();
-            proc.WaitForExit(5_000);
+            proc.WaitForExit(30_000);
             return proc.ExitCode == 0;
         }
         catch
@@ -511,7 +513,7 @@ public sealed class CredentialVault
             if (proc is null)
                 return null;
             var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5_000);
+            proc.WaitForExit(30_000);
             return proc.ExitCode == 0 ? output.Trim() : null;
         }
         catch

@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "Добавьте проект перед регистрацией пароля.",
   "Projects.Encryption.EnrollValidationProject": "Выберите проект для продолжения.",
   "Projects.Encryption.PasswordUpdateFailed": "Не удалось обновить пароль шифрования проекта.",
+  "Projects.Encryption.LinuxSecretToolMissing": "Системное хранилище недоступно. Убедитесь, что установлен пакет 'libsecret' (или 'secret-tool'), а служба Keyring запущена и разблокирована.",
   "Projects.Encryption.PasswordValidationMismatch": "Пароль и подтверждение не совпадают.",
   "Projects.Encryption.PasswordValidationRequired": "Требуются пароль и подтверждение.",
   "Projects.Encryption.ProjectNotFound": "Проект с id {0} не найден.",

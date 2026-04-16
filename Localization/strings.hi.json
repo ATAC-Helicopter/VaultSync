@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "एन्क्रिप्शन पासवर्ड पंजीकरण से पहले एक प्रोजेक्ट जोड़ें।",
   "Projects.Encryption.EnrollValidationProject": "जारी रखने के लिए एक प्रोजेक्ट चुनें।",
   "Projects.Encryption.PasswordUpdateFailed": "प्रोजेक्ट एन्क्रिप्शन पासवर्ड अपडेट करने में विफल।",
+  "Projects.Encryption.LinuxSecretToolMissing": "सिस्टम स्टोरेज अनुपलब्ध है ।  सुनिश्चित करें कि' लिबसेक्रेट 'पैकेज (या' सीक्रेट-टूल') स्थापित है, और कीरिंग सेवा चल रही है और अनलॉक है । ",
   "Projects.Encryption.PasswordValidationMismatch": "पासवर्ड और पुष्टि मेल नहीं खाते।",
   "Projects.Encryption.PasswordValidationRequired": "पासवर्ड और पुष्टि आवश्यक हैं।",
   "Projects.Encryption.ProjectNotFound": "आईडी {0} वाला प्रोजेक्ट नहीं मिला।",

@@ -130,9 +130,18 @@ public sealed class ProjectEncryptionEnrollmentService
         catch (Exception ex)
         {
             _log($"[Projects] Failed to update encryption password for project {project.Id}: {ex.Message}");
-            _showNotification(
-                L("Projects.Encryption.PasswordUpdateFailed", "Failed to update project encryption password."),
-                NotificationSeverity.Error);
+            if (ex.Message == "LINUX_SECRET_TOOL_MISSING")
+            {
+                _showNotification(
+                    L("Projects.Encryption.LinuxSecretToolMissing", "Linux secret storage is unavailable. Ensure 'libsecret' is installed and your keyring service is running."),
+                    NotificationSeverity.Error);
+            }
+            else
+            {
+                _showNotification(
+                    L("Projects.Encryption.PasswordUpdateFailed", "Failed to update project encryption password."),
+                    NotificationSeverity.Error);
+            }
         }
     }
 
