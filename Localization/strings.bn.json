@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "এনক্রিপশন পাসওয়ার্ড নিবন্ধনের আগে একটি প্রকল্প যোগ করুন।",
   "Projects.Encryption.EnrollValidationProject": "চালিয়ে যেতে একটি প্রকল্প নির্বাচন করুন।",
   "Projects.Encryption.PasswordUpdateFailed": "প্রজেক্ট এনক্রিপশন পাসওয়ার্ড আপডেট করতে ব্যর্থ হয়েছে।",
+  "Projects.Encryption.LinuxSecretToolMissing": "সিস্টেম স্টোরেজ অনুপলব্ধ. নিশ্চিত করুন যে 'লিবসেক্রেট' প্যাকেজ (বা 'সিক্রেট-টুল') ইনস্টল করা আছে এবং কীরিং পরিষেবা চলছে এবং আনলক করা হয়েছে৷",
   "Projects.Encryption.PasswordValidationMismatch": "পাসওয়ার্ড এবং নিশ্চিতকরণ মিলছে না।",
   "Projects.Encryption.PasswordValidationRequired": "পাসওয়ার্ড এবং নিশ্চিতকরণ প্রয়োজন।",
   "Projects.Encryption.ProjectNotFound": "আইডি {0} সহ প্রজেক্ট পাওয়া যায়নি।",

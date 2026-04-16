@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "Add a project before enrolling a project encryption password.",
   "Projects.Encryption.EnrollValidationProject": "Select a project to continue.",
   "Projects.Encryption.PasswordUpdateFailed": "Failed to update project encryption password.",
+  "Projects.Encryption.LinuxSecretToolMissing": "The system storage is unavailable. Make sure that the 'libsecret' package (or 'secret-tool') is installed, and the Keyring service is running and unlocked.",
   "Projects.Encryption.PasswordValidationMismatch": "Password and confirmation do not match.",
   "Projects.Encryption.PasswordValidationRequired": "Password and confirmation are required.",
   "Projects.Encryption.ProjectNotFound": "Project with id {0} was not found.",

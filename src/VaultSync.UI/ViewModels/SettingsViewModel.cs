@@ -2584,7 +2584,17 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                BackupEncryptionSecretStatus = L("Settings.Encryption.SecretStatusSaveFailed", "Failed to store encryption password.");
+                if (ex.InnerException.Message == "LINUX_SECRET_TOOL_MISSING")
+                {
+                    BackupEncryptionSecretStatus = L("Projects.Encryption.LinuxSecretToolMissing",
+                        "Linux secret storage is unavailable. Ensure 'libsecret' is installed and your keyring service is running.");
+                }
+                else
+                {
+                    BackupEncryptionSecretStatus = L("Settings.Encryption.SecretStatusSaveFailed",
+                        "Failed to store encryption password.");
+                }
+
                 GlobalNotificationCenter.Instance.Show(
                     $"{BackupEncryptionSecretStatus} {ex.Message}",
                     NotificationSeverity.Error,
