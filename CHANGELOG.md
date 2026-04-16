@@ -1,12 +1,12 @@
 ﻿# Changelog
-## [1.8.0] - Unreleased
+## [1.7.3] - Unreleased
 ### Fixed
 - [BUG-17100] Tray panel screen detection, reopen behavior, and Linux/Wayland positioning are now resilient on Hyprland-class environments. Contributed by @JustH8Me in PR #216.
 - [BUG-17101] Fixed tooltip flickering and focus issues on Linux/Wayland by enabling overlay popups PR #217 (thanks @JustH8Me)
 - [BUG-17102] Fixed fatal AccessViolationException on Linux x64 during backup (thanks @JustH8Me, refs #218)
 - [BUG-17103] Fixed passwords being saved as 'null' on Linux and increased timeouts passwords (thanks @JustH8Me, refs #220)
 -
-## [1.7.2] - Unreleased
+## [1.7.2] - 09.04.2026
 ### Added
 - [VS-1727] Added an initial Microsoft Store packaging scaffold with the reserved Partner Center identity values, separate from the Direct installer path.
 - [VS-1726] Added runtime distribution-channel detection so VaultSync can distinguish Direct installs from the reserved Microsoft Store package identity.
