@@ -75,6 +75,14 @@ namespace VaultSync.UI.ViewModels
             Unavailable
         }
 
+        public enum SeverityStatus
+        {
+            None,
+            Success,
+            Warning,
+            Error
+        }
+
         // Filtered view for the history list
         public ObservableCollection<BackupSnapshotItem> Snapshots { get; } =
             new ObservableCollection<BackupSnapshotItem>();
@@ -1766,7 +1774,7 @@ namespace VaultSync.UI.ViewModels
             foreach (var dest in list)
             {
                 var status = dest.Active ? DestinationStatus.Pending : DestinationStatus.Inactive;
-                var severity = "Info";
+                var severity = SeverityStatus.None;
                 var item = new DestinationStatusItem
                 {
                     Id     = DestinationStatusItem.GetId(dest),
@@ -1800,8 +1808,8 @@ namespace VaultSync.UI.ViewModels
                     if (item.Status != newStatus)
                     {
                         item.Status = newStatus;
-                        item.Severity = "Info";
-                        item.DotBrush = GetDestinationDotBrush(newStatus, "Info");
+                        item.Severity = SeverityStatus.None;
+                        item.DotBrush = GetDestinationDotBrush(newStatus, SeverityStatus.None);
                     }
 
                     DestinationActiveChanged?.Invoke(item, item.IsActive);
@@ -1829,7 +1837,7 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(HasActiveDestinationStatuses));
         }
 
-        public void UpdateDestinationStatus(string id, string status, string severity = "Info")
+        public void UpdateDestinationStatus(string id, string status, SeverityStatus severity = SeverityStatus.None)
         {
             if (!Dispatcher.UIThread.CheckAccess())
             {
@@ -1869,33 +1877,33 @@ namespace VaultSync.UI.ViewModels
             }
             else
             {
-                if (string.Equals(severity, "Success", StringComparison.OrdinalIgnoreCase))
+                if (severity == SeverityStatus.Success)
                 {
                     newStatus = DestinationStatus.Reachable;
-                }else if (string.Equals(severity, "Warning", StringComparison.OrdinalIgnoreCase))
+                }else if (severity == SeverityStatus.Warning)
                 {
                     newStatus = DestinationStatus.ReadOnly;
                 }
-                else if (string.Equals(severity, "Error", StringComparison.OrdinalIgnoreCase))
+                else if (severity == SeverityStatus.Error)
                 {
                     newStatus = DestinationStatus.Unavailable;
                 }
             }
 
             var severityToUse = severity;
-            if (string.Equals(severity, "Info", StringComparison.OrdinalIgnoreCase))
+            if (severity == SeverityStatus.None)
             {
                 if (newStatus == DestinationStatus.Reachable)
                 {
-                    severityToUse = "Success";
+                    severityToUse = SeverityStatus.Success;
                 }
                 else if (newStatus == DestinationStatus.Unavailable)
                 {
-                    severityToUse = "Error";
+                    severityToUse = SeverityStatus.Error;
                 }
                 else if (newStatus == DestinationStatus.ReadOnly)
                 {
-                    severityToUse = "Warning";
+                    severityToUse = SeverityStatus.Warning;
                 }
                 else if (newStatus == DestinationStatus.None)
                 {
@@ -1911,19 +1919,20 @@ namespace VaultSync.UI.ViewModels
 
         public void MarkDestinationComplete(string id, bool success, string status)
         {
-            UpdateDestinationStatus(id, status, success ? "Success" : "Error");
+            UpdateDestinationStatus(id, status, success ? SeverityStatus.Success: SeverityStatus.Error);
         }
 
-        private static IBrush GetDestinationDotBrush(DestinationStatus status, string severity)
+        private static IBrush GetDestinationDotBrush(DestinationStatus status, SeverityStatus severity)
         {
             return (status, severity) switch
             {
                 (DestinationStatus.Inactive, _) => AccentBrush("#808080"),
                 (DestinationStatus.Reachable, _) => AccentBrush("#22CC88"),
 
-                (_, "Success") => AccentBrush("#22CC88"),
-                (_, "Warning") => AccentBrush("#FFB84C"),
-                (_, "Error")   => AccentBrush("#FF6B6B"),
+                (_, SeverityStatus.Success) => AccentBrush("#22CC88"),
+                (_, SeverityStatus.Warning) => AccentBrush("#FFB84C"),
+                (_, SeverityStatus.Error)   => AccentBrush("#FF6B6B"),
+                (_, SeverityStatus.None)   => AccentBrush("#8E9BAF"),
                 _         => AccentBrush("#8E9BAF")
             };
         }
@@ -4408,8 +4417,8 @@ namespace VaultSync.UI.ViewModels
             set => SetField(ref _isConfigurable, value);
         }
 
-        private string _severity = "Info";
-        public string Severity
+        private BackupsViewModel.SeverityStatus _severity = BackupsViewModel.SeverityStatus.None;
+        public BackupsViewModel.SeverityStatus Severity
         {
             get => _severity;
             set
@@ -4434,9 +4443,10 @@ namespace VaultSync.UI.ViewModels
             {
                 return Severity switch
                 {
-                    "Success" => SuccessBrush,
-                    "Warning" => WarningBrush,
-                    "Error" => ErrorBrush,
+                    BackupsViewModel.SeverityStatus.Success => SuccessBrush,
+                    BackupsViewModel.SeverityStatus.Warning => WarningBrush,
+                    BackupsViewModel.SeverityStatus.Error => ErrorBrush,
+                    BackupsViewModel.SeverityStatus.None => InfoBrush,
                     _ => InfoBrush
                 };
             }

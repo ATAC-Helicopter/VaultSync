@@ -250,7 +250,7 @@ namespace VaultSync.UI.ViewModels
                     var resolution = await PrepareDestinationAsync(dest, cfg);
                     if (!resolution.IsSuccess)
                     {
-                        BackupsViewModel.UpdateDestinationStatus(destId, resolution.Message, "Error");
+                        BackupsViewModel.UpdateDestinationStatus(destId, resolution.Message, BackupsViewModel.SeverityStatus.Error);
                     }
 
                     if (!resolution.IsSuccess)
@@ -271,7 +271,7 @@ namespace VaultSync.UI.ViewModels
                     if (driveDecision.Block)
                     {
                         driveBlocked++;
-                        BackupsViewModel.UpdateDestinationStatus(destId, driveDecision.Message, "Warning");
+                        BackupsViewModel.UpdateDestinationStatus(destId, driveDecision.Message, BackupsViewModel.SeverityStatus.Warning);
                         _networkMountService.Cleanup(resolution);
                         continue;
                     }
@@ -439,7 +439,7 @@ namespace VaultSync.UI.ViewModels
                                         delaySeconds,
                                         attemptIndex + 1,
                                         retryMaxAttempts),
-                                    "Warning");
+                                    BackupsViewModel.SeverityStatus.Warning);
                                 Telemetry.Log("backup_single_destination_retry", b => b
                                     .WithHashedString("project", project.Name)
                                     .WithHashedString("destinationPath", dest.Path)
@@ -456,7 +456,7 @@ namespace VaultSync.UI.ViewModels
                             BackupsViewModel.UpdateDestinationStatus(
                                 destId,
                                 Lf("Backups.Destinations.RetryExhausted", "Failed after {0} attempts", retryMaxAttempts),
-                                "Error");
+                                BackupsViewModel.SeverityStatus.Error);
                         }
                         if (noChangesDetected)
                         {
