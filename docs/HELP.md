@@ -11,8 +11,9 @@ Core actions:
 - Sync metadata history across machines
 
 ## Install and Run
-- UI (Windows target):
-  - `dotnet run -f net8.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
+- UI:
+  - macOS/Linux: `dotnet run -f net8.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
+  - Windows target: `dotnet run -f net8.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
 - CLI tool build/install:
   - `dotnet pack src/VaultSync.CLI -c Release`
   - `dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli`
@@ -50,6 +51,17 @@ VaultSync supports two destination modes:
 - Optional auto-import is available in Settings.
 - Conflicting imported project settings can be reviewed and resolved from Settings > Advanced > Doctor.
 
+Metadata sync carries:
+- project identity and portable project settings such as encryption policy references, preferred destination, restore mode, verification policy, tags, and avatar color
+- snapshot history summaries such as file counts, bytes, and diff summary data
+- backup history details such as backup mode, destination alias, protection flag, source machine name, and non-secret encryption descriptor metadata
+
+Metadata sync does not carry:
+- backup file contents themselves
+- plaintext secrets or encryption passwords
+- your full app configuration or destination definitions
+- arbitrary local machine state outside the exported metadata store
+
 ## Doctor and Integrity Checks
 - Startup backup-index consistency checks run in the background and persist a summary for diagnostics and support bundles.
 - Settings > Advanced includes Doctor actions for:
@@ -79,8 +91,9 @@ See full troubleshooting page: `docs/wiki/Troubleshooting.md`.
 
 ## Where Data Lives
 - Config: `~/.vaultsync/appsettings.json`
-- DB (Windows): `%AppData%/VaultSync/vaultsync.db`
-- DB (macOS): `~/Library/Application Support/VaultSync/vaultsync.db`
+- DB (all platforms, default): `~/.vaultsync/vaultsync.db`
+- Logs: `~/.vaultsync/logs/`
+- Metadata store on destinations: `<destination>/.vaultsync/meta/vaultsync.meta.db`
 
 ## More Docs
 - Docs index: `docs/README.md`
