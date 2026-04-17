@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img
     width="960"
     alt="VaultSync dashboard"
@@ -24,7 +24,7 @@
 
 <p align="center">
   🌐 <strong>Website:</strong>  
-  <a href="https://www.fglabs.dev/vaultsync">
+  <a href="https://fglabs.dev/vaultsync">
     https://www.fglabs.dev/vaultsync
   </a>
 </p>
@@ -306,4 +306,4 @@ Current stable desktop release line: `1.7.1`. Current development line: `1.7.2`.
 
 ## Credits
 
-Created by **Flavio Giacchetti**
+Created by **Flavio Giacchetti** & **Contributors**
