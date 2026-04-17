@@ -65,6 +65,16 @@ namespace VaultSync.UI.ViewModels
             return true;
         }
 
+        public enum DestinationStatus
+        {
+            None,
+            Pending,
+            Inactive,
+            Reachable,
+            ReadOnly,
+            Unavailable
+        }
+
         // Filtered view for the history list
         public ObservableCollection<BackupSnapshotItem> Snapshots { get; } =
             new ObservableCollection<BackupSnapshotItem>();
@@ -1444,9 +1454,14 @@ namespace VaultSync.UI.ViewModels
 
             foreach (var des in DestinationStatuses)
             {
-                des.LastCheckedUtc = des.LastCheckedUtc;
+                des.RefreshLocalization();
             }
             OnPropertyChanged(nameof(string.Empty));
+            lock (_healthProbeGate)
+            {
+                _lastHealthProbeUtc = DateTime.MinValue;
+            }
+            RefreshBackupDiskUsage(includeHealthProbe:true);
         }
 
         private void RefreshProjectSortOptions()
@@ -1750,7 +1765,7 @@ namespace VaultSync.UI.ViewModels
             DestinationStatuses.Clear();
             foreach (var dest in list)
             {
-                var status = GetDestinationStatusText(dest.Active);
+                var status = dest.Active ? DestinationStatus.Pending : DestinationStatus.Inactive;
                 var severity = "Info";
                 var item = new DestinationStatusItem
                 {
@@ -1781,12 +1796,12 @@ namespace VaultSync.UI.ViewModels
             {
                 if (item.IsConfigurable)
                 {
-                    var status = GetDestinationStatusText(item.IsActive);
-                    if (!string.Equals(item.Status, status, StringComparison.OrdinalIgnoreCase))
+                    DestinationStatus newStatus = item.IsActive ? DestinationStatus.Pending : DestinationStatus.Inactive;
+                    if (item.Status != newStatus)
                     {
-                        item.Status = status;
+                        item.Status = newStatus;
                         item.Severity = "Info";
-                        item.DotBrush = GetDestinationDotBrush(status, "Info");
+                        item.DotBrush = GetDestinationDotBrush(newStatus, "Info");
                     }
 
                     DestinationActiveChanged?.Invoke(item, item.IsActive);
@@ -1826,76 +1841,71 @@ namespace VaultSync.UI.ViewModels
             if (item is null)
                 return;
 
-            var normalizedStatus = status ?? string.Empty;
-            var reachableLabel = LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable";
-            var unavailableLabel = LocalizationProvider.Service?.GetString("Destinations.Test.Unavailable") ?? "Unavailable";
-            var readOnlyLabel = LocalizationProvider.Service?.GetString("Destinations.Test.ReadOnly") ?? "Read-only";
-
-            if (!string.IsNullOrWhiteSpace(normalizedStatus))
+            string rawText = status;
+            if (rawText == null)
             {
-                if (normalizedStatus.Contains("Using pre-mounted", StringComparison.OrdinalIgnoreCase))
-                {
-                    normalizedStatus = reachableLabel;
-                }
-                else if (normalizedStatus.Contains("Reachable", StringComparison.OrdinalIgnoreCase))
-                {
-                    normalizedStatus = reachableLabel;
-                }
-                else if (normalizedStatus.Contains("Completed", StringComparison.OrdinalIgnoreCase) ||
-                         normalizedStatus.Contains("No changes", StringComparison.OrdinalIgnoreCase) ||
-                         normalizedStatus.Contains("No backup", StringComparison.OrdinalIgnoreCase))
-                {
-                    normalizedStatus = reachableLabel;
-                }
-                else if (normalizedStatus.Contains("Read-only", StringComparison.OrdinalIgnoreCase) ||
-                         normalizedStatus.Contains("Read only", StringComparison.OrdinalIgnoreCase))
-                {
-                    normalizedStatus = readOnlyLabel;
-                }
-                else if (normalizedStatus.Contains("Unavailable", StringComparison.OrdinalIgnoreCase) ||
-                         normalizedStatus.Contains("Unreachable", StringComparison.OrdinalIgnoreCase))
-                {
-                    normalizedStatus = unavailableLabel;
-                }
+                rawText = string.Empty;
+            }
+
+            DestinationStatus newStatus = DestinationStatus.None;
+
+            if(rawText.Contains("Using pre-mounted", StringComparison.OrdinalIgnoreCase) ||
+               rawText.Contains("Reachable", StringComparison.OrdinalIgnoreCase) ||
+               rawText.Contains("Completed", StringComparison.OrdinalIgnoreCase) ||
+               rawText.Contains("No changes", StringComparison.OrdinalIgnoreCase)||
+               rawText.Contains("No backup", StringComparison.OrdinalIgnoreCase))
+            {
+                newStatus = DestinationStatus.Reachable;
+            }
+            else if (rawText.Contains("Read-only", StringComparison.OrdinalIgnoreCase) ||
+                     rawText.Contains("Read only", StringComparison.OrdinalIgnoreCase))
+            {
+                newStatus = DestinationStatus.ReadOnly;
+            }
+            else if (rawText.Contains("Unavailable", StringComparison.OrdinalIgnoreCase) ||
+                     rawText.Contains("Unreachable", StringComparison.OrdinalIgnoreCase))
+            {
+                newStatus = DestinationStatus.Unavailable;
             }
             else
             {
-                normalizedStatus = severity switch
+                if (string.Equals(severity, "Success", StringComparison.OrdinalIgnoreCase))
                 {
-                    "Success" => reachableLabel,
-                    "Warning" => readOnlyLabel,
-                    "Error" => unavailableLabel,
-                    _ => normalizedStatus
-                };
+                    newStatus = DestinationStatus.Reachable;
+                }else if (string.Equals(severity, "Warning", StringComparison.OrdinalIgnoreCase))
+                {
+                    newStatus = DestinationStatus.ReadOnly;
+                }
+                else if (string.Equals(severity, "Error", StringComparison.OrdinalIgnoreCase))
+                {
+                    newStatus = DestinationStatus.Unavailable;
+                }
             }
 
             var severityToUse = severity;
             if (string.Equals(severity, "Info", StringComparison.OrdinalIgnoreCase))
             {
-                if (!string.IsNullOrWhiteSpace(normalizedStatus) &&
-                    string.Equals(normalizedStatus, reachableLabel, StringComparison.OrdinalIgnoreCase))
+                if (newStatus == DestinationStatus.Reachable)
                 {
                     severityToUse = "Success";
                 }
-                else if (!string.IsNullOrWhiteSpace(normalizedStatus) &&
-                         string.Equals(normalizedStatus, unavailableLabel, StringComparison.OrdinalIgnoreCase))
+                else if (newStatus == DestinationStatus.Unavailable)
                 {
                     severityToUse = "Error";
                 }
-                else if (!string.IsNullOrWhiteSpace(normalizedStatus) &&
-                         string.Equals(normalizedStatus, readOnlyLabel, StringComparison.OrdinalIgnoreCase))
+                else if (newStatus == DestinationStatus.ReadOnly)
                 {
                     severityToUse = "Warning";
                 }
-                else if (!string.Equals(item.Severity, "Info", StringComparison.OrdinalIgnoreCase))
+                else if (newStatus == DestinationStatus.None)
                 {
                     severityToUse = item.Severity;
                 }
             }
 
-            item.Status   = normalizedStatus;
+            item.Status   = newStatus;
             item.Severity = severityToUse;
-            item.DotBrush = GetDestinationDotBrush(normalizedStatus, severityToUse);
+            item.DotBrush = GetDestinationDotBrush(newStatus, severityToUse);
             item.LastCheckedUtc = DateTime.UtcNow;
         }
 
@@ -1904,25 +1914,16 @@ namespace VaultSync.UI.ViewModels
             UpdateDestinationStatus(id, status, success ? "Success" : "Error");
         }
 
-        private static string GetDestinationStatusText(bool isActive)
+        private static IBrush GetDestinationDotBrush(DestinationStatus status, string severity)
         {
-            if (isActive)
+            return (status, severity) switch
             {
-                return LocalizationProvider.Service?.GetString("Backups.Destinations.Pending")
-                       ?? "Pending";
-            }
+                (DestinationStatus.Inactive, _) => AccentBrush("#808080"),
+                (DestinationStatus.Reachable, _) => AccentBrush("#22CC88"),
 
-            return LocalizationProvider.Service?.GetString("Backups.Destinations.Inactive")
-                   ?? "Inactive";
-        }
-
-        private static IBrush GetDestinationDotBrush(string status, string severity)
-        {
-            return severity switch
-            {
-                "Success" => AccentBrush("#22CC88"),
-                "Warning" => AccentBrush("#FFB84C"),
-                "Error"   => AccentBrush("#FF6B6B"),
+                (_, "Success") => AccentBrush("#22CC88"),
+                (_, "Warning") => AccentBrush("#FFB84C"),
+                (_, "Error")   => AccentBrush("#FF6B6B"),
                 _         => AccentBrush("#8E9BAF")
             };
         }
@@ -4346,6 +4347,9 @@ namespace VaultSync.UI.ViewModels
 
     public class DestinationStatusItem : ViewModelBase
     {
+        private static string L(string key, string fallback) =>
+            LocalizationProvider.Service?.GetString(key) ?? fallback;
+
         private static readonly IBrush SuccessBrush = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
         private static readonly IBrush WarningBrush = new ImmutableSolidColorBrush(Color.Parse("#FFB84C"));
         private static readonly IBrush ErrorBrush = new ImmutableSolidColorBrush(Color.Parse("#FF6B6B"));
@@ -4355,44 +4359,40 @@ namespace VaultSync.UI.ViewModels
         public string Alias { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
 
-        private string _statusKey = string.Empty;
-        public string Status
+        private BackupsViewModel.DestinationStatus _status = BackupsViewModel.DestinationStatus.None;
+        public BackupsViewModel.DestinationStatus Status
         {
-            get => _statusKey;
+            get => _status;
             set
             {
-                if (_statusKey == value)
+                if (_status == value)
                     return;
-                _statusKey = value;
+                _status = value;
+
                 OnPropertyChanged(nameof(Status));
                 OnPropertyChanged(nameof(StatusDisplay));
                 OnPropertyChanged(nameof(IsChecking));
             }
         }
 
-        public string StatusDisplay => NormalizeDestinationStatus(_statusKey);
-
-        private static string NormalizeDestinationStatus(string? status)
+        public string StatusDisplay => _status switch
         {
-            if (string.IsNullOrWhiteSpace(status))
-                return string.Empty;
+            BackupsViewModel.DestinationStatus.Pending => L("Backups.Destinations.Pending", "Pending"),
+            BackupsViewModel.DestinationStatus.Inactive => L("Backups.Destinations.Inactive", "Inactive"),
+            BackupsViewModel.DestinationStatus.Reachable => L("Destinations.Test.Reachable", "Reachable"),
+            BackupsViewModel.DestinationStatus.ReadOnly => L("Destinations.Test.ReadOnly", "ReadOnly"),
+            BackupsViewModel.DestinationStatus.Unavailable => L("Destinations.Test.Unavailable", "Unavailable"),
+            BackupsViewModel.DestinationStatus.None => string.Empty,
 
-            var reachableLabel = LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable";
-            if (status.Contains("Completed", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("No changes", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("No backup", StringComparison.OrdinalIgnoreCase))
-            {
-                return reachableLabel;
-            }
-
-            return status;
+            _ => string.Empty
+        };
+        public void RefreshLocalization()
+        {
+            OnPropertyChanged(nameof(StatusDisplay));
+            OnPropertyChanged(nameof(LastCheckedDisplay));
         }
 
-        public bool IsChecking =>
-            string.Equals(_statusKey, "Pending", StringComparison.OrdinalIgnoreCase) ||
-            _statusKey.Contains("checking", StringComparison.OrdinalIgnoreCase) ||
-            _statusKey.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
-            _statusKey.Contains("probing", StringComparison.OrdinalIgnoreCase);
+        public bool IsChecking => _status ==  BackupsViewModel.DestinationStatus.Pending;
 
         private bool _isActive = true;
         public bool IsActive

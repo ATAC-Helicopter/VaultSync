@@ -489,6 +489,14 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(MaintenanceWindowRepairDescription));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataLabel));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
+                ProjectMetadataConflictStatus = ProjectMetadataConflicts.Count == 0
+                    ? L("Settings.Advanced.MetadataConflictsNone", "No pending cross-machine metadata conflicts.")
+                    : string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.Advanced.MetadataConflictsPending", "{0} pending cross-machine metadata conflict(s)."),
+                        ProjectMetadataConflicts.Count);
+
+                OnPropertyChanged(nameof(ProjectMetadataConflictStatus));
             };
 
             ThemeOptions = new ObservableCollection<string>();

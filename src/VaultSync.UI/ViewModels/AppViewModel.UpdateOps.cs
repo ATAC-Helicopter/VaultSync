@@ -131,6 +131,7 @@ namespace VaultSync.UI.ViewModels
 
         private void RefreshCurrentViewLocalization()
         {
+            _projectsViewModel?.RefreshLocalization();
             if (_dashboardViewModel != null)
             {
                 _dashboardViewModel.ReapplyLocalization();
