@@ -2864,8 +2864,6 @@ public class ProjectsViewModel : ViewModelBase
         var config = AppConfigStore.GetSnapshot();
         LoadGroupOptions();
         OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
-        //OnPropertyChanged(nameof(SnapshotHistory)); //не работает
-
         RefreshEncryptionPolicyOptions();
         RefreshDestinationOptionsInternal(config);
         foreach (var project in _allProjects)

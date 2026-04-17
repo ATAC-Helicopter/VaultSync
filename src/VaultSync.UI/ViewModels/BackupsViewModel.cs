@@ -1444,7 +1444,6 @@ namespace VaultSync.UI.ViewModels
 
             foreach (var des in DestinationStatuses)
             {
-                des.Status = des.Status;
                 des.LastCheckedUtc = des.LastCheckedUtc;
             }
             OnPropertyChanged(nameof(string.Empty));
@@ -4356,20 +4355,22 @@ namespace VaultSync.UI.ViewModels
         public string Alias { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
 
-        private string _status = string.Empty;
+        private string _statusKey = string.Empty;
         public string Status
         {
-            get => _status;
+            get => _statusKey;
             set
             {
-                var normalized = NormalizeDestinationStatus(value);
-                if (_status == normalized)
+                if (_statusKey == value)
                     return;
-                _status = normalized;
+                _statusKey = value;
                 OnPropertyChanged(nameof(Status));
+                OnPropertyChanged(nameof(StatusDisplay));
                 OnPropertyChanged(nameof(IsChecking));
             }
         }
+
+        public string StatusDisplay => NormalizeDestinationStatus(_statusKey);
 
         private static string NormalizeDestinationStatus(string? status)
         {
@@ -4388,10 +4389,10 @@ namespace VaultSync.UI.ViewModels
         }
 
         public bool IsChecking =>
-            string.Equals(Status, LocalizationProvider.Service?.GetString("Backups.Destinations.Pending") ?? "Pending", StringComparison.OrdinalIgnoreCase) ||
-            Status.Contains("checking", StringComparison.OrdinalIgnoreCase) ||
-            Status.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
-            Status.Contains("probing", StringComparison.OrdinalIgnoreCase);
+            string.Equals(_statusKey, "Pending", StringComparison.OrdinalIgnoreCase) ||
+            _statusKey.Contains("checking", StringComparison.OrdinalIgnoreCase) ||
+            _statusKey.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
+            _statusKey.Contains("probing", StringComparison.OrdinalIgnoreCase);
 
         private bool _isActive = true;
         public bool IsActive
