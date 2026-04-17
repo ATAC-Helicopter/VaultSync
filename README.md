@@ -25,7 +25,7 @@
 <p align="center">
   🌐 <strong>Website:</strong>  
   <a href="https://fglabs.dev/vaultsync">
-    https://www.fglabs.dev/vaultsync
+    https://fglabs.dev/vaultsync
   </a>
 </p>
 ---
@@ -65,7 +65,7 @@
 </p>
 
 <p align="center" style="margin-top:14px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-  <a href="https://www.fglabs.dev/vaultsync">
+  <a href="https://fglabs.dev/vaultsync">
     <img src="https://img.shields.io/badge/Website-FG%20Labs-111827?style=for-the-badge&logo=vercel" />
   </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">
@@ -137,7 +137,7 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 
 ## Docs & Links
 
-- Website: [www.fglabs.dev/vaultsync](https://www.fglabs.dev/vaultsync)
+- Website: [fglabs.dev/vaultsync](https://fglabs.dev/vaultsync)
 - Documentation overview: [DOCUMENTATION.md](DOCUMENTATION.md)
 - Wiki (how-to guides): [docs/wiki/Home.md](docs/wiki/Home.md)
 - Roadmap: [ROADMAP.md](ROADMAP.md)
