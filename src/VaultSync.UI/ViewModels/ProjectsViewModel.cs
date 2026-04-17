@@ -2862,6 +2862,10 @@ public class ProjectsViewModel : ViewModelBase
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
         var config = AppConfigStore.GetSnapshot();
+        LoadGroupOptions();
+        OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
+        //OnPropertyChanged(nameof(SnapshotHistory)); //не работает
+
         RefreshEncryptionPolicyOptions();
         RefreshDestinationOptionsInternal(config);
         foreach (var project in _allProjects)
@@ -2871,6 +2875,12 @@ public class ProjectsViewModel : ViewModelBase
         }
         RefreshHealthTags();
         RefreshSnapshotText();
+        if (SelectedProject != null)
+        {
+            SelectedProject.SnapshotHistoryLoaded = false;
+            LoadSnapshotHistoryForSelectedProject();
+        }
+        OnPropertyChanged(nameof(SelectedProject));
     }
 
     private void RequestProjectEncryptionPasswordEdit(ProjectItemViewModel? project)

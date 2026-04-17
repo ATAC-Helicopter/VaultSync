@@ -1427,6 +1427,29 @@ namespace VaultSync.UI.ViewModels
             RefreshProjectSortOptions();
         }
 
+        public void ReapplyLocalization()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(ReapplyLocalization);
+                return;
+            }
+
+            _lastProjectSignature = -1;
+            _lastBackupSignature = -1;
+            _lastAutoBackupSignature = -1;
+            _lastFilterRevision = -1;
+
+            InitializeLocalizationDefaults();
+
+            foreach (var des in DestinationStatuses)
+            {
+                des.Status = des.Status;
+                des.LastCheckedUtc = des.LastCheckedUtc;
+            }
+            OnPropertyChanged(nameof(string.Empty));
+        }
+
         private void RefreshProjectSortOptions()
         {
             ProjectSortOptions.Clear();
