@@ -92,7 +92,17 @@ Before merging documentation updates:
 - Full docs index: `docs/README.md`
 - Wiki sidebar: `docs/wiki/_Sidebar.md`
 
-## 8. 1.7 Documentation Focus
+## 8. Metadata Sync Contract
+The metadata sync store under `<destination>/.vaultsync/meta/` currently exports:
+- project identity and shape: `external_id`, `name`, `preset`, `root_path_hint`, timestamps
+- `settings_json` with project-scoped settings such as `avatarColor`, `encryptionPolicy`, `encryptionKeyRef`, `preferredDestinationId`, `restoreMode`, `verificationPolicy`, `autoBackupEnabled`, and `tags`
+- snapshot identity plus diff summary fields: `diff_added`, `diff_modified`, `diff_deleted`, `diff_net_bytes`, `diff_top_paths_json`
+- backup identity plus operational fields: `type`, `backup_mode`, `path_rel`, `destination_alias`, `origin_machine_name`, `is_protected`, encryption flag, and non-secret crypto descriptor JSON
+- tombstones for removed projects, snapshots, and backups
+
+This contract is regression-tested in `tests/VaultSync.Core.Tests/MetadataSyncTests.cs`. If metadata behavior changes, update both the tests and this section in the same PR.
+
+## 9. 1.7 Documentation Focus
 For the `1.7` release line, keep these areas aligned:
 - update/patch behavior (`docs/UPDATER.md`, `docs/wiki/Updates.md`, `docs/RELEASING.md`)
 - integrity and Doctor workflows (`docs/HELP.md`, `README.md`)
