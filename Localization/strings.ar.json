@@ -1237,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "فشل فتح صفحة المتجر",
   "Settings.Advanced.UpdateManagedByStoreStatus": "الحالة",
   "Settings.Advanced.UpdateManagedByStoreTitle": "إدارة التحديث عبر المتجر",
-  "Update.Store.ManagedDescription": "يتم إدارة هذا التثبيت بواسطة المتجر"
-}
+  "Update.Store.ManagedDescription": "يتم إدارة هذا التثبيت بواسطة المتجر",
+  "LogConsole.AutoScroll": "التمرير التلقائي",
+  "LogConsole.CopySelected": "نسخ المحدد",
+  "LogConsole.CopySelectedFailed": "فشل نسخ المحدد",
+  "LogConsole.CopySelectedSuccess": "تم نسخ المحدد",
+  "Update.Store.OpenStore": "فتح المتجر"
+  }

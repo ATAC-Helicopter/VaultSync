@@ -1237,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Impossibile aprire la pagina dello store",
   "Settings.Advanced.UpdateManagedByStoreStatus": "Stato",
   "Settings.Advanced.UpdateManagedByStoreTitle": "Aggiornamenti gestiti dallo store",
-  "Update.Store.ManagedDescription": "Questa installazione è gestita dallo store"
+  "Update.Store.ManagedDescription": "Questa installazione è gestita dallo store",
+  "LogConsole.AutoScroll": "Scorrimento automatico",
+  "LogConsole.CopySelected": "Copia selezionato",
+  "LogConsole.CopySelectedFailed": "Impossibile copiare la selezione",
+  "LogConsole.CopySelectedSuccess": "Selezione copiata",
+  "Update.Store.OpenStore": "Apri Store"
 }

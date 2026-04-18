@@ -131,17 +131,16 @@ namespace VaultSync.UI.ViewModels
 
         private void RefreshCurrentViewLocalization()
         {
-            if (CurrentView == _dashboardViewModel)
+            _projectsViewModel?.RefreshLocalization();
+            if (_dashboardViewModel != null)
             {
-                DashboardViewModel.ReapplyLocalization();
+                _dashboardViewModel.ReapplyLocalization();
+                 _ =_dashboardViewModel.RefreshAsync(force: true);
             }
-            else if (CurrentView == _backupsViewModel)
+            if (_backupsViewModel != null)
             {
+                _backupsViewModel.ReapplyLocalization();
                 ReloadBackupsVmData();
-            }
-            else if (CurrentView == _projectsViewModel)
-            {
-                _projectsViewModel.RefreshLocalization();
             }
         }
 

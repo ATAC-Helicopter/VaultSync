@@ -83,7 +83,7 @@ namespace VaultSync.UI.ViewModels
                     var summaries = GetDestinationProbeSummaries(cfg);
                     foreach (var summary in summaries)
                     {
-                        var severity = summary.Reachable ? "Success" : "Error";
+                        var severity = summary.Reachable ? BackupsViewModel.SeverityStatus.Success : BackupsViewModel.SeverityStatus.Error;
                         vm.UpdateDestinationStatus(summary.Id, summary.Message, severity);
                     }
                 }

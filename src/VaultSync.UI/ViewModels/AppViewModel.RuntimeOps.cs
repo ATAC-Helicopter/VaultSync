@@ -203,9 +203,9 @@ namespace VaultSync.UI.ViewModels
 
             var severity = result.Reachable
                 ? (message.Contains(LStatic("Destinations.Test.ReadOnly", "Read-only"), StringComparison.OrdinalIgnoreCase)
-                    ? "Warning"
-                    : "Success")
-                : "Error";
+                    ? BackupsViewModel.SeverityStatus.Warning
+                    : BackupsViewModel.SeverityStatus.Success)
+                : BackupsViewModel.SeverityStatus.Error;
 
             _destinationProbeSummaries[id] = new DestinationProbeSummary(
                 id,

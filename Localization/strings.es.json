@@ -1237,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Error al abrir la página de la tienda",
   "Settings.Advanced.UpdateManagedByStoreStatus": "Estado",
   "Settings.Advanced.UpdateManagedByStoreTitle": "Actualizaciones gestionadas por la tienda",
-  "Update.Store.ManagedDescription": "Esta instalación está gestionada por la tienda"
-}
+  "Update.Store.ManagedDescription": "Esta instalación está gestionada por la tienda",
+  "LogConsole.AutoScroll": "Desplazamiento automático",
+  "LogConsole.CopySelected": "Copiar selección",
+  "LogConsole.CopySelectedFailed": "No se pudo copiar la selección",
+  "LogConsole.CopySelectedSuccess": "Selección copiada",
+  "Update.Store.OpenStore": "Abrir tienda"
+  }

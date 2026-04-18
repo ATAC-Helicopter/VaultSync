@@ -1,6 +1,7 @@
-﻿# Changelog
+# Changelog
 ## [1.7.3] - Unreleased
 ### Added
+- [VS-17106] The in-app log console now exposes an explicit Auto-scroll toggle and lets you copy the selected log line with a button or the usual platform copy shortcut.
 - [VS-1805] Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`, plus a desktop-friendly `linux-x64` AppImage so direct Linux installs cover the widest practical audience.
 ### Changed
 - [VS-1805] Linux update discovery now prefers architecture-specific installers and patch assets (`linux-x64` / `linux-arm64`) before falling back to generic Linux naming.
@@ -9,7 +10,8 @@
 - [BUG-17101] Fixed tooltip flickering and focus issues on Linux/Wayland by enabling overlay popups PR #217 (thanks @JustH8Me)
 - [BUG-17102] Fixed fatal AccessViolationException on Linux x64 during backup (thanks @JustH8Me, refs #218)
 - [BUG-17103] Fixed passwords being saved as 'null' on Linux and increased timeouts passwords (thanks @JustH8Me, refs #220)
-
+- [BUG-17104] Settings now refreshes persisted values correctly after config reloads, preventing fields like Projects root from appearing blank even when the saved config is intact.
+- [BUG-17105] Startup now repairs blank project root paths from the configured Projects root when the matching project folder still exists on disk, reducing missing-path issues after relaunch.
 ## [1.7.2] - 09.04.2026
 ### Added
 - [VS-1727] Added an initial Microsoft Store packaging scaffold with the reserved Partner Center identity values, separate from the Direct installer path.

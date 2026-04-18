@@ -1237,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Store-Seite konnte nicht geöffnet werden",
   "Settings.Advanced.UpdateManagedByStoreStatus": "Status",
   "Settings.Advanced.UpdateManagedByStoreTitle": "Store-verwaltete Updates",
-  "Update.Store.ManagedDescription": "Diese Installation wird vom Store verwaltet"
+  "Update.Store.ManagedDescription": "Diese Installation wird vom Store verwaltet",
+  "LogConsole.AutoScroll": "Automatisch scrollen",
+  "LogConsole.CopySelected": "Auswahl kopieren",
+  "LogConsole.CopySelectedFailed": "Auswahl konnte nicht kopiert werden",
+  "LogConsole.CopySelectedSuccess": "Auswahl kopiert",
+  "Update.Store.OpenStore": "Store öffnen"
 }

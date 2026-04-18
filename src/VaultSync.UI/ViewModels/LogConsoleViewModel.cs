@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
@@ -14,6 +15,8 @@ namespace VaultSync.UI.ViewModels
     {
         private readonly LogConsoleService _service;
         private string _statusMessage = string.Empty;
+        private bool _autoScrollEnabled = true;
+        private LogLine? _selectedLine;
 
         public LogConsoleViewModel(LogConsoleService service)
         {
@@ -23,6 +26,7 @@ namespace VaultSync.UI.ViewModels
             ClearCommand = new RelayCommand(_ => _service.Clear());
             ExportCommand = new RelayCommand(async _ => await ExportLogsAsync());
             OpenFolderCommand = new RelayCommand(_ => OpenLogFolder());
+            CopySelectedLineCommand = new RelayCommand(async _ => await CopySelectedLineAsync(), _ => SelectedLine is not null);
         }
 
         public void SetUiCaptureEnabled(bool enabled)
@@ -41,9 +45,29 @@ namespace VaultSync.UI.ViewModels
             private set => SetField(ref _statusMessage, value);
         }
 
+        public bool AutoScrollEnabled
+        {
+            get => _autoScrollEnabled;
+            set => SetField(ref _autoScrollEnabled, value);
+        }
+
+        public LogLine? SelectedLine
+        {
+            get => _selectedLine;
+            set
+            {
+                if (SetField(ref _selectedLine, value))
+                {
+                    if (CopySelectedLineCommand is RelayCommand copyCommand)
+                        copyCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         public ICommand ClearCommand { get; }
         public ICommand ExportCommand { get; }
         public ICommand OpenFolderCommand { get; }
+        public ICommand CopySelectedLineCommand { get; }
 
         private async System.Threading.Tasks.Task ExportLogsAsync()
         {
@@ -109,6 +133,18 @@ namespace VaultSync.UI.ViewModels
                     NotificationSeverity.Warning,
                     L("LogConsole.ExportTitle", "Log export"));
             }
+        }
+
+        public async System.Threading.Tasks.Task<bool> CopySelectedLineAsync()
+        {
+            if (SelectedLine is null)
+                return false;
+
+            var copied = await ClipboardHelper.TryCopyAsync(SelectedLine.Display);
+            StatusMessage = copied
+                ? L("LogConsole.CopySelectedSuccess", "Selected line copied.")
+                : L("LogConsole.CopySelectedFailed", "Failed to copy selected line.");
+            return copied;
         }
 
         private void OnServiceStateChanged()

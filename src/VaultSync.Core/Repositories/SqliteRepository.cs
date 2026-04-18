@@ -476,6 +476,23 @@ DELETE FROM sqlite_sequence;";
             return rows > 0;
         }
 
+        public bool UpdateProjectPath(int projectId, string newPath, out string? oldPath)
+        {
+            using var c = Open();
+            var p = GetProjectById(projectId);
+            if (p is null)
+            {
+                oldPath = null;
+                return false;
+            }
+
+            oldPath = p.RootPath;
+            var rows = c.Execute(
+                "UPDATE projects SET root_path=@newPath WHERE id=@id",
+                new { newPath, id = projectId });
+            return rows > 0;
+        }
+
         public DeleteStats DeleteProjectCascade(string name)
         {
             using var c = Open();

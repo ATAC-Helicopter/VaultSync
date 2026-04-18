@@ -155,6 +155,7 @@ namespace VaultSync.UI
         private bool _isInitialized;
         private bool _isSaving;
         private bool _savePending;
+        private bool _isReloadingFromConfig;
         private bool? _lastLaunchOnLoginApplied;
 
         public event Action? OpenLogConsoleRequested;
@@ -489,6 +490,17 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(MaintenanceWindowRepairDescription));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataLabel));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
+                ProjectMetadataConflictStatus = ProjectMetadataConflicts.Count == 0
+                    ? L("Settings.Advanced.MetadataConflictsNone", "No pending cross-machine metadata conflicts.")
+                    : string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.Advanced.MetadataConflictsPending", "{0} pending cross-machine metadata conflict(s)."),
+                        ProjectMetadataConflicts.Count);
+                _backupEncryptionSecretStatus = _backupEncryptionHasSecret
+                    ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+                    : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
+                OnPropertyChanged(nameof(BackupEncryptionSecretStatus));
+                OnPropertyChanged(nameof(ProjectMetadataConflictStatus));
             };
 
             ThemeOptions = new ObservableCollection<string>();
@@ -576,21 +588,24 @@ namespace VaultSync.UI
 
         private void LoadFromConfig()
         {
-            var cfg = AppConfigStore.Load();
-            _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
-                ? _localizationService.CurrentLanguage
-                : cfg.Advanced.Language;
-            _localizationService.SetLanguage(_selectedLanguageCode);
+            _isReloadingFromConfig = true;
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
+                    ? _localizationService.CurrentLanguage
+                    : cfg.Advanced.Language;
+                _localizationService.SetLanguage(_selectedLanguageCode);
 
-            _projectsRootPath      = cfg.ProjectsRoot ?? "";
-            _resumeLastSession     = cfg.ResumeLastSession;
-            _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
-            _showTrayIcon            = cfg.Behavior.ShowTrayIcon;
-            _runInBackground         = cfg.Behavior.RunInBackground;
-            _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
-            _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
-            _lastLaunchOnLoginApplied = _launchOnLogin;
-            _confirmDeleteBackup     = cfg.Behavior.ConfirmDeleteBackup;
+                _projectsRootPath      = cfg.ProjectsRoot ?? "";
+                _resumeLastSession     = cfg.ResumeLastSession;
+                _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
+                _showTrayIcon            = cfg.Behavior.ShowTrayIcon;
+                _runInBackground         = cfg.Behavior.RunInBackground;
+                _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
+                _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
+                _lastLaunchOnLoginApplied = _launchOnLogin;
+                _confirmDeleteBackup     = cfg.Behavior.ConfirmDeleteBackup;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
             _autoBackupIntervalMinutes = ClampInt(cfg.Backups.IntervalMinutes, 1, 10080, 30);
@@ -762,10 +777,58 @@ namespace VaultSync.UI
             ApplyThemeFromSelected();
             ThemeManager.ApplyCompactLayout(_useCompactLayout);
 
-            SaveStatus = L("Settings.Status.Loaded", "Settings loaded");
+                SaveStatus = L("Settings.Status.Loaded", "Settings loaded");
 
-            // Update UI
-            OnPropertyChanged(null);
+                // Explicit notifications are more reliable here than a blanket null refresh,
+                // especially when the cached Settings view is reloaded after startup.
+                OnPropertyChanged(nameof(ProjectsRootPath));
+                OnPropertyChanged(nameof(ResumeLastSession));
+                OnPropertyChanged(nameof(ShowWindowOnTrayActions));
+                OnPropertyChanged(nameof(ShowTrayIcon));
+                OnPropertyChanged(nameof(RunInBackground));
+                OnPropertyChanged(nameof(ShowTrayBackupWidget));
+                OnPropertyChanged(nameof(LaunchOnLogin));
+                OnPropertyChanged(nameof(ConfirmDeleteBackups));
+                OnPropertyChanged(nameof(EnableAutoBackups));
+                OnPropertyChanged(nameof(AutoBackupIntervalMinutes));
+                OnPropertyChanged(nameof(MaxSnapshotsPerProject));
+                OnPropertyChanged(nameof(BackupLocationPath));
+                OnPropertyChanged(nameof(UseAdvancedDestinations));
+                OnPropertyChanged(nameof(UseBackupCompression));
+                OnPropertyChanged(nameof(UseRsyncDelta));
+                OnPropertyChanged(nameof(UseIncrementalBackups));
+                OnPropertyChanged(nameof(VerifyBackupsAfterCreate));
+                OnPropertyChanged(nameof(PauseBackupsOnBattery));
+                OnPropertyChanged(nameof(PreferExternalDrives));
+                OnPropertyChanged(nameof(ShowDriveHealthWarnings));
+                OnPropertyChanged(nameof(MinimumFreeSpacePercent));
+                OnPropertyChanged(nameof(SelectedTheme));
+                OnPropertyChanged(nameof(UseCompactLayout));
+                OnPropertyChanged(nameof(ShowProjectAvatars));
+                OnPropertyChanged(nameof(NotifyOnBackupSuccess));
+                OnPropertyChanged(nameof(NotifyOnBackupFailure));
+                OnPropertyChanged(nameof(NotifyOnLowDiskSpace));
+                OnPropertyChanged(nameof(NotifyOnSnapshotSuccess));
+                OnPropertyChanged(nameof(NotifyOnSnapshotFailure));
+                OnPropertyChanged(nameof(UseOsNotifications));
+                OnPropertyChanged(nameof(NotifyOnlyWhenInactive));
+                OnPropertyChanged(nameof(EnableVerboseLogging));
+                OnPropertyChanged(nameof(SaveVerboseLogs));
+                OnPropertyChanged(nameof(CheckForUpdatesOnStartup));
+                OnPropertyChanged(nameof(UpdateCheckIntervalMinutes));
+                OnPropertyChanged(nameof(BetaChannelEnabled));
+                OnPropertyChanged(nameof(EnableMaintenanceWindow));
+                OnPropertyChanged(nameof(MaintenanceWindowStart));
+                OnPropertyChanged(nameof(MaintenanceWindowEnd));
+                OnPropertyChanged(nameof(MaintenanceRunConsistencyScan));
+                OnPropertyChanged(nameof(MaintenanceRunRepairDryRun));
+                OnPropertyChanged(nameof(MaintenanceRunMetadataRefresh));
+                OnPropertyChanged(nameof(SaveStatus));
+            }
+            finally
+            {
+                _isReloadingFromConfig = false;
+            }
         }
 
         private async Task SaveToConfigAsync(bool notifyOnValidationError = true)
@@ -1210,7 +1273,7 @@ namespace VaultSync.UI
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is null)
+            if (_isReloadingFromConfig || e.PropertyName is null)
                 return;
 
             TriggerAutoSave();

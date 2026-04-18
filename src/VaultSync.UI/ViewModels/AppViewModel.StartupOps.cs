@@ -166,6 +166,16 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
+                ReconcileBlankProjectRootsOnStartup();
+                RecordStartupPhase("project-root-reconciliation-complete");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Startup project-root reconciliation failed: {ex.GetType().Name} - {ex.Message}");
+            }
+
+            try
+            {
                 CleanupIncompleteBackupsOnStartup();
                 RecordStartupPhase("cleanup-incomplete-backups-complete");
             }

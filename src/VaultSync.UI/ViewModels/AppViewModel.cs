@@ -87,6 +87,7 @@ namespace VaultSync.UI.ViewModels
         public event Action? TrayMenuRefreshRequested;
 
         private object? _currentView;
+        private string _currentViewName = "Dashboard";
         private string _headerTitle = LStatic("Nav.Dashboard", "Dashboard");
         private string _headerKicker = LStatic("Main.HeaderOverview", "Overview");
 
@@ -569,11 +570,32 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public string CurrentViewName
+        {
+            get => _currentViewName;
+            set
+            {
+                if (_currentViewName == value)
+                {
+                    return;
+                }
+                _currentViewName = value;
+                OnPropertyChanged(nameof(CurrentViewName));
+                OnPropertyChanged(nameof(IsDashboardActive));
+                OnPropertyChanged(nameof(IsProjectsViewActive));
+                OnPropertyChanged(nameof(IsBackupsViewActive));
+                OnPropertyChanged(nameof(IsSettingsActive));
+            }
+        }
+
         public OnboardingTourViewModel OnboardingTour
         {
             get;
         }
-
+        public bool IsDashboardActive => CurrentViewName == "Dashboard";
+        public bool IsProjectsViewActive => CurrentViewName == "Projects";
+        public bool IsBackupsViewActive => CurrentViewName == "Backups";
+        public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
         public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel();
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
