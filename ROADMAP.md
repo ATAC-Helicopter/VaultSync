@@ -1505,6 +1505,13 @@
     - interrupted parallel uploads can resume safely without re-sending already validated chunks
 
 ## 1.8.x
+- [x] `BUG-17106` `P2` Improve in-app log console tail-following and selected-line copy. _(Done)_
+  - Scope: expose log tail-following as a real UI control and let users copy the selected log line without exporting the full console.
+  - Acceptance:
+    - the log console exposes an Auto-scroll toggle
+    - new log lines follow automatically when the toggle is enabled
+    - users can scroll away from the bottom without the view forcing itself back down unless auto-scroll is enabled
+    - the selected log line can be copied from the UI and via the usual platform copy shortcut
 - [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
   - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.
   - Current status:

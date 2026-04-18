@@ -1,5 +1,7 @@
 ﻿# Changelog
 ## [1.8.0] - Unreleased
+### Added
+- [BUG-17106] The in-app log console now exposes an explicit Auto-scroll toggle and lets you copy the selected log line with a button or the usual platform copy shortcut.
 ### Fixed
 - [BUG-17100] Tray panel screen detection, reopen behavior, and Linux/Wayland positioning are now resilient on Hyprland-class environments. Contributed by @JustH8Me in PR #216.
 - [BUG-17101] Fixed tooltip flickering and focus issues on Linux/Wayland by enabling overlay popups PR #217 (thanks @JustH8Me)

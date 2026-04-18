@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using VaultSync.UI.Services;
@@ -34,15 +36,18 @@ namespace VaultSync.UI.Views
             {
                 notifier.CollectionChanged += OnLinesChanged;
             }
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             Closed += OnClosed;
             Opened += OnOpened;
+            KeyDown += OnKeyDown;
         }
 
         private void OnOpened(object? sender, System.EventArgs e)
         {
             _viewModel.SetUiCaptureEnabled(true);
             if (OperatingSystem.IsMacOS())
-                _autoScroll = false;
+                _viewModel.AutoScrollEnabled = false;
+            _autoScroll = _viewModel.AutoScrollEnabled;
             if (this.FindControl<ListBox>("LogList") is { } list)
             {
                 _logList = list;
@@ -79,7 +84,25 @@ namespace VaultSync.UI.Views
                 return;
 
             var maxY = _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height;
-            _autoScroll = _scrollViewer.Offset.Y >= Math.Max(0, maxY - 4);
+            var shouldAutoScroll = _scrollViewer.Offset.Y >= Math.Max(0, maxY - 4);
+            _autoScroll = shouldAutoScroll;
+
+            if (_viewModel.AutoScrollEnabled != shouldAutoScroll)
+                _viewModel.AutoScrollEnabled = shouldAutoScroll;
+        }
+
+        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (!string.Equals(e.PropertyName, nameof(LogConsoleViewModel.AutoScrollEnabled), StringComparison.Ordinal))
+                return;
+
+            _autoScroll = _viewModel.AutoScrollEnabled;
+            if (_autoScroll)
+            {
+                _scrollPending = true;
+                if (_scrollTimer is not null && !_scrollTimer.IsEnabled)
+                    _scrollTimer.Start();
+            }
         }
 
         private void OnClosed(object? sender, System.EventArgs e)
@@ -89,6 +112,8 @@ namespace VaultSync.UI.Views
             {
                 notifier.CollectionChanged -= OnLinesChanged;
             }
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            KeyDown -= OnKeyDown;
             if (_scrollViewer is not null)
             {
                 _scrollViewer.ScrollChanged -= OnScrollChanged;
@@ -102,6 +127,20 @@ namespace VaultSync.UI.Views
             }
             Opened -= OnOpened;
             Closed -= OnClosed;
+        }
+
+        private async void OnKeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.C)
+                return;
+
+            var modifiers = e.KeyModifiers;
+            var isCopyGesture = modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Meta);
+            if (!isCopyGesture)
+                return;
+
+            if (await _viewModel.CopySelectedLineAsync())
+                e.Handled = true;
         }
 
         private void FlushPendingScroll()

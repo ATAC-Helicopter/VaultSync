@@ -28,6 +28,12 @@
                     Orientation="Horizontal"
                     Spacing="8"
                     VerticalAlignment="Center">
+          <CheckBox Content="{infra:LocalizedString Key=LogConsole.AutoScroll}"
+                    IsChecked="{Binding AutoScrollEnabled, Mode=TwoWay}"
+                    VerticalAlignment="Center" />
+          <Button Content="{infra:LocalizedString Key=LogConsole.CopySelected}"
+                  Classes="action-ghost"
+                  Command="{Binding CopySelectedLineCommand}" />
           <Button Content="{infra:LocalizedString Key=LogConsole.OpenFolder}"
                   Classes="action-ghost"
                   Command="{Binding OpenFolderCommand}" />
@@ -53,6 +59,7 @@
             Padding="{DynamicResource CardPaddingSmall}">
       <ListBox x:Name="LogList"
                ItemsSource="{Binding Lines}"
+               SelectedItem="{Binding SelectedLine, Mode=TwoWay}"
                Background="Transparent"
                BorderThickness="0">
         <ListBox.ItemTemplate>
