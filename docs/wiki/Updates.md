@@ -15,6 +15,7 @@ VaultSync supports two Windows update models:
 - If a patch fails, the installer fallback is offered.
 - Patch assets are named `vaultsync-patch-<platform>.json` and `vaultsync-patch-<platform>.zip`.
   - macOS checks for arch-specific assets first (`vaultsync-patch-macos-apple-silicon.*` or `vaultsync-patch-macos-intel.*`).
+  - Linux checks for arch-specific assets first (`vaultsync-patch-linux-x64.*` or `vaultsync-patch-linux-arm64.*`).
 - Patch eligibility is exact:
   - the manifest must explicitly list the installed version as an allowed base version
   - unlisted or older installs fall back to the full installer
