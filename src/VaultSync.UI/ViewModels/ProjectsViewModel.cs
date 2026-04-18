@@ -2870,6 +2870,8 @@ public class ProjectsViewModel : ViewModelBase
         {
             UpdateProjectDestinationDisplay(project, config);
             UpdateProjectEncryptionDisplay(project, config);
+            UpdateProjectPresetDisplay(project);
+
         }
         RefreshHealthTags();
         RefreshSnapshotText();
@@ -2879,6 +2881,7 @@ public class ProjectsViewModel : ViewModelBase
             LoadSnapshotHistoryForSelectedProject();
         }
         OnPropertyChanged(nameof(SelectedProject));
+        OnPropertyChanged(string.Empty);
     }
 
     private void RequestProjectEncryptionPasswordEdit(ProjectItemViewModel? project)

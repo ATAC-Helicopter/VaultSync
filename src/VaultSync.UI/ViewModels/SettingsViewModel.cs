@@ -495,7 +495,10 @@ namespace VaultSync.UI
                         CultureInfo.CurrentCulture,
                         L("Settings.Advanced.MetadataConflictsPending", "{0} pending cross-machine metadata conflict(s)."),
                         ProjectMetadataConflicts.Count);
-
+                _backupEncryptionSecretStatus = _backupEncryptionHasSecret
+                    ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+                    : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
+                OnPropertyChanged(nameof(BackupEncryptionSecretStatus));
                 OnPropertyChanged(nameof(ProjectMetadataConflictStatus));
             };
 
