@@ -11,13 +11,13 @@
   - [Backups overview](Backups)
   - [Backup pipeline](Backup-Pipeline)
   - [Destinations](Destinations)
+  - [Metadata sync](Metadata-Sync)
   - [Network shares](Network-Shares)
   - [Snapshots](Snapshots)
   - [Tray menu](Tray)
 
 - Updates
   - [Updates](Updates)
-  - [Installation](Installation)
 
 - 1.7 areas
   - Integrity / Doctor: [Configuration](Configuration)

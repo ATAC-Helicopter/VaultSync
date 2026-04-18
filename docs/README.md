@@ -29,6 +29,7 @@ Use this page as the primary index for all project documentation.
 - Backups overview: `docs/wiki/Backups.md`
 - Backup pipeline: `docs/wiki/Backup-Pipeline.md`
 - Destinations: `docs/wiki/Destinations.md`
+- Metadata sync: `docs/wiki/Metadata-Sync.md`
 - Network shares: `docs/wiki/Network-Shares.md`
 - Snapshots: `docs/wiki/Snapshots.md`
 - Configuration: `docs/wiki/Configuration.md`
@@ -37,6 +38,11 @@ Use this page as the primary index for all project documentation.
 - Troubleshooting: `docs/wiki/Troubleshooting.md`
 - FAQ: `docs/wiki/FAQ.md`
 - Reporting bugs: `docs/wiki/Reporting-Bugs.md`
+
+## Metadata Sync Scope
+- Carries portable metadata such as project settings, snapshot summaries, backup history fields, tombstones, and non-secret encryption descriptors.
+- Does not carry backup payload contents, plaintext secrets, or the full local app configuration.
+- Contract details and regression coverage live in `DOCUMENTATION.md` and `tests/VaultSync.Core.Tests/MetadataSyncTests.cs`.
 
 ## Localization Operations
 - UI strings live in `Localization/strings.en.json`.
