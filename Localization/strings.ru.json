@@ -1237,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Не удалось открыть страницу магазина",
   "Settings.Advanced.UpdateManagedByStoreStatus": "Статус",
   "Settings.Advanced.UpdateManagedByStoreTitle": "Обновления через магазин",
-  "Update.Store.ManagedDescription": "Эта установка управляется магазином"
+  "Update.Store.ManagedDescription": "Эта установка управляется магазином",
+  "LogConsole.AutoScroll": "Автопрокрутка",
+  "LogConsole.CopySelected": "Копировать выделенное",
+  "LogConsole.CopySelectedFailed": "Не удалось скопировать выделенное",
+  "LogConsole.CopySelectedSuccess": "Выделенное скопировано",
+  "Update.Store.OpenStore": "Открыть магазин"
 }

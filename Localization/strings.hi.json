@@ -1237,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "स्टोर पेज खोलने में विफल",
   "Settings.Advanced.UpdateManagedByStoreStatus": "स्थिति",
   "Settings.Advanced.UpdateManagedByStoreTitle": "स्टोर-प्रबंधित अपडेट",
-  "Update.Store.ManagedDescription": "यह इंस्टॉलेशन स्टोर द्वारा प्रबंधित है"
+  "Update.Store.ManagedDescription": "यह इंस्टॉलेशन स्टोर द्वारा प्रबंधित है",
+  "LogConsole.AutoScroll": "स्वतः स्क्रॉल",
+  "LogConsole.CopySelected": "चयनित कॉपी करें",
+  "LogConsole.CopySelectedFailed": "चयनित कॉपी नहीं हो सका",
+  "LogConsole.CopySelectedSuccess": "चयनित कॉपी किया गया",
+  "Update.Store.OpenStore": "स्टोर खोलें"
 }

@@ -1237,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "স্টোর পৃষ্ঠা খুলতে ব্যর্থ",
   "Settings.Advanced.UpdateManagedByStoreStatus": "স্থিতি",
   "Settings.Advanced.UpdateManagedByStoreTitle": "স্টোর দ্বারা আপডেট ব্যবস্থাপনা",
-  "Update.Store.ManagedDescription": "এই ইনস্টলেশনটি স্টোর দ্বারা পরিচালিত"
+  "Update.Store.ManagedDescription": "এই ইনস্টলেশনটি স্টোর দ্বারা পরিচালিত",
+  "LogConsole.AutoScroll": "অটো স্ক্রল",
+  "LogConsole.CopySelected": "নির্বাচিত অংশ কপি করুন",
+  "LogConsole.CopySelectedFailed": "নির্বাচিত অংশ কপি করা যায়নি",
+  "LogConsole.CopySelectedSuccess": "নির্বাচিত অংশ কপি করা হয়েছে",
+  "Update.Store.OpenStore": "স্টোর খুলুন"
 }

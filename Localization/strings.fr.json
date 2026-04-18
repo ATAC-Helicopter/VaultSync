@@ -1237,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Échec de l'ouverture de la page de la boutique",
   "Settings.Advanced.UpdateManagedByStoreStatus": "Statut",
   "Settings.Advanced.UpdateManagedByStoreTitle": "Mises à jour gérées par la boutique",
-  "Update.Store.ManagedDescription": "Cette installation est gérée par la boutique"
+  "Update.Store.ManagedDescription": "Cette installation est gérée par la boutique",
+  "LogConsole.AutoScroll": "Défilement automatique",
+  "LogConsole.CopySelected": "Copier la sélection",
+  "LogConsole.CopySelectedFailed": "Échec de la copie de la sélection",
+  "LogConsole.CopySelectedSuccess": "Sélection copiée",
+  "Update.Store.OpenStore": "Ouvrir la boutique"
 }
