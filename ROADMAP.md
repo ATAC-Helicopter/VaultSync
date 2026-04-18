@@ -1503,6 +1503,60 @@
   - Acceptance:
     - enabling checkpointed retry no longer silently disables parallel archive uploads
     - interrupted parallel uploads can resume safely without re-sending already validated chunks
+- [ ] `BUG-17104` `P1` Keep Settings `Projects root` synchronized after config reloads in the cached Settings view.
+  - Scope: ensure `LoadFromConfig()` refreshes visible Settings fields reliably, avoids reload-time autosave churn, and keeps the persisted `ProjectsRoot` value visible after navigation or startup reloads.
+  - Current status:
+    - In progress: implemented on PR `#222`.
+    - Issue `#227` tracks the regression report and expected behavior.
+  - Acceptance:
+    - Settings no longer shows `Projects root` as blank when the config file still contains a valid value
+    - reload-time field refreshes do not trigger spurious saves
+- [ ] `BUG-17105` `P1` Repair blank project roots during startup when the project folder still exists under `ProjectsRoot`.
+  - Scope: reconcile blank `RootPath` values after startup initialization, repair from `ProjectsRoot\\ProjectName` when present, and prefer project-id-based updates where available.
+  - Current status:
+    - In progress: implemented on PR `#222`.
+    - Issue `#228` tracks the startup repair gap.
+  - Acceptance:
+    - projects with recoverable blank roots are repaired during startup without waiting for backup/restore flows
+    - project root repairs prefer stable project identity over name-only matching
+- [ ] `BUG-17106` `P2` Add explicit auto-scroll and selected-line copy controls to the in-app log console.
+  - Scope: expose an explicit tail-follow toggle, stop manual scroll from fighting live capture, and allow copying the selected log line via button and standard shortcut.
+  - Current status:
+    - In progress: implemented on PR `#222`.
+    - Issue `#229` tracks the user-facing log console controls.
+  - Acceptance:
+    - the log console exposes an explicit auto-scroll toggle
+    - users can copy the selected log line from the UI and with the platform shortcut
+- [ ] `BUG-17107` `P1` Preserve `Read-only` destination status for Linux paths that fail real write access.
+  - Scope: replace the Linux-unreliable read-only heuristic in background destination probes with a real writability check, and preserve read-only warning state instead of collapsing it back to green reachable success on status refresh.
+  - Current status:
+    - Reported via issue `#230`: `chmod 555` paths can flip from `Read-only` back to green `Reachable` during background/status refresh even though backups still fail with write denial.
+  - Acceptance:
+    - Linux read-only destinations stay visibly `Read-only` during background and navigation refreshes
+    - status refresh paths preserve warning/read-only state instead of repainting it as success
+- [ ] `BUG-17108` `P1` Make the in-app log console reliably surface runtime errors and exception paths.
+  - Scope: ensure exceptions and error-level diagnostics that currently only appear in terminal/stdout or external console paths are also routed into the in-app log console consistently across Linux and other desktop targets.
+  - Current status:
+    - Reported via issue `#231`: some reproducible runtime errors do not appear in the in-app log console even though they are visible from `dotnet run` output.
+  - Acceptance:
+    - reproducible runtime errors appear in the in-app log console without requiring an external terminal
+    - log console coverage is consistent for handled and surfaced error paths on supported desktop targets
+- [ ] `BUG-17109` `P1` Fix destination status localization staying stale after navigation with cached views.
+  - Scope: keep destination status state in invariant internal keys, localize only at display time, and force destination-status refreshes when localization changes so cached navigation does not resurrect stale-language labels.
+  - Current status:
+    - Reported via issue `#223`.
+    - Related work lives on PR `#222`.
+  - Acceptance:
+    - destination status cards always render in the active UI language after navigation and menu reopen flows
+    - cached view reuse does not keep stale localized destination labels alive
+- [ ] `VS-1805` `P1` Add Linux release assets and architecture-aware patch packaging to the release workflow.
+  - Scope: build Linux `tar.gz` assets for `x64` and `arm64`, produce a desktop-friendly `linux-x64` AppImage, generate Linux patch assets, and make updater asset selection architecture-aware.
+  - Current status:
+    - In progress: workflow, updater, and docs changes are prepared locally on `Dev`.
+    - Issue `#232` tracks the release-asset work item.
+  - Acceptance:
+    - release-assets workflow uploads Linux install artifacts and Linux patch assets
+    - Linux update discovery prefers architecture-specific installers and patch assets before generic Linux fallback
 
 ## 1.8.x
 - [x] `BUG-17106` `P2` Improve in-app log console tail-following and selected-line copy. _(Done)_

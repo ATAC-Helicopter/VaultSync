@@ -15,10 +15,18 @@ VaultSync uses GitHub Releases for update discovery and supports patch assets to
   - `VaultSyncInstaller.exe`
 - macOS bundles:
   - architecture-specific DMGs
+- Linux bundles:
+  - `VaultSync-<version>-linux-x64.AppImage`
+  - `VaultSync-<version>-linux-x64.tar.gz`
+  - `VaultSync-<version>-linux-arm64.tar.gz`
 
 macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`
+
+Linux can use architecture-specific patch names:
+- `vaultsync-patch-linux-x64.*`
+- `vaultsync-patch-linux-arm64.*`
 
 ## Runtime Expectations
 - Updater checks according to Settings policy.

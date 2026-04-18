@@ -485,7 +485,18 @@ namespace VaultSync.UI.Services
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                asset = assets.FirstOrDefault(a =>
+                foreach (var suffix in GetLinuxAssetSuffixes())
+                {
+                    asset = assets.FirstOrDefault(a =>
+                        a.Name is not null &&
+                        a.Name.Contains(suffix, StringComparison.OrdinalIgnoreCase) &&
+                        (a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) ||
+                         a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)));
+                    if (asset != null)
+                        break;
+                }
+
+                asset ??= assets.FirstOrDefault(a =>
                     a.Name is not null &&
                     (a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) ||
                      a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)));
@@ -511,8 +522,30 @@ namespace VaultSync.UI.Services
                 return new List<string> { suffix, "macos" };
             }
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                return new List<string> { "linux" };
+            {
+                var suffixes = GetLinuxPatchSuffixes();
+                suffixes.Add("linux");
+                return suffixes;
+            }
             return new List<string>();
+        }
+
+        private static List<string> GetLinuxPatchSuffixes()
+        {
+            return RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.Arm64 => new List<string> { "linux-arm64" },
+                _ => new List<string> { "linux-x64" }
+            };
+        }
+
+        private static List<string> GetLinuxAssetSuffixes()
+        {
+            return RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.Arm64 => new List<string> { "linux-arm64", "arm64", "aarch64" },
+                _ => new List<string> { "linux-x64", "x64", "x86_64", "amd64" }
+            };
         }
 
         private static string DescribeRelease(GitHubRelease? release)
