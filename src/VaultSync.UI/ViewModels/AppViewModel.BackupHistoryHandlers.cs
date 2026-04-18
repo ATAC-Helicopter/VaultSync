@@ -1194,7 +1194,7 @@ namespace VaultSync.UI.ViewModels
             {
                 var projectsRoot = Path.Combine(cfg.ProjectsRoot, project.Name);
                 Directory.CreateDirectory(projectsRoot);
-                _repo.UpdateProjectPath(project.Name, projectsRoot, out _);
+                TryUpdateProjectRootPath(project, projectsRoot);
                 RuntimeLog.WriteVerbose($"[Restore] Project root missing. Using ProjectsRoot '{projectsRoot}'.");
                 return projectsRoot;
             }
@@ -1205,7 +1205,7 @@ namespace VaultSync.UI.ViewModels
                 project.Name);
 
             Directory.CreateDirectory(fallbackRoot);
-            _repo.UpdateProjectPath(project.Name, fallbackRoot, out _);
+            TryUpdateProjectRootPath(project, fallbackRoot);
 
             RuntimeLog.WriteVerbose($"[Restore] Project root missing. Using fallback restore path '{fallbackRoot}'.");
             return fallbackRoot;
