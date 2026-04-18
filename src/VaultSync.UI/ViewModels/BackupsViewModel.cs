@@ -1464,11 +1464,8 @@ namespace VaultSync.UI.ViewModels
             {
                 des.RefreshLocalization();
             }
-            OnPropertyChanged(nameof(string.Empty));
-            lock (_healthProbeGate)
-            {
-                _lastHealthProbeUtc = DateTime.MinValue;
-            }
+            OnPropertyChanged(string.Empty);
+            _lastHealthProbeUtc = DateTime.MinValue;
             RefreshBackupDiskUsage(includeHealthProbe:true);
         }
 
@@ -1857,36 +1854,47 @@ namespace VaultSync.UI.ViewModels
 
             DestinationStatus newStatus = DestinationStatus.None;
 
-            if(rawText.Contains("Using pre-mounted", StringComparison.OrdinalIgnoreCase) ||
-               rawText.Contains("Reachable", StringComparison.OrdinalIgnoreCase) ||
-               rawText.Contains("Completed", StringComparison.OrdinalIgnoreCase) ||
-               rawText.Contains("No changes", StringComparison.OrdinalIgnoreCase)||
-               rawText.Contains("No backup", StringComparison.OrdinalIgnoreCase))
+            newStatus = severity switch
             {
-                newStatus = DestinationStatus.Reachable;
-            }
-            else if (rawText.Contains("Read-only", StringComparison.OrdinalIgnoreCase) ||
-                     rawText.Contains("Read only", StringComparison.OrdinalIgnoreCase))
+                SeverityStatus.Success => DestinationStatus.Reachable,
+                SeverityStatus.Warning => DestinationStatus.ReadOnly,
+                SeverityStatus.Error => DestinationStatus.Unavailable,
+                _ => DestinationStatus.None
+            };
+            if (newStatus != DestinationStatus.None)
             {
-                newStatus = DestinationStatus.ReadOnly;
-            }
-            else if (rawText.Contains("Unavailable", StringComparison.OrdinalIgnoreCase) ||
-                     rawText.Contains("Unreachable", StringComparison.OrdinalIgnoreCase))
-            {
-                newStatus = DestinationStatus.Unavailable;
-            }
-            else
-            {
-                if (severity == SeverityStatus.Success)
+                if (rawText.Contains("Using pre-mounted", StringComparison.OrdinalIgnoreCase) ||
+                    rawText.Contains("Reachable", StringComparison.OrdinalIgnoreCase) ||
+                    rawText.Contains("Completed", StringComparison.OrdinalIgnoreCase) ||
+                    rawText.Contains("No changes", StringComparison.OrdinalIgnoreCase) ||
+                    rawText.Contains("No backup", StringComparison.OrdinalIgnoreCase))
                 {
                     newStatus = DestinationStatus.Reachable;
-                }else if (severity == SeverityStatus.Warning)
+                }
+                else if (rawText.Contains("Read-only", StringComparison.OrdinalIgnoreCase) ||
+                         rawText.Contains("Read only", StringComparison.OrdinalIgnoreCase))
                 {
                     newStatus = DestinationStatus.ReadOnly;
                 }
-                else if (severity == SeverityStatus.Error)
+                else if (rawText.Contains("Unavailable", StringComparison.OrdinalIgnoreCase) ||
+                         rawText.Contains("Unreachable", StringComparison.OrdinalIgnoreCase))
                 {
                     newStatus = DestinationStatus.Unavailable;
+                }
+                else
+                {
+                    if (severity == SeverityStatus.Success)
+                    {
+                        newStatus = DestinationStatus.Reachable;
+                    }
+                    else if (severity == SeverityStatus.Warning)
+                    {
+                        newStatus = DestinationStatus.ReadOnly;
+                    }
+                    else if (severity == SeverityStatus.Error)
+                    {
+                        newStatus = DestinationStatus.Unavailable;
+                    }
                 }
             }
 
@@ -1927,13 +1935,14 @@ namespace VaultSync.UI.ViewModels
             return (status, severity) switch
             {
                 (DestinationStatus.Inactive, _) => AccentBrush("#808080"),
+                (_, SeverityStatus.Error)        => AccentBrush("#FF6B6B"),
+                (DestinationStatus.Unavailable, _) => AccentBrush("#FF6B6B"),
+                (DestinationStatus.ReadOnly, _)  => AccentBrush("#FFB84C"),
+                (_, SeverityStatus.Warning)      => AccentBrush("#FFB84C"),
                 (DestinationStatus.Reachable, _) => AccentBrush("#22CC88"),
-
-                (_, SeverityStatus.Success) => AccentBrush("#22CC88"),
-                (_, SeverityStatus.Warning) => AccentBrush("#FFB84C"),
-                (_, SeverityStatus.Error)   => AccentBrush("#FF6B6B"),
-                (_, SeverityStatus.None)   => AccentBrush("#8E9BAF"),
-                _         => AccentBrush("#8E9BAF")
+                (_, SeverityStatus.Success)      => AccentBrush("#22CC88"),
+                (_, SeverityStatus.None)         => AccentBrush("#8E9BAF"),
+                _ => AccentBrush("#8E9BAF")
             };
         }
 
@@ -4389,7 +4398,7 @@ namespace VaultSync.UI.ViewModels
             BackupsViewModel.DestinationStatus.Pending => L("Backups.Destinations.Pending", "Pending"),
             BackupsViewModel.DestinationStatus.Inactive => L("Backups.Destinations.Inactive", "Inactive"),
             BackupsViewModel.DestinationStatus.Reachable => L("Destinations.Test.Reachable", "Reachable"),
-            BackupsViewModel.DestinationStatus.ReadOnly => L("Destinations.Test.ReadOnly", "ReadOnly"),
+            BackupsViewModel.DestinationStatus.ReadOnly => L("Destinations.Test.ReadOnly", "Read-only"),
             BackupsViewModel.DestinationStatus.Unavailable => L("Destinations.Test.Unavailable", "Unavailable"),
             BackupsViewModel.DestinationStatus.None => string.Empty,
 
