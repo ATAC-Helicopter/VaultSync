@@ -5,6 +5,7 @@
 - [BUG-17101] Fixed tooltip flickering and focus issues on Linux/Wayland by enabling overlay popups PR #217 (thanks @JustH8Me)
 - [BUG-17102] Fixed fatal AccessViolationException on Linux x64 during backup (thanks @JustH8Me, refs #218)
 - [BUG-17103] Fixed passwords being saved as 'null' on Linux and increased timeouts passwords (thanks @JustH8Me, refs #220)
+- [BUG-17104] Settings now refreshes persisted values correctly after config reloads, preventing fields like Projects root from appearing blank even when the saved config is intact.
 -
 ## [1.7.2] - Unreleased
 ### Added
