@@ -1,5 +1,5 @@
-# Changelog
-## [1.7.3] - Unreleased
+﻿# Changelog
+## [1.7.3-Beta.1] - Unreleased
 ### Added
 - [VS-17106] The in-app log console now exposes an explicit Auto-scroll toggle and lets you copy the selected log line with a button or the usual platform copy shortcut.
 - [VS-1805] Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`, plus a desktop-friendly `linux-x64` AppImage so direct Linux installs cover the widest practical audience.

@@ -6,7 +6,7 @@ This document defines the current release packaging flow.
 - .NET 8 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- Beta builds must use prerelease versions such as `1.7.x-beta.N`; the current development patch line is `1.7.2` and the latest Stable cut is `1.7.1`
+- Beta builds must use prerelease versions such as `1.7.x-Beta.N`; the current development patch line is `1.7.3-Beta.1` and the latest Stable cut is `1.7.1`
 
 ## 1) Windows Installer
 1. Publish:
@@ -33,8 +33,8 @@ This document defines the current release packaging flow.
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.7.3 x64 src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.7.3 arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.7.3-Beta.1 x64 src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.7.3-Beta.1 arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz` artifacts and the `linux-x64` `.AppImage`.
 
@@ -51,13 +51,13 @@ Beta example:
 - branch: `Dev`
 - release channel: `beta`
 - `previous_version = 1.6.0`
-- `target_version = 1.7.x-beta.N`
+- `target_version = 1.7.3-Beta.1`
 
 Stable example:
 - branch: `Stable`
 - release channel: `stable`
 - `previous_version = 1.6.0`
-- `target_version = 1.7.2`
+- `target_version = 1.7.3`
 
 Example multi-base input:
 - `previous_version = 1.6.2`

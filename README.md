@@ -302,7 +302,7 @@ See the full license here: [LICENSE](LICENSE).
 Bundled helper tools may ship under their own licenses. See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Current stable desktop release line: `1.7.1`. Current development line: `1.7.2`.
+Current stable desktop release line: `1.7.1`. Current development line: `1.7.3-Beta.1`.
 
 ## Credits
 

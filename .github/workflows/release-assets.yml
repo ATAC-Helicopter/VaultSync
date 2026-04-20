@@ -17,7 +17,7 @@ on:
         description: "Optional comma/newline separated exact base-version allowlist for one manifest (defaults to previous_version only)"
         required: false
       target_version:
-        description: "Target version for patch manifests (e.g., 1.7.0-beta.2 or 1.7.2)"
+        description: "Target version for patch manifests (e.g., 1.7.3-Beta.1 or 1.7.3)"
         required: true
 
 permissions:

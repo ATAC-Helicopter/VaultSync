@@ -1,25 +1,27 @@
 # What's New
 
-## [1.7.2]
+## [1.7.3-Beta.1]
 
-Current `1.7.2` development highlights focus on sync reliability, smarter archive retry behavior, Microsoft Store preparation, and UX cleanup.
+Current `1.7.3-Beta.1` beta highlights focus on Linux reliability, release asset coverage, safer startup/config recovery, and small usability improvements.
 
-### Notifications and workflow polish
-- Reworked in-app toasts so repeated alerts collapse cleanly, keep actions clickable, and avoid stacking noisy duplicates.
-- Tightened Projects tag editing and bulk-tag behavior so duplicate or bundled tag actions are easier to understand and control.
-- Cleaned up update diagnostics presentation so Settings is easier to scan during normal use.
+### Linux and release assets
+- Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`.
+- Release asset builds also produce a desktop-friendly `linux-x64` AppImage for direct Linux installs.
+- Linux update discovery now prefers architecture-specific installer and patch names before falling back to generic Linux assets.
 
-### Sync and backup resilience
-- Per-project auto-backup state, tags, and preferred destination now round-trip through metadata exports more reliably across machines.
-- Removing a project now exports a project tombstone so deleted projects do not reappear from destination metadata.
-- Archive compression progress now updates continuously on large files instead of appearing frozen during long entries.
-- Parallel archive upload and checkpointed retry now work together, so interrupted uploads can resume validated completed chunks instead of silently falling back to single-stream upload.
+### Linux reliability fixes
+- Tray panel screen detection, reopen behavior, and Linux/Wayland positioning are more resilient on Hyprland-class environments.
+- Tooltip flicker and focus issues on Linux/Wayland were fixed by enabling overlay popups.
+- A fatal Linux x64 `AccessViolationException` during backup was fixed.
+- Linux password saving no longer stores `null`, and password operation timeouts are longer.
 
-### Store preparation
-- Added Microsoft Store packaging scaffolding and runtime Direct-vs-Store channel awareness.
-- Store builds now disable GitHub self-update and route update actions to Microsoft Store instead.
-- Added a dedicated Store package workflow and a submission checklist for the Partner Center path.
-- Corrected the Store packaging project imports so the GitHub package workflow can build the upload artifact on the Windows runner.
+### Settings and startup recovery
+- Settings now refreshes persisted values correctly after config reloads, so fields such as Projects root no longer appear blank when the saved config is intact.
+- Startup can repair blank project root paths from the configured Projects root when the matching folder still exists on disk.
+
+### Usability
+- The in-app log console now has an explicit Auto-scroll toggle.
+- The in-app log console can copy the selected log line with a button or the usual platform copy shortcut.
 
 ## [1.7.0]
 
