@@ -1488,7 +1488,11 @@ namespace VaultSync.UI
             {
                 if (SetField(ref _backupLocationPath, value))
                 {
-                    ValidateBackupLocation(value);
+                    var (reachable, writable) = ValidateBackupLocation(value, notifyOnSuccess: false);
+                    if (_isInitialized)
+                    {
+                        DestinationTested?.Invoke(new BackupDestination { Alias = "Primary", Path = value, Active = true, PreMounted = true }, reachable, writable, BackupLocationStatus);
+                    }
                 }
             }
         }
@@ -3021,46 +3025,23 @@ namespace VaultSync.UI
             Dispatcher.UIThread.Post(Raise);
         }
 
-        private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)
+        private (bool isReachable, bool isWritable) ValidateBackupLocation(string path, bool notifyOnSuccess = true)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
                 BackupLocationStatus = string.Empty;
-                return;
+                return (false, false);
             }
 
-            try
-            {
-                Directory.CreateDirectory(path);
-            }
-            catch (Exception ex)
-            {
-                BackupLocationStatus = "Not accessible";
-                GlobalNotificationCenter.Instance.Show(
-                    $"Backup location not accessible: {ex.Message}",
-                    NotificationSeverity.Error,
-                    "Backup location");
-                return;
-            }
-
-            // Write test file to ensure we can write to the target.
-            var testFile = Path.Combine(path, ".vaultsync_write_test");
-            try
-            {
-                File.WriteAllText(testFile, "ok");
-                File.Delete(testFile);
-            }
-            catch (Exception ex)
+            bool canWrite = TryWriteProbeFile(path);
+            if (!canWrite)
             {
                 BackupLocationStatus = "Not writable";
-                GlobalNotificationCenter.Instance.Show(
-                    $"Backup location is not writable: {ex.Message}",
-                    NotificationSeverity.Error,
-                    "Backup location");
-                return;
+                return (true, false);
             }
 
             // Check free space against the configured minimum threshold.
+            bool lowSpace = false;
             try
             {
                 var drive = new DriveInfo(path);
@@ -3074,6 +3055,7 @@ namespace VaultSync.UI
                             $"Free space below threshold ({freePercent:0.#}% available, threshold {MinimumFreeSpacePercent}%).",
                             NotificationSeverity.Warning,
                             "Backup location");
+                        lowSpace = true;
                     }
                     else
                     {
@@ -3085,6 +3067,7 @@ namespace VaultSync.UI
                                 NotificationSeverity.Info,
                                 "Backup location");
                         }
+                        lowSpace = false;
                     }
                 }
             }
@@ -3093,6 +3076,7 @@ namespace VaultSync.UI
                 BackupLocationStatus = "OK";
                 // Ignore disk space failures; path/write checks already passed.
             }
+            return (true, true);
         }
 
         private void ForgetAllProjects()
