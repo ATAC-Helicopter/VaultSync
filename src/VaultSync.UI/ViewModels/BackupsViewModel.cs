@@ -1763,30 +1763,47 @@ namespace VaultSync.UI.ViewModels
 
             ShowDestinationToggles = allowToggle;
 
-            foreach (var item in DestinationStatuses)
+            var activeIds = list.Select(DestinationStatusItem.GetId).ToHashSet();
+
+            for (int i = DestinationStatuses.Count - 1; i >= 0; i--)
             {
-                item.PropertyChanged -= OnDestinationItemPropertyChanged;
+                if (!activeIds.Contains(DestinationStatuses[i].Id))
+                {
+                    DestinationStatuses[i].PropertyChanged -= OnDestinationItemPropertyChanged;
+                    DestinationStatuses.RemoveAt(i);
+                }
             }
-            DestinationStatuses.Clear();
+
             foreach (var dest in list)
             {
-                var status = dest.Active ? DestinationStatus.Pending : DestinationStatus.Inactive;
-                var severity = SeverityStatus.None;
-                var item = new DestinationStatusItem
+                var id = DestinationStatusItem.GetId(dest);
+                var existing = DestinationStatuses.FirstOrDefault(x => x.Id == id);
+                if (existing == null)
                 {
-                    Id     = DestinationStatusItem.GetId(dest),
-                    Alias  = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path,
-                    Path   = dest.Path,
-                    Status = status,
-                    Severity = severity,
-                    DotBrush = GetDestinationDotBrush(status, severity),
-                    LastCheckedUtc = null,
-                    IsActive = dest.Active,
-                    IsConfigurable = allowToggle
-                };
-                ApplyDestinationQuotaPlan(item);
-                item.PropertyChanged += OnDestinationItemPropertyChanged;
-                DestinationStatuses.Add(item);
+                    var status = dest.Active ? DestinationStatus.Pending : DestinationStatus.Inactive;
+                    var severity = SeverityStatus.None;
+                    var item = new DestinationStatusItem
+                    {
+                        Id = DestinationStatusItem.GetId(dest),
+                        Alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path,
+                        Path = dest.Path,
+                        Status = status,
+                        Severity = severity,
+                        DotBrush = GetDestinationDotBrush(status, severity),
+                        LastCheckedUtc = null,
+                        IsActive = dest.Active,
+                        IsConfigurable = allowToggle
+                    };
+                    ApplyDestinationQuotaPlan(item);
+                    item.PropertyChanged += OnDestinationItemPropertyChanged;
+                    DestinationStatuses.Add(item);
+                }
+                else
+                {
+                    existing.IsActive = dest.Active;
+                    existing.IsConfigurable = allowToggle;
+                    existing.Alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
+                }
             }
             RebuildActiveDestinationStatuses();
             OnPropertyChanged(nameof(HasDestinationStatuses));
@@ -1834,7 +1851,7 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(HasActiveDestinationStatuses));
         }
 
-        public void UpdateDestinationStatus(string id, string status, SeverityStatus severity = SeverityStatus.None)
+        public void UpdateDestinationStatus(string id, string status, SeverityStatus severity = SeverityStatus.None, string? alias = null)
         {
             if (!Dispatcher.UIThread.CheckAccess())
             {
@@ -1843,85 +1860,44 @@ namespace VaultSync.UI.ViewModels
             }
 
             var item = DestinationStatuses.FirstOrDefault(d => d.Id == id);
+            if (item is null && !string.IsNullOrWhiteSpace(alias))
+            {
+                item = DestinationStatuses.FirstOrDefault(d => string.Equals(d.Alias, alias, StringComparison.OrdinalIgnoreCase));
+            }
+
             if (item is null)
                 return;
 
-            string rawText = status;
-            if (rawText == null)
+            if (severity == SeverityStatus.None)
             {
-                rawText = string.Empty;
+                var rawText = status ?? string.Empty;
+                if (rawText.Contains("Read-only", StringComparison.CurrentCultureIgnoreCase )||
+                        rawText.Contains("ReadOnly", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    severity = SeverityStatus.Warning;
+                }
+                else if (rawText.Contains("Unavailable", StringComparison.CurrentCultureIgnoreCase) ||
+                          rawText.Contains("Unreachable", StringComparison.CurrentCultureIgnoreCase) ||
+                          rawText.Contains("Error", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    severity = SeverityStatus.Error;
+                }
+                else if (!string.IsNullOrWhiteSpace(rawText))
+                {
+                    severity = SeverityStatus.Success;
+                }
             }
-
-            DestinationStatus newStatus = DestinationStatus.None;
-
-            newStatus = severity switch
+            DestinationStatus newStatus = severity switch
             {
                 SeverityStatus.Success => DestinationStatus.Reachable,
                 SeverityStatus.Warning => DestinationStatus.ReadOnly,
                 SeverityStatus.Error => DestinationStatus.Unavailable,
                 _ => DestinationStatus.None
             };
-            if (newStatus != DestinationStatus.None)
-            {
-                if (rawText.Contains("Using pre-mounted", StringComparison.OrdinalIgnoreCase) ||
-                    rawText.Contains("Reachable", StringComparison.OrdinalIgnoreCase) ||
-                    rawText.Contains("Completed", StringComparison.OrdinalIgnoreCase) ||
-                    rawText.Contains("No changes", StringComparison.OrdinalIgnoreCase) ||
-                    rawText.Contains("No backup", StringComparison.OrdinalIgnoreCase))
-                {
-                    newStatus = DestinationStatus.Reachable;
-                }
-                else if (rawText.Contains("Read-only", StringComparison.OrdinalIgnoreCase) ||
-                         rawText.Contains("Read only", StringComparison.OrdinalIgnoreCase))
-                {
-                    newStatus = DestinationStatus.ReadOnly;
-                }
-                else if (rawText.Contains("Unavailable", StringComparison.OrdinalIgnoreCase) ||
-                         rawText.Contains("Unreachable", StringComparison.OrdinalIgnoreCase))
-                {
-                    newStatus = DestinationStatus.Unavailable;
-                }
-                else
-                {
-                    if (severity == SeverityStatus.Success)
-                    {
-                        newStatus = DestinationStatus.Reachable;
-                    }
-                    else if (severity == SeverityStatus.Warning)
-                    {
-                        newStatus = DestinationStatus.ReadOnly;
-                    }
-                    else if (severity == SeverityStatus.Error)
-                    {
-                        newStatus = DestinationStatus.Unavailable;
-                    }
-                }
-            }
-
-            var severityToUse = severity;
-            if (severity == SeverityStatus.None)
-            {
-                if (newStatus == DestinationStatus.Reachable)
-                {
-                    severityToUse = SeverityStatus.Success;
-                }
-                else if (newStatus == DestinationStatus.Unavailable)
-                {
-                    severityToUse = SeverityStatus.Error;
-                }
-                else if (newStatus == DestinationStatus.ReadOnly)
-                {
-                    severityToUse = SeverityStatus.Warning;
-                }
-                else if (newStatus == DestinationStatus.None)
-                {
-                    severityToUse = item.Severity;
-                }
-            }
 
             item.Status   = newStatus;
-            item.Severity = severityToUse;
-            item.DotBrush = GetDestinationDotBrush(newStatus, severityToUse);
+            item.Severity = severity;
+            item.DotBrush = GetDestinationDotBrush(newStatus, severity);
             item.LastCheckedUtc = DateTime.UtcNow;
         }
 

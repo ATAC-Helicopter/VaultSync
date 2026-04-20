@@ -164,6 +164,7 @@ namespace VaultSync.UI
         public event Action? RotateEncryptedBackupsRequested;
         public event Action? EnrollProjectEncryptionRequested;
         public event Action? LockEncryptedOpenWorkspacesRequested;
+        public event Action<BackupDestination, bool, bool, string>? DestinationTested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -2918,6 +2919,7 @@ namespace VaultSync.UI
                     _networkMountService.Cleanup(resolution);
                 }
             });
+            DestinationTested?.Invoke(destModel, result.success, result.writable, result.message);
 
             if (!result.success)
             {

@@ -83,8 +83,7 @@ namespace VaultSync.UI.ViewModels
                     var summaries = GetDestinationProbeSummaries(cfg);
                     foreach (var summary in summaries)
                     {
-                        var severity = summary.Reachable ? BackupsViewModel.SeverityStatus.Success : BackupsViewModel.SeverityStatus.Error;
-                        vm.UpdateDestinationStatus(summary.Id, summary.Message, severity);
+                        vm.UpdateDestinationStatus(summary.Id, summary.Message, summary.Severity, summary.Alias);
                     }
                 }
                 catch (Exception ex)
@@ -1308,6 +1307,10 @@ namespace VaultSync.UI.ViewModels
         private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
         {
             var propertyName = e.PropertyName ?? string.Empty;
+            if (propertyName == nameof(SettingsViewModel.SaveStatus))
+            {
+                return;
+            }
             QueueConfigReload(cfg =>
             {
                 _config = cfg;
@@ -1400,13 +1403,15 @@ namespace VaultSync.UI.ViewModels
 
         private void OnDestinationViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (sender is not BackupDestinationViewModel)
+            if (sender is not BackupDestinationViewModel dest)
                 return;
 
             if (e.PropertyName is nameof(BackupDestinationViewModel.Alias)
                 or nameof(BackupDestinationViewModel.Path)
                 or nameof(BackupDestinationViewModel.Active))
             {
+                var targetId = DestinationStatusItem.GetId(new BackupDestination { Path = dest.Path, Alias = dest.Alias });
+                _destinationProbeSummaries.TryRemove(targetId, out _);
                 RefreshDestinationOptionSources();
                 RefreshDestinationStatusOverview();
             }
