@@ -895,7 +895,7 @@ namespace VaultSync.UI
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
 
-            cfg.ProjectsRoot      = ProjectsRootPath;
+            cfg.ProjectsRoot      = ResolveProjectsRootForSave(ProjectsRootPath, cfg.ProjectsRoot);
             cfg.ResumeLastSession = ResumeLastSession;
 
             cfg.Behavior.LaunchOnLogin           = _launchOnLogin;
@@ -909,11 +909,17 @@ namespace VaultSync.UI
             cfg.Backups.IntervalMinutes             = ClampInt(AutoBackupIntervalMinutes, 1, 10080, 30);
             cfg.Backups.MaxSnapshotsPerProject      = ClampInt(MaxSnapshotsPerProject, 1, 10000, 20);
             cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
+            var preserveExistingDestinations =
+                UseAdvancedDestinations &&
+                destinationSnapshot.Count == 0 &&
+                cfg.Backups.Destinations is { Count: > 0 };
             var fallbackRoot = UseAdvancedDestinations
-                ? (Destinations.FirstOrDefault(d => d.Active)?.Path ?? Destinations.FirstOrDefault()?.Path)
+                ? (destinationSnapshot.FirstOrDefault(d => d.Active)?.Path ?? destinationSnapshot.FirstOrDefault()?.Path)
                 : BackupLocationPath;
-            var nextBackupRoot = string.IsNullOrWhiteSpace(fallbackRoot) ? null : fallbackRoot;
-            var nextDestinations = destinationSnapshot.Select(d => new BackupDestination
+            var nextBackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
+            var nextDestinations = preserveExistingDestinations
+                ? cfg.Backups.Destinations.ToList()
+                : destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
                 Path           = d.Path,
@@ -1147,6 +1153,26 @@ namespace VaultSync.UI
             return true;
         }
 
+        internal static string ResolveProjectsRootForSave(string? requestedRoot, string? persistedRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(requestedRoot))
+                return requestedRoot.Trim();
+
+            return string.IsNullOrWhiteSpace(persistedRoot)
+                ? string.Empty
+                : persistedRoot.Trim();
+        }
+
+        internal static string? ResolveBackupRootForSave(string? requestedRoot, string? persistedRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(requestedRoot))
+                return requestedRoot.Trim();
+
+            return string.IsNullOrWhiteSpace(persistedRoot)
+                ? null
+                : persistedRoot.Trim();
+        }
+
         private bool ValidateTransferPolicy(bool notifyOnError)
         {
             if (EnableBandwidthLimit && (MaxBandwidthMbps < 1 || MaxBandwidthMbps > 5000))
@@ -1316,11 +1342,30 @@ namespace VaultSync.UI
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_isReloadingFromConfig || e.PropertyName is null)
+            if (_isReloadingFromConfig || e.PropertyName is null || !ShouldAutoSaveProperty(e.PropertyName))
                 return;
 
             TriggerAutoSave();
         }
+
+        internal static bool ShouldAutoSaveProperty(string propertyName)
+            => propertyName switch
+            {
+                nameof(BackupLocationStatus) => false,
+                nameof(RsyncStatusHint) => false,
+                nameof(ShowRsyncStatusHint) => false,
+                nameof(BackupEncryptionSecretStatus) => false,
+                nameof(SaveStatus) => false,
+                nameof(BackupIndexRepairStatus) => false,
+                nameof(ProjectMetadataConflictStatus) => false,
+                nameof(RetentionSimulationStatus) => false,
+                nameof(UpdateCheckStatusText) => false,
+                nameof(UpdateCheckErrorText) => false,
+                nameof(UpdateDiagnosticsText) => false,
+                nameof(StartupDiagnosticsText) => false,
+                nameof(CheckpointResumeDiagnosticsText) => false,
+                _ => true
+            };
 
         private void AddTagColorRule()
         {
