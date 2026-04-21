@@ -77,7 +77,6 @@ namespace VaultSync.UI.ViewModels
                 UpdateDestinationProbeSummary(dest, testResult);
             };
 
-            _settingsViewModel.UpdateUpdateCheckStatus(null, null);
             foreach (var dest in _settingsViewModel.Destinations)
             {
                 TrackDestinationViewModel(dest);

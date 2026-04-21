@@ -1855,7 +1855,7 @@ namespace VaultSync.UI.ViewModels
         {
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                Dispatcher.UIThread.Post(() => UpdateDestinationStatus(id, status, severity));
+                Dispatcher.UIThread.Post(() => UpdateDestinationStatus(id, status, severity, alias));
                 return;
             }
 

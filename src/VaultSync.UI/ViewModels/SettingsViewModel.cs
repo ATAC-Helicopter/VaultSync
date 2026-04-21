@@ -3033,15 +3033,38 @@ namespace VaultSync.UI
                 return (false, false);
             }
 
-            bool canWrite = TryWriteProbeFile(path);
+            try
+            {
+                Directory.CreateDirectory(path);
+            }
+            catch (Exception ex)
+            {
+                BackupLocationStatus = "Not accessible";
+                if (notifyOnSuccess)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        $"Backup location not accessible: {ex.Message}",
+                        NotificationSeverity.Error,
+                        "Backup location");
+                }
+                return (false, false);
+            }
+
+            var canWrite = TryWriteProbeFile(path);
             if (!canWrite)
             {
                 BackupLocationStatus = "Not writable";
+                if (notifyOnSuccess)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        "Backup location is not writable.",
+                        NotificationSeverity.Error,
+                        "Backup location");
+                }
                 return (true, false);
             }
 
             // Check free space against the configured minimum threshold.
-            bool lowSpace = false;
             try
             {
                 var drive = new DriveInfo(path);
@@ -3055,7 +3078,6 @@ namespace VaultSync.UI
                             $"Free space below threshold ({freePercent:0.#}% available, threshold {MinimumFreeSpacePercent}%).",
                             NotificationSeverity.Warning,
                             "Backup location");
-                        lowSpace = true;
                     }
                     else
                     {
@@ -3067,7 +3089,6 @@ namespace VaultSync.UI
                                 NotificationSeverity.Info,
                                 "Backup location");
                         }
-                        lowSpace = false;
                     }
                 }
             }
