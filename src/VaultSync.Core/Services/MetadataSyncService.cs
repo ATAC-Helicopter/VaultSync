@@ -410,7 +410,6 @@ public sealed class MetadataSyncService
 
         var backupExternalMap = _repo.GetBackupExternalIdMap();
         var missingBackupExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var localLatestByProjectBeforeBackupImport = _repo.GetLatestBackupUtcByProject();
 
         foreach (var metaBackup in metaBackups)
         {
@@ -531,21 +530,20 @@ public sealed class MetadataSyncService
         };
         if (opts.MarkNeedsRestoreOnImport)
         {
-            var liveBackups = metaBackups
-                .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
-            UpdateNeedsRestoreFlags(projectMap, liveBackups, localLatestByProjectBeforeBackupImport);
+        var liveBackups = metaBackups
+            .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
+            UpdateNeedsRestoreFlags(projectMap, liveBackups);
         }
         Console.WriteLine($"[MetadataSync] Import complete from '{rootPath}': projects={importedProjects}, snapshots={importedSnapshots}, backups={importedBackups}, tombstones={appliedTombstones}.");
         return result;
     }
 
-    private void UpdateNeedsRestoreFlags(
-        IReadOnlyDictionary<string, int> projectMap,
-        IEnumerable<MetaBackup> metaBackups,
-        IReadOnlyDictionary<int, DateTime> localLatestByProject)
+    private void UpdateNeedsRestoreFlags(IReadOnlyDictionary<string, int> projectMap, IEnumerable<MetaBackup> metaBackups)
     {
         if (projectMap.Count == 0)
             return;
+
+        var localLatestByProject = _repo.GetLatestBackupUtcByProject();
 
         var importedLatestByExternalId = metaBackups
             .Where(b => !string.IsNullOrWhiteSpace(b.ProjectExternalId))
