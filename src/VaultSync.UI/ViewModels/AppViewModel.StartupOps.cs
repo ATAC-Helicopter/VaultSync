@@ -71,6 +71,12 @@ namespace VaultSync.UI.ViewModels
             _settingsViewModel.LockEncryptedOpenWorkspacesRequested += OnLockEncryptedOpenWorkspacesRequested;
             _settingsViewModel.UpdateUpdateCheckStatus(null, null);
             _settingsViewModel.Destinations.CollectionChanged += OnDestinationsCollectionChanged;
+            _settingsViewModel.DestinationTested += (dest, success, writable, message) =>
+            {
+                var testResult = new DestinationTestResult(success, writable, dest.Path ?? string.Empty, message);
+                UpdateDestinationProbeSummary(dest, testResult);
+            };
+
             foreach (var dest in _settingsViewModel.Destinations)
             {
                 TrackDestinationViewModel(dest);

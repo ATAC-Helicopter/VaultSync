@@ -164,6 +164,7 @@ namespace VaultSync.UI
         public event Action? RotateEncryptedBackupsRequested;
         public event Action? EnrollProjectEncryptionRequested;
         public event Action? LockEncryptedOpenWorkspacesRequested;
+        public event Action<BackupDestination, bool, bool, string>? DestinationTested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -1487,7 +1488,11 @@ namespace VaultSync.UI
             {
                 if (SetField(ref _backupLocationPath, value))
                 {
-                    ValidateBackupLocation(value);
+                    var (reachable, writable) = ValidateBackupLocation(value, notifyOnSuccess: false);
+                    if (_isInitialized)
+                    {
+                        DestinationTested?.Invoke(new BackupDestination { Alias = "Primary", Path = value, Active = true, PreMounted = true }, reachable, writable, BackupLocationStatus);
+                    }
                 }
             }
         }
@@ -2918,6 +2923,7 @@ namespace VaultSync.UI
                     _networkMountService.Cleanup(resolution);
                 }
             });
+            DestinationTested?.Invoke(destModel, result.success, result.writable, result.message);
 
             if (!result.success)
             {
@@ -3019,12 +3025,12 @@ namespace VaultSync.UI
             Dispatcher.UIThread.Post(Raise);
         }
 
-        private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)
+        private (bool isReachable, bool isWritable) ValidateBackupLocation(string path, bool notifyOnSuccess = true)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
                 BackupLocationStatus = string.Empty;
-                return;
+                return (false, false);
             }
 
             try
@@ -3034,28 +3040,28 @@ namespace VaultSync.UI
             catch (Exception ex)
             {
                 BackupLocationStatus = "Not accessible";
-                GlobalNotificationCenter.Instance.Show(
-                    $"Backup location not accessible: {ex.Message}",
-                    NotificationSeverity.Error,
-                    "Backup location");
-                return;
+                if (notifyOnSuccess)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        $"Backup location not accessible: {ex.Message}",
+                        NotificationSeverity.Error,
+                        "Backup location");
+                }
+                return (false, false);
             }
 
-            // Write test file to ensure we can write to the target.
-            var testFile = Path.Combine(path, ".vaultsync_write_test");
-            try
-            {
-                File.WriteAllText(testFile, "ok");
-                File.Delete(testFile);
-            }
-            catch (Exception ex)
+            var canWrite = TryWriteProbeFile(path);
+            if (!canWrite)
             {
                 BackupLocationStatus = "Not writable";
-                GlobalNotificationCenter.Instance.Show(
-                    $"Backup location is not writable: {ex.Message}",
-                    NotificationSeverity.Error,
-                    "Backup location");
-                return;
+                if (notifyOnSuccess)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        "Backup location is not writable.",
+                        NotificationSeverity.Error,
+                        "Backup location");
+                }
+                return (true, false);
             }
 
             // Check free space against the configured minimum threshold.
@@ -3091,6 +3097,7 @@ namespace VaultSync.UI
                 BackupLocationStatus = "OK";
                 // Ignore disk space failures; path/write checks already passed.
             }
+            return (true, true);
         }
 
         private void ForgetAllProjects()

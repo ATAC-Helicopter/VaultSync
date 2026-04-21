@@ -202,9 +202,7 @@ namespace VaultSync.UI.ViewModels
                 : result.Message;
 
             var severity = result.Reachable
-                ? (message.Contains(LStatic("Destinations.Test.ReadOnly", "Read-only"), StringComparison.OrdinalIgnoreCase)
-                    ? BackupsViewModel.SeverityStatus.Warning
-                    : BackupsViewModel.SeverityStatus.Success)
+                ? (result.Writable ? BackupsViewModel.SeverityStatus.Success : BackupsViewModel.SeverityStatus.Warning)
                 : BackupsViewModel.SeverityStatus.Error;
 
             _destinationProbeSummaries[id] = new DestinationProbeSummary(
@@ -213,9 +211,10 @@ namespace VaultSync.UI.ViewModels
                 dest.Path ?? string.Empty,
                 result.Reachable,
                 message,
-                DateTime.UtcNow);
+                DateTime.UtcNow,
+                severity);
 
-            BackupsViewModel.UpdateDestinationStatus(id, message, severity);
+            BackupsViewModel.UpdateDestinationStatus(id, message, severity, dest.Alias);
         }
 
         private void OnRefreshHistoryRequested()
@@ -759,6 +758,11 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
+                if (OperatingSystem.IsLinux())
+                {
+                    return TryWriteProbeFile(path);
+                }
+
                 var info = new DirectoryInfo(path);
                 if (!info.Exists)
                     return false;
@@ -1369,6 +1373,32 @@ namespace VaultSync.UI.ViewModels
             }
 
             return Task.CompletedTask;
+        }
+        private static bool TryWriteProbeFile(string effectivePath)
+        {
+            var testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
+            try
+            {
+                File.WriteAllText(testFile, "ok");
+                File.Delete(testFile);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(testFile))
+                        File.Delete(testFile);
+                }
+                catch
+                {
+                    // best effort cleanup
+                }
+            }
         }
 
     }

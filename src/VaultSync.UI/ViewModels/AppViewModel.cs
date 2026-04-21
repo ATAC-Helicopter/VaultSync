@@ -82,7 +82,8 @@ namespace VaultSync.UI.ViewModels
             string Path,
             bool Reachable,
             string Message,
-            DateTime LastChecked);
+            DateTime LastChecked,
+            BackupsViewModel.SeverityStatus Severity);
 
         public event Action? TrayMenuRefreshRequested;
 
