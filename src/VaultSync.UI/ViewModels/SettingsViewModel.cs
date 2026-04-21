@@ -893,7 +893,7 @@ namespace VaultSync.UI
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
 
-            cfg.ProjectsRoot      = ProjectsRootPath;
+            cfg.ProjectsRoot      = ResolveProjectsRootForSave(ProjectsRootPath, cfg.ProjectsRoot);
             cfg.ResumeLastSession = ResumeLastSession;
 
             cfg.Behavior.LaunchOnLogin           = _launchOnLogin;
@@ -911,10 +911,14 @@ namespace VaultSync.UI
             // Sync legacy backup root so older code paths still work.
             // - Simple mode: BackupLocationPath is authoritative.
             // - Advanced mode: use the first active destination as the canonical root.
+            var preserveExistingDestinations =
+                UseAdvancedDestinations &&
+                destinationSnapshot.Count == 0 &&
+                cfg.Backups.Destinations is { Count: > 0 };
             var fallbackRoot = UseAdvancedDestinations
-                ? (Destinations.FirstOrDefault(d => d.Active)?.Path ?? Destinations.FirstOrDefault()?.Path)
+                ? (destinationSnapshot.FirstOrDefault(d => d.Active)?.Path ?? destinationSnapshot.FirstOrDefault()?.Path)
                 : BackupLocationPath;
-            cfg.Backups.BackupRoot = string.IsNullOrWhiteSpace(fallbackRoot) ? null : fallbackRoot;
+            cfg.Backups.BackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
             cfg.Backups.Location   = cfg.Backups.BackupRoot;
             cfg.Backups.UseCompression              = UseBackupCompression;
             cfg.Backups.UseRsyncDelta               = UseRsyncDelta;
@@ -940,24 +944,27 @@ namespace VaultSync.UI
             cfg.Backups.Encryption.KeyRef = string.IsNullOrWhiteSpace(_backupEncryptionKeyRef)
                 ? string.Empty
                 : _backupEncryptionKeyRef;
-            cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
+            if (!preserveExistingDestinations)
             {
-                Alias          = d.Alias,
-                Path           = d.Path,
-                CredentialName = d.CredentialName,
-                Active         = d.Active,
-                AutoMount      = d.AutoMount,
-                AutoUnmount    = d.AutoUnmount,
-                PreMounted     = d.PreMounted,
-                EnableMetadataSync = d.EnableMetadataSync,
-                AutoImportMetadata = d.AutoImportMetadata,
-                ForceMetadataBackfill = d.ForceMetadataBackfill,
-                RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
-                RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
-                EnableCheckpointResume = d.EnableCheckpointResume,
-                SoftQuotaBytes = d.SoftQuotaBytes,
-                QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
-            }).ToList();
+                cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
+                {
+                    Alias          = d.Alias,
+                    Path           = d.Path,
+                    CredentialName = d.CredentialName,
+                    Active         = d.Active,
+                    AutoMount      = d.AutoMount,
+                    AutoUnmount    = d.AutoUnmount,
+                    PreMounted     = d.PreMounted,
+                    EnableMetadataSync = d.EnableMetadataSync,
+                    AutoImportMetadata = d.AutoImportMetadata,
+                    ForceMetadataBackfill = d.ForceMetadataBackfill,
+                    RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
+                    RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
+                    EnableCheckpointResume = d.EnableCheckpointResume,
+                    SoftQuotaBytes = d.SoftQuotaBytes,
+                    QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
+                }).ToList();
+            }
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
             cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
@@ -1102,6 +1109,26 @@ namespace VaultSync.UI
             }
 
             return true;
+        }
+
+        internal static string ResolveProjectsRootForSave(string? requestedRoot, string? persistedRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(requestedRoot))
+                return requestedRoot.Trim();
+
+            return string.IsNullOrWhiteSpace(persistedRoot)
+                ? string.Empty
+                : persistedRoot.Trim();
+        }
+
+        internal static string? ResolveBackupRootForSave(string? requestedRoot, string? persistedRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(requestedRoot))
+                return requestedRoot.Trim();
+
+            return string.IsNullOrWhiteSpace(persistedRoot)
+                ? null
+                : persistedRoot.Trim();
         }
 
         private bool ValidateTransferPolicy(bool notifyOnError)
@@ -1273,11 +1300,30 @@ namespace VaultSync.UI
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_isReloadingFromConfig || e.PropertyName is null)
+            if (_isReloadingFromConfig || e.PropertyName is null || !ShouldAutoSaveProperty(e.PropertyName))
                 return;
 
             TriggerAutoSave();
         }
+
+        internal static bool ShouldAutoSaveProperty(string propertyName)
+            => propertyName switch
+            {
+                nameof(BackupLocationStatus) => false,
+                nameof(RsyncStatusHint) => false,
+                nameof(ShowRsyncStatusHint) => false,
+                nameof(BackupEncryptionSecretStatus) => false,
+                nameof(SaveStatus) => false,
+                nameof(BackupIndexRepairStatus) => false,
+                nameof(ProjectMetadataConflictStatus) => false,
+                nameof(RetentionSimulationStatus) => false,
+                nameof(UpdateCheckStatusText) => false,
+                nameof(UpdateCheckErrorText) => false,
+                nameof(UpdateDiagnosticsText) => false,
+                nameof(StartupDiagnosticsText) => false,
+                nameof(CheckpointResumeDiagnosticsText) => false,
+                _ => true
+            };
 
         private void AddTagColorRule()
         {
