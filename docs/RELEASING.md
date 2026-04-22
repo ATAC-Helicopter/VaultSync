@@ -53,6 +53,12 @@ Stable example:
 - `previous_version = 1.6.0`
 - `target_version = 1.7.3`
 
+Future beta example:
+- branch: `Dev`
+- release channel: `beta`
+- `previous_version = 1.7.3`
+- `target_version = 1.8.0-Beta.1`
+
 Example multi-base input:
 - `previous_version = 1.6.2`
 - `previous_versions =`
