@@ -63,6 +63,7 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel = null;
             _settingsViewModel = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
+            _settingsViewModel.DestinationSettingsSaved += OnDestinationSettingsSaved;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
             _settingsViewModel.UpdateCheckRequested += OnUpdateCheckRequested;
             _settingsViewModel.RefreshHistoryRequested += OnRefreshHistoryRequested;
