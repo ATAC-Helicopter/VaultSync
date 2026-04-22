@@ -758,6 +758,60 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ExportProjectToStore_ProjectSettings_TransportAutoBackupEnabledWithoutBackup()
+    {
+        var metaRoot = CreateTempDir();
+        var sourceDbPath = Path.Combine(CreateTempDir(), "vaultsync-source.db");
+        var targetDbPath = Path.Combine(CreateTempDir(), "vaultsync-target.db");
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var sourceRepo = CreateRepository(sourceDbPath);
+            var projectId = sourceRepo.AddProject(new Project
+            {
+                Name = "Project Settings Only",
+                RootPath = CreateTempDir(),
+                Preset = "unity",
+                CreatedUtc = DateTime.UtcNow
+            });
+
+            var cfg = CloneConfig(originalConfig);
+            cfg.Backups.AutoBackupDisabledProjects = new List<int> { projectId };
+            AppConfigStore.Save(cfg);
+
+            var exportService = new MetadataSyncService(sourceRepo);
+            var exportResult = exportService.ExportProjectToStore(metaRoot, projectId, "1.7.3", "machine-source");
+            Assert.Equal(MetadataSyncStatus.Success, exportResult.Status);
+
+            var store = new MetadataStore(metaRoot);
+            var metaProject = store.ListProjects().Single();
+            using (var doc = JsonDocument.Parse(metaProject.SettingsJson))
+            {
+                Assert.True(doc.RootElement.TryGetProperty("autoBackupEnabled", out var autoBackupEnabled));
+                Assert.False(autoBackupEnabled.GetBoolean());
+            }
+
+            cfg.Backups.AutoBackupDisabledProjects.Clear();
+            AppConfigStore.Save(cfg);
+
+            var targetRepo = CreateRepository(targetDbPath);
+            var importService = new MetadataSyncService(targetRepo);
+            var importResult = importService.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+            Assert.Equal(MetadataSyncStatus.Success, importResult.Status);
+
+            var importedProject = targetRepo.GetProjectByName("Project Settings Only");
+            Assert.NotNull(importedProject);
+            var refreshedConfig = AppConfigStore.Load();
+            Assert.Contains(importedProject!.Id, refreshedConfig.Backups.AutoBackupDisabledProjects);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
     public void ExportBackupToStore_ProjectSettings_IncludeDestinationRestoreVerificationAndTags()
     {
         var metaRoot = CreateTempDir();
