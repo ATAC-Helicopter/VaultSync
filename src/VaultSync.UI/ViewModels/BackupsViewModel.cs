@@ -5075,7 +5075,15 @@ namespace VaultSync.UI.ViewModels
         public void Execute(object? parameter)    => _execute(parameter);
 
         public event EventHandler? CanExecuteChanged;
-        public void RaiseCanExecuteChanged() =>
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        public void RaiseCanExecuteChanged()
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+        }
     }
 }
