@@ -83,8 +83,7 @@ namespace VaultSync.UI.ViewModels
                     var summaries = GetDestinationProbeSummaries(cfg);
                     foreach (var summary in summaries)
                     {
-                        var severity = summary.Reachable ? "Success" : "Error";
-                        vm.UpdateDestinationStatus(summary.Id, summary.Message, severity);
+                        vm.UpdateDestinationStatus(summary.Id, summary.Message, summary.Severity, summary.Alias);
                     }
                 }
                 catch (Exception ex)
@@ -341,7 +340,7 @@ namespace VaultSync.UI.ViewModels
 
         private BackupProjectPreparation CreateManualBackupPreparation(int projectId)
         {
-            var cfg = _config;
+            var cfg = AppConfigStore.GetSnapshot();
             var project = _repo.GetProjectById(projectId);
             var selection = project is null
                 ? new ProjectDestinationSelection(GetActiveDestinations(cfg), null, null)
@@ -1024,6 +1023,8 @@ namespace VaultSync.UI.ViewModels
 
                     cfg.Backups.AutoBackupDisabledProjects = list;
                     AppConfigStore.Save(cfg);
+                    DiagnosticsLogger.Record(
+                        $"[AutoBackup] Preference changed. ProjectId={projectId}; Enabled={enabled}; DisabledCount={list.Count}.");
 
                     Dispatcher.UIThread.Post(() =>
                     {
@@ -1073,6 +1074,8 @@ namespace VaultSync.UI.ViewModels
 
                     cfg.Backups.AutoBackupDisabledProjects = list;
                     AppConfigStore.Save(cfg);
+                    DiagnosticsLogger.Record(
+                        $"[AutoBackup] Group preference changed. ProjectIds={string.Join(',', ids)}; Enabled={enabled}; DisabledCount={list.Count}.");
 
                     Dispatcher.UIThread.Post(() =>
                     {
@@ -1308,6 +1311,10 @@ namespace VaultSync.UI.ViewModels
         private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
         {
             var propertyName = e.PropertyName ?? string.Empty;
+            if (propertyName == nameof(SettingsViewModel.SaveStatus))
+            {
+                return;
+            }
             QueueConfigReload(cfg =>
             {
                 _config = cfg;
@@ -1353,11 +1360,21 @@ namespace VaultSync.UI.ViewModels
 
                 if (propertyName is nameof(SettingsViewModel.UseAdvancedDestinations))
                 {
-                    RefreshDestinationOptionSources();
+                    RefreshDestinationOptionSources(cfg);
                 }
 
                 RefreshDestinationStatusOverview();
             }, "settings-change");
+        }
+
+        private void OnDestinationSettingsSaved()
+        {
+            QueueConfigReload(cfg =>
+            {
+                _config = cfg;
+                RefreshDestinationOptionSources(cfg);
+                RefreshDestinationStatusOverview();
+            }, "settings-saved");
         }
 
         private void OnDestinationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -1400,13 +1417,15 @@ namespace VaultSync.UI.ViewModels
 
         private void OnDestinationViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (sender is not BackupDestinationViewModel)
+            if (sender is not BackupDestinationViewModel dest)
                 return;
 
             if (e.PropertyName is nameof(BackupDestinationViewModel.Alias)
                 or nameof(BackupDestinationViewModel.Path)
                 or nameof(BackupDestinationViewModel.Active))
             {
+                var targetId = DestinationStatusItem.GetId(new BackupDestination { Path = dest.Path, Alias = dest.Alias });
+                _destinationProbeSummaries.TryRemove(targetId, out _);
                 RefreshDestinationOptionSources();
                 RefreshDestinationStatusOverview();
             }
@@ -1416,9 +1435,15 @@ namespace VaultSync.UI.ViewModels
         {
             QueueConfigReload(config =>
             {
-                _projectsViewModel.RefreshDestinationOptions(config);
-                BackupsViewModel.RefreshDestinationOptions(config);
+                _config = config;
+                RefreshDestinationOptionSources(config);
             }, "destinations-options");
+        }
+
+        private void RefreshDestinationOptionSources(AppConfig config)
+        {
+            _projectsViewModel.RefreshDestinationOptions(config);
+            BackupsViewModel.RefreshDestinationOptions(config);
         }
 
         private void UpdateLogConsoleSettings()

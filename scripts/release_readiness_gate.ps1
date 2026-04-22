@@ -45,12 +45,12 @@ function Get-FileVersionValue {
 }
 
 function Get-ChangelogVersion {
-    $line = Get-Content CHANGELOG.md | Select-Object -First 3 | Where-Object { $_ -match '^## \[(.+?)\] - Unreleased' } | Select-Object -First 1
+    $line = Get-Content CHANGELOG.md | Select-Object -First 3 | Where-Object { $_ -match '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})' } | Select-Object -First 1
     if (-not $line) {
-        throw "Could not find unreleased changelog header in CHANGELOG.md."
+        throw "Could not find release changelog header in CHANGELOG.md."
     }
 
-    $match = [regex]::Match($line, '^## \[(.+?)\] - Unreleased')
+    $match = [regex]::Match($line, '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})')
     return $match.Groups[1].Value.Trim()
 }
 
@@ -139,8 +139,8 @@ Add-CheckResult -Results $results -Code "version-installer" -Condition ($install
     -Data @{ expected = $TargetVersion; actual = $installerVersion }
 
 Add-CheckResult -Results $results -Code "docs-changelog" -Condition ($changelogVersion -eq $TargetVersion) `
-    -PassMessage "Top unreleased changelog version is '$changelogVersion'." `
-    -FailMessage "Top unreleased changelog version '$changelogVersion' does not match target '$TargetVersion'." `
+    -PassMessage "Top changelog version is '$changelogVersion'." `
+    -FailMessage "Top changelog version '$changelogVersion' does not match target '$TargetVersion'." `
     -Data @{ expected = $TargetVersion; actual = $changelogVersion }
 
 Add-CheckResult -Results $results -Code "docs-whats-new" -Condition ($whatsNewVersion -eq $TargetVersion) `

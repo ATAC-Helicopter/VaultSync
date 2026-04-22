@@ -103,9 +103,14 @@ Keep planning, implementation, and release tracking connected:
 
 ## 7) Quality Gates
 Run before requesting review:
-- `dotnet build VaultSync.sln`
+- `dotnet build VaultSync.sln --configuration Release -warnaserror -p:UseSharedCompilation=false`
 - relevant tests for touched areas
 - smoke check of impacted UI flows if UI changed
+
+Pull requests and pushes to `Dev`/`Stable` also run the lightweight CI workflow:
+- Windows: full solution Release build plus core tests.
+- Linux: generic UI target Release build plus core tests.
+- Warnings are treated as errors so review fixes do not hide compiler noise.
 
 ## 8) Release Hygiene
 - Ensure changelog entries are categorized (`Added`, `Changed`, `Fixed`).

@@ -96,6 +96,7 @@ namespace VaultSync.UI.ViewModels
                 case "Projects":
                     BackupsViewModel.IsActiveView = false;
                     _projectsViewModel.EnsureLoaded();
+                    CurrentViewName = "Projects";
                     CurrentView = _projectsViewModel;
                     HeaderTitle = L("Nav.Projects", "Projects");
                     HeaderKicker = L("Main.HeaderProjects", "All repositories");
@@ -120,6 +121,7 @@ namespace VaultSync.UI.ViewModels
                     }
                     RefreshDestinationStatusOverview();
                     BackupsViewModel.RefreshActiveViewState();
+                    CurrentViewName = "Backups";
                     CurrentView = BackupsViewModel;
                     HeaderTitle = L("Nav.Backups", "Backups");
                     HeaderKicker = L("Main.HeaderBackups", "Snapshots & history");
@@ -127,6 +129,7 @@ namespace VaultSync.UI.ViewModels
                 case "Settings":
                     BackupsViewModel.IsActiveView = false;
                     _settingsViewModel.RebindDestinationCredentials();
+                    CurrentViewName = "Settings";
                     CurrentView = _settingsViewModel;
                     HeaderTitle = L("Nav.Settings", "Settings");
                     HeaderKicker = L("Main.HeaderSettings", "Preferences");
@@ -141,6 +144,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         QueueDashboardWarmLoadIfReady();
                     }
+                    CurrentViewName = "Dashboard";
                     CurrentView = DashboardViewModel;
                     HeaderTitle = L("Nav.Dashboard", "Dashboard");
                     HeaderKicker = L("Main.HeaderOverview", "Overview");

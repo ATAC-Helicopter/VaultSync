@@ -345,4 +345,16 @@ internal static class Program
         => AppBuilder.Configure<UpdaterApp>()
             .UsePlatformDetect()
             .LogToTrace(LogEventLevel.Warning);
+
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .With(new Win32PlatformOptions
+            {
+                OverlayPopups = true // For Windows
+            })
+            .With(new X11PlatformOptions
+            {
+                OverlayPopups = true // For Linux
+            });
 }

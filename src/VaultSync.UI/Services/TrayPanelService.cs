@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia;
@@ -14,6 +15,7 @@ namespace VaultSync.UI.Services;
 
 public sealed class TrayPanelService : IDisposable
 {
+    private static readonly bool IsLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
     private readonly IClassicDesktopStyleApplicationLifetime _desktop;
     private readonly Func<AppViewModel?> _getViewModel;
     private TrayPanelWindow? _window;
@@ -45,7 +47,11 @@ public sealed class TrayPanelService : IDisposable
         if (_window is null)
         {
             _window = new TrayPanelWindow();
-            _window.Deactivated += (_, _) => Hide();
+            _window.Closed += (s, e) => _window = null;
+            if (!IsLinux)
+            {
+                _window.Deactivated += (_, _) => Hide();
+            }
         }
 
         _viewModel ??= CreateViewModel(appVm);
@@ -240,7 +246,8 @@ public sealed class TrayPanelService : IDisposable
 
     private void PositionWindow(Window window)
     {
-        var screen = window.Screens.Primary;
+        var screen = window.Screens.Primary ?? window.Screens.ScreenFromVisual(window) ?? window.Screens.All.FirstOrDefault();
+        if (screen == null) return;
         var working = screen.WorkingArea;
         var width = (int)Math.Ceiling(window.Bounds.Width > 0 ? window.Bounds.Width : window.Width);
         var height = (int)Math.Ceiling(window.Bounds.Height > 0 ? window.Bounds.Height : window.Height);
@@ -253,19 +260,25 @@ public sealed class TrayPanelService : IDisposable
 
         int x;
         int y;
-        // Bottom-right, but clamp to working area to avoid off-screen placement.
+
         var minX = left + margin;
         var maxX = right - width - margin;
         var minY = top + margin;
         var maxY = bottom - height - margin;
 
-        // Prefer a centered-lower-right placement (not flush to the corner).
-        var desiredX = left + margin + inset;
-        var desiredY = top + (int)Math.Round((bottom - top - height) * 0.60);
+        if (IsLinux)
+        {
+            x = Clamp(right - width - margin, minX, maxX);
+            y = Clamp(bottom - height - margin, minY, maxY);
+        }
+        else
+        {
+            // Prefer a centered-lower-right placement (not flush to the corner).
+            x = Clamp(left + margin + inset, minX, maxX);
+            y = Clamp(top + (int)Math.Round((bottom - top - height) * 0.60), minY, maxY);
+        }
 
-        window.Position = new PixelPoint(
-            Clamp(desiredX, minX, maxX),
-            Clamp(desiredY, minY, maxY));
+        window.Position = new PixelPoint(x, y);
     }
 
     private static int Clamp(int value, int min, int max)

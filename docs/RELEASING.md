@@ -1,4 +1,4 @@
-﻿# Releasing VaultSync (Windows and macOS)
+# Releasing VaultSync (Windows, macOS, and Linux)
 
 This document defines the current release packaging flow.
 
@@ -6,7 +6,7 @@ This document defines the current release packaging flow.
 - .NET 8 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- Beta builds must use prerelease versions such as `1.7.x-beta.N`; the current development patch line is `1.7.2` and the latest Stable cut is `1.7.1`
+- The current stable release target is `1.7.3`; prerelease builds are for future development cycles only.
 
 ## 1) Windows Installer
 1. Publish:
@@ -25,7 +25,20 @@ This document defines the current release packaging flow.
 2. Build `.app` and `.dmg` using repository scripts.
 3. Upload both DMGs to release assets.
 
-## 3) Patch/Updater Assets
+## 3) Linux Direct Assets
+1. Publish both Linux architectures:
+   ```bash
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r linux-x64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r linux-arm64 --self-contained true
+   ```
+2. Build Linux archives:
+   ```bash
+   bash scripts/build_linux_release.sh 1.7.3 x64 src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.7.3 arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
+   ```
+3. Upload the generated `.tar.gz` artifacts and the `linux-x64` `.AppImage`.
+
+## 4) Patch/Updater Assets
 Create patch manifest and patch archives as described in `docs/UPDATER.md`.
 
 For `VS-1724` multi-base patch support:
@@ -34,17 +47,17 @@ For `VS-1724` multi-base patch support:
 - only include versions you have actually validated against the same patch payload
 - do not use ranges or inferred compatibility
 
-Beta example:
-- branch: `Dev`
-- release channel: `beta`
-- `previous_version = 1.6.0`
-- `target_version = 1.7.x-beta.N`
-
 Stable example:
 - branch: `Stable`
 - release channel: `stable`
 - `previous_version = 1.6.0`
-- `target_version = 1.7.2`
+- `target_version = 1.7.3`
+
+Future beta example:
+- branch: `Dev`
+- release channel: `beta`
+- `previous_version = 1.7.3`
+- `target_version = 1.8.0-Beta.1`
 
 Example multi-base input:
 - `previous_version = 1.6.2`
@@ -59,7 +72,7 @@ This produces one manifest with:
 
 Older or unlisted installs must fall back to the full installer.
 
-## 4) Release Checklist
+## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
   powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1
@@ -72,14 +85,20 @@ Older or unlisted installs must fall back to the full installer.
 - `docs/WHATS_NEW.md` updated
 - relevant wiki/help docs updated
 - build/test validation captured
-- release assets uploaded (installer/DMG/patch assets)
+- release assets uploaded (installer/DMG/Linux archives/patch assets)
 
-## 5) Unsigned Build Note
+## 6) Unsigned Build Note
 VaultSync builds are currently unsigned.
 
 macOS users may need to run:
 ```bash
 xattr -dr com.apple.quarantine /Applications/VaultSync.app
+```
+
+Linux AppImage users may need to run:
+```bash
+chmod +x VaultSync-<version>-linux-x64.AppImage
+./VaultSync-<version>-linux-x64.AppImage
 ```
 
 ## Related Docs

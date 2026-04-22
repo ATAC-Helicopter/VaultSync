@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "Adicione um projeto antes de registrar uma senha.",
   "Projects.Encryption.EnrollValidationProject": "Selecione um projeto para continuar.",
   "Projects.Encryption.PasswordUpdateFailed": "Falha ao atualizar a senha de criptografia do projeto.",
+  "Projects.Encryption.LinuxSecretToolMissing": "O armazenamento do sistema não está disponível. Certifique-se de que o pacote 'libsecret' (ou 'secret-tool') esteja instalado e que o Keyring esteja em execução e desbloqueado.",
   "Projects.Encryption.PasswordValidationMismatch": "A senha e a confirmação não correspondem.",
   "Projects.Encryption.PasswordValidationRequired": "Senha e confirmação são obrigatórias.",
   "Projects.Encryption.ProjectNotFound": "Projeto com id {0} não encontrado.",
@@ -1236,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Falha ao abrir a página da loja",
   "Settings.Advanced.UpdateManagedByStoreStatus": "Estado",
   "Settings.Advanced.UpdateManagedByStoreTitle": "Atualizações geridas pela loja",
-  "Update.Store.ManagedDescription": "Esta instalação é gerida pela loja"
+  "Update.Store.ManagedDescription": "Esta instalação é gerida pela loja",
+  "LogConsole.AutoScroll": "Rolagem automática",
+  "LogConsole.CopySelected": "Copiar selecionado",
+  "LogConsole.CopySelectedFailed": "Falha ao copiar a seleção",
+  "LogConsole.CopySelectedSuccess": "Seleção copiada",
+  "Update.Store.OpenStore": "Abrir loja"
 }

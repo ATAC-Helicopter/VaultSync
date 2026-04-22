@@ -2862,15 +2862,26 @@ public class ProjectsViewModel : ViewModelBase
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
         var config = AppConfigStore.GetSnapshot();
+        LoadGroupOptions();
+        OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
         RefreshEncryptionPolicyOptions();
         RefreshDestinationOptionsInternal(config);
         foreach (var project in _allProjects)
         {
             UpdateProjectDestinationDisplay(project, config);
             UpdateProjectEncryptionDisplay(project, config);
+            UpdateProjectPresetDisplay(project);
+
         }
         RefreshHealthTags();
         RefreshSnapshotText();
+        if (SelectedProject != null)
+        {
+            SelectedProject.SnapshotHistoryLoaded = false;
+            LoadSnapshotHistoryForSelectedProject();
+        }
+        OnPropertyChanged(nameof(SelectedProject));
+        OnPropertyChanged(string.Empty);
     }
 
     private void RequestProjectEncryptionPasswordEdit(ProjectItemViewModel? project)

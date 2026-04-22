@@ -155,6 +155,7 @@ namespace VaultSync.UI
         private bool _isInitialized;
         private bool _isSaving;
         private bool _savePending;
+        private bool _isReloadingFromConfig;
         private bool? _lastLaunchOnLoginApplied;
 
         public event Action? OpenLogConsoleRequested;
@@ -163,6 +164,8 @@ namespace VaultSync.UI
         public event Action? RotateEncryptedBackupsRequested;
         public event Action? EnrollProjectEncryptionRequested;
         public event Action? LockEncryptedOpenWorkspacesRequested;
+        public event Action? DestinationSettingsSaved;
+        public event Action<BackupDestination, bool, bool, string>? DestinationTested;
 
         private sealed record DestinationSnapshot(
             string Alias,
@@ -489,6 +492,17 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(MaintenanceWindowRepairDescription));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataLabel));
                 OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
+                ProjectMetadataConflictStatus = ProjectMetadataConflicts.Count == 0
+                    ? L("Settings.Advanced.MetadataConflictsNone", "No pending cross-machine metadata conflicts.")
+                    : string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.Advanced.MetadataConflictsPending", "{0} pending cross-machine metadata conflict(s)."),
+                        ProjectMetadataConflicts.Count);
+                _backupEncryptionSecretStatus = _backupEncryptionHasSecret
+                    ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
+                    : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
+                OnPropertyChanged(nameof(BackupEncryptionSecretStatus));
+                OnPropertyChanged(nameof(ProjectMetadataConflictStatus));
             };
 
             ThemeOptions = new ObservableCollection<string>();
@@ -576,21 +590,24 @@ namespace VaultSync.UI
 
         private void LoadFromConfig()
         {
-            var cfg = AppConfigStore.Load();
-            _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
-                ? _localizationService.CurrentLanguage
-                : cfg.Advanced.Language;
-            _localizationService.SetLanguage(_selectedLanguageCode);
+            _isReloadingFromConfig = true;
+            try
+            {
+                var cfg = AppConfigStore.Load();
+                _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
+                    ? _localizationService.CurrentLanguage
+                    : cfg.Advanced.Language;
+                _localizationService.SetLanguage(_selectedLanguageCode);
 
-            _projectsRootPath      = cfg.ProjectsRoot ?? "";
-            _resumeLastSession     = cfg.ResumeLastSession;
-            _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
-            _showTrayIcon            = cfg.Behavior.ShowTrayIcon;
-            _runInBackground         = cfg.Behavior.RunInBackground;
-            _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
-            _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
-            _lastLaunchOnLoginApplied = _launchOnLogin;
-            _confirmDeleteBackup     = cfg.Behavior.ConfirmDeleteBackup;
+                _projectsRootPath      = cfg.ProjectsRoot ?? "";
+                _resumeLastSession     = cfg.ResumeLastSession;
+                _showWindowOnTrayActions = cfg.Behavior.ShowWindowOnTrayActions;
+                _showTrayIcon            = cfg.Behavior.ShowTrayIcon;
+                _runInBackground         = cfg.Behavior.RunInBackground;
+                _showTrayBackupWidget    = cfg.Behavior.ShowBackupWidget;
+                _launchOnLogin           = cfg.Behavior.LaunchOnLogin;
+                _lastLaunchOnLoginApplied = _launchOnLogin;
+                _confirmDeleteBackup     = cfg.Behavior.ConfirmDeleteBackup;
 
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
             _autoBackupIntervalMinutes = ClampInt(cfg.Backups.IntervalMinutes, 1, 10080, 30);
@@ -762,10 +779,58 @@ namespace VaultSync.UI
             ApplyThemeFromSelected();
             ThemeManager.ApplyCompactLayout(_useCompactLayout);
 
-            SaveStatus = L("Settings.Status.Loaded", "Settings loaded");
+                SaveStatus = L("Settings.Status.Loaded", "Settings loaded");
 
-            // Update UI
-            OnPropertyChanged(null);
+                // Explicit notifications are more reliable here than a blanket null refresh,
+                // especially when the cached Settings view is reloaded after startup.
+                OnPropertyChanged(nameof(ProjectsRootPath));
+                OnPropertyChanged(nameof(ResumeLastSession));
+                OnPropertyChanged(nameof(ShowWindowOnTrayActions));
+                OnPropertyChanged(nameof(ShowTrayIcon));
+                OnPropertyChanged(nameof(RunInBackground));
+                OnPropertyChanged(nameof(ShowTrayBackupWidget));
+                OnPropertyChanged(nameof(LaunchOnLogin));
+                OnPropertyChanged(nameof(ConfirmDeleteBackups));
+                OnPropertyChanged(nameof(EnableAutoBackups));
+                OnPropertyChanged(nameof(AutoBackupIntervalMinutes));
+                OnPropertyChanged(nameof(MaxSnapshotsPerProject));
+                OnPropertyChanged(nameof(BackupLocationPath));
+                OnPropertyChanged(nameof(UseAdvancedDestinations));
+                OnPropertyChanged(nameof(UseBackupCompression));
+                OnPropertyChanged(nameof(UseRsyncDelta));
+                OnPropertyChanged(nameof(UseIncrementalBackups));
+                OnPropertyChanged(nameof(VerifyBackupsAfterCreate));
+                OnPropertyChanged(nameof(PauseBackupsOnBattery));
+                OnPropertyChanged(nameof(PreferExternalDrives));
+                OnPropertyChanged(nameof(ShowDriveHealthWarnings));
+                OnPropertyChanged(nameof(MinimumFreeSpacePercent));
+                OnPropertyChanged(nameof(SelectedTheme));
+                OnPropertyChanged(nameof(UseCompactLayout));
+                OnPropertyChanged(nameof(ShowProjectAvatars));
+                OnPropertyChanged(nameof(NotifyOnBackupSuccess));
+                OnPropertyChanged(nameof(NotifyOnBackupFailure));
+                OnPropertyChanged(nameof(NotifyOnLowDiskSpace));
+                OnPropertyChanged(nameof(NotifyOnSnapshotSuccess));
+                OnPropertyChanged(nameof(NotifyOnSnapshotFailure));
+                OnPropertyChanged(nameof(UseOsNotifications));
+                OnPropertyChanged(nameof(NotifyOnlyWhenInactive));
+                OnPropertyChanged(nameof(EnableVerboseLogging));
+                OnPropertyChanged(nameof(SaveVerboseLogs));
+                OnPropertyChanged(nameof(CheckForUpdatesOnStartup));
+                OnPropertyChanged(nameof(UpdateCheckIntervalMinutes));
+                OnPropertyChanged(nameof(BetaChannelEnabled));
+                OnPropertyChanged(nameof(EnableMaintenanceWindow));
+                OnPropertyChanged(nameof(MaintenanceWindowStart));
+                OnPropertyChanged(nameof(MaintenanceWindowEnd));
+                OnPropertyChanged(nameof(MaintenanceRunConsistencyScan));
+                OnPropertyChanged(nameof(MaintenanceRunRepairDryRun));
+                OnPropertyChanged(nameof(MaintenanceRunMetadataRefresh));
+                OnPropertyChanged(nameof(SaveStatus));
+            }
+            finally
+            {
+                _isReloadingFromConfig = false;
+            }
         }
 
         private async Task SaveToConfigAsync(bool notifyOnValidationError = true)
@@ -830,7 +895,7 @@ namespace VaultSync.UI
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
 
-            cfg.ProjectsRoot      = ProjectsRootPath;
+            cfg.ProjectsRoot      = ResolveProjectsRootForSave(ProjectsRootPath, cfg.ProjectsRoot);
             cfg.ResumeLastSession = ResumeLastSession;
 
             cfg.Behavior.LaunchOnLogin           = _launchOnLogin;
@@ -844,14 +909,41 @@ namespace VaultSync.UI
             cfg.Backups.IntervalMinutes             = ClampInt(AutoBackupIntervalMinutes, 1, 10080, 30);
             cfg.Backups.MaxSnapshotsPerProject      = ClampInt(MaxSnapshotsPerProject, 1, 10000, 20);
             cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
-            cfg.Backups.UseAdvancedDestinations     = UseAdvancedDestinations;
-            // Sync legacy backup root so older code paths still work.
-            // - Simple mode: BackupLocationPath is authoritative.
-            // - Advanced mode: use the first active destination as the canonical root.
+            var preserveExistingDestinations =
+                UseAdvancedDestinations &&
+                destinationSnapshot.Count == 0 &&
+                cfg.Backups.Destinations is { Count: > 0 };
             var fallbackRoot = UseAdvancedDestinations
-                ? (Destinations.FirstOrDefault(d => d.Active)?.Path ?? Destinations.FirstOrDefault()?.Path)
+                ? (destinationSnapshot.FirstOrDefault(d => d.Active)?.Path ?? destinationSnapshot.FirstOrDefault()?.Path)
                 : BackupLocationPath;
-            cfg.Backups.BackupRoot = string.IsNullOrWhiteSpace(fallbackRoot) ? null : fallbackRoot;
+            var nextBackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
+            var nextDestinations = preserveExistingDestinations
+                ? cfg.Backups.Destinations.ToList()
+                : destinationSnapshot.Select(d => new BackupDestination
+            {
+                Alias          = d.Alias,
+                Path           = d.Path,
+                CredentialName = d.CredentialName,
+                Active         = d.Active,
+                AutoMount      = d.AutoMount,
+                AutoUnmount    = d.AutoUnmount,
+                PreMounted     = d.PreMounted,
+                EnableMetadataSync = d.EnableMetadataSync,
+                AutoImportMetadata = d.AutoImportMetadata,
+                ForceMetadataBackfill = d.ForceMetadataBackfill,
+                RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
+                RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
+                EnableCheckpointResume = d.EnableCheckpointResume,
+                SoftQuotaBytes = d.SoftQuotaBytes,
+                QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
+            }).ToList();
+            var destinationSettingsChanged =
+                cfg.Backups.UseAdvancedDestinations != UseAdvancedDestinations ||
+                !string.Equals(cfg.Backups.BackupRoot ?? string.Empty, nextBackupRoot ?? string.Empty, StringComparison.Ordinal) ||
+                !BackupDestinationsEqual(cfg.Backups.Destinations, nextDestinations);
+
+            cfg.Backups.UseAdvancedDestinations = UseAdvancedDestinations;
+            cfg.Backups.BackupRoot = nextBackupRoot;
             cfg.Backups.Location   = cfg.Backups.BackupRoot;
             cfg.Backups.UseCompression              = UseBackupCompression;
             cfg.Backups.UseRsyncDelta               = UseRsyncDelta;
@@ -877,24 +969,7 @@ namespace VaultSync.UI
             cfg.Backups.Encryption.KeyRef = string.IsNullOrWhiteSpace(_backupEncryptionKeyRef)
                 ? string.Empty
                 : _backupEncryptionKeyRef;
-            cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
-            {
-                Alias          = d.Alias,
-                Path           = d.Path,
-                CredentialName = d.CredentialName,
-                Active         = d.Active,
-                AutoMount      = d.AutoMount,
-                AutoUnmount    = d.AutoUnmount,
-                PreMounted     = d.PreMounted,
-                EnableMetadataSync = d.EnableMetadataSync,
-                AutoImportMetadata = d.AutoImportMetadata,
-                ForceMetadataBackfill = d.ForceMetadataBackfill,
-                RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
-                RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
-                EnableCheckpointResume = d.EnableCheckpointResume,
-                SoftQuotaBytes = d.SoftQuotaBytes,
-                QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
-            }).ToList();
+            cfg.Backups.Destinations                = nextDestinations;
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
             cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
@@ -979,6 +1054,10 @@ namespace VaultSync.UI
             }
 
             await AppConfigStore.SaveAsync(cfg);
+            if (destinationSettingsChanged)
+            {
+                DestinationSettingsSaved?.Invoke();
+            }
 
             SaveStatus = string.Format(
                 CultureInfo.CurrentCulture,
@@ -1039,6 +1118,59 @@ namespace VaultSync.UI
             }
 
             return true;
+        }
+
+        private static bool BackupDestinationsEqual(IReadOnlyList<BackupDestination>? current, IReadOnlyList<BackupDestination> next)
+        {
+            current ??= Array.Empty<BackupDestination>();
+            if (current.Count != next.Count)
+                return false;
+
+            for (var i = 0; i < current.Count; i++)
+            {
+                var left = current[i];
+                var right = next[i];
+                if (!string.Equals(left.Alias ?? string.Empty, right.Alias ?? string.Empty, StringComparison.Ordinal) ||
+                    !string.Equals(left.Path ?? string.Empty, right.Path ?? string.Empty, StringComparison.Ordinal) ||
+                    !string.Equals(left.CredentialName ?? string.Empty, right.CredentialName ?? string.Empty, StringComparison.Ordinal) ||
+                    left.Active != right.Active ||
+                    left.AutoMount != right.AutoMount ||
+                    left.AutoUnmount != right.AutoUnmount ||
+                    left.PreMounted != right.PreMounted ||
+                    left.EnableMetadataSync != right.EnableMetadataSync ||
+                    left.AutoImportMetadata != right.AutoImportMetadata ||
+                    left.ForceMetadataBackfill != right.ForceMetadataBackfill ||
+                    left.RetryMaxAttempts != right.RetryMaxAttempts ||
+                    left.RetryBackoffSeconds != right.RetryBackoffSeconds ||
+                    left.EnableCheckpointResume != right.EnableCheckpointResume ||
+                    left.SoftQuotaBytes != right.SoftQuotaBytes ||
+                    left.QuotaWarningPercent != right.QuotaWarningPercent)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        internal static string ResolveProjectsRootForSave(string? requestedRoot, string? persistedRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(requestedRoot))
+                return requestedRoot.Trim();
+
+            return string.IsNullOrWhiteSpace(persistedRoot)
+                ? string.Empty
+                : persistedRoot.Trim();
+        }
+
+        internal static string? ResolveBackupRootForSave(string? requestedRoot, string? persistedRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(requestedRoot))
+                return requestedRoot.Trim();
+
+            return string.IsNullOrWhiteSpace(persistedRoot)
+                ? null
+                : persistedRoot.Trim();
         }
 
         private bool ValidateTransferPolicy(bool notifyOnError)
@@ -1210,11 +1342,30 @@ namespace VaultSync.UI
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is null)
+            if (_isReloadingFromConfig || e.PropertyName is null || !ShouldAutoSaveProperty(e.PropertyName))
                 return;
 
             TriggerAutoSave();
         }
+
+        internal static bool ShouldAutoSaveProperty(string propertyName)
+            => propertyName switch
+            {
+                nameof(BackupLocationStatus) => false,
+                nameof(RsyncStatusHint) => false,
+                nameof(ShowRsyncStatusHint) => false,
+                nameof(BackupEncryptionSecretStatus) => false,
+                nameof(SaveStatus) => false,
+                nameof(BackupIndexRepairStatus) => false,
+                nameof(ProjectMetadataConflictStatus) => false,
+                nameof(RetentionSimulationStatus) => false,
+                nameof(UpdateCheckStatusText) => false,
+                nameof(UpdateCheckErrorText) => false,
+                nameof(UpdateDiagnosticsText) => false,
+                nameof(StartupDiagnosticsText) => false,
+                nameof(CheckpointResumeDiagnosticsText) => false,
+                _ => true
+            };
 
         private void AddTagColorRule()
         {
@@ -1424,7 +1575,11 @@ namespace VaultSync.UI
             {
                 if (SetField(ref _backupLocationPath, value))
                 {
-                    ValidateBackupLocation(value);
+                    var (reachable, writable) = ValidateBackupLocation(value, notifyOnSuccess: false);
+                    if (_isInitialized)
+                    {
+                        DestinationTested?.Invoke(new BackupDestination { Alias = "Primary", Path = value, Active = true, PreMounted = true }, reachable, writable, BackupLocationStatus);
+                    }
                 }
             }
         }
@@ -2584,7 +2739,17 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                BackupEncryptionSecretStatus = L("Settings.Encryption.SecretStatusSaveFailed", "Failed to store encryption password.");
+                if (ex.InnerException.Message == "LINUX_SECRET_TOOL_MISSING")
+                {
+                    BackupEncryptionSecretStatus = L("Projects.Encryption.LinuxSecretToolMissing",
+                        "Linux secret storage is unavailable. Ensure 'libsecret' is installed and your keyring service is running.");
+                }
+                else
+                {
+                    BackupEncryptionSecretStatus = L("Settings.Encryption.SecretStatusSaveFailed",
+                        "Failed to store encryption password.");
+                }
+
                 GlobalNotificationCenter.Instance.Show(
                     $"{BackupEncryptionSecretStatus} {ex.Message}",
                     NotificationSeverity.Error,
@@ -2845,6 +3010,7 @@ namespace VaultSync.UI
                     _networkMountService.Cleanup(resolution);
                 }
             });
+            DestinationTested?.Invoke(destModel, result.success, result.writable, result.message);
 
             if (!result.success)
             {
@@ -2946,12 +3112,12 @@ namespace VaultSync.UI
             Dispatcher.UIThread.Post(Raise);
         }
 
-        private void ValidateBackupLocation(string path, bool notifyOnSuccess = true)
+        private (bool isReachable, bool isWritable) ValidateBackupLocation(string path, bool notifyOnSuccess = true)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
                 BackupLocationStatus = string.Empty;
-                return;
+                return (false, false);
             }
 
             try
@@ -2961,28 +3127,28 @@ namespace VaultSync.UI
             catch (Exception ex)
             {
                 BackupLocationStatus = "Not accessible";
-                GlobalNotificationCenter.Instance.Show(
-                    $"Backup location not accessible: {ex.Message}",
-                    NotificationSeverity.Error,
-                    "Backup location");
-                return;
+                if (notifyOnSuccess)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        $"Backup location not accessible: {ex.Message}",
+                        NotificationSeverity.Error,
+                        "Backup location");
+                }
+                return (false, false);
             }
 
-            // Write test file to ensure we can write to the target.
-            var testFile = Path.Combine(path, ".vaultsync_write_test");
-            try
-            {
-                File.WriteAllText(testFile, "ok");
-                File.Delete(testFile);
-            }
-            catch (Exception ex)
+            var canWrite = TryWriteProbeFile(path);
+            if (!canWrite)
             {
                 BackupLocationStatus = "Not writable";
-                GlobalNotificationCenter.Instance.Show(
-                    $"Backup location is not writable: {ex.Message}",
-                    NotificationSeverity.Error,
-                    "Backup location");
-                return;
+                if (notifyOnSuccess)
+                {
+                    GlobalNotificationCenter.Instance.Show(
+                        "Backup location is not writable.",
+                        NotificationSeverity.Error,
+                        "Backup location");
+                }
+                return (true, false);
             }
 
             // Check free space against the configured minimum threshold.
@@ -3018,6 +3184,7 @@ namespace VaultSync.UI
                 BackupLocationStatus = "OK";
                 // Ignore disk space failures; path/write checks already passed.
             }
+            return (true, true);
         }
 
         private void ForgetAllProjects()

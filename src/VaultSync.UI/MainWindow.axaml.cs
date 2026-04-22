@@ -277,7 +277,6 @@ public partial class MainWindow : Window
         if (!TrySetCurrentView(vm))
         {
             // If AppViewModel lacks CurrentView, just show the VM directly.
-            MainContent.Content = vm;
         }
     }
 
@@ -292,7 +291,6 @@ public partial class MainWindow : Window
         // If CurrentView exists, set a plain string or the VM and let ViewLocator handle it.
         if (!TrySetCurrentView(new TextBlock { Text = placeholderText, Margin = new Thickness(16) }))
         {
-            MainContent.Content = new TextBlock { Text = placeholderText, Margin = new Thickness(16) };
         }
     }
 

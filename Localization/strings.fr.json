@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "Ajoutez un projet avant d’enregistrer un mot de passe de chiffrement.",
   "Projects.Encryption.EnrollValidationProject": "Sélectionnez un projet pour continuer.",
   "Projects.Encryption.PasswordUpdateFailed": "Échec de la mise à jour du mot de passe de chiffrement du projet.",
+  "Projects.Encryption.LinuxSecretToolMissing": "Le stockage système n'est pas disponible. Assurez-vous que 'libsecret' (ou 'secret-tool') est installé et que le service Keyring est en cours d'exécution et déverrouillé.",
   "Projects.Encryption.PasswordValidationMismatch": "Le mot de passe et la confirmation ne correspondent pas.",
   "Projects.Encryption.PasswordValidationRequired": "Le mot de passe et la confirmation sont requis.",
   "Projects.Encryption.ProjectNotFound": "Projet avec l’id {0} introuvable.",
@@ -1236,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "Échec de l'ouverture de la page de la boutique",
   "Settings.Advanced.UpdateManagedByStoreStatus": "Statut",
   "Settings.Advanced.UpdateManagedByStoreTitle": "Mises à jour gérées par la boutique",
-  "Update.Store.ManagedDescription": "Cette installation est gérée par la boutique"
+  "Update.Store.ManagedDescription": "Cette installation est gérée par la boutique",
+  "LogConsole.AutoScroll": "Défilement automatique",
+  "LogConsole.CopySelected": "Copier la sélection",
+  "LogConsole.CopySelectedFailed": "Échec de la copie de la sélection",
+  "LogConsole.CopySelectedSuccess": "Sélection copiée",
+  "Update.Store.OpenStore": "Ouvrir la boutique"
 }

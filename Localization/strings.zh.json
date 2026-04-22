@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "请先添加项目再注册密码。",
   "Projects.Encryption.EnrollValidationProject": "请选择项目以继续。",
   "Projects.Encryption.PasswordUpdateFailed": "更新项目加密密码失败。",
+  "Projects.Encryption.LinuxSecretToolMissing": "系统存储不可用。 确保安装了'libsecret'包（或'secret-tool'），并且密钥环服务正在运行和解锁。",
   "Projects.Encryption.PasswordValidationMismatch": "密码和确认不匹配。",
   "Projects.Encryption.PasswordValidationRequired": "必须输入密码和确认。",
   "Projects.Encryption.ProjectNotFound": "未找到 ID 为 {0} 的项目。",
@@ -1236,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "无法打开商店页面",
   "Settings.Advanced.UpdateManagedByStoreStatus": "状态",
   "Settings.Advanced.UpdateManagedByStoreTitle": "由商店管理的更新",
-  "Update.Store.ManagedDescription": "此安装由应用商店管理"
+  "Update.Store.ManagedDescription": "此安装由应用商店管理",
+  "LogConsole.AutoScroll": "自动滚动",
+  "LogConsole.CopySelected": "复制所选内容",
+  "LogConsole.CopySelectedFailed": "无法复制所选内容",
+  "LogConsole.CopySelectedSuccess": "已复制所选内容",
+  "Update.Store.OpenStore": "打开商店"
 }

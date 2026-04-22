@@ -842,7 +842,7 @@ public sealed class BackupService
         // Timestamped folder name: 2025-11-16_15-47-30
         var timestamp = DateTime.UtcNow;
         var folderName = timestamp.ToString("yyyy-MM-dd_HH-mm-ss");
-        var backupFolder = Path.Combine(projectBackupRoot, folderName);
+        var backupFolder = GetAvailableBackupFolder(projectBackupRoot, folderName);
         Directory.CreateDirectory(backupFolder);
         WriteMarkerFile(backupFolder, InProgressMarkerFileName, $"started:{DateTime.UtcNow:O}");
         var backupRootUsed = backupRoot;
@@ -876,10 +876,11 @@ public sealed class BackupService
                 useScanCache,
                 aggressiveScanCache);
 
-            var outcome = SnapshotService.LastOutcome;
+            var outcome = snapshotService.LastCreatedOutcome;
             if (skipIfNoChanges &&
                 !reuseSnapshotId.HasValue &&
-                outcome is { Added: 0, Modified: 0, Deleted: 0 })
+                outcome is { Added: 0, Modified: 0, Deleted: 0 } &&
+                HasUsableBackupForDestination(project.Id, backupRoot))
             {
                 // No file changes: remove the empty backup folder and snapshot, then skip.
                 DeletePartialBackup(backupFolderUsed);
@@ -2768,6 +2769,91 @@ public sealed class BackupService
     }
 
     public static string GetProjectBackupFolderName(string name) => Slugify(name);
+
+    private static string GetAvailableBackupFolder(string projectBackupRoot, string folderName)
+    {
+        var candidate = Path.Combine(projectBackupRoot, folderName);
+        if (!Directory.Exists(candidate))
+            return candidate;
+
+        for (var i = 2; i < 1000; i++)
+        {
+            candidate = Path.Combine(projectBackupRoot, $"{folderName}-{i}");
+            if (!Directory.Exists(candidate))
+                return candidate;
+        }
+
+        return Path.Combine(projectBackupRoot, $"{folderName}-{Guid.NewGuid():N}");
+    }
+
+    private bool HasUsableBackupForDestination(int projectId, string backupRoot)
+    {
+        List<Backup> backups;
+        try
+        {
+            backups = _repo.GetBackupsForProject(projectId).ToList();
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[BackupService] Cannot verify existing backups for projectId={projectId}: {ex.Message}");
+            return false;
+        }
+
+        foreach (var backup in backups)
+        {
+            var root = string.IsNullOrWhiteSpace(backup.DestinationPath)
+                ? backupRoot
+                : backup.DestinationPath;
+            if (!PathsEqual(root, backupRoot))
+                continue;
+
+            var backupPath = Path.IsPathRooted(backup.Path)
+                ? backup.Path
+                : Path.Combine(root, backup.Path);
+            if (DirectoryHasBackupContent(backupPath))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool DirectoryHasBackupContent(string path)
+    {
+        try
+        {
+            return Directory.Exists(path) && Directory.EnumerateFileSystemEntries(path).Any();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool PathsEqual(string? left, string? right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+            return false;
+
+        try
+        {
+            left = Path.GetFullPath(left);
+            right = Path.GetFullPath(right);
+        }
+        catch
+        {
+            left = left.Trim();
+            right = right.Trim();
+        }
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(
+            left.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            right.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            comparison);
+    }
+
     private void ApplyBackupRetention(int projectId, string backupRoot, int? maxSnapshotsToKeep)
     {
         if (!maxSnapshotsToKeep.HasValue || maxSnapshotsToKeep.Value <= 0)
@@ -3284,9 +3370,12 @@ public sealed class BackupService
                 return null;
             }
 
-            var unixSpace = TryGetUnixDiskSpace(fullPath);
-            if (unixSpace is not null)
-                return unixSpace.Value;
+            if (OperatingSystem.IsMacOS())
+            {
+                var unixSpace = TryGetUnixDiskSpace(fullPath);
+                if (unixSpace is not null)
+                    return unixSpace.Value;
+            }
 
             // Non-Windows fallback: DriveInfo can handle full paths and mount points.
             var driveInfo = new DriveInfo(fullPath);

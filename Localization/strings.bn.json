@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "এনক্রিপশন পাসওয়ার্ড নিবন্ধনের আগে একটি প্রকল্প যোগ করুন।",
   "Projects.Encryption.EnrollValidationProject": "চালিয়ে যেতে একটি প্রকল্প নির্বাচন করুন।",
   "Projects.Encryption.PasswordUpdateFailed": "প্রজেক্ট এনক্রিপশন পাসওয়ার্ড আপডেট করতে ব্যর্থ হয়েছে।",
+  "Projects.Encryption.LinuxSecretToolMissing": "সিস্টেম স্টোরেজ অনুপলব্ধ. নিশ্চিত করুন যে 'লিবসেক্রেট' প্যাকেজ (বা 'সিক্রেট-টুল') ইনস্টল করা আছে এবং কীরিং পরিষেবা চলছে এবং আনলক করা হয়েছে৷",
   "Projects.Encryption.PasswordValidationMismatch": "পাসওয়ার্ড এবং নিশ্চিতকরণ মিলছে না।",
   "Projects.Encryption.PasswordValidationRequired": "পাসওয়ার্ড এবং নিশ্চিতকরণ প্রয়োজন।",
   "Projects.Encryption.ProjectNotFound": "আইডি {0} সহ প্রজেক্ট পাওয়া যায়নি।",
@@ -1236,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "স্টোর পৃষ্ঠা খুলতে ব্যর্থ",
   "Settings.Advanced.UpdateManagedByStoreStatus": "স্থিতি",
   "Settings.Advanced.UpdateManagedByStoreTitle": "স্টোর দ্বারা আপডেট ব্যবস্থাপনা",
-  "Update.Store.ManagedDescription": "এই ইনস্টলেশনটি স্টোর দ্বারা পরিচালিত"
+  "Update.Store.ManagedDescription": "এই ইনস্টলেশনটি স্টোর দ্বারা পরিচালিত",
+  "LogConsole.AutoScroll": "অটো স্ক্রল",
+  "LogConsole.CopySelected": "নির্বাচিত অংশ কপি করুন",
+  "LogConsole.CopySelectedFailed": "নির্বাচিত অংশ কপি করা যায়নি",
+  "LogConsole.CopySelectedSuccess": "নির্বাচিত অংশ কপি করা হয়েছে",
+  "Update.Store.OpenStore": "স্টোর খুলুন"
 }

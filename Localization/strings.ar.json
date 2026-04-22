@@ -540,6 +540,7 @@
   "Projects.Encryption.EnrollNoProjects": "أضف مشروعاً قبل تسجيل كلمة مرور التشفير.",
   "Projects.Encryption.EnrollValidationProject": "اختر مشروعاً للمتابعة.",
   "Projects.Encryption.PasswordUpdateFailed": "فشل تحديث كلمة مرور تشفير المشروع.",
+  "Projects.Encryption.LinuxSecretToolMissing": "تخزين النظام غير متوفر. تأكد من تثبيت حزمة' ليبسكريت '(أو' أداة سرية') ، وخدمة كيرينغ قيد التشغيل وغير مقفلة.",
   "Projects.Encryption.PasswordValidationMismatch": "كلمة المرور وتأكيدها غير متطابقين.",
   "Projects.Encryption.PasswordValidationRequired": "كلمة المرور وتأكيدها مطلوبان.",
   "Projects.Encryption.ProjectNotFound": "لم يتم العثور على مشروع بالمعرف {0}.",
@@ -1236,5 +1237,10 @@
   "Settings.Advanced.UpdateManagedByStoreOpenFailed": "فشل فتح صفحة المتجر",
   "Settings.Advanced.UpdateManagedByStoreStatus": "الحالة",
   "Settings.Advanced.UpdateManagedByStoreTitle": "إدارة التحديث عبر المتجر",
-  "Update.Store.ManagedDescription": "يتم إدارة هذا التثبيت بواسطة المتجر"
-}
+  "Update.Store.ManagedDescription": "يتم إدارة هذا التثبيت بواسطة المتجر",
+  "LogConsole.AutoScroll": "التمرير التلقائي",
+  "LogConsole.CopySelected": "نسخ المحدد",
+  "LogConsole.CopySelectedFailed": "فشل نسخ المحدد",
+  "LogConsole.CopySelectedSuccess": "تم نسخ المحدد",
+  "Update.Store.OpenStore": "فتح المتجر"
+  }

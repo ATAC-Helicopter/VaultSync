@@ -15,10 +15,18 @@ VaultSync uses GitHub Releases for update discovery and supports patch assets to
   - `VaultSyncInstaller.exe`
 - macOS bundles:
   - architecture-specific DMGs
+- Linux bundles:
+  - `VaultSync-<version>-linux-x64.AppImage`
+  - `VaultSync-<version>-linux-x64.tar.gz`
+  - `VaultSync-<version>-linux-arm64.tar.gz`
 
 macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`
+
+Linux can use architecture-specific patch names:
+- `vaultsync-patch-linux-x64.*`
+- `vaultsync-patch-linux-arm64.*`
 
 ## Runtime Expectations
 - Updater checks according to Settings policy.
@@ -31,7 +39,7 @@ macOS can use architecture-specific patch names:
 - `baseVersions` is an exact allowlist, not a version range.
 - Patch preflight and helper apply both require the installed version to match one listed base exactly.
 - If the installed version is not listed, VaultSync must fall back to the installer.
-- Prerelease labels are part of the exact version identity, so `1.7.x-beta.N` and `1.7.2` are treated as different bases.
+- Prerelease labels are part of the exact version identity, so `1.7.3-Beta.1` and `1.7.3` are treated as different bases.
 
 This is required because patch archives are partial target payloads. Files omitted from the patch are assumed to already be correct on every listed base version.
 

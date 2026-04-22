@@ -63,6 +63,7 @@ namespace VaultSync.UI.ViewModels
             _backupsViewModel = null;
             _settingsViewModel = new SettingsViewModel(_localizationService);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
+            _settingsViewModel.DestinationSettingsSaved += OnDestinationSettingsSaved;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
             _settingsViewModel.UpdateCheckRequested += OnUpdateCheckRequested;
             _settingsViewModel.RefreshHistoryRequested += OnRefreshHistoryRequested;
@@ -71,6 +72,12 @@ namespace VaultSync.UI.ViewModels
             _settingsViewModel.LockEncryptedOpenWorkspacesRequested += OnLockEncryptedOpenWorkspacesRequested;
             _settingsViewModel.UpdateUpdateCheckStatus(null, null);
             _settingsViewModel.Destinations.CollectionChanged += OnDestinationsCollectionChanged;
+            _settingsViewModel.DestinationTested += (dest, success, writable, message) =>
+            {
+                var testResult = new DestinationTestResult(success, writable, dest.Path ?? string.Empty, message);
+                UpdateDestinationProbeSummary(dest, testResult);
+            };
+
             foreach (var dest in _settingsViewModel.Destinations)
             {
                 TrackDestinationViewModel(dest);
@@ -162,6 +169,16 @@ namespace VaultSync.UI.ViewModels
             catch (Exception ex)
             {
                 DiagnosticsLogger.Record($"Startup schema ensure failed: {ex.GetType().Name} - {ex.Message}");
+            }
+
+            try
+            {
+                ReconcileBlankProjectRootsOnStartup();
+                RecordStartupPhase("project-root-reconciliation-complete");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Startup project-root reconciliation failed: {ex.GetType().Name} - {ex.Message}");
             }
 
             try

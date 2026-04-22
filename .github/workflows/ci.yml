@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ "Dev", "Stable" ]
+  push:
+    branches: [ "Dev", "Stable" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows build and test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore VaultSync.sln
+
+      - name: Build
+        run: dotnet build VaultSync.sln --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+
+      - name: Test
+        run: dotnet test tests\VaultSync.Core.Tests\VaultSync.Core.Tests.csproj --configuration Release --no-build
+
+  linux:
+    name: Linux build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore VaultSync.sln
+
+      - name: Build UI generic target
+        run: dotnet build src/VaultSync.UI/VaultSync.UI.csproj --framework net8.0 --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+
+      - name: Test
+        run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false

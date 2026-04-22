@@ -910,7 +910,9 @@
             <WrapPanel ItemSpacing="8"
                        LineSpacing="4"
                        VerticalAlignment="Center">
-                <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
+
+              <!-- Add a translation for a word Add  -->
+              <TextBlock Text="{Binding BackupDiskUsedPercent, StringFormat='{}{0:0}% used'}"
                          FontSize="{DynamicResource SectionHeaderFontSize}"
                          FontWeight="SemiBold" />
               <TextBlock Text="{Binding BackupDiskFreeText}"

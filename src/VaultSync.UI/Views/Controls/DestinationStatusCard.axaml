@@ -111,7 +111,7 @@
                   HorizontalAlignment="Right"
                   VerticalAlignment="Center">
         <TextBlock Classes="status"
-                   Text="{Binding Status}"
+                   Text="{Binding StatusDisplay}"
                    FontSize="11"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    TextTrimming="CharacterEllipsis"
@@ -121,7 +121,7 @@
               Width="20"
               Height="20"
               ClipToBounds="False"
-              ToolTip.Tip="{Binding Status}">
+              ToolTip.Tip="{Binding StatusDisplay}">
           <Border Classes="pulse-ring"
                   CornerRadius="5"
                   Background="{Binding ReachabilityBrush}"

@@ -410,6 +410,7 @@ public sealed class MetadataSyncService
 
         var backupExternalMap = _repo.GetBackupExternalIdMap();
         var missingBackupExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var localLatestByProjectBeforeBackupImport = _repo.GetLatestBackupUtcByProject();
 
         foreach (var metaBackup in metaBackups)
         {
@@ -530,20 +531,21 @@ public sealed class MetadataSyncService
         };
         if (opts.MarkNeedsRestoreOnImport)
         {
-        var liveBackups = metaBackups
-            .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
-            UpdateNeedsRestoreFlags(projectMap, liveBackups);
+            var liveBackups = metaBackups
+                .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
+            UpdateNeedsRestoreFlags(projectMap, liveBackups, localLatestByProjectBeforeBackupImport);
         }
         Console.WriteLine($"[MetadataSync] Import complete from '{rootPath}': projects={importedProjects}, snapshots={importedSnapshots}, backups={importedBackups}, tombstones={appliedTombstones}.");
         return result;
     }
 
-    private void UpdateNeedsRestoreFlags(IReadOnlyDictionary<string, int> projectMap, IEnumerable<MetaBackup> metaBackups)
+    private void UpdateNeedsRestoreFlags(
+        IReadOnlyDictionary<string, int> projectMap,
+        IEnumerable<MetaBackup> metaBackups,
+        IReadOnlyDictionary<int, DateTime> localLatestByProject)
     {
         if (projectMap.Count == 0)
             return;
-
-        var localLatestByProject = _repo.GetLatestBackupUtcByProject();
 
         var importedLatestByExternalId = metaBackups
             .Where(b => !string.IsNullOrWhiteSpace(b.ProjectExternalId))
@@ -1201,6 +1203,164 @@ public sealed class MetadataSyncService
     {
         return ExportBackupToStoreAsync(rootPath, backupId, appVersion, machineId, forceBackfill, CancellationToken.None)
             .GetAwaiter().GetResult();
+    }
+
+    public MetadataSyncResult ExportProjectToStore(string rootPath, int projectId, string appVersion, string machineId)
+    {
+        return ExportProjectToStoreAsync(rootPath, projectId, appVersion, machineId, CancellationToken.None)
+            .GetAwaiter().GetResult();
+    }
+
+    public async Task<MetadataSyncResult> ExportProjectToStoreAsync(
+        string rootPath,
+        int projectId,
+        string appVersion,
+        string machineId,
+        CancellationToken ct = default)
+    {
+        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
+            var retryDelays = new[]
+            {
+                TimeSpan.FromMilliseconds(200),
+                TimeSpan.FromMilliseconds(500),
+                TimeSpan.FromMilliseconds(1000)
+            };
+
+            for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
+            {
+                try
+                {
+                    return ExportProjectToStoreInternal(rootPath, projectId, appVersion, machineId);
+                }
+                catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+                {
+                    if (attempt >= retryDelays.Length)
+                    {
+                        Console.WriteLine($"[MetadataSync] Project export failed after retries: {ex.Message}");
+                        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+                    }
+
+                    var delay = retryDelays[attempt];
+                    Console.WriteLine($"[MetadataSync] Project export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                    await Task.Delay(delay, ct).ConfigureAwait(false);
+                }
+            }
+
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Project export failed after retries.");
+        }
+        finally
+        {
+            MetadataIoGate.Release();
+        }
+    }
+
+    private MetadataSyncResult ExportProjectToStoreInternal(string rootPath, int projectId, string appVersion, string machineId)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            Console.WriteLine("[MetadataSync] Project export failed: root path is empty.");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
+        }
+
+        TryFlushDeferredExport(rootPath);
+
+        var storeRoot = rootPath;
+        var isDeferred = false;
+        var destMetaDir = GetMetaDir(rootPath);
+        if (!TryEnsureMetadataDirWritable(destMetaDir))
+        {
+            storeRoot = GetDeferredExportRoot(rootPath);
+            isDeferred = true;
+        }
+
+        var store = new MetadataStore(storeRoot);
+        Console.WriteLine($"[MetadataSync] Project export target store: '{store.DatabasePath}'.");
+        try
+        {
+            store.EnsureSchema();
+        }
+        catch (Exception ex)
+        {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
+            Console.WriteLine($"[MetadataSync] Project export failed: store init error at '{rootPath}': {ex.Message}");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+        }
+
+        var project = _repo.GetProjectById(projectId);
+        if (project == null)
+        {
+            Console.WriteLine($"[MetadataSync] Project export failed: project {projectId} not found.");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
+        }
+
+        var projectExternalId = EnsureProjectExternalId(project);
+        var now = DateTime.UtcNow;
+        var metaInfo = store.GetMetaInfo();
+        if (metaInfo == null)
+        {
+            metaInfo = new MetaInfo
+            {
+                SchemaVersion = MetadataStore.CurrentSchemaVersion,
+                CreatedUtc = now,
+                LastWriteUtc = now,
+                WriterAppVersion = appVersion,
+                WriterMachineId = machineId
+            };
+        }
+        else
+        {
+            metaInfo.LastWriteUtc = now;
+            metaInfo.WriterAppVersion = appVersion;
+            metaInfo.WriterMachineId = machineId;
+        }
+
+        try
+        {
+            store.UpsertMetaInfo(metaInfo);
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = projectExternalId,
+                Name = project.Name,
+                Preset = project.Preset,
+                RootPathHint = project.RootPath,
+                CreatedUtc = project.CreatedUtc,
+                SettingsJson = BuildProjectSettingsJson(project),
+                UpdatedUtc = now
+            });
+        }
+        catch (Exception ex)
+        {
+            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
+                throw;
+            Console.WriteLine($"[MetadataSync] Project export failed writing store '{rootPath}': {ex.Message}");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+        }
+
+        var exportResult = new MetadataSyncResult(
+            MetadataSyncStatus.Success,
+            1,
+            0,
+            0,
+            0,
+            string.Empty);
+        Console.WriteLine($"[MetadataSync] Project export complete for project '{project.Name}' to '{storeRoot}'.");
+        LogStoreCounts(store);
+
+        if (isDeferred)
+        {
+            if (TryFlushDeferredExport(rootPath))
+                return exportResult;
+
+            return MetadataSyncResult.Failure(
+                MetadataSyncStatus.WriteFailed,
+                "Project export queued: destination not writable. Will retry when available.");
+        }
+
+        return exportResult;
     }
 
     public async Task<MetadataSyncResult> ExportBackupToStoreAsync(

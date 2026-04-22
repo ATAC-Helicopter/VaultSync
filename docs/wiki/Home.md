@@ -11,6 +11,7 @@ Use this wiki for user-facing workflows and troubleshooting.
 - [Backups overview](Backups)
 - [Backup pipeline](Backup-Pipeline)
 - [Destinations](Destinations)
+- [Metadata sync](Metadata-Sync)
 - [Network shares](Network-Shares)
 - [Snapshots](Snapshots)
 - [Tray menu](Tray)

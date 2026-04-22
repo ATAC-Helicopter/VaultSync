@@ -17,7 +17,7 @@ on:
         description: "Optional comma/newline separated exact base-version allowlist for one manifest (defaults to previous_version only)"
         required: false
       target_version:
-        description: "Target version for patch manifests (e.g., 1.7.0-beta.2 or 1.7.2)"
+        description: "Target version for patch manifests (e.g., 1.7.3-Beta.1 or 1.7.3)"
         required: true
 
 permissions:
@@ -240,3 +240,76 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.zip
             patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.zip
+
+  linux:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish (linux-x64)
+        run: >
+          dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
+          -c Release
+          -f net8.0
+          -r linux-x64
+          --self-contained true
+
+      - name: Publish (linux-arm64)
+        run: >
+          dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
+          -c Release
+          -f net8.0
+          -r linux-arm64
+          --self-contained true
+
+      - name: Build Linux archives
+        run: |
+          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish
+          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
+
+      - name: Build patch assets
+        env:
+          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
+        run: |
+          mkdir -p "patches/v${{ inputs.target_version }}"
+          previous_args=()
+          while IFS= read -r base; do
+            [[ -n "$base" ]] || continue
+            previous_args+=( --previous "$base" )
+          done <<'EOF'
+          ${{ needs.validate.outputs.patch_base_versions }}
+          EOF
+          python3 scripts/build_patch.py \
+            --base-dir "src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish" \
+            --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip" \
+            --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.json" \
+            --platform linux \
+            "${previous_args[@]}" \
+            --target "${{ inputs.target_version }}"
+          python3 scripts/build_patch.py \
+            --base-dir "src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish" \
+            --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip" \
+            --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json" \
+            --platform linux \
+            "${previous_args[@]}" \
+            --target "${{ inputs.target_version }}"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-assets
+          path: |
+            dist/linux/VaultSync-*-linux-x64.tar.gz
+            dist/linux/VaultSync-*-linux-arm64.tar.gz
+            dist/linux/VaultSync-*-linux-x64.AppImage
+            patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.json
+            patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip
+            patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json
+            patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip

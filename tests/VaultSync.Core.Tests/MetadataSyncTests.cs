@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -757,6 +758,470 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ExportProjectToStore_ProjectSettings_TransportAutoBackupEnabledWithoutBackup()
+    {
+        var metaRoot = CreateTempDir();
+        var sourceDbPath = Path.Combine(CreateTempDir(), "vaultsync-source.db");
+        var targetDbPath = Path.Combine(CreateTempDir(), "vaultsync-target.db");
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var sourceRepo = CreateRepository(sourceDbPath);
+            var projectId = sourceRepo.AddProject(new Project
+            {
+                Name = "Project Settings Only",
+                RootPath = CreateTempDir(),
+                Preset = "unity",
+                CreatedUtc = DateTime.UtcNow
+            });
+
+            var cfg = CloneConfig(originalConfig);
+            cfg.Backups.AutoBackupDisabledProjects = new List<int> { projectId };
+            AppConfigStore.Save(cfg);
+
+            var exportService = new MetadataSyncService(sourceRepo);
+            var exportResult = exportService.ExportProjectToStore(metaRoot, projectId, "1.7.3", "machine-source");
+            Assert.Equal(MetadataSyncStatus.Success, exportResult.Status);
+
+            var store = new MetadataStore(metaRoot);
+            var metaProject = store.ListProjects().Single();
+            using (var doc = JsonDocument.Parse(metaProject.SettingsJson))
+            {
+                Assert.True(doc.RootElement.TryGetProperty("autoBackupEnabled", out var autoBackupEnabled));
+                Assert.False(autoBackupEnabled.GetBoolean());
+            }
+
+            cfg.Backups.AutoBackupDisabledProjects.Clear();
+            AppConfigStore.Save(cfg);
+
+            var targetRepo = CreateRepository(targetDbPath);
+            var importService = new MetadataSyncService(targetRepo);
+            var importResult = importService.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+            Assert.Equal(MetadataSyncStatus.Success, importResult.Status);
+
+            var importedProject = targetRepo.GetProjectByName("Project Settings Only");
+            Assert.NotNull(importedProject);
+            var refreshedConfig = AppConfigStore.Load();
+            Assert.Contains(importedProject!.Id, refreshedConfig.Backups.AutoBackupDisabledProjects);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
+    public void ExportBackupToStore_ProjectSettings_IncludeDestinationRestoreVerificationAndTags()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+
+        var repo = CreateRepository(dbPath);
+        var projectId = repo.AddProject(new Project
+        {
+            Name = "Project Export Tracked Settings",
+            RootPath = CreateTempDir(),
+            Preset = "unity",
+            CreatedUtc = DateTime.UtcNow,
+            PreferredDestinationId = "dest-nas-primary",
+            RestoreMode = ProjectRestoreMode.Sandbox,
+            VerificationPolicy = ProjectVerificationPolicy.Manual,
+            Tags = "remote,critical"
+        });
+
+        var snapshotId = repo.CreateSnapshot(projectId, 2, 500);
+        var backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            500,
+            "project-export-tracked-settings/2025-01-01_00-00-00",
+            metaRoot,
+            "Primary");
+
+        var service = new MetadataSyncService(repo);
+        var result = service.ExportBackupToStore(metaRoot, backupId, "1.7.3", "machine-settings");
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+        var store = new MetadataStore(metaRoot);
+        var metaProject = store.ListProjects().Single();
+        using var doc = JsonDocument.Parse(metaProject.SettingsJson);
+        Assert.True(doc.RootElement.TryGetProperty("preferredDestinationId", out var destinationId));
+        Assert.Equal("dest-nas-primary", destinationId.GetString());
+        Assert.True(doc.RootElement.TryGetProperty("restoreMode", out var restoreMode));
+        Assert.Equal(ProjectRestoreMode.Sandbox, restoreMode.GetString());
+        Assert.True(doc.RootElement.TryGetProperty("verificationPolicy", out var verificationPolicy));
+        Assert.Equal(ProjectVerificationPolicy.Manual, verificationPolicy.GetString());
+        Assert.True(doc.RootElement.TryGetProperty("tags", out var tags));
+        Assert.Equal("remote,critical", tags.GetString());
+    }
+
+    [Fact]
+    public void ExportBackupToStore_MetadataContract_ExportsSelectedFieldsExplicitly()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var previousResolver = MetadataSyncService.ProjectColorResolver;
+        var previousApplier = MetadataSyncService.ProjectColorApplier;
+        const string expectedAvatarColor = "#1A2B3C";
+        var expectedTopPathsJson = JsonSerializer.Serialize(new[]
+        {
+            new SnapshotDiffPathStat("Assets/Scripts/Game.cs", 4, 3072),
+            new SnapshotDiffPathStat("Assets/Scenes/Main.unity", 2, 1024)
+        }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+
+        try
+        {
+            MetadataSyncService.ProjectColorResolver = _ => expectedAvatarColor;
+            MetadataSyncService.ProjectColorApplier = null;
+
+            var repo = CreateRepository(dbPath);
+            var projectId = repo.AddProject(new Project
+            {
+                Name = "Project Export Contract",
+                RootPath = CreateTempDir(),
+                Preset = "unity",
+                CreatedUtc = DateTime.UtcNow
+            });
+
+            var diffSummary = new SnapshotDiffSummary(
+                5,
+                3,
+                1,
+                4096,
+                SnapshotDiffSummary.ParseTopChangedPaths(expectedTopPathsJson));
+
+            var snapshotId = repo.CreateSnapshot(projectId, 42, 65_536, diffSummary);
+            var backupPath = "project-export-contract/2026-04-17_12-00-00";
+            var backupId = repo.CreateBackup(
+                projectId,
+                snapshotId,
+                "manual",
+                65_536,
+                backupPath,
+                metaRoot,
+                "Archive NAS",
+                backupMode: BackupModes.Incremental,
+                isProtected: true);
+
+            var service = new MetadataSyncService(repo);
+            var result = service.ExportBackupToStore(metaRoot, backupId, "1.7.3", "machine-contract");
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            var store = new MetadataStore(metaRoot);
+            var metaProject = Assert.Single(store.ListProjects());
+            var metaSnapshot = Assert.Single(store.ListSnapshots());
+            var metaBackup = Assert.Single(store.ListBackups());
+
+            using (var doc = JsonDocument.Parse(metaProject.SettingsJson))
+            {
+                Assert.True(doc.RootElement.TryGetProperty("avatarColor", out var avatarColor));
+                Assert.Equal(expectedAvatarColor, avatarColor.GetString());
+            }
+
+            Assert.Equal(5, metaSnapshot.DiffAdded);
+            Assert.Equal(3, metaSnapshot.DiffModified);
+            Assert.Equal(1, metaSnapshot.DiffDeleted);
+            Assert.Equal(4096, metaSnapshot.DiffNetBytes);
+            Assert.Equal(expectedTopPathsJson, metaSnapshot.DiffTopPathsJson);
+
+            Assert.Equal(BackupModes.Incremental, metaBackup.BackupMode);
+            Assert.True(metaBackup.IsProtected);
+            Assert.Equal("machine-contract", metaBackup.OriginMachineName);
+            Assert.Equal("Archive NAS", metaBackup.DestinationAlias);
+        }
+        finally
+        {
+            MetadataSyncService.ProjectColorResolver = previousResolver;
+            MetadataSyncService.ProjectColorApplier = previousApplier;
+        }
+    }
+
+    [Fact]
+    public void ImportFromStore_ProjectSettings_AppliesTrackedFieldsWhenCreatingProject()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+        var now = DateTime.UtcNow;
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var destination = new BackupDestination
+            {
+                Path = CreateTempDir(),
+                Alias = "Imported Destination",
+                Active = true
+            };
+            var destinationId = DestinationIdentityService.GetId(destination);
+            var cfg = CloneConfig(originalConfig);
+            cfg.Advanced.ProjectMetadataConflicts.Clear();
+            cfg.Backups.Destinations = new List<BackupDestination> { destination };
+            AppConfigStore.Save(cfg);
+
+            var repo = CreateRepository(dbPath);
+            var store = CreateStore(metaRoot);
+            SeedMetaInfo(store, "machine-settings-apply");
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = "proj-settings-apply",
+                Name = "Project Settings Apply",
+                Preset = "unity",
+                RootPathHint = projectRoot,
+                CreatedUtc = now.AddDays(-2),
+                SettingsJson = $"{{\"preferredDestinationId\":\"{destinationId}\",\"restoreMode\":\"sandbox\",\"verificationPolicy\":\"manual\",\"tags\":\"imported,remote\"}}",
+                UpdatedUtc = now
+            });
+
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            var project = repo.GetProjectByExternalId("proj-settings-apply");
+            Assert.NotNull(project);
+            Assert.Equal(destinationId, project!.PreferredDestinationId);
+            Assert.Equal(ProjectRestoreMode.Sandbox, project.RestoreMode);
+            Assert.Equal(ProjectVerificationPolicy.Manual, project.VerificationPolicy);
+            Assert.Equal("imported,remote", project.Tags);
+
+            var refreshedConfig = AppConfigStore.Load();
+            Assert.Empty(refreshedConfig.Advanced.ProjectMetadataConflicts);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
+    public void ImportFromStore_ProjectSettings_NormalizesPreferredDestinationIdFromAliasWhenCreatingProject()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var destination = new BackupDestination
+            {
+                Path = CreateTempDir(),
+                Alias = "NAS Primary",
+                Active = true
+            };
+            var destinationId = DestinationIdentityService.GetId(destination);
+            var cfg = CloneConfig(originalConfig);
+            cfg.Backups.Destinations = new List<BackupDestination> { destination };
+            AppConfigStore.Save(cfg);
+
+            var store = CreateStore(metaRoot);
+            SeedMetaInfo(store, "machine-alias-import");
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = "proj-settings-alias",
+                Name = "Project Settings Alias",
+                Preset = "unity",
+                RootPathHint = projectRoot,
+                CreatedUtc = DateTime.UtcNow.AddDays(-1),
+                SettingsJson = "{\"preferredDestinationId\":\"NAS Primary\"}",
+                UpdatedUtc = DateTime.UtcNow
+            });
+
+            var repo = CreateRepository(dbPath);
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+            var project = repo.GetProjectByExternalId("proj-settings-alias");
+            Assert.NotNull(project);
+            Assert.Equal(destinationId, project!.PreferredDestinationId);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
+    public void ImportFromStore_ProjectSettings_RecordsNormalizedPreferredDestinationInConflict()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+        var now = DateTime.UtcNow;
+        var originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            var destination = new BackupDestination
+            {
+                Path = CreateTempDir(),
+                Alias = "NAS Imported",
+                Active = true
+            };
+            var destinationId = DestinationIdentityService.GetId(destination);
+            var cfg = CloneConfig(originalConfig);
+            cfg.Advanced.ProjectMetadataConflicts.Clear();
+            cfg.Backups.Destinations = new List<BackupDestination> { destination };
+            AppConfigStore.Save(cfg);
+
+            var repo = CreateRepository(dbPath);
+            var projectId = repo.AddProject(new Project
+            {
+                ExternalId = "proj-conflict-normalized",
+                Name = "Project Conflict Normalized",
+                RootPath = projectRoot,
+                Preset = "unity",
+                CreatedUtc = now.AddDays(-2),
+                PreferredDestinationId = "dest-local",
+                RestoreMode = ProjectRestoreMode.Direct,
+                VerificationPolicy = ProjectVerificationPolicy.Always,
+                Tags = "local"
+            });
+
+            var store = CreateStore(metaRoot);
+            SeedMetaInfo(store, "machine-conflict-normalized");
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = "proj-conflict-normalized",
+                Name = "Project Conflict Normalized",
+                Preset = "unity",
+                RootPathHint = projectRoot,
+                CreatedUtc = now.AddDays(-2),
+                SettingsJson = "{\"preferredDestinationId\":\"NAS Imported\",\"restoreMode\":\"sandbox\",\"verificationPolicy\":\"manual\",\"tags\":\"imported\"}",
+                UpdatedUtc = now
+            });
+
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+            var project = repo.GetProjectById(projectId);
+            Assert.NotNull(project);
+            Assert.Equal("dest-local", project!.PreferredDestinationId);
+
+            var refreshedConfig = AppConfigStore.Load();
+            var conflict = Assert.Single(refreshedConfig.Advanced.ProjectMetadataConflicts);
+            Assert.Equal(destinationId, conflict.Imported.PreferredDestinationId);
+            Assert.Equal("dest-local", conflict.Local.PreferredDestinationId);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
+    public void ImportFromStore_MetadataContract_ImportsSelectedFieldsExplicitly()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+        var capturedColors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var previousResolver = MetadataSyncService.ProjectColorResolver;
+        var previousApplier = MetadataSyncService.ProjectColorApplier;
+        const string projectExternalId = "proj-contract-import";
+        const string snapshotExternalId = "snap-contract-import";
+        const string backupExternalId = "backup-contract-import";
+        const string backupPathRel = "project-contract-import/2026-04-17_13-00-00";
+        var topPathsJson = JsonSerializer.Serialize(new[]
+        {
+            new SnapshotDiffPathStat("src/App.cs", 6, 8192),
+            new SnapshotDiffPathStat("assets/logo.png", 1, 4096)
+        }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+
+        Directory.CreateDirectory(Path.Combine(metaRoot, backupPathRel));
+
+        try
+        {
+            MetadataSyncService.ProjectColorResolver = null;
+            MetadataSyncService.ProjectColorApplier = (externalId, color) => capturedColors[externalId] = color;
+
+            var store = CreateStore(metaRoot);
+            SeedMetaInfo(store, "machine-import-source");
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = projectExternalId,
+                Name = "Project Import Contract",
+                Preset = "unity",
+                RootPathHint = projectRoot,
+                CreatedUtc = DateTime.UtcNow.AddDays(-2),
+                SettingsJson = "{\"avatarColor\":\"#ABCDEF\"}",
+                UpdatedUtc = DateTime.UtcNow
+            });
+            store.UpsertSnapshot(new MetaSnapshot
+            {
+                ExternalId = snapshotExternalId,
+                ProjectExternalId = projectExternalId,
+                CreatedUtc = DateTime.UtcNow.AddDays(-1),
+                FileCount = 17,
+                TotalBytes = 81_920,
+                DiffAdded = 7,
+                DiffModified = 4,
+                DiffDeleted = 2,
+                DiffNetBytes = 12_288,
+                DiffTopPathsJson = topPathsJson
+            });
+            store.UpsertBackup(new MetaBackup
+            {
+                ExternalId = backupExternalId,
+                ProjectExternalId = projectExternalId,
+                SnapshotExternalId = snapshotExternalId,
+                CreatedUtc = DateTime.UtcNow.AddHours(-2),
+                Type = "manual",
+                BackupMode = BackupModes.Incremental,
+                TotalBytes = 81_920,
+                PathRel = backupPathRel,
+                DestinationAlias = "Remote Vault",
+                OriginMachineName = "machine-import-source",
+                IsProtected = true,
+                IsEncrypted = false,
+                KdfParamsJson = BackupCryptoDescriptor.PlainMetadataJson
+            });
+
+            var repo = CreateRepository(dbPath);
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            Assert.True(capturedColors.TryGetValue(projectExternalId, out var importedColor));
+            Assert.Equal("#ABCDEF", importedColor);
+
+            var importedSnapshot = repo.GetSnapshotByExternalId(snapshotExternalId);
+            Assert.NotNull(importedSnapshot);
+            Assert.Equal(7, importedSnapshot!.DiffAdded);
+            Assert.Equal(4, importedSnapshot.DiffModified);
+            Assert.Equal(2, importedSnapshot.DiffDeleted);
+            Assert.Equal(12_288, importedSnapshot.DiffNetBytes);
+            Assert.Equal(topPathsJson, importedSnapshot.DiffTopPathsJson);
+
+            var importedBackup = repo.GetBackupByExternalId(backupExternalId);
+            Assert.NotNull(importedBackup);
+            Assert.Equal(BackupModes.Incremental, importedBackup!.BackupMode);
+            Assert.True(importedBackup.IsProtected);
+            Assert.Equal("machine-import-source", importedBackup.OriginMachineName);
+            Assert.Equal("Remote Vault", importedBackup.DestinationAlias);
+        }
+        finally
+        {
+            MetadataSyncService.ProjectColorResolver = previousResolver;
+            MetadataSyncService.ProjectColorApplier = previousApplier;
+        }
+    }
+
+    [Fact]
     public void ImportFromStore_AppliesProjectTombstone()
     {
         var metaRoot = CreateTempDir();
@@ -916,6 +1381,9 @@ public sealed class MetadataSyncTests : IDisposable
 
     public void Dispose()
     {
+        MetadataSyncService.ProjectColorResolver = null;
+        MetadataSyncService.ProjectColorApplier = null;
+
         foreach (var path in _tempDirs.OrderByDescending(p => p.Length))
             TryDeleteDir(path);
     }

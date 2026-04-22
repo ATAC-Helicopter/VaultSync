@@ -202,10 +202,8 @@ namespace VaultSync.UI.ViewModels
                 : result.Message;
 
             var severity = result.Reachable
-                ? (message.Contains(LStatic("Destinations.Test.ReadOnly", "Read-only"), StringComparison.OrdinalIgnoreCase)
-                    ? "Warning"
-                    : "Success")
-                : "Error";
+                ? (result.Writable ? BackupsViewModel.SeverityStatus.Success : BackupsViewModel.SeverityStatus.Warning)
+                : BackupsViewModel.SeverityStatus.Error;
 
             _destinationProbeSummaries[id] = new DestinationProbeSummary(
                 id,
@@ -213,9 +211,10 @@ namespace VaultSync.UI.ViewModels
                 dest.Path ?? string.Empty,
                 result.Reachable,
                 message,
-                DateTime.UtcNow);
+                DateTime.UtcNow,
+                severity);
 
-            BackupsViewModel.UpdateDestinationStatus(id, message, severity);
+            BackupsViewModel.UpdateDestinationStatus(id, message, severity, dest.Alias);
         }
 
         private void OnRefreshHistoryRequested()
@@ -759,6 +758,11 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
+                if (OperatingSystem.IsLinux())
+                {
+                    return TryWriteProbeFile(path);
+                }
+
                 var info = new DirectoryInfo(path);
                 if (!info.Exists)
                     return false;
@@ -1232,34 +1236,54 @@ namespace VaultSync.UI.ViewModels
                     return;
 
                 var latestBackup = _repo.GetLatestBackupForProject(projectId);
-                if (latestBackup is null || latestBackup.Id <= 0)
-                    return;
-
                 var cfg = await Task.Run(() => AppConfigStore.GetSnapshot());
                 var destinations = ResolveDestinationsForProject(project, cfg).Destinations;
                 if (destinations.Count == 0)
+                {
+                    DiagnosticsLogger.Record($"[MetadataSync] Project settings export skipped: no destinations for projectId={projectId}.");
                     return;
+                }
 
                 foreach (var dest in destinations)
                 {
                     if (!IsMetadataSyncEnabled(cfg, dest))
+                    {
+                        DiagnosticsLogger.Record($"[MetadataSync] Project settings export skipped: metadata disabled for destination '{dest.Alias ?? dest.Path}'.");
                         continue;
+                    }
 
                     var resolution = await PrepareDestinationAsync(dest, cfg);
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                    {
+                        DiagnosticsLogger.Record($"[MetadataSync] Project settings export skipped: destination unavailable for projectId={projectId}; destination='{dest.Alias ?? dest.Path}'; message='{resolution.Message}'.");
                         continue;
+                    }
 
-                    TryExportMetadataForBackup(
-                        cfg,
-                        dest,
+                    if (latestBackup is { Id: > 0 })
+                    {
+                        TryExportMetadataForBackup(
+                            cfg,
+                            dest,
+                            resolution.EffectivePath,
+                            latestBackup.Id,
+                            forceBackfillOverride: true);
+                        continue;
+                    }
+
+                    var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+                    DiagnosticsLogger.Record($"[MetadataSync] Project-only settings export started for projectId={projectId} -> '{name}'.");
+                    var result = await _metadataSyncService.ExportProjectToStoreAsync(
                         resolution.EffectivePath,
-                        latestBackup.Id,
-                        forceBackfillOverride: true);
+                        projectId,
+                        _currentVersionString,
+                        Environment.MachineName);
+                    DiagnosticsLogger.Record($"[MetadataSync] Project-only settings export ({name}) result: {result.Status}; message='{result.Message}'.");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[MetadataSync] Project settings export failed for projectId={projectId}: {ex.Message}");
+                DiagnosticsLogger.Record($"[MetadataSync] Project settings export failed for projectId={projectId}: {ex.GetType().Name} - {ex.Message}");
             }
         }
 
@@ -1369,6 +1393,32 @@ namespace VaultSync.UI.ViewModels
             }
 
             return Task.CompletedTask;
+        }
+        private static bool TryWriteProbeFile(string effectivePath)
+        {
+            var testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
+            try
+            {
+                File.WriteAllText(testFile, "ok");
+                File.Delete(testFile);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(testFile))
+                        File.Delete(testFile);
+                }
+                catch
+                {
+                    // best effort cleanup
+                }
+            }
         }
 
     }

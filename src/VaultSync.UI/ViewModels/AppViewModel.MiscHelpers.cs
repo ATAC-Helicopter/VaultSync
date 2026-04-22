@@ -486,7 +486,7 @@ namespace VaultSync.UI.ViewModels
                 var fallback = Path.Combine(projectsRoot, project.Name);
                 if (Directory.Exists(fallback))
                 {
-                    _repo.UpdateProjectPath(project.Name, fallback, out _);
+                    TryUpdateProjectRootPath(project, fallback);
                     resolvedProject = project with
                     {
                         RootPath = fallback
