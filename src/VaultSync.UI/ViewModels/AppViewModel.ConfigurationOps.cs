@@ -1023,6 +1023,8 @@ namespace VaultSync.UI.ViewModels
 
                     cfg.Backups.AutoBackupDisabledProjects = list;
                     AppConfigStore.Save(cfg);
+                    DiagnosticsLogger.Record(
+                        $"[AutoBackup] Preference changed. ProjectId={projectId}; Enabled={enabled}; DisabledCount={list.Count}.");
 
                     Dispatcher.UIThread.Post(() =>
                     {
@@ -1072,6 +1074,8 @@ namespace VaultSync.UI.ViewModels
 
                     cfg.Backups.AutoBackupDisabledProjects = list;
                     AppConfigStore.Save(cfg);
+                    DiagnosticsLogger.Record(
+                        $"[AutoBackup] Group preference changed. ProjectIds={string.Join(',', ids)}; Enabled={enabled}; DisabledCount={list.Count}.");
 
                     Dispatcher.UIThread.Post(() =>
                     {

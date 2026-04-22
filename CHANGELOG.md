@@ -16,6 +16,7 @@
 - [BUG-17109] Backup All and auto-backup no-change runs now create real first backup artifacts instead of empty destination folders.
 - [BUG-17110] Metadata imports now compare restore-needed state against the pre-import local backup baseline, so newly imported backups no longer suppress their own restore prompt.
 - [BUG-17113] Individual project backup buttons now resolve destinations from the latest saved config and refresh destination choices after backup destination settings change.
+- [BUG-17114] Project auto-backup settings now export through metadata before the first backup, so toggles travel across machines earlier.
 ## [1.7.2] - 09.04.2026
 ### Added
 - [VS-1727] Added an initial Microsoft Store packaging scaffold with the reserved Partner Center identity values, separate from the Direct installer path.
