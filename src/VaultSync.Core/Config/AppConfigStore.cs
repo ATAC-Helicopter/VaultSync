@@ -103,6 +103,7 @@ namespace VaultSync.Core.Config
         public static void Save(AppConfig config)
         {
             Directory.CreateDirectory(ConfigDir);
+            PreserveDurableConfigValues(config);
             var json = JsonSerializer.Serialize(config, JsonOptions);
             WriteConfigWithRetry(json);
             RememberLastKnownGood(config);
@@ -112,6 +113,7 @@ namespace VaultSync.Core.Config
         public static async Task SaveAsync(AppConfig config, CancellationToken ct = default)
         {
             Directory.CreateDirectory(ConfigDir);
+            PreserveDurableConfigValues(config);
             var json = JsonSerializer.Serialize(config, JsonOptions);
             await WriteConfigWithRetryAsync(json, ct).ConfigureAwait(false);
             RememberLastKnownGood(config);
@@ -340,6 +342,37 @@ namespace VaultSync.Core.Config
                     return fallback;
 
                 throw;
+            }
+        }
+
+        private static void PreserveDurableConfigValues(AppConfig config)
+        {
+            if (!string.IsNullOrWhiteSpace(config.ProjectsRoot))
+                return;
+
+            var persisted = TryLoadPersistedConfigForPreservation(ConfigFilePath)
+                            ?? TryLoadPersistedConfigForPreservation(ConfigBackupFilePath)
+                            ?? GetLastKnownGoodClone();
+            if (string.IsNullOrWhiteSpace(persisted?.ProjectsRoot))
+                return;
+
+            config.ProjectsRoot = persisted.ProjectsRoot.Trim();
+            RuntimeLog.WriteVerbose("[Config] Save preserved existing ProjectsRoot because the pending save had an empty value.");
+        }
+
+        private static AppConfig? TryLoadPersistedConfigForPreservation(string path)
+        {
+            if (!File.Exists(path))
+                return null;
+
+            try
+            {
+                var json = ReadConfigWithRetry(path);
+                return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions);
+            }
+            catch
+            {
+                return null;
             }
         }
 
