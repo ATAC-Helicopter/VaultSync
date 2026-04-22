@@ -7,7 +7,7 @@ assignees: ATAC-Helicopter
 ---
 
 ### VaultSync Environment
-- VaultSync Version: [e.g. 1.7.3-Beta.1]
+- VaultSync Version: [e.g. 1.7.3]
 - Install Type: [Installer / Portable]
 - OS: [Windows 10 / Windows 11 / Linux (distro) / macOS]
 - Architecture: [x64 / ARM64]

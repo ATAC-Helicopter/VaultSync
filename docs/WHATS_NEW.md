@@ -1,8 +1,8 @@
 # What's New
 
-## [1.7.3-Beta.1]
+## [1.7.3]
 
-Current `1.7.3-Beta.1` beta highlights focus on Linux reliability, release asset coverage, safer startup/config recovery, and small usability improvements.
+Current `1.7.3` highlights focus on Linux reliability, release asset coverage, safer startup/config recovery, and the final backup and metadata fixes from the 1.7 stabilization cycle.
 
 ### Linux and release assets
 - Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`.
@@ -18,6 +18,14 @@ Current `1.7.3-Beta.1` beta highlights focus on Linux reliability, release asset
 ### Settings and startup recovery
 - Settings now refreshes persisted values correctly after config reloads, so fields such as Projects root no longer appear blank when the saved config is intact.
 - Startup can repair blank project root paths from the configured Projects root when the matching folder still exists on disk.
+- Background settings saves preserve existing project roots, backup roots, and advanced destinations when the UI is still loading transient blank values.
+- Command state refreshes now marshal back to Avalonia's UI thread, preventing startup/background checks from crashing command validation.
+
+### Backup and metadata reliability
+- Backup All and auto-backup no-change runs now create real first backup artifacts instead of empty destination folders.
+- Individual project backup buttons resolve destinations from the latest saved config and refresh destination choices after backup destination settings change.
+- Metadata imports compare restore-needed state against the pre-import local backup baseline so newly imported backups no longer suppress their own restore prompt.
+- Project auto-backup settings export through metadata before the first backup, so toggles travel across machines earlier.
 
 ### Usability
 - The in-app log console now has an explicit Auto-scroll toggle.
