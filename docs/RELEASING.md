@@ -6,7 +6,7 @@ This document defines the current release packaging flow.
 - .NET 8 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- Beta builds must use prerelease versions such as `1.8.x-Beta.N`; the current release target is `1.7.3` and the latest Stable cut is `1.7.3`
+- The current stable release target is `1.7.3`; prerelease builds are for future development cycles only.
 
 ## 1) Windows Installer
 1. Publish:
@@ -46,12 +46,6 @@ For `VS-1724` multi-base patch support:
 - optionally provide `previous_versions` as a comma/newline separated exact allowlist
 - only include versions you have actually validated against the same patch payload
 - do not use ranges or inferred compatibility
-
-Beta example:
-- branch: `Dev`
-- release channel: `beta`
-- `previous_version = 1.6.0`
-- `target_version = 1.8.0-Beta.1`
 
 Stable example:
 - branch: `Stable`

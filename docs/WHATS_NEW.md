@@ -33,7 +33,7 @@ Current `1.7.3` highlights focus on Linux reliability, release asset coverage, s
 
 ## [1.7.0]
 
-Current `1.7` release-train highlights, including the beta-preview work around repair tooling, safer updates, transfer resilience, dashboard clarity, and in-context appearance customization.
+Current `1.7` release-train highlights, including repair tooling, safer updates, transfer resilience, dashboard clarity, and in-context appearance customization.
 
 ### Integrity and repair
 - Added startup backup-index consistency checks so VaultSync can detect metadata drift early without blocking launch.

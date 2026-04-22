@@ -72,9 +72,6 @@
     <img src="https://img.shields.io/github/v/release/ATAC-Helicopter/VaultSync?style=for-the-badge" />
   </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
-    <img src="https://img.shields.io/github/v/tag/ATAC-Helicopter/VaultSync?include_prereleases&label=Beta&style=for-the-badge" />
-  </a>
-  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
     <img src="https://img.shields.io/github/downloads/ATAC-Helicopter/VaultSync/total?style=for-the-badge" />
   </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/tree/download-stats">

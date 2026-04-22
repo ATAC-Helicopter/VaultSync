@@ -139,8 +139,8 @@ Add-CheckResult -Results $results -Code "version-installer" -Condition ($install
     -Data @{ expected = $TargetVersion; actual = $installerVersion }
 
 Add-CheckResult -Results $results -Code "docs-changelog" -Condition ($changelogVersion -eq $TargetVersion) `
-    -PassMessage "Top unreleased changelog version is '$changelogVersion'." `
-    -FailMessage "Top unreleased changelog version '$changelogVersion' does not match target '$TargetVersion'." `
+    -PassMessage "Top changelog version is '$changelogVersion'." `
+    -FailMessage "Top changelog version '$changelogVersion' does not match target '$TargetVersion'." `
     -Data @{ expected = $TargetVersion; actual = $changelogVersion }
 
 Add-CheckResult -Results $results -Code "docs-whats-new" -Condition ($whatsNewVersion -eq $TargetVersion) `
