@@ -13,7 +13,9 @@
 - [BUG-17104] Settings now refreshes persisted values correctly after config reloads, preventing fields like Projects root from appearing blank even when the saved config is intact.
 - [BUG-17105] Startup now repairs blank project root paths from the configured Projects root when the matching project folder still exists on disk, reducing missing-path issues after relaunch.
 - [BUG-17107] Fixed false "Reachable" status for Read-Only directories on Linux and eliminated UI list flickering (thanks @JustH8Me, refs #230)
+- [BUG-17109] Backup All and auto-backup no-change runs now create real first backup artifacts instead of empty destination folders.
 - [BUG-17110] Metadata imports now compare restore-needed state against the pre-import local backup baseline, so newly imported backups no longer suppress their own restore prompt.
+- [BUG-17113] Individual project backup buttons now resolve destinations from the latest saved config and refresh destination choices after backup destination settings change.
 ## [1.7.2] - 09.04.2026
 ### Added
 - [VS-1727] Added an initial Microsoft Store packaging scaffold with the reserved Partner Center identity values, separate from the Direct installer path.

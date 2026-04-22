@@ -9,6 +9,7 @@ public class SnapshotService
 {
     private readonly SqliteRepository _repo;
     private readonly HashService _hash;
+    public SnapshotOutcome? LastCreatedOutcome { get; private set; }
 
     public SnapshotService(SqliteRepository repo, HashService hash)
     {
@@ -183,7 +184,7 @@ public class SnapshotService
                     }
                 }
 
-                LastOutcome = new SnapshotOutcome
+                LastCreatedOutcome = new SnapshotOutcome
                 (
                     Added:      added.Count,
                     Modified:   modified.Count,
@@ -192,6 +193,7 @@ public class SnapshotService
                     TotalFiles: snapshotEntries.Count,
                     TotalBytes: snapshotTotalBytes
                 );
+                LastOutcome = LastCreatedOutcome;
 
                 Console.WriteLine($"[SnapshotService] Finished snapshot for '{project.Name}': " +
                                   $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={snapshotEntries.Count}, totalBytes={snapshotTotalBytes}");
@@ -344,7 +346,7 @@ public class SnapshotService
             }
 
             // Attach summary for CLI
-            LastOutcome = new SnapshotOutcome
+            LastCreatedOutcome = new SnapshotOutcome
             (
                 Added:      added.Count,
                 Modified:   modified.Count,
@@ -353,6 +355,7 @@ public class SnapshotService
                 TotalFiles: entries.Count,
                 TotalBytes: totalBytes
             );
+            LastOutcome = LastCreatedOutcome;
 
             Console.WriteLine($"[SnapshotService] Finished snapshot for '{project.Name}': " +
                               $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={entries.Count}, totalBytes={totalBytes}");

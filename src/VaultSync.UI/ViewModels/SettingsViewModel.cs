@@ -164,6 +164,7 @@ namespace VaultSync.UI
         public event Action? RotateEncryptedBackupsRequested;
         public event Action? EnrollProjectEncryptionRequested;
         public event Action? LockEncryptedOpenWorkspacesRequested;
+        public event Action? DestinationSettingsSaved;
         public event Action<BackupDestination, bool, bool, string>? DestinationTested;
 
         private sealed record DestinationSnapshot(
@@ -908,14 +909,35 @@ namespace VaultSync.UI
             cfg.Backups.IntervalMinutes             = ClampInt(AutoBackupIntervalMinutes, 1, 10080, 30);
             cfg.Backups.MaxSnapshotsPerProject      = ClampInt(MaxSnapshotsPerProject, 1, 10000, 20);
             cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
-            cfg.Backups.UseAdvancedDestinations     = UseAdvancedDestinations;
-            // Sync legacy backup root so older code paths still work.
-            // - Simple mode: BackupLocationPath is authoritative.
-            // - Advanced mode: use the first active destination as the canonical root.
             var fallbackRoot = UseAdvancedDestinations
                 ? (Destinations.FirstOrDefault(d => d.Active)?.Path ?? Destinations.FirstOrDefault()?.Path)
                 : BackupLocationPath;
-            cfg.Backups.BackupRoot = string.IsNullOrWhiteSpace(fallbackRoot) ? null : fallbackRoot;
+            var nextBackupRoot = string.IsNullOrWhiteSpace(fallbackRoot) ? null : fallbackRoot;
+            var nextDestinations = destinationSnapshot.Select(d => new BackupDestination
+            {
+                Alias          = d.Alias,
+                Path           = d.Path,
+                CredentialName = d.CredentialName,
+                Active         = d.Active,
+                AutoMount      = d.AutoMount,
+                AutoUnmount    = d.AutoUnmount,
+                PreMounted     = d.PreMounted,
+                EnableMetadataSync = d.EnableMetadataSync,
+                AutoImportMetadata = d.AutoImportMetadata,
+                ForceMetadataBackfill = d.ForceMetadataBackfill,
+                RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
+                RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
+                EnableCheckpointResume = d.EnableCheckpointResume,
+                SoftQuotaBytes = d.SoftQuotaBytes,
+                QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
+            }).ToList();
+            var destinationSettingsChanged =
+                cfg.Backups.UseAdvancedDestinations != UseAdvancedDestinations ||
+                !string.Equals(cfg.Backups.BackupRoot ?? string.Empty, nextBackupRoot ?? string.Empty, StringComparison.Ordinal) ||
+                !BackupDestinationsEqual(cfg.Backups.Destinations, nextDestinations);
+
+            cfg.Backups.UseAdvancedDestinations = UseAdvancedDestinations;
+            cfg.Backups.BackupRoot = nextBackupRoot;
             cfg.Backups.Location   = cfg.Backups.BackupRoot;
             cfg.Backups.UseCompression              = UseBackupCompression;
             cfg.Backups.UseRsyncDelta               = UseRsyncDelta;
@@ -941,24 +963,7 @@ namespace VaultSync.UI
             cfg.Backups.Encryption.KeyRef = string.IsNullOrWhiteSpace(_backupEncryptionKeyRef)
                 ? string.Empty
                 : _backupEncryptionKeyRef;
-            cfg.Backups.Destinations                = destinationSnapshot.Select(d => new BackupDestination
-            {
-                Alias          = d.Alias,
-                Path           = d.Path,
-                CredentialName = d.CredentialName,
-                Active         = d.Active,
-                AutoMount      = d.AutoMount,
-                AutoUnmount    = d.AutoUnmount,
-                PreMounted     = d.PreMounted,
-                EnableMetadataSync = d.EnableMetadataSync,
-                AutoImportMetadata = d.AutoImportMetadata,
-                ForceMetadataBackfill = d.ForceMetadataBackfill,
-                RetryMaxAttempts = ClampInt(d.RetryMaxAttempts, 1, 10, 1),
-                RetryBackoffSeconds = ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
-                EnableCheckpointResume = d.EnableCheckpointResume,
-                SoftQuotaBytes = d.SoftQuotaBytes,
-                QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
-            }).ToList();
+            cfg.Backups.Destinations                = nextDestinations;
 
             cfg.Storage.PreferExternalDrives = PreferExternalDrives;
             cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
@@ -1043,6 +1048,10 @@ namespace VaultSync.UI
             }
 
             await AppConfigStore.SaveAsync(cfg);
+            if (destinationSettingsChanged)
+            {
+                DestinationSettingsSaved?.Invoke();
+            }
 
             SaveStatus = string.Format(
                 CultureInfo.CurrentCulture,
@@ -1100,6 +1109,39 @@ namespace VaultSync.UI
                     return false;
                 }
 
+            }
+
+            return true;
+        }
+
+        private static bool BackupDestinationsEqual(IReadOnlyList<BackupDestination>? current, IReadOnlyList<BackupDestination> next)
+        {
+            current ??= Array.Empty<BackupDestination>();
+            if (current.Count != next.Count)
+                return false;
+
+            for (var i = 0; i < current.Count; i++)
+            {
+                var left = current[i];
+                var right = next[i];
+                if (!string.Equals(left.Alias ?? string.Empty, right.Alias ?? string.Empty, StringComparison.Ordinal) ||
+                    !string.Equals(left.Path ?? string.Empty, right.Path ?? string.Empty, StringComparison.Ordinal) ||
+                    !string.Equals(left.CredentialName ?? string.Empty, right.CredentialName ?? string.Empty, StringComparison.Ordinal) ||
+                    left.Active != right.Active ||
+                    left.AutoMount != right.AutoMount ||
+                    left.AutoUnmount != right.AutoUnmount ||
+                    left.PreMounted != right.PreMounted ||
+                    left.EnableMetadataSync != right.EnableMetadataSync ||
+                    left.AutoImportMetadata != right.AutoImportMetadata ||
+                    left.ForceMetadataBackfill != right.ForceMetadataBackfill ||
+                    left.RetryMaxAttempts != right.RetryMaxAttempts ||
+                    left.RetryBackoffSeconds != right.RetryBackoffSeconds ||
+                    left.EnableCheckpointResume != right.EnableCheckpointResume ||
+                    left.SoftQuotaBytes != right.SoftQuotaBytes ||
+                    left.QuotaWarningPercent != right.QuotaWarningPercent)
+                {
+                    return false;
+                }
             }
 
             return true;

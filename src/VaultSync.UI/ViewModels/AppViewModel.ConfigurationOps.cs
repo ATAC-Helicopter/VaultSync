@@ -340,7 +340,7 @@ namespace VaultSync.UI.ViewModels
 
         private BackupProjectPreparation CreateManualBackupPreparation(int projectId)
         {
-            var cfg = _config;
+            var cfg = AppConfigStore.GetSnapshot();
             var project = _repo.GetProjectById(projectId);
             var selection = project is null
                 ? new ProjectDestinationSelection(GetActiveDestinations(cfg), null, null)
@@ -1356,11 +1356,21 @@ namespace VaultSync.UI.ViewModels
 
                 if (propertyName is nameof(SettingsViewModel.UseAdvancedDestinations))
                 {
-                    RefreshDestinationOptionSources();
+                    RefreshDestinationOptionSources(cfg);
                 }
 
                 RefreshDestinationStatusOverview();
             }, "settings-change");
+        }
+
+        private void OnDestinationSettingsSaved()
+        {
+            QueueConfigReload(cfg =>
+            {
+                _config = cfg;
+                RefreshDestinationOptionSources(cfg);
+                RefreshDestinationStatusOverview();
+            }, "settings-saved");
         }
 
         private void OnDestinationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -1421,9 +1431,15 @@ namespace VaultSync.UI.ViewModels
         {
             QueueConfigReload(config =>
             {
-                _projectsViewModel.RefreshDestinationOptions(config);
-                BackupsViewModel.RefreshDestinationOptions(config);
+                _config = config;
+                RefreshDestinationOptionSources(config);
             }, "destinations-options");
+        }
+
+        private void RefreshDestinationOptionSources(AppConfig config)
+        {
+            _projectsViewModel.RefreshDestinationOptions(config);
+            BackupsViewModel.RefreshDestinationOptions(config);
         }
 
         private void UpdateLogConsoleSettings()
