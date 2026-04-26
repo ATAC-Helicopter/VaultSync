@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-04-25T05:21:31Z`
+Captured at: `2026-04-26T05:46:16Z`
 
 - Releases: **36**
 - Assets: **210**
-- Total asset downloads: **782**
-- Change since previous snapshot: **+2**
+- Total asset downloads: **783**
+- Change since previous snapshot: **+1**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.7.3** with **7** downloads (+1)
+- Latest stable: **VaultSync 1.7.3** with **8** downloads (+1)
 - Latest prerelease: **VaultSync 1.7.3-beta** with **23** downloads (0)
 
 ## Top assets
@@ -33,12 +33,12 @@ Captured at: `2026-04-25T05:21:31Z`
 
 - Tag: `v1.7.3`
 - Published: `2026-04-22T23:08:56Z`
-- Total downloads: **7**
+- Total downloads: **8**
 - Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| VaultSync-1.7.3-linux-x64.AppImage | 3 | +1 | 46630080 |
+| VaultSync-1.7.3-linux-x64.AppImage | 4 | +1 | 46630080 |
 | vaultsync-patch-windows.json | 2 | 0 | 111666 |
 | vaultsync-patch-windows.zip | 2 | 0 | 92595464 |
 | VaultSync-1.7.3-linux-arm64.tar.gz | 0 | 0 | 44525315 |
@@ -143,13 +143,13 @@ Captured at: `2026-04-25T05:21:31Z`
 - Tag: `v1.7.0-beta.1`
 - Published: `2026-03-15T14:02:28Z`
 - Total downloads: **11**
-- Delta: **+1**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | VaultSync-Setup-1.7.0.exe | 4 | 0 | 68425795 |
 | vaultsync-patch-macos-apple-silicon.zip | 2 | 0 | 50284020 |
-| vaultsync-patch-windows.zip | 2 | +1 | 94802490 |
+| vaultsync-patch-windows.zip | 2 | 0 | 94802490 |
 | VaultSync-1.7.0-beta.1-macos-apple-silicon.dmg | 1 | 0 | 56740743 |
 | VaultSync-1.7.0-beta.1-macos-intel.dmg | 1 | 0 | 58079015 |
 | vaultsync-patch-macos-intel.zip | 1 | 0 | 51952730 |
