@@ -1,4 +1,8 @@
 ﻿# Changelog
+## [1.8.0] - Unreleased
+### Fixed
+- [BUG-18001] Tray panel action buttons now wrap localized labels within the fixed popover width, preventing longer non-English text from clipping or overflowing.
+
 ## [1.7.3] - 23.04.2026
 ### Added
 - [VS-17106] The in-app log console now exposes an explicit Auto-scroll toggle and lets you copy the selected log line with a button or the usual platform copy shortcut.

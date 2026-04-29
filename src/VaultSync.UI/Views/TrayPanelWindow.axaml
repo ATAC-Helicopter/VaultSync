@@ -51,9 +51,8 @@
               BorderThickness="1"
               CornerRadius="12"
               Padding="10">
-        <Grid ColumnDefinitions="*,Auto"
-              ColumnSpacing="10">
-          <StackPanel>
+        <StackPanel Spacing="8">
+          <StackPanel Spacing="2">
             <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.Title}"
                        FontSize="12"
                        FontWeight="SemiBold" />
@@ -61,27 +60,35 @@
                        FontSize="11"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
           </StackPanel>
-          <StackPanel Grid.Column="1"
-                      Orientation="Horizontal"
-                      Spacing="6"
-                      VerticalAlignment="Center">
-            <Button Content="{infra:LocalizedString Key=Tray.Backup.All}"
-                    Command="{Binding BackupAllCommand}"
+          <WrapPanel Orientation="Horizontal"
+                     ItemSpacing="6"
+                     LineSpacing="6">
+            <Button Command="{Binding BackupAllCommand}"
                     Classes="action-primary"
                     Padding="12,6"
-                    MinWidth="0" />
-            <Button Content="{infra:LocalizedString Key=Tray.Snapshot.All}"
-                    Command="{Binding SnapshotAllCommand}"
+                    MinWidth="0">
+              <TextBlock Text="{infra:LocalizedString Key=Tray.Backup.All}"
+                         TextWrapping="Wrap"
+                         MaxWidth="280"
+                         TextAlignment="Center" />
+            </Button>
+            <Button Command="{Binding SnapshotAllCommand}"
                     Classes="action-ghost"
                     Padding="12,6"
-                    MinWidth="0" />
-          </StackPanel>
-        </Grid>
+                    MinWidth="0">
+              <TextBlock Text="{infra:LocalizedString Key=Tray.Snapshot.All}"
+                         TextWrapping="Wrap"
+                         MaxWidth="280"
+                         TextAlignment="Center" />
+            </Button>
+          </WrapPanel>
+        </StackPanel>
       </Border>
 
       <!-- Scrollable content -->
       <ScrollViewer Grid.Row="2"
-                    VerticalScrollBarVisibility="Auto">
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="12">
           <!-- Destinations -->
           <Border Background="{DynamicResource Surface2}"
@@ -90,18 +97,24 @@
                   CornerRadius="12"
                   Padding="10">
             <StackPanel Spacing="8">
-              <Grid ColumnDefinitions="*,Auto"
-                    ColumnSpacing="8">
+              <StackPanel Spacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.Title}"
                            FontSize="12"
                            FontWeight="SemiBold" />
-                <Button Grid.Column="1"
-                        Content="{infra:LocalizedString Key=Tray.Open}"
-                        Command="{Binding OpenAppCommand}"
-                        Classes="action-ghost"
-                        Padding="10,5"
-                        MinWidth="0" />
-              </Grid>
+                <WrapPanel Orientation="Horizontal"
+                           ItemSpacing="6"
+                           LineSpacing="6">
+                  <Button Command="{Binding OpenAppCommand}"
+                          Classes="action-ghost"
+                          Padding="10,5"
+                          MinWidth="0">
+                    <TextBlock Text="{infra:LocalizedString Key=Tray.Open}"
+                               TextWrapping="Wrap"
+                               MaxWidth="280"
+                               TextAlignment="Center" />
+                  </Button>
+                </WrapPanel>
+              </StackPanel>
               <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.None}"
                          FontSize="11"
                          Foreground="{DynamicResource TextSecondaryBrush}"
@@ -129,18 +142,24 @@
                   CornerRadius="12"
                   Padding="10">
             <StackPanel Spacing="8">
-              <Grid ColumnDefinitions="*,Auto"
-                    ColumnSpacing="8">
+              <StackPanel Spacing="6">
                 <TextBlock Text="{infra:LocalizedString Key=Tray.Recent.Title}"
                            FontSize="12"
                            FontWeight="SemiBold" />
-                <Button Grid.Column="1"
-                        Content="{infra:LocalizedString Key=Tray.Recent.OpenInApp}"
-                        Command="{Binding OpenBackupsCommand}"
-                        Classes="action-ghost"
-                        Padding="10,5"
-                        MinWidth="0" />
-              </Grid>
+                <WrapPanel Orientation="Horizontal"
+                           ItemSpacing="6"
+                           LineSpacing="6">
+                  <Button Command="{Binding OpenBackupsCommand}"
+                          Classes="action-ghost"
+                          Padding="10,5"
+                          MinWidth="0">
+                    <TextBlock Text="{infra:LocalizedString Key=Tray.Recent.OpenInApp}"
+                               TextWrapping="Wrap"
+                               MaxWidth="280"
+                               TextAlignment="Center" />
+                  </Button>
+                </WrapPanel>
+              </StackPanel>
               <TextBlock Text="{infra:LocalizedString Key=Tray.Recent.None}"
                          FontSize="11"
                          Foreground="{DynamicResource TextSecondaryBrush}"
@@ -174,30 +193,47 @@
                                        TextTrimming="CharacterEllipsis" />
                           </StackPanel>
                           <Button Grid.Column="1"
-                                  Content="{Binding KeepLabel}"
                                   Command="{Binding ToggleKeepCommand}"
                                   Classes="action-ghost"
                                   Padding="10,5"
-                                  MinWidth="0" />
+                                  MinWidth="0">
+                            <TextBlock Text="{Binding KeepLabel}"
+                                       TextWrapping="Wrap"
+                                       MaxWidth="120"
+                                       TextAlignment="Center" />
+                          </Button>
                         </Grid>
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="6">
-                          <Button Content="{infra:LocalizedString Key=Tray.Recent.OpenFolder}"
-                                  Command="{Binding OpenFolderCommand}"
+                        <WrapPanel Orientation="Horizontal"
+                                   ItemSpacing="6"
+                                   LineSpacing="6">
+                          <Button Command="{Binding OpenFolderCommand}"
                                   Classes="action-ghost"
                                   Padding="10,5"
-                                  MinWidth="0" />
-                          <Button Content="{infra:LocalizedString Key=Tray.Recent.ViewInApp}"
-                                  Command="{Binding ViewInAppCommand}"
+                                  MinWidth="0">
+                            <TextBlock Text="{infra:LocalizedString Key=Tray.Recent.OpenFolder}"
+                                       TextWrapping="Wrap"
+                                       MaxWidth="130"
+                                       TextAlignment="Center" />
+                          </Button>
+                          <Button Command="{Binding ViewInAppCommand}"
                                   Classes="action-ghost"
                                   Padding="10,5"
-                                  MinWidth="0" />
-                          <Button Content="{infra:LocalizedString Key=Tray.Recent.Delete}"
-                                  Command="{Binding DeleteCommand}"
+                                  MinWidth="0">
+                            <TextBlock Text="{infra:LocalizedString Key=Tray.Recent.ViewInApp}"
+                                       TextWrapping="Wrap"
+                                       MaxWidth="150"
+                                       TextAlignment="Center" />
+                          </Button>
+                          <Button Command="{Binding DeleteCommand}"
                                   Classes="action-ghost"
                                   Padding="10,5"
-                                  MinWidth="0" />
-                        </StackPanel>
+                                  MinWidth="0">
+                            <TextBlock Text="{infra:LocalizedString Key=Tray.Recent.Delete}"
+                                       TextWrapping="Wrap"
+                                       MaxWidth="120"
+                                       TextAlignment="Center" />
+                          </Button>
+                        </WrapPanel>
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -209,30 +245,38 @@
       </ScrollViewer>
 
       <!-- Footer -->
-      <Grid Grid.Row="3"
-            ColumnDefinitions="*,Auto"
-            ColumnSpacing="8">
-        <StackPanel Orientation="Horizontal"
-                    Spacing="8">
-          <Button Content="{infra:LocalizedString Key=Nav.Settings}"
-                  Command="{Binding OpenSettingsCommand}"
-                  Classes="action-ghost"
-                  Padding="12,6"
-                  MinWidth="0" />
-          <Button Content="{infra:LocalizedString Key=Tray.Open}"
-                  Command="{Binding OpenAppCommand}"
-                  Classes="action-ghost"
-                  Padding="12,6"
-                  MinWidth="0" />
-        </StackPanel>
-        <Button Grid.Column="1"
-                Content="{infra:LocalizedString Key=Tray.Quit}"
-                Command="{Binding QuitCommand}"
+      <WrapPanel Grid.Row="3"
+                 Orientation="Horizontal"
+                 ItemSpacing="8"
+                 LineSpacing="8">
+        <Button Command="{Binding OpenSettingsCommand}"
                 Classes="action-ghost"
                 Padding="12,6"
-                MinWidth="0"
-                HorizontalAlignment="Right" />
-      </Grid>
+                MinWidth="0">
+          <TextBlock Text="{infra:LocalizedString Key=Nav.Settings}"
+                     TextWrapping="Wrap"
+                     MaxWidth="110"
+                     TextAlignment="Center" />
+        </Button>
+        <Button Command="{Binding OpenAppCommand}"
+                Classes="action-ghost"
+                Padding="12,6"
+                MinWidth="0">
+          <TextBlock Text="{infra:LocalizedString Key=Tray.Open}"
+                     TextWrapping="Wrap"
+                     MaxWidth="130"
+                     TextAlignment="Center" />
+        </Button>
+        <Button Command="{Binding QuitCommand}"
+                Classes="action-ghost"
+                Padding="12,6"
+                MinWidth="0">
+          <TextBlock Text="{infra:LocalizedString Key=Tray.Quit}"
+                     TextWrapping="Wrap"
+                     MaxWidth="130"
+                     TextAlignment="Center" />
+        </Button>
+      </WrapPanel>
     </Grid>
   </Border>
 </Window>
