@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync continua a funzionare",
   "Tray.Tooltip": "VaultSync - snapshot e backup",
   "Tray.Open": "Apri VaultSync",
+  "Tray.Panel.Open": "Apri pannello della tray",
   "Tray.Policy.Active": "Politica: {0}",
   "Tray.Quit": "Chiudi VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",

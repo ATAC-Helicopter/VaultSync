@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync अभी भी चल रहा है",
   "Tray.Tooltip": "VaultSync - स्नैपशॉट और बैकअप",
   "Tray.Open": "VaultSync खोलें",
+  "Tray.Panel.Open": "ट्रे पैनल खोलें",
   "Tray.Policy.Active": "नीति: {0}",
   "Tray.Quit": "VaultSync बंद करें",
   "Tray.Recent.ActionFormat": "   * {0}",

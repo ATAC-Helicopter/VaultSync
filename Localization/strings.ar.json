@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "لا يزال VaultSync قيد التشغيل",
   "Tray.Tooltip": "VaultSync - اللقطات والنسخ الاحتياطية",
   "Tray.Open": "افتح فولت سينك",
+  "Tray.Panel.Open": "فتح لوحة علبة النظام",
   "Tray.Policy.Active": "السياسة: {0}",
   "Tray.Quit": "قم بإنهاء VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",

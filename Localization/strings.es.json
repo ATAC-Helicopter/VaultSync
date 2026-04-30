@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync sigue en ejecución",
   "Tray.Tooltip": "VaultSync - instantáneas y respaldos",
   "Tray.Open": "Abrir VaultSync",
+  "Tray.Panel.Open": "Abrir panel de bandeja",
   "Tray.Policy.Active": "Política: {0}",
   "Tray.Quit": "Salir de VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",

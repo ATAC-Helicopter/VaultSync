@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync продолжает работать",
   "Tray.Tooltip": "VaultSync — снимки и резервные копии",
   "Tray.Open": "Открыть VaultSync",
+  "Tray.Panel.Open": "Открыть панель трея",
   "Tray.Policy.Active": "Политика: {0}",
   "Tray.Quit": "Выйти из VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",
