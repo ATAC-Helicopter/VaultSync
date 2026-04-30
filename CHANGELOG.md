@@ -1,6 +1,8 @@
 ﻿# Changelog
 ## [1.8.0] - Unreleased
 ### Fixed
+- [BUG-18002] The log console now formats live diagnostics into readable time/source/message rows with fixed color-coded source chips while keeping raw lines available for copy and export.
+- [BUG-17108] The in-app log console now captures live output when opened and mirrors diagnostics-session errors, so runtime failures are visible without enabling verbose logging first.
 - [BUG-18001] Tray panel action buttons now wrap localized labels within the fixed popover width, preventing longer non-English text from clipping or overflowing.
 
 ## [1.7.3] - 23.04.2026

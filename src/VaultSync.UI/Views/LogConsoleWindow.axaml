@@ -64,10 +64,43 @@
                BorderThickness="0">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="svc:LogLine">
-            <TextBlock Text="{Binding Display}"
-                       FontFamily="Consolas"
-                       FontSize="12"
-                       TextWrapping="NoWrap" />
+            <Border Padding="6,4"
+                    CornerRadius="4"
+                    ToolTip.Tip="{Binding RawDisplay}">
+              <Grid ColumnDefinitions="72,64,*"
+                    ColumnSpacing="8">
+                <TextBlock Text="{Binding TimeText}"
+                           FontFamily="Consolas"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Top"
+                           Margin="0,3,0,0" />
+                <Border Grid.Column="1"
+                        Width="52"
+                        Height="24"
+                        Background="{Binding SourceBackground}"
+                        CornerRadius="4"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top">
+                  <TextBlock Text="{Binding SourceText}"
+                             FontFamily="Consolas"
+                             FontSize="10"
+                             FontWeight="SemiBold"
+                             Foreground="{Binding SourceForeground}"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             TextAlignment="Center" />
+                </Border>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding MessageText}"
+                           FontFamily="Consolas"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           VerticalAlignment="Top"
+                           LineHeight="18" />
+              </Grid>
+            </Border>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
