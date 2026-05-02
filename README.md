@@ -1,11 +1,11 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-05-01T06:21:51Z`
+Captured at: `2026-05-02T05:43:36Z`
 
 - Releases: **36**
 - Assets: **210**
-- Total asset downloads: **793**
-- Change since previous snapshot: **+1**
+- Total asset downloads: **795**
+- Change since previous snapshot: **+2**
 
 ## Highlights
 
@@ -142,17 +142,17 @@ Captured at: `2026-05-01T06:21:51Z`
 
 - Tag: `v1.7.0-beta.1`
 - Published: `2026-03-15T14:02:28Z`
-- Total downloads: **11**
-- Delta: **0**
+- Total downloads: **13**
+- Delta: **+2**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | VaultSync-Setup-1.7.0.exe | 4 | 0 | 68425795 |
+| VaultSync-1.7.0-beta.1-macos-apple-silicon.dmg | 2 | +1 | 56740743 |
 | vaultsync-patch-macos-apple-silicon.zip | 2 | 0 | 50284020 |
+| vaultsync-patch-macos-intel.zip | 2 | +1 | 51952730 |
 | vaultsync-patch-windows.zip | 2 | 0 | 94802490 |
-| VaultSync-1.7.0-beta.1-macos-apple-silicon.dmg | 1 | 0 | 56740743 |
 | VaultSync-1.7.0-beta.1-macos-intel.dmg | 1 | 0 | 58079015 |
-| vaultsync-patch-macos-intel.zip | 1 | 0 | 51952730 |
 | vaultsync-patch-macos-apple-silicon.json | 0 | 0 | 54348 |
 | vaultsync-patch-macos-intel.json | 0 | 0 | 54345 |
 | vaultsync-patch-windows.json | 0 | 0 | 111567 |
@@ -327,12 +327,12 @@ Captured at: `2026-05-01T06:21:51Z`
 - Tag: `v1.3.1-Beta`
 - Published: `2026-01-16T21:03:15Z`
 - Total downloads: **32**
-- Delta: **+1**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | VaultSync-1.3.1-macos-apple-silicon.dmg | 5 | 0 | 54688242 |
-| vaultsync-patch-windows.zip | 5 | +1 | 92990105 |
+| vaultsync-patch-windows.zip | 5 | 0 | 92990105 |
 | VaultSync-Setup-1.3.1.exe | 5 | 0 | 66771131 |
 | VaultSync-1.3.1-macos-intel.dmg | 4 | 0 | 56044587 |
 | vaultsync-patch-macos-apple-silicon.zip | 3 | 0 | 48467097 |
