@@ -140,7 +140,7 @@ namespace VaultSync.UI.ViewModels
             if (SelectedLine is null)
                 return false;
 
-            var copied = await ClipboardHelper.TryCopyAsync(SelectedLine.Display);
+            var copied = await ClipboardHelper.TryCopyAsync(SelectedLine.RawDisplay);
             StatusMessage = copied
                 ? L("LogConsole.CopySelectedSuccess", "Selected line copied.")
                 : L("LogConsole.CopySelectedFailed", "Failed to copy selected line.");

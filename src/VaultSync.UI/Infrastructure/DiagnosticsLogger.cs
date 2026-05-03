@@ -34,6 +34,7 @@ internal static class DiagnosticsLogger
     private static int _writerStarted;
 
     public static string? SessionLogPath => _sessionPath;
+    public static event Action<string>? Recorded;
 
     public static void Initialize()
     {
@@ -69,6 +70,7 @@ internal static class DiagnosticsLogger
             return;
 
         var line = $"{DateTimeOffset.UtcNow:O} [t{Thread.CurrentThread.ManagedThreadId}] {message}";
+        RaiseRecorded(line);
         Recent.Enqueue(line);
         var count = Interlocked.Increment(ref _recentCount);
         while (count > MaxRecent && Recent.TryDequeue(out _))
@@ -82,6 +84,26 @@ internal static class DiagnosticsLogger
 
         PendingWrites.Enqueue(line);
         WriterSignal.Set();
+    }
+
+    private static void RaiseRecorded(string line)
+    {
+        var handlers = Recorded;
+        if (handlers is null)
+            return;
+
+        foreach (var callback in handlers.GetInvocationList())
+        {
+            try
+            {
+                if (callback is Action<string> handler)
+                    handler(line);
+            }
+            catch
+            {
+                // Diagnostics must never fail the caller.
+            }
+        }
     }
 
     public static void RecordWithStack(string message, int maxLines = 10)

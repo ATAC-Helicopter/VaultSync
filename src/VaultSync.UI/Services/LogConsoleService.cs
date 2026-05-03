@@ -8,13 +8,105 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.Services
 {
     public sealed record LogLine(DateTimeOffset Timestamp, string Source, string Message)
     {
-        public string Display => $"[{Timestamp:HH:mm:ss}] {Source}: {Message}";
+        private static readonly IBrush DiagnosticsBackground = new ImmutableSolidColorBrush(Color.Parse("#23304A"));
+        private static readonly IBrush DiagnosticsForeground = new ImmutableSolidColorBrush(Color.Parse("#BFD1FF"));
+        private static readonly IBrush OutputBackground = new ImmutableSolidColorBrush(Color.Parse("#173B34"));
+        private static readonly IBrush OutputForeground = new ImmutableSolidColorBrush(Color.Parse("#A7F3D0"));
+        private static readonly IBrush ErrorBackground = new ImmutableSolidColorBrush(Color.Parse("#4A1F28"));
+        private static readonly IBrush ErrorForeground = new ImmutableSolidColorBrush(Color.Parse("#FEB2B2"));
+        private static readonly IBrush TraceBackground = new ImmutableSolidColorBrush(Color.Parse("#3A314A"));
+        private static readonly IBrush TraceForeground = new ImmutableSolidColorBrush(Color.Parse("#DDD6FE"));
+
+        public string TimeText => Timestamp.ToString("HH:mm:ss");
+
+        public string SourceText => SourceKind switch
+        {
+            "diagnostics" => "DIAG",
+            "stderr" => "ERR",
+            "stdout" => "OUT",
+            "trace" => "TRACE",
+            _ => Source.ToUpperInvariant()
+        };
+
+        public IBrush SourceBackground => SourceKind switch
+        {
+            "stderr" => ErrorBackground,
+            "stdout" => OutputBackground,
+            "trace" => TraceBackground,
+            _ => DiagnosticsBackground
+        };
+
+        public IBrush SourceForeground => SourceKind switch
+        {
+            "stderr" => ErrorForeground,
+            "stdout" => OutputForeground,
+            "trace" => TraceForeground,
+            _ => DiagnosticsForeground
+        };
+
+        public string MessageText => SimplifyMessage(Message);
+
+        public string Display => $"[{TimeText}] {SourceText}: {MessageText}";
+
+        public string RawDisplay => $"[{Timestamp:O}] {Source}: {Message}";
+
+        private string SourceKind
+        {
+            get
+            {
+                if (!string.Equals(Source, "diagnostics", StringComparison.Ordinal))
+                    return Source;
+
+                var text = Message.TrimStart();
+                if (text.Contains("CONSOLE[stderr]", StringComparison.Ordinal))
+                    return "stderr";
+                if (text.Contains("CONSOLE[stdout]", StringComparison.Ordinal))
+                    return "stdout";
+                if (text.Contains("TRACE ", StringComparison.Ordinal) ||
+                    text.Contains("TRACE[", StringComparison.Ordinal))
+                    return "trace";
+
+                return Source;
+            }
+        }
+
+        private static string SimplifyMessage(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return string.Empty;
+
+            var text = message.Trim();
+            var threadMarker = text.IndexOf(" [t", StringComparison.Ordinal);
+            if (threadMarker > 0 && text.Length > 24 && char.IsDigit(text[0]))
+            {
+                var threadEnd = text.IndexOf("] ", threadMarker, StringComparison.Ordinal);
+                if (threadEnd >= 0 && threadEnd + 2 < text.Length)
+                {
+                    text = text[(threadEnd + 2)..].TrimStart();
+                }
+            }
+
+            if (text.StartsWith("CONSOLE[", StringComparison.Ordinal))
+            {
+                var sourceEnd = text.IndexOf("] ", StringComparison.Ordinal);
+                if (sourceEnd > 8 && sourceEnd + 2 < text.Length)
+                {
+                    var consoleSource = text[8..sourceEnd].ToUpperInvariant();
+                    text = $"{consoleSource}: {text[(sourceEnd + 2)..]}";
+                }
+            }
+
+            return text;
+        }
     }
 
     public sealed class LogConsoleService
@@ -45,6 +137,8 @@ namespace VaultSync.UI.Services
         public LogConsoleService()
         {
             _readOnlyLines = new ReadOnlyObservableCollection<LogLine>(_lines);
+            SeedDiagnosticsSnapshot();
+            DiagnosticsLogger.Recorded += OnDiagnosticsRecorded;
         }
 
         public ReadOnlyObservableCollection<LogLine> Lines => _readOnlyLines;
@@ -62,7 +156,7 @@ namespace VaultSync.UI.Services
                 if (_enabled == value)
                     return;
                 _enabled = value;
-                MaxLines = _enabled ? DefaultMaxLines : ReducedMaxLines;
+                ApplyMaxLines();
                 if (!_enabled)
                 {
                     lock (_snapshotGate)
@@ -104,6 +198,7 @@ namespace VaultSync.UI.Services
             _maxFlushBatch = enabled
                 ? (OperatingSystem.IsMacOS() ? 20 : 50)
                 : 200;
+            ApplyMaxLines();
 
             if (enabled && loadSnapshot)
             {
@@ -129,6 +224,7 @@ namespace VaultSync.UI.Services
                 Interlocked.Exchange(ref _pendingCount, 0);
                 Interlocked.Exchange(ref _flushScheduled, 0);
                 Interlocked.Exchange(ref _flushDelayed, 0);
+                TrimSnapshotIfNeeded();
             }
         }
 
@@ -224,7 +320,7 @@ namespace VaultSync.UI.Services
 
         internal void Append(string? message, string source)
         {
-            if (!Enabled || string.IsNullOrWhiteSpace(message))
+            if (!ShouldCapture() || string.IsNullOrWhiteSpace(message))
                 return;
 
             if (Dispatcher.UIThread.CheckAccess())
@@ -278,6 +374,76 @@ namespace VaultSync.UI.Services
                 {
                     AppendToFile(entry);
                 }
+            }
+        }
+
+        private void OnDiagnosticsRecorded(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                return;
+
+            if (_captureInstalled &&
+                (line.Contains("CONSOLE[", StringComparison.Ordinal) ||
+                 line.Contains("TRACE ", StringComparison.Ordinal) ||
+                 line.Contains("TRACE[", StringComparison.Ordinal)))
+            {
+                return;
+            }
+
+            AppendDiagnostics(line);
+        }
+
+        private void AppendDiagnostics(string line)
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                var captured = line;
+                ThreadPool.QueueUserWorkItem(_ => AppendCore(captured, "diagnostics"));
+                return;
+            }
+
+            AppendCore(line, "diagnostics");
+        }
+
+        private void SeedDiagnosticsSnapshot()
+        {
+            var recent = DiagnosticsLogger.GetRecentLog();
+            if (string.IsNullOrWhiteSpace(recent))
+                return;
+
+            foreach (var line in recent.Replace("\r", string.Empty).Split('\n'))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                _snapshotLines.Add(new LogLine(DateTimeOffset.Now, "diagnostics", line));
+                if (_snapshotLines.Count > MaxLines)
+                {
+                    _snapshotLines.RemoveAt(0);
+                }
+            }
+        }
+
+        private bool ShouldCapture() =>
+            Enabled ||
+            SaveToFile ||
+            Interlocked.CompareExchange(ref _uiCaptureEnabled, 0, 0) == 1;
+
+        private void ApplyMaxLines()
+        {
+            MaxLines = Enabled || Interlocked.CompareExchange(ref _uiCaptureEnabled, 0, 0) == 1
+                ? DefaultMaxLines
+                : ReducedMaxLines;
+        }
+
+        private void TrimSnapshotIfNeeded()
+        {
+            lock (_snapshotGate)
+            {
+                if (_snapshotLines.Count <= MaxLines)
+                    return;
+
+                _snapshotLines.RemoveRange(0, _snapshotLines.Count - MaxLines);
             }
         }
 
