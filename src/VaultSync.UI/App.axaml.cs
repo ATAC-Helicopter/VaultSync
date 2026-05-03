@@ -633,6 +633,12 @@ public partial class App : Application
         IReadOnlyList<AppViewModel.TrayProjectBackups>? recentBackups = null,
         string? policySummary = null)
     {
+        if (!OperatingSystem.IsMacOS())
+        {
+            PopulateCompactTrayMenu(menu, desktop, policySummary);
+            return;
+        }
+
         // Build a small context menu: header / Open / Backup / Snapshot / Recent backups / Quit.
         menu.Items.Clear();
 
@@ -690,6 +696,67 @@ public partial class App : Application
         menu.Items.Add(separator2);
         menu.Items.Add(quitItem);
 
+    }
+
+    private void PopulateCompactTrayMenu(
+        NativeMenu menu,
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string? policySummary = null)
+    {
+        menu.Items.Clear();
+
+        AddTrayHeader(menu);
+
+        var destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
+                                   ?? Array.Empty<AppViewModel.DestinationProbeSummary>();
+        var cfg = AppConfigStore.GetSnapshot();
+        var configuredDestinations = GetConfiguredDestinations(cfg);
+        var (destinationsTitle, destinationsStatus) =
+            GetDestinationStatus(destinationSummaries, configuredDestinations);
+
+        menu.Items.Add(new NativeMenuItem($"{destinationsTitle} - {destinationsStatus}") { IsEnabled = false });
+        if (!string.IsNullOrWhiteSpace(policySummary))
+        {
+            menu.Items.Add(new NativeMenuItem(policySummary) { IsEnabled = false });
+        }
+
+        menu.Items.Add(new NativeMenuItemSeparator());
+
+        var panelItem = new NativeMenuItem(L("Tray.Panel.Open", "Open tray panel"));
+        panelItem.Click += (_, _) => _trayPanelService?.Show();
+        menu.Items.Add(panelItem);
+        menu.Items.Add(BuildOpenTrayItem(desktop));
+
+        var backupAllItem = new NativeMenuItem(L("Tray.Backup.All", "Backup all projects"));
+        backupAllItem.Click += (_, _) =>
+        {
+            BringWindowToFrontIfUserWants(desktop);
+            AppViewModelInstance?.RequestBackupAllFromTray();
+        };
+        menu.Items.Add(backupAllItem);
+
+        var snapshotAllItem = new NativeMenuItem(L("Tray.Snapshot.All", "Snapshot all projects"));
+        snapshotAllItem.Click += async (_, _) =>
+        {
+            BringWindowToFrontIfUserWants(desktop);
+            if (AppViewModelInstance is not null)
+            {
+                await AppViewModelInstance.TakeSnapshotAllFromTrayAsync();
+            }
+        };
+        menu.Items.Add(snapshotAllItem);
+
+        var openBackupsItem = new NativeMenuItem(L("Tray.Recent.OpenInApp", "Open in VaultSync"));
+        openBackupsItem.Click += (_, _) =>
+        {
+            BringMainWindowToFront(desktop);
+            AppViewModelInstance?.NavigateBackups?.Execute(null);
+        };
+        menu.Items.Add(openBackupsItem);
+
+        menu.Items.Add(new NativeMenuItemSeparator());
+        menu.Items.Add(BuildTraySettingsItem(desktop));
+        menu.Items.Add(BuildQuitTrayItem(desktop));
     }
 
     private void AddTrayHeader(NativeMenu menu)

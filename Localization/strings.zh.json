@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync 正在后台运行",
   "Tray.Tooltip": "VaultSync — 快照与备份",
   "Tray.Open": "打开 VaultSync",
+  "Tray.Panel.Open": "打开托盘面板",
   "Tray.Policy.Active": "策略：{0}",
   "Tray.Quit": "退出 VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",
