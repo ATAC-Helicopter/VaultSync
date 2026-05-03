@@ -1,6 +1,7 @@
 ﻿# Changelog
 ## [1.8.0] - Unreleased
 ### Fixed
+- [BUG-17115] Windows/Linux tray right-click now uses a compact native menu that opens the richer tray panel instead of fragile nested submenus, making tray actions selectable on Linux desktop environments.
 - [BUG-18001] Tray panel action buttons now wrap localized labels within the fixed popover width, preventing longer non-English text from clipping or overflowing.
 
 ## [1.7.3] - 23.04.2026
