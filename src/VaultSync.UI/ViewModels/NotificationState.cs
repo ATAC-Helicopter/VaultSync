@@ -176,9 +176,8 @@ namespace VaultSync.UI.ViewModels.Notifications
                 if (!IsVisible && string.IsNullOrWhiteSpace(Message))
                     return;
 
-                CancellationTokenSource? previous = Interlocked.Exchange(ref _cts, null);
-                previous?.Cancel();
-                previous?.Dispose();
+                var previous = Interlocked.Exchange(ref _cts, null);
+                CancelAndDispose(previous);
 
                 Message = string.Empty;
                 Title = string.Empty;
@@ -198,10 +197,9 @@ namespace VaultSync.UI.ViewModels.Notifications
 
         private async Task StartAutoDismissAsync(TimeSpan duration)
         {
-            CancellationTokenSource? previous = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
-            previous?.Cancel();
-            previous?.Dispose();
-            CancellationTokenSource local = _cts!;
+            var previous = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
+            CancelAndDispose(previous);
+            var local = _cts!;
 
             try
             {
@@ -218,11 +216,29 @@ namespace VaultSync.UI.ViewModels.Notifications
             finally
             {
                 // Dispose only if still current; avoid disposing a newer token source.
-                if (ReferenceEquals(_cts, local))
+                if (Interlocked.CompareExchange(ref _cts, null, local) == local)
                 {
                     local.Dispose();
-                    _cts = null;
                 }
+            }
+        }
+
+        private static void CancelAndDispose(CancellationTokenSource? cts)
+        {
+            if (cts is null)
+                return;
+
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Another UI/background path already retired this auto-dismiss token.
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 
