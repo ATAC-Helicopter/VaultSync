@@ -122,6 +122,7 @@ namespace VaultSync.UI.ViewModels
             {
                 sb.Append(summary.Id).Append('|')
                   .Append(summary.Reachable).Append('|')
+                  .Append(summary.EffectivePath).Append('|')
                   .Append(summary.Message).Append('|')
                   .Append(summary.LastChecked.ToString("O")).Append(';');
             }
@@ -150,6 +151,7 @@ namespace VaultSync.UI.ViewModels
                         previous.Reachable &&
                         (now - previous.LastChecked) < DestinationProbeMinInterval)
                     {
+                        TryImportMetadataForDestination(cfg, dest, GetMetadataImportPath(previous));
                         continue;
                     }
 
@@ -209,12 +211,20 @@ namespace VaultSync.UI.ViewModels
                 id,
                 alias,
                 dest.Path ?? string.Empty,
+                string.IsNullOrWhiteSpace(result.EffectivePath) ? dest.Path ?? string.Empty : result.EffectivePath,
                 result.Reachable,
                 message,
                 DateTime.UtcNow,
                 severity);
 
             BackupsViewModel.UpdateDestinationStatus(id, message, severity, dest.Alias);
+        }
+
+        private static string GetMetadataImportPath(DestinationProbeSummary summary)
+        {
+            return string.IsNullOrWhiteSpace(summary.EffectivePath)
+                ? summary.Path
+                : summary.EffectivePath;
         }
 
         private void OnRefreshHistoryRequested()
@@ -575,7 +585,8 @@ namespace VaultSync.UI.ViewModels
             {
                 var options = new MetadataSyncOptions(
                     AllowCreateProjects: true,
-                    MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport);
+                    MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
+                    .AsReadOnlySource();
                 var preview = await _metadataSyncService.PreviewImportFromStoreAsync(cfg.ProjectsRoot, options);
                 var label = L("MetadataSync.Review.SourceProjectsRoot", "Projects root");
                     if (await ConfirmMetadataImportAsync(preview, label))
@@ -610,7 +621,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     var options = new MetadataSyncOptions(
                         AllowCreateProjects: true,
-                        MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport);
+                        MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
+                        .AsReadOnlySource();
                     var preview = await _metadataSyncService.PreviewImportFromStoreAsync(resolution.EffectivePath, options);
                     var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
                     var label = Lf("MetadataSync.Review.SourceDestination", "Destination: {0}", name);
@@ -1026,7 +1038,8 @@ namespace VaultSync.UI.ViewModels
             _metadataImportAttempts[key] = DateTime.UtcNow;
             var options = new MetadataSyncOptions(
                 AllowCreateProjects: true,
-                MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport);
+                MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
+                .AsReadOnlySource();
             var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
             _ = Task.Run(() =>
             {
@@ -1081,7 +1094,8 @@ namespace VaultSync.UI.ViewModels
 
             var options = new MetadataSyncOptions(
                 AllowCreateProjects: true,
-                MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport);
+                MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
+                .AsReadOnlySource();
             try
             {
                 Console.WriteLine("[MetadataSync] Auto import started for projects root.");

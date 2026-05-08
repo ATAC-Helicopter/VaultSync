@@ -80,6 +80,63 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_RemapsRootedBackupPathToConfiguredDestination()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+        var backupPathRel = Path.Combine("project-one", "2025-01-01_00-00-00");
+        Directory.CreateDirectory(Path.Combine(metaRoot, backupPathRel));
+
+        var store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "machine-a");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-rooted-path",
+            Name = "Project One",
+            Preset = "unity",
+            RootPathHint = projectRoot,
+            CreatedUtc = DateTime.UtcNow.AddDays(-2),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "snap-rooted-path",
+            ProjectExternalId = "proj-rooted-path",
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            FileCount = 10,
+            TotalBytes = 1024
+        });
+        store.UpsertBackup(new MetaBackup
+        {
+            ExternalId = "backup-rooted-path",
+            ProjectExternalId = "proj-rooted-path",
+            SnapshotExternalId = "snap-rooted-path",
+            CreatedUtc = DateTime.UtcNow.AddMinutes(-1),
+            Type = "manual",
+            TotalBytes = 2048,
+            PathRel = @"Z:\VaultSyncBackups\project-one\2025-01-01_00-00-00",
+            DestinationAlias = "Primary",
+            IsProtected = false,
+            IsEncrypted = false,
+            KdfParamsJson = "{}"
+        });
+
+        var repo = CreateRepository(dbPath);
+        var service = new MetadataSyncService(repo);
+        var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+        Assert.Equal(1, result.ImportedBackups);
+
+        var backup = repo.GetBackupByExternalId("backup-rooted-path");
+        Assert.NotNull(backup);
+        Assert.Equal(backupPathRel, backup!.Path);
+        Assert.Equal(metaRoot, backup.DestinationPath);
+    }
+
+    [Fact]
     public void ImportFromStore_SkipsBackupWhenPathMissing_AndWritesBackupTombstone()
     {
         var metaRoot = CreateTempDir();
@@ -139,6 +196,66 @@ public sealed class MetadataSyncTests : IDisposable
             .Select(t => t.EntityId)
             .ToList();
         Assert.Contains("backup-missing", backupTombstones, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ImportFromStore_ReadOnlySource_SkipsMissingBackupTombstoneWrite()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var projectRoot = CreateTempDir();
+
+        var store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "machine-a");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-readonly-source",
+            Name = "Project Readonly Source",
+            Preset = "unity",
+            RootPathHint = projectRoot,
+            CreatedUtc = DateTime.UtcNow.AddDays(-2),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "snap-readonly-source",
+            ProjectExternalId = "proj-readonly-source",
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            FileCount = 5,
+            TotalBytes = 4096
+        });
+        store.UpsertBackup(new MetaBackup
+        {
+            ExternalId = "backup-readonly-source-missing",
+            ProjectExternalId = "proj-readonly-source",
+            SnapshotExternalId = "snap-readonly-source",
+            CreatedUtc = DateTime.UtcNow.AddMinutes(-1),
+            Type = "manual",
+            TotalBytes = 4096,
+            PathRel = "missing-folder/backup-1",
+            DestinationAlias = "Primary",
+            IsProtected = false,
+            IsEncrypted = false,
+            KdfParamsJson = "{}"
+        });
+
+        var repo = CreateRepository(dbPath);
+        var service = new MetadataSyncService(repo);
+        var result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default.AsReadOnlySource());
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+        Assert.Equal(1, result.ImportedProjects);
+        Assert.Equal(1, result.ImportedSnapshots);
+        Assert.Equal(0, result.ImportedBackups);
+
+        var refreshedStore = new MetadataStore(metaRoot);
+        var backupTombstones = refreshedStore
+            .ListTombstones()
+            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.EntityId)
+            .ToList();
+        Assert.DoesNotContain("backup-readonly-source-missing", backupTombstones, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]

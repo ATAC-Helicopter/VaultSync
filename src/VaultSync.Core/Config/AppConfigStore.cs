@@ -1,5 +1,8 @@
 using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -12,8 +15,7 @@ namespace VaultSync.Core.Config
     {
         private static readonly SemaphoreSlim SaveGate = new(1, 1);
         private static readonly object LastKnownGoodGate = new();
-        private static readonly string ConfigDir =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync");
+        private static readonly string ConfigDir = ResolveConfigDir();
         private static int _firstLoadState; // 0=unknown, 1=missing config, 2=existing config
 
         private static readonly string ConfigFilePath =
@@ -397,6 +399,33 @@ namespace VaultSync.Core.Config
         {
             var json = JsonSerializer.Serialize(config, JsonOptions);
             return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+        }
+
+        private static string ResolveConfigDir()
+        {
+            var overrideDir = Environment.GetEnvironmentVariable("VAULTSYNC_CONFIG_DIR");
+            if (!string.IsNullOrWhiteSpace(overrideDir))
+                return overrideDir;
+
+            if (IsRunningUnderTest())
+            {
+                return Path.Combine(
+                    Path.GetTempPath(),
+                    "vaultsync-test-config",
+                    Process.GetCurrentProcess().Id.ToString(CultureInfo.InvariantCulture));
+            }
+
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync");
+        }
+
+        private static bool IsRunningUnderTest()
+        {
+            var entryName = Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty;
+            if (entryName.Contains("test", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var baseDir = AppContext.BaseDirectory ?? string.Empty;
+            return baseDir.Contains("test", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

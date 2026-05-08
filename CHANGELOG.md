@@ -1,17 +1,22 @@
 ﻿# Changelog
-## [1.8.0] - Unreleased
+## [1.7.4] - Unreleased
 ### Fixed
-- [BUG-18002] The log console now formats live diagnostics into readable time/source/message rows with fixed color-coded source chips while keeping raw lines available for copy and export.
-- [BUG-17108] The in-app log console now captures live output when opened and mirrors diagnostics-session errors, so runtime failures are visible without enabling verbose logging first.
-- [BUG-17115] Windows/Linux tray right-click now uses a compact native menu that opens the richer tray panel instead of fragile nested submenus, making tray actions selectable on Linux desktop environments.
-- [BUG-18001] Tray panel action buttons now wrap localized labels within the fixed popover width, preventing longer non-English text from clipping or overflowing.
+- [BUG-17118] Log console rows now show readable time, source, and message fields.
+- [BUG-17108] In-app logs now capture runtime errors without verbose logging.
+- [BUG-17115] Windows/Linux tray menus now open the richer tray panel reliably.
+- [BUG-17117] Tray panel action labels now wrap in localized layouts.
+- [BUG-17119] Linux metadata imports now remap rooted backup paths to the active destination.
+- [BUG-17120] Core tests now isolate config writes from real app settings.
+- [BUG-17119] Startup metadata import now also checks reachable backup destinations.
+- [BUG-17119] UI metadata imports now treat source stores as read-only.
+- [VS-1732] Release publish restore now declares Windows, Linux, and macOS RIDs.
 
 ## [1.7.3] - 23.04.2026
 ### Added
 - [VS-17106] The in-app log console now exposes an explicit Auto-scroll toggle and lets you copy the selected log line with a button or the usual platform copy shortcut.
-- [VS-1805] Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`, plus a desktop-friendly `linux-x64` AppImage so direct Linux installs cover the widest practical audience.
+- [VS-1732] Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`, plus a desktop-friendly `linux-x64` AppImage so direct Linux installs cover the widest practical audience.
 ### Changed
-- [VS-1805] Linux update discovery now prefers architecture-specific installers and patch assets (`linux-x64` / `linux-arm64`) before falling back to generic Linux naming.
+- [VS-1732] Linux update discovery now prefers architecture-specific installers and patch assets (`linux-x64` / `linux-arm64`) before falling back to generic Linux naming.
 ### Fixed
 - [BUG-17100] Tray panel screen detection, reopen behavior, and Linux/Wayland positioning are now resilient on Hyprland-class environments. Contributed by @JustH8Me in PR #216.
 - [BUG-17101] Fixed tooltip flickering and focus issues on Linux/Wayland by enabling overlay popups PR #217 (thanks @JustH8Me)

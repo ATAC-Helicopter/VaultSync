@@ -1,13 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>1.7.3</Version>
+    <Version>1.7.4</Version>
     <Product>VaultSync</Product>
     <Company>Flavio Giacchetti</Company>
     <ApplicationIcon>Assets\vaultsync.ico</ApplicationIcon>
 
     <!-- Multi-target: generic .NET 8 + Windows-specific TFM -->
     <TargetFrameworks>net8.0;net8.0-windows10.0.19041.0</TargetFrameworks>
+    <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
 
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
@@ -24,8 +25,8 @@
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
     <!-- Allow building the Windows TFM on non-Windows agents (e.g., macOS CI/local) -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <!-- Ensure restore generates both Desktop Bridge reference-pack and packaged output assets -->
-    <RuntimeIdentifiers>any;win-x64</RuntimeIdentifiers>
+    <!-- Ensure Windows TFM restore generates packaged Windows output assets without requesting the invalid "any" RID. -->
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <!-- Default Release publishes to win-x64 self-contained to avoid missing runtime prompts -->
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">win-x64</RuntimeIdentifier>
     <SelfContained Condition="'$(Configuration)' == 'Release'">true</SelfContained>

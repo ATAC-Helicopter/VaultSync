@@ -80,6 +80,7 @@ namespace VaultSync.UI.ViewModels
             string Id,
             string Alias,
             string Path,
+            string EffectivePath,
             bool Reachable,
             string Message,
             DateTime LastChecked,

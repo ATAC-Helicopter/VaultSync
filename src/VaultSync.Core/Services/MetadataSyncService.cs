@@ -420,8 +420,7 @@ public sealed class MetadataSyncService
             if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
 
-            var normalizedPathRel = NormalizeBackupPathRel(metaBackup.PathRel);
-            if (!BackupPathExists(rootPath, normalizedPathRel))
+            if (!TryResolveBackupPath(rootPath, metaBackup.PathRel, out var normalizedPathRel))
             {
                 missingBackupExternalIds.Add(metaBackup.ExternalId);
                 tombstonedBackupIds.Add(metaBackup.ExternalId);
@@ -485,7 +484,10 @@ public sealed class MetadataSyncService
                 }
             }
 
-            TryExportMissingBackupTombstones(rootPath, missingBackupExternalIds);
+            if (opts.ExportMissingTombstonesOnImport)
+            {
+                TryExportMissingBackupTombstones(rootPath, missingBackupExternalIds);
+            }
         }
 
         if (missingSnapshotExternalIds.Count > 0)
@@ -510,7 +512,10 @@ public sealed class MetadataSyncService
 
             if (removedSnapshots > 0)
             {
-                TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
+                if (opts.ExportMissingTombstonesOnImport)
+                {
+                    TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
+                }
             }
         }
 
@@ -778,8 +783,7 @@ public sealed class MetadataSyncService
             if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
 
-            var normalizedPathRel = NormalizeBackupPathRel(metaBackup.PathRel);
-            if (!BackupPathExists(rootPath, normalizedPathRel))
+            if (!TryResolveBackupPath(rootPath, metaBackup.PathRel, out _))
             {
                 tombstonedBackupIds.Add(metaBackup.ExternalId);
                 if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
@@ -911,6 +915,53 @@ public sealed class MetadataSyncService
             : Path.Combine(rootPath, pathRel);
 
         return Directory.Exists(fullPath) || File.Exists(fullPath);
+    }
+
+    private static bool TryResolveBackupPath(string rootPath, string pathRel, out string normalizedPathRel)
+    {
+        normalizedPathRel = NormalizeBackupPathRel(pathRel);
+        if (string.IsNullOrWhiteSpace(normalizedPathRel))
+            return false;
+
+        if (BackupPathExists(rootPath, normalizedPathRel))
+            return true;
+
+        if (TryResolveRootedBackupPathUnderRoot(rootPath, normalizedPathRel, out var remappedPathRel))
+        {
+            normalizedPathRel = remappedPathRel;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveRootedBackupPathUnderRoot(string rootPath, string pathRel, out string remappedPathRel)
+    {
+        remappedPathRel = string.Empty;
+        if (string.IsNullOrWhiteSpace(rootPath) || !IsRootedPath(pathRel))
+            return false;
+
+        var segments = pathRel
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
+            .Where(segment => !segment.EndsWith(":", StringComparison.Ordinal))
+            .ToArray();
+
+        // Rooted paths from another machine may include that machine's destination root.
+        // Try suffixes under the configured destination, but keep at least project/timestamp.
+        for (var start = 0; start <= segments.Length - 2; start++)
+        {
+            var candidateRel = Path.Combine(segments[start..]);
+            var candidateFull = Path.Combine(rootPath, candidateRel);
+            if (Directory.Exists(candidateFull) || File.Exists(candidateFull))
+            {
+                remappedPathRel = candidateRel;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string NormalizeBackupPathRel(string pathRel)
@@ -2384,9 +2435,13 @@ public sealed class MetadataSyncService
     }
 }
 
-public sealed record MetadataSyncOptions(bool AllowCreateProjects, bool MarkNeedsRestoreOnImport)
+public sealed record MetadataSyncOptions(
+    bool AllowCreateProjects,
+    bool MarkNeedsRestoreOnImport,
+    bool ExportMissingTombstonesOnImport = true)
 {
     public static MetadataSyncOptions Default => new(true, true);
+    public MetadataSyncOptions AsReadOnlySource() => this with { ExportMissingTombstonesOnImport = false };
 }
 
 public sealed record MetadataSyncResult(
