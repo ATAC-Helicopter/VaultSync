@@ -55,21 +55,16 @@ public sealed record BackupIndexConsistencySummary(
     int WarningCount,
     IReadOnlyList<string> TopFindingCodes);
 
-public sealed class BackupIndexConsistencyService
+public sealed class BackupIndexConsistencyService(SqliteRepository repo)
 {
-    private readonly SqliteRepository _repo;
-
-    public BackupIndexConsistencyService(SqliteRepository repo)
-    {
-        _repo = repo ?? throw new ArgumentNullException(nameof(repo));
-    }
+    private readonly SqliteRepository _repo = repo ?? throw new ArgumentNullException(nameof(repo));
 
     public BackupIndexConsistencyReport Scan()
     {
-        var checkedUtc = DateTime.UtcNow;
+        DateTime checkedUtc = DateTime.UtcNow;
         var projects = _repo.GetAllProjects().ToList();
         var snapshots = _repo.GetAllSnapshots().ToList();
-        var backups = _repo.GetAllBackups();
+        List<Backup> backups = _repo.GetAllBackups();
 
         var findings = new List<BackupIndexConsistencyFinding>();
 
@@ -169,10 +164,10 @@ public sealed class BackupIndexConsistencyService
         }
 
         var mismatchedBackups = backups
-            .Where(b => snapshotsById.TryGetValue(b.SnapshotId, out var snapshot) && snapshot.ProjectId != b.ProjectId)
+            .Where(b => snapshotsById.TryGetValue(b.SnapshotId, out Snapshot? snapshot) && snapshot.ProjectId != b.ProjectId)
             .Select(b =>
             {
-                var snapshot = snapshotsById[b.SnapshotId];
+                Snapshot snapshot = snapshotsById[b.SnapshotId];
                 return $"{b.Id}:project={b.ProjectId}:snapshot={b.SnapshotId}:snapshotProject={snapshot.ProjectId}";
             })
             .OrderBy(static sample => sample, StringComparer.Ordinal)
@@ -184,7 +179,7 @@ public sealed class BackupIndexConsistencyService
                 BackupIndexConsistencyCode.BackupSnapshotProjectMismatch,
                 BackupIndexConsistencySeverity.Warning,
                 "Backups point to snapshots owned by a different project.",
-                backups.Count(b => snapshotsById.TryGetValue(b.SnapshotId, out var snapshot) && snapshot.ProjectId != b.ProjectId),
+                backups.Count(b => snapshotsById.TryGetValue(b.SnapshotId, out Snapshot? snapshot) && snapshot.ProjectId != b.ProjectId),
                 mismatchedBackups));
         }
 
@@ -193,10 +188,9 @@ public sealed class BackupIndexConsistencyService
             projects.Count,
             snapshots.Count,
             backups.Count,
-            findings
+            [.. findings
                 .OrderByDescending(f => f.Severity)
-                .ThenBy(f => f.Code, StringComparer.Ordinal)
-                .ToList());
+                .ThenBy(f => f.Code, StringComparer.Ordinal)]);
     }
 
     public static BackupIndexConsistencySummary BuildSummary(BackupIndexConsistencyReport report)
@@ -210,17 +204,15 @@ public sealed class BackupIndexConsistencyService
             report.BackupCount,
             report.ErrorCount,
             report.WarningCount,
-            report.Findings
+            [.. report.Findings
                 .OrderByDescending(static finding => finding.Count)
                 .ThenByDescending(static finding => finding.Severity)
                 .ThenBy(static finding => finding.Code, StringComparer.Ordinal)
                 .Take(5)
-                .Select(static finding => finding.Code)
-                .ToList());
+                .Select(static finding => finding.Code)]);
     }
-
     private static void AppendMissingExternalIdFindings<T>(
-        ICollection<BackupIndexConsistencyFinding> findings,
+        List<BackupIndexConsistencyFinding> findings,
         IReadOnlyCollection<T> items,
         Func<T, string?> externalIdSelector,
         string code,
@@ -245,7 +237,7 @@ public sealed class BackupIndexConsistencyService
     }
 
     private static void AppendDuplicateExternalIdFindings<T>(
-        ICollection<BackupIndexConsistencyFinding> findings,
+        List<BackupIndexConsistencyFinding> findings,
         IEnumerable<T> items,
         Func<T, string?> externalIdSelector,
         string code,

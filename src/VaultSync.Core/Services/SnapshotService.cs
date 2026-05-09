@@ -9,6 +9,8 @@ public class SnapshotService
 {
     private readonly SqliteRepository _repo;
     private readonly HashService _hash;
+
+    private readonly record struct SnapshotFileMetadata(string Full, string Rel, FileEntry Entry);
     public SnapshotOutcome? LastCreatedOutcome { get; private set; }
 
     public SnapshotService(SqliteRepository repo, HashService hash)
@@ -55,9 +57,9 @@ public class SnapshotService
             ct.ThrowIfCancellationRequested();
 
             // Load previous snapshot (if any) to enable incremental behavior
-            var prev = _repo.GetLatestSnapshot(project.Id);
-            var previousTotalBytes = prev?.TotalBytes ?? 0L;
-            var prevFiles = prev != null
+            Snapshot? prev = _repo.GetLatestSnapshot(project.Id);
+            long previousTotalBytes = prev?.TotalBytes ?? 0L;
+            Dictionary<string, FileEntry> prevFiles = prev != null
                 ? _repo.GetFilesForSnapshot(prev.Id).ToDictionary(f => f.RelPath, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, FileEntry>(StringComparer.OrdinalIgnoreCase);
 
@@ -67,19 +69,19 @@ public class SnapshotService
             var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
 
             // Build current file list (with optional scan cache)
-            var filterHash = ComputeFilterHash(filter);
-            var cache = useScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
-            var forceFullScan = ShouldForceFullScan(cache, useScanCache, aggressiveScanCache);
+            string filterHash = ComputeFilterHash(filter);
+            ScanCacheState? cache = useScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
+            bool forceFullScan = ShouldForceFullScan(cache, useScanCache, aggressiveScanCache);
 
             var dirMtimeCache = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-            var currentEntries = BuildCurrentEntries(
+            List<FileEntry> currentEntries = BuildCurrentEntries(
                 project,
                 filter,
                 prevFiles.Values,
                 cache,
                 forceFullScan,
                 dirMtimeCache,
-                out var skippedDirs,
+                out int skippedDirs,
                 ct);
 
             Console.WriteLine($"[SnapshotService] Scan cache used={useScanCache && cache is not null}, skippedDirs={skippedDirs}, files={currentEntries.Count}.");
@@ -87,41 +89,40 @@ public class SnapshotService
             ct.ThrowIfCancellationRequested();
 
             // Map rel path -> file system info
-            var currMeta = currentEntries.Select(entry => new
-            {
-                Full = Path.Combine(project.RootPath, entry.RelPath.Replace('/', Path.DirectorySeparatorChar)),
-                Rel  = entry.RelPath,
-                Entry = entry
-            }).ToList();
+            List<SnapshotFileMetadata> currMeta = [.. currentEntries
+                .Select(entry => new SnapshotFileMetadata(
+                    Path.Combine(project.RootPath, entry.RelPath.Replace('/', Path.DirectorySeparatorChar)),
+                    entry.RelPath,
+                    entry))];
 
             // Index by relative path for faster lookups
-            var currMetaByRel = currMeta.ToDictionary(m => m.Rel, StringComparer.OrdinalIgnoreCase);
-            var currentFilesByRel = currMetaByRel.ToDictionary(
+            Dictionary<string, SnapshotFileMetadata> currMetaByRel = currMeta.ToDictionary(m => m.Rel, StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, FileEntry> currentFilesByRel = currMetaByRel.ToDictionary(
                 kvp => kvp.Key,
                 kvp => kvp.Value.Entry,
                 StringComparer.OrdinalIgnoreCase);
 
             // Determine changes
-            var added     = new List<string>();
-            var modified  = new List<string>();
-            var unchanged = new List<string>();
+            List<string> added     = new List<string>();
+            List<string> modified  = new List<string>();
+            List<string> unchanged = new List<string>();
 
-            foreach (var kvp in currMetaByRel)
+            foreach (KeyValuePair<string, SnapshotFileMetadata> kvp in currMetaByRel)
             {
                 ct.ThrowIfCancellationRequested();
 
-                var rel = kvp.Key;
-                var f   = kvp.Value;
+                string rel = kvp.Key;
+                SnapshotFileMetadata f = kvp.Value;
 
-                if (!prevFiles.TryGetValue(rel, out var old))
+                if (!prevFiles.TryGetValue(rel, out FileEntry? old))
                 {
                     added.Add(rel);
                     continue;
                 }
 
                 // consider unchanged if size and mtime are identical (UTC)
-                var sameSize = old.Size == f.Entry.Size;
-                var sameTime = Math.Abs((old.MTimeUtc - f.Entry.MTimeUtc).TotalSeconds) < 1.0; // tolerate FS granularity
+                bool sameSize = old.Size == f.Entry.Size;
+                bool sameTime = Math.Abs((old.MTimeUtc - f.Entry.MTimeUtc).TotalSeconds) < 1.0; // tolerate FS granularity
 
                 if (!sameSize || !sameTime)
                     modified.Add(rel);
@@ -138,15 +139,15 @@ public class SnapshotService
             if (!hashNow)
             {
                 long snapshotTotalBytes = 0;
-                var snapshotEntries = new List<FileEntry>(currMetaByRel.Count);
+                List<FileEntry> snapshotEntries = new List<FileEntry>(currMetaByRel.Count);
 
-                foreach (var meta in currMetaByRel.Values)
+                foreach (SnapshotFileMetadata meta in currMetaByRel.Values)
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    var hash = string.Empty;
+                    string hash = string.Empty;
                     if (!fullHash &&
-                        prevFiles.TryGetValue(meta.Rel, out var prevEntry) &&
+                        prevFiles.TryGetValue(meta.Rel, out FileEntry? prevEntry) &&
                         !string.IsNullOrWhiteSpace(prevEntry.HashSha256))
                     {
                         hash = prevEntry.HashSha256;
@@ -156,7 +157,7 @@ public class SnapshotService
                     snapshotTotalBytes += meta.Entry.Size;
                 }
 
-                var diffSummary = BuildSnapshotDiffSummary(
+                SnapshotDiffSummary diffSummary = BuildSnapshotDiffSummary(
                     added,
                     modified,
                     deleted,
@@ -165,7 +166,7 @@ public class SnapshotService
                     snapshotTotalBytes,
                     previousTotalBytes);
 
-                var snapshotId = _repo.CreateSnapshot(
+                int snapshotId = _repo.CreateSnapshot(
                     project.Id,
                     snapshotEntries.Count,
                     snapshotTotalBytes,
@@ -215,14 +216,14 @@ public class SnapshotService
             // Unchanged: reuse previous hash unless fullHash forces recompute
             if (!fullHash && unchanged.Count > 0)
             {
-                foreach (var rel in unchanged)
+                foreach (string rel in unchanged)
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    if (!currMetaByRel.TryGetValue(rel, out var meta))
+                    if (!currMetaByRel.TryGetValue(rel, out SnapshotFileMetadata meta))
                         continue;
 
-                    if (!prevFiles.TryGetValue(rel, out var prevEntry))
+                    if (!prevFiles.TryGetValue(rel, out FileEntry? prevEntry))
                         continue;
 
                     AddEntry(rel, meta.Entry.Size, meta.Entry.MTimeUtc, prevEntry.HashSha256);
@@ -230,42 +231,42 @@ public class SnapshotService
             }
 
             // Added + Modified (and everything if fullHash)
-            var changedRel = new HashSet<string>(added, StringComparer.OrdinalIgnoreCase);
+            HashSet<string> changedRel = new HashSet<string>(added, StringComparer.OrdinalIgnoreCase);
             changedRel.UnionWith(modified);
-            var toHash = fullHash
+            List<SnapshotFileMetadata> toHash = fullHash
                 ? currMeta
-                : currMeta.Where(m => changedRel.Contains(m.Rel)).ToList();
+                : [.. currMeta.Where(m => changedRel.Contains(m.Rel))];
 
             Console.WriteLine($"[SnapshotService] toHash = {toHash.Count}, fullHash={fullHash}, added={added.Count}, modified={modified.Count}, unchanged={unchanged.Count}, deleted={deleted.Count}");
 
-            var totalToHash = toHash.Count;
-            var totalHashBytes = toHash.Sum(m => m.Entry.Size);
-            var hashedCount = 0;
+            int totalToHash = toHash.Count;
+            long totalHashBytes = toHash.Sum(m => m.Entry.Size);
+            int hashedCount = 0;
             long hashedBytes = 0;
-            var hashStart = DateTime.UtcNow;
-            var lastReport = hashStart;
+            DateTime hashStart = DateTime.UtcNow;
+            DateTime lastReport = hashStart;
             var reportInterval = TimeSpan.FromMilliseconds(200);
-            var progressLock = new object();
+            object progressLock = new object();
 
             void ReportHashProgress(string relPath, bool force)
             {
                 if (progressCallback is null)
                     return;
 
-                var now = DateTime.UtcNow;
+                DateTime now = DateTime.UtcNow;
                 lock (progressLock)
                 {
                     if (!force && (now - lastReport) < reportInterval)
                         return;
 
                     lastReport = now;
-                    var count = hashedCount;
-                    var bytes = hashedBytes;
-                    var percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
+                    int count = hashedCount;
+                    long bytes = hashedBytes;
+                    double percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
 
-                    var elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
-                    var speedBytesSec = bytes / elapsedSeconds;
-                    var speedMbSec = speedBytesSec / (1024d * 1024d);
+                    double elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
+                    double speedBytesSec = bytes / elapsedSeconds;
+                    double speedMbSec = speedBytesSec / (1024d * 1024d);
 
                     string etaText;
                     if (count >= totalToHash)
@@ -274,8 +275,8 @@ public class SnapshotService
                     }
                     else if (count > 0 && totalHashBytes > 0 && speedBytesSec > 0)
                     {
-                        var remainingBytes = Math.Max(0L, totalHashBytes - bytes);
-                        var remainingSeconds = remainingBytes / speedBytesSec;
+                        long remainingBytes = Math.Max(0L, totalHashBytes - bytes);
+                        double remainingSeconds = remainingBytes / speedBytesSec;
                         var eta = TimeSpan.FromSeconds(remainingSeconds);
                         etaText = $"Hashing {count}/{totalToHash} - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
                     }
@@ -303,17 +304,17 @@ public class SnapshotService
                 },
                 async (m, token) =>
                 {
-                    var h = await _hash.Sha256Async(m.Full, token);
+                    string h = await _hash.Sha256Async(m.Full, token);
                     AddEntry(m.Rel, m.Entry.Size, m.Entry.MTimeUtc, h);
 
                     Interlocked.Add(ref hashedBytes, m.Entry.Size);
-                    var currentCount = Interlocked.Increment(ref hashedCount);
+                    int currentCount = Interlocked.Increment(ref hashedCount);
                     ReportHashProgress(m.Rel, currentCount >= totalToHash);
                 });
 
             ct.ThrowIfCancellationRequested();
 
-            var diffSummaryWithHashes = BuildSnapshotDiffSummary(
+            SnapshotDiffSummary diffSummaryWithHashes = BuildSnapshotDiffSummary(
                 added,
                 modified,
                 deleted,
@@ -323,7 +324,7 @@ public class SnapshotService
                 previousTotalBytes);
 
             // Create snapshot record
-            var snapId = _repo.CreateSnapshot(
+            int snapId = _repo.CreateSnapshot(
                 project.Id,
                 entries.Count,
                 totalBytes,
@@ -366,9 +367,9 @@ public class SnapshotService
 
     private static string ComputeFilterHash(FilterService filter)
     {
-        var joined = string.Join('\n', filter.RawPatterns ?? Array.Empty<string>());
-        var bytes = System.Text.Encoding.UTF8.GetBytes(joined);
-        var hash = SHA256.HashData(bytes);
+        string joined = string.Join('\n', filter.RawPatterns ?? Array.Empty<string>());
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(joined);
+        byte[] hash = SHA256.HashData(bytes);
         return Convert.ToHexString(hash);
     }
 
@@ -383,9 +384,9 @@ public class SnapshotService
         CancellationToken ct)
     {
         var results = new List<FileEntry>();
-        var prevByDir = BuildPrevByDir(prevEntries);
-        var root = project.RootPath;
-        var skippedDirsLocal = 0;
+        Dictionary<string, List<FileEntry>> prevByDir = BuildPrevByDir(prevEntries);
+        string root = project.RootPath;
+        int skippedDirsLocal = 0;
 
         void ScanDir(string fullDir, string relDir)
         {
@@ -403,15 +404,15 @@ public class SnapshotService
                 return;
             }
 
-            var dirKey = relDir;
-            var mtimeTicks = info.LastWriteTimeUtc.Ticks;
+            string dirKey = relDir;
+            long mtimeTicks = info.LastWriteTimeUtc.Ticks;
             dirMtimeCache[dirKey] = mtimeTicks;
 
             if (!forceFullScan &&
                 cache is not null &&
-                cache.DirectoryMtimeUtcTicks.TryGetValue(dirKey, out var cachedTicks) &&
+                cache.DirectoryMtimeUtcTicks.TryGetValue(dirKey, out long cachedTicks) &&
                 cachedTicks == mtimeTicks &&
-                prevByDir.TryGetValue(dirKey, out var cachedEntries))
+                prevByDir.TryGetValue(dirKey, out List<FileEntry>? cachedEntries))
             {
                 results.AddRange(cachedEntries);
                 skippedDirsLocal++;
@@ -428,13 +429,13 @@ public class SnapshotService
                 return;
             }
 
-            foreach (var sub in dirs)
+            foreach (string sub in dirs)
             {
                 ct.ThrowIfCancellationRequested();
                 if (filter.ShouldExclude(root, sub))
                     continue;
 
-                var rel = Path.GetRelativePath(root, sub).Replace('\\', '/');
+                string rel = Path.GetRelativePath(root, sub).Replace('\\', '/');
                 ScanDir(sub, rel);
             }
 
@@ -448,7 +449,7 @@ public class SnapshotService
                 return;
             }
 
-            foreach (var file in files)
+            foreach (string file in files)
             {
                 ct.ThrowIfCancellationRequested();
                 if (filter.ShouldExclude(root, file))
@@ -457,7 +458,7 @@ public class SnapshotService
                 try
                 {
                     var fi = new FileInfo(file);
-                    var rel = Path.GetRelativePath(root, file).Replace('\\', '/');
+                    string rel = Path.GetRelativePath(root, file).Replace('\\', '/');
                     results.Add(new FileEntry(rel, fi.Length, fi.LastWriteTimeUtc, string.Empty));
                 }
                 catch
@@ -474,14 +475,14 @@ public class SnapshotService
     private static Dictionary<string, List<FileEntry>> BuildPrevByDir(IEnumerable<FileEntry> entries)
     {
         var map = new Dictionary<string, List<FileEntry>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in entries)
+        foreach (FileEntry entry in entries)
         {
-            var rel = entry.RelPath.Replace('\\', '/');
-            var dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? string.Empty;
-            var current = dir;
+            string rel = entry.RelPath.Replace('\\', '/');
+            string dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? string.Empty;
+            string current = dir;
             while (true)
             {
-                if (!map.TryGetValue(current, out var list))
+                if (!map.TryGetValue(current, out List<FileEntry>? list))
                 {
                     list = new List<FileEntry>();
                     map[current] = list;
@@ -491,7 +492,7 @@ public class SnapshotService
                 if (string.IsNullOrEmpty(current))
                     break;
 
-                var idx = current.LastIndexOf('/');
+                int idx = current.LastIndexOf('/');
                 current = idx >= 0 ? current[..idx] : string.Empty;
             }
         }
@@ -537,8 +538,8 @@ public class SnapshotService
         if (!useScanCache || cache is null)
             return true;
 
-        var fullScanInterval = aggressiveScanCache ? 10 : 5;
-        var fullScanMaxAge = aggressiveScanCache ? TimeSpan.FromDays(2) : TimeSpan.FromDays(7);
+        int fullScanInterval = aggressiveScanCache ? 10 : 5;
+        TimeSpan fullScanMaxAge = aggressiveScanCache ? TimeSpan.FromDays(2) : TimeSpan.FromDays(7);
 
         if (cache.RunsSinceFullScan >= fullScanInterval)
             return true;
@@ -572,7 +573,7 @@ public class SnapshotService
             if (string.IsNullOrWhiteSpace(bucket))
                 return;
 
-            if (stats.TryGetValue(bucket, out var current))
+            if (stats.TryGetValue(bucket, out (int Changes, long ChangedBytes) current))
             {
                 stats[bucket] = (current.Changes + 1, current.ChangedBytes + changedBytes);
                 return;
@@ -581,41 +582,40 @@ public class SnapshotService
             stats[bucket] = (1, changedBytes);
         }
 
-        foreach (var rel in added)
+        foreach (string rel in added)
         {
-            if (!currentByRel.TryGetValue(rel, out var current))
+            if (!currentByRel.TryGetValue(rel, out FileEntry? current))
                 continue;
 
             AddPathStat(pathStats, ToChangedPathBucket(rel), Math.Max(0L, current.Size));
         }
 
-        foreach (var rel in modified)
+        foreach (string rel in modified)
         {
-            if (!currentByRel.TryGetValue(rel, out var current))
+            if (!currentByRel.TryGetValue(rel, out FileEntry? current))
                 continue;
 
-            previousByRel.TryGetValue(rel, out var old);
-            var oldSize = old?.Size ?? 0L;
-            var newSize = current.Size;
-            var changedBytes = Math.Max(oldSize, newSize);
+            previousByRel.TryGetValue(rel, out FileEntry? old);
+            long oldSize = old?.Size ?? 0L;
+            long newSize = current.Size;
+            long changedBytes = Math.Max(oldSize, newSize);
             AddPathStat(pathStats, ToChangedPathBucket(rel), Math.Max(0L, changedBytes));
         }
 
-        foreach (var rel in deleted)
+        foreach (string rel in deleted)
         {
-            if (!previousByRel.TryGetValue(rel, out var old))
+            if (!previousByRel.TryGetValue(rel, out FileEntry? old))
                 continue;
 
             AddPathStat(pathStats, ToChangedPathBucket(rel), Math.Max(0L, old.Size));
         }
 
-        var topPaths = pathStats
+        SnapshotDiffPathStat[] topPaths = [.. pathStats
             .OrderByDescending(kvp => kvp.Value.Changes)
             .ThenByDescending(kvp => kvp.Value.ChangedBytes)
             .ThenBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase)
             .Take(5)
-            .Select(kvp => new SnapshotDiffPathStat(kvp.Key, kvp.Value.Changes, kvp.Value.ChangedBytes))
-            .ToArray();
+            .Select(kvp => new SnapshotDiffPathStat(kvp.Key, kvp.Value.Changes, kvp.Value.ChangedBytes))];
 
         return new SnapshotDiffSummary(
             Added: added.Count,
@@ -630,15 +630,15 @@ public class SnapshotService
         if (string.IsNullOrWhiteSpace(relPath))
             return "(root)";
 
-        var normalized = relPath.Replace('\\', '/').Trim('/');
+        string normalized = relPath.Replace('\\', '/').Trim('/');
         if (normalized.Length == 0)
             return "(root)";
 
-        var slash = normalized.IndexOf('/');
+        int slash = normalized.IndexOf('/');
         if (slash < 0)
             return normalized;
 
-        var secondSlash = normalized.IndexOf('/', slash + 1);
+        int secondSlash = normalized.IndexOf('/', slash + 1);
         return secondSlash < 0 ? normalized[..slash] : normalized[..secondSlash];
     }
 
@@ -662,14 +662,14 @@ public class SnapshotService
         if (files.Count == 0)
             return 0;
 
-        var totalToHash = files.Count;
-        var totalBytes = files.Sum(f => f.Size);
-        var hashedCount = 0;
+        int totalToHash = files.Count;
+        long totalBytes = files.Sum(f => f.Size);
+        int hashedCount = 0;
         long hashedBytes = 0;
-        var hashStart = DateTime.UtcNow;
-        var lastReport = hashStart;
+        DateTime hashStart = DateTime.UtcNow;
+        DateTime lastReport = hashStart;
         var reportInterval = TimeSpan.FromMilliseconds(250);
-        var progressLock = new object();
+        object progressLock = new object();
         var updates = new ConcurrentBag<(string RelPath, string HashSha256)>();
 
         void ReportProgress(string relPath, bool force)
@@ -677,20 +677,20 @@ public class SnapshotService
             if (progressCallback is null)
                 return;
 
-            var now = DateTime.UtcNow;
+            DateTime now = DateTime.UtcNow;
             lock (progressLock)
             {
                 if (!force && (now - lastReport) < reportInterval)
                     return;
 
                 lastReport = now;
-                var count = hashedCount;
-                var bytes = hashedBytes;
-                var percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
+                int count = hashedCount;
+                long bytes = hashedBytes;
+                double percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
 
-                var elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
-                var speedBytesSec = bytes / elapsedSeconds;
-                var speedMbSec = speedBytesSec / (1024d * 1024d);
+                double elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
+                double speedBytesSec = bytes / elapsedSeconds;
+                double speedMbSec = speedBytesSec / (1024d * 1024d);
 
                 string etaText;
                 if (count >= totalToHash)
@@ -699,8 +699,8 @@ public class SnapshotService
                 }
                 else if (count > 0 && totalBytes > 0 && speedBytesSec > 0)
                 {
-                    var remainingBytes = Math.Max(0L, totalBytes - bytes);
-                    var remainingSeconds = remainingBytes / speedBytesSec;
+                    long remainingBytes = Math.Max(0L, totalBytes - bytes);
+                    double remainingSeconds = remainingBytes / speedBytesSec;
                     var eta = TimeSpan.FromSeconds(remainingSeconds);
                     etaText = $"Hashing {count}/{totalToHash} - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
                 }
@@ -722,15 +722,15 @@ public class SnapshotService
             },
             async (entry, token) =>
             {
-                var relPath = entry.RelPath.Replace('/', Path.DirectorySeparatorChar);
-                var fullPath = Path.Combine(project.RootPath, relPath);
+                string relPath = entry.RelPath.Replace('/', Path.DirectorySeparatorChar);
+                string fullPath = Path.Combine(project.RootPath, relPath);
                 try
                 {
-                    var hash = await _hash.Sha256Async(fullPath, token);
+                    string hash = await _hash.Sha256Async(fullPath, token);
                     updates.Add((entry.RelPath, hash));
 
                     Interlocked.Add(ref hashedBytes, entry.Size);
-                    var currentCount = Interlocked.Increment(ref hashedCount);
+                    int currentCount = Interlocked.Increment(ref hashedCount);
                     ReportProgress(entry.RelPath, currentCount >= totalToHash);
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -757,7 +757,7 @@ public class SnapshotService
             return;
 
         // Load all backups for this project to find protected snapshot IDs
-        var backups = _repo.GetBackupsForProject(project.Id);
+        IEnumerable<Backup> backups = _repo.GetBackupsForProject(project.Id);
         var protectedIds = new HashSet<int>(backups.Select(b => b.SnapshotId));
 
         // Determine snapshots that are not referenced by any backup

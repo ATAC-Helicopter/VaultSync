@@ -25,17 +25,17 @@ public sealed class BackupCheckpointResumeTests : IDisposable
     [Fact]
     public void BuildArchiveResumeFingerprint_IsStableAcrossFileOrder()
     {
-        var sourceDir = Path.Combine(_tempDir, "source");
+        string sourceDir = Path.Combine(_tempDir, "source");
         Directory.CreateDirectory(sourceDir);
 
-        var a = Path.Combine(sourceDir, "a.txt");
-        var b = Path.Combine(sourceDir, "nested", "b.txt");
+        string a = Path.Combine(sourceDir, "a.txt");
+        string b = Path.Combine(sourceDir, "nested", "b.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(b)!);
         File.WriteAllText(a, "alpha", Encoding.UTF8);
         File.WriteAllText(b, "beta", Encoding.UTF8);
 
-        var forward = BackupService.BuildArchiveResumeFingerprint(sourceDir, new[] { a, b });
-        var reverse = BackupService.BuildArchiveResumeFingerprint(sourceDir, new[] { b, a });
+        string forward = BackupService.BuildArchiveResumeFingerprint(sourceDir, new[] { a, b });
+        string reverse = BackupService.BuildArchiveResumeFingerprint(sourceDir, new[] { b, a });
 
         Assert.Equal(forward, reverse);
     }
@@ -43,8 +43,8 @@ public sealed class BackupCheckpointResumeTests : IDisposable
     [Fact]
     public void ValidateArchiveResumePrefix_ReturnsTrueOnlyForMatchingPrefix()
     {
-        var local = Path.Combine(_tempDir, "local.zip");
-        var dest = Path.Combine(_tempDir, "dest.zip");
+        string local = Path.Combine(_tempDir, "local.zip");
+        string dest = Path.Combine(_tempDir, "dest.zip");
         File.WriteAllBytes(local, Enumerable.Range(0, 64).Select(i => (byte)i).ToArray());
         File.WriteAllBytes(dest, Enumerable.Range(0, 32).Select(i => (byte)i).ToArray());
 
@@ -57,10 +57,10 @@ public sealed class BackupCheckpointResumeTests : IDisposable
     [Fact]
     public void CleanupIncompleteBackups_PreservesCheckpointedArchiveFolders()
     {
-        var backupRoot = Path.Combine(_tempDir, "backups");
-        var projectDir = Path.Combine(backupRoot, "project");
-        var resumableDir = Path.Combine(projectDir, "2026-03-13_10-00-00");
-        var staleDir = Path.Combine(projectDir, "2026-03-13_09-00-00");
+        string backupRoot = Path.Combine(_tempDir, "backups");
+        string projectDir = Path.Combine(backupRoot, "project");
+        string resumableDir = Path.Combine(projectDir, "2026-03-13_10-00-00");
+        string staleDir = Path.Combine(projectDir, "2026-03-13_09-00-00");
         Directory.CreateDirectory(resumableDir);
         Directory.CreateDirectory(staleDir);
 
@@ -85,7 +85,7 @@ public sealed class BackupCheckpointResumeTests : IDisposable
         var repo = new SqliteRepository(_dbPath);
         var service = new BackupService(repo);
 
-        var removed = service.CleanupIncompleteBackups(backupRoot);
+        int removed = BackupService.CleanupIncompleteBackups(backupRoot);
 
         Assert.Equal(1, removed);
         Assert.True(Directory.Exists(resumableDir));

@@ -13,14 +13,14 @@ public sealed class BackupEncryptionSecretServiceTests
     public void SaveSecret_SecureStoreSuccess_UsesSecureStore()
     {
         var secureStore = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var service = CreateService(
+        BackupEncryptionSecretService service = CreateService(
             ensureKeyRef: (existing, hint) => string.IsNullOrWhiteSpace(existing) ? $"ref-{hint}" : existing!,
             getSecret: (keyRef, _, _, fallback) =>
-                !string.IsNullOrWhiteSpace(keyRef) && secureStore.TryGetValue(keyRef, out var value) ? value : fallback,
+                !string.IsNullOrWhiteSpace(keyRef) && secureStore.TryGetValue(keyRef, out string? value) ? value : fallback,
             saveSecret: (keyRef, _, secret, _) => secureStore[keyRef] = secret,
             deleteSecret: (_, _) => { });
 
-        var storage = service.SaveSecret(
+        EncryptionSecretStorageMode storage = service.SaveSecret(
             keyRef: "enc-ref",
             username: "user",
             secret: "top-secret",
@@ -34,13 +34,13 @@ public sealed class BackupEncryptionSecretServiceTests
     [Fact]
     public void SaveSecret_WhenSecureStoreFails_RequiresExplicitFallbackConfirmation()
     {
-        var service = CreateService(
+        BackupEncryptionSecretService service = CreateService(
             ensureKeyRef: (existing, hint) => string.IsNullOrWhiteSpace(existing) ? $"ref-{hint}" : existing!,
             getSecret: (_, _, _, fallback) => fallback,
             saveSecret: (_, _, _, _) => throw new InvalidOperationException("Secure store unavailable."),
             deleteSecret: (_, _) => { });
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
             service.SaveSecret(
                 keyRef: "enc-ref",
                 username: "user",
@@ -55,13 +55,13 @@ public sealed class BackupEncryptionSecretServiceTests
     [Fact]
     public void SaveSecret_WhenConfirmedFallback_StoresInSessionMemory()
     {
-        var service = CreateService(
+        BackupEncryptionSecretService service = CreateService(
             ensureKeyRef: (existing, hint) => string.IsNullOrWhiteSpace(existing) ? $"ref-{hint}" : existing!,
             getSecret: (_, _, _, fallback) => fallback,
             saveSecret: (_, _, _, _) => throw new InvalidOperationException("Secure store unavailable."),
             deleteSecret: (_, _) => { });
 
-        var storage = service.SaveSecret(
+        EncryptionSecretStorageMode storage = service.SaveSecret(
             keyRef: "enc-ref",
             username: "user",
             secret: "session-secret",
@@ -75,13 +75,13 @@ public sealed class BackupEncryptionSecretServiceTests
     [Fact]
     public void DeleteSecret_RemovesSessionCopy()
     {
-        var service = CreateService(
+        BackupEncryptionSecretService service = CreateService(
             ensureKeyRef: (existing, hint) => string.IsNullOrWhiteSpace(existing) ? $"ref-{hint}" : existing!,
             getSecret: (_, _, _, fallback) => fallback,
             saveSecret: (_, _, _, _) => throw new InvalidOperationException("Secure store unavailable."),
             deleteSecret: (_, _) => { });
 
-        var storage = service.SaveSecret(
+        EncryptionSecretStorageMode storage = service.SaveSecret(
             keyRef: "enc-ref",
             username: "user",
             secret: "session-secret",
@@ -97,11 +97,11 @@ public sealed class BackupEncryptionSecretServiceTests
     public void SaveSecret_SecureStoreSuccess_ClearsPriorSessionFallback()
     {
         var secureStore = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var shouldFailSave = true;
-        var service = CreateService(
+        bool shouldFailSave = true;
+        BackupEncryptionSecretService service = CreateService(
             ensureKeyRef: (existing, hint) => string.IsNullOrWhiteSpace(existing) ? $"ref-{hint}" : existing!,
             getSecret: (keyRef, _, _, fallback) =>
-                !string.IsNullOrWhiteSpace(keyRef) && secureStore.TryGetValue(keyRef, out var value) ? value : fallback,
+                !string.IsNullOrWhiteSpace(keyRef) && secureStore.TryGetValue(keyRef, out string? value) ? value : fallback,
             saveSecret: (keyRef, _, secret, _) =>
             {
                 if (shouldFailSave)
@@ -111,7 +111,7 @@ public sealed class BackupEncryptionSecretServiceTests
             },
             deleteSecret: (_, _) => { });
 
-        var fallbackStorage = service.SaveSecret(
+        EncryptionSecretStorageMode fallbackStorage = service.SaveSecret(
             keyRef: "enc-ref",
             username: "user",
             secret: "session-secret",
@@ -121,7 +121,7 @@ public sealed class BackupEncryptionSecretServiceTests
         Assert.Equal("session-secret", service.GetSecret("enc-ref", "user"));
 
         shouldFailSave = false;
-        var secureStorage = service.SaveSecret(
+        EncryptionSecretStorageMode secureStorage = service.SaveSecret(
             keyRef: "enc-ref",
             username: "user",
             secret: "secure-secret",
@@ -135,7 +135,7 @@ public sealed class BackupEncryptionSecretServiceTests
     [Fact]
     public void ClearSessionSecrets_RemovesAllFallbackSecrets()
     {
-        var service = CreateService(
+        BackupEncryptionSecretService service = CreateService(
             ensureKeyRef: (existing, hint) => string.IsNullOrWhiteSpace(existing) ? $"ref-{hint}" : existing!,
             getSecret: (_, _, _, fallback) => fallback,
             saveSecret: (_, _, _, _) => throw new InvalidOperationException("Secure store unavailable."),
@@ -153,13 +153,13 @@ public sealed class BackupEncryptionSecretServiceTests
     [Fact]
     public void EnsureSecretRef_ReturnsExistingReferenceWhenProvided()
     {
-        var service = CreateService(
+        BackupEncryptionSecretService service = CreateService(
             ensureKeyRef: (existing, hint) => string.IsNullOrWhiteSpace(existing) ? $"ref-{hint}" : existing!,
             getSecret: (_, _, _, fallback) => fallback,
             saveSecret: (_, _, _, _) => { },
             deleteSecret: (_, _) => { });
 
-        var keyRef = service.EnsureSecretRef("existing-ref", "global");
+        string keyRef = service.EnsureSecretRef("existing-ref", "global");
         Assert.Equal("existing-ref", keyRef);
     }
 

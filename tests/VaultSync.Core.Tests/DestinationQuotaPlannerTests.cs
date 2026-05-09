@@ -21,14 +21,14 @@ public sealed class DestinationQuotaPlannerTests
         };
 
         var planner = new DestinationQuotaPlanner();
-        var backups = new[]
+        Backup[] backups = new[]
         {
             CreateBackup(1, destination.Path, 250, DateTime.UtcNow.AddDays(-3)),
             CreateBackup(2, destination.Path, 400, DateTime.UtcNow.AddDays(-2)),
             CreateBackup(3, destination.Path, 300, DateTime.UtcNow.AddDays(-1))
         };
 
-        var plan = planner.BuildPlans(new[] { destination }, backups).Single();
+        DestinationQuotaPlan plan = planner.BuildPlans(new[] { destination }, backups).Single();
 
         Assert.Equal(950, plan.StoredBytes);
         Assert.Equal(1_000, plan.SoftQuotaBytes);
@@ -51,13 +51,13 @@ public sealed class DestinationQuotaPlannerTests
         };
 
         var planner = new DestinationQuotaPlanner();
-        var backups = new[]
+        Backup[] backups = new[]
         {
             CreateBackup(1, destination.Path, 600, DateTime.UtcNow.AddDays(-2), isProtected: true),
             CreateBackup(2, destination.Path, 500, DateTime.UtcNow.AddDays(-1), isProtected: true)
         };
 
-        var plan = planner.BuildPlans(new[] { destination }, backups).Single();
+        DestinationQuotaPlan plan = planner.BuildPlans(new[] { destination }, backups).Single();
 
         Assert.True(plan.ExceedsWarningThreshold);
         Assert.True(plan.ExceedsQuota);
@@ -75,7 +75,7 @@ public sealed class DestinationQuotaPlannerTests
         };
 
         var planner = new DestinationQuotaPlanner();
-        var plan = planner.BuildPlans(new[] { destination }, new[] { CreateBackup(1, destination.Path, 123, DateTime.UtcNow) }).Single();
+        DestinationQuotaPlan plan = planner.BuildPlans(new[] { destination }, new[] { CreateBackup(1, destination.Path, 123, DateTime.UtcNow) }).Single();
 
         Assert.Equal(123, plan.StoredBytes);
         Assert.Null(plan.SoftQuotaBytes);

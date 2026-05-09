@@ -21,7 +21,7 @@ public sealed class RestoreReadinessService
         ArgumentNullException.ThrowIfNull(backups);
         ArgumentNullException.ThrowIfNull(config);
 
-        var reachability = destinationReachability ?? BuildDestinationReachabilityLookup(config);
+        IReadOnlyDictionary<string, bool> reachability = destinationReachability ?? BuildDestinationReachabilityLookup(config);
         var backupsByProject = backups
             .GroupBy(backup => backup.ProjectId)
             .ToDictionary(group => group.Key, group => group.OrderByDescending(backup => backup.CreatedUtc).ThenByDescending(backup => backup.Id).ToList());
@@ -31,12 +31,12 @@ public sealed class RestoreReadinessService
             .Select(project => EvaluateProject(project, backupsByProject.GetValueOrDefault(project.Id), config, scanSummary, reachability))
             .ToList();
 
-        var ready = results.Count(result => result.State == RestoreReadinessState.Ready);
-        var attention = results.Count(result => result.State == RestoreReadinessState.Attention);
-        var risk = results.Count(result => result.State == RestoreReadinessState.Risk);
-        var unavailable = results.Count(result => result.State == RestoreReadinessState.Unavailable);
+        int ready = results.Count(result => result.State == RestoreReadinessState.Ready);
+        int attention = results.Count(result => result.State == RestoreReadinessState.Attention);
+        int risk = results.Count(result => result.State == RestoreReadinessState.Risk);
+        int unavailable = results.Count(result => result.State == RestoreReadinessState.Unavailable);
 
-        var headline = ready == results.Count && results.Count > 0
+        string headline = ready == results.Count && results.Count > 0
             ? "Restore ready across all tracked projects"
             : unavailable > 0
                 ? $"{unavailable} project(s) are not currently restore-ready"
@@ -46,7 +46,7 @@ public sealed class RestoreReadinessService
                         ? $"{attention} project(s) should be reviewed"
                         : "No tracked projects yet";
 
-        var detail = string.Format(
+        string detail = string.Format(
             CultureInfo.InvariantCulture,
             "Ready {0} | Attention {1} | Risk {2} | Unavailable {3}",
             ready,
@@ -70,9 +70,9 @@ public sealed class RestoreReadinessService
     public static IReadOnlyDictionary<string, bool> BuildDestinationReachabilityLookup(AppConfig config)
     {
         var lookup = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-        foreach (var destination in GetAllDestinations(config))
+        foreach (BackupDestination destination in GetAllDestinations(config))
         {
-            var id = DestinationIdentityService.GetId(destination);
+            string id = DestinationIdentityService.GetId(destination);
             if (lookup.ContainsKey(id))
                 continue;
 
@@ -89,7 +89,7 @@ public sealed class RestoreReadinessService
         BackupIndexScanSummary? scanSummary,
         IReadOnlyDictionary<string, bool> destinationReachability)
     {
-        var latest = backups?.FirstOrDefault();
+        Backup? latest = backups?.FirstOrDefault();
         if (latest is null)
         {
             return new ProjectRestoreReadiness
@@ -103,9 +103,9 @@ public sealed class RestoreReadinessService
             };
         }
 
-        var score = 100;
+        int score = 100;
         var reasons = new List<string>();
-        var latestAge = DateTime.UtcNow - latest.CreatedUtc;
+        TimeSpan latestAge = DateTime.UtcNow - latest.CreatedUtc;
         if (latestAge > TimeSpan.FromHours(72))
         {
             score -= 45;
@@ -117,7 +117,7 @@ public sealed class RestoreReadinessService
             reasons.Add("latest backup is older than 24 hours");
         }
 
-        var verificationPolicy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
+        string verificationPolicy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
         if (string.Equals(verificationPolicy, ProjectVerificationPolicy.Manual, StringComparison.OrdinalIgnoreCase))
         {
             score -= 20;
@@ -130,7 +130,7 @@ public sealed class RestoreReadinessService
             reasons.Add("latest backup has not been covered by scheduled verification");
         }
 
-        var selectedDestinations = ResolveSelectedDestinations(project, config);
+        List<BackupDestination> selectedDestinations = ResolveSelectedDestinations(project, config);
         if (selectedDestinations.Count == 0)
         {
             score = Math.Min(score, 25);
@@ -138,8 +138,8 @@ public sealed class RestoreReadinessService
         }
         else
         {
-            var reachableCount = selectedDestinations.Count(destination =>
-                destinationReachability.TryGetValue(DestinationIdentityService.GetId(destination), out var reachable) && reachable);
+            int reachableCount = selectedDestinations.Count(destination =>
+                destinationReachability.TryGetValue(DestinationIdentityService.GetId(destination), out bool reachable) && reachable);
 
             if (reachableCount == 0)
             {
@@ -165,7 +165,7 @@ public sealed class RestoreReadinessService
         }
 
         score = Math.Clamp(score, 0, 100);
-        var state = score switch
+        RestoreReadinessState state = score switch
         {
             >= 85 => RestoreReadinessState.Ready,
             >= 60 => RestoreReadinessState.Attention,
@@ -188,9 +188,9 @@ public sealed class RestoreReadinessService
 
     private static List<BackupDestination> ResolveSelectedDestinations(Project project, AppConfig config)
     {
-        var allDestinations = GetAllDestinations(config);
+        List<BackupDestination> allDestinations = GetAllDestinations(config);
         var activeDestinations = allDestinations.Where(destination => destination.Active).ToList();
-        var preferredId = DestinationIdentityService.NormalizePreferredDestinationId(project.PreferredDestinationId, allDestinations);
+        string preferredId = DestinationIdentityService.NormalizePreferredDestinationId(project.PreferredDestinationId, allDestinations);
 
         if (string.IsNullOrWhiteSpace(preferredId))
             return activeDestinations;
@@ -198,8 +198,8 @@ public sealed class RestoreReadinessService
         if (string.Equals(preferredId, Project.DestinationAllId, StringComparison.OrdinalIgnoreCase))
             return allDestinations;
 
-        var match = DestinationIdentityService.FindByPreferredDestinationId(allDestinations, preferredId);
-        if (match is null || !match.Active)
+        BackupDestination? match = DestinationIdentityService.FindByPreferredDestinationId(allDestinations, preferredId);
+        if (match?.Active != true)
             return activeDestinations;
 
         return new List<BackupDestination> { match };
@@ -208,7 +208,7 @@ public sealed class RestoreReadinessService
     private static List<BackupDestination> GetAllDestinations(AppConfig config)
     {
         if (config.Backups.UseAdvancedDestinations && config.Backups.Destinations is { Count: > 0 })
-            return config.Backups.Destinations.ToList();
+            return [.. config.Backups.Destinations];
 
         if (!string.IsNullOrWhiteSpace(config.Backups.BackupLocation))
         {

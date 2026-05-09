@@ -14,7 +14,7 @@ public static class RuntimeLog
 
     public static void UpdateFromConfig(AppConfig? config)
     {
-        var advanced = config?.Advanced;
+        AdvancedConfig? advanced = config?.Advanced;
         _verboseEnabled =
             advanced?.VerboseLogging == true ||
             advanced?.SaveVerboseLogs == true;

@@ -25,11 +25,11 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
     [Fact]
     public void BuildPlan_FindsExactBackupProjectRemapAction()
     {
-        var repo = CreateRepository();
-        var projectA = CreateProject(repo, "Alpha");
-        var projectB = CreateProject(repo, "Bravo");
-        var snapshotId = repo.CreateSnapshot(projectA, 10, 1024);
-        var backupId = repo.CreateBackupFromMetadata(
+        SqliteRepository repo = CreateRepository();
+        int projectA = CreateProject(repo, "Alpha");
+        int projectB = CreateProject(repo, "Bravo");
+        int snapshotId = repo.CreateSnapshot(projectA, 10, 1024);
+        int backupId = repo.CreateBackupFromMetadata(
             "backup-one",
             projectB,
             snapshotId,
@@ -43,9 +43,9 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
             isImported: false);
 
         var service = new BackupIndexRepairService(repo);
-        var plan = service.BuildPlan();
+        BackupIndexRepairPlan plan = service.BuildPlan();
 
-        var action = Assert.Single(plan.Actions);
+        BackupIndexRepairAction action = Assert.Single(plan.Actions);
         Assert.Equal(BackupIndexRepairCode.ReassignBackupProjectFromSnapshot, action.Code);
         Assert.Equal(backupId, action.BackupId);
         Assert.Equal(projectB, action.CurrentProjectId);
@@ -55,11 +55,11 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
     [Fact]
     public void ApplyPlan_ReassignsBackupProjectToSnapshotOwner()
     {
-        var repo = CreateRepository();
-        var projectA = CreateProject(repo, "Alpha");
-        var projectB = CreateProject(repo, "Bravo");
-        var snapshotId = repo.CreateSnapshot(projectA, 10, 1024);
-        var backupId = repo.CreateBackupFromMetadata(
+        SqliteRepository repo = CreateRepository();
+        int projectA = CreateProject(repo, "Alpha");
+        int projectB = CreateProject(repo, "Bravo");
+        int snapshotId = repo.CreateSnapshot(projectA, 10, 1024);
+        int backupId = repo.CreateBackupFromMetadata(
             "backup-one",
             projectB,
             snapshotId,
@@ -73,21 +73,21 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
             isImported: false);
 
         var service = new BackupIndexRepairService(repo);
-        var plan = service.BuildPlan();
-        var applied = service.ApplyPlan(plan);
+        BackupIndexRepairPlan plan = service.BuildPlan();
+        int applied = service.ApplyPlan(plan);
 
         Assert.Equal(1, applied);
-        var repaired = Assert.Single(repo.GetAllBackups(), backup => backup.Id == backupId);
+        Backup repaired = Assert.Single(repo.GetAllBackups(), backup => backup.Id == backupId);
         Assert.Equal(projectA, repaired.ProjectId);
     }
 
     [Fact]
     public void BuildPlan_ReportsBlockedIssues_ForMissingSnapshotOrProject()
     {
-        var repo = CreateRepository();
-        var projectId = CreateProject(repo, "Alpha");
-        var snapshotId = repo.CreateSnapshot(projectId, 10, 1024);
-        var backupId = repo.CreateBackupFromMetadata(
+        SqliteRepository repo = CreateRepository();
+        int projectId = CreateProject(repo, "Alpha");
+        int snapshotId = repo.CreateSnapshot(projectId, 10, 1024);
+        int backupId = repo.CreateBackupFromMetadata(
             "backup-one",
             projectId,
             snapshotId,
@@ -111,7 +111,7 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
         }
 
         var service = new BackupIndexRepairService(repo);
-        var plan = service.BuildPlan();
+        BackupIndexRepairPlan plan = service.BuildPlan();
 
         Assert.Empty(plan.Actions);
         Assert.Contains(plan.BlockedIssues, issue => issue.Code == BackupIndexRepairCode.BackupSnapshotMissing);

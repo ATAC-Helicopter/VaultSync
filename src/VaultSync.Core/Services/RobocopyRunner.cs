@@ -49,11 +49,11 @@ namespace VaultSync.Core.Services
                 throw new PlatformNotSupportedException("Robocopy is Windows-only.");
 
             // Load exclusions from preset + project-local ignore
-            var (excludeFiles, excludeDirs) = LoadExcludes(project);
+            (List<string> excludeFiles, List<string> excludeDirs) = LoadExcludes(project);
 
             // Normalize and enable long paths
-            var src = NormalizeWinPath(project.RootPath);
-            var dst = NormalizeWinPath(destination);
+            string src = NormalizeWinPath(project.RootPath);
+            string dst = NormalizeWinPath(destination);
 
             Directory.CreateDirectory(destination); // ensure exists; robocopy handles \\?\
 
@@ -79,13 +79,13 @@ namespace VaultSync.Core.Services
             // Keep it fast and predictable
             psi.ArgumentList.Add("/R:1");
             psi.ArgumentList.Add("/W:1");
-            var threadCount = _isNetworkDestination
+            int threadCount = _isNetworkDestination
                 ? Math.Min(32, Math.Max(4, Environment.ProcessorCount))
                 : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2));
             psi.ArgumentList.Add($"/MT:{threadCount}");
             if (maxBandwidthMbps is > 0)
             {
-                var ipg = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps.Value, threadCount);
+                int ipg = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps.Value, threadCount);
                 if (ipg > 0)
                     psi.ArgumentList.Add($"/IPG:{ipg}");
             }
@@ -121,7 +121,7 @@ namespace VaultSync.Core.Services
 
             string? currentFile = null;
             double? lastPercent = null;
-            var lastLog = DateTime.UtcNow;
+            DateTime lastLog = DateTime.UtcNow;
             var logInterval = TimeSpan.FromSeconds(5);
             using var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
 
@@ -135,18 +135,18 @@ namespace VaultSync.Core.Services
                 {
                     stdout.AppendLine(e.Data);
 
-                    var line = e.Data.Trim();
+                    string line = e.Data.Trim();
 
                     if (progressCallback is not null)
                     {
                         // First, try to parse a percentage from this line.
-                        var percent = TryParsePercent(line);
+                        double? percent = TryParsePercent(line);
                         if (percent is double p)
                         {
                             lastPercent = p;
                             // Use the last-seen file path as the "current file" label if we have one.
-                            var fileLabel = currentFile ?? string.Empty;
-                            var etaText = line;
+                            string fileLabel = currentFile ?? string.Empty;
+                            string etaText = line;
                             progressCallback(p, fileLabel, etaText);
 
                             if ((DateTime.UtcNow - lastLog) >= logInterval)
@@ -167,7 +167,7 @@ namespace VaultSync.Core.Services
                                 // Heuristic: if the line contains a slash or backslash, treat the trailing token as the path.
                                 if (line.Contains('\\') || line.Contains('/'))
                                 {
-                                    var lastSpace = line.LastIndexOf(' ');
+                                    int lastSpace = line.LastIndexOf(' ');
                                     if (lastSpace >= 0 && lastSpace < line.Length - 1)
                                         currentFile = line[(lastSpace + 1)..];
                                     else
@@ -215,7 +215,7 @@ namespace VaultSync.Core.Services
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
 
-                using var reg = ct.Register(() =>
+                using CancellationTokenRegistration reg = ct.Register(() =>
                 {
                     try
                     {
@@ -225,16 +225,16 @@ namespace VaultSync.Core.Services
                     catch { /* ignore */ }
                 });
 
-                var exit = await tcs.Task.ConfigureAwait(false);
+                int exit = await tcs.Task.ConfigureAwait(false);
 
                 // Robocopy 0..7 are success (changes/no changes). Normalize to 0.
-                var normalized = exit <= 7 ? 0 : exit;
+                int normalized = exit <= 7 ? 0 : exit;
 
                 if (normalized != 0)
                 {
                     // Emit stdout/stderr for diagnostics (trim to avoid flooding logs).
-                    var outText = TrimLog(stdout);
-                    var errText = TrimLog(stderr);
+                    string outText = TrimLog(stdout);
+                    string errText = TrimLog(stderr);
 
                     Console.WriteLine($"[RobocopyRunner] robocopy failed (exit={exit}, normalized={normalized}) src='{src}' dst='{dst}'.");
                     if (outText.Length > 0)
@@ -263,14 +263,14 @@ namespace VaultSync.Core.Services
             if (files.Count > 0)
             {
                 psi.ArgumentList.Add("/XF");
-                foreach (var f in files)
+                foreach (string f in files)
                     psi.ArgumentList.Add(f);
             }
 
             if (dirs.Count > 0)
             {
                 psi.ArgumentList.Add("/XD");
-                foreach (var d in dirs)
+                foreach (string d in dirs)
                     psi.ArgumentList.Add(d);
             }
         }
@@ -284,7 +284,7 @@ namespace VaultSync.Core.Services
             //    (env override, app presets/, src/presets/, user ~/.vaultsync/presets).
             if (!string.IsNullOrWhiteSpace(project.Preset))
             {
-                var presetPath = ResolvePresetFile(project.Preset);
+                string? presetPath = ResolvePresetFile(project.Preset);
                 if (!string.IsNullOrWhiteSpace(presetPath))
                 {
                     MergeIgnoreFile(presetPath!, files, dirs);
@@ -292,7 +292,7 @@ namespace VaultSync.Core.Services
             }
 
             // 2) Project-local .vaultsyncignore (always allowed to override/add rules)
-            var localIgnore = Path.Combine(project.RootPath, ".vaultsyncignore");
+            string localIgnore = Path.Combine(project.RootPath, ".vaultsyncignore");
             MergeIgnoreFile(localIgnore, files, dirs);
 
             return (files, dirs);
@@ -303,9 +303,9 @@ namespace VaultSync.Core.Services
             if (!File.Exists(path))
                 return;
 
-            foreach (var raw in File.ReadAllLines(path))
+            foreach (string raw in File.ReadAllLines(path))
             {
-                var line = raw.Trim();
+                string line = raw.Trim();
 
                 // Skip comments / empty
                 if (line.Length == 0 || line.StartsWith("#"))
@@ -315,7 +315,7 @@ namespace VaultSync.Core.Services
                 // If the pattern looks like "bin/**" treat it as a dir exclude "bin".
                 if (line.Contains("/**") || line.Contains("\\**"))
                 {
-                    var d = line.Replace("/**", string.Empty)
+                    string d = line.Replace("/**", string.Empty)
                                 .Replace("\\**", string.Empty)
                                 .TrimEnd('/');
 
@@ -334,7 +334,7 @@ namespace VaultSync.Core.Services
                 if (line.EndsWith("/"))
                 {
                     // robocopy /XD likes bare dir names or relative paths; leave as-is
-                    var d = line.TrimEnd('/');
+                    string d = line.TrimEnd('/');
                     if (!string.IsNullOrWhiteSpace(d))
                         dirs.Add(NormalizeRobocopyGlob(d));
                 }
@@ -351,30 +351,30 @@ namespace VaultSync.Core.Services
                 return null;
 
             // 1) Environment override
-            var envDir = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
+            string? envDir = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
             if (!string.IsNullOrWhiteSpace(envDir))
             {
-                var candidate = ResolvePresetFileInDirectory(envDir, presetName);
+                string? candidate = ResolvePresetFileInDirectory(envDir, presetName);
                 if (!string.IsNullOrWhiteSpace(candidate))
                     return candidate;
             }
 
             // 2) App-installed presets folder: <app>/presets
-            var appDir = Path.Combine(AppContext.BaseDirectory, "presets");
-            var appPreset = ResolvePresetFileInDirectory(appDir, presetName);
+            string appDir = Path.Combine(AppContext.BaseDirectory, "presets");
+            string? appPreset = ResolvePresetFileInDirectory(appDir, presetName);
             if (!string.IsNullOrWhiteSpace(appPreset))
                 return appPreset;
 
             // 3) Dev tree: walk up to find src/presets
-            var dir = AppContext.BaseDirectory;
+            string dir = AppContext.BaseDirectory;
             for (int i = 0; i < 6; i++)
             {
-                var candidateDir = Path.Combine(dir, "src", "presets");
-                var candidate = ResolvePresetFileInDirectory(candidateDir, presetName);
+                string candidateDir = Path.Combine(dir, "src", "presets");
+                string? candidate = ResolvePresetFileInDirectory(candidateDir, presetName);
                 if (!string.IsNullOrWhiteSpace(candidate))
                     return candidate;
 
-                var parent = Directory.GetParent(dir)?.FullName;
+                string? parent = Directory.GetParent(dir)?.FullName;
                 if (parent is null)
                     break;
 
@@ -382,9 +382,9 @@ namespace VaultSync.Core.Services
             }
 
             // 4) User presets: ~/.vaultsync/presets
-            var home       = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var userDir = Path.Combine(home, ".vaultsync", "presets");
-            var userPreset = ResolvePresetFileInDirectory(userDir, presetName);
+            string home       = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string userDir = Path.Combine(home, ".vaultsync", "presets");
+            string? userPreset = ResolvePresetFileInDirectory(userDir, presetName);
             if (!string.IsNullOrWhiteSpace(userPreset))
                 return userPreset;
 
@@ -396,11 +396,11 @@ namespace VaultSync.Core.Services
             if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
                 return null;
 
-            var direct = Path.Combine(directory, $"{presetName}.vaultsyncignore");
+            string direct = Path.Combine(directory, $"{presetName}.vaultsyncignore");
             if (File.Exists(direct))
                 return direct;
 
-            var mapped = ResolvePresetFileFromIndex(directory, presetName);
+            string? mapped = ResolvePresetFileFromIndex(directory, presetName);
             if (!string.IsNullOrWhiteSpace(mapped))
                 return mapped;
 
@@ -411,23 +411,23 @@ namespace VaultSync.Core.Services
         {
             try
             {
-                var indexPath = Path.Combine(directory, "presets.index.json");
+                string indexPath = Path.Combine(directory, "presets.index.json");
                 if (!File.Exists(indexPath))
                     return null;
 
                 Dictionary<string, string> map;
                 lock (s_presetIndexLock)
                 {
-                    var lastWrite = File.GetLastWriteTimeUtc(indexPath);
-                    if (!s_presetIndexCache.TryGetValue(indexPath, out var cached) || cached.LastWriteUtc != lastWrite)
+                    DateTime lastWrite = File.GetLastWriteTimeUtc(indexPath);
+                    if (!s_presetIndexCache.TryGetValue(indexPath, out (DateTime LastWriteUtc, Dictionary<string, string> Map) cached) || cached.LastWriteUtc != lastWrite)
                     {
-                        var json = File.ReadAllText(indexPath);
-                        var index = JsonSerializer.Deserialize<PresetIndex>(json);
+                        string json = File.ReadAllText(indexPath);
+                        PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json);
                         var parsed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                         if (index?.Presets != null)
                         {
-                            foreach (var preset in index.Presets)
+                            foreach (PresetInfo preset in index.Presets)
                             {
                                 if (string.IsNullOrWhiteSpace(preset.Id) || string.IsNullOrWhiteSpace(preset.File))
                                     continue;
@@ -443,10 +443,10 @@ namespace VaultSync.Core.Services
                     map = cached.Map;
                 }
 
-                if (!map.TryGetValue(presetName, out var fileName) || string.IsNullOrWhiteSpace(fileName))
+                if (!map.TryGetValue(presetName, out string? fileName) || string.IsNullOrWhiteSpace(fileName))
                     return null;
 
-                var candidate = Path.Combine(directory, fileName);
+                string candidate = Path.Combine(directory, fileName);
                 return File.Exists(candidate) ? candidate : null;
             }
             catch
@@ -459,7 +459,7 @@ namespace VaultSync.Core.Services
         {
             // Convert forward slashes to backslashes; keep wildcards as-is.
             // Robocopy accepts wildcards in names, e.g. *.tmp or obj\*.
-            var p = pattern.Replace('/', '\\');
+            string p = pattern.Replace('/', '\\');
 
             // Robocopy does not understand "**" (recursive glob). Downgrade to single star.
             while (p.Contains("**"))
@@ -474,7 +474,7 @@ namespace VaultSync.Core.Services
         private static string NormalizeWinPath(string path)
         {
             // Trim trailing separators, convert to backslashes.
-            var trimmed = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            string trimmed = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                               .Replace('/', '\\');
 
             // If already long-path or UNC, leave as-is.
@@ -484,7 +484,7 @@ namespace VaultSync.Core.Services
             // UNC share (e.g. \\server\share) -> long UNC form \\?\UNC\server\share
             if (trimmed.StartsWith(@"\\"))
             {
-                var withoutLeadingSlashes = trimmed.TrimStart('\\');
+                string withoutLeadingSlashes = trimmed.TrimStart('\\');
                 return @"\\?\UNC\" + withoutLeadingSlashes;
             }
 
@@ -501,17 +501,17 @@ namespace VaultSync.Core.Services
         {
             // Robocopy sometimes prints progress-like lines containing a percentage.
             // We use a simple heuristic: find the first '%' and read preceding digits.
-            var idx = line.IndexOf('%');
+            int idx = line.IndexOf('%');
             if (idx <= 0)
                 return null;
 
-            var end = idx - 1;
-            var start = end;
-            var hasDigit = false;
+            int end = idx - 1;
+            int start = end;
+            bool hasDigit = false;
 
             while (start >= 0)
             {
-                var ch = line[start];
+                char ch = line[start];
                 if (char.IsDigit(ch))
                 {
                     hasDigit = true;
@@ -533,8 +533,8 @@ namespace VaultSync.Core.Services
             if (!hasDigit || start > end)
                 return null;
 
-            var numberSpan = line[start..(end + 1)];
-            if (double.TryParse(numberSpan, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value))
+            string numberSpan = line[start..(end + 1)];
+            if (double.TryParse(numberSpan, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
             {
                 if (value >= 0 && value <= 100)
                     return value;
@@ -556,7 +556,7 @@ namespace VaultSync.Core.Services
 
         private static string TrimLog(StringBuilder sb, int maxChars = 4000)
         {
-            var text = sb.ToString();
+            string text = sb.ToString();
             if (text.Length <= maxChars)
                 return text;
 

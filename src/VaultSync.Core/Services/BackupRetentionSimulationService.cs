@@ -7,18 +7,13 @@ using VaultSync.Core.Repositories;
 
 namespace VaultSync.Core.Services;
 
-public sealed class BackupRetentionSimulationService
+public sealed class BackupRetentionSimulationService(SqliteRepository repo)
 {
-    private readonly SqliteRepository _repo;
-
-    public BackupRetentionSimulationService(SqliteRepository repo)
-    {
-        _repo = repo ?? throw new ArgumentNullException(nameof(repo));
-    }
+    private readonly SqliteRepository _repo = repo ?? throw new ArgumentNullException(nameof(repo));
 
     public BackupRetentionSimulationResult Simulate(int maxSnapshotsPerProject)
     {
-        var normalizedMaxSnapshots = Math.Max(1, maxSnapshotsPerProject);
+        int normalizedMaxSnapshots = Math.Max(1, maxSnapshotsPerProject);
         var projects = _repo.GetAllProjects().ToDictionary(project => project.Id);
         var backups = _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)
             .OrderByDescending(backup => backup.CreatedUtc)
@@ -28,7 +23,7 @@ public sealed class BackupRetentionSimulationService
 
         var projectResults = new List<ProjectRetentionSimulationProjectResult>();
 
-        foreach (var project in projects.Values.OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (Project? project in projects.Values.OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase))
         {
             var projectBackups = backups
                 .Where(backup => backup.ProjectId == project.Id)
@@ -36,7 +31,7 @@ public sealed class BackupRetentionSimulationService
                 .ThenByDescending(backup => backup.Id)
                 .ToList();
             var unprotected = projectBackups.Where(backup => !backup.IsProtected).ToList();
-            var deleteQuota = Math.Max(0, unprotected.Count - normalizedMaxSnapshots);
+            int deleteQuota = Math.Max(0, unprotected.Count - normalizedMaxSnapshots);
             var candidates = unprotected
                 .OrderBy(backup => backup.CreatedUtc)
                 .ThenBy(backup => backup.Id)
@@ -45,13 +40,13 @@ public sealed class BackupRetentionSimulationService
                 .Where(entry => entry.Value.ProjectId == project.Id)
                 .ToDictionary(entry => entry.Key, entry => entry.Value);
 
-            var preflight = BackupService.EvaluateRetentionPreflight(
+            BackupService.BackupRetentionPreflightResult preflight = BackupService.EvaluateRetentionPreflight(
                 project.Id,
                 projectBackups,
                 candidates,
                 projectSnapshots,
                 deleteQuota);
-            var decisions = BackupService.BuildRetentionDeletionPlan(
+            IReadOnlyList<BackupService.BackupRetentionCandidateDecision> decisions = BackupService.BuildRetentionDeletionPlan(
                 project.Id,
                 projectBackups,
                 candidates,
@@ -66,7 +61,7 @@ public sealed class BackupRetentionSimulationService
                 .OrderBy(backup => backup.CreatedUtc)
                 .ThenBy(backup => backup.Id)
                 .ToList();
-            var skippedUnsafeCount = decisions.Count(decision =>
+            int skippedUnsafeCount = decisions.Count(decision =>
                 !decision.Selected &&
                 !string.Equals(decision.Code, "quota-satisfied", StringComparison.OrdinalIgnoreCase));
 

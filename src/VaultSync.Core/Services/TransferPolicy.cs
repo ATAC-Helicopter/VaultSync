@@ -20,7 +20,7 @@ public static class TransferPolicy
     /// </summary>
     public static int ToRsyncBwLimitKbps(int maxBandwidthMbps)
     {
-        var mbps = Math.Clamp(maxBandwidthMbps, 1, 5000);
+        int mbps = Math.Clamp(maxBandwidthMbps, 1, 5000);
         // 1 Mbps = 125 KB/s
         return mbps * 125;
     }
@@ -31,18 +31,18 @@ public static class TransferPolicy
     /// </summary>
     public static int ToRobocopyIpgMilliseconds(int maxBandwidthMbps, int threadCount)
     {
-        var mbps = Math.Clamp(maxBandwidthMbps, 1, 5000);
-        var threads = Math.Clamp(threadCount, 1, 128);
+        int mbps = Math.Clamp(maxBandwidthMbps, 1, 5000);
+        int threads = Math.Clamp(threadCount, 1, 128);
 
-        var bytesPerSecond = (mbps * 1024d * 1024d) / 8d;
-        var bytesPerSecondPerThread = bytesPerSecond / threads;
-        var bytesPerMillisecondPerThread = bytesPerSecondPerThread / 1000d;
+        double bytesPerSecond = (mbps * 1024d * 1024d) / 8d;
+        double bytesPerSecondPerThread = bytesPerSecond / threads;
+        double bytesPerMillisecondPerThread = bytesPerSecondPerThread / 1000d;
         if (bytesPerMillisecondPerThread <= 0)
             return 0;
 
         // Robocopy chunks are roughly packet-sized; 64 KiB is a practical approximation.
         const double packetBytes = 64d * 1024d;
-        var delayMs = (packetBytes / bytesPerMillisecondPerThread) - 1d;
+        double delayMs = (packetBytes / bytesPerMillisecondPerThread) - 1d;
         if (delayMs <= 0)
             return 0;
 

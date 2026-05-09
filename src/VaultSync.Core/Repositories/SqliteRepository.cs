@@ -9,14 +9,13 @@ using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Repositories
 {
-    public class SqliteRepository
+    public class SqliteRepository(string dbPath)
     {
-        private readonly string _dbPath;
-        public SqliteRepository(string dbPath) => _dbPath = dbPath;
+        private readonly string _dbPath = dbPath;
 
     private SqliteConnection Open()
     {
-        var dir = Path.GetDirectoryName(_dbPath);
+            string? dir = Path.GetDirectoryName(_dbPath);
         if (!string.IsNullOrWhiteSpace(dir))
         {
             Directory.CreateDirectory(dir);
@@ -30,29 +29,27 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 {
     if (string.IsNullOrWhiteSpace(projectName))
         throw new ArgumentException("Project name is required", nameof(projectName));
-    if (snapshotIds is null)
-        throw new ArgumentNullException(nameof(snapshotIds));
+    ArgumentNullException.ThrowIfNull(snapshotIds);
 
-    var ids = snapshotIds.Distinct().ToArray();
+            int[] ids = [.. snapshotIds.Distinct()];
     if (ids.Length == 0)
         return (0, 0);
 
-    using var conn = Open();                 // <-- uses your existing helper in this class
-    using var tx   = conn.BeginTransaction();
+    using SqliteConnection conn = Open();                 // <-- uses your existing helper in this class
+    using SqliteTransaction tx   = conn.BeginTransaction();
 
-    // Resolve project id
-    var pid = conn.ExecuteScalar<int?>(
+            // Resolve project id
+            int pid = conn.ExecuteScalar<int?>(
         "SELECT id FROM projects WHERE name = @name;",
-        new { name = projectName }, tx);
-    if (pid is null)
-        throw new InvalidOperationException($"Project '{projectName}' not found");
+        new { name = projectName }, tx)
+        ?? throw new InvalidOperationException($"Project '{projectName}' not found");
 
-    // Keep only snapshot ids that belong to this project
-    var validIds = conn.Query<int>(
+            // Keep only snapshot ids that belong to this project
+            int[] validIds = [.. conn.Query<int>(
         @"SELECT id FROM snapshots 
           WHERE project_id = @pid AND id IN @ids 
           ORDER BY id;",
-        new { pid, ids }, tx).ToArray();
+        new { pid, ids }, tx)];
 
     if (validIds.Length == 0)
     {
@@ -60,8 +57,8 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
         return (0, 0);
     }
 
-    // Count files that will be removed via FK cascade
-    var filesDeleted = conn.ExecuteScalar<int>(
+            // Count files that will be removed via FK cascade
+            int filesDeleted = conn.ExecuteScalar<int>(
         "SELECT COUNT(*) FROM files WHERE snapshot_id IN @ids;",
         new { ids = validIds }, tx);
 
@@ -74,7 +71,7 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
 
  public void EnsureSchema()
 {
-    using var c = Open();
+    using SqliteConnection c = Open();
 
     // Ensure pragmas explicitly (keep also in Open(); harmless to repeat)
     c.Execute("PRAGMA foreign_keys = ON;");
@@ -207,20 +204,20 @@ private sealed class BackupPathRow
     public string Path { get; init; } = string.Empty;
 }
 
-private void NormalizeBackupPathSeparators(SqliteConnection connection)
+private static void NormalizeBackupPathSeparators(SqliteConnection connection)
 {
     var rows = connection.Query<BackupPathRow>(
         "SELECT id, path FROM backups WHERE path LIKE '%\\\\%' OR path LIKE '%/%';").ToList();
     if (rows.Count == 0)
         return;
 
-    var separator = Path.DirectorySeparatorChar;
-    foreach (var row in rows)
+            char separator = Path.DirectorySeparatorChar;
+    foreach (BackupPathRow? row in rows)
     {
         if (string.IsNullOrWhiteSpace(row.Path))
             continue;
 
-        var normalized = row.Path
+                string normalized = row.Path
             .Replace('\\', separator)
             .Replace('/', separator)
             .TrimStart(separator);
@@ -241,10 +238,10 @@ private void NormalizeBackupPathSeparators(SqliteConnection connection)
         /// </summary>
         public void ResetAllData()
         {
-            using var connection = Open();
-            using var tx = connection.BeginTransaction();
+            using SqliteConnection connection = Open();
+            using SqliteTransaction tx = connection.BeginTransaction();
 
-            using (var cmd = connection.CreateCommand())
+            using (SqliteCommand cmd = connection.CreateCommand())
             {
                 cmd.Transaction = tx;
                 cmd.CommandText = @"
@@ -261,7 +258,7 @@ DELETE FROM sqlite_sequence;";
         // ---------- Projects ----------
         public Project? GetProjectByName(string name)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Project>(
                 "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
                 new { name });
@@ -269,7 +266,7 @@ DELETE FROM sqlite_sequence;";
 
         public Project? GetProjectById(int id)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Project>(
                 "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
                 new { id });
@@ -277,8 +274,8 @@ DELETE FROM sqlite_sequence;";
 
         public IReadOnlyDictionary<string, int> GetProjectExternalIdMap()
         {
-            using var c = Open();
-            var rows = c.Query<(int Id, string ExternalId)>(
+            using SqliteConnection c = Open();
+            IEnumerable<(int Id, string ExternalId)> rows = c.Query<(int Id, string ExternalId)>(
                 "SELECT id as Id, external_id as ExternalId FROM projects WHERE external_id != '';");
 
             return rows
@@ -288,7 +285,7 @@ DELETE FROM sqlite_sequence;";
 
         public void RemoveProject(int projectId)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
 
             // Because foreign_keys are ON and snapshots/files reference projects
             // with ON DELETE CASCADE, deleting the project row will also delete
@@ -299,7 +296,7 @@ DELETE FROM sqlite_sequence;";
 
         public IEnumerable<Project> ListProjects()
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Project>(
                 "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
         }
@@ -321,15 +318,15 @@ DELETE FROM sqlite_sequence;";
         {
             const string sql =
                 "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name";
-            using var c = Open();
-            var rows = await c.QueryAsync<Project>(new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
-            return rows.ToList();
+            await using SqliteConnection c = Open();
+            IEnumerable<Project> rows = await c.QueryAsync<Project>(new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
+            return [.. rows];
         }
 
         public int AddProject(Project p)
         {
-            using var c = Open();
-            var externalId = string.IsNullOrWhiteSpace(p.ExternalId)
+            using SqliteConnection c = Open();
+            string externalId = string.IsNullOrWhiteSpace(p.ExternalId)
                 ? NewExternalId()
                 : p.ExternalId;
             return c.ExecuteScalar<int>(
@@ -357,7 +354,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateProjectNeedsRestore(int projectId, bool needsRestore)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE projects SET needs_restore = @needs WHERE id = @id;",
                 new { needs = needsRestore ? 1 : 0, id = projectId });
@@ -365,7 +362,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateProjectPreferredDestination(int projectId, string? preferredDestinationId)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE projects SET preferred_destination_id = @preferred WHERE id = @id;",
                 new
@@ -377,7 +374,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateProjectEncryptionPolicy(int projectId, string? encryptionPolicy)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE projects SET encryption_policy = @policy WHERE id = @id;",
                 new
@@ -389,7 +386,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateProjectEncryptionSettings(int projectId, string? encryptionPolicy, string? encryptionKeyRef)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE projects SET encryption_policy = @policy, encryption_key_ref = @keyRef WHERE id = @id;",
                 new
@@ -402,7 +399,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateProjectRestoreMode(int projectId, string? restoreMode)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE projects SET restore_mode = @mode WHERE id = @id;",
                 new
@@ -414,7 +411,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateProjectVerificationPolicy(int projectId, string? verificationPolicy)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE projects SET verification_policy = @policy WHERE id = @id;",
                 new
@@ -426,7 +423,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateProjectTags(int projectId, string? tags)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE projects SET tags = @tags WHERE id = @id;",
                 new
@@ -441,7 +438,7 @@ DELETE FROM sqlite_sequence;";
             if (string.IsNullOrWhiteSpace(externalId))
                 return null;
 
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Project>(
                 """
                 SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
@@ -457,7 +454,7 @@ DELETE FROM sqlite_sequence;";
             if (string.IsNullOrWhiteSpace(externalId))
                 return;
 
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE projects SET external_id = @externalId WHERE id = @id;",
                 new { externalId, id = projectId });
@@ -465,12 +462,12 @@ DELETE FROM sqlite_sequence;";
 
         public bool UpdateProjectPath(string name, string newPath, out string? oldPath)
         {
-            using var c = Open();
-            var p = GetProjectByName(name);
+            using SqliteConnection c = Open();
+            Project? p = GetProjectByName(name);
             if (p is null) { oldPath = null; return false; }
 
             oldPath = p.RootPath;
-            var rows = c.Execute(
+            int rows = c.Execute(
                 "UPDATE projects SET root_path=@newPath WHERE id=@id",
                 new { newPath, id = p.Id });
             return rows > 0;
@@ -478,8 +475,8 @@ DELETE FROM sqlite_sequence;";
 
         public bool UpdateProjectPath(int projectId, string newPath, out string? oldPath)
         {
-            using var c = Open();
-            var p = GetProjectById(projectId);
+            using SqliteConnection c = Open();
+            Project? p = GetProjectById(projectId);
             if (p is null)
             {
                 oldPath = null;
@@ -487,7 +484,7 @@ DELETE FROM sqlite_sequence;";
             }
 
             oldPath = p.RootPath;
-            var rows = c.Execute(
+            int rows = c.Execute(
                 "UPDATE projects SET root_path=@newPath WHERE id=@id",
                 new { newPath, id = projectId });
             return rows > 0;
@@ -495,15 +492,15 @@ DELETE FROM sqlite_sequence;";
 
         public DeleteStats DeleteProjectCascade(string name)
         {
-            using var c = Open();
-            using var tx = c.BeginTransaction();
+            using SqliteConnection c = Open();
+            using SqliteTransaction tx = c.BeginTransaction();
 
-            var projId = c.ExecuteScalar<int>("SELECT id FROM projects WHERE name=@name", new { name }, tx);
+            int projId = c.ExecuteScalar<int>("SELECT id FROM projects WHERE name=@name", new { name }, tx);
             if (projId == 0)
                 return new DeleteStats(0, 0, 0);
 
             var snaps = c.Query<int>("SELECT id FROM snapshots WHERE project_id=@pid", new { pid = projId }, tx).ToList();
-            var filesCount = 0;
+            int filesCount = 0;
             if (snaps.Count > 0)
             {
                 filesCount = c.ExecuteScalar<int>(
@@ -512,8 +509,8 @@ DELETE FROM sqlite_sequence;";
             }
 
             // Delete snapshots; files will be removed automatically via ON DELETE CASCADE
-            var snapsDeleted = c.Execute("DELETE FROM snapshots WHERE project_id=@pid", new { pid = projId }, tx);
-            var projDeleted = c.Execute("DELETE FROM projects WHERE id=@pid", new { pid = projId }, tx);
+            int snapsDeleted = c.Execute("DELETE FROM snapshots WHERE project_id=@pid", new { pid = projId }, tx);
+            int projDeleted = c.Execute("DELETE FROM projects WHERE id=@pid", new { pid = projId }, tx);
 
             tx.Commit();
             return new DeleteStats(projDeleted, snapsDeleted, filesCount);
@@ -522,10 +519,10 @@ DELETE FROM sqlite_sequence;";
         // ---------- Snapshots ----------
         public int CreateSnapshot(int projectId, long fileCount, long totalBytes, SnapshotDiffSummary? diffSummary = null)
         {
-            using var c = Open();
-            var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
-            var externalId = NewExternalId();
-            var summary = diffSummary ?? SnapshotDiffSummary.Empty;
+            using SqliteConnection c = Open();
+            string created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+            string externalId = NewExternalId();
+            SnapshotDiffSummary summary = diffSummary ?? SnapshotDiffSummary.Empty;
             return c.ExecuteScalar<int>(
                 """
                 INSERT INTO snapshots(
@@ -575,10 +572,10 @@ DELETE FROM sqlite_sequence;";
             long totalBytes,
             SnapshotDiffSummary? diffSummary = null)
         {
-            using var c = Open();
-            var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
-            var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
-            var summary = diffSummary ?? SnapshotDiffSummary.Empty;
+            using SqliteConnection c = Open();
+            string created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
+            string idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
+            SnapshotDiffSummary summary = diffSummary ?? SnapshotDiffSummary.Empty;
             return c.ExecuteScalar<int>(
                 """
                 INSERT INTO snapshots(
@@ -625,7 +622,7 @@ DELETE FROM sqlite_sequence;";
             if (string.IsNullOrWhiteSpace(externalId))
                 return null;
 
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Snapshot>(
                 """
                 SELECT
@@ -649,7 +646,7 @@ DELETE FROM sqlite_sequence;";
 
         public Snapshot? GetSnapshotById(int id)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Snapshot>(
                 """
                 SELECT
@@ -673,8 +670,8 @@ DELETE FROM sqlite_sequence;";
 
         public IReadOnlyDictionary<string, int> GetSnapshotExternalIdMap()
         {
-            using var c = Open();
-            var rows = c.Query<(int Id, string ExternalId)>(
+            using SqliteConnection c = Open();
+            IEnumerable<(int Id, string ExternalId)> rows = c.Query<(int Id, string ExternalId)>(
                 "SELECT id as Id, external_id as ExternalId FROM snapshots WHERE external_id != '';");
 
             return rows
@@ -687,7 +684,7 @@ DELETE FROM sqlite_sequence;";
             if (string.IsNullOrWhiteSpace(externalId))
                 return;
 
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE snapshots SET external_id = @externalId WHERE id = @id;",
                 new { externalId, id = snapshotId });
@@ -700,7 +697,7 @@ DELETE FROM sqlite_sequence;";
 
         public Snapshot? GetLatestSnapshotForProject(int projectId)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Snapshot>(
                 """
                 SELECT
@@ -725,8 +722,8 @@ DELETE FROM sqlite_sequence;";
 
         public IReadOnlyDictionary<int, (DateTime CreatedUtc, long TotalBytes)> GetLatestSnapshotInfoByProject()
         {
-            using var c = Open();
-            var rows = c.Query<(int ProjectId, string CreatedUtc, long TotalBytes)>(
+            using SqliteConnection c = Open();
+            IEnumerable<(int ProjectId, string CreatedUtc, long TotalBytes)> rows = c.Query<(int ProjectId, string CreatedUtc, long TotalBytes)>(
                 """
                 SELECT
                   project_id as ProjectId,
@@ -743,14 +740,14 @@ DELETE FROM sqlite_sequence;";
                 WHERE rn = 1;
                 """);
 
-            var styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
+            const DateTimeStyles styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
             var map = new Dictionary<int, (DateTime CreatedUtc, long TotalBytes)>();
-            foreach (var row in rows)
+            foreach ((int projectId, string createdUtc, long totalBytes) in rows)
             {
-                if (!DateTime.TryParse(row.CreatedUtc, CultureInfo.InvariantCulture, styles, out var created))
-                    created = DateTime.SpecifyKind(DateTime.Parse(row.CreatedUtc), DateTimeKind.Utc);
+                if (!DateTime.TryParse(createdUtc, CultureInfo.InvariantCulture, styles, out DateTime created))
+                    created = DateTime.SpecifyKind(DateTime.Parse(createdUtc), DateTimeKind.Utc);
 
-                map[row.ProjectId] = (created, row.TotalBytes);
+                map[projectId] = (created, totalBytes);
             }
 
             return map;
@@ -761,7 +758,7 @@ DELETE FROM sqlite_sequence;";
         /// </summary>
         public IEnumerable<Snapshot> GetAllSnapshots()
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Snapshot>(
                 """
                 SELECT
@@ -783,17 +780,15 @@ DELETE FROM sqlite_sequence;";
 
         public IEnumerable<Snapshot> GetSnapshotsByIds(IEnumerable<int> snapshotIds)
         {
-            if (snapshotIds is null)
-                throw new ArgumentNullException(nameof(snapshotIds));
+            ArgumentNullException.ThrowIfNull(snapshotIds);
 
-            var ids = snapshotIds
+            int[] ids = [.. snapshotIds
                 .Where(id => id > 0)
-                .Distinct()
-                .ToArray();
+                .Distinct()];
             if (ids.Length == 0)
-                return Enumerable.Empty<Snapshot>();
+                return [];
 
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Snapshot>(
                 """
                 SELECT
@@ -837,14 +832,14 @@ DELETE FROM sqlite_sequence;";
                 FROM snapshots
                 ORDER BY created_utc DESC
                 """;
-            using var c = Open();
-            var rows = await c.QueryAsync<Snapshot>(new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
-            return rows.ToList();
+            await using SqliteConnection c = Open();
+            IEnumerable<Snapshot> rows = await c.QueryAsync<Snapshot>(new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
+            return [.. rows];
         }
 
         public IEnumerable<Snapshot> GetSnapshotsForProject(string projectName)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Snapshot>(
                 """
                 SELECT
@@ -890,26 +885,26 @@ DELETE FROM sqlite_sequence;";
                 WHERE project_id = (SELECT id FROM projects WHERE name=@name)
                 ORDER BY created_utc DESC, id DESC
                 """;
-            using var c = Open();
-            var rows = await c.QueryAsync<Snapshot>(
+            await using SqliteConnection c = Open();
+            IEnumerable<Snapshot> rows = await c.QueryAsync<Snapshot>(
                 new CommandDefinition(sql, new { name = projectName }, cancellationToken: ct)).ConfigureAwait(false);
-            return rows.ToList();
+            return [.. rows];
         }
 
         public IEnumerable<FileEntry> GetFilesForSnapshot(int snapshotId)
         {
-            using var c = Open();
-            var rows = c.Query<(string RelPath, long Size, string MTimeUtc, string HashSha256)>(
+            using SqliteConnection c = Open();
+            IEnumerable<(string RelPath, long Size, string MTimeUtc, string HashSha256)> rows = c.Query<(string RelPath, long Size, string MTimeUtc, string HashSha256)>(
                 "SELECT rel_path as RelPath, size as Size, mtime_utc as MTimeUtc, hash_sha256 as HashSha256 FROM files WHERE snapshot_id=@sid",
                 new { sid = snapshotId });
 
-            var styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
-            foreach (var r in rows)
+            const DateTimeStyles styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
+            foreach ((string relPath, long size, string mTimeUtc, string hashSha256) in rows)
             {
-                if (!DateTime.TryParse(r.MTimeUtc, CultureInfo.InvariantCulture, styles, out var mtime))
-                    mtime = DateTime.SpecifyKind(DateTime.Parse(r.MTimeUtc), DateTimeKind.Utc);
+                if (!DateTime.TryParse(mTimeUtc, CultureInfo.InvariantCulture, styles, out DateTime mtime))
+                    mtime = DateTime.SpecifyKind(DateTime.Parse(mTimeUtc), DateTimeKind.Utc);
 
-                yield return new FileEntry(r.RelPath, r.Size, mtime, r.HashSha256);
+                yield return new FileEntry(relPath, size, mtime, hashSha256);
             }
         }
 
@@ -921,17 +916,17 @@ DELETE FROM sqlite_sequence;";
         {
             const string sql =
                 "SELECT rel_path as RelPath, size as Size, mtime_utc as MTimeUtc, hash_sha256 as HashSha256 FROM files WHERE snapshot_id=@sid";
-            using var c = Open();
-            var rows = await c.QueryAsync<(string RelPath, long Size, string MTimeUtc, string HashSha256)>(
+            await using SqliteConnection c = Open();
+            IEnumerable<(string RelPath, long Size, string MTimeUtc, string HashSha256)> rows = await c.QueryAsync<(string RelPath, long Size, string MTimeUtc, string HashSha256)>(
                 new CommandDefinition(sql, new { sid = snapshotId }, cancellationToken: ct)).ConfigureAwait(false);
-            var styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
+            const DateTimeStyles styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
             var list = new List<FileEntry>();
-            foreach (var entry in rows)
+            foreach ((string relPath, long size, string mTimeUtc, string hashSha256) in rows)
             {
                 ct.ThrowIfCancellationRequested();
-                if (!DateTime.TryParse(entry.MTimeUtc, CultureInfo.InvariantCulture, styles, out var mtime))
-                    mtime = DateTime.SpecifyKind(DateTime.Parse(entry.MTimeUtc), DateTimeKind.Utc);
-                list.Add(new FileEntry(entry.RelPath, entry.Size, mtime, entry.HashSha256));
+                if (!DateTime.TryParse(mTimeUtc, CultureInfo.InvariantCulture, styles, out DateTime mtime))
+                    mtime = DateTime.SpecifyKind(DateTime.Parse(mTimeUtc), DateTimeKind.Utc);
+                list.Add(new FileEntry(relPath, size, mtime, hashSha256));
             }
 
             return list;
@@ -939,8 +934,8 @@ DELETE FROM sqlite_sequence;";
 
         public void InsertFiles(int snapshotId, IEnumerable<FileEntry> files)
         {
-            using var c = Open();
-            using var tx = c.BeginTransaction();
+            using SqliteConnection c = Open();
+            using SqliteTransaction tx = c.BeginTransaction();
             c.Execute(
                 """
                 INSERT INTO files(snapshot_id, rel_path, size, mtime_utc, hash_sha256)
@@ -960,8 +955,8 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateFileHashes(int snapshotId, IEnumerable<(string RelPath, string HashSha256)> updates)
         {
-            using var c = Open();
-            using var tx = c.BeginTransaction();
+            using SqliteConnection c = Open();
+            using SqliteTransaction tx = c.BeginTransaction();
 
             c.Execute(
                 """
@@ -994,12 +989,12 @@ DELETE FROM sqlite_sequence;";
             bool isEncrypted = false,
             string? cryptoDescriptorJson = null)
         {
-            using var c = Open();
-            var created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
-            var externalId = NewExternalId();
-            var originMachineName = Environment.MachineName;
+            using SqliteConnection c = Open();
+            string created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+            string externalId = NewExternalId();
+            string originMachineName = Environment.MachineName;
             var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
-            var descriptorJson = descriptor.ToMetadataJson(isEncrypted);
+            string descriptorJson = descriptor.ToMetadataJson(isEncrypted);
 
             return c.ExecuteScalar<int>(
                 """
@@ -1044,11 +1039,11 @@ DELETE FROM sqlite_sequence;";
             bool isEncrypted = false,
             string? cryptoDescriptorJson = null)
         {
-            using var c = Open();
-            var created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
-            var idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
+            using SqliteConnection c = Open();
+            string created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
+            string idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
             var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
-            var descriptorJson = descriptor.ToMetadataJson(isEncrypted);
+            string descriptorJson = descriptor.ToMetadataJson(isEncrypted);
             return c.ExecuteScalar<int>(
                 """
                 INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, backup_mode, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
@@ -1080,7 +1075,7 @@ DELETE FROM sqlite_sequence;";
             if (string.IsNullOrWhiteSpace(externalId))
                 return null;
 
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Backup>(
                 """
                   SELECT
@@ -1109,8 +1104,8 @@ DELETE FROM sqlite_sequence;";
 
         public IReadOnlyDictionary<string, int> GetBackupExternalIdMap()
         {
-            using var c = Open();
-            var rows = c.Query<(int Id, string ExternalId)>(
+            using SqliteConnection c = Open();
+            IEnumerable<(int Id, string ExternalId)> rows = c.Query<(int Id, string ExternalId)>(
                 "SELECT id as Id, external_id as ExternalId FROM backups WHERE external_id != '';");
 
             return rows
@@ -1123,7 +1118,7 @@ DELETE FROM sqlite_sequence;";
             if (string.IsNullOrWhiteSpace(externalId))
                 return;
 
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE backups SET external_id = @externalId WHERE id = @id;",
                 new { externalId, id = backupId });
@@ -1131,7 +1126,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateBackupProjectId(int backupId, int projectId)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute(
                 "UPDATE backups SET project_id = @projectId WHERE id = @id;",
                 new { projectId, id = backupId });
@@ -1139,7 +1134,7 @@ DELETE FROM sqlite_sequence;";
 
         public void UpdateBackupEncryptionMetadata(int backupId, bool isEncrypted, string? cryptoDescriptorJson, long totalBytes)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
             c.Execute(
                 """
@@ -1160,7 +1155,7 @@ DELETE FROM sqlite_sequence;";
 
         public Backup? GetLatestBackupForProject(int projectId)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Backup>(
                 """
                   SELECT
@@ -1190,7 +1185,7 @@ DELETE FROM sqlite_sequence;";
 
         public List<Backup> GetLatestBackupsPerProject()
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Backup>(
                 """
                   SELECT
@@ -1218,12 +1213,12 @@ DELETE FROM sqlite_sequence;";
                 ) latest
                 ON b.project_id = latest.project_id AND b.created_utc = latest.created_utc
                 ORDER BY b.created_utc DESC;
-                """).ToList();
+                """).AsList();
         }
 
         public Backup? GetBackupById(int backupId)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Backup>(
                 """
                   SELECT
@@ -1253,9 +1248,9 @@ DELETE FROM sqlite_sequence;";
         public IReadOnlyList<Backup> GetRecentBackupsByProject(int limitPerProject)
         {
             if (limitPerProject <= 0)
-                return Array.Empty<Backup>();
+                return [];
 
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Backup>(
                 """
                   SELECT
@@ -1284,12 +1279,12 @@ DELETE FROM sqlite_sequence;";
                 WHERE rn <= @limit
                 ORDER BY project_id, created_utc DESC;
                 """,
-                new { limit = limitPerProject }).ToList();
+                new { limit = limitPerProject }).AsList();
         }
 
         public IEnumerable<Backup> GetBackupsForProject(int projectId)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Backup>(
                 """
                   SELECT
@@ -1318,8 +1313,8 @@ DELETE FROM sqlite_sequence;";
 
         public bool HasBackupForSnapshot(int projectId, int snapshotId)
         {
-            using var c = Open();
-            var hit = c.QueryFirstOrDefault<int?>(
+            using SqliteConnection c = Open();
+            int? hit = c.QueryFirstOrDefault<int?>(
                 "SELECT 1 FROM backups WHERE project_id = @pid AND snapshot_id = @sid LIMIT 1;",
                 new { pid = projectId, sid = snapshotId });
             return hit.HasValue;
@@ -1354,10 +1349,10 @@ DELETE FROM sqlite_sequence;";
                   WHERE project_id = @pid
                 ORDER BY created_utc DESC;
                 """;
-            using var c = Open();
-            var rows = await c.QueryAsync<Backup>(
+            await using SqliteConnection c = Open();
+            IEnumerable<Backup> rows = await c.QueryAsync<Backup>(
                 new CommandDefinition(sql, new { pid = projectId }, cancellationToken: ct)).ConfigureAwait(false);
-            return rows.ToList();
+            return [.. rows];
         }
 
         /// <summary>
@@ -1366,7 +1361,7 @@ DELETE FROM sqlite_sequence;";
         /// </summary>
         public IEnumerable<Backup> GetBackupsInRange(DateTime fromUtc, DateTime toUtc)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Backup>(
                 """
                 SELECT
@@ -1426,8 +1421,8 @@ DELETE FROM sqlite_sequence;";
                 WHERE created_utc >= @from AND created_utc <= @to
                 ORDER BY created_utc DESC;
                 """;
-            using var c = Open();
-            var rows = await c.QueryAsync<Backup>(
+            await using SqliteConnection c = Open();
+            IEnumerable<Backup> rows = await c.QueryAsync<Backup>(
                 new CommandDefinition(
                     sql,
                     new
@@ -1436,12 +1431,12 @@ DELETE FROM sqlite_sequence;";
                         to = toUtc.ToString("u", CultureInfo.InvariantCulture)
                     },
                     cancellationToken: ct)).ConfigureAwait(false);
-            return rows.ToList();
+            return [.. rows];
         }
 
         public Backup? GetLastBackup()
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Backup>(
                 """
                 SELECT
@@ -1469,7 +1464,7 @@ DELETE FROM sqlite_sequence;";
 
         public List<Backup> GetAllBackups()
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Query<Backup>(
                 """
                 SELECT
@@ -1491,19 +1486,19 @@ DELETE FROM sqlite_sequence;";
                   is_imported as IsImported
                 FROM backups
                 ORDER BY created_utc DESC;
-                """).ToList();
+                """).AsList();
         }
 
         public int GetBackupCount()
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.ExecuteScalar<int>("SELECT COUNT(*) FROM backups;");
         }
 
         public IReadOnlyDictionary<int, long> GetBackupTotalsByProject(bool includeImported = false)
         {
-            using var c = Open();
-            var rows = includeImported
+            using SqliteConnection c = Open();
+            IEnumerable<(int ProjectId, long TotalBytes)> rows = includeImported
                 ? c.Query<(int ProjectId, long TotalBytes)>(
                     "SELECT project_id as ProjectId, COALESCE(SUM(total_bytes), 0) as TotalBytes FROM backups GROUP BY project_id;")
                 : c.Query<(int ProjectId, long TotalBytes)>(
@@ -1520,7 +1515,7 @@ DELETE FROM sqlite_sequence;";
         /// </summary>
         public int RepairBackupProjectLinksFromSnapshots()
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             return c.Execute(
                 """
                 UPDATE backups
@@ -1547,8 +1542,8 @@ DELETE FROM sqlite_sequence;";
 
         public List<(int projectId, DateTime createdUtc, string type)> GetRecentBackups(int limit)
         {
-            using var c = Open();
-            var rows = c.Query<BackupActivityRow>(
+            using SqliteConnection c = Open();
+            IEnumerable<BackupActivityRow> rows = c.Query<BackupActivityRow>(
                 """
                 SELECT project_id as ProjectId, created_utc as CreatedUtc, type as Type
                 FROM backups
@@ -1558,18 +1553,18 @@ DELETE FROM sqlite_sequence;";
                 new { limit });
 
             var result = new List<(int projectId, DateTime createdUtc, string type)>();
-            foreach (var row in rows)
+            foreach (BackupActivityRow row in rows)
             {
                 if (!DateTime.TryParse(
                         row.CreatedUtc,
                         CultureInfo.InvariantCulture,
                         DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                        out var created))
+                        out DateTime created))
                 {
                     continue;
                 }
 
-                var projectId = row.ProjectId > int.MaxValue ? int.MaxValue : (int)row.ProjectId;
+                int projectId = row.ProjectId > int.MaxValue ? int.MaxValue : (int)row.ProjectId;
                 result.Add((projectId, created, row.Type));
             }
 
@@ -1584,8 +1579,8 @@ DELETE FROM sqlite_sequence;";
 
         public List<(int projectId, DateTime createdUtc)> GetRecentSnapshotsWithoutBackup(int limit)
         {
-            using var c = Open();
-            var rows = c.Query<SnapshotActivityRow>(
+            using SqliteConnection c = Open();
+            IEnumerable<SnapshotActivityRow> rows = c.Query<SnapshotActivityRow>(
                 """
                 SELECT s.project_id as ProjectId, s.created_utc as CreatedUtc
                 FROM snapshots s
@@ -1597,18 +1592,18 @@ DELETE FROM sqlite_sequence;";
                 new { limit });
 
             var result = new List<(int projectId, DateTime createdUtc)>();
-            foreach (var row in rows)
+            foreach (SnapshotActivityRow row in rows)
             {
                 if (!DateTime.TryParse(
                         row.CreatedUtc,
                         CultureInfo.InvariantCulture,
                         DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                        out var created))
+                        out DateTime created))
                 {
                     continue;
                 }
 
-                var projectId = row.ProjectId > int.MaxValue ? int.MaxValue : (int)row.ProjectId;
+                int projectId = row.ProjectId > int.MaxValue ? int.MaxValue : (int)row.ProjectId;
                 result.Add((projectId, created));
             }
 
@@ -1631,8 +1626,8 @@ DELETE FROM sqlite_sequence;";
 
         public IReadOnlyDictionary<DateTime, int> GetBackupCountsByDay(DateTime fromUtc, DateTime toUtc)
         {
-            using var c = Open();
-            var rows = c.Query<BackupCountRow>(
+            using SqliteConnection c = Open();
+            IEnumerable<BackupCountRow> rows = c.Query<BackupCountRow>(
                 """
                 SELECT substr(created_utc, 1, 10) as Day, COUNT(*) as Count
                 FROM backups
@@ -1647,14 +1642,14 @@ DELETE FROM sqlite_sequence;";
                 });
 
             var result = new Dictionary<DateTime, int>();
-            foreach (var row in rows)
+            foreach (BackupCountRow row in rows)
             {
                 if (!DateTime.TryParseExact(
                         row.Day,
                         "yyyy-MM-dd",
                         CultureInfo.InvariantCulture,
                         DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                        out var day))
+                        out DateTime day))
                 {
                     continue;
                 }
@@ -1670,8 +1665,8 @@ DELETE FROM sqlite_sequence;";
 
         public IReadOnlyDictionary<DateTime, (int AutoCount, int ManualCount, int ImportedCount)> GetBackupCountsByDayBreakdown(DateTime fromUtc, DateTime toUtc)
         {
-            using var c = Open();
-            var rows = c.Query<BackupCountByTypeRow>(
+            using SqliteConnection c = Open();
+            IEnumerable<BackupCountByTypeRow> rows = c.Query<BackupCountByTypeRow>(
                 """
                 SELECT substr(created_utc, 1, 10) as Day,
                        lower(type) as Type,
@@ -1689,24 +1684,24 @@ DELETE FROM sqlite_sequence;";
                 });
 
             var result = new Dictionary<DateTime, (int AutoCount, int ManualCount, int ImportedCount)>();
-            foreach (var row in rows)
+            foreach (BackupCountByTypeRow row in rows)
             {
                 if (!DateTime.TryParseExact(
                         row.Day,
                         "yyyy-MM-dd",
                         CultureInfo.InvariantCulture,
                         DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                        out var day))
+                        out DateTime day))
                 {
                     continue;
                 }
 
-                result.TryGetValue(day.Date, out var current);
-                var autoCount = current.AutoCount;
-                var manualCount = current.ManualCount;
-                var importedCount = current.ImportedCount;
+                result.TryGetValue(day.Date, out (int AutoCount, int ManualCount, int ImportedCount) current);
+                int autoCount = current.AutoCount;
+                int manualCount = current.ManualCount;
+                int importedCount = current.ImportedCount;
 
-                var count = row.Count > int.MaxValue ? int.MaxValue : (int)row.Count;
+                int count = row.Count > int.MaxValue ? int.MaxValue : (int)row.Count;
                 if (row.IsImported != 0)
                 {
                     importedCount = Math.Min(int.MaxValue, importedCount + count);
@@ -1728,29 +1723,29 @@ DELETE FROM sqlite_sequence;";
 
     public long GetTotalBackupBytes()
     {
-        using var c = Open();
+        using SqliteConnection c = Open();
         return c.ExecuteScalar<long>("SELECT COALESCE(SUM(total_bytes), 0) FROM backups;");
     }
 
         public IReadOnlyDictionary<int, DateTime> GetLatestBackupUtcByProject()
         {
-            using var c = Open();
-            var rows = c.Query<(int ProjectId, string LatestUtc)>(
+            using SqliteConnection c = Open();
+            IEnumerable<(int ProjectId, string LatestUtc)> rows = c.Query<(int ProjectId, string LatestUtc)>(
                 "SELECT project_id as ProjectId, MAX(created_utc) as LatestUtc FROM backups GROUP BY project_id;");
 
             var result = new Dictionary<int, DateTime>();
-            foreach (var row in rows)
+            foreach ((int projectId, string latestUtc) in rows)
             {
-                if (string.IsNullOrWhiteSpace(row.LatestUtc))
+                if (string.IsNullOrWhiteSpace(latestUtc))
                     continue;
 
                 if (DateTime.TryParse(
-                        row.LatestUtc,
+                        latestUtc,
                         CultureInfo.InvariantCulture,
                         DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                        out var parsed))
+                        out DateTime parsed))
                 {
-                    result[row.ProjectId] = parsed;
+                    result[projectId] = parsed;
                 }
             }
 
@@ -1761,7 +1756,7 @@ DELETE FROM sqlite_sequence;";
     {
         try
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             var cols = c.Query($"PRAGMA table_info({table});")
                         .Select(row => (string)row.name)
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -1781,17 +1776,17 @@ DELETE FROM sqlite_sequence;";
 
         public (int autoCount, int manualCount) GetBackupTypeCounts()
         {
-            using var c = Open();
-            var rows = c.Query<(string type, int count)>(
+            using SqliteConnection c = Open();
+            IEnumerable<(string type, int count)> rows = c.Query<(string type, int count)>(
                 "SELECT type, COUNT(*) as count FROM backups GROUP BY type;");
 
             int auto = 0, manual = 0;
-            foreach (var row in rows)
+            foreach ((string type, int count) in rows)
             {
-                if (string.Equals(row.type, "auto", StringComparison.OrdinalIgnoreCase))
-                    auto = row.count;
-                else if (string.Equals(row.type, "manual", StringComparison.OrdinalIgnoreCase))
-                    manual = row.count;
+                if (string.Equals(type, "auto", StringComparison.OrdinalIgnoreCase))
+                    auto = count;
+                else if (string.Equals(type, "manual", StringComparison.OrdinalIgnoreCase))
+                    manual = count;
             }
 
             return (auto, manual);
@@ -1799,13 +1794,13 @@ DELETE FROM sqlite_sequence;";
 
         public void DeleteBackupById(int backupId)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute("DELETE FROM backups WHERE id=@id;", new { id = backupId });
         }
 
         public void SetBackupProtection(int backupId, bool isProtected)
         {
-            using var c = Open();
+            using SqliteConnection c = Open();
             c.Execute("UPDATE backups SET is_protected=@p WHERE id=@id;", new { id = backupId, p = isProtected ? 1 : 0 });
         }
     }

@@ -9,7 +9,7 @@ public class HashService
         const int Buf = 1024 * 1024;
         await using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, Buf, useAsync: true);
         using var sha = SHA256.Create();
-        var hash = await sha.ComputeHashAsync(fs, ct);
+        byte[] hash = await sha.ComputeHashAsync(fs, ct);
         return Convert.ToHexString(hash);
     }
 }

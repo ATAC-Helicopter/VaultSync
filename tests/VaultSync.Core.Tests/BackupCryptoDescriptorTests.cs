@@ -19,7 +19,7 @@ public sealed class BackupCryptoDescriptorTests
             kdfParamRef: "profile-fast",
             formatVersion: 2);
 
-        var json = descriptor.ToMetadataJson(isEncrypted: true);
+        string json = descriptor.ToMetadataJson(isEncrypted: true);
         var parsed = BackupCryptoDescriptor.FromMetadata(isEncrypted: true, descriptorJson: json);
 
         Assert.Equal(2, parsed.FormatVersion);
@@ -83,10 +83,10 @@ public sealed class BackupCryptoDescriptorTests
                             """
         });
 
-        var stored = store.ListBackups().Single(x => x.ExternalId == "backup-crypto-1");
+        MetaBackup stored = store.ListBackups().Single(x => x.ExternalId == "backup-crypto-1");
         using var doc = JsonDocument.Parse(stored.KdfParamsJson);
-        var root = doc.RootElement;
-        var properties = root.EnumerateObject().Select(x => x.Name).OrderBy(x => x).ToArray();
+        JsonElement root = doc.RootElement;
+        string[] properties = root.EnumerateObject().Select(x => x.Name).OrderBy(x => x).ToArray();
 
         Assert.Equal(new[] { "algorithm", "formatVersion", "kdfParamRef", "kdfProfile" }, properties);
         Assert.False(root.TryGetProperty("password", out _));

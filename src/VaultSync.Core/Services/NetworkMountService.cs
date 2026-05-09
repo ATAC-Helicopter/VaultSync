@@ -14,10 +14,10 @@ public sealed class NetworkMountService
 
     public DestinationResolution PrepareDestination(BackupDestination dest, NetworkCredentialProfile? profile)
     {
-        var alias = DisplayName(dest);
+        string alias = DisplayName(dest);
         Console.WriteLine($"[NetworkMount] PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
 
-        var normalizedPath = NormalizePath(dest.Path, out var normalizeError);
+        string normalizedPath = NormalizePath(dest.Path, out string? normalizeError);
         if (!string.IsNullOrWhiteSpace(normalizeError))
         {
             return DestinationResolution.CreateFailure(dest, normalizeError);
@@ -31,7 +31,7 @@ public sealed class NetworkMountService
                 : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
         }
 
-        var isNetwork = IsNetworkPath(normalizedPath);
+        bool isNetwork = IsNetworkPath(normalizedPath);
         if (!isNetwork)
         {
             try
@@ -63,7 +63,7 @@ public sealed class NetworkMountService
         }
 
         Console.WriteLine($"[NetworkMount] Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
-        var password = profile is null
+        string? password = profile is null
             ? null
             : _vault.GetSecret(profile.KeyRef, profile.Username, profile.UseKeychain, profile.Password);
 
@@ -124,32 +124,32 @@ public sealed class NetworkMountService
             return DestinationResolution.CreateFailure(dest, $"No password available for credential '{profile.Name}'.");
         }
 
-        var username = BuildWindowsUsername(profile);
+        string? username = BuildWindowsUsername(profile);
 
         try
         {
-            var firstAttempt = TryNetUseConnect(normalizedPath, username, password);
+            NetUseResult firstAttempt = TryNetUseConnect(normalizedPath, username, password);
             Console.WriteLine($"[NetworkMount] net use connect attempt exit={firstAttempt.ExitCode}.");
             if (firstAttempt.ExitCode == 0)
                 return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: true, $"Mounted {DisplayName(dest)}");
 
-            var detail = FormatNetUseError(firstAttempt);
+            string detail = FormatNetUseError(firstAttempt);
             if (IsError1219(detail))
             {
                 // Error 1219 usually means there is an existing connection to the same server with different credentials.
                 // Best-effort disconnect for this share/server and retry once.
                 TryNetUseDelete(normalizedPath);
-                if (TryParseShare(normalizedPath, out var host, out _))
+                if (TryParseShare(normalizedPath, out string? host, out _))
                 {
                     TryNetUseDelete($@"\\{host}");
                 }
 
-                var secondAttempt = TryNetUseConnect(normalizedPath, username, password);
+                NetUseResult secondAttempt = TryNetUseConnect(normalizedPath, username, password);
                 Console.WriteLine($"[NetworkMount] net use retry exit={secondAttempt.ExitCode}.");
                 if (secondAttempt.ExitCode == 0)
                     return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: true, $"Mounted {DisplayName(dest)}");
 
-                var retryDetail = FormatNetUseError(secondAttempt);
+                string retryDetail = FormatNetUseError(secondAttempt);
                 return DestinationResolution.CreateFailure(
                     dest,
                     $"Windows error 1219: another connection to this server is already using different credentials. Disconnect existing connections to that server and retry. Details: {retryDetail}");
@@ -180,7 +180,7 @@ public sealed class NetworkMountService
 
     private static NetUseResult TryNetUseConnect(string uncPath, string? username, string password)
     {
-        var psi = CreateHiddenProcessStartInfo("net");
+        ProcessStartInfo psi = CreateHiddenProcessStartInfo("net");
 
         psi.ArgumentList.Add("use");
         psi.ArgumentList.Add(uncPath);
@@ -198,8 +198,8 @@ public sealed class NetworkMountService
             return new NetUseResult(-1, string.Empty, "Unable to start 'net use'.");
 
         proc.WaitForExit(10_000);
-        var stdout = proc.StandardOutput.ReadToEnd();
-        var stderr = proc.StandardError.ReadToEnd();
+        string stdout = proc.StandardOutput.ReadToEnd();
+        string stderr = proc.StandardError.ReadToEnd();
         return new NetUseResult(proc.ExitCode, stdout, stderr);
     }
 
@@ -207,7 +207,7 @@ public sealed class NetworkMountService
     {
         try
         {
-            var psi = CreateHiddenProcessStartInfo("net");
+            ProcessStartInfo psi = CreateHiddenProcessStartInfo("net");
 
             psi.ArgumentList.Add("use");
             psi.ArgumentList.Add(uncOrServer);
@@ -243,13 +243,13 @@ public sealed class NetworkMountService
         if (result.ExitCode == 0)
             return string.Empty;
 
-        var detail = string.IsNullOrWhiteSpace(result.Stderr) ? result.Stdout : result.Stderr;
+        string detail = string.IsNullOrWhiteSpace(result.Stderr) ? result.Stdout : result.Stderr;
         detail = detail.Replace("\r", string.Empty).Trim();
 
         if (string.IsNullOrWhiteSpace(detail))
             return result.ExitCode < 0 ? "Unable to start 'net use'." : $"exit {result.ExitCode}";
 
-        var firstLine = detail.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+        string? firstLine = detail.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
         return string.IsNullOrWhiteSpace(firstLine) ? detail : firstLine;
     }
 
@@ -268,12 +268,12 @@ public sealed class NetworkMountService
         NetworkCredentialProfile? profile,
         string? password)
     {
-        if (!TryParseShareWithSubpath(normalizedPath, out var shareHost, out var shareName, out var shareSubPath))
+        if (!TryParseShareWithSubpath(normalizedPath, out string? shareHost, out string? shareName, out string? shareSubPath))
         {
             return DestinationResolution.CreateFailure(dest, "Destination must be an smb:// or UNC path for auto-mount.");
         }
 
-        var mountRoot = GetMacMountRoot();
+        string mountRoot = GetMacMountRoot();
         try
         {
             Directory.CreateDirectory(mountRoot);
@@ -283,7 +283,7 @@ public sealed class NetworkMountService
             return DestinationResolution.CreateFailure(dest, $"Unable to create mount root '{mountRoot}': {ex.Message}");
         }
 
-        var mountPoint = Path.Combine(mountRoot, string.IsNullOrWhiteSpace(dest.Alias) ? shareName : Slugify(dest.Alias!));
+        string mountPoint = Path.Combine(mountRoot, string.IsNullOrWhiteSpace(dest.Alias) ? shareName : Slugify(dest.Alias!));
         if (!Directory.Exists(mountPoint))
         {
             try
@@ -292,7 +292,7 @@ public sealed class NetworkMountService
             }
             catch (Exception ex)
             {
-                var existing = FindExistingMountPoint(shareName, mountRoot);
+                string? existing = FindExistingMountPoint(shareName, mountRoot);
                 if (!string.IsNullOrWhiteSpace(existing))
                 {
                     mountPoint = existing;
@@ -304,11 +304,11 @@ public sealed class NetworkMountService
             }
         }
 
-        if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out var existingMount))
+        if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out string? existingMount))
         {
             mountPoint = existingMount;
             Console.WriteLine($"[NetworkMount] Share already mounted for '{DisplayName(dest)}' at '{mountPoint}'.");
-            if (!IsSmbfsMountPoint(mountPoint, out var mountLine))
+            if (!IsSmbfsMountPoint(mountPoint, out string? mountLine))
             {
                 return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
             }
@@ -316,7 +316,7 @@ public sealed class NetworkMountService
             {
                 Console.WriteLine($"[NetworkMount] SMB mount detected: {mountLine}");
             }
-            var effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
+            string effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
             return CreateSuccessWithKeepAlive(dest, effectivePath, mounted: false, $"Mounted {DisplayName(dest)}");
         }
 
@@ -325,16 +325,16 @@ public sealed class NetworkMountService
             return DestinationResolution.CreateFailure(dest, "Username is required to mount with stored credentials.");
         }
 
-        var userPart = profile is null || string.IsNullOrWhiteSpace(profile.Username)
+        string userPart = profile is null || string.IsNullOrWhiteSpace(profile.Username)
             ? "guest"
             : profile.Username;
 
-        var passwordPart = string.IsNullOrWhiteSpace(password)
+        string passwordPart = string.IsNullOrWhiteSpace(password)
             ? string.Empty
             : ":" + Uri.EscapeDataString(password);
 
-        var share = $"//{userPart}{passwordPart}@{shareHost}/{shareName}";
-        var shareDisplay = $"//{userPart}@{shareHost}/{shareName}";
+        string share = $"//{userPart}{passwordPart}@{shareHost}/{shareName}";
+        string shareDisplay = $"//{userPart}@{shareHost}/{shareName}";
 
         var psi = new ProcessStartInfo
         {
@@ -358,14 +358,14 @@ public sealed class NetworkMountService
 
             if (proc.ExitCode != 0)
             {
-                var stderr = proc.StandardError.ReadToEnd();
-                var sanitized = SanitizeMountError(stderr, password, share, shareDisplay);
+                string stderr = proc.StandardError.ReadToEnd();
+                string sanitized = SanitizeMountError(stderr, password, share, shareDisplay);
                 Console.WriteLine($"[NetworkMount] mount_smbfs failed for '{DisplayName(dest)}': {sanitized.Trim()}");
-                if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out var existingMountAfterFail))
+                if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out string? existingMountAfterFail))
                 {
                     mountPoint = existingMountAfterFail;
                     Console.WriteLine($"[NetworkMount] Share already mounted for '{DisplayName(dest)}' at '{mountPoint}'.");
-                    if (!IsSmbfsMountPoint(mountPoint, out var mountLine))
+                    if (!IsSmbfsMountPoint(mountPoint, out string? mountLine))
                     {
                         return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
                     }
@@ -373,7 +373,7 @@ public sealed class NetworkMountService
                     {
                         Console.WriteLine($"[NetworkMount] SMB mount detected: {mountLine}");
                     }
-                    var effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
+                    string effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
                     return CreateSuccessWithKeepAlive(dest, effectivePath, mounted: false, $"Mounted {DisplayName(dest)}");
                 }
 
@@ -381,7 +381,7 @@ public sealed class NetworkMountService
             }
 
             Console.WriteLine($"[NetworkMount] Mounted '{DisplayName(dest)}' at '{mountPoint}'.");
-            if (!IsSmbfsMountPoint(mountPoint, out var mountInfo))
+            if (!IsSmbfsMountPoint(mountPoint, out string? mountInfo))
             {
                 return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
             }
@@ -389,7 +389,7 @@ public sealed class NetworkMountService
             {
                 Console.WriteLine($"[NetworkMount] SMB mount detected: {mountInfo}");
             }
-            var finalPath = AppendShareSubPath(mountPoint, shareSubPath);
+            string finalPath = AppendShareSubPath(mountPoint, shareSubPath);
             return CreateSuccessWithKeepAlive(dest, finalPath, mounted: true, $"Mounted {DisplayName(dest)}");
         }
         catch (Exception ex)
@@ -402,18 +402,18 @@ public sealed class NetworkMountService
         BackupDestination dest,
         string normalizedPath)
     {
-        if (!TryParseNfs(normalizedPath, out var host, out var exportPath))
+        if (!TryParseNfs(normalizedPath, out string? host, out string? exportPath))
         {
             return DestinationResolution.CreateFailure(dest, "Destination must be an nfs://host/export path for auto-mount.");
         }
 
-        var exportCandidates = BuildNfsExportCandidates(exportPath);
+        IReadOnlyList<(string ExportPath, string SubPath)> exportCandidates = BuildNfsExportCandidates(exportPath);
         if (exportCandidates.Count == 0)
         {
             return DestinationResolution.CreateFailure(dest, "Destination must be an nfs://host/export path for auto-mount.");
         }
 
-        var mountRoot = GetMacMountRoot();
+        string mountRoot = GetMacMountRoot();
         try
         {
             Directory.CreateDirectory(mountRoot);
@@ -423,13 +423,13 @@ public sealed class NetworkMountService
             return DestinationResolution.CreateFailure(dest, $"Unable to create mount root '{mountRoot}': {ex.Message}");
         }
 
-        var nameHint = string.IsNullOrWhiteSpace(dest.Alias)
+        string nameHint = string.IsNullOrWhiteSpace(dest.Alias)
             ? Path.GetFileName(exportPath.TrimEnd('/'))
             : dest.Alias!;
         if (string.IsNullOrWhiteSpace(nameHint))
             nameHint = "nfs-share";
 
-        var mountPoint = Path.Combine(mountRoot, Slugify(nameHint));
+        string mountPoint = Path.Combine(mountRoot, Slugify(nameHint));
         if (!Directory.Exists(mountPoint))
         {
             try
@@ -442,18 +442,18 @@ public sealed class NetworkMountService
             }
         }
 
-        if (IsNfsMountPoint(mountPoint, out var mountLine))
+        if (IsNfsMountPoint(mountPoint, out string? mountLine))
         {
             if (!string.IsNullOrWhiteSpace(mountLine))
             {
                 Console.WriteLine($"[NetworkMount] NFS mount detected: {mountLine}");
             }
-            var effectivePath = mountPoint;
-            if (TryGetNfsMountSource(mountLine, out var mountedSource))
+            string effectivePath = mountPoint;
+            if (TryGetNfsMountSource(mountLine, out string? mountedSource))
             {
-                foreach (var candidate in exportCandidates)
+                foreach ((string ExportPath, string SubPath) candidate in exportCandidates)
                 {
-                    var source = $"{host}:{candidate.ExportPath}";
+                    string source = $"{host}:{candidate.ExportPath}";
                     if (!string.Equals(source, mountedSource, StringComparison.OrdinalIgnoreCase))
                         continue;
 
@@ -467,9 +467,9 @@ public sealed class NetworkMountService
             return CreateSuccessWithKeepAlive(dest, effectivePath, mounted: false, $"Mounted {DisplayName(dest)}");
         }
 
-        foreach (var candidate in exportCandidates)
+        foreach ((string ExportPath, string SubPath) candidate in exportCandidates)
         {
-            var source = $"{host}:{candidate.ExportPath}";
+            string source = $"{host}:{candidate.ExportPath}";
             var psi = new ProcessStartInfo
             {
                 FileName               = "/sbin/mount_nfs",
@@ -492,13 +492,13 @@ public sealed class NetworkMountService
 
                 if (proc.ExitCode != 0)
                 {
-                    var stderr = proc.StandardError.ReadToEnd();
+                    string stderr = proc.StandardError.ReadToEnd();
                     Console.WriteLine($"[NetworkMount] mount_nfs failed for '{DisplayName(dest)}': {stderr.Trim()}");
                     continue;
                 }
 
                 Console.WriteLine($"[NetworkMount] Mounted '{DisplayName(dest)}' at '{mountPoint}'.");
-                if (!IsNfsMountPoint(mountPoint, out var mountInfo))
+                if (!IsNfsMountPoint(mountPoint, out string? mountInfo))
                 {
                     return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an NFS mount.");
                 }
@@ -507,7 +507,7 @@ public sealed class NetworkMountService
                     Console.WriteLine($"[NetworkMount] NFS mount detected: {mountInfo}");
                 }
 
-                var effectivePath = mountPoint;
+                string effectivePath = mountPoint;
                 if (!string.IsNullOrWhiteSpace(candidate.SubPath))
                 {
                     effectivePath = Path.Combine(mountPoint, candidate.SubPath);
@@ -525,12 +525,12 @@ public sealed class NetworkMountService
 
     private static string SanitizeMountError(string stderr, string? password, string share, string shareDisplay)
     {
-        var sanitized = stderr ?? string.Empty;
+        string sanitized = stderr ?? string.Empty;
 
         if (!string.IsNullOrWhiteSpace(password))
         {
             sanitized = sanitized.Replace(password, "******", StringComparison.Ordinal);
-            var escaped = Uri.EscapeDataString(password);
+            string escaped = Uri.EscapeDataString(password);
             sanitized = sanitized.Replace(escaped, "******", StringComparison.Ordinal);
         }
 
@@ -544,7 +544,7 @@ public sealed class NetworkMountService
 
     private static string GetMacMountRoot()
     {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, "Library", "Application Support", "VaultSync", "mounts");
     }
 
@@ -573,23 +573,23 @@ public sealed class NetworkMountService
                 return false;
 
             proc.WaitForExit(3_000);
-            var output = proc.StandardOutput.ReadToEnd();
+            string output = proc.StandardOutput.ReadToEnd();
             if (string.IsNullOrWhiteSpace(output))
                 return false;
 
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var line in lines)
+            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (string line in lines)
             {
                 if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
                 if (onIndex <= 0)
                     continue;
 
-                var source = line.Substring(0, onIndex).Trim();
-                var rest = line.Substring(onIndex + 4);
-                var mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                string source = line.Substring(0, onIndex).Trim();
+                string rest = line.Substring(onIndex + 4);
+                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
                 if (string.IsNullOrWhiteSpace(mountedAt))
                     continue;
 
@@ -600,7 +600,7 @@ public sealed class NetworkMountService
                     return true;
                 }
 
-                if (!TryParseShare(source, out var mountedHost, out var mountedShare))
+                if (!TryParseShare(source, out string? mountedHost, out string? mountedShare))
                     continue;
 
                 if (string.Equals(host, mountedHost, StringComparison.OrdinalIgnoreCase) &&
@@ -641,22 +641,22 @@ public sealed class NetworkMountService
                 return false;
 
             proc.WaitForExit(3_000);
-            var output = proc.StandardOutput.ReadToEnd();
+            string output = proc.StandardOutput.ReadToEnd();
             if (string.IsNullOrWhiteSpace(output))
                 return false;
 
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var line in lines)
+            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (string line in lines)
             {
                 if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
                 if (onIndex <= 0)
                     continue;
 
-                var rest = line[(onIndex + 4)..];
-                var mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                string rest = line[(onIndex + 4)..];
+                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
                 if (string.IsNullOrWhiteSpace(mountedAt))
                     continue;
 
@@ -684,11 +684,11 @@ public sealed class NetworkMountService
 
             if (Directory.Exists(mountRoot))
             {
-                var exact = Path.Combine(mountRoot, shareName);
+                string exact = Path.Combine(mountRoot, shareName);
                 if (Directory.Exists(exact))
                     return exact;
 
-                var match = Directory.EnumerateDirectories(mountRoot)
+                string? match = Directory.EnumerateDirectories(mountRoot)
                     .FirstOrDefault(dir =>
                         string.Equals(Path.GetFileName(dir), shareName, StringComparison.OrdinalIgnoreCase));
                 if (!string.IsNullOrWhiteSpace(match))
@@ -699,7 +699,7 @@ public sealed class NetworkMountService
             if (!Directory.Exists(volumesRoot))
                 return null;
 
-            var volumesExact = Path.Combine(volumesRoot, shareName);
+            string volumesExact = Path.Combine(volumesRoot, shareName);
             if (Directory.Exists(volumesExact))
                 return volumesExact;
 
@@ -717,7 +717,7 @@ public sealed class NetworkMountService
     {
         try
         {
-            var psi = CreateHiddenProcessStartInfo("net");
+            ProcessStartInfo psi = CreateHiddenProcessStartInfo("net");
 
             psi.ArgumentList.Add("use");
             psi.ArgumentList.Add(string.IsNullOrWhiteSpace(res.EffectivePath) ? res.Destination.Path : res.EffectivePath);
@@ -788,7 +788,7 @@ public sealed class NetworkMountService
                 raw = raw.TrimStart('/');
             }
 
-            var parts = raw.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = raw.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
             {
                 host  = parts[0];
@@ -836,7 +836,7 @@ public sealed class NetworkMountService
                 raw = raw.TrimStart('/');
             }
 
-            var parts = raw.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = raw.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
             {
                 host = parts[0];
@@ -873,14 +873,14 @@ public sealed class NetworkMountService
         if (string.IsNullOrWhiteSpace(subPath))
             return mountPoint;
 
-        var cleaned = subPath.Trim().TrimStart('/', '\\');
+        string cleaned = subPath.Trim().TrimStart('/', '\\');
         if (string.IsNullOrWhiteSpace(cleaned))
             return mountPoint;
 
-        var segments = cleaned.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] segments = cleaned.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
         return segments.Length == 0
             ? mountPoint
-            : Path.Combine(new[] { mountPoint }.Concat(segments).ToArray());
+            : Path.Combine([mountPoint, .. segments]);
     }
 
     private static bool TryParseNfs(string raw, out string host, out string exportPath)
@@ -892,7 +892,7 @@ public sealed class NetworkMountService
         {
             if (raw.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
             {
-                if (!Uri.TryCreate(raw, UriKind.Absolute, out var uri) || string.IsNullOrWhiteSpace(uri.Host))
+                if (!Uri.TryCreate(raw, UriKind.Absolute, out Uri? uri) || string.IsNullOrWhiteSpace(uri.Host))
                     return false;
 
                 host = uri.Host;
@@ -900,7 +900,7 @@ public sealed class NetworkMountService
                 return !string.IsNullOrWhiteSpace(exportPath);
             }
 
-            var colonIndex = raw.IndexOf(":/", StringComparison.Ordinal);
+            int colonIndex = raw.IndexOf(":/", StringComparison.Ordinal);
             if (colonIndex > 0)
             {
                 host = raw[..colonIndex];
@@ -919,7 +919,7 @@ public sealed class NetworkMountService
     private static IReadOnlyList<(string ExportPath, string SubPath)> BuildNfsExportCandidates(string exportPath)
     {
         var candidates = new List<(string ExportPath, string SubPath)>();
-        var trimmed = exportPath.Trim();
+        string trimmed = exportPath.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))
             return candidates;
 
@@ -927,17 +927,17 @@ public sealed class NetworkMountService
         if (trimmed.Length == 0)
             trimmed = "/";
 
-        var segments = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string[] segments = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Length == 0)
         {
             candidates.Add(("/", string.Empty));
             return candidates;
         }
 
-        for (var i = segments.Length; i >= 1; i--)
+        for (int i = segments.Length; i >= 1; i--)
         {
-            var root = "/" + string.Join('/', segments.Take(i));
-            var subPath = i == segments.Length
+            string root = "/" + string.Join('/', segments.Take(i));
+            string subPath = i == segments.Length
                 ? string.Empty
                 : string.Join('/', segments.Skip(i));
             candidates.Add((root, subPath));
@@ -952,7 +952,7 @@ public sealed class NetworkMountService
         if (string.IsNullOrWhiteSpace(mountLine))
             return false;
 
-        var onIndex = mountLine.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+        int onIndex = mountLine.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
         if (onIndex <= 0)
             return false;
 
@@ -966,13 +966,13 @@ public sealed class NetworkMountService
         if (string.IsNullOrWhiteSpace(raw))
             return raw;
 
-        var trimmed = raw.Trim();
+        string trimmed = raw.Trim();
 
         if (OperatingSystem.IsWindows() && trimmed.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
         {
-            if (TryParseShareWithSubpath(trimmed, out var host, out var share, out var subPath))
+            if (TryParseShareWithSubpath(trimmed, out string? host, out string? share, out string? subPath))
             {
-                var unc = $@"\\{host}\{share}";
+                string unc = $@"\\{host}\{share}";
                 if (!string.IsNullOrWhiteSpace(subPath))
                     unc = Path.Combine(unc, subPath.Replace('/', Path.DirectorySeparatorChar));
                 return unc;
@@ -996,7 +996,7 @@ public sealed class NetworkMountService
     private static string Slugify(string input)
     {
         var sb = new StringBuilder();
-        foreach (var ch in input)
+        foreach (char ch in input)
         {
             if (char.IsLetterOrDigit(ch))
                 sb.Append(char.ToLowerInvariant(ch));
@@ -1006,7 +1006,7 @@ public sealed class NetworkMountService
                 sb.Append('-');
         }
 
-        var slug = sb.ToString().Trim('-');
+        string slug = sb.ToString().Trim('-');
         return string.IsNullOrWhiteSpace(slug) ? "vaultsync-share" : slug;
     }
 
@@ -1053,23 +1053,23 @@ public sealed class NetworkMountService
                 return false;
 
             proc.WaitForExit(3_000);
-            var output = proc.StandardOutput.ReadToEnd();
+            string output = proc.StandardOutput.ReadToEnd();
             if (string.IsNullOrWhiteSpace(output))
                 return false;
 
-            var candidate = string.Empty;
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var line in lines)
+            string candidate = string.Empty;
+            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (string line in lines)
             {
                 if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
                 if (onIndex <= 0)
                     continue;
 
-                var rest = line[(onIndex + 4)..];
-                var mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                string rest = line[(onIndex + 4)..];
+                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
                 if (string.IsNullOrWhiteSpace(mountedAt))
                     continue;
 
@@ -1113,8 +1113,8 @@ public sealed class NetworkMountService
         {
             try
             {
-                var markerDir = Path.Combine(path, ".vaultsync");
-                var markerPath = Path.Combine(markerDir, ".keepalive");
+                string markerDir = Path.Combine(path, ".vaultsync");
+                string markerPath = Path.Combine(markerDir, ".keepalive");
 
                 try
                 {
@@ -1158,22 +1158,22 @@ public sealed class NetworkMountService
                 return false;
 
             proc.WaitForExit(3_000);
-            var output = proc.StandardOutput.ReadToEnd();
+            string output = proc.StandardOutput.ReadToEnd();
             if (string.IsNullOrWhiteSpace(output))
                 return false;
 
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var line in lines)
+            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (string line in lines)
             {
                 if (!line.Contains(" nfs", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
                 if (onIndex <= 0)
                     continue;
 
-                var rest = line[(onIndex + 4)..];
-                var mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                string rest = line[(onIndex + 4)..];
+                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
                 if (string.IsNullOrWhiteSpace(mountedAt))
                     continue;
 

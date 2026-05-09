@@ -29,5 +29,5 @@ public sealed class RestoreReadinessSummary
     public int ProjectCount { get; init; }
     public string Headline { get; init; } = string.Empty;
     public string Detail { get; init; } = string.Empty;
-    public IReadOnlyList<ProjectRestoreReadiness> Projects { get; init; } = new List<ProjectRestoreReadiness>();
+    public IReadOnlyList<ProjectRestoreReadiness> Projects { get; init; } = [];
 }

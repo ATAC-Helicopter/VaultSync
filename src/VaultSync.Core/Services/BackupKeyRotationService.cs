@@ -5,21 +5,16 @@ using VaultSync.Core.Config;
 
 namespace VaultSync.Core.Services;
 
-public sealed class BackupKeyRotationService
+public sealed class BackupKeyRotationService(BackupArchiveCryptoService? cryptoService = null)
 {
-    private readonly BackupArchiveCryptoService _cryptoService;
+    private readonly BackupArchiveCryptoService _cryptoService = cryptoService ?? new BackupArchiveCryptoService();
 
     public sealed record RotationResult(
         bool Success,
         string CryptoDescriptorJson,
         long TotalBytes);
 
-    public BackupKeyRotationService(BackupArchiveCryptoService? cryptoService = null)
-    {
-        _cryptoService = cryptoService ?? new BackupArchiveCryptoService();
-    }
-
-    public RotationResult RotateEncryptedBackup(
+    public static RotationResult RotateEncryptedBackup(
         string backupFolder,
         string oldPassword,
         string newPassword,
@@ -35,35 +30,35 @@ public sealed class BackupKeyRotationService
         if (!Directory.Exists(backupFolder))
             throw new DirectoryNotFoundException($"Backup folder '{backupFolder}' was not found.");
 
-        var sourceEncryptedPath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+        string sourceEncryptedPath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
         if (!File.Exists(sourceEncryptedPath))
             throw new FileNotFoundException("Encrypted backup artifact not found.", sourceEncryptedPath);
 
-        var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-rotate-{Guid.NewGuid():N}");
-        var stagingBackupFolder = Path.Combine(stagingRoot, "backup");
-        var rollbackSuffix = $".rotatebak-{Guid.NewGuid():N}";
-        var rollbackEncryptedPath = sourceEncryptedPath + rollbackSuffix;
-        var sourceMetadataPath = Path.Combine(backupFolder, BackupArchiveCryptoService.MetadataFileName);
-        var rollbackMetadataPath = sourceMetadataPath + rollbackSuffix;
-        var movedEncryptedToRollback = false;
-        var movedMetadataToRollback = false;
-        var wroteNewEncrypted = false;
-        var wroteNewMetadata = false;
+        string stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-rotate-{Guid.NewGuid():N}");
+        string stagingBackupFolder = Path.Combine(stagingRoot, "backup");
+        string rollbackSuffix = $".rotatebak-{Guid.NewGuid():N}";
+        string rollbackEncryptedPath = sourceEncryptedPath + rollbackSuffix;
+        string sourceMetadataPath = Path.Combine(backupFolder, BackupArchiveCryptoService.MetadataFileName);
+        string rollbackMetadataPath = sourceMetadataPath + rollbackSuffix;
+        bool movedEncryptedToRollback = false;
+        bool movedMetadataToRollback = false;
+        bool wroteNewEncrypted = false;
+        bool wroteNewMetadata = false;
 
         try
         {
             Directory.CreateDirectory(stagingBackupFolder);
-            var stagingPlainArchive = Path.Combine(stagingBackupFolder, BackupArchiveCryptoService.PlainArchiveFileName);
-            _cryptoService.DecryptArchiveToPlainZip(backupFolder, oldPassword, stagingPlainArchive, ct);
+            string stagingPlainArchive = Path.Combine(stagingBackupFolder, BackupArchiveCryptoService.PlainArchiveFileName);
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, oldPassword, stagingPlainArchive, ct);
 
-            var encryptionResult = _cryptoService.EncryptArchiveInPlace(
+            BackupArchiveCryptoService.EncryptionResult encryptionResult = BackupArchiveCryptoService.EncryptArchiveInPlace(
                 stagingBackupFolder,
                 newPassword,
                 targetConfig,
                 ct);
 
-            var stagedEncryptedPath = Path.Combine(stagingBackupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
-            var stagedMetadataPath = Path.Combine(stagingBackupFolder, BackupArchiveCryptoService.MetadataFileName);
+            string stagedEncryptedPath = Path.Combine(stagingBackupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            string stagedMetadataPath = Path.Combine(stagingBackupFolder, BackupArchiveCryptoService.MetadataFileName);
             if (!File.Exists(stagedEncryptedPath))
                 throw new InvalidOperationException("Staging rotation output is missing encrypted archive.");
 
