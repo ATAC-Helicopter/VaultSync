@@ -17,25 +17,25 @@ namespace VaultSync.CLI.Commands
 
     sealed class InitCommand : AsyncCommand<InitSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, InitSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, InitSettings s, CancellationToken ct)
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var targetDb = string.IsNullOrWhiteSpace(s.Db)
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string targetDb = string.IsNullOrWhiteSpace(s.Db)
                 ? AppConfigStore.GetDefaultDbPath()
                 : s.Db.Replace("~", home);
 
-            var cfg = AppConfigStore.Load();
+            AppConfig cfg = AppConfigStore.Load();
             cfg.DbPath = targetDb;
             ConfigHelper.Save(cfg);
 
             if (!s.Quiet)
             {
-                var dir = ConfigHelper.GetConfigDir();
+                string dir = ConfigHelper.GetConfigDir();
                 AnsiConsole.MarkupLine($"[green]Initialized config at[/] {Markup.Escape(dir)}");
 
-                var pretty = JsonSerializer.Serialize(
+                string pretty = JsonSerializer.Serialize(
                     new { DbPath = targetDb },
-                    new JsonSerializerOptions { WriteIndented = true });
+                    CommandJsonOptions.Indented);
                 AnsiConsole.WriteLine(pretty);
             }
 

@@ -40,28 +40,28 @@ namespace VaultSync.CLI.Commands
     {
         private static readonly System.Threading.SemaphoreSlim _cycleGate = new(1, 1);
 
-        public override async Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(null);
+            string db = ConfigHelper.ResolveDb(null);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.ProjectName);
+            Core.Models.Project? proj = repo.GetProjectByName(s.ProjectName);
             if (proj is null)
             {
                 AnsiConsole.MarkupLine($"[red]Error:[/] Project '{Markup.Escape(s.ProjectName)}' not found");
                 return 2;
             }
 
-            var root = proj.RootPath;
+            string root = proj.RootPath;
             if (!Directory.Exists(root))
             {
                 AnsiConsole.MarkupLine($"[red]Error:[/] Project path not found: {Markup.Escape(root)}");
                 return 2;
             }
 
-            var doVerify = s.Verify;
-            var doSync = s.Sync || doVerify;
+            bool doVerify = s.Verify;
+            bool doSync = s.Sync || doVerify;
 
             if (doSync && string.IsNullOrWhiteSpace(s.Destination))
             {
@@ -72,8 +72,8 @@ namespace VaultSync.CLI.Commands
             AnsiConsole.MarkupLine($"[grey]Watching[/] {Markup.Escape(root)} [grey](preset: {proj.Preset})[/]");
             if (doSync)
             {
-                var extra = s.DryRun ? " (dry-run)" : "";
-                var tail = doVerify ? " and verify" : "";
+                string extra = s.DryRun ? " (dry-run)" : "";
+                string tail = doVerify ? " and verify" : "";
                 AnsiConsole.MarkupLine($"[grey]-> will sync to[/] {Markup.Escape(s.Destination!)}[grey]{extra}{tail}[/]");
             }
 
@@ -88,7 +88,7 @@ namespace VaultSync.CLI.Commands
                         AnsiConsole.MarkupLine($"[dim]* change detected ({Markup.Escape(reason)}); snapshotting...[/]");
 
                     var snapSvc = new SnapshotService(repo, new HashService());
-                    var snapId = await snapSvc.CreateSnapshotAsync(
+                    int snapId = await snapSvc.CreateSnapshotAsync(
                         proj,
                         fullHash: true,
                         maxSnapshotsToKeep: null,
@@ -96,7 +96,7 @@ namespace VaultSync.CLI.Commands
 
                     if (!s.Quiet)
                     {
-                        var outcome = SnapshotService.LastOutcome;
+                        SnapshotOutcome? outcome = SnapshotService.LastOutcome;
                         if (outcome is not null)
                         {
                             AnsiConsole.MarkupLine(
@@ -112,9 +112,9 @@ namespace VaultSync.CLI.Commands
 
                     if (!doSync) return;
 
-                    var dest = s.Destination!.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+                    string dest = s.Destination!.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
                     var syncSvc = new SyncService();
-                    var code = await syncSvc.SyncAsync(proj, dest, s.DryRun, token);
+                    int code = await syncSvc.SyncAsync(proj, dest, s.DryRun, token);
                     if (code != 0)
                     {
                         AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {code})");
@@ -125,8 +125,8 @@ namespace VaultSync.CLI.Commands
                     if (doVerify)
                     {
                         var verifySvc = new VerifyService(repo, new HashService());
-                        var vr = await verifySvc.VerifyAsync(proj, dest, percent: 100, full: true, token);
-                        if (vr.Failures.Any())
+                        VerifyResult vr = await verifySvc.VerifyAsync(proj, dest, percent: 100, full: true, token);
+                        if (vr.Failures.Count > 0)
                             AnsiConsole.MarkupLine($"[red]Verify failed:[/] {vr.Failures.Count} issue(s)");
                         else if (!s.Quiet)
                             AnsiConsole.MarkupLine("[green]Verify OK[/]");

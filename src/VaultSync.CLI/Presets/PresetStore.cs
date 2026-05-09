@@ -24,31 +24,31 @@ namespace VaultSync.CLI.Presets
 
         private static string UserPresetsDir()
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             return Path.Combine(home, ".vaultsync", "presets");
         }
 
         private static string BuiltInPresetsDir()
         {
             // 1) Environment override for power users / testing
-            var env = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
+            string? env = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
             if (!string.IsNullOrWhiteSpace(env) && Directory.Exists(env))
                 return env;
 
             // 2) Installed / published app: <app>/presets
-            var appPresets = Path.Combine(AppContext.BaseDirectory, "presets");
+            string appPresets = Path.Combine(AppContext.BaseDirectory, "presets");
             if (Directory.Exists(appPresets))
                 return appPresets;
 
             // 3) Dev tree: walk up to find src/presets (current repo layout)
-            var dir = AppContext.BaseDirectory;
+            string dir = AppContext.BaseDirectory;
             for (int i = 0; i < 6; i++)
             {
-                var candidate = Path.Combine(dir, "src", "presets");
+                string candidate = Path.Combine(dir, "src", "presets");
                 if (Directory.Exists(candidate))
                     return candidate;
 
-                var parent = Directory.GetParent(dir)?.FullName;
+                string? parent = Directory.GetParent(dir)?.FullName;
                 if (parent is null)
                     break;
 
@@ -63,12 +63,12 @@ namespace VaultSync.CLI.Presets
         {
             try
             {
-                var indexPath = Path.Combine(dir, "presets.index.json");
+                string indexPath = Path.Combine(dir, "presets.index.json");
                 if (!File.Exists(indexPath))
                     return null;
 
-                var json = File.ReadAllText(indexPath);
-                var index = JsonSerializer.Deserialize<PresetIndex>(json);
+                string json = File.ReadAllText(indexPath);
+                PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json);
                 return index;
             }
             catch
@@ -80,20 +80,20 @@ namespace VaultSync.CLI.Presets
 
         public static IEnumerable<string> ListNames()
         {
-            var userDir = UserPresetsDir();
+            string userDir = UserPresetsDir();
             Directory.CreateDirectory(userDir);
 
             // User presets: names are file names without extension
-            var userFiles = Directory.EnumerateFiles(userDir, "*.vaultsyncignore")
+            IEnumerable<string> userFiles = Directory.EnumerateFiles(userDir, "*.vaultsyncignore")
                                      .Select(f => Path.GetFileNameWithoutExtension(f));
 
             // Built-in presets from index or from files
-            var builtInDir = BuiltInPresetsDir();
+            string builtInDir = BuiltInPresetsDir();
             IEnumerable<string> builtInNames = Array.Empty<string>();
 
             if (Directory.Exists(builtInDir))
             {
-                var index = LoadIndex(builtInDir);
+                PresetIndex? index = LoadIndex(builtInDir);
                 if (index?.Presets != null && index.Presets.Count > 0)
                 {
                     builtInNames = index.Presets
@@ -119,42 +119,42 @@ namespace VaultSync.CLI.Presets
                 throw new ArgumentException("Preset name cannot be empty.", nameof(name));
 
             // 1) User override in ~/.vaultsync/presets
-            var userDir = UserPresetsDir();
+            string userDir = UserPresetsDir();
             Directory.CreateDirectory(userDir);
-            var userPath = Path.Combine(userDir, $"{name}.vaultsyncignore");
+            string userPath = Path.Combine(userDir, $"{name}.vaultsyncignore");
             if (File.Exists(userPath))
                 return File.ReadAllText(userPath);
 
             // 2) Built-in presets
-            var builtInDir = BuiltInPresetsDir();
+            string builtInDir = BuiltInPresetsDir();
             if (Directory.Exists(builtInDir))
             {
-                var index = LoadIndex(builtInDir);
+                PresetIndex? index = LoadIndex(builtInDir);
 
                 // Try index first
                 if (index?.Presets != null && index.Presets.Count > 0)
                 {
-                    var preset = index.Presets
+                    PresetInfo? preset = index.Presets
                         .FirstOrDefault(p =>
                             string.Equals(p.Id, name, StringComparison.OrdinalIgnoreCase) ||
                             string.Equals(Path.GetFileNameWithoutExtension(p.File), name, StringComparison.OrdinalIgnoreCase));
 
                     if (preset != null)
                     {
-                        var presetPath = Path.Combine(builtInDir, preset.File);
+                        string presetPath = Path.Combine(builtInDir, preset.File);
                         if (File.Exists(presetPath))
                             return File.ReadAllText(presetPath);
                     }
                 }
 
                 // Fallback: direct file name match without index
-                var fallbackPath = Path.Combine(builtInDir, $"{name}.vaultsyncignore");
+                string fallbackPath = Path.Combine(builtInDir, $"{name}.vaultsyncignore");
                 if (File.Exists(fallbackPath))
                     return File.ReadAllText(fallbackPath);
             }
 
             // 3) Not found anywhere
-            var builtInAvailable = Directory.Exists(BuiltInPresetsDir())
+            string builtInAvailable = Directory.Exists(BuiltInPresetsDir())
                 ? string.Join(", ",
                     ListNames().OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
                 : "none";

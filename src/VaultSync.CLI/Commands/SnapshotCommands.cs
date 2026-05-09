@@ -24,13 +24,13 @@ namespace VaultSync.CLI.Commands
 
     sealed class SnapshotCommand : AsyncCommand<SnapshotSettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, SnapshotSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, SnapshotSettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
+            string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
 
             var svc = new SnapshotService(repo, new HashService());
 
@@ -39,14 +39,14 @@ namespace VaultSync.CLI.Commands
             if (!s.Quiet)
                 AnsiConsole.MarkupLine($"[blue]Scanning & hashing[/] {Markup.Escape(proj.Name)} at {Markup.Escape(proj.RootPath)} (preset: {Markup.Escape(proj.Preset)})...");
 
-            var started = DateTime.UtcNow;
-            var snapId = await svc.CreateSnapshotAsync(
+            DateTime started = DateTime.UtcNow;
+            int snapId = await svc.CreateSnapshotAsync(
                 proj,
                 s.FullHash,
                 maxSnapshotsToKeep: null,
                 ct: ct);
-            var took = DateTime.UtcNow - started;
-            var outcome = SnapshotService.LastOutcome;
+            TimeSpan took = DateTime.UtcNow - started;
+            SnapshotOutcome? outcome = SnapshotService.LastOutcome;
 
             if (!s.Quiet)
             {
@@ -72,15 +72,15 @@ namespace VaultSync.CLI.Commands
 
     sealed class HistoryCommand : AsyncCommand<HistorySettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, HistorySettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, HistorySettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
+            string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
 
-            var snaps = repo.GetSnapshotsForProject(proj.Name);
+            IEnumerable<Core.Models.Snapshot> snaps = repo.GetSnapshotsForProject(proj.Name);
             if (s.Limit is int lim && lim > 0) snaps = snaps.Take(lim);
 
             var list = snaps.ToList();
@@ -89,22 +89,22 @@ namespace VaultSync.CLI.Commands
 
             if (s.Json)
             {
-                var json = JsonSerializer.Serialize(
+                string json = JsonSerializer.Serialize(
                     list.Select(x => new {
                         x.Id, CreatedUtc = x.CreatedUtc.ToString("u"), x.FileCount, x.TotalBytes
                     }),
-                    new JsonSerializerOptions { WriteIndented = true });
+                    CommandJsonOptions.Indented);
                 Console.WriteLine(json);
                 return Task.FromResult(0);
             }
 
-            var table = new Table().Border(TableBorder.Rounded);
+            Table table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("Snapshot");
             table.AddColumn("Created (UTC)");
             table.AddColumn(new TableColumn("Files").RightAligned());
             table.AddColumn(new TableColumn("Bytes").RightAligned());
 
-            foreach (var srow in list)
+            foreach (Core.Models.Snapshot? srow in list)
                 table.AddRow(srow.Id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), srow.TotalBytes.ToString("N0"));
 
             AnsiConsole.MarkupLine($"History for [bold]{Markup.Escape(proj.Name)}[/] - {list.Count} snapshot(s)");
@@ -125,13 +125,13 @@ namespace VaultSync.CLI.Commands
 
     sealed class DiffCommand : AsyncCommand<DiffSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, DiffSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, DiffSettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
+            string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
 
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
             if (snaps.Count < 1) throw new Exception("No snapshots exist for this project");
@@ -144,7 +144,7 @@ namespace VaultSync.CLI.Commands
             else if (s.A.HasValue)
             {
                 aId = s.A.Value;
-                var idx = snaps.FindIndex(x => x.Id == aId);
+                int idx = snaps.FindIndex(x => x.Id == aId);
                 if (idx < 0 || idx + 1 >= snaps.Count) throw new Exception("Cannot infer the other snapshot; provide both A and B.");
                 bId = snaps[idx + 1].Id;
             }
@@ -162,11 +162,11 @@ namespace VaultSync.CLI.Commands
             var modified = new List<string>();
             var unchanged = new List<string>();
 
-            foreach (var kv in aFiles)
+            foreach (KeyValuePair<string, Core.Models.FileEntry> kv in aFiles)
             {
-                var rel = kv.Key;
-                var af = kv.Value;
-                if (!bFiles.TryGetValue(rel, out var bf))
+                string rel = kv.Key;
+                Core.Models.FileEntry af = kv.Value;
+                if (!bFiles.TryGetValue(rel, out Core.Models.FileEntry? bf))
                 {
                     added.Add(rel); continue;
                 }
@@ -175,9 +175,9 @@ namespace VaultSync.CLI.Commands
                 else
                     unchanged.Add(rel);
             }
-            foreach (var kv in bFiles)
+            foreach (KeyValuePair<string, Core.Models.FileEntry> kv in bFiles)
             {
-                var rel = kv.Key;
+                string rel = kv.Key;
                 if (!aFiles.ContainsKey(rel)) deleted.Add(rel);
             }
 
@@ -185,20 +185,20 @@ namespace VaultSync.CLI.Commands
 
             if (s.Json)
             {
-                var json = JsonSerializer.Serialize(new {
+                string json = JsonSerializer.Serialize(new {
                     A = aId, B = bId, added, deleted, modified, unchanged,
                     summary = new {
                         added = added.Count, deleted = deleted.Count,
                         modified = modified.Count, unchanged = unchanged.Count,
                         totalA = aFiles.Count, totalB = bFiles.Count
                     }
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, CommandJsonOptions.Indented);
                 Console.WriteLine(json);
                 return Task.FromResult(0);
             }
 
             AnsiConsole.MarkupLine($"Diff [bold]{Markup.Escape(proj.Name)}[/] - A: {aId} vs B: {bId}");
-            var grid = new Grid().AddColumn().AddColumn().AddColumn().AddColumn();
+            Grid grid = new Grid().AddColumn().AddColumn().AddColumn().AddColumn();
             grid.AddRow(
                 $"[green]Added[/]: {added.Count}",
                 $"[red]Deleted[/]: {deleted.Count}",
@@ -208,14 +208,14 @@ namespace VaultSync.CLI.Commands
 
             void PrintList(string title, string color, IEnumerable<string> rows)
             {
-                var total = rows is ICollection<string> c ? c.Count : rows.Count();
+                int total = rows is ICollection<string> c ? c.Count : rows.Count();
                 var list  = rows.Take(s.Limit).ToList();
                 if (list.Count == 0) return;
 
-                var table = new Table().Border(TableBorder.Rounded);
+                Table table = new Table().Border(TableBorder.Rounded);
                 table.Title = new TableTitle($"[{color}]{title}[/] (showing {list.Count}{(total > list.Count ? $"/{total}" : "")})");
                 table.AddColumn("Path");
-                foreach (var r in list) table.AddRow(r);
+                foreach (string? r in list) table.AddRow(r);
                 AnsiConsole.Write(table);
             }
 
@@ -253,13 +253,13 @@ namespace VaultSync.CLI.Commands
 
     sealed class PruneCommand : AsyncCommand<PruneSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, PruneSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, PruneSettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
+            string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
 
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
             if (snaps.Count == 0)
@@ -279,12 +279,12 @@ namespace VaultSync.CLI.Commands
                 toDelete.AddRange(snaps.Where(x => x.CreatedUtc < cutoff).Select(x => x.Id));
             }
 
-            var planned = toDelete.Distinct().OrderBy(id => id).ToList();
+            List<int> planned = [.. toDelete.Distinct().Order()];
 
             if (s.Json)
             {
                 var payload = new { project = proj.Name, totalSnapshots = snaps.Count, plannedDeletions = planned, dryRun = s.DryRun };
-                Console.WriteLine(JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
             }
             else
             {
@@ -295,16 +295,16 @@ namespace VaultSync.CLI.Commands
                 }
                 else
                 {
-                    var tbl = new Table().Border(TableBorder.Rounded);
+                    Table tbl = new Table().Border(TableBorder.Rounded);
                     tbl.AddColumn("Snapshot");
                     tbl.AddColumn("Created (UTC)");
                     tbl.AddColumn(new TableColumn("Files").RightAligned());
                     tbl.AddColumn(new TableColumn("Bytes").RightAligned());
 
                     var byId = snaps.ToDictionary(x => x.Id);
-                    foreach (var id in planned)
+                    foreach (int id in planned)
                     {
-                        var srow = byId[id];
+                        Core.Models.Snapshot srow = byId[id];
                         tbl.AddRow(id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), srow.TotalBytes.ToString("N0"));
                     }
                     AnsiConsole.Write(tbl);
@@ -314,8 +314,8 @@ namespace VaultSync.CLI.Commands
 
             if (planned.Count == 0 || s.DryRun) return Task.FromResult(0);
 
-            var stats = repo.DeleteSnapshotsById(proj.Name, planned);
-            AnsiConsole.MarkupLine($"[green]Pruned[/] snapshots: {stats.Snapshots}, files: {stats.Files}");
+            (int snapshots, int files) = repo.DeleteSnapshotsById(proj.Name, planned);
+            AnsiConsole.MarkupLine($"[green]Pruned[/] snapshots: {snapshots}, files: {files}");
             return Task.FromResult(0);
         }
     }

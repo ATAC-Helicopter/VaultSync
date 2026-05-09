@@ -8,15 +8,15 @@ using VaultSync.CLI.Config;
 
 namespace VaultSync.CLI.Commands
 {
-    sealed class ConfigShowSettings : CommandSettings { }
-    sealed class ConfigPathSettings : CommandSettings { }
+    sealed class ConfigShowSettings : CommandSettings;
+    sealed class ConfigPathSettings : CommandSettings;
 
     sealed class ConfigShowCommand : AsyncCommand<ConfigShowSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, ConfigShowSettings settings, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, ConfigShowSettings settings, CancellationToken ct)
         {
-            var cfg = ConfigHelper.Load();
-            var json = JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true });
+            Core.Config.AppConfig cfg = ConfigHelper.Load();
+            string json = JsonSerializer.Serialize(cfg, CommandJsonOptions.Indented);
             Console.WriteLine(json);
             return Task.FromResult(0);
         }
@@ -24,9 +24,9 @@ namespace VaultSync.CLI.Commands
 
     sealed class ConfigPathCommand : AsyncCommand<ConfigPathSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, ConfigPathSettings settings, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, ConfigPathSettings settings, CancellationToken ct)
         {
-            var cfg = ConfigHelper.Load();
+            Core.Config.AppConfig cfg = ConfigHelper.Load();
             Console.WriteLine(string.IsNullOrWhiteSpace(cfg.DbPath)
                 ? ConfigHelper.ResolveDb(null)
                 : cfg.DbPath);
@@ -41,14 +41,14 @@ namespace VaultSync.CLI.Commands
 
     sealed class ConfigSetDbCommand : AsyncCommand<ConfigSetDbSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, ConfigSetDbSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, ConfigSetDbSettings s, CancellationToken ct)
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var expanded = s.DbPath.Replace("~", home);
-            var dir = System.IO.Path.GetDirectoryName(expanded)!;
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string expanded = s.DbPath.Replace("~", home);
+            string dir = System.IO.Path.GetDirectoryName(expanded)!;
             System.IO.Directory.CreateDirectory(dir);
 
-            var cfg = ConfigHelper.Load();
+            Core.Config.AppConfig cfg = ConfigHelper.Load();
             cfg.DbPath = s.DbPath;
             ConfigHelper.Save(cfg);
 
@@ -57,5 +57,4 @@ namespace VaultSync.CLI.Commands
         }
     }
 }
-
 
