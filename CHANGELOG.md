@@ -1,15 +1,33 @@
 ﻿# Changelog
 ## [1.7.4] - Unreleased
+### Added
+- [VS-1732] Release publish restore now declares Windows, Linux, and macOS RIDs.
+- [VS-1737] Added VS Code Linux debug launch/tasks for the UI, CLI, and full test suite.
+- [VS-1738] Linux tarball releases now include rootless install/uninstall scripts that create a user desktop launcher, icon, and `vaultsync` command across distro families.
+- [VS-1739] CLI JSON-producing commands now share a single indented serializer configuration so config, destination, snapshot, sync, restore, and prune output stays consistent.
+
+### Changed
+- [BUG-17119] Startup metadata import now also checks reachable backup destinations.
+- [BUG-17119] UI metadata imports now treat source stores as read-only.
+- [BUG-17120] Core tests now isolate config writes from real app settings.
+- [VS-1724] Patch manifest compatibility tests now cover empty allowlists, build metadata normalization, and prerelease mismatch edge cases.
+- [VS-1739] CLI command implementations were updated for the current Spectre.Console.Cli command override model.
+- [VS-1740] Refreshed the safe dependency set for 1.7.4, including Avalonia 11.3.14, LiveCharts 2.0.2, ReactiveUI 23.2.27, SQLite/ProtectedData/System.Text.Json 10.0.7, Spectre.Console 0.55.x, and the current DBus/test SDK packages.
 ### Fixed
 - [BUG-17118] Log console rows now show readable time, source, and message fields.
 - [BUG-17108] In-app logs now capture runtime errors without verbose logging.
 - [BUG-17115] Windows/Linux tray menus now open the richer tray panel reliably.
 - [BUG-17117] Tray panel action labels now wrap in localized layouts.
 - [BUG-17119] Linux metadata imports now remap rooted backup paths to the active destination.
-- [BUG-17120] Core tests now isolate config writes from real app settings.
-- [BUG-17119] Startup metadata import now also checks reachable backup destinations.
-- [BUG-17119] UI metadata imports now treat source stores as read-only.
-- [VS-1732] Release publish restore now declares Windows, Linux, and macOS RIDs.
+- [BUG-17122] Linux debug builds now use an Avalonia/LiveCharts-compatible dependency set, preventing silent startup exits and dashboard chart crashes in local runs.
+- [BUG-17123] Destination metadata imports now recover SQLite sidecar journals through a temporary copy, preventing read-only source stores from importing as empty.
+- [BUG-17124] Destination imports now rebuild missing backup history from timestamped backup folders when metadata backup rows are absent or the store is missing, including Linux-mounted Windows backup roots.
+- [BUG-17125] Destination reachability probes now run during deferred startup instead of waiting for the periodic timer, and locked tombstone exports defer locally for a later retry instead of being dropped.
+- [BUG-17126] Crash dialog chrome now uses Avalonia 11's `SystemDecorations` API, restoring clean builds after the dependency refresh.
+- [BUG-17127] Onboarding's manual test hook now keeps the environment-variable override reachable without producing unreachable-code diagnostics.
+- [BUG-17128] System notification service creation now records fallback exceptions instead of swallowing an empty catch.
+- [BUG-17129] Drive health checks now prefer `smartctl` when available across platforms and avoid surfacing SMART health rows for network destinations where local drive data is unavailable.
+- [BUG-17130] Metadata tombstone exports now treat Linux mount roots as network-style SQLite stores, avoiding WAL locks on mounted backup destinations.
 
 ## [1.7.3] - 23.04.2026
 ### Added
