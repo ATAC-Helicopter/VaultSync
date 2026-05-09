@@ -37,6 +37,12 @@ This document defines the current release packaging flow.
    bash scripts/build_linux_release.sh 1.7.3 arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz` artifacts and the `linux-x64` `.AppImage`.
+   The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
+   per-user Linux install that works across distro families:
+   ```bash
+   tar -xzf VaultSync-<version>-linux-<arch>.tar.gz
+   ./install.sh
+   ```
 
 ## 4) Patch/Updater Assets
 Create patch manifest and patch archives as described in `docs/UPDATER.md`.
@@ -99,6 +105,12 @@ Linux AppImage users may need to run:
 ```bash
 chmod +x VaultSync-<version>-linux-x64.AppImage
 ./VaultSync-<version>-linux-x64.AppImage
+```
+
+Linux tarball users can install VaultSync into their user app menu without root:
+```bash
+tar -xzf VaultSync-<version>-linux-<arch>.tar.gz
+./install.sh
 ```
 
 ## Related Docs

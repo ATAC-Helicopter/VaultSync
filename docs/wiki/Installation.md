@@ -11,7 +11,7 @@ VaultSync is distributed through two Windows channels plus the existing macOS/Li
    - Windows Direct: download from GitHub Releases.
    - Windows Store: install from Microsoft Store when that channel is published.
    - macOS/Linux: download from GitHub Releases.
-2. Windows Direct: run the `.exe` installer. Linux: use `.AppImage` or `.tar.gz`. macOS: open the `.dmg` and drag `VaultSync.app` to `/Applications`.
+2. Windows Direct: run the `.exe` installer. Linux x64: use the `.AppImage` for the most app-like portable launch, or extract the `.tar.gz` and run `./install.sh` for a per-user desktop/menu install. Linux arm64: extract the `.tar.gz` and run `./install.sh`. macOS: open the `.dmg` and drag `VaultSync.app` to `/Applications`.
 3. On macOS, the app is unsigned: right-click -> Open the first time (or run `xattr -dr com.apple.quarantine /Applications/VaultSync.app`).
 4. Launch VaultSync.
 
