@@ -83,8 +83,8 @@ namespace VaultSync.UI.Views
             if (_scrollViewer is null)
                 return;
 
-            var maxY = _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height;
-            var shouldAutoScroll = _scrollViewer.Offset.Y >= Math.Max(0, maxY - 4);
+            double maxY = _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height;
+            bool shouldAutoScroll = _scrollViewer.Offset.Y >= Math.Max(0, maxY - 4);
             _autoScroll = shouldAutoScroll;
 
             if (_viewModel.AutoScrollEnabled != shouldAutoScroll)
@@ -134,8 +134,8 @@ namespace VaultSync.UI.Views
             if (e.Key != Key.C)
                 return;
 
-            var modifiers = e.KeyModifiers;
-            var isCopyGesture = modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Meta);
+            KeyModifiers modifiers = e.KeyModifiers;
+            bool isCopyGesture = modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Meta);
             if (!isCopyGesture)
                 return;
 
@@ -163,7 +163,7 @@ namespace VaultSync.UI.Views
 
             if (_logList is not null && _logList.ItemCount > 0)
             {
-                var last = _logList.Items[_logList.ItemCount - 1];
+                object? last = _logList.Items[_logList.ItemCount - 1];
                 _logList.ScrollIntoView(last);
             }
         }

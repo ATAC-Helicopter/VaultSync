@@ -122,13 +122,13 @@ namespace VaultSync.UI.ViewModels
         private readonly IPowerStatusProvider _powerStatusProvider;
         private readonly IDriveHealthService _driveHealthService;
         private readonly BackupIndexConsistencyService _backupIndexConsistencyService;
-        private readonly HashSet<BackupDestinationViewModel> _observedDestinations = new();
+        private readonly HashSet<BackupDestinationViewModel> _observedDestinations = [];
         private readonly LogConsoleService _logConsoleService;
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
         private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan DestinationProbeFailureBackoff = TimeSpan.FromMinutes(15);
-        private static readonly TimeSpan DestinationProbeStartupDelay = TimeSpan.FromSeconds(45);
+        private static readonly TimeSpan DestinationProbeStartupDelay = TimeSpan.Zero;
         private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
         private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
         private const int DefaultEncryptedOpenTimeoutMinutes = 10;
@@ -172,7 +172,7 @@ namespace VaultSync.UI.ViewModels
             public required NotificationSeverity Severity { get; init; }
             public required string Title { get; init; }
             public required Func<IReadOnlyList<string>, string> MessageFactory { get; init; }
-            public List<string> ProjectNames { get; } = new();
+            public List<string> ProjectNames { get; } = [];
             public HashSet<string> ProjectNameSet { get; } = new(StringComparer.OrdinalIgnoreCase);
         }
         private static readonly TimeSpan BackupsCacheTtl = TimeSpan.FromSeconds(5);
@@ -185,7 +185,7 @@ namespace VaultSync.UI.ViewModels
         private readonly LocalizationService _localizationService = new();
         private readonly Stopwatch _startupDiagnosticsStopwatch = Stopwatch.StartNew();
         private readonly object _startupDiagnosticsGate = new();
-        private readonly List<StartupDiagnosticsPhase> _startupDiagnosticsPhases = new();
+        private readonly List<StartupDiagnosticsPhase> _startupDiagnosticsPhases = [];
         private static readonly HttpClient s_installerClient = CreateInstallerHttpClient();
         private readonly string _currentVersionString;
         private CancellationTokenSource? _updateCheckCts;
@@ -201,7 +201,7 @@ namespace VaultSync.UI.ViewModels
         private DateTime _metadataRootImportRetryAfterUtc = DateTime.MinValue;
         private readonly ConcurrentDictionary<int, DateTime> _backupProgressUiTimestamps = new();
         private readonly object _destinationProbeCacheGate = new();
-        private IReadOnlyList<DestinationProbeSummary> _cachedDestinationProbeSummaries = Array.Empty<DestinationProbeSummary>();
+        private IReadOnlyList<DestinationProbeSummary> _cachedDestinationProbeSummaries = [];
         private string _cachedDestinationProbeSignature = string.Empty;
         private int _updateCheckInFlight;
         private DateTimeOffset? _lastUpdateCheckAt;
@@ -284,8 +284,8 @@ namespace VaultSync.UI.ViewModels
             if (!OperatingSystem.IsMacOS())
                 return false;
 
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var mountRoot = Path.Combine(home, "Library", "Application Support", "VaultSync", "mounts");
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string mountRoot = Path.Combine(home, "Library", "Application Support", "VaultSync", "mounts");
             if (path.StartsWith(mountRoot, StringComparison.OrdinalIgnoreCase))
                 return true;
 
@@ -321,12 +321,12 @@ namespace VaultSync.UI.ViewModels
                     return true;
                 }
 
-                var root = Path.GetPathRoot(path);
+                string? root = Path.GetPathRoot(path);
                 if (string.IsNullOrWhiteSpace(root))
                     return false;
 
                 // DriveInfo accepts drive roots like C:\ or C:
-                var normalizedRoot = root.TrimEnd('\\', '/');
+                string normalizedRoot = root.TrimEnd('\\', '/');
                 if (normalizedRoot.Length != 2 || normalizedRoot[1] != ':')
                     return false;
 
@@ -344,8 +344,8 @@ namespace VaultSync.UI.ViewModels
             if (!_settingsViewModel.EnableVerboseLogging)
                 return;
 
-            var now = DateTime.UtcNow;
-            var last = _backupProgressLogTimestamps.GetOrAdd(projectId, DateTime.MinValue);
+            DateTime now = DateTime.UtcNow;
+            DateTime last = _backupProgressLogTimestamps.GetOrAdd(projectId, DateTime.MinValue);
             if ((now - last) < TimeSpan.FromSeconds(1))
                 return;
 
@@ -360,10 +360,12 @@ namespace VaultSync.UI.ViewModels
 
             if (!string.IsNullOrWhiteSpace(etaText) &&
                 etaText.Contains("Finalizing", StringComparison.OrdinalIgnoreCase))
+            {
                 return true;
+            }
 
-            var now = DateTime.UtcNow;
-            var last = _backupProgressUiTimestamps.GetOrAdd(projectId, DateTime.MinValue);
+            DateTime now = DateTime.UtcNow;
+            DateTime last = _backupProgressUiTimestamps.GetOrAdd(projectId, DateTime.MinValue);
             if ((now - last) < TimeSpan.FromMilliseconds(200))
                 return false;
 
@@ -372,29 +374,27 @@ namespace VaultSync.UI.ViewModels
         }
 
         private GitHubReleaseChannel CurrentUpdateChannel =>
-            _settingsViewModel?.BetaChannelEnabled == true
+            _settingsViewModel?.BetaChannelEnabled is true
                 ? GitHubReleaseChannel.Beta
                 : GitHubReleaseChannel.Stable;
 
-        private bool CanUseSelfUpdate => !DistributionChannelService.Current.IsStore;
+        private static bool CanUseSelfUpdate => !DistributionChannelService.Current.IsStore;
 
         public SettingsViewModel SettingsViewModel => _settingsViewModel;
         public BackupsViewModel BackupsViewModel => _backupsViewModel ??= CreateBackupsViewModel();
 
-        private List<BackupDestination> GetActiveDestinations(AppConfig cfg)
+        private static List<BackupDestination> GetActiveDestinations(AppConfig cfg)
         {
             if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
             {
-                return cfg.Backups.Destinations
-                    .Where(d => d.Active)
-                    .ToList();
+                return [.. cfg.Backups.Destinations.Where(d => d.Active)];
             }
 
-            var backupRoot = cfg.Backups.BackupLocation;
+            string? backupRoot = cfg.Backups.BackupLocation;
             if (!string.IsNullOrWhiteSpace(backupRoot))
             {
-                return new List<BackupDestination>
-                {
+                return
+                [
                     new BackupDestination
                     {
                         Alias       = "Primary",
@@ -404,24 +404,24 @@ namespace VaultSync.UI.ViewModels
                         AutoMount   = false,
                         AutoUnmount = false
                     }
-                };
+                ];
             }
 
-            return new List<BackupDestination>();
+            return [];
         }
 
-        private List<BackupDestination> GetAllDestinations(AppConfig cfg)
+        private static List<BackupDestination> GetAllDestinations(AppConfig cfg)
         {
             if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
             {
-                return cfg.Backups.Destinations.ToList();
+                return [.. cfg.Backups.Destinations];
             }
 
-            var backupRoot = cfg.Backups.BackupLocation;
+            string? backupRoot = cfg.Backups.BackupLocation;
             if (!string.IsNullOrWhiteSpace(backupRoot))
             {
-                return new List<BackupDestination>
-                {
+                return
+                [
                     new BackupDestination
                     {
                         Alias       = "Primary",
@@ -431,10 +431,10 @@ namespace VaultSync.UI.ViewModels
                         AutoMount   = false,
                         AutoUnmount = false
                     }
-                };
+                ];
             }
 
-            return new List<BackupDestination>();
+            return [];
         }
 
         private sealed record ProjectDestinationSelection(
@@ -444,9 +444,9 @@ namespace VaultSync.UI.ViewModels
 
         private ProjectDestinationSelection ResolveDestinationsForProject(Project project, AppConfig cfg)
         {
-            var activeDestinations = GetActiveDestinations(cfg);
-            var allDestinations = GetAllDestinations(cfg);
-            var preferredId = DestinationIdentityService.NormalizePreferredDestinationId(project.PreferredDestinationId, allDestinations);
+            List<BackupDestination> activeDestinations = GetActiveDestinations(cfg);
+            List<BackupDestination> allDestinations = GetAllDestinations(cfg);
+            string preferredId = DestinationIdentityService.NormalizePreferredDestinationId(project.PreferredDestinationId, allDestinations);
 
             if (string.IsNullOrWhiteSpace(preferredId))
             {
@@ -458,11 +458,11 @@ namespace VaultSync.UI.ViewModels
                 return new ProjectDestinationSelection(allDestinations, null, null);
             }
 
-            var match = DestinationIdentityService.FindByPreferredDestinationId(allDestinations, preferredId);
+            BackupDestination? match = DestinationIdentityService.FindByPreferredDestinationId(allDestinations, preferredId);
 
             if (match is null)
             {
-                var message = Lf(
+                string message = Lf(
                     "Backups.Notification.PreferredDestinationMissing",
                     "Preferred destination '{0}' not found. Using active destinations.",
                     preferredId);
@@ -471,15 +471,15 @@ namespace VaultSync.UI.ViewModels
 
             if (!match.Active)
             {
-                var label = string.IsNullOrWhiteSpace(match.Alias) ? match.Path : match.Alias;
-                var message = Lf(
+                string label = string.IsNullOrWhiteSpace(match.Alias) ? match.Path : match.Alias;
+                string message = Lf(
                     "Backups.Notification.PreferredDestinationInactive",
                     "Preferred destination '{0}' is inactive. Using active destinations.",
                     label);
                 return new ProjectDestinationSelection(activeDestinations, message, "preferred_inactive");
             }
 
-            return new ProjectDestinationSelection(new List<BackupDestination> { match }, null, null);
+            return new ProjectDestinationSelection([match], null, null);
         }
 
         private void RefreshDestinationStatusOverview()
@@ -523,7 +523,7 @@ namespace VaultSync.UI.ViewModels
 
         public string ReleaseActionText => !CanUseSelfUpdate
             ? L("Update.Store.OpenStore", "Open Microsoft Store")
-            : _pendingUpdateResult?.HasInstaller == true
+            : _pendingUpdateResult?.HasInstaller is true
             ? (IsInstallerDownloading
                 ? L("Shell.OpenInstaller.Downloading", "Downloading installer...")
                 : L("Shell.OpenInstaller", "Install update"))
@@ -608,7 +608,7 @@ namespace VaultSync.UI.ViewModels
         public ICommand CopySoftCrashLogCommand => _copySoftCrashLogCommand;
         public string CurrentVersionDisplay => $"v{StripBuildMetadata(_currentVersionString)}";
         public string FooterProductDisplay => $"VaultSync · {CurrentVersionDisplay}";
-        public string FooterCopyrightDisplay => $"© {DateTime.UtcNow.Year} Flavio Giacchetti";
+        public static string FooterCopyrightDisplay => $"© {DateTime.UtcNow.Year} Flavio Giacchetti";
         public bool ShowSoftCrashBanner => _showSoftCrashBanner;
         public BackupIndexConsistencyReport? BackupIndexConsistencyReport => _backupIndexConsistencyReport;
         public bool HasBackupIndexConsistencyIssues => (_backupIndexConsistencyReport?.HasIssues).GetValueOrDefault();

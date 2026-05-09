@@ -12,7 +12,7 @@ public class BooleanToCharConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        var maskChar = parameter is string s && s.Length > 0 ? s[0] : '*';
+        char maskChar = parameter is string s && s.Length > 0 ? s[0] : '*';
         if (value is bool show && show)
             return '\0'; // no mask
         return maskChar;

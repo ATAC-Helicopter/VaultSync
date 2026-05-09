@@ -33,7 +33,7 @@ internal static class Program
         RegisterDiagnosticHooks();
         DiagnosticsLogger.RecordStartupSnapshot(args, useSoftwareFallback: false);
         CrashHandler.RegisterEarly();
-        if (PatchInstallService.TryParsePatchArgs(args, out var request))
+        if (PatchInstallService.TryParsePatchArgs(args, out PatchApplyRequest? request))
         {
             DiagnosticsLogger.Record("Patch installer mode detected.");
             UpdaterApp.SetPendingRequest(request);
@@ -41,7 +41,7 @@ internal static class Program
             return;
         }
 
-        _instanceMutex = new Mutex(true, "VaultSync.UI.SingleInstance", out var isFirstInstance);
+        _instanceMutex = new Mutex(true, "VaultSync.UI.SingleInstance", out bool isFirstInstance);
         DiagnosticsLogger.Record($"Instance mutex acquired. IsFirst={isFirstInstance}.");
         if (!isFirstInstance)
         {
@@ -120,8 +120,8 @@ internal static class Program
             try
             {
                 client.Connect(500);
-                var payload = BuildActivationPayload(args);
-                var bytes = Encoding.UTF8.GetBytes(payload);
+                string payload = BuildActivationPayload(args);
+                byte[] bytes = Encoding.UTF8.GetBytes(payload);
                 client.Write(bytes, 0, bytes.Length);
                 DiagnosticsLogger.Record("Signaled existing instance.");
             }
@@ -152,8 +152,8 @@ internal static class Program
                     PipeOptions.Asynchronous);
 
                 await server.WaitForConnectionAsync(token);
-                var payload = await ReadPipePayloadAsync(server, token);
-                var payloadKind = payload.StartsWith("open-vse|", StringComparison.Ordinal)
+                string payload = await ReadPipePayloadAsync(server, token);
+                string payloadKind = payload.StartsWith("open-vse|", StringComparison.Ordinal)
                     ? "open-vse"
                     : "activate";
                 DiagnosticsLogger.Record($"Received activation signal. PayloadKind='{payloadKind}'.");
@@ -172,10 +172,10 @@ internal static class Program
 
     private static string BuildActivationPayload(string[] args)
     {
-        var encryptedArchivePath = args.FirstOrDefault(IsEncryptedArchiveArg);
+        string? encryptedArchivePath = args.FirstOrDefault(IsEncryptedArchiveArg);
         if (!string.IsNullOrWhiteSpace(encryptedArchivePath))
         {
-            var encodedPath = Convert.ToBase64String(Encoding.UTF8.GetBytes(encryptedArchivePath));
+            string encodedPath = Convert.ToBase64String(Encoding.UTF8.GetBytes(encryptedArchivePath));
             return $"open-vse|{encodedPath}";
         }
 
@@ -184,11 +184,11 @@ internal static class Program
 
     private static async Task<string> ReadPipePayloadAsync(PipeStream server, CancellationToken token)
     {
-        var buffer = new byte[1024];
+        byte[] buffer = new byte[1024];
         using var ms = new MemoryStream();
         while (true)
         {
-            var read = await server.ReadAsync(buffer.AsMemory(0, buffer.Length), token);
+            int read = await server.ReadAsync(buffer.AsMemory(0, buffer.Length), token);
             if (read <= 0)
                 break;
 
@@ -226,7 +226,7 @@ internal static class Program
         {
             PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx =>
             {
-                var info = GetParentProcessInfo();
+                string info = GetParentProcessInfo();
                 DiagnosticsLogger.Record($"POSIX signal: SIGTERM (cancel={ctx.Cancel}). Parent={info}");
                 if (string.Equals(Environment.GetEnvironmentVariable("VAULTSYNC_IGNORE_SIGTERM"), "1", StringComparison.OrdinalIgnoreCase))
                 {
@@ -255,7 +255,7 @@ internal static class Program
 
     private static void LogParentProcessInfo(string stage)
     {
-        var info = GetParentProcessInfo();
+        string info = GetParentProcessInfo();
         DiagnosticsLogger.Record($"Parent process ({stage}): {info}");
     }
 
@@ -266,12 +266,12 @@ internal static class Program
 
         try
         {
-            var pid = Environment.ProcessId;
-            var ppid = RunPs($"-o ppid= -p {pid}").Trim();
+            int pid = Environment.ProcessId;
+            string ppid = RunPs($"-o ppid= -p {pid}").Trim();
             if (string.IsNullOrWhiteSpace(ppid))
                 return "ppid=unknown";
 
-            var comm = RunPs($"-p {ppid} -o comm=").Trim();
+            string comm = RunPs($"-p {ppid} -o comm=").Trim();
             if (string.IsNullOrWhiteSpace(comm))
                 return $"ppid={ppid}";
 

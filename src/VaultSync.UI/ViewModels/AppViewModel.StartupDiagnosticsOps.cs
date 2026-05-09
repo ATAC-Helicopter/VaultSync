@@ -17,7 +17,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var elapsedMs = _startupDiagnosticsStopwatch.ElapsedMilliseconds;
+            long elapsedMs = _startupDiagnosticsStopwatch.ElapsedMilliseconds;
             lock (_startupDiagnosticsGate)
             {
                 _startupDiagnosticsPhases.Add(new StartupDiagnosticsPhase
@@ -35,24 +35,23 @@ namespace VaultSync.UI.ViewModels
                 StartupDiagnosticsPhase[] phases;
                 lock (_startupDiagnosticsGate)
                 {
-                    phases = _startupDiagnosticsPhases
+                    phases = [.. _startupDiagnosticsPhases
                         .OrderBy(phase => phase.ElapsedMs)
                         .Select(phase => new StartupDiagnosticsPhase
                         {
                             Name = phase.Name,
                             ElapsedMs = phase.ElapsedMs
-                        })
-                        .ToArray();
+                        })];
                 }
 
                 var summary = new StartupDiagnosticsSummary
                 {
                     LastCompletedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                     TotalDurationMs = _startupDiagnosticsStopwatch.ElapsedMilliseconds,
-                    Phases = phases.ToList()
+                    Phases = [.. phases]
                 };
 
-                var cfg = AppConfigStore.Load();
+                AppConfig cfg = AppConfigStore.Load();
                 cfg.Advanced.StartupDiagnostics = summary;
                 AppConfigStore.Save(cfg);
 
@@ -60,13 +59,12 @@ namespace VaultSync.UI.ViewModels
                 {
                     LastCompletedUtc = summary.LastCompletedUtc,
                     TotalDurationMs = summary.TotalDurationMs,
-                    Phases = summary.Phases
+                    Phases = [.. summary.Phases
                         .Select(phase => new StartupDiagnosticsPhase
                         {
                             Name = phase.Name,
                             ElapsedMs = phase.ElapsedMs
-                        })
-                        .ToList()
+                        })]
                 };
                 Dispatcher.UIThread.Post(() => _settingsViewModel.ReloadStartupDiagnostics());
 

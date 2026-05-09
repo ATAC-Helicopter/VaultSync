@@ -61,13 +61,13 @@ namespace VaultSync.UI.ViewModels
 
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
-            Array.Empty<BackupUsageSegment>();
+            [];
         public IReadOnlyList<BackupUsageSegment> BackupTopConsumers { get; private set; } =
-            Array.Empty<BackupUsageSegment>();
+            [];
 
-        public ISeries[] BackupUsageSeries { get; private set; } = Array.Empty<ISeries>();
-        public Axis[] BackupUsageXAxes { get; private set; } = Array.Empty<Axis>();
-        public Axis[] BackupUsageYAxes { get; private set; } = Array.Empty<Axis>();
+        public ISeries[] BackupUsageSeries { get; private set; } = [];
+        public Axis[] BackupUsageXAxes { get; private set; } = [];
+        public Axis[] BackupUsageYAxes { get; private set; } = [];
         public bool HasBackupUsageSegments => BackupUsageSegments.Count > 0;
         public bool HasBackupTopConsumers => BackupTopConsumers.Count > 0;
 
@@ -359,10 +359,10 @@ namespace VaultSync.UI.ViewModels
         public RelayCommand OpenBackupsCommand { get; }
 
         // Chart bindings
-        public ISeries[] SnapshotSeries { get; private set; } = Array.Empty<ISeries>();
-        public Axis[] SnapshotXAxes { get; private set; } = Array.Empty<Axis>();
-        public Axis[] SnapshotYAxes { get; private set; } = Array.Empty<Axis>();
-        public ObservableCollection<SnapshotActivityPoint> WeeklySnapshotActivity { get; } = new();
+        public ISeries[] SnapshotSeries { get; private set; } = [];
+        public Axis[] SnapshotXAxes { get; private set; } = [];
+        public Axis[] SnapshotYAxes { get; private set; } = [];
+        public ObservableCollection<SnapshotActivityPoint> WeeklySnapshotActivity { get; } = [];
         public double WeeklyChartHeight { get; private set; } = 180;
         public double WeeklyAverageLineOffset { get; private set; }
         public string WeeklyAverageLabel { get; private set; } = string.Empty;
@@ -370,10 +370,10 @@ namespace VaultSync.UI.ViewModels
         public string TotalSnapshotsWeekLabel => string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), TotalSnapshotsWeek);
 
         // Donut bindings
-        public ISeries[] StorageSeries { get; private set; } = Array.Empty<ISeries>();
+        public ISeries[] StorageSeries { get; private set; } = [];
         public bool HasStorageSeries => StorageSeries is { Length: > 0 };
-        public IEnumerable<LegendItem> StorageLegend { get; private set; } = Array.Empty<LegendItem>();
-        public ObservableCollection<StorageLegendSortOption> StorageSortOptions { get; } = new();
+        public IEnumerable<LegendItem> StorageLegend { get; private set; } = [];
+        public ObservableCollection<StorageLegendSortOption> StorageSortOptions { get; } = [];
 
         private StorageLegendSortOption? _selectedStorageSortOption;
         public StorageLegendSortOption? SelectedStorageSortOption
@@ -394,12 +394,12 @@ namespace VaultSync.UI.ViewModels
         }
 
         // Activity items, populated from real data.
-        public ObservableCollection<ActivityItem> ActivityItems { get; } = new();
-        public ObservableCollection<RestoreReadinessIssueItem> RestoreReadinessIssues { get; } = new();
+        public ObservableCollection<ActivityItem> ActivityItems { get; } = [];
+        public ObservableCollection<RestoreReadinessIssueItem> RestoreReadinessIssues { get; } = [];
         public bool HasRestoreReadinessIssues => RestoreReadinessIssues.Count > 0;
 
         // Internal data for chart aggregation
-        private string[] _days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+        private readonly string[] _days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
         private readonly double[] _snapshotCountsByDay = new double[7];
         private readonly int[] _autoCountsByDay = new int[7];
         private readonly int[] _manualCountsByDay = new int[7];
@@ -413,7 +413,7 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan DashboardDataTtl = TimeSpan.FromSeconds(30);
         private SqliteRepository? _repo;
         private string? _repoDbPath;
-        private IReadOnlyList<(Project project, long bytes)> _lastStorageSlices = Array.Empty<(Project project, long bytes)>();
+        private IReadOnlyList<(Project project, long bytes)> _lastStorageSlices = [];
 
         public DashboardViewModel()
         {
@@ -476,7 +476,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var data = await Task.Run(() =>
+                DashboardData data = await Task.Run(() =>
                 {
                     if (!force && _lastDashboardData is not null &&
                         (DateTime.UtcNow - _lastDashboardDataUtc) < DashboardDataTtl)
@@ -484,10 +484,10 @@ namespace VaultSync.UI.ViewModels
                         return _lastDashboardData;
                     }
 
-                    var cfg = AppConfigStore.GetSnapshot();
-                    var diskUsage = ComputeBackupDiskUsageDetailed(cfg);
+                    AppConfig cfg = AppConfigStore.GetSnapshot();
+                    (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string riskReason, BackupDiskUsageStatus status) diskUsage = ComputeBackupDiskUsageDetailed(cfg);
 
-                    var dbPath = !string.IsNullOrWhiteSpace(cfg.DbPath)
+                    string dbPath = !string.IsNullOrWhiteSpace(cfg.DbPath)
                         ? cfg.DbPath
                         : GetDefaultDbPath();
 
@@ -496,20 +496,20 @@ namespace VaultSync.UI.ViewModels
                         _repo = new SqliteRepository(dbPath);
                         _repoDbPath = dbPath;
                     }
-                    var repo = _repo;
+                    SqliteRepository repo = _repo;
                     repo.EnsureSchema();
-                    var remappedBackups = repo.RepairBackupProjectLinksFromSnapshots();
+                    int remappedBackups = repo.RepairBackupProjectLinksFromSnapshots();
                     if (remappedBackups > 0)
                     {
                         RuntimeLog.WriteVerbose($"[Dashboard] Repaired {remappedBackups} backup-project links from snapshots.");
                     }
 
                     var projects = repo.GetAllProjects().ToList();
-                    var backupCount = repo.GetBackupCount();
+                    int backupCount = repo.GetBackupCount();
 
-                    var localStartDate = DateTime.Now.Date.AddDays(-6);
-                    var localEndDate = DateTime.Now.Date.AddDays(1).AddTicks(-1);
-                    var backupCountsByDay = repo.GetBackupCountsByDayBreakdown(
+                    DateTime localStartDate = DateTime.Now.Date.AddDays(-6);
+                    DateTime localEndDate = DateTime.Now.Date.AddDays(1).AddTicks(-1);
+                    IReadOnlyDictionary<DateTime, (int AutoCount, int ManualCount, int ImportedCount)> backupCountsByDay = repo.GetBackupCountsByDayBreakdown(
                         localStartDate.ToUniversalTime(),
                         localEndDate.ToUniversalTime());
 
@@ -517,18 +517,18 @@ namespace VaultSync.UI.ViewModels
                     long totalLatestBytes = 0;
                     long totalLocalBytes = 0;
                     var storageSlices = new List<(Project project, long bytes)>();
-                    var backupsByProject = repo.GetBackupTotalsByProject(includeImported: true);
-                    var localBackupsByProject = repo.GetBackupTotalsByProject(includeImported: false);
+                    IReadOnlyDictionary<int, long> backupsByProject = repo.GetBackupTotalsByProject(includeImported: true);
+                    IReadOnlyDictionary<int, long> localBackupsByProject = repo.GetBackupTotalsByProject(includeImported: false);
 
-                    foreach (var p in projects)
+                    foreach (Project? p in projects)
                     {
-                        if (!backupsByProject.TryGetValue(p.Id, out var projectTotal))
+                        if (!backupsByProject.TryGetValue(p.Id, out long projectTotal))
                             continue;
 
                         totalLatestBytes += projectTotal;
                         storageSlices.Add((p, projectTotal));
 
-                        if (localBackupsByProject.TryGetValue(p.Id, out var localTotal))
+                        if (localBackupsByProject.TryGetValue(p.Id, out long localTotal))
                         {
                             totalLocalBytes += localTotal;
                         }
@@ -539,10 +539,10 @@ namespace VaultSync.UI.ViewModels
                     // still show per-project storage using latest snapshot sizes.
                     if (storageSlices.Count == 0 && projects.Count > 0)
                     {
-                        var latestSnapshotsByProject = repo.GetLatestSnapshotInfoByProject();
-                        foreach (var p in projects)
+                        IReadOnlyDictionary<int, (DateTime CreatedUtc, long TotalBytes)> latestSnapshotsByProject = repo.GetLatestSnapshotInfoByProject();
+                        foreach (Project? p in projects)
                         {
-                            if (!latestSnapshotsByProject.TryGetValue(p.Id, out var info))
+                            if (!latestSnapshotsByProject.TryGetValue(p.Id, out (DateTime CreatedUtc, long TotalBytes) info))
                                 continue;
 
                             if (info.TotalBytes <= 0)
@@ -559,22 +559,22 @@ namespace VaultSync.UI.ViewModels
                         }
                     }
 
-                    var dayLabels = new string[_days.Length];
-                    for (var i = 0; i < dayLabels.Length; i++)
+                    string[] dayLabels = new string[_days.Length];
+                    for (int i = 0; i < dayLabels.Length; i++)
                     {
-                        var d = localStartDate.AddDays(i);
+                        DateTime d = localStartDate.AddDays(i);
                         dayLabels[i] = d.ToString("ddd");
                     }
 
-                    var counts = new double[_snapshotCountsByDay.Length];
-                    var autoCounts = new int[_snapshotCountsByDay.Length];
-                    var manualCounts = new int[_snapshotCountsByDay.Length];
-                    var importedCounts = new int[_snapshotCountsByDay.Length];
-                    for (var i = 0; i < counts.Length; i++)
+                    double[] counts = new double[_snapshotCountsByDay.Length];
+                    int[] autoCounts = new int[_snapshotCountsByDay.Length];
+                    int[] manualCounts = new int[_snapshotCountsByDay.Length];
+                    int[] importedCounts = new int[_snapshotCountsByDay.Length];
+                    for (int i = 0; i < counts.Length; i++)
                     {
-                        var localDay = localStartDate.AddDays(i).Date;
-                        var utcBucket = localDay.ToUniversalTime().Date;
-                        if (backupCountsByDay.TryGetValue(utcBucket, out var breakdown))
+                        DateTime localDay = localStartDate.AddDays(i).Date;
+                        DateTime utcBucket = localDay.ToUniversalTime().Date;
+                        if (backupCountsByDay.TryGetValue(utcBucket, out (int AutoCount, int ManualCount, int ImportedCount) breakdown))
                         {
                             autoCounts[i] = breakdown.AutoCount;
                             manualCounts[i] = breakdown.ManualCount;
@@ -585,17 +585,17 @@ namespace VaultSync.UI.ViewModels
 
                     // Activity list (newest first)
                     var activities = new List<(int? ProjectId, DateTime WhenUtc, string Subtitle)>();
-                    var recentBackups = repo.GetRecentBackups(12);
-                    foreach (var b in recentBackups)
+                    List<(int projectId, DateTime createdUtc, string type)> recentBackups = repo.GetRecentBackups(12);
+                    foreach ((int projectId, DateTime createdUtc, string type) b in recentBackups)
                     {
-                        var subtitle = string.Equals(b.type, "auto", StringComparison.OrdinalIgnoreCase)
+                        string subtitle = string.Equals(b.type, "auto", StringComparison.OrdinalIgnoreCase)
                             ? "auto"
                             : "manual";
                         activities.Add((b.projectId, b.createdUtc, subtitle));
                     }
 
-                    var recentSnapshots = repo.GetRecentSnapshotsWithoutBackup(12);
-                    foreach (var s in recentSnapshots)
+                    List<(int projectId, DateTime createdUtc)> recentSnapshots = repo.GetRecentSnapshotsWithoutBackup(12);
+                    foreach ((int projectId, DateTime createdUtc) s in recentSnapshots)
                     {
                         activities.Add((s.projectId, s.createdUtc, "snapshot"));
                     }
@@ -665,7 +665,7 @@ namespace VaultSync.UI.ViewModels
                     ApplyRestoreReadinessSummary(data.RestoreReadiness);
 
                     var activityItems = new List<ActivityItem>();
-                    var projectPalette = new[]
+                    Color[] projectPalette = new[]
                     {
                         Color.Parse("#4C8DFF"),
                         Color.Parse("#22CC88"),
@@ -674,11 +674,11 @@ namespace VaultSync.UI.ViewModels
                         Color.Parse("#9B6BFF")
                     };
                     var projectDotBrushes = new Dictionary<int, IBrush>();
-                    var paletteIndex = 0;
+                    int paletteIndex = 0;
 
                     IBrush GetBrush(Color color) => new ImmutableSolidColorBrush(color);
 
-                    foreach (var a in data.Activities
+                    foreach ((int? ProjectId, DateTime WhenUtc, string Subtitle) a in data.Activities
                                  .OrderByDescending(a => a.WhenUtc)
                                  .Take(5))
                     {
@@ -688,36 +688,35 @@ namespace VaultSync.UI.ViewModels
                             project = data.Projects.FirstOrDefault(p => p.Id == a.ProjectId.Value);
                         }
 
-                        var title = project != null ? project.Name : L("Dashboard.Activity.UnknownProject", "Unknown project");
-                        var subtitle = a.Subtitle switch
+                        string title = project != null ? project.Name : L("Dashboard.Activity.UnknownProject", "Unknown project");
+                        string subtitle = a.Subtitle switch
                         {
                             "auto"     => L("Dashboard.Activity.AutoBackup", "Auto backup created"),
                             "manual"   => L("Dashboard.Activity.ManualBackup", "Manual backup created"),
                             _          => L("Dashboard.Activity.SnapshotCreated", "Snapshot created")
                         };
-                        var tagsDisplay = string.Empty;
-                        var tagChips = Array.Empty<ProjectTagChip>();
+                        string tagsDisplay = string.Empty;
+                        ProjectTagChip[] tagChips = [];
                         if (project is not null)
                         {
-                            var tags = (project.Tags ?? string.Empty)
+                            string[] tags = [.. (project.Tags ?? string.Empty)
                                 .Split(',', StringSplitOptions.RemoveEmptyEntries)
                                 .Select(t => t.Trim())
                                 .Where(t => !string.IsNullOrWhiteSpace(t))
                                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .Take(3)
-                                .ToArray();
+                                .Take(3)];
                             if (tags.Length > 0)
                                 tagsDisplay = string.Join(" - ", tags);
-                            tagChips = ProjectTagAppearance.CreateChips(project.Tags, max: 3).ToArray();
+                            tagChips = [.. ProjectTagAppearance.CreateChips(project.Tags, max: 3)];
                         }
-                        var when = a.WhenUtc.ToLocalTime().ToString("g");
+                        string when = a.WhenUtc.ToLocalTime().ToString("g");
 
                         IBrush dotBrush;
                         if (project != null)
                         {
                             if (!projectDotBrushes.TryGetValue(project.Id, out dotBrush!))
                             {
-                                var color = projectPalette[paletteIndex % projectPalette.Length];
+                                Color color = projectPalette[paletteIndex % projectPalette.Length];
                                 dotBrush = GetBrush(color);
                                 projectDotBrushes[project.Id] = dotBrush;
                                 paletteIndex++;
@@ -732,32 +731,32 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     ActivityItems.Clear();
-                    foreach (var item in activityItems)
+                    foreach (ActivityItem item in activityItems)
                     {
                         ActivityItems.Add(item);
                     }
 
-                    for (var i = 0; i < _days.Length && i < data.DayLabels.Length; i++)
+                    for (int i = 0; i < _days.Length && i < data.DayLabels.Length; i++)
                     {
                         _days[i] = data.DayLabels[i];
                     }
                     Array.Clear(_snapshotCountsByDay, 0, _snapshotCountsByDay.Length);
-                    for (var i = 0; i < _snapshotCountsByDay.Length && i < data.SnapshotCounts.Length; i++)
+                    for (int i = 0; i < _snapshotCountsByDay.Length && i < data.SnapshotCounts.Length; i++)
                     {
                         _snapshotCountsByDay[i] = data.SnapshotCounts[i];
                     }
                     Array.Clear(_autoCountsByDay, 0, _autoCountsByDay.Length);
                     Array.Clear(_manualCountsByDay, 0, _manualCountsByDay.Length);
                     Array.Clear(_importedCountsByDay, 0, _importedCountsByDay.Length);
-                    for (var i = 0; i < _autoCountsByDay.Length && i < data.AutoCounts.Length; i++)
+                    for (int i = 0; i < _autoCountsByDay.Length && i < data.AutoCounts.Length; i++)
                     {
                         _autoCountsByDay[i] = data.AutoCounts[i];
                     }
-                    for (var i = 0; i < _manualCountsByDay.Length && i < data.ManualCounts.Length; i++)
+                    for (int i = 0; i < _manualCountsByDay.Length && i < data.ManualCounts.Length; i++)
                     {
                         _manualCountsByDay[i] = data.ManualCounts[i];
                     }
-                    for (var i = 0; i < _importedCountsByDay.Length && i < data.ImportedCounts.Length; i++)
+                    for (int i = 0; i < _importedCountsByDay.Length && i < data.ImportedCounts.Length; i++)
                     {
                         _importedCountsByDay[i] = data.ImportedCounts[i];
                     }
@@ -803,18 +802,18 @@ namespace VaultSync.UI.ViewModels
         {
             public AppConfig Config { get; init; } = new();
             public (double UsedPercent, string FreeText, string ThresholdText, bool IsBelowThreshold, string RiskReason, BackupDiskUsageStatus Status) DiskUsage;
-            public List<Project> Projects { get; init; } = new();
-            public List<(int? ProjectId, DateTime WhenUtc, string Subtitle)> Activities { get; init; } = new();
-            public List<(Project project, long bytes)> StorageSlices { get; init; } = new();
+            public List<Project> Projects { get; init; } = [];
+            public List<(int? ProjectId, DateTime WhenUtc, string Subtitle)> Activities { get; init; } = [];
+            public List<(Project project, long bytes)> StorageSlices { get; init; } = [];
             public long TotalLatestBytes { get; init; }
             public long TotalLocalBytes { get; init; }
             public int BackupCount { get; init; }
             public int BackupsThisWeekCount { get; init; }
-            public string[] DayLabels { get; init; } = Array.Empty<string>();
-            public double[] SnapshotCounts { get; init; } = Array.Empty<double>();
-            public int[] AutoCounts { get; init; } = Array.Empty<int>();
-            public int[] ManualCounts { get; init; } = Array.Empty<int>();
-            public int[] ImportedCounts { get; init; } = Array.Empty<int>();
+            public string[] DayLabels { get; init; } = [];
+            public double[] SnapshotCounts { get; init; } = [];
+            public int[] AutoCounts { get; init; } = [];
+            public int[] ManualCounts { get; init; } = [];
+            public int[] ImportedCounts { get; init; } = [];
             public RestoreReadinessSummary RestoreReadiness { get; init; } = new();
         }
 
@@ -840,51 +839,51 @@ namespace VaultSync.UI.ViewModels
         {
             WeeklySnapshotActivity.Clear();
 
-            var max = _snapshotCountsByDay.DefaultIfEmpty(0d).Max();
+            double max = _snapshotCountsByDay.DefaultIfEmpty(0d).Max();
             if (max < 1)
             {
                 max = 1;
             }
 
-            var chartHeight = max <= 2 ? 150d : (max <= 4 ? 170d : 188d);
+            double chartHeight = max <= 2 ? 150d : (max <= 4 ? 170d : 188d);
             const double barBase = 14;
-            var barRange = chartHeight - 30;
+            double barRange = chartHeight - 30;
             WeeklyChartHeight = chartHeight;
 
-            var avg = _snapshotCountsByDay.Length == 0 ? 0d : _snapshotCountsByDay.Average();
-            var avgNormalized = avg / max;
-            var avgHeight = avg <= 0 ? 0 : barBase + avgNormalized * barRange;
+            double avg = _snapshotCountsByDay.Length == 0 ? 0d : _snapshotCountsByDay.Average();
+            double avgNormalized = avg / max;
+            double avgHeight = avg <= 0 ? 0 : barBase + avgNormalized * barRange;
             const double labelOffset = 10;
             WeeklyAverageLineOffset = labelOffset + avgHeight;
             WeeklyAverageLabel = Lf("Dashboard.Chart.AvgLabel", "Avg {0:0.0}", avg);
 
-            for (var i = 0; i < _snapshotCountsByDay.Length && i < _days.Length; i++)
+            for (int i = 0; i < _snapshotCountsByDay.Length && i < _days.Length; i++)
             {
-                var autoCount = _autoCountsByDay[i];
-                var manualCount = _manualCountsByDay[i];
-                var importedCount = _importedCountsByDay[i];
-                var count = autoCount + manualCount + importedCount;
-                var normalized = count / max;
-                var totalHeight = count == 0 ? 0 : barBase + normalized * barRange;
-                var dayLabel = _days[i];
+                int autoCount = _autoCountsByDay[i];
+                int manualCount = _manualCountsByDay[i];
+                int importedCount = _importedCountsByDay[i];
+                int count = autoCount + manualCount + importedCount;
+                double normalized = count / max;
+                double totalHeight = count == 0 ? 0 : barBase + normalized * barRange;
+                string dayLabel = _days[i];
 
-                var tooltip = count == 0
+                string tooltip = count == 0
                     ? Lf("Dashboard.Chart.TooltipNone", "{0}: No backups", dayLabel)
                     : Lf("Dashboard.Chart.TooltipBreakdown", "{0}: {1} auto, {2} manual, {3} imported", dayLabel, autoCount, manualCount, importedCount);
 
-                var autoHeight = 0d;
-                var manualHeight = 0d;
-                var importedHeight = 0d;
+                double autoHeight = 0d;
+                double manualHeight = 0d;
+                double importedHeight = 0d;
                 if (count > 0)
                 {
                     autoHeight = autoCount == 0 ? 0 : Math.Max(6, totalHeight * autoCount / count);
                     manualHeight = manualCount == 0 ? 0 : Math.Max(6, totalHeight * manualCount / count);
                     importedHeight = importedCount == 0 ? 0 : Math.Max(6, totalHeight * importedCount / count);
 
-                    var combined = autoHeight + manualHeight + importedHeight;
+                    double combined = autoHeight + manualHeight + importedHeight;
                     if (combined > totalHeight && combined > 0)
                     {
-                        var scale = totalHeight / combined;
+                        double scale = totalHeight / combined;
                         autoHeight *= scale;
                         manualHeight *= scale;
                         importedHeight *= scale;
@@ -913,39 +912,37 @@ namespace VaultSync.UI.ViewModels
 
         private void BuildStorageDonut(IReadOnlyList<(Project project, long bytes)> perProject)
         {
-            _lastStorageSlices = perProject ?? Array.Empty<(Project project, long bytes)>();
+            _lastStorageSlices = perProject ?? [];
 
             // If we have no per-project data, show an empty donut.
             if (_lastStorageSlices.Count == 0)
             {
-                StorageSeries = Array.Empty<ISeries>();
-                StorageLegend = Array.Empty<LegendItem>();
+                StorageSeries = [];
+                StorageLegend = [];
                 OnPropertyChanged(nameof(StorageSeries));
                 OnPropertyChanged(nameof(HasStorageSeries));
                 OnPropertyChanged(nameof(StorageLegend));
                 return;
             }
 
-            var total = _lastStorageSlices.Sum(p => p.bytes);
+            long total = _lastStorageSlices.Sum(p => p.bytes);
             if (total <= 0)
             {
-                StorageSeries = Array.Empty<ISeries>();
-                StorageLegend = Array.Empty<LegendItem>();
+                StorageSeries = [];
+                StorageLegend = [];
                 OnPropertyChanged(nameof(StorageSeries));
                 OnPropertyChanged(nameof(HasStorageSeries));
                 OnPropertyChanged(nameof(StorageLegend));
                 return;
             }
-            var orderedSlices = (_selectedStorageSortOption?.Mode ?? StorageLegendSortMode.LargestFirst) switch
+            List<(Project project, long bytes)> orderedSlices = (_selectedStorageSortOption?.Mode ?? StorageLegendSortMode.LargestFirst) switch
             {
-                StorageLegendSortMode.Alphabetical => _lastStorageSlices
+                StorageLegendSortMode.Alphabetical => [.. _lastStorageSlices
                     .OrderBy(x => x.project.Name, StringComparer.CurrentCultureIgnoreCase)
-                    .ThenByDescending(x => x.bytes)
-                    .ToList(),
-                _ => _lastStorageSlices
+                    .ThenByDescending(x => x.bytes)],
+                _ => [.. _lastStorageSlices
                     .OrderByDescending(x => x.bytes)
-                    .ThenBy(x => x.project.Name, StringComparer.CurrentCultureIgnoreCase)
-                    .ToList()
+                    .ThenBy(x => x.project.Name, StringComparer.CurrentCultureIgnoreCase)]
             };
 
             var series = new List<ISeries>();
@@ -953,18 +950,18 @@ namespace VaultSync.UI.ViewModels
 
             for (int i = 0; i < orderedSlices.Count; i++)
             {
-                var (project, bytes) = orderedSlices[i];
+                (Project project, long bytes) = orderedSlices[i];
                 if (bytes <= 0) continue;
 
-                var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
-                var color = SKColors.DodgerBlue;
+                string colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
+                SKColor color = SKColors.DodgerBlue;
                 if (!SKColor.TryParse(colorHex, out color))
                 {
                     color = SKColors.DodgerBlue;
                 }
-                var projectName = project.Name;
-                var displayProjectName = TrimForTooltip(projectName, 28);
-                var sliceBytes = bytes;
+                string projectName = project.Name;
+                string displayProjectName = TrimForTooltip(projectName, 28);
+                long sliceBytes = bytes;
 
                 series.Add(new PieSeries<double>
                 {
@@ -983,15 +980,15 @@ namespace VaultSync.UI.ViewModels
 
             if (series.Count == 0)
             {
-                StorageSeries = Array.Empty<ISeries>();
-                StorageLegend = Array.Empty<LegendItem>();
+                StorageSeries = [];
+                StorageLegend = [];
                 OnPropertyChanged(nameof(StorageSeries));
                 OnPropertyChanged(nameof(HasStorageSeries));
                 OnPropertyChanged(nameof(StorageLegend));
                 return;
             }
 
-            StorageSeries = series.ToArray();
+            StorageSeries = [.. series];
             StorageLegend = legend;
 
             OnPropertyChanged(nameof(StorageSeries));
@@ -1015,7 +1012,7 @@ namespace VaultSync.UI.ViewModels
             Array.Clear(_manualCountsByDay, 0, _manualCountsByDay.Length);
             Array.Clear(_importedCountsByDay, 0, _importedCountsByDay.Length);
             WeeklySnapshotActivity.Clear();
-            SnapshotSeries = Array.Empty<ISeries>();
+            SnapshotSeries = [];
             OnPropertyChanged(nameof(SnapshotSeries));
 
             ProjectCount   = 0;
@@ -1027,9 +1024,9 @@ namespace VaultSync.UI.ViewModels
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
             ApplyRestoreReadinessSummary(new RestoreReadinessSummary());
 
-            BuildStorageDonut(Array.Empty<(Project project, long bytes)>());
-            var cfg = AppConfigStore.GetSnapshot();
-            BuildBackupUsageBar(cfg, Array.Empty<(Project project, long bytes)>());
+            BuildStorageDonut([]);
+            AppConfig cfg = AppConfigStore.GetSnapshot();
+            BuildBackupUsageBar(cfg, []);
             OnPropertyChanged(nameof(TotalSnapshotsWeek));
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
         }
@@ -1039,14 +1036,14 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 // Default to empty segments if backup root is not configured.
-                var backupRoot = config.Backups.BackupLocation;
+                string? backupRoot = config.Backups.BackupLocation;
         if (string.IsNullOrWhiteSpace(backupRoot))
         {
-            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-            BackupTopConsumers = Array.Empty<BackupUsageSegment>();
-            BackupUsageSeries   = Array.Empty<ISeries>();
-            BackupUsageXAxes    = Array.Empty<Axis>();
-            BackupUsageYAxes    = Array.Empty<Axis>();
+            BackupUsageSegments = [];
+            BackupTopConsumers = [];
+            BackupUsageSeries   = [];
+            BackupUsageXAxes    = [];
+            BackupUsageYAxes    = [];
 
             OnPropertyChanged(nameof(BackupUsageSegments));
             OnPropertyChanged(nameof(BackupTopConsumers));
@@ -1057,11 +1054,11 @@ namespace VaultSync.UI.ViewModels
             return;
         }
 
-        var vaultSyncBytes = perProject?.Sum(p => p.bytes) ?? 0L;
+                long vaultSyncBytes = perProject?.Sum(p => p.bytes) ?? 0L;
 
         if (OperatingSystem.IsMacOS() && IsNetworkPath(backupRoot))
         {
-            if (!TryResolveMountedSharePath(backupRoot, out var mountedRoot))
+            if (!TryResolveMountedSharePath(backupRoot, out string? mountedRoot))
             {
                 BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
                 return;
@@ -1074,20 +1071,20 @@ namespace VaultSync.UI.ViewModels
             backupRoot = Path.GetFullPath(backupRoot);
         }
 
-        if (!TryGetDiskSpace(backupRoot, out var totalBytes, out var freeBytes) || totalBytes <= 0)
+        if (!TryGetDiskSpace(backupRoot, out long totalBytes, out long freeBytes) || totalBytes <= 0)
         {
             BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
             return;
         }
 
-        var usedBytes  = Math.Max(0L, totalBytes - freeBytes);
+                long usedBytes  = Math.Max(0L, totalBytes - freeBytes);
 
         if (totalBytes <= 0)
         {
-            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-            BackupUsageSeries   = Array.Empty<ISeries>();
-            BackupUsageXAxes    = Array.Empty<Axis>();
-            BackupUsageYAxes    = Array.Empty<Axis>();
+            BackupUsageSegments = [];
+            BackupUsageSeries   = [];
+            BackupUsageXAxes    = [];
+            BackupUsageYAxes    = [];
 
             OnPropertyChanged(nameof(BackupUsageSegments));
             OnPropertyChanged(nameof(BackupUsageSeries));
@@ -1099,17 +1096,17 @@ namespace VaultSync.UI.ViewModels
         // Sum of the latest snapshot sizes per project (VaultSync usage approximation).
         if (vaultSyncBytes < 0) vaultSyncBytes = 0;
 
-        // Percentages of the total backup disk.
-        var usedPercentTotal = usedBytes        * 100d / totalBytes;
-        var vaultSyncPercent = vaultSyncBytes   * 100d / totalBytes;
-        var otherPercent     = Math.Max(0d, usedPercentTotal - vaultSyncPercent);
+                // Percentages of the total backup disk.
+                double usedPercentTotal = usedBytes        * 100d / totalBytes;
+                double vaultSyncPercent = vaultSyncBytes   * 100d / totalBytes;
+                double otherPercent     = Math.Max(0d, usedPercentTotal - vaultSyncPercent);
 
         var segments = new List<BackupUsageSegment>();
         const int maxProjectSegments = 5;
 
-        // 1) Other segment (non-VaultSync usage on the backup drive).
-        // This is both in the legend and in the overlay bar.
-        var otherBytes = Math.Max(0L, usedBytes - vaultSyncBytes);
+                // 1) Other segment (non-VaultSync usage on the backup drive).
+                // This is both in the legend and in the overlay bar.
+                long otherBytes = Math.Max(0L, usedBytes - vaultSyncBytes);
         if (otherPercent > 0)
         {
             segments.Add(new BackupUsageSegment(
@@ -1120,8 +1117,8 @@ namespace VaultSync.UI.ViewModels
                 Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", L("Dashboard.Storage.Other", "Other"), FormatBytes(otherBytes))));
         }
 
-        // 2) One segment per project for its latest snapshot size, as percent of total disk.
-        var addedProjectSegments = 0;
+                // 2) One segment per project for its latest snapshot size, as percent of total disk.
+                int addedProjectSegments = 0;
         if (perProject != null)
         {
             var orderedProjects = perProject
@@ -1132,9 +1129,9 @@ namespace VaultSync.UI.ViewModels
             var visibleProjects = orderedProjects.Take(maxProjectSegments).ToList();
             var remainingProjects = orderedProjects.Skip(maxProjectSegments).ToList();
 
-            foreach (var (project, bytes) in visibleProjects)
+            foreach ((Project project, long bytes) in visibleProjects)
             {
-                var projectPercent = bytes * 100d / totalBytes;
+                        double projectPercent = bytes * 100d / totalBytes;
                 // Keep legend/segment presence stable even when disk is huge and
                 // floating-point math yields near-zero percentages.
                 if (projectPercent <= 0)
@@ -1142,9 +1139,9 @@ namespace VaultSync.UI.ViewModels
                     projectPercent = 0.0001d;
                 }
 
-                var colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
+                        string colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
                 var color = Color.Parse(colorHex);
-                var displayName = TrimForTooltip(project.Name, 26);
+                        string displayName = TrimForTooltip(project.Name, 26);
 
                 segments.Add(new BackupUsageSegment(
                     displayName,
@@ -1157,8 +1154,8 @@ namespace VaultSync.UI.ViewModels
 
             if (remainingProjects.Count > 0)
             {
-                var remainingBytes = remainingProjects.Sum(x => x.bytes);
-                var remainingPercent = remainingBytes * 100d / totalBytes;
+                        long remainingBytes = remainingProjects.Sum(x => x.bytes);
+                        double remainingPercent = remainingBytes * 100d / totalBytes;
                 if (remainingPercent <= 0)
                     remainingPercent = 0.0001d;
 
@@ -1188,7 +1185,7 @@ namespace VaultSync.UI.ViewModels
         // Build stacked RowSeries for the colored bar (Other + VaultSync projects).
         if (segments.Count == 0)
         {
-            BackupUsageSeries = Array.Empty<ISeries>();
+            BackupUsageSeries = [];
             BackupUsageXAxes  = new[]
             {
                 new Axis
@@ -1216,10 +1213,10 @@ namespace VaultSync.UI.ViewModels
             return;
         }
 
-        var totalShown = segments.Sum(s => s.SizeBytes);
+                double totalShown = segments.Sum(s => s.SizeBytes);
         if (totalShown <= 0)
         {
-            BackupUsageSeries = Array.Empty<ISeries>();
+            BackupUsageSeries = [];
             BackupUsageXAxes  = new[]
             {
                 new Axis
@@ -1248,7 +1245,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         var series = new List<ISeries>();
-        foreach (var seg in segments)
+        foreach (BackupUsageSegment seg in segments)
         {
             if (seg.SizeBytes <= 0)
                 continue;
@@ -1270,7 +1267,7 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        BackupUsageSeries = series.ToArray();
+        BackupUsageSeries = [.. series];
 
         BackupUsageXAxes = new[]
         {
@@ -1302,11 +1299,11 @@ namespace VaultSync.UI.ViewModels
     {
         Console.WriteLine($"[Dashboard] Backup usage bar failed: {ex.Message}");
 
-        BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-        BackupTopConsumers = Array.Empty<BackupUsageSegment>();
-        BackupUsageSeries   = Array.Empty<ISeries>();
-        BackupUsageXAxes    = Array.Empty<Axis>();
-        BackupUsageYAxes    = Array.Empty<Axis>();
+        BackupUsageSegments = [];
+        BackupTopConsumers = [];
+        BackupUsageSeries   = [];
+        BackupUsageXAxes    = [];
+        BackupUsageYAxes    = [];
 
         OnPropertyChanged(nameof(BackupUsageSegments));
         OnPropertyChanged(nameof(BackupTopConsumers));
@@ -1321,11 +1318,11 @@ namespace VaultSync.UI.ViewModels
         {
             if (vaultSyncBytes <= 0 || perProject == null || perProject.Count == 0)
             {
-            BackupUsageSegments = Array.Empty<BackupUsageSegment>();
-            BackupTopConsumers = Array.Empty<BackupUsageSegment>();
-            BackupUsageSeries   = Array.Empty<ISeries>();
-            BackupUsageXAxes    = Array.Empty<Axis>();
-            BackupUsageYAxes    = Array.Empty<Axis>();
+            BackupUsageSegments = [];
+            BackupTopConsumers = [];
+            BackupUsageSeries   = [];
+            BackupUsageXAxes    = [];
+            BackupUsageYAxes    = [];
 
             OnPropertyChanged(nameof(BackupUsageSegments));
             OnPropertyChanged(nameof(BackupTopConsumers));
@@ -1338,7 +1335,7 @@ namespace VaultSync.UI.ViewModels
 
             var segments = new List<BackupUsageSegment>();
             const int maxProjectSegments = 5;
-            var projectPalette = new[]
+            Color[] projectPalette = new[]
             {
                 Color.Parse("#4C8DFF"),
                 Color.Parse("#FFB84C"),
@@ -1347,18 +1344,18 @@ namespace VaultSync.UI.ViewModels
                 Color.Parse("#9B6BFF")
             };
 
-            var index = 0;
+            int index = 0;
             var orderedProjects = perProject
                 .Where(p => p.bytes > 0)
                 .OrderByDescending(p => p.bytes)
                 .ToList();
 
-            foreach (var (project, bytes) in orderedProjects.Take(maxProjectSegments))
+            foreach ((Project project, long bytes) in orderedProjects.Take(maxProjectSegments))
             {
-                var percent = bytes * 100d / vaultSyncBytes;
+                double percent = bytes * 100d / vaultSyncBytes;
                 if (percent <= 0) continue;
 
-                var color = projectPalette[index % projectPalette.Length];
+                Color color = projectPalette[index % projectPalette.Length];
                 index++;
 
                 segments.Add(new BackupUsageSegment(
@@ -1372,8 +1369,8 @@ namespace VaultSync.UI.ViewModels
             var remainingProjects = orderedProjects.Skip(maxProjectSegments).ToList();
             if (remainingProjects.Count > 0)
             {
-                var remainingBytes = remainingProjects.Sum(x => x.bytes);
-                var remainingPercent = remainingBytes * 100d / vaultSyncBytes;
+                long remainingBytes = remainingProjects.Sum(x => x.bytes);
+                double remainingPercent = remainingBytes * 100d / vaultSyncBytes;
                 if (remainingPercent > 0)
                 {
                     segments.Add(new BackupUsageSegment(
@@ -1392,7 +1389,7 @@ namespace VaultSync.UI.ViewModels
 
             if (segments.Count == 0)
             {
-                BackupUsageSeries = Array.Empty<ISeries>();
+                BackupUsageSeries = [];
                 BackupUsageXAxes  = new[]
                 {
                     new Axis
@@ -1421,7 +1418,7 @@ namespace VaultSync.UI.ViewModels
             }
 
             var series = new List<ISeries>();
-            foreach (var seg in segments)
+            foreach (BackupUsageSegment seg in segments)
             {
                 if (seg.SizeBytes <= 0)
                     continue;
@@ -1443,7 +1440,7 @@ namespace VaultSync.UI.ViewModels
                 });
             }
 
-            BackupUsageSeries = series.ToArray();
+            BackupUsageSeries = [.. series];
 
             BackupUsageXAxes = new[]
             {
@@ -1472,23 +1469,23 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(BackupUsageYAxes));
         }
 
-        private IReadOnlyList<BackupUsageSegment> BuildTopConsumerList(IReadOnlyList<BackupUsageSegment> segments)
+        private static IReadOnlyList<BackupUsageSegment> BuildTopConsumerList(IReadOnlyList<BackupUsageSegment> segments)
         {
             if (segments.Count == 0)
-                return Array.Empty<BackupUsageSegment>();
+                return [];
 
             var projectSegments = segments
                 .Where(s => !string.Equals(s.Name, L("Dashboard.Storage.Other", "Other"), StringComparison.Ordinal))
                 .ToList();
 
             if (projectSegments.Count == 0)
-                return Array.Empty<BackupUsageSegment>();
+                return [];
 
             const int maxVisibleRows = 5;
             if (projectSegments.Count <= maxVisibleRows)
                 return projectSegments;
 
-            var hasAggregateTail = projectSegments[^1].Name.StartsWith("+ ", StringComparison.Ordinal);
+            bool hasAggregateTail = projectSegments[^1].Name.StartsWith("+ ", StringComparison.Ordinal);
             if (!hasAggregateTail)
                 return projectSegments.Take(maxVisibleRows).ToList();
 
@@ -1520,12 +1517,12 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var thresholdText = string.Format(
+                string thresholdText = string.Format(
                     L("Dashboard.Storage.Threshold", "Keep at least {0}% free space"),
                     config.Storage.MinFreeSpacePercent);
 
                 // Use the backup root from config; if not configured, show a hint.
-                var backupRoot = config.Backups.BackupLocation;
+                string? backupRoot = config.Backups.BackupLocation;
                 if (string.IsNullOrWhiteSpace(backupRoot))
                 {
                     return (
@@ -1540,7 +1537,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (OperatingSystem.IsMacOS() && IsNetworkPath(backupRoot))
                 {
-                    if (!TryResolveMountedSharePath(backupRoot, out var mountedRoot))
+                    if (!TryResolveMountedSharePath(backupRoot, out string? mountedRoot))
                     {
                         return (
                             0d,
@@ -1559,7 +1556,7 @@ namespace VaultSync.UI.ViewModels
                     backupRoot = Path.GetFullPath(backupRoot);
                 }
 
-                if (!TryGetDiskSpace(backupRoot, out var total, out var free))
+                if (!TryGetDiskSpace(backupRoot, out long total, out long free))
                 {
                     return (
                         0d,
@@ -1583,18 +1580,18 @@ namespace VaultSync.UI.ViewModels
                     );
                 }
 
-                var used        = total - free;
-                var usedPercent = (double)used / total * 100d;
-                var freePercent = (double)free / total * 100d;
+                long used        = total - free;
+                double usedPercent = (double)used / total * 100d;
+                double freePercent = (double)free / total * 100d;
 
-                var freeText = string.Format(
+                string freeText = string.Format(
                     L("Dashboard.Storage.FreeText", "Free {0} of {1} ({2}%)"),
                     FormatBytes(free),
                     FormatBytes(total),
                     freePercent.ToString("0.#"));
-                var isBelowThreshold = freePercent < config.Storage.MinFreeSpacePercent;
+                bool isBelowThreshold = freePercent < config.Storage.MinFreeSpacePercent;
 
-                var riskReason = isBelowThreshold
+                string riskReason = isBelowThreshold
                     ? string.Format(
                         L("Dashboard.Storage.Risk.LowFreeSpace", "Free space dropped below the configured {0}% safety threshold, so future backups may fail or force retention cleanup."),
                         config.Storage.MinFreeSpacePercent)
@@ -1618,7 +1615,7 @@ namespace VaultSync.UI.ViewModels
         public static (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold)
             ComputeBackupDiskUsage(AppConfig config)
         {
-            var (usedPercent, freeText, thresholdText, isBelowThreshold, _, _) = ComputeBackupDiskUsageDetailed(config);
+            (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string _, BackupDiskUsageStatus _) = ComputeBackupDiskUsageDetailed(config);
             return (usedPercent, freeText, thresholdText, isBelowThreshold);
         }
 
@@ -1632,7 +1629,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(fullPath))
                 return string.Empty;
 
-            var normalized = Path.GetFullPath(fullPath);
+            string normalized = Path.GetFullPath(fullPath);
 
             if (OperatingSystem.IsWindows())
             {
@@ -1642,7 +1639,7 @@ namespace VaultSync.UI.ViewModels
             // macOS external disks live under /Volumes/<Name>; keep the mount path.
             if (normalized.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
             {
-                var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length >= 2)
                 {
                     return "/Volumes/" + parts[1];
@@ -1670,24 +1667,24 @@ namespace VaultSync.UI.ViewModels
             if (!OperatingSystem.IsMacOS() || string.IsNullOrWhiteSpace(originalPath))
                 return false;
 
-            if (!TryParseShareWithSubpath(originalPath, out var host, out var share, out var subPath))
+            if (!TryParseShareWithSubpath(originalPath, out string? host, out string? share, out string? subPath))
                 return false;
 
-            var mountPoint = TryGetMountedSharePath(host, share);
+            string mountPoint = TryGetMountedSharePath(host, share);
             if (!string.IsNullOrWhiteSpace(mountPoint))
             {
                 mountedPath = AppendShareSubPath(mountPoint, subPath);
                 return true;
             }
 
-            var mountRoot = GetMacMountRoot();
-            if (TryFindMountByName(share, mountRoot, out var rootMatch))
+            string mountRoot = GetMacMountRoot();
+            if (TryFindMountByName(share, mountRoot, out string? rootMatch))
             {
                 mountedPath = AppendShareSubPath(rootMatch, subPath);
                 return true;
             }
 
-            if (TryFindMountByName(share, "/Volumes", out var volumesMatch))
+            if (TryFindMountByName(share, "/Volumes", out string? volumesMatch))
             {
                 mountedPath = AppendShareSubPath(volumesMatch, subPath);
                 return true;
@@ -1707,11 +1704,11 @@ namespace VaultSync.UI.ViewModels
 
             if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
             {
-                if (!Uri.TryCreate(path, UriKind.Absolute, out var uri))
+                if (!Uri.TryCreate(path, UriKind.Absolute, out Uri? uri))
                     return false;
 
                 host = uri.Host;
-                var segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (segments.Length == 0)
                     return false;
 
@@ -1725,8 +1722,8 @@ namespace VaultSync.UI.ViewModels
             if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
             {
-                var trimmed = path.TrimStart('\\', '/').Replace('\\', FormatSeparator);
-                var parts = trimmed.Split(FormatSeparator, StringSplitOptions.RemoveEmptyEntries);
+                string trimmed = path.TrimStart('\\', '/').Replace('\\', FormatSeparator);
+                string[] parts = trimmed.Split(FormatSeparator, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length < 2)
                     return false;
 
@@ -1752,14 +1749,14 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(subPath))
                 return mountPoint;
 
-            var cleaned = subPath.Trim().TrimStart('/', '\\');
+            string cleaned = subPath.Trim().TrimStart('/', '\\');
             if (string.IsNullOrWhiteSpace(cleaned))
                 return mountPoint;
 
-            var segments = cleaned.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] segments = cleaned.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
             return segments.Length == 0
                 ? mountPoint
-                : Path.Combine(new[] { mountPoint }.Concat(segments).ToArray());
+                : Path.Combine([mountPoint, .. segments]);
         }
 
         private const char FormatSeparator = '/';
@@ -1774,11 +1771,11 @@ namespace VaultSync.UI.ViewModels
 
             if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
             {
-                if (!Uri.TryCreate(path, UriKind.Absolute, out var uri))
+                if (!Uri.TryCreate(path, UriKind.Absolute, out Uri? uri))
                     return false;
 
                 host = uri.Host;
-                var segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (segments.Length == 0)
                     return false;
 
@@ -1789,8 +1786,8 @@ namespace VaultSync.UI.ViewModels
             if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
             {
-                var trimmed = path.TrimStart('\\', '/').Replace('\\', '/');
-                var parts = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string trimmed = path.TrimStart('\\', '/').Replace('\\', '/');
+                string[] parts = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length < 2)
                     return false;
 
@@ -1834,27 +1831,27 @@ namespace VaultSync.UI.ViewModels
                     return string.Empty;
 
                 proc.WaitForExit(3_000);
-                var output = proc.StandardOutput.ReadToEnd();
+                string output = proc.StandardOutput.ReadToEnd();
                 if (string.IsNullOrWhiteSpace(output))
                     return string.Empty;
 
-                var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                foreach (var line in lines)
+                string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (string line in lines)
                 {
                     if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                    int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
                     if (onIndex <= 0)
                         continue;
 
-                    var source = line.Substring(0, onIndex).Trim();
-                    var rest = line.Substring(onIndex + 4);
-                    var mountPoint = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                    string source = line.Substring(0, onIndex).Trim();
+                    string rest = line.Substring(onIndex + 4);
+                    string mountPoint = rest.Split(" (", StringSplitOptions.None)[0].Trim();
                     if (string.IsNullOrWhiteSpace(mountPoint))
                         continue;
 
-                    if (!TryParseShare(source, out var mountedHost, out var mountedShare))
+                    if (!TryParseShare(source, out string? mountedHost, out string? mountedShare))
                         continue;
 
                     if (string.Equals(host, mountedHost, StringComparison.OrdinalIgnoreCase) &&
@@ -1883,14 +1880,14 @@ namespace VaultSync.UI.ViewModels
                 if (!Directory.Exists(rootPath))
                     return false;
 
-                var exact = Path.Combine(rootPath, share);
+                string exact = Path.Combine(rootPath, share);
                 if (Directory.Exists(exact))
                 {
                     mountedPath = exact;
                     return true;
                 }
 
-                var match = Directory.EnumerateDirectories(rootPath)
+                string? match = Directory.EnumerateDirectories(rootPath)
                     .FirstOrDefault(dir =>
                         string.Equals(Path.GetFileName(dir), share, StringComparison.OrdinalIgnoreCase));
                 if (string.IsNullOrWhiteSpace(match))
@@ -1907,7 +1904,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string GetMacMountRoot()
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             return Path.Combine(home, "Library", "Application Support", "VaultSync", "mounts");
         }
 
@@ -1921,14 +1918,14 @@ namespace VaultSync.UI.ViewModels
                 if (string.IsNullOrWhiteSpace(path))
                     return false;
 
-                var fullPath = Path.GetFullPath(path);
+                string fullPath = Path.GetFullPath(path);
 
                 if (OperatingSystem.IsWindows())
                 {
                     if (!GetDiskFreeSpaceEx(
                             fullPath,
-                            out var freeBytesAvailable,
-                            out var totalNumberOfBytes,
+                            out ulong freeBytesAvailable,
+                            out ulong totalNumberOfBytes,
                             out _))
                     {
                         return false;
@@ -1939,7 +1936,7 @@ namespace VaultSync.UI.ViewModels
                     return totalBytes > 0;
                 }
 
-                var drivePath = GetDriveInfoPath(fullPath);
+                string drivePath = GetDriveInfoPath(fullPath);
                 if (string.IsNullOrWhiteSpace(drivePath))
                     return false;
 
@@ -1966,7 +1963,7 @@ namespace VaultSync.UI.ViewModels
 
         private void UpdateBackupDiskUsage(AppConfig config)
         {
-            var (usedPercent, freeText, thresholdText, isBelowThreshold, riskReason, _) =
+            (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string riskReason, BackupDiskUsageStatus _) =
                 ComputeBackupDiskUsageDetailed(config);
 
             BackupDiskUsedPercent      = usedPercent;
@@ -1979,11 +1976,11 @@ namespace VaultSync.UI.ViewModels
         private void UpdateBackupSummaryPills()
         {
             // Dashboard tracks the last 7 days (UTC date, including today) in the chart arrays.
-            var todayCount = _snapshotCountsByDay.Length > 0 ? (int)_snapshotCountsByDay[^1] : 0;
-            var autoWeek = _autoCountsByDay.Sum();
-            var manualWeek = _manualCountsByDay.Sum();
-            var importedWeek = _importedCountsByDay.Sum();
-            var weekTotal = autoWeek + manualWeek + importedWeek;
+            int todayCount = _snapshotCountsByDay.Length > 0 ? (int)_snapshotCountsByDay[^1] : 0;
+            int autoWeek = _autoCountsByDay.Sum();
+            int manualWeek = _manualCountsByDay.Sum();
+            int importedWeek = _importedCountsByDay.Sum();
+            int weekTotal = autoWeek + manualWeek + importedWeek;
 
             SnapshotsSummaryLine = Lf(
                 "Backups.Summary.TodayWeek",
@@ -2009,14 +2006,14 @@ namespace VaultSync.UI.ViewModels
 
         private static double[] MovingAverage(IReadOnlyList<double> v, int window)
         {
-            if (window <= 1) return v.ToArray();
-            var r = new double[v.Count];
-            for (var i = 0; i < v.Count; i++)
+            if (window <= 1) return [.. v];
+            double[] r = new double[v.Count];
+            for (int i = 0; i < v.Count; i++)
             {
-                var start = Math.Max(0, i - (window - 1));
-                var count = i - start + 1;
+                int start = Math.Max(0, i - (window - 1));
+                int count = i - start + 1;
                 double sum = 0;
-                for (var j = start; j <= i; j++) sum += v[j];
+                for (int j = start; j <= i; j++) sum += v[j];
                 r[i] = sum / count;
             }
             return r;
@@ -2039,8 +2036,8 @@ namespace VaultSync.UI.ViewModels
 
         private static string L(string key, string fallback)
         {
-            var loc = LocalizationProvider.Service;
-            var value = loc?.GetString(key);
+            LocalizationService? loc = LocalizationProvider.Service;
+            string? value = loc?.GetString(key);
             return string.IsNullOrWhiteSpace(value) ? fallback : value;
         }
 
@@ -2095,7 +2092,7 @@ namespace VaultSync.UI.ViewModels
 
         private void RebuildStorageSortOptions()
         {
-            var selectedMode = _selectedStorageSortOption?.Mode ?? StorageLegendSortMode.LargestFirst;
+            StorageLegendSortMode selectedMode = _selectedStorageSortOption?.Mode ?? StorageLegendSortMode.LargestFirst;
             StorageSortOptions.Clear();
             StorageSortOptions.Add(new StorageLegendSortOption(
                 StorageLegendSortMode.LargestFirst,
@@ -2104,7 +2101,7 @@ namespace VaultSync.UI.ViewModels
                 StorageLegendSortMode.Alphabetical,
                 L("Dashboard.Storage.Sort.Alphabetical", "A-Z")));
 
-            var match = StorageSortOptions.FirstOrDefault(x => x.Mode == selectedMode) ?? StorageSortOptions[0];
+            StorageLegendSortOption match = StorageSortOptions.FirstOrDefault(x => x.Mode == selectedMode) ?? StorageSortOptions[0];
             _selectedStorageSortOption = match;
             OnPropertyChanged(nameof(SelectedStorageSortOption));
             RebuildStorageDonut();
@@ -2133,7 +2130,7 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessUnavailableLabel = Lf("RestoreReadiness.Count.Unavailable", "{0} unavailable", summary.UnavailableCount);
 
             RestoreReadinessIssues.Clear();
-            foreach (var item in summary.Projects
+            foreach (ProjectRestoreReadiness? item in summary.Projects
                          .Where(project => project.State != RestoreReadinessState.Ready)
                          .OrderByDescending(project => project.State == RestoreReadinessState.Risk)
                          .ThenByDescending(project => project.State == RestoreReadinessState.Unavailable)
@@ -2205,7 +2202,7 @@ namespace VaultSync.UI.ViewModels
         {
             if (bytes <= 0) return "0 B";
             string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-            var order = 0;
+            int order = 0;
             double len = bytes;
             while (len >= 1024 && order < sizes.Length - 1)
             {
@@ -2243,7 +2240,7 @@ namespace VaultSync.UI.ViewModels
                 When     = when;
                 DotBrush = dotBrush;
                 ProjectTagsDisplay = projectTagsDisplay ?? string.Empty;
-                ProjectTagChips = new ObservableCollection<ProjectTagChip>(projectTagChips ?? Array.Empty<ProjectTagChip>());
+                ProjectTagChips = new ObservableCollection<ProjectTagChip>(projectTagChips ?? []);
             }
 
             // Backwards-compatible constructor for simple fixed dots.

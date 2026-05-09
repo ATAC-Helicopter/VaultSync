@@ -18,7 +18,7 @@ namespace VaultSync.UI.Views
             if (DataContext is not BackupsViewModel vm)
                 return;
 
-            var width = Bounds.Width > 0 ? Bounds.Width : Width;
+            double width = Bounds.Width > 0 ? Bounds.Width : Width;
             if (width <= 0)
                 return;
 

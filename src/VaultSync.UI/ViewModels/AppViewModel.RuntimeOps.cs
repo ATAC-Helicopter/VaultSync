@@ -54,13 +54,14 @@ namespace VaultSync.UI.ViewModels
                 TimeSpan.FromMinutes(10),
                 TimeSpan.FromMinutes(10));
 
-            var initialDelay = DateTime.UtcNow - _appStartUtc < DestinationProbeStartupDelay
+            TimeSpan initialDelay = DateTime.UtcNow - _appStartUtc < DestinationProbeStartupDelay
                 ? DestinationProbeStartupDelay
                 : TimeSpan.Zero;
             _ = Task.Run(async () =>
             {
                 if (initialDelay > TimeSpan.Zero)
                     await Task.Delay(initialDelay).ConfigureAwait(false);
+                DiagnosticsLogger.Record("Destination startup probe running.");
                 await ProbeDestinationsAsync().ConfigureAwait(false);
             });
         }
@@ -72,18 +73,18 @@ namespace VaultSync.UI.ViewModels
 
         private IReadOnlyList<DestinationProbeSummary> GetDestinationProbeSummaries(AppConfig cfg)
         {
-            var destinations = GetActiveDestinations(cfg);
+            List<BackupDestination> destinations = GetActiveDestinations(cfg);
             if (destinations.Count == 0)
             {
                 _destinationProbeSummaries.Clear();
-                return Array.Empty<DestinationProbeSummary>();
+                return [];
             }
 
             var activeIds = new HashSet<string>(
                 destinations.Select(DestinationStatusItem.GetId),
                 StringComparer.OrdinalIgnoreCase);
 
-            foreach (var id in _destinationProbeSummaries.Keys.ToList())
+            foreach (string? id in _destinationProbeSummaries.Keys.ToList())
             {
                 if (!activeIds.Contains(id))
                 {
@@ -96,7 +97,7 @@ namespace VaultSync.UI.ViewModels
                 .OrderBy(s => s.Alias, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            var signature = BuildDestinationProbeSignature(summaries);
+            string signature = BuildDestinationProbeSignature(summaries);
             lock (_destinationProbeCacheGate)
             {
                 if (signature == _cachedDestinationProbeSignature &&
@@ -118,7 +119,7 @@ namespace VaultSync.UI.ViewModels
                 return string.Empty;
 
             var sb = new StringBuilder();
-            foreach (var summary in summaries)
+            foreach (DestinationProbeSummary summary in summaries)
             {
                 sb.Append(summary.Id).Append('|')
                   .Append(summary.Reachable).Append('|')
@@ -136,17 +137,17 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.GetSnapshot();
-                var destinations = GetActiveDestinations(cfg);
+                AppConfig cfg = AppConfigStore.GetSnapshot();
+                List<BackupDestination> destinations = GetActiveDestinations(cfg);
 
-                var now = DateTime.UtcNow;
-                foreach (var dest in destinations)
+                DateTime now = DateTime.UtcNow;
+                foreach (BackupDestination dest in destinations)
                 {
                     if (!dest.Active)
                         continue;
 
-                    var id = DestinationStatusItem.GetId(dest);
-                    _destinationProbeSummaries.TryGetValue(id, out var previous);
+                    string id = DestinationStatusItem.GetId(dest);
+                    _destinationProbeSummaries.TryGetValue(id, out DestinationProbeSummary? previous);
                     if (previous is not null &&
                         previous.Reachable &&
                         (now - previous.LastChecked) < DestinationProbeMinInterval)
@@ -162,7 +163,7 @@ namespace VaultSync.UI.ViewModels
                         continue;
                     }
 
-                    var result = await Task.Run(() => TryTestDestination(dest, cfg));
+                    DestinationTestResult result = await Task.Run(() => TryTestDestination(dest, cfg));
                     UpdateDestinationProbeSummary(dest, result);
 
                     if (result.Reachable && (previous is null || !previous.Reachable))
@@ -172,8 +173,8 @@ namespace VaultSync.UI.ViewModels
 
                     if (!result.Reachable && (previous is null || previous.Reachable))
                     {
-                        var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
-                        var message = string.IsNullOrWhiteSpace(result.Message)
+                        string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+                        string message = string.IsNullOrWhiteSpace(result.Message)
                             ? L("Destinations.Probe.DefaultHint", "Check mount/credentials.")
                             : result.Message;
                         GlobalNotificationCenter.Instance.Show(
@@ -195,15 +196,15 @@ namespace VaultSync.UI.ViewModels
 
         private void UpdateDestinationProbeSummary(BackupDestination dest, DestinationTestResult result)
         {
-            var id = DestinationStatusItem.GetId(dest);
-            var alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias ?? dest.Path ?? string.Empty;
-            var message = string.IsNullOrWhiteSpace(result.Message)
+            string id = DestinationStatusItem.GetId(dest);
+            string alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias ?? dest.Path ?? string.Empty;
+            string message = string.IsNullOrWhiteSpace(result.Message)
                 ? (result.Reachable
                     ? LStatic("Destinations.Test.Reachable", "Reachable")
                     : LStatic("Destinations.Test.Unavailable", "Unavailable"))
                 : result.Message;
 
-            var severity = result.Reachable
+            BackupsViewModel.SeverityStatus severity = result.Reachable
                 ? (result.Writable ? BackupsViewModel.SeverityStatus.Success : BackupsViewModel.SeverityStatus.Warning)
                 : BackupsViewModel.SeverityStatus.Error;
 
@@ -348,13 +349,13 @@ namespace VaultSync.UI.ViewModels
                 rotateButton.Classes.Add("action-primary");
 
                 Window? window = null;
-                var confirmed = false;
+                bool confirmed = false;
                 cancelButton.Click += (_, _) => window?.Close();
                 rotateButton.Click += (_, _) =>
                 {
-                    var oldPassword = oldPasswordBox.Text ?? string.Empty;
-                    var newPassword = newPasswordBox.Text ?? string.Empty;
-                    var newPasswordConfirm = confirmPasswordBox.Text ?? string.Empty;
+                    string oldPassword = oldPasswordBox.Text ?? string.Empty;
+                    string newPassword = newPasswordBox.Text ?? string.Empty;
+                    string newPasswordConfirm = confirmPasswordBox.Text ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(oldPassword) || string.IsNullOrWhiteSpace(newPassword))
                     {
                         validationText.Text = L("Settings.Encryption.RotateValidationPassword", "Both old and new passwords are required.");
@@ -406,7 +407,7 @@ namespace VaultSync.UI.ViewModels
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     window.Icon = owner.Icon;
@@ -445,11 +446,11 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var request = await ConfirmEncryptionRotationRequestAsync();
+            EncryptionRotationRequest request = await ConfirmEncryptionRotationRequestAsync();
             if (!request.Confirmed)
                 return;
 
-            var cfg = await Task.Run(AppConfigStore.Load);
+            AppConfig cfg = await Task.Run(AppConfigStore.Load);
             var projects = await Task.Run(() => _repo.GetAllProjects().ToList());
 
             Project? scopedProject = null;
@@ -466,11 +467,11 @@ namespace VaultSync.UI.ViewModels
                 }
             }
 
-            var targetProjects = scopedProject is null
+            List<Project> targetProjects = scopedProject is null
                 ? projects
-                : new List<Project> { scopedProject };
+                : [scopedProject];
 
-            var destinations = GetAllDestinations(cfg);
+            List<BackupDestination> destinations = GetAllDestinations(cfg);
             var rotationService = new BackupKeyRotationService();
             BackupsViewModel.IsBusy = true;
             BackupsViewModel.BusyMessage = L("Settings.Encryption.RotateBusy", "Rotating encrypted backups...");
@@ -478,27 +479,27 @@ namespace VaultSync.UI.ViewModels
             {
                 var summary = await Task.Run(() =>
                 {
-                    var succeeded = 0;
-                    var failed = 0;
-                    var skipped = 0;
+                    int succeeded = 0;
+                    int failed = 0;
+                    int skipped = 0;
                     var failureMessages = new List<string>();
 
-                    foreach (var project in targetProjects)
+                    foreach (Project project in targetProjects)
                     {
                         var backups = _repo.GetBackupsForProject(project.Id)
                             .Where(b => b.IsEncrypted)
                             .ToList();
 
-                        foreach (var backup in backups)
+                        foreach (Backup? backup in backups)
                         {
-                            var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
+                            string? backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
                             if (string.IsNullOrWhiteSpace(backupRoot) || string.IsNullOrWhiteSpace(backup.Path))
                             {
                                 skipped++;
                                 continue;
                             }
 
-                            var backupFolder = Path.Combine(backupRoot, backup.Path);
+                            string backupFolder = Path.Combine(backupRoot, backup.Path);
                             if (!Directory.Exists(backupFolder))
                             {
                                 skipped++;
@@ -507,7 +508,7 @@ namespace VaultSync.UI.ViewModels
 
                             try
                             {
-                                var result = rotationService.RotateEncryptedBackup(
+                                BackupKeyRotationService.RotationResult result = BackupKeyRotationService.RotateEncryptedBackup(
                                     backupFolder,
                                     request.OldPassword,
                                     request.NewPassword,
@@ -539,7 +540,7 @@ namespace VaultSync.UI.ViewModels
                     await _projectsViewModel.RefreshAsync();
                 }
 
-                foreach (var line in summary.failureMessages.Take(5))
+                foreach (string? line in summary.failureMessages.Take(5))
                 {
                     Console.WriteLine($"[Rotate] {line}");
                 }
@@ -552,7 +553,7 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                var message = Lf(
+                string message = Lf(
                     "Settings.Encryption.RotateSummary",
                     "Rotation complete. Succeeded: {0}, Failed: {1}, Skipped: {2}.",
                     summary.succeeded,
@@ -571,7 +572,7 @@ namespace VaultSync.UI.ViewModels
 
         private async Task RefreshMetadataNowAsync()
         {
-            var cfg = await Task.Run(AppConfigStore.Load);
+            AppConfig cfg = await Task.Run(AppConfigStore.Load);
             if (!cfg.Backups.EnableMetadataSync)
             {
                 Console.WriteLine("[MetadataSync] Refresh skipped: metadata sync disabled.");
@@ -579,19 +580,19 @@ namespace VaultSync.UI.ViewModels
             }
 
             Console.WriteLine("[MetadataSync] Manual refresh started.");
-            var refreshNeeded = false;
+            bool refreshNeeded = false;
 
             if (!string.IsNullOrWhiteSpace(cfg.ProjectsRoot))
             {
-                var options = new MetadataSyncOptions(
+                MetadataSyncOptions options = new MetadataSyncOptions(
                     AllowCreateProjects: true,
                     MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
                     .AsReadOnlySource();
-                var preview = await _metadataSyncService.PreviewImportFromStoreAsync(cfg.ProjectsRoot, options);
-                var label = L("MetadataSync.Review.SourceProjectsRoot", "Projects root");
+                MetadataSyncPreview preview = await _metadataSyncService.PreviewImportFromStoreAsync(cfg.ProjectsRoot, options);
+                string label = L("MetadataSync.Review.SourceProjectsRoot", "Projects root");
                     if (await ConfirmMetadataImportAsync(preview, label))
                     {
-                        var result = await _metadataSyncService.ImportFromStoreAsync(cfg.ProjectsRoot, options);
+                    MetadataSyncResult result = await _metadataSyncService.ImportFromStoreAsync(cfg.ProjectsRoot, options);
                         Console.WriteLine($"[MetadataSync] Manual refresh (projects root) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
                         _ = Task.Run(() => ApplyRetentionAfterMetadataImport(cfg.ProjectsRoot, result));
                         refreshNeeded |= result.Status == MetadataSyncStatus.Success &&
@@ -602,33 +603,33 @@ namespace VaultSync.UI.ViewModels
                 }
             }
 
-            var destinations = GetActiveDestinations(cfg);
-            foreach (var dest in destinations)
+            List<BackupDestination> destinations = GetActiveDestinations(cfg);
+            foreach (BackupDestination dest in destinations)
             {
                 if (!dest.EnableMetadataSync)
                     continue;
 
-                var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+                NetworkCredentialProfile? profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                     ? null
                     : cfg.Network.Credentials.FirstOrDefault(c =>
                         c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-                var resolution = await Task.Run(() => _networkMountService.PrepareDestination(dest, profile));
+                DestinationResolution resolution = await Task.Run(() => _networkMountService.PrepareDestination(dest, profile));
                 if (!resolution.IsSuccess)
                     continue;
 
                 try
                 {
-                    var options = new MetadataSyncOptions(
+                    MetadataSyncOptions options = new MetadataSyncOptions(
                         AllowCreateProjects: true,
                         MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
                         .AsReadOnlySource();
-                    var preview = await _metadataSyncService.PreviewImportFromStoreAsync(resolution.EffectivePath, options);
-                    var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
-                    var label = Lf("MetadataSync.Review.SourceDestination", "Destination: {0}", name);
+                    MetadataSyncPreview preview = await _metadataSyncService.PreviewImportFromStoreAsync(resolution.EffectivePath, options);
+                    string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+                    string label = Lf("MetadataSync.Review.SourceDestination", "Destination: {0}", name);
                     if (await ConfirmMetadataImportAsync(preview, label))
                     {
-                        var result = await _metadataSyncService.ImportFromStoreAsync(resolution.EffectivePath, options);
+                        MetadataSyncResult result = await _metadataSyncService.ImportFromStoreAsync(resolution.EffectivePath, options);
                         Console.WriteLine($"[MetadataSync] Manual refresh ({name}) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
                         _ = Task.Run(() => ApplyRetentionAfterMetadataImport(resolution.EffectivePath, result));
                         refreshNeeded |= result.Status == MetadataSyncStatus.Success &&
@@ -672,7 +673,7 @@ namespace VaultSync.UI.ViewModels
                     DataContext = new ViewModels.MetadataSyncReviewViewModel(_localizationService, preview, sourceLabel)
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     await window.ShowDialog(owner);
@@ -704,19 +705,19 @@ namespace VaultSync.UI.ViewModels
                 return new DestinationTestResult(false, false, string.Empty, LStatic("Destinations.Test.EmptyPath", "Destination path is empty."));
 
             DiagnosticsLogger.Record($"Destination test start: '{dest.Alias ?? dest.Path}'.");
-            var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+            NetworkCredentialProfile? profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                 ? null
                 : cfg.Network.Credentials.FirstOrDefault(c =>
                     c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-            var resolution = _networkMountService.PrepareDestination(dest, profile);
+            DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
             if (!resolution.IsSuccess)
             {
                 DiagnosticsLogger.Record($"Destination test failed: '{dest.Alias ?? dest.Path}' - {resolution.Message}");
                 return new DestinationTestResult(false, false, resolution.EffectivePath ?? string.Empty, resolution.Message);
             }
 
-            var testTarget = resolution.EffectivePath;
+            string testTarget = resolution.EffectivePath;
 
             try
             {
@@ -726,8 +727,8 @@ namespace VaultSync.UI.ViewModels
                 // first-chance UnauthorizedAccess exceptions in debugger sessions.
                 // Use a non-throwing heuristic and keep real write validation for
                 // explicit operations (backup/test actions).
-                var writable = IsLikelyWritableDirectory(testTarget);
-                var message = writable
+                bool writable = IsLikelyWritableDirectory(testTarget);
+                string message = writable
                     ? LStatic("Destinations.Test.Reachable", "Reachable")
                     : LStatic("Destinations.Test.ReadOnly", "Read-only");
 
@@ -755,7 +756,7 @@ namespace VaultSync.UI.ViewModels
                         Alias          = dest.Alias
                     };
 
-                    var cleanupResolution = resolution with { Destination = cleanupDest };
+                    DestinationResolution cleanupResolution = resolution with { Destination = cleanupDest };
                     _networkMountService.Cleanup(cleanupResolution);
                 }
             }
@@ -803,7 +804,7 @@ namespace VaultSync.UI.ViewModels
 
             if (!cfg.Backups.EnableArchiveUploadAutoTune)
             {
-                var configured = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
+                int? configured = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
                 if (configured.HasValue && configured.Value > 0)
                     return configured.Value;
 
@@ -813,18 +814,18 @@ namespace VaultSync.UI.ViewModels
                 return 1024 * 1024;
             }
 
-            var existing = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
+            int? existing = GetConfiguredArchiveUploadBufferBytes(cfg, dest);
             if (existing.HasValue && existing.Value > 0)
                 return existing.Value;
 
             try
             {
-                var display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
+                string display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
                 Console.WriteLine($"[DestinationProbe] Auto-tuning archive upload buffer for '{display}'.");
 
-                var timeoutSeconds = IsSmbPath(dest.Path) || IsSmbPath(effectivePath) ? 8 : 3;
+                int timeoutSeconds = IsSmbPath(dest.Path) || IsSmbPath(effectivePath) ? 8 : 3;
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
-                var result = await Task.Run(
+                ArchiveProbeResult result = await Task.Run(
                     () => ProbeArchiveUploadBufferBytes(effectivePath, ct, timeoutCts.Token),
                     ct);
 
@@ -836,7 +837,7 @@ namespace VaultSync.UI.ViewModels
 
                 SaveArchiveUploadBufferBytes(cfg, dest, result.BufferBytes);
 
-                var bufferMb = result.BufferBytes / (1024d * 1024d);
+                double bufferMb = result.BufferBytes / (1024d * 1024d);
                 Console.WriteLine($"[DestinationProbe] Archive upload buffer for '{display}' set to {bufferMb:0.#} MB ({result.Mbps:0.0} MB/s).");
 
                 return result.BufferBytes;
@@ -852,25 +853,25 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private int? GetConfiguredArchiveUploadBufferBytes(AppConfig cfg, BackupDestination dest)
+        private static int? GetConfiguredArchiveUploadBufferBytes(AppConfig cfg, BackupDestination dest)
         {
             if (cfg.Backups.UseAdvancedDestinations)
             {
-                var match = FindMatchingDestination(cfg, dest);
+                BackupDestination? match = FindMatchingDestination(cfg, dest);
                 return match?.ArchiveUploadBufferBytes;
             }
 
             return cfg.Backups.LegacyArchiveUploadBufferBytes;
         }
 
-        private void SaveArchiveUploadBufferBytes(AppConfig cfg, BackupDestination dest, int bufferBytes)
+        private static void SaveArchiveUploadBufferBytes(AppConfig cfg, BackupDestination dest, int bufferBytes)
         {
             if (bufferBytes <= 0)
                 return;
 
             if (cfg.Backups.UseAdvancedDestinations)
             {
-                var match = FindMatchingDestination(cfg, dest);
+                BackupDestination? match = FindMatchingDestination(cfg, dest);
                 if (match is null)
                     return;
 
@@ -895,9 +896,9 @@ namespace VaultSync.UI.ViewModels
             const int chunkSizeBytes = 4 * 1024 * 1024;
             const int fallbackBytes  = 4 * 1024 * 1024;
 
-            var probeDir  = Path.Combine(effectivePath, ".vaultsync");
-            var probeFile = Path.Combine(probeDir, $".upload_probe_{Guid.NewGuid():N}.bin");
-            var createdDir = false;
+            string probeDir  = Path.Combine(effectivePath, ".vaultsync");
+            string probeFile = Path.Combine(probeDir, $".upload_probe_{Guid.NewGuid():N}.bin");
+            bool createdDir = false;
 
             try
             {
@@ -907,8 +908,8 @@ namespace VaultSync.UI.ViewModels
                     createdDir = true;
                 }
 
-                var buffer = new byte[chunkSizeBytes];
-                var remaining = probeSizeBytes;
+                byte[] buffer = new byte[chunkSizeBytes];
+                int remaining = probeSizeBytes;
                 var sw = Stopwatch.StartNew();
 
                 using (var fs = new FileStream(
@@ -925,7 +926,7 @@ namespace VaultSync.UI.ViewModels
                         if (timeoutCt.IsCancellationRequested)
                             return new ArchiveProbeResult(fallbackBytes, 0, TimedOut: true);
 
-                        var toWrite = Math.Min(chunkSizeBytes, remaining);
+                        int toWrite = Math.Min(chunkSizeBytes, remaining);
                         fs.Write(buffer, 0, toWrite);
                         remaining -= toWrite;
                     }
@@ -934,9 +935,9 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 sw.Stop();
-                var seconds = Math.Max(0.05, sw.Elapsed.TotalSeconds);
-                var mbps = (probeSizeBytes / seconds) / (1024d * 1024d);
-                var bufferBytes = SelectArchiveUploadBufferBytes(mbps);
+                double seconds = Math.Max(0.05, sw.Elapsed.TotalSeconds);
+                double mbps = (probeSizeBytes / seconds) / (1024d * 1024d);
+                int bufferBytes = SelectArchiveUploadBufferBytes(mbps);
                 return new ArchiveProbeResult(bufferBytes, mbps, TimedOut: false);
             }
             catch (OperationCanceledException)
@@ -990,7 +991,7 @@ namespace VaultSync.UI.ViewModels
             return 64 * 1024 * 1024;
         }
 
-        private bool IsMetadataSyncEnabled(AppConfig cfg, BackupDestination dest)
+        private static bool IsMetadataSyncEnabled(AppConfig cfg, BackupDestination dest)
         {
             if (!cfg.Backups.EnableMetadataSync)
                 return false;
@@ -1023,30 +1024,30 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(effectivePath))
                 return;
 
-            var key = effectivePath.Trim();
-            if (_metadataImportRetryAfter.TryGetValue(key, out var retryAfter) &&
+            string key = effectivePath.Trim();
+            if (_metadataImportRetryAfter.TryGetValue(key, out DateTime retryAfter) &&
                 DateTime.UtcNow < retryAfter)
             {
                 return;
             }
-            if (_metadataImportAttempts.TryGetValue(key, out var last) &&
+            if (_metadataImportAttempts.TryGetValue(key, out DateTime last) &&
                 DateTime.UtcNow - last < TimeSpan.FromMinutes(5))
             {
                 return;
             }
 
             _metadataImportAttempts[key] = DateTime.UtcNow;
-            var options = new MetadataSyncOptions(
+            MetadataSyncOptions options = new MetadataSyncOptions(
                 AllowCreateProjects: true,
                 MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
                 .AsReadOnlySource();
-            var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+            string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
             _ = Task.Run(() =>
             {
                 try
                 {
                     Console.WriteLine($"[MetadataSync] Auto import started for '{name}'.");
-                    var result = _metadataSyncService.ImportFromStore(effectivePath, options);
+                    MetadataSyncResult result = _metadataSyncService.ImportFromStore(effectivePath, options);
                     Console.WriteLine($"[MetadataSync] Auto import ({name}) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
                     if (result.Status == MetadataSyncStatus.Success &&
                         (result.ImportedProjects > 0 || result.ImportedSnapshots > 0 || result.ImportedBackups > 0 || result.AppliedTombstones > 0))
@@ -1067,8 +1068,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     Console.WriteLine($"[MetadataSync] Auto import failed for '{name}': {ex.Message}");
                     _metadataImportRetryAfter[key] = DateTime.UtcNow.AddMinutes(15);
-                    var actionLabel = L("Logs.CopySnippet", "Copy log snippet");
-                    var actionCommand = CreateCopyLogSnippetCommand(
+                    string actionLabel = L("Logs.CopySnippet", "Copy log snippet");
+                    System.Windows.Input.ICommand actionCommand = CreateCopyLogSnippetCommand(
                         Lf("Logs.Snippet.MetadataImportFailure", "Metadata import failed for '{0}'.", name));
                     GlobalNotificationCenter.Instance.Show(
                         Lf("MetadataSync.Notification.ImportFailed", "Metadata import failed for '{0}'. Check logs for details.", name),
@@ -1085,21 +1086,21 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(rootPath))
                 return;
 
-            var cfg = _config;
+            AppConfig cfg = _config;
             if (!cfg.Backups.EnableMetadataSync || !cfg.Backups.AutoImportMetadata)
                 return;
 
             if (DateTime.UtcNow < _metadataRootImportRetryAfterUtc)
                 return;
 
-            var options = new MetadataSyncOptions(
+            MetadataSyncOptions options = new MetadataSyncOptions(
                 AllowCreateProjects: true,
                 MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
                 .AsReadOnlySource();
             try
             {
                 Console.WriteLine("[MetadataSync] Auto import started for projects root.");
-                var result = _metadataSyncService.ImportFromStore(rootPath, options);
+                MetadataSyncResult result = _metadataSyncService.ImportFromStore(rootPath, options);
                 Console.WriteLine($"[MetadataSync] Auto import (projects root) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
                 if (result.Status != MetadataSyncStatus.Success)
                 {
@@ -1112,8 +1113,8 @@ namespace VaultSync.UI.ViewModels
             {
                 Console.WriteLine($"[MetadataSync] Auto import failed for projects root: {ex.Message}");
                 _metadataRootImportRetryAfterUtc = DateTime.UtcNow.AddMinutes(15);
-                var actionLabel = L("Logs.CopySnippet", "Copy log snippet");
-                var actionCommand = CreateCopyLogSnippetCommand(
+                string actionLabel = L("Logs.CopySnippet", "Copy log snippet");
+                System.Windows.Input.ICommand actionCommand = CreateCopyLogSnippetCommand(
                     L("Logs.Snippet.MetadataImportRootFailure", "Metadata import failed for projects root."));
                 GlobalNotificationCenter.Instance.Show(
                     L("MetadataSync.Notification.ImportRootFailed", "Metadata import failed for projects root. Check logs for details."),
@@ -1150,16 +1151,16 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.GetSnapshot();
-                var maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
+                AppConfig cfg = AppConfigStore.GetSnapshot();
+                int maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
                 if (maxSnapshotsToKeep <= 0)
                     return;
 
-                var projects = result.AffectedProjectIds.Count > 0
+                IReadOnlyCollection<int> projects = result.AffectedProjectIds.Count > 0
                     ? result.AffectedProjectIds
                     : _repo.GetAllProjects().Select(p => p.Id).ToArray();
 
-                foreach (var projectId in projects)
+                foreach (int projectId in projects)
                 {
                     _backupService.EnforceRetentionForProject(projectId, rootPath, maxSnapshotsToKeep);
                 }
@@ -1212,15 +1213,15 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(effectivePath) || backupId <= 0)
                 return;
 
-            var machineId = Environment.MachineName;
-            var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
-            var forceBackfill = forceBackfillOverride ?? dest.ForceMetadataBackfill;
+            string machineId = Environment.MachineName;
+            string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+            bool forceBackfill = forceBackfillOverride ?? dest.ForceMetadataBackfill;
             _ = Task.Run(async () =>
             {
                 try
                 {
                     Console.WriteLine($"[MetadataSync] Export started for backup {backupId} -> '{name}'.");
-                    var result = await _metadataSyncService.ExportBackupToStoreAsync(
+                    MetadataSyncResult result = await _metadataSyncService.ExportBackupToStoreAsync(
                         effectivePath,
                         backupId,
                         _currentVersionString,
@@ -1245,20 +1246,20 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var project = _repo.GetProjectById(projectId);
+                Project? project = _repo.GetProjectById(projectId);
                 if (project is null)
                     return;
 
-                var latestBackup = _repo.GetLatestBackupForProject(projectId);
-                var cfg = await Task.Run(() => AppConfigStore.GetSnapshot());
-                var destinations = ResolveDestinationsForProject(project, cfg).Destinations;
+                Backup? latestBackup = _repo.GetLatestBackupForProject(projectId);
+                AppConfig cfg = await Task.Run(() => AppConfigStore.GetSnapshot());
+                List<BackupDestination> destinations = ResolveDestinationsForProject(project, cfg).Destinations;
                 if (destinations.Count == 0)
                 {
                     DiagnosticsLogger.Record($"[MetadataSync] Project settings export skipped: no destinations for projectId={projectId}.");
                     return;
                 }
 
-                foreach (var dest in destinations)
+                foreach (BackupDestination dest in destinations)
                 {
                     if (!IsMetadataSyncEnabled(cfg, dest))
                     {
@@ -1266,7 +1267,7 @@ namespace VaultSync.UI.ViewModels
                         continue;
                     }
 
-                    var resolution = await PrepareDestinationAsync(dest, cfg);
+                    DestinationResolution resolution = await PrepareDestinationAsync(dest, cfg);
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
                     {
                         DiagnosticsLogger.Record($"[MetadataSync] Project settings export skipped: destination unavailable for projectId={projectId}; destination='{dest.Alias ?? dest.Path}'; message='{resolution.Message}'.");
@@ -1284,9 +1285,9 @@ namespace VaultSync.UI.ViewModels
                         continue;
                     }
 
-                    var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+                    string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
                     DiagnosticsLogger.Record($"[MetadataSync] Project-only settings export started for projectId={projectId} -> '{name}'.");
-                    var result = await _metadataSyncService.ExportProjectToStoreAsync(
+                    MetadataSyncResult result = await _metadataSyncService.ExportProjectToStoreAsync(
                         resolution.EffectivePath,
                         projectId,
                         _currentVersionString,
@@ -1307,8 +1308,8 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    var cfg = AppConfigStore.Load();
-                    var destEntry = FindMatchingDestination(cfg, dest);
+                    AppConfig cfg = AppConfigStore.Load();
+                    BackupDestination? destEntry = FindMatchingDestination(cfg, dest);
                     if (destEntry != null && destEntry.ForceMetadataBackfill)
                     {
                         destEntry.ForceMetadataBackfill = false;
@@ -1320,7 +1321,7 @@ namespace VaultSync.UI.ViewModels
 
                     Dispatcher.UIThread.Post(() =>
                     {
-                        var vmDest = _settingsViewModel.Destinations
+                        BackupDestinationViewModel? vmDest = _settingsViewModel.Destinations
                             .FirstOrDefault(d => DestinationsMatch(d.Path, d.Alias, dest));
                         if (vmDest != null)
                         {
@@ -1367,12 +1368,12 @@ namespace VaultSync.UI.ViewModels
                 if (BackupsViewModel.IsBusy)
                     return Task.CompletedTask;
 
-                var cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = AppConfigStore.GetSnapshot();
 
                 if (_settingsViewModel?.PreferExternalDrives != true)
                     return Task.CompletedTask;
 
-                var backupRoot = cfg.Backups.BackupRoot;
+                string? backupRoot = cfg.Backups.BackupRoot;
                 if (string.IsNullOrWhiteSpace(backupRoot) || !IsNetworkPath(backupRoot))
                     return Task.CompletedTask;
 
@@ -1380,11 +1381,11 @@ namespace VaultSync.UI.ViewModels
                     return Task.CompletedTask;
 
                 var projects = _repo.GetAllProjects().ToList();
-                var hadTemp = false;
+                bool hadTemp = false;
 
-                foreach (var project in projects)
+                foreach (Project? project in projects)
                 {
-                    var tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+                    string tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
                     if (Directory.Exists(tempRoot))
                     {
                         hadTemp = true;
@@ -1410,7 +1411,7 @@ namespace VaultSync.UI.ViewModels
         }
         private static bool TryWriteProbeFile(string effectivePath)
         {
-            var testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
+            string testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
             try
             {
                 File.WriteAllText(testFile, "ok");

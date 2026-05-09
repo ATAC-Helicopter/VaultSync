@@ -33,7 +33,7 @@ namespace VaultSync.UI
                 _scrollViewer.LayoutUpdated += OnScrollViewerLayoutUpdated;
             }
 
-            var localization = LocalizationProvider.Service;
+            LocalizationService? localization = LocalizationProvider.Service;
             if (localization != null)
             {
                 localization.LanguageChanged += OnLanguageChanged;
@@ -42,7 +42,7 @@ namespace VaultSync.UI
 
         private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
         {
-            var localization = LocalizationProvider.Service;
+            LocalizationService? localization = LocalizationProvider.Service;
             if (localization != null)
             {
                 localization.LanguageChanged -= OnLanguageChanged;
@@ -77,7 +77,7 @@ namespace VaultSync.UI
                 return;
 
             _restoreScrollPending = false;
-            var current = _scrollViewer.Offset;
+            Vector current = _scrollViewer.Offset;
             _scrollViewer.Offset = new Vector(current.X, _pendingScrollOffset);
         }
     }

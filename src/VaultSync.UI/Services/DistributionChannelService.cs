@@ -30,7 +30,7 @@ public static class DistributionChannelService
 
     private static AppDistributionInfo Detect()
     {
-        var overrideValue = Environment.GetEnvironmentVariable("VAULTSYNC_DISTRIBUTION_CHANNEL")?.Trim();
+        string? overrideValue = Environment.GetEnvironmentVariable("VAULTSYNC_DISTRIBUTION_CHANNEL")?.Trim();
         if (!string.IsNullOrWhiteSpace(overrideValue))
         {
             if (string.Equals(overrideValue, "store", StringComparison.OrdinalIgnoreCase))
@@ -64,9 +64,9 @@ public static class DistributionChannelService
                 DetectionSource: "non-windows");
         }
 
-        var packageFamilyName = TryGetCurrentPackageFamilyName();
-        var packageFullName = TryGetCurrentPackageFullName();
-        var isPackaged = !string.IsNullOrWhiteSpace(packageFamilyName) || !string.IsNullOrWhiteSpace(packageFullName);
+        string packageFamilyName = TryGetCurrentPackageFamilyName();
+        string packageFullName = TryGetCurrentPackageFullName();
+        bool isPackaged = !string.IsNullOrWhiteSpace(packageFamilyName) || !string.IsNullOrWhiteSpace(packageFullName);
 
         if (string.Equals(packageFamilyName, StorePackageFamilyName, StringComparison.OrdinalIgnoreCase))
         {
@@ -90,15 +90,15 @@ public static class DistributionChannelService
     {
         try
         {
-            var length = 0u;
-            var rc = GetCurrentPackageFamilyName(ref length, null);
+            uint length = 0u;
+            int rc = GetCurrentPackageFamilyName(ref length, null);
             if (rc == AppModelErrorNoPackage)
                 return string.Empty;
 
             if (length == 0)
                 return string.Empty;
 
-            var buffer = new char[length];
+            char[] buffer = new char[length];
             rc = GetCurrentPackageFamilyName(ref length, buffer);
             if (rc != 0)
                 return string.Empty;
@@ -115,15 +115,15 @@ public static class DistributionChannelService
     {
         try
         {
-            var length = 0u;
-            var rc = GetCurrentPackageFullName(ref length, null);
+            uint length = 0u;
+            int rc = GetCurrentPackageFullName(ref length, null);
             if (rc == AppModelErrorNoPackage)
                 return string.Empty;
 
             if (length == 0)
                 return string.Empty;
 
-            var buffer = new char[length];
+            char[] buffer = new char[length];
             rc = GetCurrentPackageFullName(ref length, buffer);
             if (rc != 0)
                 return string.Empty;

@@ -23,15 +23,15 @@ namespace VaultSync.UI.ViewModels
                 Dispatcher.UIThread.Post(() =>
                 {
                     BackupsViewModel.BackupProgress = 0;
-                    BackupsViewModel.BackupCurrentFile = L("Backups.Status.Preparing", "Preparing backup...");
+                    BackupsViewModel.BackupCurrentFile = AppViewModel.L("Backups.Status.Preparing", "Preparing backup...");
                     BackupsViewModel.BackupEtaText = string.Empty;
-                    BackupsViewModel.BusyMessage = L("Backups.Busy.All", "Backing up all projects...");
+                    BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Busy.All", "Backing up all projects...");
                 });
                 return;
             }
 
-            var avg = progressPerProject.Values.DefaultIfEmpty(0).Average();
-            var now = DateTime.UtcNow;
+            double avg = progressPerProject.Values.DefaultIfEmpty(0).Average();
+            DateTime now = DateTime.UtcNow;
             if (avg < 100 && (now - lastAggregateUiUpdateUtc) < TimeSpan.FromMilliseconds(200))
             {
                 return;
@@ -46,15 +46,15 @@ namespace VaultSync.UI.ViewModels
             }
             else if (avg <= 0.1)
             {
-                label = L("Backups.Status.Preparing", "Preparing backup...");
+                label = AppViewModel.L("Backups.Status.Preparing", "Preparing backup...");
             }
             else if (avg < 100)
             {
-                label = L("Backups.Status.RunningMultiple", "Running backups...");
+                label = AppViewModel.L("Backups.Status.RunningMultiple", "Running backups...");
             }
             else
             {
-                label = L("Backups.Status.AllCompleted", "All backups completed");
+                label = AppViewModel.L("Backups.Status.AllCompleted", "All backups completed");
             }
 
             Dispatcher.UIThread.Post(() =>
@@ -62,7 +62,7 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.BackupProgress = avg;
                 BackupsViewModel.BackupCurrentFile = label;
                 BackupsViewModel.BackupEtaText = etaText;
-                BackupsViewModel.BusyMessage = L("Backups.Busy.All", "Backing up all projects...");
+                BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Busy.All", "Backing up all projects...");
             });
         }
 
@@ -72,11 +72,11 @@ namespace VaultSync.UI.ViewModels
         /// </summary>
         private DestinationResolution PrepareDestination(BackupDestination dest, AppConfig cfg)
         {
-            var profile = cfg.Network.Credentials?
+            NetworkCredentialProfile? profile = cfg.Network.Credentials?
                 .FirstOrDefault(c =>
                     string.Equals(c.Name, dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
 
-            var resolution = _networkMountService.PrepareDestination(dest, profile);
+            DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
             RuntimeLog.WriteVerbose($"[Backup] Destination resolved: alias='{dest.Alias ?? dest.Path}', path='{dest.Path}', effective='{resolution.EffectivePath}', success={resolution.IsSuccess}, mountedByUs={resolution.MountedByUs}");
             return resolution;
         }
@@ -88,8 +88,8 @@ namespace VaultSync.UI.ViewModels
 
         private BackupAllPreparationResult PrepareBackupAll()
         {
-            var cfg = AppConfigStore.GetSnapshot();
-            var destinations = GetAllDestinations(cfg);
+            AppConfig cfg = AppConfigStore.GetSnapshot();
+            System.Collections.Generic.List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
             if (destinations.Count == 0)
             {
                 return BackupAllPreparationResult.Failure("no_destination");
@@ -129,7 +129,7 @@ namespace VaultSync.UI.ViewModels
                 }
                 else
                 {
-                    var tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+                    string tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
                     Directory.CreateDirectory(tempRoot);
 
                     effectiveBackupRoot = tempRoot;
@@ -141,7 +141,7 @@ namespace VaultSync.UI.ViewModels
 
         private static void TryMigrateTempBackups(Project project, string targetRoot)
         {
-            var tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+            string tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
             if (!Directory.Exists(tempRoot))
             {
                 return;
@@ -149,9 +149,9 @@ namespace VaultSync.UI.ViewModels
 
             Directory.CreateDirectory(targetRoot);
 
-            foreach (var dir in Directory.EnumerateDirectories(tempRoot))
+            foreach (string dir in Directory.EnumerateDirectories(tempRoot))
             {
-                var dest = Path.Combine(targetRoot, Path.GetFileName(dir));
+                string dest = Path.Combine(targetRoot, Path.GetFileName(dir));
 
                 try
                 {

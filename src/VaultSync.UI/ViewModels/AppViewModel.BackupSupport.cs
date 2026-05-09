@@ -17,9 +17,9 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
-        private bool ShouldRunVerification(Project project, bool isAutoRun, bool globalVerifyAfterCreate)
+        private static bool ShouldRunVerification(Project project, bool isAutoRun, bool globalVerifyAfterCreate)
         {
-            var policy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
+            string policy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
             return policy switch
             {
                 ProjectVerificationPolicy.Always => true,
@@ -37,7 +37,7 @@ namespace VaultSync.UI.ViewModels
                 try
                 {
                     var snapshotService = new SnapshotService(_repo, new HashService());
-                    var hashed = await snapshotService.HashMissingFilesAsync(project, snapshotId, CancellationToken.None);
+                    int hashed = await snapshotService.HashMissingFilesAsync(project, snapshotId, CancellationToken.None);
                     Telemetry.Log("backup_post_hash_complete", b => b
                         .WithHashedString("project", project.Name)
                         .WithCount("hashedFiles", hashed));
@@ -63,11 +63,11 @@ namespace VaultSync.UI.ViewModels
                 if (elapsed.TotalSeconds <= 1)
                     return;
 
-                var backup = _repo.GetBackupById(backupId);
+                Backup? backup = _repo.GetBackupById(backupId);
                 if (backup is null || backup.TotalBytes <= 0)
                     return;
 
-                var mbSec = backup.TotalBytes / (1024d * 1024d) / elapsed.TotalSeconds;
+                double mbSec = backup.TotalBytes / (1024d * 1024d) / elapsed.TotalSeconds;
                 if (double.IsNaN(mbSec) || double.IsInfinity(mbSec) || mbSec <= 0)
                     return;
 
@@ -75,12 +75,12 @@ namespace VaultSync.UI.ViewModels
                 {
                     try
                     {
-                        var cfg = AppConfigStore.Load();
-                        var existing = useArchiveMode
+                        AppConfig cfg = AppConfigStore.Load();
+                        double existing = useArchiveMode
                             ? cfg.Backups.LastBackupThroughputArchiveMbSec
                             : cfg.Backups.LastBackupThroughputCopyMbSec;
-                        var blended = existing > 0 ? (existing * 0.7 + mbSec * 0.3) : mbSec;
-                        var rounded = Math.Round(blended, 2);
+                        double blended = existing > 0 ? ((existing * 0.7) + (mbSec * 0.3)) : mbSec;
+                        double rounded = Math.Round(blended, 2);
                         if (useArchiveMode)
                         {
                             cfg.Backups.LastBackupThroughputArchiveMbSec = rounded;
@@ -119,11 +119,11 @@ namespace VaultSync.UI.ViewModels
                 {
                     Console.WriteLine($"[Backup] Verification start: project='{project.Name}', backupId={latest.Id}, snapshotId={latest.SnapshotId}");
                     var snapshotService = new SnapshotService(_repo, new HashService());
-                    await snapshotService.HashMissingFilesAsync(project, latest.SnapshotId, CancellationToken.None);
+                    _ = await snapshotService.HashMissingFilesAsync(project, latest.SnapshotId, CancellationToken.None);
 
                     var verifyService = new VerifyService(_repo, new HashService());
-                    var folder = Path.Combine(backupRoot, latest.Path ?? string.Empty);
-                    await verifyService.VerifyAsync(project, folder, 100, full: true);
+                    string folder = Path.Combine(backupRoot, latest.Path ?? string.Empty);
+                    _ = await verifyService.VerifyAsync(project, folder, 100, full: true);
                     Console.WriteLine($"[Backup] Verification complete: project='{project.Name}', backupId={latest.Id}");
                 }
                 catch (Exception vex)
@@ -137,8 +137,8 @@ namespace VaultSync.UI.ViewModels
 
                     if (NotificationsEnabled)
                     {
-                        var title = L("Backups.Verification.Title", "Backup verification failed");
-                        var msg = Lf("Backups.Verification.FailureMessage", "Verification failed for '{0}'. The backup may be corrupted or incomplete.", project.Name);
+                        string title = L("Backups.Verification.Title", "Backup verification failed");
+                        string msg = Lf("Backups.Verification.FailureMessage", "Verification failed for '{0}'. The backup may be corrupted or incomplete.", project.Name);
 
                         _notificationService.ShowError(title, msg, NotificationKind.Backup);
 
@@ -161,7 +161,7 @@ namespace VaultSync.UI.ViewModels
 
                     Dispatcher.UIThread.Post(() =>
                     {
-                        var backupId = latest.Id.ToString();
+                        string backupId = latest.Id.ToString();
                         BackupsViewModel.MarkSnapshotAsFailed(backupId);
                         BackupsViewModel.ShowVerificationFailure(backupId, project.Name);
                     });
@@ -174,15 +174,15 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 // If any other backup references this snapshot, keep it.
-                var remaining = _repo.HasBackupForSnapshot(projectId, snapshotId);
+                bool remaining = _repo.HasBackupForSnapshot(projectId, snapshotId);
                 if (remaining)
                     return;
 
-                var project = _repo.GetProjectById(projectId);
+                Project? project = _repo.GetProjectById(projectId);
                 if (project is null)
                     return;
 
-                _repo.DeleteSnapshotsById(project.Name, new[] { snapshotId });
+                _ = _repo.DeleteSnapshotsById(project.Name, [snapshotId]);
             }
             catch
             {
@@ -205,11 +205,11 @@ namespace VaultSync.UI.ViewModels
 
         private sealed record DriveHealthDecision(bool Block, string Message, NotificationSeverity Severity);
 
-        private async Task<DriveHealthDecision> EvaluateDriveHealthAsync(string projectPath, string backupPath)
+        private Task<DriveHealthDecision> EvaluateDriveHealthAsync(string projectPath, string backupPath)
         {
-            return await Task.Run(() =>
+            return Task.Run(() =>
             {
-                var block = ShouldBlockForDriveHealth(projectPath, backupPath, out var msg, out var sev);
+                bool block = ShouldBlockForDriveHealth(projectPath, backupPath, out string? msg, out NotificationSeverity sev);
                 return new DriveHealthDecision(block, msg, sev);
             });
         }
@@ -219,7 +219,7 @@ namespace VaultSync.UI.ViewModels
             message  = string.Empty;
             severity = NotificationSeverity.Warning;
 
-            if (_settingsViewModel?.ShowDriveHealthWarnings != true)
+            if (_settingsViewModel?.ShowDriveHealthWarnings is not true)
                 return false;
 
             var results = new List<DriveHealthResult>
@@ -229,7 +229,7 @@ namespace VaultSync.UI.ViewModels
             };
 
             DriveHealthResult? issue = null;
-            foreach (var r in results)
+            foreach (DriveHealthResult r in results)
             {
                 if (r.Status == DriveHealthStatus.Failing)
                 {
@@ -246,7 +246,7 @@ namespace VaultSync.UI.ViewModels
             if (issue is null || issue.Status == DriveHealthStatus.Unknown || issue.Status == DriveHealthStatus.Healthy)
                 return false;
 
-            var driveLabel = issue.DriveId ?? issue.Path ?? L("DriveHealth.UnknownDrive", "drive");
+            string driveLabel = issue.DriveId ?? issue.Path ?? L("DriveHealth.UnknownDrive", "drive");
             severity = issue.Status == DriveHealthStatus.Failing
                 ? NotificationSeverity.Error
                 : NotificationSeverity.Warning;
@@ -266,7 +266,7 @@ namespace VaultSync.UI.ViewModels
             if (!NotificationsEnabled)
                 return;
 
-            var title = severity == NotificationSeverity.Error
+            string title = severity == NotificationSeverity.Error
                 ? L("Backups.Notification.DriveBlockedTitle", "Backup blocked: drive health")
                 : L("Backups.Notification.DriveWarningTitle", "Drive health warning");
 

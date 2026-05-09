@@ -31,7 +31,7 @@ namespace VaultSync.UI.Services
         public string PreviousVersion { get; set; } = string.Empty;
 
         [JsonPropertyName("baseVersions")]
-        public List<string> BaseVersions { get; set; } = new();
+        public List<string> BaseVersions { get; set; } = [];
 
         [JsonPropertyName("targetVersion")]
         public string TargetVersion { get; set; } = string.Empty;
@@ -43,7 +43,7 @@ namespace VaultSync.UI.Services
         public long ArchiveSize { get; set; }
 
         [JsonPropertyName("files")]
-        public List<PatchFileEntry> Files { get; set; } = new();
+        public List<PatchFileEntry> Files { get; set; } = [];
     }
 
     public sealed class PatchPlan
@@ -107,18 +107,18 @@ namespace VaultSync.UI.Services
             string currentVersion,
             CancellationToken cancellationToken)
         {
-            var preflight = await PreflightPatchAsync(updateResult, currentVersion, cancellationToken);
+            PatchPreflightResult preflight = await PreflightPatchAsync(updateResult, currentVersion, cancellationToken);
             return preflight.Eligible ? preflight.Plan : null;
         }
 
-        public async Task<PatchPreflightResult> PreflightPatchAsync(
+        public static async Task<PatchPreflightResult> PreflightPatchAsync(
             UpdateCheckResult updateResult,
             string currentVersion,
             CancellationToken cancellationToken)
         {
-            var hasManifest = !string.IsNullOrWhiteSpace(updateResult.PatchManifestUrl);
-            var hasArchive = updateResult.PatchArchiveUrl is not null;
-            var hasInstaller = updateResult.HasInstaller;
+            bool hasManifest = !string.IsNullOrWhiteSpace(updateResult.PatchManifestUrl);
+            bool hasArchive = updateResult.PatchArchiveUrl is not null;
+            bool hasInstaller = updateResult.HasInstaller;
 
             if (!hasManifest || !hasArchive)
             {
@@ -134,7 +134,7 @@ namespace VaultSync.UI.Services
                     hasInstaller: hasInstaller);
             }
 
-            var manifest = await GetManifestAsync(updateResult.PatchManifestUrl!, cancellationToken);
+            PatchManifest? manifest = await GetManifestAsync(updateResult.PatchManifestUrl!, cancellationToken);
             if (manifest is null)
             {
                 return new PatchPreflightResult(
@@ -149,7 +149,7 @@ namespace VaultSync.UI.Services
                     hasInstaller: hasInstaller);
             }
 
-            if (!TryValidateAllowedBaseVersions(manifest, currentVersion, out _, out var matchedBaseVersion, out var baseVersionStatusCode, out var baseVersionMessage))
+            if (!TryValidateAllowedBaseVersions(manifest, currentVersion, out _, out string? matchedBaseVersion, out string? baseVersionStatusCode, out string? baseVersionMessage))
             {
                 return new PatchPreflightResult(
                     eligible: false,
@@ -191,7 +191,7 @@ namespace VaultSync.UI.Services
                     hasInstaller: hasInstaller);
             }
 
-            var archiveName = string.IsNullOrWhiteSpace(updateResult.PatchArchiveName)
+            string archiveName = string.IsNullOrWhiteSpace(updateResult.PatchArchiveName)
                 ? Path.GetFileName(updateResult.PatchArchiveUrl!.AbsolutePath)
                 : updateResult.PatchArchiveName;
             var plan = new PatchPlan(manifest, updateResult.PatchArchiveUrl!, archiveName);
@@ -208,39 +208,39 @@ namespace VaultSync.UI.Services
                 hasInstaller: hasInstaller);
         }
 
-        public async Task<string?> DownloadPatchArchiveAsync(
+        public static async Task<string?> DownloadPatchArchiveAsync(
             PatchPlan plan,
             Action<long, long?, double?>? progress,
             CancellationToken cancellationToken)
         {
-            var stagingDir = Path.Combine(
+            string stagingDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "VaultSync",
                 "patches");
             Directory.CreateDirectory(stagingDir);
 
-            var destinationPath = Path.Combine(stagingDir, plan.ArchiveName);
+            string destinationPath = Path.Combine(stagingDir, plan.ArchiveName);
 
             // If the file already exists and matches size/hash, reuse it instead of re-downloading.
             if (File.Exists(destinationPath))
             {
                 var existing = new FileInfo(destinationPath);
-                var sizeOk   = plan.Manifest.ArchiveSize <= 0 || existing.Length == plan.Manifest.ArchiveSize;
-                var hashOk   = await VerifyChecksumAsync(destinationPath, plan.Manifest.ArchiveSha256, cancellationToken);
+                bool sizeOk   = plan.Manifest.ArchiveSize <= 0 || existing.Length == plan.Manifest.ArchiveSize;
+                bool hashOk   = await VerifyChecksumAsync(destinationPath, plan.Manifest.ArchiveSha256, cancellationToken);
                 if (sizeOk && hashOk)
                 {
                     return destinationPath;
                 }
             }
 
-            using (var response = await s_httpClient.GetAsync(plan.ArchiveUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
+            using (HttpResponseMessage response = await s_httpClient.GetAsync(plan.ArchiveUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
             {
                 if (!response.IsSuccessStatusCode)
                     return null;
 
-                var totalBytes = response.Content.Headers.ContentLength;
-                await using var sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                await using var destinationStream = File.Create(destinationPath);
+                long? totalBytes = response.Content.Headers.ContentLength;
+                await using Stream sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                await using FileStream destinationStream = File.Create(destinationPath);
                 await CopyToWithProgressAsync(sourceStream, destinationStream, totalBytes, progress, cancellationToken);
             }
 
@@ -261,15 +261,15 @@ namespace VaultSync.UI.Services
             Action<long, long?, double?>? progress,
             CancellationToken cancellationToken)
         {
-            var buffer = new byte[1024 * 128];
+            byte[] buffer = new byte[1024 * 128];
             long totalRead = 0;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var lastReport = TimeSpan.Zero;
+            TimeSpan lastReport = TimeSpan.Zero;
             long lastBytes = 0;
 
             while (true)
             {
-                var read = await source.ReadAsync(buffer, cancellationToken);
+                int read = await source.ReadAsync(buffer, cancellationToken);
                 if (read <= 0)
                     break;
 
@@ -279,13 +279,13 @@ namespace VaultSync.UI.Services
                 if (progress is null)
                     continue;
 
-                var elapsed = stopwatch.Elapsed;
+                TimeSpan elapsed = stopwatch.Elapsed;
                 if (elapsed - lastReport < TimeSpan.FromMilliseconds(250))
                     continue;
 
-                var deltaBytes = totalRead - lastBytes;
-                var deltaTime = (elapsed - lastReport).TotalSeconds;
-                var bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
+                long deltaBytes = totalRead - lastBytes;
+                double deltaTime = (elapsed - lastReport).TotalSeconds;
+                double? bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
 
                 progress(totalRead, totalBytes, bytesPerSecond);
                 lastReport = elapsed;
@@ -294,10 +294,10 @@ namespace VaultSync.UI.Services
 
             if (progress is not null)
             {
-                var elapsed = stopwatch.Elapsed;
-                var deltaBytes = totalRead - lastBytes;
-                var deltaTime = (elapsed - lastReport).TotalSeconds;
-                var bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
+                TimeSpan elapsed = stopwatch.Elapsed;
+                long deltaBytes = totalRead - lastBytes;
+                double deltaTime = (elapsed - lastReport).TotalSeconds;
+                double? bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
                 progress(totalRead, totalBytes, bytesPerSecond);
             }
         }
@@ -310,37 +310,37 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(expectedSha256))
                 return true;
 
-            using var stream = File.OpenRead(filePath);
+            using FileStream stream = File.OpenRead(filePath);
             using var sha = SHA256.Create();
-            var hash = await sha.ComputeHashAsync(stream, cancellationToken);
-            var actual = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+            byte[] hash = await sha.ComputeHashAsync(stream, cancellationToken);
+            string actual = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
             return string.Equals(actual, expectedSha256.Trim().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool VersionsMatch(string? previousVersion, string? currentVersion)
         {
-            var normalizedPrevious = VersionHelper.NormalizeIdentity(previousVersion);
-            var normalizedCurrent = VersionHelper.NormalizeIdentity(currentVersion);
-            var manifestVersion = VersionHelper.TryParse(previousVersion);
-            var currentParsed = VersionHelper.TryParse(currentVersion);
+            string normalizedPrevious = VersionHelper.NormalizeIdentity(previousVersion);
+            string normalizedCurrent = VersionHelper.NormalizeIdentity(currentVersion);
+            Version? manifestVersion = VersionHelper.TryParse(previousVersion);
+            Version? currentParsed = VersionHelper.TryParse(currentVersion);
 
             if (manifestVersion is not null && currentParsed is not null)
             {
-                var sameCore = manifestVersion.Major == currentParsed.Major
+                bool sameCore = manifestVersion.Major == currentParsed.Major
                                && manifestVersion.Minor == currentParsed.Minor
                                && manifestVersion.Build == currentParsed.Build;
 
                 if (!sameCore)
                     return false;
 
-                var revA = manifestVersion.Revision;
-                var revB = currentParsed.Revision;
+                int revA = manifestVersion.Revision;
+                int revB = currentParsed.Revision;
 
                 // Treat missing revision (-1) as 0, but do not ignore non-zero revisions.
                 if (revA == revB || (revA == -1 && revB == 0) || (revB == -1 && revA == 0))
                 {
-                    var prereleaseA = VersionHelper.GetPrereleaseLabel(previousVersion);
-                    var prereleaseB = VersionHelper.GetPrereleaseLabel(currentVersion);
+                    string prereleaseA = VersionHelper.GetPrereleaseLabel(previousVersion);
+                    string prereleaseB = VersionHelper.GetPrereleaseLabel(currentVersion);
                     return string.Equals(prereleaseA, prereleaseB, StringComparison.OrdinalIgnoreCase);
                 }
 
@@ -359,7 +359,7 @@ namespace VaultSync.UI.Services
             out string statusCode,
             out string message)
         {
-            allowedBaseVersions = Array.Empty<string>();
+            allowedBaseVersions = [];
             statusCode = string.Empty;
             message = string.Empty;
 
@@ -373,9 +373,9 @@ namespace VaultSync.UI.Services
             var normalized = new List<string>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var raw in manifest.BaseVersions ?? new List<string>())
+            foreach (string raw in manifest.BaseVersions ?? [])
             {
-                var normalizedVersion = VersionHelper.NormalizeIdentity(raw);
+                string normalizedVersion = VersionHelper.NormalizeIdentity(raw);
                 if (string.IsNullOrWhiteSpace(normalizedVersion))
                 {
                     statusCode = "manifest-invalid-base-allowlist";
@@ -389,7 +389,7 @@ namespace VaultSync.UI.Services
                 normalized.Add(normalizedVersion);
             }
 
-            var legacyBase = VersionHelper.NormalizeIdentity(manifest.PreviousVersion);
+            string legacyBase = VersionHelper.NormalizeIdentity(manifest.PreviousVersion);
             if (!string.IsNullOrWhiteSpace(legacyBase))
             {
                 if (normalized.Count == 0)
@@ -430,7 +430,7 @@ namespace VaultSync.UI.Services
             if (!TryGetAllowedBaseVersions(manifest, out allowedBaseVersions, out statusCode, out message))
                 return false;
 
-            var normalizedCurrent = VersionHelper.NormalizeIdentity(currentVersion);
+            string normalizedCurrent = VersionHelper.NormalizeIdentity(currentVersion);
             if (string.IsNullOrWhiteSpace(normalizedCurrent))
             {
                 statusCode = "base-version-not-allowed";
@@ -461,7 +461,7 @@ namespace VaultSync.UI.Services
             client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-PatchUpdater/1.0");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
 
-            var token = Environment.GetEnvironmentVariable("VAULTSYNC_GH_TOKEN")
+            string? token = Environment.GetEnvironmentVariable("VAULTSYNC_GH_TOKEN")
                         ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
             if (!string.IsNullOrWhiteSpace(token))
             {
@@ -473,7 +473,7 @@ namespace VaultSync.UI.Services
 
         private static async Task<PatchManifest?> GetManifestAsync(string manifestUrl, CancellationToken cancellationToken)
         {
-            if (s_manifestCache.TryGetValue(manifestUrl, out var cached))
+            if (s_manifestCache.TryGetValue(manifestUrl, out (PatchManifest Manifest, DateTimeOffset FetchedAt) cached))
             {
                 if (DateTimeOffset.UtcNow - cached.FetchedAt < s_manifestCacheWindow)
                 {
@@ -481,7 +481,7 @@ namespace VaultSync.UI.Services
                 }
             }
 
-            var manifest = await s_httpClient.GetFromJsonAsync<PatchManifest>(manifestUrl, cancellationToken);
+            PatchManifest? manifest = await s_httpClient.GetFromJsonAsync<PatchManifest>(manifestUrl, cancellationToken);
             if (manifest is null)
                 return null;
 

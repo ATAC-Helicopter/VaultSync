@@ -39,20 +39,22 @@ namespace VaultSync.UI.Services
 
             try
             {
-                var full = Path.GetFullPath(path);
-                var root = Path.GetPathRoot(full);
+                string full = Path.GetFullPath(path);
+                string? root = Path.GetPathRoot(full);
                 if (string.IsNullOrWhiteSpace(root))
                     return Unknown(L("DriveHealth.Unknown.CouldNotResolveDrive", "Could not resolve drive"));
 
                 // UNC / network shares: SMART usually not accessible; report unknown.
                 if (root.StartsWith(@"\\") || root.StartsWith("//"))
+                {
                     return Unknown(
                         L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
                         driveId: root,
                         path: full);
+                }
 
                 // Prefer smartctl when available (all platforms).
-                if (TrySmartCtl(root, full, out var smartResult))
+                if (TrySmartCtl(root, full, out DriveHealthResult? smartResult))
                     return smartResult;
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -91,15 +93,15 @@ namespace VaultSync.UI.Services
             }
 
             // Try WMIC SMART status; if unavailable, fall back to basic readiness.
-            var output = RunProcess("wmic", "diskdrive get Status,DeviceID", 4000);
+            string output = RunProcess("wmic", "diskdrive get Status,DeviceID", 4000);
             if (!string.IsNullOrWhiteSpace(output))
             {
                 // If any drive reports a non-OK status, flag warning/failing.
-                var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                var sawOk = false;
-                foreach (var line in lines)
+                string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                bool sawOk = false;
+                foreach (string line in lines)
                 {
-                    var trimmed = line.Trim();
+                    string trimmed = line.Trim();
                     if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("Status", StringComparison.OrdinalIgnoreCase))
                         continue;
 
@@ -170,8 +172,8 @@ namespace VaultSync.UI.Services
         private static DriveHealthResult CheckMac(string fullPath)
         {
             // Resolve device via df -P path to get /dev/diskXsY, then query diskutil info
-            var dfOutput = RunProcess("/bin/df", $"-P \"{fullPath}\"", 4000);
-            var device = ParseDeviceFromDf(dfOutput);
+            string dfOutput = RunProcess("/bin/df", $"-P \"{fullPath}\"", 4000);
+            string device = ParseDeviceFromDf(dfOutput);
             if (string.IsNullOrWhiteSpace(device))
                 return Unknown(L("DriveHealth.Unknown.CouldNotResolveDevice", "Could not resolve device"), path: fullPath);
 
@@ -184,22 +186,24 @@ namespace VaultSync.UI.Services
             }
 
             // Prefer smartctl if available on macOS (brew install smartmontools).
-            if (TrySmartCtl(device, fullPath, out var smartResult))
+            if (TrySmartCtl(device, fullPath, out DriveHealthResult? smartResult))
                 return smartResult;
 
-            var infoOutput = RunProcess("/usr/sbin/diskutil", $"info {device}", 4000);
+            string infoOutput = RunProcess("/usr/sbin/diskutil", $"info {device}", 4000);
             if (string.IsNullOrWhiteSpace(infoOutput))
                 return Unknown(L("DriveHealth.Unknown.DiskutilNoData", "diskutil did not return data"), driveId: device, path: fullPath);
 
-            if (infoOutput.IndexOf("SMART Status: Verified", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (infoOutput.Contains("SMART Status: Verified", StringComparison.OrdinalIgnoreCase))
+            {
                 return new DriveHealthResult(
                     DriveHealthStatus.Healthy,
                     L("DriveHealth.Healthy.SmartVerified", "SMART verified"),
                     DriveId: device,
                     Path: fullPath);
+            }
 
-            if (infoOutput.IndexOf("SMART Status: Failing", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                infoOutput.IndexOf("SMART Status: Failed", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (infoOutput.Contains("SMART Status: Failing", StringComparison.OrdinalIgnoreCase) ||
+                infoOutput.Contains("SMART Status: Failed", StringComparison.OrdinalIgnoreCase))
             {
                 return new DriveHealthResult(
                     DriveHealthStatus.Failing,
@@ -214,8 +218,8 @@ namespace VaultSync.UI.Services
         private static DriveHealthResult CheckLinux(string fullPath)
         {
             // Resolve device using df -P to get /dev/sdXn or similar.
-            var dfOutput = RunProcess("/bin/df", $"-P \"{fullPath}\"", 4000);
-            var device = ParseDeviceFromDf(dfOutput);
+            string dfOutput = RunProcess("/bin/df", $"-P \"{fullPath}\"", 4000);
+            string device = ParseDeviceFromDf(dfOutput);
             if (string.IsNullOrWhiteSpace(device))
                 return Unknown(L("DriveHealth.Unknown.CouldNotResolveDevice", "Could not resolve device"), path: fullPath);
 
@@ -228,7 +232,7 @@ namespace VaultSync.UI.Services
             }
 
             // Try smartctl -H <device> if available.
-            if (TrySmartCtl(device, fullPath, out var smartResult))
+            if (TrySmartCtl(device, fullPath, out DriveHealthResult? smartResult))
                 return smartResult;
 
             return Unknown(L("DriveHealth.Unknown.SmartNotAvailable", "SMART not available"), driveId: device, path: fullPath);
@@ -238,17 +242,17 @@ namespace VaultSync.UI.Services
         {
             result = default;
             // Normalize Windows drive letters to C: style
-            var device = target?.TrimEnd('\\', '/');
+            string? device = target?.TrimEnd('\\', '/');
             if (string.IsNullOrWhiteSpace(device))
                 return false;
 
             // smartctl supports drive letters on Windows (e.g., "C:")
-            var smartOutput = RunProcess("smartctl", $"-H {device}", 5000);
+            string smartOutput = RunProcess("smartctl", $"-H {device}", 5000);
             if (string.IsNullOrWhiteSpace(smartOutput))
                 return false;
 
-            if (smartOutput.IndexOf("PASSED", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                smartOutput.IndexOf("OK", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (smartOutput.Contains("PASSED", StringComparison.OrdinalIgnoreCase) ||
+                smartOutput.Contains("OK", StringComparison.OrdinalIgnoreCase))
             {
                 result = new DriveHealthResult(
                     DriveHealthStatus.Healthy,
@@ -258,9 +262,9 @@ namespace VaultSync.UI.Services
                 return true;
             }
 
-            if (smartOutput.IndexOf("FAILED", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                smartOutput.IndexOf("FAIL", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                smartOutput.IndexOf("PRE-FAIL", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (smartOutput.Contains("FAILED", StringComparison.OrdinalIgnoreCase) ||
+                smartOutput.Contains("FAIL", StringComparison.OrdinalIgnoreCase) ||
+                smartOutput.Contains("PRE-FAIL", StringComparison.OrdinalIgnoreCase))
             {
                 result = new DriveHealthResult(
                     DriveHealthStatus.Failing,
@@ -280,13 +284,13 @@ namespace VaultSync.UI.Services
 
             // df -P output: Filesystem 1024-blocks Used Available Capacity Mounted on
             // Grab the first non-header line's first column.
-            var lines = dfOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var line in lines)
+            string[] lines = dfOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (string line in lines)
             {
                 if (line.StartsWith("Filesystem", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length > 0)
                     return parts[0].Trim();
             }
@@ -308,11 +312,11 @@ namespace VaultSync.UI.Services
             if (!device.StartsWith("/dev/", StringComparison.OrdinalIgnoreCase) && device.Contains(':'))
                 return true;
 
-            return device.IndexOf("smbfs", StringComparison.OrdinalIgnoreCase) >= 0
-                || device.IndexOf("afpfs", StringComparison.OrdinalIgnoreCase) >= 0
-                || device.IndexOf("webdav", StringComparison.OrdinalIgnoreCase) >= 0
-                || device.IndexOf("cifs", StringComparison.OrdinalIgnoreCase) >= 0
-                || device.IndexOf("nfs", StringComparison.OrdinalIgnoreCase) >= 0;
+            return device.Contains("smbfs", StringComparison.OrdinalIgnoreCase)
+                || device.Contains("afpfs", StringComparison.OrdinalIgnoreCase)
+                || device.Contains("webdav", StringComparison.OrdinalIgnoreCase)
+                || device.Contains("cifs", StringComparison.OrdinalIgnoreCase)
+                || device.Contains("nfs", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string RunProcess(string fileName, string arguments, int timeoutMs)
@@ -321,14 +325,14 @@ namespace VaultSync.UI.Services
             {
                 if (string.Equals(fileName, "smartctl", StringComparison.OrdinalIgnoreCase))
                 {
-                    var resolved = ResolveSmartctlPath();
+                    string resolved = ResolveSmartctlPath();
                     if (string.IsNullOrWhiteSpace(resolved))
                         return string.Empty;
                     fileName = resolved;
                 }
                 else
                 {
-                    var resolved = ResolveExecutablePath(fileName);
+                    string resolved = ResolveExecutablePath(fileName);
                     if (string.IsNullOrWhiteSpace(resolved))
                         return string.Empty;
                     fileName = resolved;
@@ -362,7 +366,7 @@ namespace VaultSync.UI.Services
         }
 
         private static DriveHealthResult Unknown(string message, string? driveId = null, string? path = null) =>
-            new DriveHealthResult(DriveHealthStatus.Unknown, message, driveId, path);
+            new(DriveHealthStatus.Unknown, message, driveId, path);
 
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -372,34 +376,34 @@ namespace VaultSync.UI.Services
             if (OperatingSystem.IsWindows())
                 return ResolveExecutablePath("smartctl");
 
-            var candidates = OperatingSystem.IsMacOS()
-                ? new[]
-                {
+            string[] candidates = OperatingSystem.IsMacOS()
+                ?
+                [
                     "/opt/homebrew/sbin/smartctl",
                     "/usr/local/sbin/smartctl",
                     "/usr/sbin/smartctl",
                     "/usr/bin/smartctl"
-                }
-                : new[]
-                {
+                ]
+                :
+                [
                     "/usr/sbin/smartctl",
                     "/usr/bin/smartctl",
                     "/sbin/smartctl",
                     "/bin/smartctl"
-                };
+                ];
 
-            foreach (var candidate in candidates)
+            foreach (string? candidate in candidates)
             {
                 if (File.Exists(candidate))
                     return candidate;
             }
 
-            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (string dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
             {
                 try
                 {
-                    var candidate = Path.Combine(dir, "smartctl");
+                    string candidate = Path.Combine(dir, "smartctl");
                     if (File.Exists(candidate))
                         return candidate;
                 }
@@ -420,25 +424,25 @@ namespace VaultSync.UI.Services
             if (Path.IsPathRooted(fileName))
                 return File.Exists(fileName) ? fileName : string.Empty;
 
-            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            var isWindows = OperatingSystem.IsWindows();
-            var hasExtension = Path.HasExtension(fileName);
-            var windowsExtensions = isWindows
+            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            bool isWindows = OperatingSystem.IsWindows();
+            bool hasExtension = Path.HasExtension(fileName);
+            string[] windowsExtensions = isWindows
                 ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT;.COM")
                     .Split(';', StringSplitOptions.RemoveEmptyEntries)
-                : Array.Empty<string>();
+                : [];
 
-            foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
             {
                 try
                 {
-                    var candidate = Path.Combine(dir, fileName);
+                    string candidate = Path.Combine(dir, fileName);
                     if (File.Exists(candidate))
                         return candidate;
 
                     if (!hasExtension && isWindows)
                     {
-                        foreach (var ext in windowsExtensions)
+                        foreach (string ext in windowsExtensions)
                         {
                             candidate = Path.Combine(dir, fileName + ext.ToLowerInvariant());
                             if (File.Exists(candidate))

@@ -51,7 +51,7 @@ namespace VaultSync.UI.Services
             Dispatcher.UIThread.Post(() =>
             {
                 // If main window is visible/foreground, skip showing the widget to avoid overlap.
-                var main = _desktop.MainWindow;
+                Window? main = _desktop.MainWindow;
                 if (main is not null && main.IsVisible && MainWindow.IsForeground)
                     return;
 
@@ -152,9 +152,9 @@ namespace VaultSync.UI.Services
             if (window is null)
                 return;
 
-            var owner = _desktop.MainWindow;
-            var screens = owner?.Screens ?? window.Screens;
-            var screen = owner is not null
+            Window? owner = _desktop.MainWindow;
+            Screens screens = owner?.Screens ?? window.Screens;
+            Avalonia.Platform.Screen? screen = owner is not null
                 ? screens.ScreenFromWindow(owner) ?? screens.Primary
                 : screens.Primary;
 
@@ -163,12 +163,12 @@ namespace VaultSync.UI.Services
 
             const int margin = 16;
             // Use the current size if available; otherwise fall back to a sensible default.
-            var width  = window.Width  > 0 ? window.Width  : 360;
-            var height = window.Height > 0 ? window.Height : 220;
+            double width  = window.Width  > 0 ? window.Width  : 360;
+            double height = window.Height > 0 ? window.Height : 220;
 
-            var area = screen.WorkingArea;
-            var x = area.X + area.Width  - (int)width  - margin;
-            var y = area.Y + area.Height - (int)height - margin;
+            PixelRect area = screen.WorkingArea;
+            int x = area.X + area.Width  - (int)width  - margin;
+            int y = area.Y + area.Height - (int)height - margin;
 
             // Keep within the working area bounds.
             x = Math.Max(area.X + margin, x);

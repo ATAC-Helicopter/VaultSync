@@ -12,7 +12,7 @@ namespace VaultSync.UI.ViewModels.Notifications
     public class ToastHostViewModel : ViewModelBase
     {
         private const int MaxVisibleToasts = 4;
-        public ObservableCollection<NotificationState> Toasts { get; } = new();
+        public ObservableCollection<NotificationState> Toasts { get; } = [];
 
         public ToastHostViewModel()
         {
@@ -23,7 +23,7 @@ namespace VaultSync.UI.ViewModels.Notifications
         {
             void Apply()
             {
-                var existing = Toasts.FirstOrDefault(toast => toast.Matches(request));
+                NotificationState? existing = Toasts.FirstOrDefault(toast => toast.Matches(request));
                 if (existing is not null)
                 {
                     existing.Show(
@@ -63,7 +63,7 @@ namespace VaultSync.UI.ViewModels.Notifications
 
         private void MoveToFront(NotificationState toast)
         {
-            var index = Toasts.IndexOf(toast);
+            int index = Toasts.IndexOf(toast);
             if (index < 0 || index == Toasts.Count - 1)
                 return;
 
@@ -75,7 +75,7 @@ namespace VaultSync.UI.ViewModels.Notifications
         {
             while (Toasts.Count > MaxVisibleToasts)
             {
-                var candidate = Toasts
+                NotificationState? candidate = Toasts
                     .OrderBy(toast => toast.Severity switch
                     {
                         NotificationSeverity.Error => 2,
