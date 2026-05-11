@@ -25,13 +25,9 @@ namespace VaultSync.Core.Services
 
         public string Name => "rsync";
 
-        // ISyncRunner implementation (without progress callback)
         public Task<int> SyncAsync(Project project, string destination, bool dryRun, CancellationToken ct)
             => SyncAsync(project, destination, dryRun, progressCallback: null, linkDest: null, ct: ct);
 
-        /// <summary>
-        /// Run rsync to mirror project.RootPath into destination, optionally reporting progress.
-        /// </summary>
         public async Task<int> SyncAsync(
             Project project,
             string destination,
@@ -41,7 +37,8 @@ namespace VaultSync.Core.Services
             int? maxBandwidthKbps = null,
             CancellationToken ct = default)
         {
-            // Build ignore filter file based on project's preset and local .vaultsyncignore
+            BackupSafetyService.EnsureSafeBackupRoot(project, destination);
+
             var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
             string? tempExcludeFile = null;
 
@@ -72,23 +69,18 @@ namespace VaultSync.Core.Services
                 ? project.RootPath
                 : project.RootPath + Path.DirectorySeparatorChar;
 
-            // common flags: archive, delete extra files at dest
             psi.ArgumentList.Add("-a");
             psi.ArgumentList.Add("--delete");
             psi.ArgumentList.Add("--human-readable");
-
-            // Fast LAN / local copy optimizations: do not compress, optionally send whole files.
-            psi.ArgumentList.Add("--no-compress"); // avoid wasting CPU on compression over LAN / local FS
+            psi.ArgumentList.Add("--no-compress");
             if (_useWholeFile)
-                psi.ArgumentList.Add("--whole-file");  // skip delta algorithm, faster for LAN and mounted shares
+                psi.ArgumentList.Add("--whole-file");
 
             if (maxBandwidthKbps is > 0)
                 psi.ArgumentList.Add($"--bwlimit={maxBandwidthKbps.Value}");
 
-            // Make rsync actually print progress lines with percentages.
             psi.ArgumentList.Add("--progress");
 
-            // progress2 gives us aggregate stats; only available on newer rsync builds.
             if (GetCapabilities(_rsyncPath).SupportsInfoProgress2)
             {
                 psi.ArgumentList.Add("--info=progress2");
@@ -100,14 +92,12 @@ namespace VaultSync.Core.Services
                 psi.ArgumentList.Add($"--link-dest={linkPath}");
             }
 
-            // macOS: avoid metadata noise; on Linux it's harmless
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 psi.ArgumentList.Add("--force");
 
             if (dryRun)
                 psi.ArgumentList.Add("--dry-run");
 
-            // Apply exclude-from file if we generated one
             if (OperatingSystem.IsWindows())
             {
                 if (tempExcludeFile != null)
@@ -133,7 +123,6 @@ namespace VaultSync.Core.Services
 
             string? currentFile = null;
 
-            // Helper to parse progress from any rsync output line (stdout or stderr)
             void HandleProgressLine(string? data)
             {
                 if (ct.IsCancellationRequested)
@@ -148,7 +137,6 @@ namespace VaultSync.Core.Services
                 // We treat lines without '%' as potential file names and remember them.
                 if (!line.Contains('%'))
                 {
-                    // Heuristic: ignore generic status lines, keep likely paths.
                     if (!line.StartsWith("sending incremental file list", StringComparison.OrdinalIgnoreCase) &&
                         !line.StartsWith("sent ", StringComparison.OrdinalIgnoreCase) &&
                         !line.StartsWith("total size is ", StringComparison.OrdinalIgnoreCase) &&
@@ -198,17 +186,16 @@ namespace VaultSync.Core.Services
             catch (OperationCanceledException)
             {
                 Console.WriteLine("[RsyncRunner] Cancellation requested; stopping rsync process.");
-                try { proc.CancelErrorRead(); } catch { /* ignore */ }
-                try { proc.CancelOutputRead(); } catch { /* ignore */ }
-                try { proc.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                try { proc.CancelErrorRead(); } catch { }
+                try { proc.CancelOutputRead(); } catch { }
+                try { proc.Kill(entireProcessTree: true); } catch { }
                 throw;
             }
             finally
             {
-                // Cleanup temp exclude file
                 if (tempExcludeFile != null && File.Exists(tempExcludeFile))
                 {
-                    try { File.Delete(tempExcludeFile); } catch { /* ignore */ }
+                    try { File.Delete(tempExcludeFile); } catch { }
                 }
             }
 
@@ -248,7 +235,7 @@ namespace VaultSync.Core.Services
 
                 if (!proc.WaitForExit(2000))
                 {
-                    try { proc.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                    try { proc.Kill(entireProcessTree: true); } catch { }
                     return new RsyncCapabilities(null, false);
                 }
 
