@@ -19,7 +19,7 @@ public class ScannerService
     /// </summary>
     public IEnumerable<FileEntry> Scan(string root)
     {
-        foreach (string path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        foreach (var path in EnumerateFilesSafely(root, CancellationToken.None))
         {
             if (_filter.ShouldExclude(root, path))
                 continue;
@@ -44,7 +44,7 @@ public class ScannerService
         {
             var results = new List<FileEntry>();
 
-            foreach (string path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            foreach (var path in EnumerateFilesSafely(root, ct))
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -73,4 +73,64 @@ public class ScannerService
             return results;
         }, ct);
     }
+
+    private IEnumerable<string> EnumerateFilesSafely(string root, CancellationToken ct)
+    {
+        var stack = new Stack<string>();
+        stack.Push(root);
+
+        while (stack.Count > 0)
+        {
+            ct.ThrowIfCancellationRequested();
+            var current = stack.Pop();
+
+            if (!string.Equals(Path.GetFullPath(root), Path.GetFullPath(current), GetPathComparison()) &&
+                (BackupSafetyService.IsReservedPath(root, current) || _filter.ShouldExclude(root, current)))
+            {
+                continue;
+            }
+
+            IEnumerable<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(current);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
+            {
+                Console.WriteLine($"[ScannerService] Skipping directory '{current}': {ex.Message}");
+                continue;
+            }
+
+            foreach (var file in files)
+            {
+                ct.ThrowIfCancellationRequested();
+                yield return file;
+            }
+
+            IEnumerable<string> directories;
+            try
+            {
+                directories = Directory.EnumerateDirectories(current);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
+            {
+                Console.WriteLine($"[ScannerService] Skipping subdirectory scan for '{current}': {ex.Message}");
+                continue;
+            }
+
+            foreach (var directory in directories)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (BackupSafetyService.IsReservedPath(root, directory) || _filter.ShouldExclude(root, directory))
+                    continue;
+
+                stack.Push(directory);
+            }
+        }
+    }
+
+    private static StringComparison GetPathComparison()
+        => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
 }
