@@ -1322,6 +1322,9 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         if (string.IsNullOrWhiteSpace(trimmed))
             return string.Empty;
 
+        if (IsVaultSyncTransientTempPath(trimmed))
+            return string.Empty;
+
         // Preserve the original imported hint when we cannot safely map it
         // to a local existing directory, so the path is never silently erased.
         return trimmed;
@@ -1341,6 +1344,9 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         try
         {
             string fullPath = Path.GetFullPath(path);
+            if (IsVaultSyncTransientTempPath(fullPath))
+                return false;
+
             return Directory.Exists(fullPath);
         }
         catch
@@ -1380,6 +1386,46 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         return string.IsNullOrWhiteSpace(cleaned)
             ? "ImportedProject"
             : cleaned;
+    }
+
+    private static bool IsVaultSyncTransientTempPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var tempRoot = Path.GetFullPath(Path.GetTempPath())
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+
+            if (!fullPath.StartsWith(tempRoot + Path.DirectorySeparatorChar, comparison))
+                return false;
+
+            var relative = Path.GetRelativePath(tempRoot, fullPath);
+            if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative))
+                return false;
+
+            var firstSegment = relative
+                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .FirstOrDefault(segment => !string.IsNullOrWhiteSpace(segment));
+
+            return firstSegment is not null &&
+                   (string.Equals(firstSegment, "vaultsync-meta-import", comparison) ||
+                    string.Equals(firstSegment, "vaultsync-meta-export", comparison) ||
+                    string.Equals(firstSegment, "vaultsync-archive-root", comparison) ||
+                    firstSegment.StartsWith("vaultsync-open-", comparison) ||
+                    firstSegment.StartsWith("vaultsync-restore-", comparison));
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)

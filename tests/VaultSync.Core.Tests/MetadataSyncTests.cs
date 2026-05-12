@@ -421,6 +421,55 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_FallsBackToProjectsRootWhenRootHintIsVaultSyncTemp()
+    {
+        var metaRoot = CreateTempDir();
+        var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var localProjectsRoot = CreateTempDir();
+        var tempImportRoot = Path.Combine(
+            Path.GetTempPath(),
+            "vaultsync-meta-import",
+            Guid.NewGuid().ToString("N"));
+        var tempRootHint = Path.Combine(tempImportRoot, "Temp Root Project");
+        Directory.CreateDirectory(tempRootHint);
+        _tempDirs.Add(tempImportRoot);
+
+        var store = CreateStore(metaRoot);
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-temp-root",
+            Name = "Temp Root Project",
+            Preset = "dotnet",
+            RootPathHint = tempRootHint,
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        var repo = CreateRepository(dbPath);
+        var cfg = AppConfigStore.Load();
+        cfg.ProjectsRoot = localProjectsRoot;
+        AppConfigStore.Save(cfg);
+
+        try
+        {
+            var service = new MetadataSyncService(repo);
+            var result = service.ImportFromStore(metaRoot, new MetadataSyncOptions(true, false));
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            var project = repo.GetProjectByName("Temp Root Project");
+            Assert.NotNull(project);
+            Assert.Equal(Path.Combine(localProjectsRoot, "Temp Root Project"), project!.RootPath);
+        }
+        finally
+        {
+            cfg.ProjectsRoot = string.Empty;
+            AppConfigStore.Save(cfg);
+        }
+    }
+
+    [Fact]
     public void ImportFromStore_PreservesRootHint_WhenNoLocalMappingIsAvailable()
     {
         string metaRoot = CreateTempDir();

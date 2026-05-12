@@ -237,7 +237,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                await RefreshMetadataNowAsync();
+                await Task.Run(RefreshMetadataNowAsync).ConfigureAwait(false);
             }
             catch
             {
