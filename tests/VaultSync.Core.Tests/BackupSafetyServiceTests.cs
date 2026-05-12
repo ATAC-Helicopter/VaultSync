@@ -69,7 +69,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     {
         var projectRoot = Path.Combine(_tempDir, "project");
         Directory.CreateDirectory(projectRoot);
-        var project = new Project { Id = 42, Name = "Project", RootPath = projectRoot };
+        var project = new Project { Id = 42, Name = "Project", RootPath = projectRoot, Preset = string.Empty };
 
         var stagingRoot = BackupSafetyService.GetOfflineStagingRoot(project);
 
@@ -90,7 +90,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
         File.WriteAllText(Path.Combine(backupsDir, "nested.bin"), "exclude");
 
         var scanner = new ScannerService(new FilterService(Array.Empty<string>()));
-        var entries = scanner.Scan(projectRoot).Select(entry => entry.Path).ToArray();
+        var entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
 
         Assert.Contains("normal.txt", entries);
         Assert.DoesNotContain(entries, path => path.Contains("runaway", StringComparison.OrdinalIgnoreCase));
