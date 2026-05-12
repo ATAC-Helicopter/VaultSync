@@ -5,7 +5,6 @@
 - [VS-1737] Added VS Code Linux debug launch/tasks for the UI, CLI, and full test suite.
 - [VS-1738] Linux tarball releases now include rootless install/uninstall scripts that create a user desktop launcher, icon, and `vaultsync` command across distro families.
 - [VS-1739] CLI JSON-producing commands now share a single indented serializer configuration so config, destination, snapshot, sync, restore, and prune output stays consistent.
-
 ### Changed
 - [BUG-17119] Startup metadata import now also checks reachable backup destinations.
 - [BUG-17119] UI metadata imports now treat source stores as read-only.
@@ -28,6 +27,13 @@
 - [BUG-17128] System notification service creation now records fallback exceptions instead of swallowing an empty catch.
 - [BUG-17129] Drive health checks now prefer `smartctl` when available across platforms and avoid surfacing SMART health rows for network destinations where local drive data is unavailable.
 - [BUG-17130] Metadata tombstone exports now treat Linux mount roots as network-style SQLite stores, avoiding WAL locks on mounted backup destinations.
+- [BUG-18002] The log console now formats live diagnostics into readable time/source/message rows with fixed color-coded source chips while keeping raw lines available for copy and export.
+- [BUG-17108] The in-app log console now captures live output when opened and mirrors diagnostics-session errors, so runtime failures are visible without enabling verbose logging first.
+- [BUG-17115] Windows/Linux tray right-click now uses a compact native menu that opens the richer tray panel instead of fragile nested submenus, making tray actions selectable on Linux desktop environments.
+- [BUG-18001] Tray panel action buttons now wrap localized labels within the fixed popover width, preventing longer non-English text from clipping or overflowing.
+- [BUG-18003] Backup safety now blocks source/destination overlap, keeps offline staging outside project trees, and always excludes VaultSync-owned backup artifacts from scans to prevent recursive backup growth. Refs #281.
+- [BUG-18004] Backup delete cards now stay visible while overlapping deletes continue and show destination, target, current file, file counts, and removed bytes during deletion. Refs #279.
+- [BUG-18005] Manual metadata refresh now keeps import work off the UI thread and ignores VaultSync temporary root hints, preventing Refresh History hangs and temp-root project mappings. Refs #280.
 
 ## [1.7.3] - 23.04.2026
 ### Added

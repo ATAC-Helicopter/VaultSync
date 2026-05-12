@@ -1632,6 +1632,25 @@
     - imported history distinguishes source-created time from local imported/discovered time.
     - future metadata sync can reconcile equal content across machines via a stable content fingerprint.
 
+- [x] `BUG-18003` `P0` Prevent recursive backup growth from nested backup destinations. _(Done in PR #278, issue #281)_
+  - Scope: block source/destination overlap, move offline staging outside project trees, force reserved VaultSync backup artifact exclusions, and prune reserved backup folders before scanner descent.
+  - Acceptance:
+    - backup roots inside project roots, project roots inside backup roots, and same-path roots are blocked
+    - offline staging is outside the project tree
+    - reserved VaultSync backup folders/files are excluded without requiring user ignore rules
+- [x] `BUG-18004` `P1` Keep backup delete operation cards visible and informative. _(Done in PR #278, issue #279)_
+  - Scope: keep the active-operation panel visible while operations remain, avoid delayed progress-card resurrection, and show delete target/progress details.
+  - Acceptance:
+    - overlapping backup deletes do not hide the active card area early
+    - delete cards show destination, target, current file, file counts, and removed bytes
+    - delete progress becomes determinate once file counts are known
+- [x] `BUG-18005` `P0` Keep metadata refresh/import work off the UI thread and ignore temp root hints. _(Done in PR #278, issue #280)_
+  - Scope: run manual metadata refresh/import work off the UI thread and reject VaultSync transient temp paths as imported project roots.
+  - Acceptance:
+    - accepting Refresh History changes does not freeze the app shell
+    - imported root hints under VaultSync temp folders fall back to the configured Projects Root
+    - temp root mapping behavior has regression coverage
+
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
 - [ ] `VS-1734` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
