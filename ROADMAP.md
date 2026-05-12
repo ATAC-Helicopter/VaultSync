@@ -1580,10 +1580,10 @@
   - Acceptance:
     - Linux desktop environments can select tray actions from the native menu.
     - deeper backup actions remain available from the richer tray panel.
-- [ ] `BUG-17116` `P1` Harden notification auto-dismiss cleanup after dismiss.
+- [x] `BUG-17116` `P1` Harden notification auto-dismiss cleanup after dismiss. _(Done in PR #258, issue #257; completed 2026-05-12)_
   - Scope: avoid disposed-token races when notifications are dismissed while auto-dismiss cleanup is still pending.
   - Current status:
-    - In progress: implemented on PR `#258`.
+    - Done: implemented on PR `#258`.
     - Issue `#257` tracks the notification cleanup crash.
   - Acceptance:
     - dismissing toast-heavy notification flows no longer produces disposed-token crash reports.
@@ -1600,18 +1600,18 @@
     - Done: implemented alongside the log-console diagnostics work in PR `#255`.
   - Acceptance:
     - log console entries are easier to scan without losing raw diagnostic text.
-- [ ] `BUG-17119` `P1` Preserve Linux metadata imports when source backup paths are rooted.
+- [x] `BUG-17119` `P1` Preserve Linux metadata imports when source backup paths are rooted. _(Done in PR #263, issue #259; completed 2026-05-12)_
   - Scope: remap rooted metadata backup paths from another machine to matching backup suffixes under the configured destination before marking imported history missing.
   - Current status:
-    - In progress: implemented on PR `#263`.
+    - Done: implemented on PR `#263`.
     - Issue `#259` tracks the Linux import-history regression.
   - Acceptance:
     - Linux installs import backup history when the configured destination contains the backup folder even if metadata stores a rooted source-machine path.
     - missing backup detection still tombstones genuinely absent backup paths.
-- [ ] `BUG-17120` `P1` Isolate test config writes from real app settings.
+- [x] `BUG-17120` `P1` Isolate test config writes from real app settings. _(Done in PR #263, issue #260; completed 2026-05-12)_
   - Scope: keep core tests that use `AppConfigStore` from writing temporary project roots into a developer's `~/.vaultsync/appsettings.json`.
   - Current status:
-    - In progress: implemented on PR `#263`.
+    - Done: implemented on PR `#263`.
     - Issue `#260` tracks the test-config leakage.
   - Acceptance:
     - test runs use a temporary config directory unless `VAULTSYNC_CONFIG_DIR` is explicitly provided.
@@ -1632,19 +1632,19 @@
     - imported history distinguishes source-created time from local imported/discovered time.
     - future metadata sync can reconcile equal content across machines via a stable content fingerprint.
 
-- [x] `BUG-18003` `P0` Prevent recursive backup growth from nested backup destinations. _(Done in PR #278, issue #281)_
+- [x] `BUG-18003` `P0` Prevent recursive backup growth from nested backup destinations. _(Done in PR #278, issue #281; completed 2026-05-12)_
   - Scope: block source/destination overlap, move offline staging outside project trees, force reserved VaultSync backup artifact exclusions, and prune reserved backup folders before scanner descent.
   - Acceptance:
     - backup roots inside project roots, project roots inside backup roots, and same-path roots are blocked
     - offline staging is outside the project tree
     - reserved VaultSync backup folders/files are excluded without requiring user ignore rules
-- [x] `BUG-18004` `P1` Keep backup delete operation cards visible and informative. _(Done in PR #278, issue #279)_
+- [x] `BUG-18004` `P1` Keep backup delete operation cards visible and informative. _(Done in PR #278, issue #279; completed 2026-05-12)_
   - Scope: keep the active-operation panel visible while operations remain, avoid delayed progress-card resurrection, and show delete target/progress details.
   - Acceptance:
     - overlapping backup deletes do not hide the active card area early
     - delete cards show destination, target, current file, file counts, and removed bytes
     - delete progress becomes determinate once file counts are known
-- [x] `BUG-18005` `P0` Keep metadata refresh/import work off the UI thread and ignore temp root hints. _(Done in PR #278, issue #280)_
+- [x] `BUG-18005` `P0` Keep metadata refresh/import work off the UI thread and ignore temp root hints. _(Done in PR #278, issue #280; completed 2026-05-12)_
   - Scope: run manual metadata refresh/import work off the UI thread and reject VaultSync transient temp paths as imported project roots.
   - Acceptance:
     - accepting Refresh History changes does not freeze the app shell
