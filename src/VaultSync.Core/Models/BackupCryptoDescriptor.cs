@@ -45,21 +45,21 @@ public sealed record BackupCryptoDescriptor
         if (string.IsNullOrWhiteSpace(descriptorJson))
             return Encrypted("unknown", "unknown", string.Empty);
 
-        var trimmed = descriptorJson.Trim();
+        string trimmed = descriptorJson.Trim();
         if (string.Equals(trimmed, PlainMetadataJson, StringComparison.Ordinal))
             return Encrypted("unknown", "unknown", string.Empty);
 
         try
         {
             using var document = JsonDocument.Parse(trimmed);
-            var root = document.RootElement;
+            JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
                 return Encrypted("unknown", "unknown", string.Empty);
 
-            var formatVersion = ReadInt(root, "formatVersion", CurrentFormatVersion);
-            var algorithm = ReadString(root, "algorithm", "unknown");
-            var kdfProfile = ReadString(root, "kdfProfile", "unknown");
-            var kdfParamRef = ReadString(root, "kdfParamRef", string.Empty);
+            int formatVersion = ReadInt(root, "formatVersion", CurrentFormatVersion);
+            string algorithm = ReadString(root, "algorithm", "unknown");
+            string kdfProfile = ReadString(root, "kdfProfile", "unknown");
+            string kdfParamRef = ReadString(root, "kdfParamRef", string.Empty);
 
             // Legacy fallback keys for pre-contract payloads.
             if (string.Equals(algorithm, "unknown", StringComparison.OrdinalIgnoreCase))
@@ -95,10 +95,10 @@ public sealed record BackupCryptoDescriptor
 
     private static int ReadInt(JsonElement root, string propertyName, int fallback)
     {
-        if (!TryGetPropertyCaseInsensitive(root, propertyName, out var property))
+        if (!TryGetPropertyCaseInsensitive(root, propertyName, out JsonElement property))
             return fallback;
 
-        if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var parsed))
+        if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out int parsed))
             return parsed;
 
         return fallback;
@@ -106,13 +106,13 @@ public sealed record BackupCryptoDescriptor
 
     private static string ReadString(JsonElement root, string propertyName, string fallback)
     {
-        if (!TryGetPropertyCaseInsensitive(root, propertyName, out var property))
+        if (!TryGetPropertyCaseInsensitive(root, propertyName, out JsonElement property))
             return fallback;
 
         if (property.ValueKind != JsonValueKind.String)
             return fallback;
 
-        var value = property.GetString();
+        string? value = property.GetString();
         return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 
@@ -129,7 +129,7 @@ public sealed record BackupCryptoDescriptor
         if (root.TryGetProperty(propertyName, out value))
             return true;
 
-        foreach (var property in root.EnumerateObject())
+        foreach (JsonProperty property in root.EnumerateObject())
         {
             if (!string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
                 continue;

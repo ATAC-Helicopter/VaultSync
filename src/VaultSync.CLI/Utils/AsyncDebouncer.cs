@@ -6,13 +6,11 @@ using Spectre.Console;
 namespace VaultSync.CLI.Utils
 {
     // Note: original had 'file sealed class' (typo) - fixed to 'sealed class'
-    public sealed class AsyncDebouncer
+    public sealed class AsyncDebouncer(int delayMs)
     {
-        private readonly int _delayMs;
+        private readonly int _delayMs = Math.Max(0, delayMs);
         private readonly object _gate = new();
         private CancellationTokenSource? _cts;
-
-        public AsyncDebouncer(int delayMs) => _delayMs = Math.Max(0, delayMs);
 
         public void Trigger(Func<CancellationToken, Task> work)
         {
@@ -24,7 +22,7 @@ namespace VaultSync.CLI.Utils
                 toCancel?.Cancel();
             }
 
-            var localCts = _cts!;
+            CancellationTokenSource localCts = _cts!;
             _ = Task.Run(async () =>
             {
                 try

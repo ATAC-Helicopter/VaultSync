@@ -12,17 +12,17 @@ namespace VaultSync.UI.ViewModels
     {
         private async Task RunStartupBackupIndexConsistencyCheckAsync()
         {
-            var report = await Task.Run(() => _backupIndexConsistencyService.Scan()).ConfigureAwait(false);
-            var summarySnapshot = BackupIndexConsistencyService.BuildSummary(report);
+            BackupIndexConsistencyReport report = await Task.Run(() => _backupIndexConsistencyService.Scan()).ConfigureAwait(false);
+            BackupIndexConsistencySummary summarySnapshot = BackupIndexConsistencyService.BuildSummary(report);
             await Task.Run(() => PersistBackupIndexConsistencySummary(summarySnapshot)).ConfigureAwait(false);
 
-            var summary = BuildBackupIndexConsistencyStatus(report);
+            string summary = BuildBackupIndexConsistencyStatus(report);
             DiagnosticsLogger.Record(
                 $"Backup index consistency scan complete: projects={report.ProjectCount}, snapshots={report.SnapshotCount}, backups={report.BackupCount}, warnings={report.WarningCount}, errors={report.ErrorCount}.");
 
             if (report.HasIssues)
             {
-                foreach (var finding in report.Findings.Take(10))
+                foreach (BackupIndexConsistencyFinding? finding in report.Findings.Take(10))
                 {
                     DiagnosticsLogger.Record(
                         $"Backup index finding [{finding.Severity}] {finding.Code}: count={finding.Count}; samples={string.Join(" | ", finding.Samples)}");
@@ -40,7 +40,7 @@ namespace VaultSync.UI.ViewModels
                     BackupCount = summarySnapshot.BackupCount,
                     ErrorCount = summarySnapshot.ErrorCount,
                     WarningCount = summarySnapshot.WarningCount,
-                    TopFindingCodes = summarySnapshot.TopFindingCodes.ToList()
+                    TopFindingCodes = [.. summarySnapshot.TopFindingCodes]
                 };
                 BackupIndexConsistencyStatus = summary;
                 OnPropertyChanged(nameof(BackupIndexConsistencyReport));
@@ -48,11 +48,11 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        private void PersistBackupIndexConsistencySummary(BackupIndexConsistencySummary summary)
+        private static void PersistBackupIndexConsistencySummary(BackupIndexConsistencySummary summary)
         {
             try
             {
-                var config = AppConfigStore.Load();
+                AppConfig config = AppConfigStore.Load();
                 config.Advanced.BackupIndexLastScan = new BackupIndexScanSummary
                 {
                     CheckedUtc = summary.CheckedUtc,
@@ -61,7 +61,7 @@ namespace VaultSync.UI.ViewModels
                     BackupCount = summary.BackupCount,
                     ErrorCount = summary.ErrorCount,
                     WarningCount = summary.WarningCount,
-                    TopFindingCodes = summary.TopFindingCodes.ToList()
+                    TopFindingCodes = [.. summary.TopFindingCodes]
                 };
                 AppConfigStore.Save(config);
             }

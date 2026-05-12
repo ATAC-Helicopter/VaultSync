@@ -48,7 +48,7 @@ public sealed class OnboardingTourStep
 public sealed class OnboardingTourViewModel : ViewModelBase
 {
     private readonly AppViewModel _app;
-    private readonly List<OnboardingTourStep> _steps = new();
+    private readonly List<OnboardingTourStep> _steps = [];
     private readonly DispatcherTimer _pollTimer;
     private int _index;
     private bool _isActive;
@@ -72,12 +72,12 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     {
         get
         {
-            var total = 0;
-            var index = -1;
-            var current = CurrentStep;
-            for (var i = 0; i < _steps.Count; i++)
+            int total = 0;
+            int index = -1;
+            OnboardingTourStep? current = CurrentStep;
+            for (int i = 0; i < _steps.Count; i++)
             {
-                var step = _steps[i];
+                OnboardingTourStep step = _steps[i];
                 if (!step.IsApplicable())
                     continue;
 
@@ -137,7 +137,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         }
     }
 
-    public string SkipLabel => L("Onboarding.Skip", "Skip");
+    public static string SkipLabel => L("Onboarding.Skip", "Skip");
 
     public RelayCommand PrimaryCommand { get; }
     public RelayCommand SkipCommand { get; }
@@ -221,7 +221,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         _steps.Clear();
         bool UseAdvanced()
         {
-            var live = _app.SettingsViewModel;
+            SettingsViewModel? live = _app.SettingsViewModel;
             if (live is not null)
                 return live.UseAdvancedDestinations;
 
@@ -229,7 +229,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         }
         bool HasAdvancedDestination()
         {
-            var live = _app.SettingsViewModel;
+            SettingsViewModel? live = _app.SettingsViewModel;
             if (live is not null)
             {
                 // Step 4 is "Add a destination": it should complete when an entry exists.
@@ -237,21 +237,21 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                 return live.Destinations.Count > 0;
             }
 
-            var cfg = GetConfig();
+            AppConfig cfg = GetConfig();
             return cfg.Backups.Destinations.Any();
         }
         bool HasLanguageSelected()
         {
-            var cfg = GetConfig();
+            AppConfig cfg = GetConfig();
             return !string.IsNullOrWhiteSpace(cfg.Advanced.Language);
         }
         bool HasProjectsRoot()
         {
-            var live = _app.SettingsViewModel;
+            SettingsViewModel? live = _app.SettingsViewModel;
             if (live is not null)
                 return !string.IsNullOrWhiteSpace(live.ProjectsRootPath);
 
-            var cfg = GetConfig();
+            AppConfig cfg = GetConfig();
             return !string.IsNullOrWhiteSpace(cfg.ProjectsRoot);
         }
         void AddStep(string title, string body, string targetName, string requiredView, Func<bool> isComplete, bool autoAdvance = true, Func<bool>? isApplicable = null)
@@ -343,11 +343,11 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                 if (UseAdvanced())
                     return true;
 
-                var live = _app.SettingsViewModel;
+                SettingsViewModel? live = _app.SettingsViewModel;
                 if (live is not null)
                     return !string.IsNullOrWhiteSpace(live.BackupLocationPath);
 
-                var cfg = GetConfig();
+                AppConfig cfg = GetConfig();
                 return HasDestinationConfigured(cfg);
             },
             isApplicable: () => !UseAdvanced());
@@ -460,7 +460,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         if (cfg.Backups.UseAdvancedDestinations)
             return cfg.Backups.Destinations.Any();
 
-        var root = cfg.Backups.BackupRoot ?? cfg.Backups.BackupLocation ?? string.Empty;
+        string root = cfg.Backups.BackupRoot ?? cfg.Backups.BackupLocation ?? string.Empty;
         return !string.IsNullOrWhiteSpace(root);
     }
 
@@ -475,8 +475,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
         if (IsStepComplete && IsOnRequiredView)
         {
-            var step = CurrentStep;
-            var autoAdvance = step?.AutoAdvance ?? true;
+            OnboardingTourStep? step = CurrentStep;
+            bool autoAdvance = step?.AutoAdvance ?? true;
             if (step is not null && autoAdvance && Interlocked.Exchange(ref _advanceQueued, 1) == 0)
             {
                 Dispatcher.UIThread.Post(async () =>
@@ -503,7 +503,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         OnPropertyChanged(nameof(PrimaryLabel));
         OnPropertyChanged(nameof(IsPrimaryEnabled));
 
-        var required = CurrentStep?.RequiredView;
+        string? required = CurrentStep?.RequiredView;
         if (!string.Equals(_lastRequiredView, required, StringComparison.OrdinalIgnoreCase))
         {
             _lastRequiredView = required;
@@ -521,7 +521,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
     private AppConfig GetConfig()
     {
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
         if (_cachedConfig is not null && (now - _lastConfigAt).TotalMilliseconds < 250)
         {
             return _cachedConfig;
@@ -535,7 +535,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                 {
                     try
                     {
-                        var cfg = AppConfigStore.GetSnapshot();
+                        AppConfig cfg = AppConfigStore.GetSnapshot();
                         Dispatcher.UIThread.Post(() =>
                         {
                             _cachedConfig = cfg;
@@ -552,7 +552,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             return _cachedConfig;
         }
 
-        var fresh = AppConfigStore.GetSnapshot();
+        AppConfig fresh = AppConfigStore.GetSnapshot();
         _cachedConfig = fresh;
         _lastConfigAt = now;
         return fresh;
@@ -575,7 +575,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
     private void EnsureApplicableStep()
     {
-        var safety = _steps.Count + 1;
+        int safety = _steps.Count + 1;
         while (safety-- > 0 && CurrentStep is not null && !CurrentStep.IsApplicable())
         {
             if (IsLastStep)
@@ -587,7 +587,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
     private bool ShouldNavigate()
     {
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
         if ((now - _lastNavigateAt).TotalMilliseconds < 900)
             return false;
 
@@ -597,7 +597,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
     private static string L(string key, string fallback)
     {
-        var value = LocalizationProvider.Service?.GetString(key);
+        string? value = LocalizationProvider.Service?.GetString(key);
         if (string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal))
             return fallback;
         return value;
@@ -605,7 +605,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
     private static string Lf(string key, string fallback, params object[] args)
     {
-        var fmt = L(key, fallback);
+        string fmt = L(key, fallback);
         return string.Format(CultureInfo.CurrentCulture, fmt, args);
     }
 }

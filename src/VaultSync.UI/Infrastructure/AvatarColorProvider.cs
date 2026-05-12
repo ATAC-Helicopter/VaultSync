@@ -29,7 +29,7 @@ public static class AvatarColorProvider
         WriteIndented = true
     };
 
-    private static Dictionary<string, string> _cache = Load();
+    private static readonly Dictionary<string, string> _cache = Load();
 
     /// <summary>
     /// Returns a stable color for the given project, allocating a new color if none is stored yet.
@@ -42,18 +42,18 @@ public static class AvatarColorProvider
     /// </summary>
     public static string GetColor(string? name, string? projectPath, string? externalId)
     {
-        var key = GetKey(projectPath, externalId);
+        string key = GetKey(projectPath, externalId);
         if (string.IsNullOrWhiteSpace(key))
             return Palette[0];
 
         lock (Sync)
         {
-            if (_cache.TryGetValue(key, out var existing) && !string.IsNullOrWhiteSpace(existing))
+            if (_cache.TryGetValue(key, out string? existing) && !string.IsNullOrWhiteSpace(existing))
                 return existing;
 
             if (!string.IsNullOrWhiteSpace(externalId) &&
                 !string.IsNullOrWhiteSpace(projectPath) &&
-                _cache.TryGetValue(projectPath, out var legacy) &&
+                _cache.TryGetValue(projectPath, out string? legacy) &&
                 !string.IsNullOrWhiteSpace(legacy))
             {
                 _cache[key] = legacy;
@@ -82,7 +82,7 @@ public static class AvatarColorProvider
         if (string.IsNullOrWhiteSpace(externalId) || string.IsNullOrWhiteSpace(color))
             return;
 
-        var key = GetKey(null, externalId);
+        string key = GetKey(null, externalId);
         if (string.IsNullOrWhiteSpace(key))
             return;
 
@@ -104,9 +104,9 @@ public static class AvatarColorProvider
 
     private static string AllocateDeterministicColor(string externalId, string? name)
     {
-        var seed = $"ext:{externalId}|{name ?? string.Empty}";
-        var hash = seed.Aggregate(17, (acc, c) => unchecked(acc * 31 + c));
-        var idx = Math.Abs(hash) % Palette.Length;
+        string seed = $"ext:{externalId}|{name ?? string.Empty}";
+        int hash = seed.Aggregate(17, (acc, c) => unchecked(acc * 31 + c));
+        int idx = Math.Abs(hash) % Palette.Length;
         return Palette[idx];
     }
 
@@ -114,18 +114,18 @@ public static class AvatarColorProvider
     {
         // Try to pick an unused palette color first to maximize uniqueness.
         var used = new HashSet<string>(_cache.Values.Where(v => !string.IsNullOrWhiteSpace(v)), StringComparer.OrdinalIgnoreCase);
-        var free = Palette.FirstOrDefault(c => !used.Contains(c));
+        string? free = Palette.FirstOrDefault(c => !used.Contains(c));
         if (!string.IsNullOrWhiteSpace(free))
             return free!;
 
         // If all colors are taken, generate a distinct hue and avoid collisions.
-        var seed = $"{name ?? string.Empty}|{projectPath ?? string.Empty}";
-        var hash = seed.Aggregate(17, (acc, c) => unchecked(acc * 31 + c));
-        var hue = Math.Abs(hash % 360);
+        string seed = $"{name ?? string.Empty}|{projectPath ?? string.Empty}";
+        int hash = seed.Aggregate(17, (acc, c) => unchecked(acc * 31 + c));
+        int hue = Math.Abs(hash % 360);
 
-        for (var i = 0; i < 36; i++)
+        for (int i = 0; i < 36; i++)
         {
-            var candidate = ToHex(FromHsl((hue + i * 37) % 360, 0.6, 0.55));
+            string candidate = ToHex(FromHsl((hue + i * 37) % 360, 0.6, 0.55));
             if (!used.Contains(candidate))
                 return candidate;
         }
@@ -140,16 +140,16 @@ public static class AvatarColorProvider
     {
         if (s <= 0.0001)
         {
-            var v = (byte)Math.Round(l * 255);
+            byte v = (byte)Math.Round(l * 255);
             return Color.FromRgb(v, v, v);
         }
 
-        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        var p = 2 * l - q;
+        double q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        double p = 2 * l - q;
 
-        var r = HueToRgb(p, q, h + 120);
-        var g = HueToRgb(p, q, h);
-        var b = HueToRgb(p, q, h - 120);
+        double r = HueToRgb(p, q, h + 120);
+        double g = HueToRgb(p, q, h);
+        double b = HueToRgb(p, q, h - 120);
 
         return Color.FromRgb(
             (byte)Math.Round(r * 255),
@@ -173,8 +173,8 @@ public static class AvatarColorProvider
             if (!File.Exists(ColorPath))
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            var json = File.ReadAllText(ColorPath);
-            var data = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
+            string json = File.ReadAllText(ColorPath);
+            Dictionary<string, string>? data = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
             return data ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
         catch
@@ -188,7 +188,7 @@ public static class AvatarColorProvider
         try
         {
             Directory.CreateDirectory(ColorDir);
-            var json = JsonSerializer.Serialize(map, JsonOptions);
+            string json = JsonSerializer.Serialize(map, JsonOptions);
             File.WriteAllText(ColorPath, json);
         }
         catch

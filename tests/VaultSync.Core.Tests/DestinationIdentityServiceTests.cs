@@ -39,7 +39,7 @@ public sealed class DestinationIdentityServiceTests
             CredentialName = string.Empty
         };
 
-        var normalized = DestinationIdentityService.NormalizePreferredDestinationId("USB", new[] { destination });
+        string normalized = DestinationIdentityService.NormalizePreferredDestinationId("USB", new[] { destination });
 
         Assert.Equal(DestinationIdentityService.GetId(destination), normalized);
     }
@@ -53,7 +53,7 @@ public sealed class DestinationIdentityServiceTests
             Alias = "USB"
         };
 
-        var normalized = DestinationIdentityService.NormalizePreferredDestinationId(@"D:\VaultSyncBackups", new[] { destination });
+        string normalized = DestinationIdentityService.NormalizePreferredDestinationId(@"D:\VaultSyncBackups", new[] { destination });
 
         Assert.Equal(DestinationIdentityService.GetId(destination), normalized);
     }
@@ -61,7 +61,7 @@ public sealed class DestinationIdentityServiceTests
     [Fact]
     public void NormalizePreferredDestinationId_PreservesSpecialAllValue()
     {
-        var normalized = DestinationIdentityService.NormalizePreferredDestinationId(Project.DestinationAllId, []);
+        string normalized = DestinationIdentityService.NormalizePreferredDestinationId(Project.DestinationAllId, []);
 
         Assert.Equal(Project.DestinationAllId, normalized);
     }

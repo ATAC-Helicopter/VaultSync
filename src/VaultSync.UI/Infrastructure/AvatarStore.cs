@@ -23,8 +23,8 @@ public static class AvatarStore
     {
         try
         {
-            var map = Load();
-            return map.TryGetValue(projectRoot, out var path) ? path : null;
+            Dictionary<string, string> map = Load();
+            return map.TryGetValue(projectRoot, out string? path) ? path : null;
         }
         catch
         {
@@ -36,7 +36,7 @@ public static class AvatarStore
     {
         try
         {
-            var map = Load();
+            Dictionary<string, string> map = Load();
             map[projectRoot] = avatarPath;
             Save(map);
         }
@@ -50,7 +50,7 @@ public static class AvatarStore
     {
         try
         {
-            var map = Load();
+            Dictionary<string, string> map = Load();
             if (map.Remove(projectRoot))
             {
                 Save(map);
@@ -69,8 +69,8 @@ public static class AvatarStore
 
         try
         {
-            var json = File.ReadAllText(AvatarPath);
-            var data = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
+            string json = File.ReadAllText(AvatarPath);
+            Dictionary<string, string>? data = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
             return data ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
         catch
@@ -82,7 +82,7 @@ public static class AvatarStore
     private static void Save(Dictionary<string, string> map)
     {
         Directory.CreateDirectory(AvatarDir);
-        var json = JsonSerializer.Serialize(map, JsonOptions);
+        string json = JsonSerializer.Serialize(map, JsonOptions);
         File.WriteAllText(AvatarPath, json);
     }
 }

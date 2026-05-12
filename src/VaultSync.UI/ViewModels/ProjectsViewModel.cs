@@ -24,6 +24,9 @@ using VaultSync.UI.Services;
 
 namespace VaultSync.UI.ViewModels;
 
+// dotnet format corrupts this multi-target file when applying IDE0008 fixes.
+#pragma warning disable IDE0008
+
 /// <summary>
 /// Projects page view model - drives the list on the left and the
 /// details / actions panel on the right.
@@ -31,9 +34,9 @@ namespace VaultSync.UI.ViewModels;
 public class ProjectsViewModel : ViewModelBase
 {
     private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
-    private static readonly string[] DefaultReusableTags = { "Work", "Games", "Media", "Critical", "Archive" };
-    private readonly IProjectDiscoveryService _discovery = new ProjectDiscoveryService();
-    private IReadOnlyList<DiscoveredProject> _cachedDiscovery = Array.Empty<DiscoveredProject>();
+    private static readonly string[] DefaultReusableTags = ["Work", "Games", "Media", "Critical", "Archive"];
+    private readonly ProjectDiscoveryService _discovery = new();
+    private IReadOnlyList<DiscoveredProject> _cachedDiscovery = [];
     private string? _cachedDiscoveryRoot;
     private DateTime _cachedDiscoveryUtc;
     private static readonly TimeSpan DiscoveryCacheTtl = TimeSpan.FromSeconds(10);
@@ -61,7 +64,7 @@ public class ProjectsViewModel : ViewModelBase
         public IBrush SwatchBrush { get; }
         public IBrush OutlineBrush { get; }
 
-        private static IBrush CreateOutlineBrush(Color color)
+        private static SolidColorBrush CreateOutlineBrush(Color color)
         {
             var luminance = ((0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B)) / 255d;
             return new SolidColorBrush(luminance > 0.62 ? Color.Parse("#24344A") : Color.Parse("#E2E8F0"));
@@ -74,15 +77,15 @@ public class ProjectsViewModel : ViewModelBase
     /// "no preset" option.
     /// </summary>
     public ObservableCollection<string> AvailablePresets { get; } =
-        new ObservableCollection<string>();
+        [];
     public ObservableCollection<DestinationOption> DestinationOptions { get; } =
-        new ObservableCollection<DestinationOption>();
+        [];
     public ObservableCollection<EncryptionPolicyOption> EncryptionPolicyOptions { get; } =
-        new ObservableCollection<EncryptionPolicyOption>();
+        [];
     public ObservableCollection<ProjectGroupOption> GroupOptions { get; } =
-        new ObservableCollection<ProjectGroupOption>();
+        [];
     public ObservableCollection<ProjectItemViewModel> Projects { get; } =
-        new ObservableCollection<ProjectItemViewModel>();
+        [];
     private readonly Dictionary<string, PresetInfo> _presetCatalogById =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PresetRecommendation?> _presetRecommendationCache =
@@ -215,16 +218,16 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand ExportPresetEditorCommand { get; }
     public ICommand ImportPresetEditorCommand { get; }
     public ICommand ToggleSortCommand { get; }
-    public ObservableCollection<ProjectTagColorSwatchViewModel> ProjectTagColorSwatches { get; } = new();
+    public ObservableCollection<ProjectTagColorSwatchViewModel> ProjectTagColorSwatches { get; } = [];
     public event Action<ProjectItemViewModel>? EditProjectEncryptionRequested;
     public event Action<int, string>? ProjectEncryptionPolicyChanged;
     public event Action<int>? ProjectSettingsMetadataChanged;
     public event Action<IReadOnlyList<int>>? BackupGroupRequested;
     public event Action<IReadOnlyList<int>, bool>? AutoBackupGroupPreferenceChanged;
     public event Action<int, string>? ProjectRemovedFromDatabase;
-    public ObservableCollection<ProjectTagChip> SelectedProjectTags { get; } = new ObservableCollection<ProjectTagChip>();
-    public ObservableCollection<ProjectTagChip> SelectedGroupTags { get; } = new ObservableCollection<ProjectTagChip>();
-    public ObservableCollection<ProjectTagChip> ReusableProjectTags { get; } = new ObservableCollection<ProjectTagChip>();
+    public ObservableCollection<ProjectTagChip> SelectedProjectTags { get; } = [];
+    public ObservableCollection<ProjectTagChip> SelectedGroupTags { get; } = [];
+    public ObservableCollection<ProjectTagChip> ReusableProjectTags { get; } = [];
     private string _groupTagInput = string.Empty;
     public string GroupTagInput
     {
@@ -407,9 +410,9 @@ public class ProjectsViewModel : ViewModelBase
     public string ProjectTagColorPreviewBackground => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Background;
     public string ProjectTagColorPreviewForeground => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Foreground;
     public string ProjectTagColorPreviewBorder => ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex).Border;
-    public string ProjectTagColorPickerLabel => L("Projects.Tags.Color.Picker", "Pick a color");
-    public string ProjectTagColorPaletteLabel => L("Projects.Tags.Color.Palette", "Quick palette");
-    public string ProjectTagColorGlobalHint => L("Projects.Tags.Color.GlobalHint", "Saved colors apply app-wide to this tag anywhere it appears.");
+    public static string ProjectTagColorPickerLabel => L("Projects.Tags.Color.Picker", "Pick a color");
+    public static string ProjectTagColorPaletteLabel => L("Projects.Tags.Color.Palette", "Quick palette");
+    public static string ProjectTagColorGlobalHint => L("Projects.Tags.Color.GlobalHint", "Saved colors apply app-wide to this tag anywhere it appears.");
     private string _presetEditorContent = string.Empty;
     public string PresetEditorContent
     {
@@ -513,8 +516,8 @@ public class ProjectsViewModel : ViewModelBase
             ? L("Projects.Sort.Latest", "Sort: Latest snapshot")
             : L("Projects.Sort.Name", "Sort: Name");
 
-    private readonly List<ProjectItemViewModel> _allProjects = new();
-    private HashSet<int> _autoBackupDisabledProjectIds = new();
+    private readonly List<ProjectItemViewModel> _allProjects = [];
+    private HashSet<int> _autoBackupDisabledProjectIds = [];
     private string _searchText = string.Empty;
     private int _initialLoadQueued;
     private ProjectGroupOption? _selectedGroup;
@@ -542,7 +545,7 @@ public class ProjectsViewModel : ViewModelBase
         _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
         _removeProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
         _applyPresetRecommendationCommand = new RelayCommand(_ => ApplyPresetRecommendation(), _ =>
-            SelectedProject is { RecommendedPreset: { Length: > 0 } });
+            SelectedProject is { RecommendedPreset.Length: > 0 });
         _togglePresetEditorCommand = new RelayCommand(_ => TogglePresetEditor(), _ => HasPresetEditorTarget);
         _reloadPresetEditorCommand = new RelayCommand(_ => ReloadPresetEditor(), _ => HasPresetEditorTarget);
         _savePresetEditorCommand = new RelayCommand(_ => SavePresetEditor(), _ => HasPresetEditorTarget);
@@ -637,10 +640,7 @@ public class ProjectsViewModel : ViewModelBase
         if (Interlocked.Exchange(ref _initialLoadQueued, 1) == 1)
             return;
 
-        _ = RefreshAsync(forceDiscovery: false).ContinueWith(_ =>
-        {
-            Interlocked.Exchange(ref _initialLoadQueued, 0);
-        });
+        _ = RefreshAsync(forceDiscovery: false).ContinueWith(_ => Interlocked.Exchange(ref _initialLoadQueued, 0));
     }
 
     private void ShowNotification(string message, NotificationSeverity severity = NotificationSeverity.Info)
@@ -648,7 +648,7 @@ public class ProjectsViewModel : ViewModelBase
         Notification.Show(message, severity);
     }
 
-    private void NotifySnapshotOutcome(string message, bool success)
+    private static void NotifySnapshotOutcome(string message, bool success)
     {
         var cfg = AppConfigStore.GetSnapshot();
 
@@ -674,19 +674,6 @@ public class ProjectsViewModel : ViewModelBase
     }
 
     // Removed sample project seeding; production should show empty state when no projects exist.
-
-    private static ProjectSnapshotViewModel[] CreateDesignSnapshots(double baseGb)
-    {
-        long Bytes(double gb) => (long)(gb * 1024 * 1024 * 1024);
-
-        return new[]
-        {
-            new ProjectSnapshotViewModel(DateTime.Today.AddDays(-1).AddHours(23).AddMinutes(40), Bytes(baseGb)),
-            new ProjectSnapshotViewModel(DateTime.Today.AddDays(-3).AddHours(23),                Bytes(baseGb * 0.97)),
-            new ProjectSnapshotViewModel(DateTime.Today.AddDays(-5).AddHours(22).AddMinutes(50), Bytes(baseGb * 0.94)),
-            new ProjectSnapshotViewModel(DateTime.Today.AddDays(-7).AddHours(23),                Bytes(baseGb * 0.90))
-        };
-    }
 
     private void Refresh()
     {
@@ -718,10 +705,7 @@ public class ProjectsViewModel : ViewModelBase
 
             Projects.Clear();
             _allProjects.Clear();
-            foreach (var item in projectItems)
-            {
-                _allProjects.Add(item);
-            }
+            _allProjects.AddRange(projectItems);
 
             ApplyFilterAndSort();
             RefreshReusableProjectTags();
@@ -768,7 +752,7 @@ public class ProjectsViewModel : ViewModelBase
         }
         catch
         {
-            discovered = Array.Empty<DiscoveredProject>();
+            discovered = [];
         }
 
         _cachedDiscovery = discovered;
@@ -808,7 +792,7 @@ public class ProjectsViewModel : ViewModelBase
                 : GetDefaultDbPath();
 
             repo = new SqliteRepository(dbPath);
-            registeredProjects = repo.GetAllProjects().ToList();
+            registeredProjects = [.. repo.GetAllProjects()];
             projectsByName = registeredProjects
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
@@ -857,7 +841,7 @@ public class ProjectsViewModel : ViewModelBase
         }
 
         if (projectSources.Count == 0)
-            return new List<ProjectItemViewModel>();
+            return [];
 
         var items = new List<ProjectItemViewModel>();
         foreach (var p in projectSources)
@@ -876,22 +860,17 @@ public class ProjectsViewModel : ViewModelBase
                 try
                 {
                     // Use DB snapshot history if the project is registered.
-                    if (projectsByName != null)
-                    {
-                        projectsByName.TryGetValue(p.Name, out existingProject);
-                    }
+                    projectsByName?.TryGetValue(p.Name, out existingProject);
 
                     if (existingProject != null)
                     {
-                        if (latestSnapshotsByProject != null &&
-                            latestSnapshotsByProject.TryGetValue(existingProject.Id, out var latestSnapshot))
+                        if (latestSnapshotsByProject?.TryGetValue(existingProject.Id, out var latestSnapshot) == true)
                         {
                             lastSnapshotTime = latestSnapshot.CreatedUtc;
                             lastSnapshotBytes = latestSnapshot.TotalBytes;
                         }
 
-                        if (latestBackupsByProject != null &&
-                            latestBackupsByProject.TryGetValue(existingProject.Id, out var latestBackup))
+                        if (latestBackupsByProject?.TryGetValue(existingProject.Id, out var latestBackup) == true)
                         {
                             if (!lastSnapshotTime.HasValue || latestBackup.CreatedUtc > lastSnapshotTime.Value)
                             {
@@ -927,7 +906,7 @@ public class ProjectsViewModel : ViewModelBase
             vm.PropertyChanged += OnProjectItemPropertyChanged;
 
             // Populate snapshot history from DB if available; otherwise fall back to discovery values.
-            if (snapshotVms != null && snapshotVms.Count > 0)
+            if (snapshotVms?.Count > 0)
             {
                 vm.SetSnapshots(snapshotVms);
             }
@@ -937,12 +916,12 @@ public class ProjectsViewModel : ViewModelBase
                     p.LastSnapshotTime.Value,
                     p.LastSnapshotSizeBytes.Value);
 
-                vm.SetSnapshots(new[] { snapshotVm });
+                vm.SetSnapshots([snapshotVm]);
                 vm.SnapshotHistoryLoaded = true;
             }
             else
             {
-                vm.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
+                vm.SetSnapshots([]);
             }
 
             // Mark whether this project is registered in the backup DB.
@@ -1455,8 +1434,8 @@ public class ProjectsViewModel : ViewModelBase
         if (!CanEditProjectTagColor || string.IsNullOrWhiteSpace(tag))
             return;
 
-        var defaults = ProjectTagChip.GetDefaultPalette(tag);
-        ProjectTagColorHex = defaults.Background;
+        var (background, _, _) = ProjectTagChip.GetDefaultPalette(tag);
+        ProjectTagColorHex = background;
 
         var cfg = AppConfigStore.Load();
         cfg.Appearance.TagColors ??= new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
@@ -1668,14 +1647,12 @@ public class ProjectsViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(input))
         {
             tags.AddRange(input
-                .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Split([',', ';', '|', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
                 .Select(NormalizeTag)
                 .Where(t => !string.IsNullOrWhiteSpace(t)));
         }
 
-        return tags
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return [.. tags.Distinct(StringComparer.OrdinalIgnoreCase)];
     }
 
     private static bool ProjectMatchesGroup(ProjectItemViewModel project, string groupId)
@@ -1703,14 +1680,13 @@ public class ProjectsViewModel : ViewModelBase
     private static List<string> ParseTags(string? tagsCsv)
     {
         if (string.IsNullOrWhiteSpace(tagsCsv))
-            return new List<string>();
+            return [];
 
-        return tagsCsv
-            .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+        return [.. tagsCsv
+            .Split([',', ';', '|', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
             .Select(t => t.Trim())
             .Where(t => !string.IsNullOrWhiteSpace(t))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
     }
 
     private static string NormalizeTag(string? tag)
@@ -1720,7 +1696,7 @@ public class ProjectsViewModel : ViewModelBase
 
         return string.Join(" ", tag
             .Trim()
-            .Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries));
+            .Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries));
     }
 
     private bool CanSnapshotSelectedGroup()
@@ -1757,8 +1733,7 @@ public class ProjectsViewModel : ViewModelBase
     private void RefreshGroupAutoBackupStateFromConfig(AppConfig? config = null)
     {
         config ??= AppConfigStore.GetSnapshot();
-        _autoBackupDisabledProjectIds = new HashSet<int>(
-            config.Backups.AutoBackupDisabledProjects ?? new List<int>());
+        _autoBackupDisabledProjectIds = [.. config.Backups.AutoBackupDisabledProjects ?? []];
         _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
         _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
     }
@@ -1766,14 +1741,13 @@ public class ProjectsViewModel : ViewModelBase
     private List<int> GetSelectedGroupRegisteredProjectIds()
     {
         var selectedGroupId = SelectedGroup?.Id ?? ProjectGroupOption.AllId;
-        return _allProjects
+        return [.. _allProjects
             .Where(p =>
                 p.IsRegistered &&
                 (string.Equals(selectedGroupId, ProjectGroupOption.AllId, StringComparison.OrdinalIgnoreCase) ||
                  ProjectMatchesGroup(p, selectedGroupId)))
             .Select(p => p.ProjectId)
-            .Distinct()
-            .ToList();
+            .Distinct()];
     }
 
     private async Task SetTagForSelectedGroupAsync(bool add)
@@ -1959,10 +1933,10 @@ public class ProjectsViewModel : ViewModelBase
         await Task.Run(() =>
         {
             var cfg = AppConfigStore.Load();
-            var disabled = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            var disabled = cfg.Backups.AutoBackupDisabledProjects ?? [];
             disabled = enabled
-                ? disabled.Except(ids).Distinct().ToList()
-                : disabled.Concat(ids).Distinct().ToList();
+                ? [.. disabled.Except(ids).Distinct()]
+                : [.. disabled.Concat(ids).Distinct()];
             cfg.Backups.AutoBackupDisabledProjects = disabled;
             AppConfigStore.Save(cfg);
         }).ConfigureAwait(false);
@@ -2301,7 +2275,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             SelectedProject.LastSnapshot = default;
             SelectedProject.SizeBytes = 0;
-            SelectedProject.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
+            SelectedProject.SetSnapshots([]);
             SelectedProject.Health = ProjectHealthStatus.OutOfDate;
             SelectedProject.HealthTag = L("Projects.Health.NotBackedUp", "Not backed up");
             SelectedProject.IsRegistered = false;
@@ -2400,7 +2374,7 @@ public class ProjectsViewModel : ViewModelBase
                 try
                 {
                     var snapshotsFromDb = repo.GetSnapshotsForProject(existing.Name)?.ToList()
-                                          ?? new List<Snapshot>();
+                                          ?? [];
 
                     if (snapshotsFromDb.Count > 0)
                     {
@@ -2420,7 +2394,7 @@ public class ProjectsViewModel : ViewModelBase
                         // No snapshots remaining (should be rare, but handle it).
                         SelectedProject.LastSnapshot = default;
                         SelectedProject.SizeBytes = 0;
-                        SelectedProject.SetSnapshots(Array.Empty<ProjectSnapshotViewModel>());
+                        SelectedProject.SetSnapshots([]);
                     }
 
                     SelectedProject.Health = ProjectHealthStatus.Healthy;
@@ -2428,6 +2402,7 @@ public class ProjectsViewModel : ViewModelBase
                 }
                 catch (Exception ex)
                 {
+                    DiagnosticsLogger.Record($"Project snapshot UI refresh failed: {ex.GetType().Name} - {ex.Message}");
                 }
             }
             if (SelectedProject != null)
@@ -2467,7 +2442,7 @@ public class ProjectsViewModel : ViewModelBase
     private static HashSet<string> GetHiddenProjectPathSet(AppConfig config)
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var values = config.Behavior.HiddenProjectPaths ?? new List<string>();
+        var values = config.Behavior.HiddenProjectPaths ?? [];
         foreach (var value in values)
         {
             var normalized = NormalizeProjectPath(value);
@@ -2485,7 +2460,7 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         var cfg = AppConfigStore.Load();
-        cfg.Behavior.HiddenProjectPaths ??= new List<string>();
+        cfg.Behavior.HiddenProjectPaths ??= [];
         var exists = cfg.Behavior.HiddenProjectPaths
             .Any(path => string.Equals(NormalizeProjectPath(path), normalized, StringComparison.OrdinalIgnoreCase));
         if (exists)
@@ -2502,11 +2477,9 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         var cfg = AppConfigStore.Load();
-        cfg.Behavior.HiddenProjectPaths ??= new List<string>();
+        cfg.Behavior.HiddenProjectPaths ??= [];
         var originalCount = cfg.Behavior.HiddenProjectPaths.Count;
-        cfg.Behavior.HiddenProjectPaths = cfg.Behavior.HiddenProjectPaths
-            .Where(path => !string.Equals(NormalizeProjectPath(path), normalized, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        cfg.Behavior.HiddenProjectPaths = [.. cfg.Behavior.HiddenProjectPaths.Where(path => !string.Equals(NormalizeProjectPath(path), normalized, StringComparison.OrdinalIgnoreCase))];
         if (cfg.Behavior.HiddenProjectPaths.Count == originalCount)
             return;
 
@@ -2630,7 +2603,9 @@ public class ProjectsViewModel : ViewModelBase
 
                 if (SelectedProject is null ||
                     !string.Equals(SelectedProject.Name, projectName, StringComparison.OrdinalIgnoreCase))
+                {
                     return;
+                }
 
                 var (missing, projectId, preset, tagsCsv, preferredDestinationId, encryptionPolicy, encryptionKeyRef) = t.Result;
                 if (missing)
@@ -2770,13 +2745,11 @@ public class ProjectsViewModel : ViewModelBase
 
                 var repo = new SqliteRepository(dbPath);
                 var snapshots = await repo.GetSnapshotsForProjectAsync(projectName);
-                return snapshots
-                    .Select(CreateProjectSnapshotViewModel)
-                    .ToList();
+                return snapshots.ConvertAll(CreateProjectSnapshotViewModel);
             }
             catch
             {
-                return new List<ProjectSnapshotViewModel>();
+                return [];
             }
         }).ContinueWith(t =>
         {
@@ -2787,7 +2760,9 @@ public class ProjectsViewModel : ViewModelBase
 
                 if (SelectedProject is null ||
                     !string.Equals(SelectedProject.Name, projectName, StringComparison.OrdinalIgnoreCase))
+                {
                     return;
+                }
 
                 var history = t.Result;
                 if (history.Count > 0)
@@ -2811,7 +2786,7 @@ public class ProjectsViewModel : ViewModelBase
         });
     }
 
-    private void ApplyProjectHealth(ProjectItemViewModel vm, DateTime? lastSnapshotTime, bool isRegistered)
+    private static void ApplyProjectHealth(ProjectItemViewModel vm, DateTime? lastSnapshotTime, bool isRegistered)
     {
         if (lastSnapshotTime.HasValue)
         {
@@ -2875,7 +2850,7 @@ public class ProjectsViewModel : ViewModelBase
         }
         RefreshHealthTags();
         RefreshSnapshotText();
-        if (SelectedProject != null)
+        if (SelectedProject is not null)
         {
             SelectedProject.SnapshotHistoryLoaded = false;
             LoadSnapshotHistoryForSelectedProject();
@@ -2908,7 +2883,7 @@ public class ProjectsViewModel : ViewModelBase
         }
     }
 
-    private string GetHealthTag(ProjectItemViewModel project)
+    private static string GetHealthTag(ProjectItemViewModel project)
     {
         if (project.LastSnapshot == default)
         {
@@ -3032,6 +3007,7 @@ public class ProjectsViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
+                DiagnosticsLogger.Record($"Project preset catalog load failed: {ex.GetType().Name} - {ex.Message}");
             }
         }
 
@@ -3126,9 +3102,9 @@ public class ProjectsViewModel : ViewModelBase
         try
         {
             var lines = (PresetEditorContent ?? string.Empty)
-                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+                .Split(["\r\n", "\n"], StringSplitOptions.None)
                 .Select(line => line.Trim())
-                .Where(line => line.Length > 0 && !line.StartsWith("#"))
+                .Where(line => line.Length > 0 && !line.StartsWith('#'))
                 .ToList();
 
             var filter = new FilterService(lines);
@@ -3327,7 +3303,9 @@ public class ProjectsViewModel : ViewModelBase
         presetId = SelectedProject?.Preset?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(presetId) ||
             string.Equals(presetId, "no preset", StringComparison.OrdinalIgnoreCase))
+        {
             return false;
+        }
 
         var dir = ResolvePresetsDirForUi();
         if (string.IsNullOrWhiteSpace(dir))
@@ -3412,7 +3390,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private sealed class PresetIndex
     {
-        public List<PresetInfo> Presets { get; set; } = new();
+        public List<PresetInfo> Presets { get; set; } = [];
     }
 
     private sealed class PresetInfo
@@ -3606,7 +3584,7 @@ public class ProjectItemViewModel : ViewModelBase
                 return string.Empty;
 
             var tags = TagsCsv
-                .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Split([',', ';', '|', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
                 .Select(t => t.Trim())
                 .Where(t => !string.IsNullOrWhiteSpace(t))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -3618,7 +3596,7 @@ public class ProjectItemViewModel : ViewModelBase
     }
 
     public bool HasTags => !string.IsNullOrWhiteSpace(TagsDisplay);
-    public ObservableCollection<ProjectTagChip> TagChips { get; } = new ObservableCollection<ProjectTagChip>();
+    public ObservableCollection<ProjectTagChip> TagChips { get; } = [];
 
     private string _recommendedPreset = string.Empty;
     public string RecommendedPreset
@@ -3773,7 +3751,7 @@ public class ProjectItemViewModel : ViewModelBase
 
     // ---- Snapshot history for per-project statistics ----
     public ObservableCollection<ProjectSnapshotViewModel> SnapshotHistory { get; } =
-        new ObservableCollection<ProjectSnapshotViewModel>();
+        [];
 
     public int SnapshotCount => SnapshotHistory.Count;
 
@@ -3936,7 +3914,7 @@ public class ProjectItemViewModel : ViewModelBase
             _ => "#181B23"
         };
 
-    public string HealthForeground => "#F4F8FF";
+    public static string HealthForeground => "#F4F8FF";
 
     public void SetCustomAvatar(string path)
     {
@@ -3968,7 +3946,7 @@ public class ProjectItemViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(name))
             return "??";
 
-        var parts = name.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        var parts = name.Split([' ', '-', '_'], StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 2)
         {
             return (parts[0][0].ToString() + parts[1][0].ToString()).ToUpperInvariant();
@@ -3976,9 +3954,9 @@ public class ProjectItemViewModel : ViewModelBase
 
         var trimmed = name.Trim();
         if (trimmed.Length >= 2)
-            return trimmed.Substring(0, 2).ToUpperInvariant();
+            return trimmed[..2].ToUpperInvariant();
 
-        return trimmed.Substring(0, 1).ToUpperInvariant();
+        return trimmed[..1].ToUpperInvariant();
     }
 
     private void RebuildTagChips()
@@ -3989,7 +3967,7 @@ public class ProjectItemViewModel : ViewModelBase
             return;
 
         var tags = TagsCsv
-            .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split([',', ';', '|', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
             .Select(t => t.Trim())
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -4008,7 +3986,7 @@ public class ProjectItemViewModel : ViewModelBase
             return;
 
         var tags = TagsCsv
-            .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split([',', ';', '|', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
             .Select(t => t.Trim())
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -4028,16 +4006,10 @@ public class ProjectItemViewModel : ViewModelBase
     }
 }
 
-public sealed class DestinationOption
+public sealed class DestinationOption(string id, string label)
 {
-    public string Id { get; }
-    public string Label { get; }
-
-    public DestinationOption(string id, string label)
-    {
-        Id = id ?? string.Empty;
-        Label = label ?? string.Empty;
-    }
+    public string Id { get; } = id ?? string.Empty;
+    public string Label { get; } = label ?? string.Empty;
 
     public override string ToString() => Label;
 
@@ -4053,17 +4025,11 @@ public sealed class DestinationOption
     }
 }
 
-public sealed class ProjectGroupOption
+public sealed class ProjectGroupOption(string id, string label)
 {
     public const string AllId = "all";
-    public string Id { get; }
-    public string Label { get; }
-
-    public ProjectGroupOption(string id, string label)
-    {
-        Id = string.IsNullOrWhiteSpace(id) ? AllId : id.Trim();
-        Label = label ?? string.Empty;
-    }
+    public string Id { get; } = string.IsNullOrWhiteSpace(id) ? AllId : id.Trim();
+    public string Label { get; } = label ?? string.Empty;
 
     public override string ToString() => Label;
 
@@ -4079,16 +4045,10 @@ public sealed class ProjectGroupOption
     }
 }
 
-public sealed class EncryptionPolicyOption
+public sealed class EncryptionPolicyOption(string id, string label)
 {
-    public string Id { get; }
-    public string Label { get; }
-
-    public EncryptionPolicyOption(string id, string label)
-    {
-        Id = ProjectEncryptionPolicy.Normalize(id);
-        Label = label ?? string.Empty;
-    }
+    public string Id { get; } = ProjectEncryptionPolicy.Normalize(id);
+    public string Label { get; } = label ?? string.Empty;
 
     public override string ToString() => Label;
 
@@ -4104,16 +4064,10 @@ public sealed class EncryptionPolicyOption
     }
 }
 
-public sealed class RestoreModeOption
+public sealed class RestoreModeOption(string id, string label)
 {
-    public string Id { get; }
-    public string Label { get; }
-
-    public RestoreModeOption(string id, string label)
-    {
-        Id = ProjectRestoreMode.Normalize(id);
-        Label = label ?? string.Empty;
-    }
+    public string Id { get; } = ProjectRestoreMode.Normalize(id);
+    public string Label { get; } = label ?? string.Empty;
 
     public override string ToString() => Label;
 
@@ -4129,16 +4083,10 @@ public sealed class RestoreModeOption
     }
 }
 
-public sealed class VerificationPolicyOption
+public sealed class VerificationPolicyOption(string id, string label)
 {
-    public string Id { get; }
-    public string Label { get; }
-
-    public VerificationPolicyOption(string id, string label)
-    {
-        Id = ProjectVerificationPolicy.Normalize(id);
-        Label = label ?? string.Empty;
-    }
+    public string Id { get; } = ProjectVerificationPolicy.Normalize(id);
+    public string Label { get; } = label ?? string.Empty;
 
     public override string ToString() => Label;
 
@@ -4154,33 +4102,22 @@ public sealed class VerificationPolicyOption
     }
 }
 
-public sealed class ProjectSnapshotViewModel
+public sealed class ProjectSnapshotViewModel(
+    DateTime timestamp,
+    long sizeBytes,
+    int diffAdded = 0,
+    int diffModified = 0,
+    int diffDeleted = 0,
+    long diffNetBytes = 0,
+    IReadOnlyList<SnapshotDiffPathStat>? topChangedPaths = null)
 {
-    public ProjectSnapshotViewModel(
-        DateTime timestamp,
-        long sizeBytes,
-        int diffAdded = 0,
-        int diffModified = 0,
-        int diffDeleted = 0,
-        long diffNetBytes = 0,
-        IReadOnlyList<SnapshotDiffPathStat>? topChangedPaths = null)
-    {
-        Timestamp = timestamp;
-        SizeBytes = sizeBytes;
-        DiffAdded = Math.Max(0, diffAdded);
-        DiffModified = Math.Max(0, diffModified);
-        DiffDeleted = Math.Max(0, diffDeleted);
-        DiffNetBytes = diffNetBytes;
-        TopChangedPaths = topChangedPaths ?? Array.Empty<SnapshotDiffPathStat>();
-    }
-
-    public DateTime Timestamp { get; }
-    public long SizeBytes { get; }
-    public int DiffAdded { get; }
-    public int DiffModified { get; }
-    public int DiffDeleted { get; }
-    public long DiffNetBytes { get; }
-    public IReadOnlyList<SnapshotDiffPathStat> TopChangedPaths { get; }
+    public DateTime Timestamp { get; } = timestamp;
+    public long SizeBytes { get; } = sizeBytes;
+    public int DiffAdded { get; } = Math.Max(0, diffAdded);
+    public int DiffModified { get; } = Math.Max(0, diffModified);
+    public int DiffDeleted { get; } = Math.Max(0, diffDeleted);
+    public long DiffNetBytes { get; } = diffNetBytes;
+    public IReadOnlyList<SnapshotDiffPathStat> TopChangedPaths { get; } = topChangedPaths ?? [];
 
     // Mini-chart data
     public double RelativeSize { get; set; }
@@ -4209,7 +4146,7 @@ public sealed class ProjectSnapshotViewModel
     {
         get
         {
-            var hasChanges = DiffAdded > 0 || DiffModified > 0 || DiffDeleted > 0;
+            var hasChanges = (DiffAdded > 0) || (DiffModified > 0) || (DiffDeleted > 0);
             if (!hasChanges && DiffNetBytes == 0)
                 return L("Projects.DiffSummary.NoChanges", "No file changes detected or diff data is unavailable for this snapshot");
 

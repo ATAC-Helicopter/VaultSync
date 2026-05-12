@@ -40,7 +40,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string Lf(string key, string fallback, params object[] args)
         {
-            var fmt = L(key, fallback);
+            string fmt = L(key, fallback);
             return args.Length == 0
                 ? fmt
                 : string.Format(CultureInfo.CurrentCulture, fmt, args);
@@ -57,7 +57,7 @@ namespace VaultSync.UI.ViewModels
         private static readonly ConcurrentDictionary<string, ImmutableSolidColorBrush> AccentBrushCache = new(StringComparer.OrdinalIgnoreCase);
         // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
-        protected bool SetProperty<T>(ref T storage, T value)
+        protected static bool SetProperty<T>(ref T storage, T value)
         {
             if (EqualityComparer<T>.Default.Equals(storage, value))
                 return false;
@@ -85,15 +85,15 @@ namespace VaultSync.UI.ViewModels
 
         // Filtered view for the history list
         public ObservableCollection<BackupSnapshotItem> Snapshots { get; } =
-            new ObservableCollection<BackupSnapshotItem>();
+            [];
 
         // Grouped view (per project) for the right-hand history panel
         public ObservableCollection<SnapshotProjectGroup> SnapshotGroups { get; } =
-            new ObservableCollection<SnapshotProjectGroup>();
+            [];
 
         // Internal full list for summary + filtering
-        private readonly List<BackupSnapshotItem> _allSnapshots = new();
-        private readonly List<BackupSnapshotItem> _filteredSnapshots = new();
+        private readonly List<BackupSnapshotItem> _allSnapshots = [];
+        private readonly List<BackupSnapshotItem> _filteredSnapshots = [];
         private readonly Dictionary<string, ProjectBackupItem> _projectLookupById =
             new Dictionary<string, ProjectBackupItem>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, DestinationQuotaPlan> _destinationQuotaPlansById =
@@ -128,7 +128,7 @@ namespace VaultSync.UI.ViewModels
             string PolicyText);
 
         private BackupSnapshotItem? _selectedSnapshotA;
-        private RelayCommand? _compareSelectedSnapshotsRelayCommand;
+        private readonly RelayCommand? _compareSelectedSnapshotsRelayCommand;
         public BackupSnapshotItem? SelectedSnapshotA
         {
             get => _selectedSnapshotA;
@@ -193,17 +193,17 @@ namespace VaultSync.UI.ViewModels
 
         // Per-project backup status
         public ObservableCollection<ProjectBackupItem> ProjectBackups { get; } =
-            new ObservableCollection<ProjectBackupItem>();
+            [];
         public ObservableCollection<BackupsProjectSortOption> ProjectSortOptions { get; } =
-            new ObservableCollection<BackupsProjectSortOption>();
+            [];
         public ObservableCollection<DestinationOption> DestinationOptions { get; } =
-            new ObservableCollection<DestinationOption>();
+            [];
         public ObservableCollection<EncryptionPolicyOption> EncryptionPolicyOptions { get; } =
-            new ObservableCollection<EncryptionPolicyOption>();
+            [];
         public ObservableCollection<RestoreModeOption> RestoreModeOptions { get; } =
-            new ObservableCollection<RestoreModeOption>();
+            [];
         public ObservableCollection<VerificationPolicyOption> VerificationPolicyOptions { get; } =
-            new ObservableCollection<VerificationPolicyOption>();
+            [];
 
         public event Action<int, bool>? AutoBackupPreferenceChanged;
         public event Action<DestinationStatusItem, bool>? DestinationActiveChanged;
@@ -218,15 +218,15 @@ namespace VaultSync.UI.ViewModels
 
         // Active per-project backup progress items (for running backups)
         public ObservableCollection<BackupProgressItem> ActiveBackups { get; } =
-            new ObservableCollection<BackupProgressItem>();
+            [];
         private readonly DispatcherTimer _activeBackupTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
 
         // Per-destination status for the current backup run
         public ObservableCollection<DestinationStatusItem> DestinationStatuses { get; } =
-            new ObservableCollection<DestinationStatusItem>();
+            [];
         public bool HasDestinationStatuses => DestinationStatuses.Count > 0;
         public ObservableCollection<DestinationStatusItem> ActiveDestinationStatuses { get; } =
-            new ObservableCollection<DestinationStatusItem>();
+            [];
         public bool HasActiveDestinationStatuses => ActiveDestinationStatuses.Count > 0;
         public bool CanToggleDestinations => !_isBusy;
         private readonly RelayCommand _toggleRestoreReadinessIssuesCommand;
@@ -268,7 +268,7 @@ namespace VaultSync.UI.ViewModels
 
                 OnPropertyChanged(nameof(SelectedProjectSortOption));
 
-                var nextMode = value?.Id ?? "latest";
+                string nextMode = value?.Id ?? "latest";
                 if (string.Equals(_projectSortMode, nextMode, StringComparison.OrdinalIgnoreCase))
                     return;
 
@@ -343,7 +343,7 @@ namespace VaultSync.UI.ViewModels
 
         // Weekly mini-chart data
         public ObservableCollection<SnapshotActivityPoint> SnapshotActivity { get; } =
-            new ObservableCollection<SnapshotActivityPoint>();
+            [];
         public double SnapshotActivityChartHeight { get; private set; } = 160;
 
         // Summary properties (bound in the top cards)
@@ -489,7 +489,7 @@ namespace VaultSync.UI.ViewModels
         public double StorageLocalPercent { get; private set; }
         public double StorageImportedPercent { get; private set; }
         public ObservableCollection<StorageConsumerItem> TopStorageConsumers { get; } =
-            new ObservableCollection<StorageConsumerItem>();
+            [];
         public bool HasTopStorageConsumers => TopStorageConsumers.Count > 0;
         public int HealthHealthyProjects { get; private set; }
         public int HealthAgingProjects { get; private set; }
@@ -510,7 +510,7 @@ namespace VaultSync.UI.ViewModels
         public double RestoreReadinessUnavailablePercent { get; private set; }
         public string RestoreReadinessHeadline { get; private set; } = string.Empty;
         public string RestoreReadinessDetail { get; private set; } = string.Empty;
-        public ObservableCollection<RestoreReadinessIssueItem> RestoreReadinessIssues { get; } = new();
+        public ObservableCollection<RestoreReadinessIssueItem> RestoreReadinessIssues { get; } = [];
         public bool HasRestoreReadinessIssues => RestoreReadinessIssues.Count > 0;
         private bool _showRestoreReadinessIssues;
         public bool ShowRestoreReadinessIssues
@@ -900,7 +900,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        public ObservableCollection<DiffPreviewPathItem> DiffPreviewTopPaths { get; } = new();
+        public ObservableCollection<DiffPreviewPathItem> DiffPreviewTopPaths { get; } = [];
         public bool HasDiffPreviewTopPaths => DiffPreviewTopPaths.Count > 0;
 
         // Events that external code (e.g. view or parent VM) can subscribe to
@@ -1012,7 +1012,7 @@ namespace VaultSync.UI.ViewModels
 
         private void TickActiveBackupDurations()
         {
-            foreach (var item in ActiveBackups)
+            foreach (BackupProgressItem item in ActiveBackups)
             {
                 item.TickStageClock();
             }
@@ -1067,7 +1067,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var path = await Task.Run(() => WriteSnapshotSummaryExport(snapshot, format));
+                string path = await Task.Run(() => WriteSnapshotSummaryExport(snapshot, format));
                 if (string.IsNullOrWhiteSpace(path))
                 {
                     ShowNotification(
@@ -1090,22 +1090,22 @@ namespace VaultSync.UI.ViewModels
 
         private string WriteSnapshotSummaryExport(BackupSnapshotItem snapshot, SnapshotSummaryExportFormat format)
         {
-            var exportDir = GetSnapshotSummaryExportDirectory();
+            string exportDir = GetSnapshotSummaryExportDirectory();
             Directory.CreateDirectory(exportDir);
 
-            var baseName = BuildSnapshotSummaryFileName(snapshot);
-            var extension = format == SnapshotSummaryExportFormat.Json ? ".json" : ".txt";
-            var path = EnsureUniqueExportPath(Path.Combine(exportDir, $"{baseName}{extension}"));
-            var payload = BuildSnapshotSummaryExportPayload(snapshot);
+            string baseName = BuildSnapshotSummaryFileName(snapshot);
+            string extension = format == SnapshotSummaryExportFormat.Json ? ".json" : ".txt";
+            string path = EnsureUniqueExportPath(Path.Combine(exportDir, $"{baseName}{extension}"));
+            SnapshotSummaryExportPayload payload = BuildSnapshotSummaryExportPayload(snapshot);
 
             if (format == SnapshotSummaryExportFormat.Json)
             {
-                var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+                string json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
                 return path;
             }
 
-            var text = BuildGitStyleDiffText(payload);
+            string text = BuildGitStyleDiffText(payload);
             File.WriteAllText(path, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             return path;
         }
@@ -1115,7 +1115,7 @@ namespace VaultSync.UI.ViewModels
             if (snapshot is null)
                 return;
 
-            var payload = BuildSnapshotSummaryExportPayload(snapshot);
+            SnapshotSummaryExportPayload payload = BuildSnapshotSummaryExportPayload(snapshot);
             DiffPreviewTitle = Lf(
                 "Backups.DiffSummary.PreviewTitle",
                 "Diff summary - {0}",
@@ -1138,7 +1138,7 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewDeleted = payload.DiffDeleted;
             DiffPreviewNet = FormatSignedSize(payload.DiffNetBytes);
             DiffPreviewTopPaths.Clear();
-            foreach (var path in payload.TopPaths.Take(8))
+            foreach (SnapshotDiffPathExport? path in payload.TopPaths.Take(8))
             {
                 DiffPreviewTopPaths.Add(new DiffPreviewPathItem(
                     path.Path,
@@ -1152,19 +1152,19 @@ namespace VaultSync.UI.ViewModels
 
         private void CompareSelectedSnapshots()
         {
-            var pointA = SelectedSnapshotA;
-            var pointB = SelectedSnapshotB;
+            BackupSnapshotItem? pointA = SelectedSnapshotA;
+            BackupSnapshotItem? pointB = SelectedSnapshotB;
             if (pointA is null || pointB is null)
                 return;
             if (string.Equals(pointA.Id, pointB.Id, StringComparison.Ordinal))
                 return;
 
-            var newer = pointA.Timestamp >= pointB.Timestamp ? pointA : pointB;
-            var older = ReferenceEquals(newer, pointA) ? pointB : pointA;
-            var elapsed = newer.Timestamp - older.Timestamp;
-            var sizeDelta = newer.SizeBytes - older.SizeBytes;
-            var netDelta = newer.DiffNetBytes - older.DiffNetBytes;
-            var projectName = ResolveCompareProjectName(newer, older);
+            BackupSnapshotItem newer = pointA.Timestamp >= pointB.Timestamp ? pointA : pointB;
+            BackupSnapshotItem older = ReferenceEquals(newer, pointA) ? pointB : pointA;
+            TimeSpan elapsed = newer.Timestamp - older.Timestamp;
+            long sizeDelta = newer.SizeBytes - older.SizeBytes;
+            long netDelta = newer.DiffNetBytes - older.DiffNetBytes;
+            string projectName = ResolveCompareProjectName(newer, older);
 
             DiffPreviewTitle = Lf(
                 "Backups.Compare.Title",
@@ -1224,8 +1224,8 @@ namespace VaultSync.UI.ViewModels
 
         private string ResolveCompareProjectName(BackupSnapshotItem a, BackupSnapshotItem b)
         {
-            var projectA = ResolveProjectNameFromSnapshot(a);
-            var projectB = ResolveProjectNameFromSnapshot(b);
+            string projectA = ResolveProjectNameFromSnapshot(a);
+            string projectB = ResolveProjectNameFromSnapshot(b);
             if (string.Equals(projectA, projectB, StringComparison.OrdinalIgnoreCase))
                 return projectA;
 
@@ -1236,7 +1236,7 @@ namespace VaultSync.UI.ViewModels
         {
             if (!string.IsNullOrWhiteSpace(snapshot.ProjectId))
             {
-                var match = ProjectBackups.FirstOrDefault(project =>
+                ProjectBackupItem? match = ProjectBackups.FirstOrDefault(project =>
                     string.Equals(project.Id, snapshot.ProjectId, StringComparison.OrdinalIgnoreCase));
                 if (match is not null)
                     return match.Name;
@@ -1276,8 +1276,8 @@ namespace VaultSync.UI.ViewModels
 
         private SnapshotSummaryExportPayload BuildSnapshotSummaryExportPayload(BackupSnapshotItem snapshot)
         {
-            var projectId = int.TryParse(snapshot.ProjectId, out var pid) ? pid : 0;
-            var projectName = ProjectBackups
+            int projectId = int.TryParse(snapshot.ProjectId, out int pid) ? pid : 0;
+            string projectName = ProjectBackups
                 .FirstOrDefault(project => string.Equals(project.Id, snapshot.ProjectId, StringComparison.OrdinalIgnoreCase))
                 ?.Name ?? L("Backups.Section.Group.Unknown", "Unknown project");
 
@@ -1305,7 +1305,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string GetSnapshotSummaryExportDirectory()
         {
-            var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             if (string.IsNullOrWhiteSpace(documents))
                 documents = Path.GetTempPath();
 
@@ -1314,8 +1314,8 @@ namespace VaultSync.UI.ViewModels
 
         private static string BuildSnapshotSummaryFileName(BackupSnapshotItem snapshot)
         {
-            var projectToken = string.IsNullOrWhiteSpace(snapshot.ProjectId) ? "global" : snapshot.ProjectId;
-            var ts = snapshot.Timestamp.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+            string projectToken = string.IsNullOrWhiteSpace(snapshot.ProjectId) ? "global" : snapshot.ProjectId;
+            string ts = snapshot.Timestamp.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
             return $"snapshot-diff-{projectToken}-backup-{snapshot.Id}-{ts}";
         }
 
@@ -1324,13 +1324,13 @@ namespace VaultSync.UI.ViewModels
             if (!File.Exists(path))
                 return path;
 
-            var directory = Path.GetDirectoryName(path) ?? string.Empty;
-            var fileName = Path.GetFileNameWithoutExtension(path);
-            var extension = Path.GetExtension(path);
+            string directory = Path.GetDirectoryName(path) ?? string.Empty;
+            string fileName = Path.GetFileNameWithoutExtension(path);
+            string extension = Path.GetExtension(path);
 
-            for (var i = 1; i <= 999; i++)
+            for (int i = 1; i <= 999; i++)
             {
-                var candidate = Path.Combine(directory, $"{fileName}-{i}{extension}");
+                string candidate = Path.Combine(directory, $"{fileName}-{i}{extension}");
                 if (!File.Exists(candidate))
                     return candidate;
             }
@@ -1338,7 +1338,7 @@ namespace VaultSync.UI.ViewModels
             return Path.Combine(directory, $"{fileName}-{Guid.NewGuid():N}{extension}");
         }
 
-        private string BuildGitStyleDiffText(SnapshotSummaryExportPayload payload)
+        private static string BuildGitStyleDiffText(SnapshotSummaryExportPayload payload)
         {
             var sb = new StringBuilder();
             sb.AppendLine("# VaultSync Snapshot Diff Summary");
@@ -1360,7 +1360,7 @@ namespace VaultSync.UI.ViewModels
             {
                 sb.AppendLine();
                 sb.AppendLine("top_paths");
-                foreach (var path in payload.TopPaths.Take(10))
+                foreach (SnapshotDiffPathExport? path in payload.TopPaths.Take(10))
                 {
                     sb.AppendLine($"~ {path.Path}  (changes: {path.Changes}, bytes: {BackupSnapshotItem.FormatSize(path.ChangedBytes)})");
                 }
@@ -1374,10 +1374,10 @@ namespace VaultSync.UI.ViewModels
             if (item is null)
                 return;
 
-            if (!int.TryParse(item.Id, out var backupId))
+            if (!int.TryParse(item.Id, out int backupId))
                 return;
 
-            var newValue = item.IsProtected;
+            bool newValue = item.IsProtected;
 
             BackupProtectionChanged?.Invoke(backupId, newValue);
         }
@@ -1404,7 +1404,7 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
                 return;
 
-            if (!int.TryParse(project.Id, out var projectId) || projectId <= 0)
+            if (!int.TryParse(project.Id, out int projectId) || projectId <= 0)
                 return;
 
             ManageProjectEncryptionRequested?.Invoke(projectId);
@@ -1425,7 +1425,7 @@ namespace VaultSync.UI.ViewModels
             HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
             BackupHealthSummaryLine = L("Backups.Health.Center.Empty", "No project health data yet.");
 
-            var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", L("DriveHealth.UnknownDrive", "drive"));
+            string driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", L("DriveHealth.UnknownDrive", "drive"));
             BackupDiskDriveLabel = driveLabel;
             BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, L("Backups.Health.NotAvailable", "not available"));
 
@@ -1460,7 +1460,7 @@ namespace VaultSync.UI.ViewModels
 
             InitializeLocalizationDefaults();
 
-            foreach (var des in DestinationStatuses)
+            foreach (DestinationStatusItem des in DestinationStatuses)
             {
                 des.RefreshLocalization();
             }
@@ -1514,10 +1514,10 @@ namespace VaultSync.UI.ViewModels
                     .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
             };
 
-            var selectedId = SelectedProject?.Id;
+            string? selectedId = SelectedProject?.Id;
             var orderedList = ordered.ToList();
             ProjectBackups.Clear();
-            foreach (var item in orderedList)
+            foreach (ProjectBackupItem? item in orderedList)
                 ProjectBackups.Add(item);
 
             if (!string.IsNullOrWhiteSpace(selectedId))
@@ -1666,7 +1666,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var item = ActiveBackups.FirstOrDefault(p => p.ProjectId == projectId);
+            BackupProgressItem? item = ActiveBackups.FirstOrDefault(p => p.ProjectId == projectId);
             if (item != null)
             {
                 ActiveBackups.Remove(item);
@@ -1687,7 +1687,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            foreach (var update in _pendingActiveBackupUpdates.Values)
+            foreach (PendingBackupUpdate update in _pendingActiveBackupUpdates.Values)
             {
                 ApplyActiveBackupUpdate(update);
             }
@@ -1697,7 +1697,7 @@ namespace VaultSync.UI.ViewModels
 
         private void ApplyActiveBackupUpdate(PendingBackupUpdate update)
         {
-            var item = ActiveBackups.FirstOrDefault(p => p.ProjectId == update.ProjectId);
+            BackupProgressItem? item = ActiveBackups.FirstOrDefault(p => p.ProjectId == update.ProjectId);
             if (item == null)
             {
                 item = new BackupProgressItem
@@ -1774,14 +1774,14 @@ namespace VaultSync.UI.ViewModels
                 }
             }
 
-            foreach (var dest in list)
+            foreach (BackupDestination? dest in list)
             {
-                var id = DestinationStatusItem.GetId(dest);
-                var existing = DestinationStatuses.FirstOrDefault(x => x.Id == id);
+                string id = DestinationStatusItem.GetId(dest);
+                DestinationStatusItem? existing = DestinationStatuses.FirstOrDefault(x => x.Id == id);
                 if (existing == null)
                 {
-                    var status = dest.Active ? DestinationStatus.Pending : DestinationStatus.Inactive;
-                    var severity = SeverityStatus.None;
+                    DestinationStatus status = dest.Active ? DestinationStatus.Pending : DestinationStatus.Inactive;
+                    SeverityStatus severity = SeverityStatus.None;
                     var item = new DestinationStatusItem
                     {
                         Id = DestinationStatusItem.GetId(dest),
@@ -1841,7 +1841,7 @@ namespace VaultSync.UI.ViewModels
             }
 
             ActiveDestinationStatuses.Clear();
-            foreach (var item in DestinationStatuses)
+            foreach (DestinationStatusItem item in DestinationStatuses)
             {
                 if (item.IsActive)
                 {
@@ -1859,7 +1859,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var item = DestinationStatuses.FirstOrDefault(d => d.Id == id);
+            DestinationStatusItem? item = DestinationStatuses.FirstOrDefault(d => d.Id == id);
             if (item is null && !string.IsNullOrWhiteSpace(alias))
             {
                 item = DestinationStatuses.FirstOrDefault(d => string.Equals(d.Alias, alias, StringComparison.OrdinalIgnoreCase));
@@ -1870,7 +1870,7 @@ namespace VaultSync.UI.ViewModels
 
             if (severity == SeverityStatus.None)
             {
-                var rawText = status ?? string.Empty;
+                string rawText = status ?? string.Empty;
                 if (rawText.Contains("Read-only", StringComparison.CurrentCultureIgnoreCase )||
                         rawText.Contains("ReadOnly", StringComparison.CurrentCultureIgnoreCase))
                 {
@@ -1944,19 +1944,19 @@ namespace VaultSync.UI.ViewModels
 
         public void MarkBackupProtection(int backupId, bool isProtected)
         {
-            var idStr = backupId.ToString();
+            string idStr = backupId.ToString();
 
-            var snapshot = Snapshots.FirstOrDefault(s => s.Id == idStr);
+            BackupSnapshotItem? snapshot = Snapshots.FirstOrDefault(s => s.Id == idStr);
             if (snapshot != null)
                 snapshot.IsProtected = isProtected;
 
-            var all = _allSnapshots.FirstOrDefault(s => s.Id == idStr);
+            BackupSnapshotItem? all = _allSnapshots.FirstOrDefault(s => s.Id == idStr);
             if (all != null)
                 all.IsProtected = isProtected;
 
-            foreach (var group in SnapshotGroups)
+            foreach (SnapshotProjectGroup group in SnapshotGroups)
             {
-                var gItem = group.Snapshots.FirstOrDefault(s => s.Id == idStr);
+                BackupSnapshotItem? gItem = group.Snapshots.FirstOrDefault(s => s.Id == idStr);
                 if (gItem != null)
                     gItem.IsProtected = isProtected;
             }
@@ -2008,7 +2008,7 @@ namespace VaultSync.UI.ViewModels
                 .ToList();
 
             Snapshots.Clear();
-            foreach (var s in ordered)
+            foreach (BackupSnapshotItem? s in ordered)
                 Snapshots.Add(s);
 
             // If we are not forcing a reset, try to restore previous selection by Id.
@@ -2067,7 +2067,7 @@ namespace VaultSync.UI.ViewModels
                 _filteredSnapshots.Clear();
                 var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
-                foreach (var snapshot in _allSnapshots)
+                foreach (BackupSnapshotItem snapshot in _allSnapshots)
                 {
                     if (_currentTypeFilter == "Auto" && !string.Equals(snapshot.Type, "Auto", StringComparison.OrdinalIgnoreCase))
                         continue;
@@ -2103,7 +2103,7 @@ namespace VaultSync.UI.ViewModels
                 Interlocked.Exchange(ref _refreshSnapshotsInFlight, 0);
                 if (Interlocked.Exchange(ref _refreshSnapshotsQueued, 0) == 1)
                 {
-                    var queuedForceReset = _refreshSnapshotsForceResetQueued;
+                    bool queuedForceReset = _refreshSnapshotsForceResetQueued;
                     _refreshSnapshotsForceResetQueued = false;
                     RefreshSnapshotsView(queuedForceReset);
                 }
@@ -2117,24 +2117,24 @@ namespace VaultSync.UI.ViewModels
             if (filtered.Count == 0)
                 return;
 
-            var grouped = filtered
+            IOrderedEnumerable<IGrouping<string, BackupSnapshotItem>> grouped = filtered
                 .GroupBy(s => s.ProjectId ?? string.Empty)
                 .OrderByDescending(g => g.Max(s => s.Timestamp))
                 .ThenBy(g =>
                 {
-                    if (!string.IsNullOrWhiteSpace(g.Key) && _projectLookupById.TryGetValue(g.Key, out var nameSource))
+                    if (!string.IsNullOrWhiteSpace(g.Key) && _projectLookupById.TryGetValue(g.Key, out ProjectBackupItem? nameSource))
                         return nameSource.Name;
                     return "zzzz_" + g.Key;
                 });
 
-            var latestOverall = filtered
+            DateTime latestOverall = filtered
                 .OrderByDescending(s => s.Timestamp)
                 .FirstOrDefault()
                 ?.Timestamp ?? DateTime.MinValue;
 
-            foreach (var g in grouped)
+            foreach (IGrouping<string, BackupSnapshotItem>? g in grouped)
             {
-                var key = g.Key ?? string.Empty;
+                string key = g.Key ?? string.Empty;
 
                 var ordered = g
                     .GroupBy(s => s.Id)
@@ -2142,14 +2142,14 @@ namespace VaultSync.UI.ViewModels
                     .OrderByDescending(s => s.Timestamp)
                     .ToList();
                 long totalBytes = ordered.Sum(s => s.SizeBytes);
-                var latest = ordered.FirstOrDefault()?.Timestamp ?? DateTime.MinValue;
+                DateTime latest = ordered.FirstOrDefault()?.Timestamp ?? DateTime.MinValue;
 
                 string projectName;
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     projectName = L("Backups.Section.Group.Global", "Global snapshots");
                 }
-                else if (!_projectLookupById.TryGetValue(key, out var nameSource))
+                else if (!_projectLookupById.TryGetValue(key, out ProjectBackupItem? nameSource))
                 {
                     projectName = L("Backups.Section.Group.Unknown", "Unknown project");
                 }
@@ -2158,18 +2158,18 @@ namespace VaultSync.UI.ViewModels
                     projectName = nameSource.Name;
                 }
 
-                var summaryKey = ordered.Count == 1
+                string summaryKey = ordered.Count == 1
                     ? "Backups.Section.SnapshotCount.Singular"
                     : "Backups.Section.SnapshotCount.Plural";
-                var summaryFallback = ordered.Count == 1 ? "{0} backup" : "{0} backups";
+                string summaryFallback = ordered.Count == 1 ? "{0} backup" : "{0} backups";
 
-                var accentBrush = GetAccentBrush("#33405A");
-                if (!string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out var colorSource))
+                ImmutableSolidColorBrush accentBrush = GetAccentBrush("#33405A");
+                if (!string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out ProjectBackupItem? colorSource))
                 {
                     accentBrush = GetAccentBrush(colorSource.AvatarColor);
                 }
 
-                var isExpanded = !string.IsNullOrWhiteSpace(_preferredExpandedProjectId)
+                bool isExpanded = !string.IsNullOrWhiteSpace(_preferredExpandedProjectId)
                     ? string.Equals(_preferredExpandedProjectId, key, StringComparison.OrdinalIgnoreCase)
                     : !string.IsNullOrWhiteSpace(_currentProjectIdFilter)
                         ? string.Equals(_currentProjectIdFilter, key, StringComparison.OrdinalIgnoreCase)
@@ -2179,7 +2179,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     ProjectId          = key,
                     ProjectName        = projectName,
-                    ProjectTagsDisplay = !string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out var tagSource)
+                    ProjectTagsDisplay = !string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out ProjectBackupItem? tagSource)
                         ? tagSource.ProjectTagsDisplay
                         : string.Empty,
                     Summary            = Lf(summaryKey, summaryFallback, ordered.Count),
@@ -2189,13 +2189,13 @@ namespace VaultSync.UI.ViewModels
                     IsExpanded         = isExpanded
                 };
 
-                if (!string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out var chipSource))
+                if (!string.IsNullOrWhiteSpace(key) && _projectLookupById.TryGetValue(key, out ProjectBackupItem? chipSource))
                 {
-                    foreach (var chip in chipSource.ProjectTagChips)
+                    foreach (ProjectTagChip chip in chipSource.ProjectTagChips)
                         groupVm.ProjectTagChips.Add(chip);
                 }
 
-                foreach (var snap in ordered)
+                foreach (BackupSnapshotItem? snap in ordered)
                     groupVm.Snapshots.Add(snap);
 
                 SnapshotGroups.Add(groupVm);
@@ -2205,8 +2205,8 @@ namespace VaultSync.UI.ViewModels
 
         private static ImmutableSolidColorBrush GetAccentBrush(string? hexColor)
         {
-            var normalized = string.IsNullOrWhiteSpace(hexColor) ? "#33405A" : hexColor;
-            if (AccentBrushCache.TryGetValue(normalized, out var cached))
+            string normalized = string.IsNullOrWhiteSpace(hexColor) ? "#33405A" : hexColor;
+            if (AccentBrushCache.TryGetValue(normalized, out ImmutableSolidColorBrush? cached))
                 return cached;
 
             try
@@ -2248,20 +2248,20 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    var config = AppConfigStore.GetSnapshot();
-                    var (usedPercent, freeText, thresholdText, isBelowThreshold, _, status) =
+                    AppConfig config = AppConfigStore.GetSnapshot();
+                    (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string _, DashboardViewModel.BackupDiskUsageStatus status) =
                         DashboardViewModel.ComputeBackupDiskUsageDetailed(config);
-                    var driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
+                    string driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
 
                     string? healthText = null;
                     IBrush? healthBrush = null;
 
-                    var shouldProbeHealth = includeHealthProbe;
+                    bool shouldProbeHealth = includeHealthProbe;
                     if (includeHealthProbe)
                     {
                         lock (_healthProbeGate)
                         {
-                            var now = DateTime.UtcNow;
+                            DateTime now = DateTime.UtcNow;
                             if (now - _lastHealthProbeUtc < HealthProbeCooldown)
                             {
                                 shouldProbeHealth = false;
@@ -2280,10 +2280,10 @@ namespace VaultSync.UI.ViewModels
                     if (shouldProbeHealth)
                     {
                         var healthService = new DriveHealthService();
-                        var backupPath = config.Backups.BackupRoot ?? string.Empty;
-                        var health = healthService.CheckPath(backupPath);
+                        string backupPath = config.Backups.BackupRoot ?? string.Empty;
+                        DriveHealthResult health = healthService.CheckPath(backupPath);
 
-                        var fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
+                        string fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
                             ? L("Backups.Health.NotAvailable", "not available")
                             : health.Message!;
                         (healthText, healthBrush) = health.Status switch
@@ -2295,8 +2295,8 @@ namespace VaultSync.UI.ViewModels
                         };
                     }
 
-                    var displayUsedPercent = usedPercent;
-                    var displayBelowThreshold = isBelowThreshold;
+                    double displayUsedPercent = usedPercent;
+                    bool displayBelowThreshold = isBelowThreshold;
                     if (status != DashboardViewModel.BackupDiskUsageStatus.Ok && BackupDiskUsedPercent > 0)
                     {
                         displayUsedPercent = BackupDiskUsedPercent;
@@ -2325,7 +2325,7 @@ namespace VaultSync.UI.ViewModels
                             string.Empty,
                             false);
 
-                        var driveUnknown = L("DriveHealth.UnknownDrive", "drive");
+                        string driveUnknown = L("DriveHealth.UnknownDrive", "drive");
                         BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", driveUnknown);
                         BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, L("Backups.Health.NotAvailable", "not available"));
                         BackupDiskHealthBrush = HealthUnknownBrush;
@@ -2345,18 +2345,18 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var normalized = System.IO.Path.GetFullPath(path);
+                string normalized = System.IO.Path.GetFullPath(path);
 
                 // On Windows, keep the drive root; on macOS/Linux prefer the mount point under /Volumes.
                 if (OperatingSystem.IsWindows())
                 {
-                    var root = System.IO.Path.GetPathRoot(normalized);
+                    string? root = System.IO.Path.GetPathRoot(normalized);
                     if (!string.IsNullOrWhiteSpace(root))
                         return root.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
                 }
                 else if (normalized.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
                 {
-                    var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                    string[] parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length >= 2)
                         return parts[1];
                 }
@@ -2369,7 +2369,7 @@ namespace VaultSync.UI.ViewModels
             // UNC/SMB paths: include the share (and optional subpath) for clarity.
             if (path.StartsWith("\\\\") || path.StartsWith("//") || path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
             {
-                if (TryParseShareWithSubpath(path, out var host, out var share, out var subPath))
+                if (TryParseShareWithSubpath(path, out string? host, out string? share, out string? subPath))
                 {
                     if (!string.IsNullOrWhiteSpace(subPath))
                         return $"\\\\{host}\\{share}\\{subPath.Replace('/', '\\')}";
@@ -2392,11 +2392,11 @@ namespace VaultSync.UI.ViewModels
 
             if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
             {
-                if (!Uri.TryCreate(path, UriKind.Absolute, out var uri))
+                if (!Uri.TryCreate(path, UriKind.Absolute, out Uri? uri))
                     return false;
 
                 host = uri.Host;
-                var segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (segments.Length == 0)
                     return false;
 
@@ -2410,8 +2410,8 @@ namespace VaultSync.UI.ViewModels
             if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
             {
-                var trimmed = path.TrimStart('\\', '/').Replace('\\', '/');
-                var parts = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string trimmed = path.TrimStart('\\', '/').Replace('\\', '/');
+                string[] parts = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length < 2)
                     return false;
 
@@ -2434,7 +2434,7 @@ namespace VaultSync.UI.ViewModels
 
         private static bool IsNetworkHealthPath(DriveHealthResult health)
         {
-            var id = health.DriveId ?? string.Empty;
+            string id = health.DriveId ?? string.Empty;
             if (id.StartsWith("//", StringComparison.OrdinalIgnoreCase))
                 return true;
             if (id.Contains("://", StringComparison.OrdinalIgnoreCase))
@@ -2442,7 +2442,7 @@ namespace VaultSync.UI.ViewModels
             if (!id.StartsWith("/dev/", StringComparison.OrdinalIgnoreCase) && id.Contains(':'))
                 return true;
 
-            var path = health.Path ?? string.Empty;
+            string path = health.Path ?? string.Empty;
             return path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase)
@@ -2462,7 +2462,7 @@ namespace VaultSync.UI.ViewModels
             string? actionLabel = null,
             ICommand? actionCommand = null)
         {
-            var sev = severity switch
+            NotificationSeverity sev = severity switch
             {
                 "Error"   => NotificationSeverity.Error,
                 "Warning" => NotificationSeverity.Warning,
@@ -2474,7 +2474,7 @@ namespace VaultSync.UI.ViewModels
 
         private void OnAutoBackupChanged(ProjectBackupItem item)
         {
-            if (int.TryParse(item.Id, out var projectId))
+            if (int.TryParse(item.Id, out int projectId))
             {
                 AutoBackupPreferenceChanged?.Invoke(projectId, item.AutoBackupEnabled);
             }
@@ -2512,7 +2512,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var snapshot = _allSnapshots.FirstOrDefault(s => s.Id == VerificationFailedBackupId);
+            BackupSnapshotItem? snapshot = _allSnapshots.FirstOrDefault(s => s.Id == VerificationFailedBackupId);
             if (snapshot == null)
             {
                 CloseVerificationPopup();
@@ -2533,7 +2533,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(backupId))
                 return;
 
-            var snapshot = _allSnapshots.FirstOrDefault(s => s.Id == backupId);
+            BackupSnapshotItem? snapshot = _allSnapshots.FirstOrDefault(s => s.Id == backupId);
             if (snapshot == null)
                 return;
 
@@ -2548,8 +2548,8 @@ namespace VaultSync.UI.ViewModels
 
         private void RecalculateSummary()
         {
-            var now       = DateTime.Now;
-            var weekStart = now.Date.AddDays(-6);
+            DateTime now       = DateTime.Now;
+            DateTime weekStart = now.Date.AddDays(-6);
 
             TotalSnapshots = _allSnapshots.Count;
             HasAnyBackups = TotalSnapshots > 0;
@@ -2595,7 +2595,7 @@ namespace VaultSync.UI.ViewModels
 
             if (_allSnapshots.Count > 0)
             {
-                var last = _allSnapshots
+                BackupSnapshotItem last = _allSnapshots
                     .OrderByDescending(s => s.Timestamp)
                     .First();
 
@@ -2606,7 +2606,7 @@ namespace VaultSync.UI.ViewModels
                     "Size {0}",
                     BackupSnapshotItem.FormatSize(last.SizeBytes));
                 LastBackupSizeValueFormatted = BackupSnapshotItem.FormatSize(last.SizeBytes);
-                var lastProjectName = ResolveProjectNameFromSnapshot(last);
+                string lastProjectName = ResolveProjectNameFromSnapshot(last);
                 LastBackupProjectName = string.IsNullOrWhiteSpace(lastProjectName)
                     ? L("Backups.Summary.UnknownProject", "Unknown project")
                     : lastProjectName;
@@ -2628,10 +2628,10 @@ namespace VaultSync.UI.ViewModels
                         ? L("Backups.Summary.LocalEncrypted", "Local - Encrypted")
                         : L("Backups.Summary.LocalPlain", "Local - Plain");
                 }
-                var ageHours = Math.Max(0, (now - last.Timestamp).TotalHours);
-                var freshness = Math.Clamp(100d - (ageHours / 72d * 100d), 0d, 100d);
+                double ageHours = Math.Max(0, (now - last.Timestamp).TotalHours);
+                double freshness = Math.Clamp(100d - (ageHours / 72d * 100d), 0d, 100d);
                 LastBackupFreshnessPercent = freshness;
-                var freshnessStateLabel = freshness >= 80
+                string freshnessStateLabel = freshness >= 80
                     ? L("Backups.Summary.Freshness.Good", "Fresh")
                     : freshness >= 40
                         ? L("Backups.Summary.Freshness.Moderate", "Aging")
@@ -2662,9 +2662,9 @@ namespace VaultSync.UI.ViewModels
                 LastBackupFreshnessBrush = FreshnessUnknownBrush;
             }
 
-            var totalBytes = _allSnapshots.Sum(s => s.SizeBytes);
+            long totalBytes = _allSnapshots.Sum(s => s.SizeBytes);
             TotalBackupSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes);
-            var avgSize = _allSnapshots.Count > 0
+            string avgSize = _allSnapshots.Count > 0
                 ? BackupSnapshotItem.FormatSize(totalBytes / _allSnapshots.Count)
                 : "0 B";
             TotalSnapshotsSecondaryLine = Lf(
@@ -2672,7 +2672,7 @@ namespace VaultSync.UI.ViewModels
                 "{0} yesterday - avg {1}",
                 SnapshotsYesterday,
                 avgSize);
-            var localBytes = _allSnapshots.Where(s => !s.IsImported).Sum(s => s.SizeBytes);
+            long localBytes = _allSnapshots.Where(s => !s.IsImported).Sum(s => s.SizeBytes);
             TotalStoredLocalLine = Lf(
                 "Backups.Summary.LocalTotal",
                 "Local total: {0}",
@@ -2680,10 +2680,10 @@ namespace VaultSync.UI.ViewModels
             TotalStoredLocalValueFormatted = BackupSnapshotItem.FormatSize(localBytes);
 
             var importedItems = _allSnapshots.Where(s => s.IsImported).ToList();
-            var importedCount = importedItems.Count;
+            int importedCount = importedItems.Count;
             ImportedSnapshotsCount = importedCount;
             LocalSnapshotsCount = Math.Max(0, _allSnapshots.Count - importedCount);
-            var importedBytes = importedItems.Sum(s => s.SizeBytes);
+            long importedBytes = importedItems.Sum(s => s.SizeBytes);
             TotalStoredImportedLine = Lf(
                 "Backups.Summary.ImportedTotal",
                 "Imported total: {0}",
@@ -2703,8 +2703,8 @@ namespace VaultSync.UI.ViewModels
                 ThisWeekImportedPercent = ImportedSnapshotsThisWeek * 100d / SnapshotsThisWeek;
             }
 
-            var safeLocal = Math.Max(0, localBytes);
-            var safeImported = Math.Max(0, importedBytes);
+            long safeLocal = Math.Max(0, localBytes);
+            long safeImported = Math.Max(0, importedBytes);
             if (safeLocal + safeImported == 0)
             {
                 StorageLocalPercent = 0;
@@ -2712,7 +2712,7 @@ namespace VaultSync.UI.ViewModels
             }
             else
             {
-                var totalStorage = safeLocal + safeImported;
+                long totalStorage = safeLocal + safeImported;
                 StorageLocalPercent = safeLocal * 100d / totalStorage;
                 StorageImportedPercent = safeImported * 100d / totalStorage;
             }
@@ -2783,8 +2783,8 @@ namespace VaultSync.UI.ViewModels
             const double chartThreshold = 1180;
             const double activityThreshold = 1460;
 
-            var showCharts = width >= chartThreshold;
-            var showActivity = width >= activityThreshold;
+            bool showCharts = width >= chartThreshold;
+            bool showActivity = width >= activityThreshold;
 
             ShowSummaryCharts = showCharts;
             ShowActivityPanel = showActivity;
@@ -2842,14 +2842,14 @@ namespace VaultSync.UI.ViewModels
             if (totalsByProject.Count == 0)
                 return;
 
-            var totalBytes = totalsByProject.Sum(entry => entry.TotalBytes);
+            long totalBytes = totalsByProject.Sum(entry => entry.TotalBytes);
             foreach (var entry in totalsByProject)
             {
-                var projectName = projectNameById.TryGetValue(entry.ProjectId, out var foundName)
+                string projectName = projectNameById.TryGetValue(entry.ProjectId, out string? foundName)
                     ? foundName
                     : L("Backups.Section.Group.Unknown", "Unknown project");
 
-                var sharePercent = totalBytes <= 0
+                double sharePercent = totalBytes <= 0
                     ? 0
                     : entry.TotalBytes * 100d / totalBytes;
 
@@ -2862,12 +2862,12 @@ namespace VaultSync.UI.ViewModels
 
         private void RebuildBackupHealthCenter(DateTime now)
         {
-            var healthy = 0;
-            var aging = 0;
-            var stale = 0;
-            var noBackup = 0;
+            int healthy = 0;
+            int aging = 0;
+            int stale = 0;
+            int noBackup = 0;
 
-            foreach (var project in ProjectBackups)
+            foreach (ProjectBackupItem project in ProjectBackups)
             {
                 if (!project.LastBackupTime.HasValue)
                 {
@@ -2875,7 +2875,7 @@ namespace VaultSync.UI.ViewModels
                     continue;
                 }
 
-                var age = now - project.LastBackupTime.Value;
+                TimeSpan age = now - project.LastBackupTime.Value;
                 if (age.TotalHours < 24)
                     healthy++;
                 else if (age.TotalHours <= 72)
@@ -2889,7 +2889,7 @@ namespace VaultSync.UI.ViewModels
             HealthStaleProjects = stale;
             HealthNoBackupProjects = noBackup;
 
-            var total = Math.Max(0, healthy + aging + stale + noBackup);
+            int total = Math.Max(0, healthy + aging + stale + noBackup);
             if (total == 0)
             {
                 HealthHealthyPercent = 0;
@@ -2916,7 +2916,7 @@ namespace VaultSync.UI.ViewModels
         private void UpdateRestoreReadinessSummary(AppConfig config, IReadOnlyList<Project> projectList, IReadOnlyList<Backup> backupList)
         {
             var service = new RestoreReadinessService();
-            var summary = service.BuildSummary(projectList, backupList, config, config.Advanced.BackupIndexLastScan);
+            RestoreReadinessSummary summary = service.BuildSummary(projectList, backupList, config, config.Advanced.BackupIndexLastScan);
 
             RestoreReadinessReadyProjects = summary.ReadyCount;
             RestoreReadinessAttentionProjects = summary.AttentionCount;
@@ -2925,9 +2925,9 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessHeadline = FormatRestoreReadinessHeadline(summary);
             RestoreReadinessDetail = FormatRestoreReadinessDetail(summary);
 
-            foreach (var result in summary.Projects)
+            foreach (ProjectRestoreReadiness result in summary.Projects)
             {
-                if (!_projectLookupById.TryGetValue(result.ProjectId.ToString(CultureInfo.InvariantCulture), out var item))
+                if (!_projectLookupById.TryGetValue(result.ProjectId.ToString(CultureInfo.InvariantCulture), out ProjectBackupItem? item))
                     continue;
 
                 item.RestoreReadinessLabel = LocalizeRestoreReadinessLabel(result.State);
@@ -2941,7 +2941,7 @@ namespace VaultSync.UI.ViewModels
                 };
             }
 
-            var total = summary.ProjectCount;
+            int total = summary.ProjectCount;
             if (total <= 0)
             {
                 RestoreReadinessReadyPercent = 0;
@@ -2961,7 +2961,7 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessUnavailablePercent = summary.UnavailableCount * 100d / total;
 
             RestoreReadinessIssues.Clear();
-            foreach (var item in summary.Projects
+            foreach (ProjectRestoreReadiness? item in summary.Projects
                          .Where(project => project.State != RestoreReadinessState.Ready)
                          .OrderByDescending(project => project.State == RestoreReadinessState.Risk)
                          .ThenByDescending(project => project.State == RestoreReadinessState.Unavailable)
@@ -3037,9 +3037,7 @@ namespace VaultSync.UI.ViewModels
             SnapshotActivity.Clear();
 
             // Last 7 days, oldest -> newest
-            var days = Enumerable.Range(0, 7)
-                .Select(offset => now.Date.AddDays(-6 + offset))
-                .ToArray();
+            DateTime[] days = [.. Enumerable.Range(0, 7).Select(offset => now.Date.AddDays(-6 + offset))];
 
             var autoByDate = _allSnapshots
                 .Where(s => string.Equals(s.Type, "Auto", StringComparison.OrdinalIgnoreCase))
@@ -3060,9 +3058,9 @@ namespace VaultSync.UI.ViewModels
             var totals = days
                 .Select(d =>
                 {
-                    autoByDate.TryGetValue(d, out var autoCount);
-                    manualByDate.TryGetValue(d, out var manualCount);
-                    importedByDate.TryGetValue(d, out var importedCount);
+                    autoByDate.TryGetValue(d, out int autoCount);
+                    manualByDate.TryGetValue(d, out int manualCount);
+                    importedByDate.TryGetValue(d, out int importedCount);
                     return autoCount + manualCount + importedCount;
                 })
                 .ToList();
@@ -3071,54 +3069,54 @@ namespace VaultSync.UI.ViewModels
             if (maxTotal == 0)
                 maxTotal = 1; // avoid divide-by-zero
 
-            var chartHeight = maxTotal <= 2 ? 150d : (maxTotal <= 4 ? 172d : 192d);
+            double chartHeight = maxTotal <= 2 ? 150d : (maxTotal <= 4 ? 172d : 192d);
             // Keep the activity chart proportionate on wide windowed layouts.
-            var widthBoost = ShowActivityPanel
+            double widthBoost = ShowActivityPanel
                 ? Math.Clamp((_lastSummaryViewportWidth - 1380d) * 0.05d, 0d, 52d)
                 : 0d;
             chartHeight += widthBoost;
             const double barBase = 12;
-            var barRange = chartHeight - 36;
+            double barRange = chartHeight - 36;
             SnapshotActivityChartHeight = chartHeight;
 
             long maxBytes = bytesByDate.Values.DefaultIfEmpty(0L).Max();
             if (maxBytes == 0)
                 maxBytes = 1;
 
-            foreach (var day in days)
+            foreach (DateTime day in days)
             {
-                autoByDate.TryGetValue(day, out var autoCount);
-                manualByDate.TryGetValue(day, out var manualCount);
-                importedByDate.TryGetValue(day, out var importedCount);
-                bytesByDate.TryGetValue(day, out var totalBytes);
+                autoByDate.TryGetValue(day, out int autoCount);
+                manualByDate.TryGetValue(day, out int manualCount);
+                importedByDate.TryGetValue(day, out int importedCount);
+                bytesByDate.TryGetValue(day, out long totalBytes);
 
-                var totalCount = autoCount + manualCount + importedCount;
-                var normalized = totalBytes > 0
+                int totalCount = autoCount + manualCount + importedCount;
+                double normalized = totalBytes > 0
                     ? totalBytes / (double)maxBytes
                     : totalCount / (double)maxTotal;
-                var totalHeight = totalCount == 0 ? 0 : barBase + normalized * barRange;
+                double totalHeight = totalCount == 0 ? 0 : barBase + normalized * barRange;
 
-                var autoHeight = 0d;
-                var manualHeight = 0d;
-                var importedHeight = 0d;
+                double autoHeight = 0d;
+                double manualHeight = 0d;
+                double importedHeight = 0d;
                 if (totalCount > 0)
                 {
                     autoHeight = autoCount == 0 ? 0 : Math.Max(5, totalHeight * autoCount / totalCount);
                     manualHeight = manualCount == 0 ? 0 : Math.Max(5, totalHeight * manualCount / totalCount);
                     importedHeight = importedCount == 0 ? 0 : Math.Max(5, totalHeight * importedCount / totalCount);
 
-                    var combined = autoHeight + manualHeight + importedHeight;
+                    double combined = autoHeight + manualHeight + importedHeight;
                     if (combined > totalHeight && combined > 0)
                     {
-                        var scale = totalHeight / combined;
+                        double scale = totalHeight / combined;
                         autoHeight *= scale;
                         manualHeight *= scale;
                         importedHeight *= scale;
                     }
                 }
 
-                var dayLabel = day.ToString("ddd");
-                var tooltip = totalCount == 0
+                string dayLabel = day.ToString("ddd");
+                string tooltip = totalCount == 0
                     ? Lf("Backups.Activity.TooltipNone", "{0}: No backups", dayLabel)
                     : Lf("Backups.Activity.Tooltip", "{0}: {1} backups - {2}", dayLabel, totalCount, BackupSnapshotItem.FormatSize(totalBytes));
 
@@ -3149,7 +3147,7 @@ namespace VaultSync.UI.ViewModels
             if (projects is null) throw new ArgumentNullException(nameof(projects));
             if (backups  is null) throw new ArgumentNullException(nameof(backups));
 
-            var config = AppConfigStore.GetSnapshot();
+            AppConfig config = AppConfigStore.GetSnapshot();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             RefreshEncryptionPolicyOptions();
@@ -3159,7 +3157,7 @@ namespace VaultSync.UI.ViewModels
 
             var projectList = projects.ToList();
             var dedupBackups = new Dictionary<int, Backup>();
-            foreach (var backup in backups)
+            foreach (Backup backup in backups)
             {
                 if (!dedupBackups.ContainsKey(backup.Id))
                 {
@@ -3168,13 +3166,13 @@ namespace VaultSync.UI.ViewModels
             }
             var backupList = dedupBackups.Values.ToList();
             RefreshDestinationQuotaPlans(config, backupList);
-            var snapshotById = LoadSnapshotLookup(config, backupList);
-            var projectSignature = ComputeProjectSignature(projectList);
-            var backupSignature = ComputeBackupSignature(backupList);
-            var autoSignature = ComputeAutoBackupSignature(autoBackupDisabledProjects);
+            Dictionary<int, Snapshot> snapshotById = LoadSnapshotLookup(config, backupList);
+            int projectSignature = ComputeProjectSignature(projectList);
+            int backupSignature = ComputeBackupSignature(backupList);
+            int autoSignature = ComputeAutoBackupSignature(autoBackupDisabledProjects);
 
-            var dataChanged = projectSignature != _lastProjectSignature || backupSignature != _lastBackupSignature;
-            var autoChanged = autoSignature != _lastAutoBackupSignature;
+            bool dataChanged = projectSignature != _lastProjectSignature || backupSignature != _lastBackupSignature;
+            bool autoChanged = autoSignature != _lastAutoBackupSignature;
             if (!dataChanged && autoChanged)
             {
                 UpdateAutoBackupFlags(autoBackupDisabledProjects);
@@ -3191,9 +3189,9 @@ namespace VaultSync.UI.ViewModels
 
             // Map per-project aggregates in a single pass.
             var projectStats = new Dictionary<int, (int Count, long TotalBytes, DateTime? LastBackupTime)>();
-            foreach (var backup in backupList)
+            foreach (Backup? backup in backupList)
             {
-                if (!projectStats.TryGetValue(backup.ProjectId, out var stats))
+                if (!projectStats.TryGetValue(backup.ProjectId, out (int Count, long TotalBytes, DateTime? LastBackupTime) stats))
                     stats = (0, 0L, null);
 
                 stats.Count++;
@@ -3206,7 +3204,7 @@ namespace VaultSync.UI.ViewModels
 
             // Compute per-project delta vs previous backup (latest - previous).
             var projectDeltaById = new Dictionary<int, long?>();
-            foreach (var group in backupList.GroupBy(b => b.ProjectId))
+            foreach (IGrouping<int, Backup> group in backupList.GroupBy(b => b.ProjectId))
             {
                 var ordered = group
                     .OrderByDescending(b => b.CreatedUtc)
@@ -3226,17 +3224,17 @@ namespace VaultSync.UI.ViewModels
 
             var orderedProjects = projectList
                 .OrderByDescending(project =>
-                    projectStats.TryGetValue(project.Id, out var stats)
+                    projectStats.TryGetValue(project.Id, out (int Count, long TotalBytes, DateTime? LastBackupTime) stats)
                         ? stats.LastBackupTime ?? DateTime.MinValue
                         : DateTime.MinValue)
                 .ThenBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            foreach (var project in orderedProjects)
+            foreach (Project? project in orderedProjects)
             {
-                projectStats.TryGetValue(project.Id, out var stats);
+                projectStats.TryGetValue(project.Id, out (int Count, long TotalBytes, DateTime? LastBackupTime) stats);
 
-                var projectName = string.IsNullOrWhiteSpace(project.Name)
+                string projectName = string.IsNullOrWhiteSpace(project.Name)
                     ? L("Backups.Section.Group.Unknown", "Unknown project")
                     : project.Name.Trim();
 
@@ -3260,7 +3258,7 @@ namespace VaultSync.UI.ViewModels
                     RestoreModeChanged = OnProjectRestoreModeChanged,
                     VerificationPolicy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy),
                     VerificationPolicyChanged = OnProjectVerificationPolicyChanged,
-                    StorageDeltaBytes = projectDeltaById.TryGetValue(project.Id, out var deltaBytes)
+                    StorageDeltaBytes = projectDeltaById.TryGetValue(project.Id, out long? deltaBytes)
                         ? deltaBytes
                         : null
                 };
@@ -3278,20 +3276,20 @@ namespace VaultSync.UI.ViewModels
             // Map individual backups into the history list model
             var projectLookup = projectList.ToDictionary(p => p.Id);
 
-            foreach (var backup in backupList)
+            foreach (Backup? backup in backupList)
             {
-                projectLookup.TryGetValue(backup.ProjectId, out var project);
-                snapshotById.TryGetValue(backup.SnapshotId, out var snapshotInfo);
-                var (diffTopPathsDisplay, hasDiffTopPaths) = BuildSnapshotDiffTopPathsDisplay(snapshotInfo);
+                projectLookup.TryGetValue(backup.ProjectId, out Project? project);
+                snapshotById.TryGetValue(backup.SnapshotId, out Snapshot? snapshotInfo);
+                (string diffTopPathsDisplay, bool hasDiffTopPaths) = BuildSnapshotDiffTopPathsDisplay(snapshotInfo);
 
-                var destinationDisplay = string.IsNullOrWhiteSpace(backup.DestinationAlias)
+                string destinationDisplay = string.IsNullOrWhiteSpace(backup.DestinationAlias)
                     ? backup.DestinationPath
                     : backup.DestinationAlias;
 
-            var isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
-            var backupMode = BackupModes.Normalize(backup.BackupMode);
-            var isIncremental = string.Equals(backupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase);
-            var importedLabel = L("Backups.Snapshot.Type.Imported", "Imported");
+                bool isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
+                string backupMode = BackupModes.Normalize(backup.BackupMode);
+                bool isIncremental = string.Equals(backupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase);
+                string importedLabel = L("Backups.Snapshot.Type.Imported", "Imported");
             if (backup.IsImported && !string.IsNullOrWhiteSpace(backup.OriginMachineName))
             {
                 importedLabel = $"{importedLabel} \u00b7 {backup.OriginMachineName}";
@@ -3367,12 +3365,12 @@ namespace VaultSync.UI.ViewModels
             _destinationQuotaPlansById.Clear();
 
             var planner = new DestinationQuotaPlanner();
-            foreach (var plan in planner.BuildPlans(config.Backups.Destinations ?? new List<BackupDestination>(), backups))
+            foreach (DestinationQuotaPlan plan in planner.BuildPlans(config.Backups.Destinations ?? [], backups))
             {
                 _destinationQuotaPlansById[plan.DestinationId] = plan;
             }
 
-            foreach (var item in DestinationStatuses)
+            foreach (DestinationStatusItem item in DestinationStatuses)
             {
                 ApplyDestinationQuotaPlan(item);
             }
@@ -3380,7 +3378,7 @@ namespace VaultSync.UI.ViewModels
 
         private void ApplyDestinationQuotaPlan(DestinationStatusItem item)
         {
-            if (!_destinationQuotaPlansById.TryGetValue(item.Id, out var plan))
+            if (!_destinationQuotaPlansById.TryGetValue(item.Id, out DestinationQuotaPlan? plan))
             {
                 item.StoredBytesText = string.Empty;
                 item.CleanupSuggestionText = string.Empty;
@@ -3398,7 +3396,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var usageLabel = string.Format(
+            string usageLabel = string.Format(
                 CultureInfo.CurrentCulture,
                 Lf("Backups.Destinations.QuotaUsage", "Quota: {0} of {1} ({2}% warn)"),
                 BackupSnapshotItem.FormatSize(plan.StoredBytes),
@@ -3422,7 +3420,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var cleanupLabel = string.Format(
+            string cleanupLabel = string.Format(
                 CultureInfo.CurrentCulture,
                 Lf(
                     "Backups.Destinations.CleanupSuggestion",
@@ -3462,8 +3460,8 @@ namespace VaultSync.UI.ViewModels
         {
             unchecked
             {
-                var hash = projects.Count;
-                foreach (var project in projects)
+                int hash = projects.Count;
+                foreach (Project project in projects)
                 {
                     hash = (hash * 397) ^ project.Id;
                     hash = (hash * 397) ^ (project.Name?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
@@ -3482,8 +3480,8 @@ namespace VaultSync.UI.ViewModels
         {
             unchecked
             {
-                var hash = backups.Count;
-                foreach (var backup in backups)
+                int hash = backups.Count;
+                foreach (Backup backup in backups)
                 {
                     hash = (hash * 397) ^ backup.Id;
                     hash = (hash * 397) ^ backup.ProjectId;
@@ -3504,11 +3502,11 @@ namespace VaultSync.UI.ViewModels
                 .ToHashSet();
 
             if (snapshotIds.Count == 0)
-                return new Dictionary<int, Snapshot>();
+                return [];
 
             try
             {
-                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                string dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
                     : AppConfigStore.GetDefaultDbPath();
                 var repo = new SqliteRepository(dbPath);
@@ -3517,7 +3515,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch
             {
-                return new Dictionary<int, Snapshot>();
+                return [];
             }
         }
 
@@ -3526,7 +3524,7 @@ namespace VaultSync.UI.ViewModels
             if (snapshot is null)
                 return L("Backups.DiffSummary.Unavailable", "Diff summary unavailable");
 
-            var hasChanges = snapshot.DiffAdded > 0 || snapshot.DiffModified > 0 || snapshot.DiffDeleted > 0;
+            bool hasChanges = snapshot.DiffAdded > 0 || snapshot.DiffModified > 0 || snapshot.DiffDeleted > 0;
             if (!hasChanges && snapshot.DiffNetBytes == 0)
                 return L("Backups.DiffSummary.NoChanges", "No file changes detected or diff data is unavailable for this backup");
 
@@ -3544,11 +3542,11 @@ namespace VaultSync.UI.ViewModels
             if (snapshot is null)
                 return (string.Empty, false);
 
-            var topPaths = SnapshotDiffSummary.ParseTopChangedPaths(snapshot.DiffTopPathsJson);
+            IReadOnlyList<SnapshotDiffPathStat> topPaths = SnapshotDiffSummary.ParseTopChangedPaths(snapshot.DiffTopPathsJson);
             if (topPaths.Count == 0)
                 return (string.Empty, false);
 
-            var preview = string.Join(
+            string preview = string.Join(
                 ", ",
                 topPaths
                     .Where(path => !string.IsNullOrWhiteSpace(path.Path))
@@ -3563,7 +3561,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string FormatSignedSize(long bytes)
         {
-            var absolute = BackupSnapshotItem.FormatSize(Math.Abs(bytes));
+            string absolute = BackupSnapshotItem.FormatSize(Math.Abs(bytes));
             if (bytes > 0)
                 return $"+{absolute}";
             if (bytes < 0)
@@ -3578,8 +3576,8 @@ namespace VaultSync.UI.ViewModels
 
             unchecked
             {
-                var hash = disabledProjects.Count;
-                foreach (var id in disabledProjects.OrderBy(id => id))
+                int hash = disabledProjects.Count;
+                foreach (int id in disabledProjects.OrderBy(id => id))
                 {
                     hash = (hash * 397) ^ id;
                 }
@@ -3589,10 +3587,10 @@ namespace VaultSync.UI.ViewModels
 
         private void UpdateAutoBackupFlags(ISet<int>? disabledProjects)
         {
-            var disabled = disabledProjects ?? new HashSet<int>();
-            foreach (var item in ProjectBackups)
+            ISet<int> disabled = disabledProjects ?? new HashSet<int>();
+            foreach (ProjectBackupItem item in ProjectBackups)
             {
-                var parsed = int.TryParse(item.Id, out var projectId) ? projectId : -1;
+                int parsed = int.TryParse(item.Id, out int projectId) ? projectId : -1;
                 item.AutoBackupEnabled = parsed > 0 && !disabled.Contains(parsed);
             }
         }
@@ -3607,8 +3605,8 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.GetSnapshot();
-                var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
+                AppConfig cfg = AppConfigStore.GetSnapshot();
+                HashSet<int> disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? [];
                 UpdateAutoBackupFlags(disabled);
                 _lastAutoBackupSignature = ComputeAutoBackupSignature(disabled);
             }
@@ -3630,16 +3628,16 @@ namespace VaultSync.UI.ViewModels
 
             if (config.Backups.UseAdvancedDestinations && config.Backups.Destinations is { Count: > 0 })
             {
-                foreach (var dest in config.Backups.Destinations)
+                foreach (BackupDestination dest in config.Backups.Destinations)
                 {
-                    var label = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
+                    string label = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias;
                     if (!dest.Active)
                     {
-                        var suffix = L("Projects.Destination.InactiveSuffix", " (inactive)");
+                        string suffix = L("Projects.Destination.InactiveSuffix", " (inactive)");
                         label = $"{label}{suffix}";
                     }
 
-                    var id = DestinationIdentityService.GetId(dest);
+                    string id = DestinationIdentityService.GetId(dest);
                     DestinationOptions.Add(new DestinationOption(id, label));
                 }
             }
@@ -3648,18 +3646,18 @@ namespace VaultSync.UI.ViewModels
         private void UpdateProjectEncryptionDisplay(ProjectBackupItem item, AppConfig config)
         {
             item.EncryptionPolicy = ProjectEncryptionPolicy.Normalize(item.EncryptionPolicy);
-            var optionMatch = EncryptionPolicyOptions.FirstOrDefault(o =>
+            EncryptionPolicyOption? optionMatch = EncryptionPolicyOptions.FirstOrDefault(o =>
                 string.Equals(o.Id, item.EncryptionPolicy, StringComparison.OrdinalIgnoreCase));
             item.SetEncryptionPolicyOption(optionMatch ?? EncryptionPolicyOptions.FirstOrDefault());
 
-            var effectiveEncrypted = ProjectEncryptionPolicy.IsEncrypted(
+            bool effectiveEncrypted = ProjectEncryptionPolicy.IsEncrypted(
                 item.EncryptionPolicy,
                 config.Backups.Encryption.Enabled);
             item.EffectiveEncryptionDisplay = effectiveEncrypted
                 ? L("Projects.EncryptionPolicy.EffectiveEncrypted", "Effective: Encrypted")
                 : L("Projects.EncryptionPolicy.EffectivePlain", "Effective: Plain");
 
-            var hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
+            bool hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
                 string.IsNullOrWhiteSpace(item.EncryptionKeyRef) ? null : item.EncryptionKeyRef,
                 BackupEncryptionSecretUsername,
                 preferKeychain: true,
@@ -3673,7 +3671,7 @@ namespace VaultSync.UI.ViewModels
         private void UpdateProjectRestoreModeDisplay(ProjectBackupItem item)
         {
             item.RestoreMode = ProjectRestoreMode.Normalize(item.RestoreMode);
-            var optionMatch = RestoreModeOptions.FirstOrDefault(o =>
+            RestoreModeOption? optionMatch = RestoreModeOptions.FirstOrDefault(o =>
                 string.Equals(o.Id, item.RestoreMode, StringComparison.OrdinalIgnoreCase));
             item.SetRestoreModeOption(optionMatch ?? RestoreModeOptions.FirstOrDefault());
         }
@@ -3681,14 +3679,14 @@ namespace VaultSync.UI.ViewModels
         private void UpdateProjectVerificationPolicyDisplay(ProjectBackupItem item)
         {
             item.VerificationPolicy = ProjectVerificationPolicy.Normalize(item.VerificationPolicy);
-            var optionMatch = VerificationPolicyOptions.FirstOrDefault(o =>
+            VerificationPolicyOption? optionMatch = VerificationPolicyOptions.FirstOrDefault(o =>
                 string.Equals(o.Id, item.VerificationPolicy, StringComparison.OrdinalIgnoreCase));
             item.SetVerificationPolicyOption(optionMatch ?? VerificationPolicyOptions.FirstOrDefault());
         }
 
         private void UpdateProjectDestinationDisplay(ProjectBackupItem item, AppConfig config)
         {
-            var id = DestinationIdentityService.NormalizePreferredDestinationId(item.PreferredDestinationId, config.Backups.Destinations);
+            string id = DestinationIdentityService.NormalizePreferredDestinationId(item.PreferredDestinationId, config.Backups.Destinations);
             if (string.IsNullOrWhiteSpace(id))
             {
                 item.PreferredDestinationDisplay = L("Projects.Destination.Auto", "Auto (active destinations)");
@@ -3704,7 +3702,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var match = DestinationIdentityService.FindByPreferredDestinationId(config.Backups.Destinations, id);
+            BackupDestination? match = DestinationIdentityService.FindByPreferredDestinationId(config.Backups.Destinations, id);
 
             if (match != null)
             {
@@ -3720,11 +3718,11 @@ namespace VaultSync.UI.ViewModels
                 item.PreferredDestinationId = id;
             }
 
-            var optionMatch = DestinationOptions.FirstOrDefault(o =>
+            DestinationOption? optionMatch = DestinationOptions.FirstOrDefault(o =>
                 string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase));
             if (optionMatch is null)
             {
-                var fallback = DestinationOptions.FirstOrDefault(o => string.IsNullOrWhiteSpace(o.Id))
+                DestinationOption? fallback = DestinationOptions.FirstOrDefault(o => string.IsNullOrWhiteSpace(o.Id))
                                ?? DestinationOptions.FirstOrDefault();
                 if (fallback != null)
                 {
@@ -3739,12 +3737,12 @@ namespace VaultSync.UI.ViewModels
 
         private void OnPreferredDestinationChanged(ProjectBackupItem item)
         {
-            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+            if (!int.TryParse(item.Id, out int projectId) || projectId <= 0)
                 return;
 
             _ = Task.Run(() =>
             {
-                var config = AppConfigStore.GetSnapshot();
+                AppConfig config = AppConfigStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
                 {
                     UpdateProjectDestinationDisplay(item, config);
@@ -3755,12 +3753,12 @@ namespace VaultSync.UI.ViewModels
 
         private void OnProjectEncryptionPolicyChanged(ProjectBackupItem item)
         {
-            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+            if (!int.TryParse(item.Id, out int projectId) || projectId <= 0)
                 return;
 
             _ = Task.Run(() =>
             {
-                var config = AppConfigStore.GetSnapshot();
+                AppConfig config = AppConfigStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
                 {
                     UpdateProjectEncryptionDisplay(item, config);
@@ -3771,7 +3769,7 @@ namespace VaultSync.UI.ViewModels
 
         private void OnProjectRestoreModeChanged(ProjectBackupItem item)
         {
-            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+            if (!int.TryParse(item.Id, out int projectId) || projectId <= 0)
                 return;
 
             Dispatcher.UIThread.Post(() =>
@@ -3783,7 +3781,7 @@ namespace VaultSync.UI.ViewModels
 
         private void OnProjectVerificationPolicyChanged(ProjectBackupItem item)
         {
-            if (!int.TryParse(item.Id, out var projectId) || projectId <= 0)
+            if (!int.TryParse(item.Id, out int projectId) || projectId <= 0)
                 return;
 
             Dispatcher.UIThread.Post(() =>
@@ -3796,7 +3794,7 @@ namespace VaultSync.UI.ViewModels
         public void RefreshDestinationOptions(AppConfig config)
         {
             RefreshDestinationOptionsInternal(config);
-            foreach (var project in ProjectBackups)
+            foreach (ProjectBackupItem project in ProjectBackups)
             {
                 UpdateProjectDestinationDisplay(project, config);
                 UpdateProjectEncryptionDisplay(project, config);
@@ -3964,7 +3962,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        public IBrush ImportedTagBackground => ImportedBrush;
+        public static IBrush ImportedTagBackground => ImportedBrush;
 
         internal static string FormatSize(long bytes)
         {
@@ -3988,7 +3986,7 @@ namespace VaultSync.UI.ViewModels
         public string? ProjectId { get; set; }
         public string ProjectName { get; set; } = string.Empty;
         public string ProjectTagsDisplay { get; set; } = string.Empty;
-        public ObservableCollection<ProjectTagChip> ProjectTagChips { get; } = new ObservableCollection<ProjectTagChip>();
+        public ObservableCollection<ProjectTagChip> ProjectTagChips { get; } = [];
         public bool HasProjectTags => ProjectTagChips.Count > 0;
         public string Summary { get; set; } = string.Empty;
         public string TotalSizeFormatted { get; set; } = string.Empty;
@@ -3997,7 +3995,7 @@ namespace VaultSync.UI.ViewModels
         public bool IsExpanded { get; set; }
 
         public ObservableCollection<BackupSnapshotItem> Snapshots { get; } =
-            new ObservableCollection<BackupSnapshotItem>();
+            [];
     }
 
     public sealed class BackupsProjectSortOption
@@ -4049,7 +4047,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        public ObservableCollection<ProjectTagChip> ProjectTagChips { get; } = new ObservableCollection<ProjectTagChip>();
+        public ObservableCollection<ProjectTagChip> ProjectTagChips { get; } = [];
         public bool HasProjectTags => ProjectTagChips.Count > 0;
         public string ProjectTagsDisplay => string.Join(", ", ProjectTagChips.Select(tag => tag.Value));
         public string PrimaryTagSortKey => ProjectTagChips.FirstOrDefault()?.Value ?? string.Empty;
@@ -4118,11 +4116,11 @@ namespace VaultSync.UI.ViewModels
                 if (ReferenceEquals(_preferredDestinationOption, value))
                     return;
 
-                var previousId = _preferredDestinationOption?.Id ?? string.Empty;
+                string previousId = _preferredDestinationOption?.Id ?? string.Empty;
                 _preferredDestinationOption = value;
                 OnPropertyChanged(nameof(PreferredDestinationOption));
 
-                var nextId = value.Id ?? string.Empty;
+                string nextId = value.Id ?? string.Empty;
                 if (string.Equals(previousId, nextId, StringComparison.OrdinalIgnoreCase))
                     return;
 
@@ -4294,7 +4292,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(name))
                 return "?";
 
-            var parts = name.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = name.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
 
             if (parts.Length >= 2)
                 return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
@@ -4322,11 +4320,11 @@ namespace VaultSync.UI.ViewModels
                 if (!StorageDeltaBytes.HasValue)
                     return "Δ -";
 
-                var value = StorageDeltaBytes.Value;
+                long value = StorageDeltaBytes.Value;
                 if (Math.Abs(value) < 1024)
                     return "Δ ~0 B";
 
-                var sign = value >= 0 ? "+" : "-";
+                string sign = value >= 0 ? "+" : "-";
                 return $"Δ {sign}{BackupSnapshotItem.FormatSize(Math.Abs(value))}";
             }
         }
@@ -4334,7 +4332,7 @@ namespace VaultSync.UI.ViewModels
         private void RebuildProjectTags()
         {
             ProjectTagChips.Clear();
-            foreach (var chip in ProjectTagAppearance.CreateChips(_projectTagsCsv))
+            foreach (ProjectTagChip chip in ProjectTagAppearance.CreateChips(_projectTagsCsv))
                 ProjectTagChips.Add(chip);
         }
     }
@@ -4460,9 +4458,9 @@ namespace VaultSync.UI.ViewModels
                            ?? "Last checked: never";
                 }
 
-                var label = LocalizationProvider.Service?.GetString("Destinations.Status.LastChecked")
+                string label = LocalizationProvider.Service?.GetString("Destinations.Status.LastChecked")
                            ?? "Last checked: {0}";
-                var local = LastCheckedUtc.Value.ToLocalTime().ToString("HH:mm:ss");
+                string local = LastCheckedUtc.Value.ToLocalTime().ToString("HH:mm:ss");
                 return string.Format(CultureInfo.CurrentCulture, label, local);
             }
         }
@@ -4558,7 +4556,7 @@ namespace VaultSync.UI.ViewModels
                 if (string.IsNullOrWhiteSpace(_destinationLabel))
                     return string.Empty;
 
-                var prefix = L("Projects.List.DestinationPrefix", "Destination: ");
+                string prefix = L("Projects.List.DestinationPrefix", "Destination: ");
                 return $"{prefix}{_destinationLabel}";
             }
         }
@@ -4571,7 +4569,7 @@ namespace VaultSync.UI.ViewModels
             get => _policyText;
             set
             {
-                var normalized = value ?? string.Empty;
+                string normalized = value ?? string.Empty;
                 if (_policyText == normalized)
                     return;
 
@@ -4650,7 +4648,7 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(EtaDisplay));
                 OnPropertyChanged(nameof(HasEtaDisplay));
                 OnPropertyChanged(nameof(IsEstimate));
-                var detail = ExtractProgressDetail(EtaDisplay);
+                string detail = ExtractProgressDetail(EtaDisplay);
                 if (!string.IsNullOrWhiteSpace(detail))
                 {
                     _lastProgressDetail = detail;
@@ -4674,13 +4672,13 @@ namespace VaultSync.UI.ViewModels
             ContainsToken(_currentFile, L("Backups.Progress.Estimating", "Estimating...")) &&
             HasEtaText;
 
-        public string EstimateLabel => L("Backups.Preflight.Title", "Backup estimate");
+        public static string EstimateLabel => L("Backups.Preflight.Title", "Backup estimate");
 
         public string CurrentFileDisplay
         {
             get
             {
-                if (TryExtractFileName(_currentFile, out var fileName))
+                if (TryExtractFileName(_currentFile, out string? fileName))
                     return fileName;
 
                 if (!string.IsNullOrWhiteSpace(_lastProgressDetail) && !ContainsSpeedOrEta(_lastProgressDetail))
@@ -4711,7 +4709,7 @@ namespace VaultSync.UI.ViewModels
         {
             get
             {
-                var stageKey = GetStageKey();
+                string stageKey = GetStageKey();
                 return stageKey switch
                 {
                     "Completed" => L("Backups.Status.Completed", "Completed"),
@@ -4774,19 +4772,19 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(value))
                 return string.Empty;
 
-            var trimmed = value.Trim();
+            string trimmed = value.Trim();
 
             // Drop destination prefix like "[Alias]" if present.
             if (trimmed.StartsWith("[", StringComparison.Ordinal))
             {
-                var end = trimmed.IndexOf(']');
+                int end = trimmed.IndexOf(']');
                 if (end >= 0 && end + 1 < trimmed.Length)
                 {
                     trimmed = trimmed[(end + 1)..].Trim();
                 }
             }
 
-            var candidate = trimmed;
+            string candidate = trimmed;
             if (candidate.Contains('\\') || candidate.Contains('/'))
             {
                 candidate = Path.GetFileName(candidate);
@@ -4804,7 +4802,7 @@ namespace VaultSync.UI.ViewModels
             if (!value.Contains('\\') && !value.Contains('/'))
                 return false;
 
-            var extracted = ExtractFileName(value);
+            string extracted = ExtractFileName(value);
             if (string.IsNullOrWhiteSpace(extracted))
                 return false;
 
@@ -4826,7 +4824,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(value))
                 return string.Empty;
 
-            var trimmed = value.Trim();
+            string trimmed = value.Trim();
             if (string.Equals(trimmed, L("Backups.Progress.CopyingRobocopy", "Copying files (robocopy)..."), StringComparison.OrdinalIgnoreCase))
                 return string.Empty;
             if (trimmed.StartsWith("Copying ", StringComparison.OrdinalIgnoreCase))
@@ -4846,7 +4844,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(value))
                 return string.Empty;
 
-            var trimmed = value.Trim();
+            string trimmed = value.Trim();
             if (trimmed.Contains("Waiting for first file", StringComparison.OrdinalIgnoreCase))
                 return L("Backups.Progress.WaitingForFirstFile", "Waiting for first file...");
 
@@ -4873,7 +4871,7 @@ namespace VaultSync.UI.ViewModels
 
         private void UpdateDisplayProgress()
         {
-            var stageKey = GetStageKey();
+            string stageKey = GetStageKey();
             if (!string.Equals(stageKey, _lastStageKey, StringComparison.OrdinalIgnoreCase))
             {
                 _displayProgress = 0d;
@@ -4888,7 +4886,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var next = Math.Clamp(_progress, 0d, 100d);
+            double next = Math.Clamp(_progress, 0d, 100d);
             if (!HasCompletionSignal() && !IsHashingStage)
             {
                 next = Math.Min(next, 99d);
@@ -4921,7 +4919,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string FormatElapsed(DateTime startUtc)
         {
-            var elapsed = DateTime.UtcNow - startUtc;
+            TimeSpan elapsed = DateTime.UtcNow - startUtc;
             if (elapsed < TimeSpan.Zero)
                 elapsed = TimeSpan.Zero;
 
@@ -4937,7 +4935,9 @@ namespace VaultSync.UI.ViewModels
                 ContainsToken(_currentFile, L("Backups.Status.Cancelled", "Cancelled")) ||
                 ContainsToken(_currentFile, L("Backups.Status.Deleted", "Deleted")) ||
                 (ContainsToken(_etaText, "Completed") && !ContainsToken(_etaText, "Hashing")))
+            {
                 return "Completed";
+            }
 
             if (ContainsToken(_currentFile, L("Backups.Status.Cancelling", "Cancelling...")))
                 return "Cancelling";
@@ -4958,11 +4958,15 @@ namespace VaultSync.UI.ViewModels
                 ContainsToken(_currentFile, "Restoring") ||
                 ContainsToken(_currentFile, "Decrypting") ||
                 ContainsToken(_currentFile, L("Backups.Status.Restoring", "Restoring backup...")))
+            {
                 return "Restoring";
+            }
 
             if (ContainsToken(_currentFile, L("Backups.Status.Deleting", "Deleting backup files...")) ||
                 ContainsToken(_currentFile, L("Backups.Stage.Deleting", "Deleting")))
+            {
                 return "Deleting";
+            }
 
             if (ContainsToken(_currentFile, L("Backups.Status.Preparing", "Preparing backup...")))
                 return "Preparing";
@@ -4970,11 +4974,15 @@ namespace VaultSync.UI.ViewModels
             if (ContainsToken(_currentFile, "Reusing existing snapshot") ||
                 ContainsToken(_currentFile, "Creating snapshot") ||
                 ContainsToken(_currentFile, "Hashing"))
+            {
                 return "Hashing";
+            }
 
             if (ContainsToken(_currentFile, L("Backups.Status.Running", "Running backup...")) ||
                 ContainsToken(_currentFile, L("Backups.Status.RunningMultiple", "Running backups...")))
+            {
                 return "BackingUp";
+            }
 
             if (HasCurrentFile)
                 return "BackingUp";
@@ -4995,7 +5003,7 @@ namespace VaultSync.UI.ViewModels
 
         private IBrush GetStageBrush()
         {
-            var stageKey = GetStageKey();
+            string stageKey = GetStageKey();
             return stageKey switch
             {
                 "Completed"   => StageCompletedBrush,

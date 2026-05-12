@@ -71,7 +71,7 @@ namespace VaultSync.UI.ViewModels
 
         private async System.Threading.Tasks.Task ExportLogsAsync()
         {
-            var path = await System.Threading.Tasks.Task.Run(() => _service.ExportBuffer());
+            string? path = await System.Threading.Tasks.Task.Run(() => _service.ExportBuffer());
             if (string.IsNullOrWhiteSpace(path))
             {
                 StatusMessage = L("LogConsole.ExportFailed", "Log export failed.");
@@ -93,7 +93,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var folder = LogConsoleService.GetLogDirectory();
+                string folder = LogConsoleService.GetLogDirectory();
                 Directory.CreateDirectory(folder);
 
                 if (OperatingSystem.IsWindows())
@@ -140,7 +140,7 @@ namespace VaultSync.UI.ViewModels
             if (SelectedLine is null)
                 return false;
 
-            var copied = await ClipboardHelper.TryCopyAsync(SelectedLine.RawDisplay);
+            bool copied = await ClipboardHelper.TryCopyAsync(SelectedLine.RawDisplay);
             StatusMessage = copied
                 ? L("LogConsole.CopySelectedSuccess", "Selected line copied.")
                 : L("LogConsole.CopySelectedFailed", "Failed to copy selected line.");
@@ -158,7 +158,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string Lf(string key, string fallback, params object[] args)
         {
-            var text = L(key, fallback);
+            string text = L(key, fallback);
             return args is { Length: > 0 }
                 ? string.Format(text, args)
                 : text;

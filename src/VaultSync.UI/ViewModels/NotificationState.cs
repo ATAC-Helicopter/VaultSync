@@ -176,7 +176,7 @@ namespace VaultSync.UI.ViewModels.Notifications
                 if (!IsVisible && string.IsNullOrWhiteSpace(Message))
                     return;
 
-                var previous = Interlocked.Exchange(ref _cts, null);
+                CancellationTokenSource? previous = Interlocked.Exchange(ref _cts, null);
                 previous?.Cancel();
                 previous?.Dispose();
 
@@ -198,10 +198,10 @@ namespace VaultSync.UI.ViewModels.Notifications
 
         private async Task StartAutoDismissAsync(TimeSpan duration)
         {
-            var previous = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
+            CancellationTokenSource? previous = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
             previous?.Cancel();
             previous?.Dispose();
-            var local = _cts!;
+            CancellationTokenSource local = _cts!;
 
             try
             {
@@ -228,7 +228,7 @@ namespace VaultSync.UI.ViewModels.Notifications
 
         public bool Matches(NotificationRequest request)
         {
-            var requestKey = request.GroupKey ?? string.Empty;
+            string requestKey = request.GroupKey ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(requestKey) && string.Equals(GroupKey, requestKey, StringComparison.Ordinal))
                 return true;
 

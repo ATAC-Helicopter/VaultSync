@@ -23,15 +23,15 @@ public sealed class BackupRetentionSimulationServiceTests : IDisposable
     [Fact]
     public void Simulate_ReportsSuggestedDeletes_ForProjectsOverRetentionCap()
     {
-        var project = CreateProject("Alpha");
+        Project project = CreateProject("Alpha");
         SeedBackup(project.Id, DateTime.UtcNow.AddDays(-3), 100);
         SeedBackup(project.Id, DateTime.UtcNow.AddDays(-2), 120);
         SeedBackup(project.Id, DateTime.UtcNow.AddDays(-1), 140);
 
         var service = new BackupRetentionSimulationService(_repo);
-        var result = service.Simulate(maxSnapshotsPerProject: 2);
+        BackupRetentionSimulationResult result = service.Simulate(maxSnapshotsPerProject: 2);
 
-        var projectResult = Assert.Single(result.Projects);
+        ProjectRetentionSimulationProjectResult projectResult = Assert.Single(result.Projects);
         Assert.True(projectResult.CanPrune);
         Assert.Equal(1, projectResult.DeleteQuota);
         Assert.Equal(1, projectResult.SelectedDeleteCount);
@@ -42,10 +42,10 @@ public sealed class BackupRetentionSimulationServiceTests : IDisposable
     [Fact]
     public void Simulate_FlagsBlockedProjects_WhenPreflightWouldRemoveLastRestorePoint()
     {
-        var project = CreateProject("Blocked");
+        Project project = CreateProject("Blocked");
         SeedBackup(project.Id, DateTime.UtcNow.AddDays(-2), 100);
-        var otherProject = CreateProject("Other");
-        var foreignSnapshotId = _repo.CreateSnapshot(otherProject.Id, DateTime.UtcNow.AddDays(-1).Ticks, 120);
+        Project otherProject = CreateProject("Other");
+        int foreignSnapshotId = _repo.CreateSnapshot(otherProject.Id, DateTime.UtcNow.AddDays(-1).Ticks, 120);
         _repo.CreateBackup(
             project.Id,
             foreignSnapshotId,
@@ -56,9 +56,9 @@ public sealed class BackupRetentionSimulationServiceTests : IDisposable
             "Primary");
 
         var service = new BackupRetentionSimulationService(_repo);
-        var result = service.Simulate(maxSnapshotsPerProject: 1);
+        BackupRetentionSimulationResult result = service.Simulate(maxSnapshotsPerProject: 1);
 
-        var projectResult = Assert.Single(result.Projects);
+        ProjectRetentionSimulationProjectResult projectResult = Assert.Single(result.Projects);
         Assert.False(projectResult.CanPrune);
         Assert.Equal("retention-last-restorable-point", projectResult.PreflightCode);
         Assert.Equal(1, result.BlockedProjectCount);
@@ -77,7 +77,7 @@ public sealed class BackupRetentionSimulationServiceTests : IDisposable
 
     private int SeedBackup(int projectId, DateTime createdUtc, long totalBytes)
     {
-        var snapshotId = _repo.CreateSnapshot(projectId, createdUtc.Ticks, totalBytes);
+        int snapshotId = _repo.CreateSnapshot(projectId, createdUtc.Ticks, totalBytes);
         _repo.CreateBackup(
             projectId,
             snapshotId,

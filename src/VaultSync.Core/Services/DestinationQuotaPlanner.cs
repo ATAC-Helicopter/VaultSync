@@ -19,10 +19,10 @@ public sealed class DestinationQuotaPlanner
         var backupList = backups.ToList();
         var plans = new List<DestinationQuotaPlan>();
 
-        foreach (var destination in destinations)
+        foreach (BackupDestination destination in destinations)
         {
-            var destinationId = DestinationIdentityService.GetId(destination);
-            var normalizedPath = NormalizePath(destination.Path);
+            string destinationId = DestinationIdentityService.GetId(destination);
+            string normalizedPath = NormalizePath(destination.Path);
             var matchingBackups = backupList
                 .Where(backup => string.Equals(NormalizePath(backup.DestinationPath), normalizedPath, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(backup => backup.CreatedUtc)
@@ -30,9 +30,9 @@ public sealed class DestinationQuotaPlanner
                 .ThenBy(backup => backup.Id)
                 .ToList();
 
-            var storedBytes = matchingBackups.Sum(backup => backup.TotalBytes);
-            var softQuotaBytes = NormalizeQuotaBytes(destination.SoftQuotaBytes);
-            var warningPercent = Math.Clamp(destination.QuotaWarningPercent, 50, 99);
+            long storedBytes = matchingBackups.Sum(backup => backup.TotalBytes);
+            long? softQuotaBytes = NormalizeQuotaBytes(destination.SoftQuotaBytes);
+            int warningPercent = Math.Clamp(destination.QuotaWarningPercent, 50, 99);
 
             if (!softQuotaBytes.HasValue)
             {
@@ -51,19 +51,19 @@ public sealed class DestinationQuotaPlanner
                 continue;
             }
 
-            var warningBytes = (long)Math.Floor(softQuotaBytes.Value * (warningPercent / 100d));
+            long warningBytes = (long)Math.Floor(softQuotaBytes.Value * (warningPercent / 100d));
             if (warningBytes <= 0)
                 warningBytes = softQuotaBytes.Value;
 
-            var exceedsWarning = storedBytes >= warningBytes;
-            var exceedsQuota = storedBytes > softQuotaBytes.Value;
-            var reclaimTargetBytes = Math.Max(0, storedBytes - warningBytes);
+            bool exceedsWarning = storedBytes >= warningBytes;
+            bool exceedsQuota = storedBytes > softQuotaBytes.Value;
+            long reclaimTargetBytes = Math.Max(0, storedBytes - warningBytes);
 
-            var candidateCount = 0;
-            var candidateBytes = 0L;
+            int candidateCount = 0;
+            long candidateBytes = 0L;
             if (reclaimTargetBytes > 0)
             {
-                foreach (var candidate in matchingBackups.Where(backup => !backup.IsProtected))
+                foreach (Backup? candidate in matchingBackups.Where(backup => !backup.IsProtected))
                 {
                     candidateCount++;
                     candidateBytes += candidate.TotalBytes;
@@ -72,7 +72,7 @@ public sealed class DestinationQuotaPlanner
                 }
             }
 
-            var canReachWarningThreshold = reclaimTargetBytes == 0 || candidateBytes >= reclaimTargetBytes;
+            bool canReachWarningThreshold = reclaimTargetBytes == 0 || candidateBytes >= reclaimTargetBytes;
 
             plans.Add(new DestinationQuotaPlan(
                 destinationId,
@@ -96,11 +96,11 @@ public sealed class DestinationQuotaPlanner
 
     private static string NormalizePath(string? path)
     {
-        var raw = (path ?? string.Empty).Trim();
+        string raw = (path ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(raw))
             return string.Empty;
 
-        var slashNormalized = raw.Replace('/', '\\');
+        string slashNormalized = raw.Replace('/', '\\');
         try
         {
             if (slashNormalized.StartsWith(@"\\", StringComparison.Ordinal))

@@ -25,18 +25,18 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
     [Fact]
     public void Scan_WithHealthyIndex_ReturnsNoFindings()
     {
-        var repo = CreateRepository();
-        var projectId = repo.AddProject(new Project
+        SqliteRepository repo = CreateRepository();
+        int projectId = repo.AddProject(new Project
         {
             Name = "Project One",
             RootPath = Path.Combine(_tempDir, "ProjectOne"),
             Preset = "dotnet"
         });
-        var snapshotId = repo.CreateSnapshot(projectId, 10, 2048);
+        int snapshotId = repo.CreateSnapshot(projectId, 10, 2048);
         repo.CreateBackup(projectId, snapshotId, "manual", 1024, "project-one/backup", _tempDir, "Primary");
 
         var service = new BackupIndexConsistencyService(repo);
-        var report = service.Scan();
+        BackupIndexConsistencyReport report = service.Scan();
 
         Assert.False(report.HasIssues);
         Assert.Empty(report.Findings);
@@ -48,22 +48,22 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
     [Fact]
     public void Scan_DetectsDuplicateExternalIds_AndProjectMismatch()
     {
-        var repo = CreateRepository();
-        var projectOneId = repo.AddProject(new Project
+        SqliteRepository repo = CreateRepository();
+        int projectOneId = repo.AddProject(new Project
         {
             Name = "Project One",
             RootPath = Path.Combine(_tempDir, "ProjectOne"),
             Preset = "dotnet"
         });
-        var projectTwoId = repo.AddProject(new Project
+        int projectTwoId = repo.AddProject(new Project
         {
             Name = "Project Two",
             RootPath = Path.Combine(_tempDir, "ProjectTwo"),
             Preset = "dotnet"
         });
-        var snapshotId = repo.CreateSnapshot(projectOneId, 20, 4096);
-        var secondSnapshotId = repo.CreateSnapshot(projectTwoId, 30, 8192);
-        var backupId = repo.CreateBackupFromMetadata(
+        int snapshotId = repo.CreateSnapshot(projectOneId, 20, 4096);
+        int secondSnapshotId = repo.CreateSnapshot(projectTwoId, 30, 8192);
+        int backupId = repo.CreateBackupFromMetadata(
             "backup-dup",
             projectTwoId,
             snapshotId,
@@ -93,7 +93,7 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
         }
 
         var service = new BackupIndexConsistencyService(repo);
-        var report = service.Scan();
+        BackupIndexConsistencyReport report = service.Scan();
 
         Assert.True(report.HasIssues);
         Assert.Contains(report.Findings, f => f.Code == BackupIndexConsistencyCode.DuplicateProjectExternalId);
@@ -105,15 +105,15 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
     [Fact]
     public void Scan_DetectsMissingExternalIds()
     {
-        var repo = CreateRepository();
-        var projectId = repo.AddProject(new Project
+        SqliteRepository repo = CreateRepository();
+        int projectId = repo.AddProject(new Project
         {
             Name = "Project No External",
             RootPath = Path.Combine(_tempDir, "ProjectNoExternal"),
             Preset = "dotnet"
         });
-        var snapshotId = repo.CreateSnapshot(projectId, 5, 512);
-        var backupId = repo.CreateBackup(projectId, snapshotId, "manual", 64, "project-no-external/backup", _tempDir, "Primary");
+        int snapshotId = repo.CreateSnapshot(projectId, 5, 512);
+        int backupId = repo.CreateBackup(projectId, snapshotId, "manual", 64, "project-no-external/backup", _tempDir, "Primary");
 
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         connection.Open();
@@ -122,7 +122,7 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
         connection.Execute("UPDATE backups SET external_id = '' WHERE id = @id;", new { id = backupId });
 
         var service = new BackupIndexConsistencyService(repo);
-        var report = service.Scan();
+        BackupIndexConsistencyReport report = service.Scan();
 
         Assert.Contains(report.Findings, f => f.Code == BackupIndexConsistencyCode.MissingProjectExternalId);
         Assert.Contains(report.Findings, f => f.Code == BackupIndexConsistencyCode.MissingSnapshotExternalId);
@@ -132,14 +132,14 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
     [Fact]
     public void Scan_SortsSamplesDeterministically_AndBuildsStableSummary()
     {
-        var repo = CreateRepository();
-        var projectB = repo.AddProject(new Project
+        SqliteRepository repo = CreateRepository();
+        int projectB = repo.AddProject(new Project
         {
             Name = "Zulu",
             RootPath = Path.Combine(_tempDir, "Zulu"),
             Preset = "dotnet"
         });
-        var projectA = repo.AddProject(new Project
+        int projectA = repo.AddProject(new Project
         {
             Name = "Alpha",
             RootPath = Path.Combine(_tempDir, "Alpha"),
@@ -151,10 +151,10 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
         connection.Execute("UPDATE projects SET external_id = '' WHERE id IN @ids;", new { ids = new[] { projectB, projectA } });
 
         var service = new BackupIndexConsistencyService(repo);
-        var report = service.Scan();
-        var summary = BackupIndexConsistencyService.BuildSummary(report);
+        BackupIndexConsistencyReport report = service.Scan();
+        BackupIndexConsistencySummary summary = BackupIndexConsistencyService.BuildSummary(report);
 
-        var finding = Assert.Single(report.Findings, f => f.Code == BackupIndexConsistencyCode.MissingProjectExternalId);
+        BackupIndexConsistencyFinding finding = Assert.Single(report.Findings, f => f.Code == BackupIndexConsistencyCode.MissingProjectExternalId);
         Assert.Equal(new[] { $"{projectB}:Zulu", $"{projectA}:Alpha" }, finding.Samples);
         Assert.Contains(BackupIndexConsistencyCode.MissingProjectExternalId, summary.TopFindingCodes);
         Assert.Equal(report.WarningCount, summary.WarningCount);

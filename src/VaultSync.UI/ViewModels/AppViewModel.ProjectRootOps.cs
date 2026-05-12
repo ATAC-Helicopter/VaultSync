@@ -13,8 +13,8 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var cfg = AppConfigStore.GetSnapshot();
-                var projectsRoot = cfg.ProjectsRoot?.Trim();
+                AppConfig cfg = AppConfigStore.GetSnapshot();
+                string? projectsRoot = cfg.ProjectsRoot?.Trim();
                 if (string.IsNullOrWhiteSpace(projectsRoot))
                 {
                     DiagnosticsLogger.Record("Startup project-root reconciliation skipped: ProjectsRoot is empty.");
@@ -27,13 +27,13 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                var repaired = 0;
-                foreach (var project in _repo.GetAllProjects())
+                int repaired = 0;
+                foreach (Project project in _repo.GetAllProjects())
                 {
                     if (!string.IsNullOrWhiteSpace(project.RootPath))
                         continue;
 
-                    var candidate = Path.Combine(projectsRoot, project.Name);
+                    string candidate = Path.Combine(projectsRoot, project.Name);
                     if (!Directory.Exists(candidate))
                         continue;
 

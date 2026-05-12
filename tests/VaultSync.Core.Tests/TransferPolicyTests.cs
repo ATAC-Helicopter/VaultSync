@@ -8,7 +8,7 @@ public sealed class TransferPolicyTests
     [Fact]
     public void NormalizeBandwidthLimit_Disabled_ReturnsNull()
     {
-        var result = TransferPolicy.NormalizeBandwidthLimitMbps(enabled: false, configuredMbps: 250);
+        int? result = TransferPolicy.NormalizeBandwidthLimitMbps(enabled: false, configuredMbps: 250);
         Assert.Null(result);
     }
 
@@ -30,15 +30,15 @@ public sealed class TransferPolicyTests
     [Fact]
     public void RobocopyIpg_ComputesPositiveDelayForLowBandwidth()
     {
-        var ipg = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps: 10, threadCount: 8);
+        int ipg = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps: 10, threadCount: 8);
         Assert.True(ipg >= 0);
     }
 
     [Fact]
     public void RobocopyIpg_LowerBandwidthProducesHigherOrEqualDelay()
     {
-        var low = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps: 20, threadCount: 8);
-        var high = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps: 200, threadCount: 8);
+        int low = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps: 20, threadCount: 8);
+        int high = TransferPolicy.ToRobocopyIpgMilliseconds(maxBandwidthMbps: 200, threadCount: 8);
         Assert.True(low >= high);
     }
 }

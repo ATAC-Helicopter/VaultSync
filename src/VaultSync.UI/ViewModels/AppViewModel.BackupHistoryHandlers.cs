@@ -26,7 +26,7 @@ namespace VaultSync.UI.ViewModels
     {
         private void OnDeleteBackupRequested(BackupSnapshotItem? snapshot)
         {
-            RunDetached(() => OnDeleteBackupRequestedAsync(snapshot), nameof(OnDeleteBackupRequestedAsync));
+            AppViewModel.RunDetached(() => OnDeleteBackupRequestedAsync(snapshot), nameof(OnDeleteBackupRequestedAsync));
         }
 
         private async Task OnDeleteBackupRequestedAsync(BackupSnapshotItem? snapshot)
@@ -34,33 +34,33 @@ namespace VaultSync.UI.ViewModels
             if (snapshot is null)
                 return;
 
-            if (!int.TryParse(snapshot.Id, out var backupId))
+            if (!int.TryParse(snapshot.Id, out int backupId))
                 return;
 
-            var preparation = await Task.Run(() => PrepareDeleteBackup(backupId));
+            DeleteBackupPreparation preparation = await Task.Run(() => PrepareDeleteBackup(backupId));
             if (!preparation.IsReady)
                 return;
-            var backup      = preparation.Backup;
-            var snapshotId  = preparation.SnapshotId;
-            var projectId   = preparation.ProjectId;
-            var backupRoot  = preparation.BackupRoot;
-            var projectName = preparation.ProjectName;
-            var cardId = $"delete-{backupId}";
+            Backup? backup      = preparation.Backup;
+            int snapshotId  = preparation.SnapshotId;
+            int projectId   = preparation.ProjectId;
+            string backupRoot  = preparation.BackupRoot;
+            string projectName = preparation.ProjectName;
+            string cardId = $"delete-{backupId}";
             DestinationResolution? deleteResolution = null;
 
             var deleteContext = await Task.Run(() =>
             {
-                var cfg = AppConfigStore.GetSnapshot();
-                var destinations = GetAllDestinations(cfg);
-                var matchedDestination = FindDestinationForBackup(backup, destinations, backupRoot);
-                var hasCredentialProfile = HasCredentialProfile(cfg, matchedDestination);
+                AppConfig cfg = AppConfigStore.GetSnapshot();
+                List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
+                BackupDestination? matchedDestination = FindDestinationForBackup(backup, destinations, backupRoot);
+                bool hasCredentialProfile = HasCredentialProfile(cfg, matchedDestination);
                 return (cfg, matchedDestination, hasCredentialProfile);
             });
-            var cfg = deleteContext.cfg;
-            var matchedDestination = deleteContext.matchedDestination;
-            var hasCredentialProfile = deleteContext.hasCredentialProfile;
+            AppConfig cfg = deleteContext.cfg;
+            BackupDestination? matchedDestination = deleteContext.matchedDestination;
+            bool hasCredentialProfile = deleteContext.hasCredentialProfile;
 
-            var confirm = await ConfirmDeleteBackupAsync(projectName, snapshot.Timestamp);
+            bool confirm = await ConfirmDeleteBackupAsync(projectName, snapshot.Timestamp);
             if (!confirm)
             {
                 return;
@@ -68,14 +68,14 @@ namespace VaultSync.UI.ViewModels
 
             BackupsViewModel.PinExpandedProject(snapshot.ProjectId);
 
-            BackupsViewModel.ShowTransientOperation(cardId, projectName, L("Backups.Status.Deleting", "Deleting backup files..."));
+            BackupsViewModel.ShowTransientOperation(cardId, projectName, AppViewModel.L("Backups.Status.Deleting", "Deleting backup files..."));
 
             BackupsViewModel.IsBusy      = true;
-            BackupsViewModel.BusyMessage = L("Backups.Status.Deleting", L("Backups.Status.Deleting", "Deleting backup files..."));
+            BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Status.Deleting", AppViewModel.L("Backups.Status.Deleting", "Deleting backup files..."));
 
-            var deleteSucceeded = false;
-            var deleteError = string.Empty;
-            var permissionDenied = false;
+            bool deleteSucceeded = false;
+            string deleteError = string.Empty;
+            bool permissionDenied = false;
             NetworkCredentialProfile? tempProfile = null;
 
             try
@@ -84,16 +84,16 @@ namespace VaultSync.UI.ViewModels
                 {
                     if (matchedDestination is not null)
                     {
-                        var destToUse = matchedDestination;
-                        var rootSubPath = string.Empty;
+                        BackupDestination destToUse = matchedDestination;
+                        string rootSubPath = string.Empty;
                         if (forceCredentials)
                         {
-                            var pathToUse = matchedDestination.Path;
-                            if (OperatingSystem.IsWindows() && TryResolveUncPath(pathToUse, out var uncPath))
+                            string? pathToUse = matchedDestination.Path;
+                            if (OperatingSystem.IsWindows() && TryResolveUncPath(pathToUse, out string? uncPath))
                             {
                                 pathToUse = uncPath;
                             }
-                            if (OperatingSystem.IsWindows() && TrySplitUncPath(pathToUse, out var uncRoot, out var uncSubPath))
+                            if (OperatingSystem.IsWindows() && TrySplitUncPath(pathToUse, out string? uncRoot, out string? uncSubPath))
                             {
                                 pathToUse = uncRoot;
                                 rootSubPath = uncSubPath;
@@ -115,7 +115,7 @@ namespace VaultSync.UI.ViewModels
                             };
                         }
 
-                        var profile = overrideProfile;
+                        NetworkCredentialProfile? profile = overrideProfile;
                         if (profile is null)
                         {
                             profile = string.IsNullOrWhiteSpace(destToUse.CredentialName)
@@ -124,7 +124,7 @@ namespace VaultSync.UI.ViewModels
                                     c.Name.Equals(destToUse.CredentialName, StringComparison.OrdinalIgnoreCase));
                         }
 
-                        var resolution = _networkMountService.PrepareDestination(destToUse, profile);
+                        DestinationResolution resolution = _networkMountService.PrepareDestination(destToUse, profile);
                         if (!resolution.IsSuccess)
                         {
                             deleteError = resolution.Message;
@@ -142,10 +142,10 @@ namespace VaultSync.UI.ViewModels
                         }
                     }
 
-                    var relativePath = backup.Path ?? string.Empty;
-                    if (!TryCombinePathUnderRoot(backupRoot, relativePath, out var fullPath, out var combineError))
+                    string relativePath = backup.Path ?? string.Empty;
+                    if (!TryCombinePathUnderRoot(backupRoot, relativePath, out string? fullPath, out string? combineError))
                     {
-                        deleteError = combineError ?? L("Backups.Delete.Error", "Delete failed");
+                        deleteError = combineError ?? AppViewModel.L("Backups.Delete.Error", "Delete failed");
                         deleteSucceeded = false;
                         return;
                     }
@@ -156,9 +156,9 @@ namespace VaultSync.UI.ViewModels
                         {
                             if (Directory.Exists(fullPath))
                             {
-                                deleteSucceeded = DeleteDirectoryRobust(fullPath, out var deleteFailure, out var deletePermissionDenied);
+                                deleteSucceeded = DeleteDirectoryRobust(fullPath, out string? deleteFailure, out bool deletePermissionDenied);
                                 if (!deleteSucceeded && string.IsNullOrWhiteSpace(deleteError))
-                                    deleteError = deleteFailure ?? L("Backups.Delete.Error", "Delete failed");
+                                    deleteError = deleteFailure ?? AppViewModel.L("Backups.Delete.Error", "Delete failed");
                                 if (deletePermissionDenied)
                                     permissionDenied = true;
                             }
@@ -204,7 +204,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (!deleteSucceeded && permissionDenied && matchedDestination is not null && hasCredentialProfile)
                 {
-                    var retry = await ConfirmDeleteWithCredentialsAsync();
+                    bool retry = await ConfirmDeleteWithCredentialsAsync();
                     if (retry)
                     {
                         permissionDenied = false;
@@ -215,7 +215,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (!deleteSucceeded && permissionDenied && matchedDestination is not null && !hasCredentialProfile)
                 {
-                    var retry = await ConfirmDeleteWithTemporaryCredentialsAsync();
+                    (bool Confirmed, string Username, string Password) retry = await ConfirmDeleteWithTemporaryCredentialsAsync();
                     if (retry.Confirmed)
                     {
                         tempProfile = new NetworkCredentialProfile
@@ -232,8 +232,8 @@ namespace VaultSync.UI.ViewModels
                     }
                     else
                     {
-                        var title = L("Backups.Delete.ForceCredentialsTitle", "Credentials required");
-                        var msg = L("Backups.Delete.ForceCredentialsMissing",
+                        string title = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required");
+                        string msg = AppViewModel.L("Backups.Delete.ForceCredentialsMissing",
                             "Assign a credential profile to this destination in Settings. If your usual user cannot delete backups, the NAS root/admin user may be required.");
                         BackupsViewModel.ShowNotification(msg, "Error");
                         if (!IsOnBackupsPage)
@@ -250,11 +250,11 @@ namespace VaultSync.UI.ViewModels
                 }
                 else
                 {
-                    var title = L("Backups.Delete.FailedTitle", "Backup delete failed");
-                    var msg = Lf("Backups.Delete.FailedMessage", "Could not delete backup '{0}'.", projectName);
+                    string title = AppViewModel.L("Backups.Delete.FailedTitle", "Backup delete failed");
+                    string msg = Lf("Backups.Delete.FailedMessage", "Could not delete backup '{0}'.", projectName);
                     if (permissionDenied)
                     {
-                        msg = $"{msg} " + L(
+                        msg = $"{msg} " + AppViewModel.L(
                             "Backups.Delete.PermissionHint",
                             "VaultSync could not remove one or more protected files on the destination. Verify destination permissions/credentials and retry.");
                     }
@@ -272,9 +272,9 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
-                var finalLabel = deleteSucceeded
-                    ? L("Backups.Status.Deleted", "Deleted")
-                    : L("Backups.Status.FailedSuffix", "Failed");
+                string finalLabel = deleteSucceeded
+                    ? AppViewModel.L("Backups.Status.Deleted", "Deleted")
+                    : AppViewModel.L("Backups.Status.FailedSuffix", "Failed");
                 BackupsViewModel.CompleteTransientOperation(cardId, finalLabel);
                 BackupsViewModel.IsBusy      = false;
                 BackupsViewModel.BusyMessage = string.Empty;
@@ -291,7 +291,7 @@ namespace VaultSync.UI.ViewModels
             if (snapshot is null)
                 return;
 
-            if (!int.TryParse(snapshot.Id, out var backupId))
+            if (!int.TryParse(snapshot.Id, out int backupId))
                 return;
 
             OpenBackupFolder(backupId);
@@ -304,16 +304,16 @@ namespace VaultSync.UI.ViewModels
 
         private async Task<bool> ConfirmDeleteBackupAsync(string projectName, DateTime timestamp)
         {
-            var cfg = await Task.Run(AppConfigStore.Load);
+            AppConfig cfg = await Task.Run(AppConfigStore.Load);
             if (!cfg.Behavior.ConfirmDeleteBackup)
                 return true;
 
-            var timeLabel = timestamp.ToString("g", CultureInfo.CurrentCulture);
+            string timeLabel = timestamp.ToString("g", CultureInfo.CurrentCulture);
             return await Dispatcher.UIThread.InvokeAsync(async () =>
             {
                 var title = new TextBlock
                 {
-                    Text = L("Backups.Delete.Title", "Delete backup?"),
+                    Text = AppViewModel.L("Backups.Delete.Title", "Delete backup?"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
@@ -326,7 +326,7 @@ namespace VaultSync.UI.ViewModels
 
                 var warning = new TextBlock
                 {
-                    Text = L("Backups.Delete.Warning", "This removes data on the destination."),
+                    Text = AppViewModel.L("Backups.Delete.Warning", "This removes data on the destination."),
                     TextWrapping = TextWrapping.Wrap
                 };
                 if (GetBrush("TextSecondary") is { } warningBrush)
@@ -336,7 +336,7 @@ namespace VaultSync.UI.ViewModels
 
                 var dontShowAgain = new CheckBox
                 {
-                    Content = L("Backups.Delete.DontShowAgain", "Don't show again"),
+                    Content = AppViewModel.L("Backups.Delete.DontShowAgain", "Don't show again"),
                     Margin = new Thickness(0, 2, 0, 0)
                 };
 
@@ -349,20 +349,20 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
                     MinWidth = 120
                 };
                 cancelButton.Classes.Add("action-ghost");
 
                 var deleteButton = new Button
                 {
-                    Content = L("Backups.Delete.Confirm", "Delete backup"),
+                    Content = AppViewModel.L("Backups.Delete.Confirm", "Delete backup"),
                     MinWidth = 140
                 };
                 deleteButton.Classes.Add("action-primary");
 
                 Window? window = null;
-                var confirmed = false;
+                bool confirmed = false;
                 cancelButton.Click += (_, _) => window?.Close();
                 deleteButton.Click += (_, _) =>
                 {
@@ -393,7 +393,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = L("Backups.Delete.Title", "Delete backup?"),
+                    Title = AppViewModel.L("Backups.Delete.Title", "Delete backup?"),
                     Content = card,
                     CanResize = false,
                     Width = 540,
@@ -401,7 +401,7 @@ namespace VaultSync.UI.ViewModels
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     window.Icon = owner.Icon;
@@ -433,7 +433,7 @@ namespace VaultSync.UI.ViewModels
 
         private static IBrush? GetBrush(string key)
         {
-            if (Application.Current?.Resources.TryGetValue(key, out var value) == true)
+            if (Application.Current?.Resources.TryGetValue(key, out object? value) == true)
             {
                 return value as IBrush;
             }
@@ -447,21 +447,21 @@ namespace VaultSync.UI.ViewModels
             {
                 var title = new TextBlock
                 {
-                    Text = L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Text = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
 
                 var question = new TextBlock
                 {
-                    Text = L("Backups.Delete.ForceCredentialsPrompt",
+                    Text = AppViewModel.L("Backups.Delete.ForceCredentialsPrompt",
                         "Use destination credentials to force delete this backup?"),
                     TextWrapping = TextWrapping.Wrap
                 };
 
                 var hint = new TextBlock
                 {
-                    Text = L("Backups.Delete.ForceCredentialsHint",
+                    Text = AppViewModel.L("Backups.Delete.ForceCredentialsHint",
                         "Recommended for NAS shares when delete is denied."),
                     TextWrapping = TextWrapping.Wrap
                 };
@@ -479,20 +479,20 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
                     MinWidth = 120
                 };
                 cancelButton.Classes.Add("action-ghost");
 
                 var forceButton = new Button
                 {
-                    Content = L("Backups.Delete.ForceCredentialsConfirm", "Use credentials"),
+                    Content = AppViewModel.L("Backups.Delete.ForceCredentialsConfirm", "Use credentials"),
                     MinWidth = 160
                 };
                 forceButton.Classes.Add("action-primary");
 
                 Window? window = null;
-                var confirmed = false;
+                bool confirmed = false;
                 cancelButton.Click += (_, _) => window?.Close();
                 forceButton.Click += (_, _) =>
                 {
@@ -519,7 +519,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Title = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
                     Content = card,
                     CanResize = false,
                     Width = 540,
@@ -527,7 +527,7 @@ namespace VaultSync.UI.ViewModels
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     window.Icon = owner.Icon;
@@ -553,21 +553,21 @@ namespace VaultSync.UI.ViewModels
             {
                 var title = new TextBlock
                 {
-                    Text = L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Text = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
 
                 var question = new TextBlock
                 {
-                    Text = L("Backups.Delete.CredentialsPrompt",
+                    Text = AppViewModel.L("Backups.Delete.CredentialsPrompt",
                         "Enter destination credentials to force delete this backup. These credentials are used once and not saved."),
                     TextWrapping = TextWrapping.Wrap
                 };
 
                 var usernameLabel = new TextBlock
                 {
-                    Text = L("Backups.Delete.CredentialsUsername", "Username"),
+                    Text = AppViewModel.L("Backups.Delete.CredentialsUsername", "Username"),
                     FontWeight = FontWeight.SemiBold
                 };
                 var usernameBox = new TextBox
@@ -577,7 +577,7 @@ namespace VaultSync.UI.ViewModels
 
                 var passwordLabel = new TextBlock
                 {
-                    Text = L("Backups.Delete.CredentialsPassword", "Password"),
+                    Text = AppViewModel.L("Backups.Delete.CredentialsPassword", "Password"),
                     FontWeight = FontWeight.SemiBold,
                     Margin = new Thickness(0, 6, 0, 0)
                 };
@@ -589,7 +589,7 @@ namespace VaultSync.UI.ViewModels
 
                 var hint = new TextBlock
                 {
-                    Text = L("Backups.Delete.ForceCredentialsMissing",
+                    Text = AppViewModel.L("Backups.Delete.ForceCredentialsMissing",
                         "Assign a credential profile to this destination in Settings. If your usual user cannot delete backups, the NAS root/admin user may be required."),
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(0, 8, 0, 0)
@@ -608,20 +608,20 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
                     MinWidth = 120
                 };
                 cancelButton.Classes.Add("action-ghost");
 
                 var forceButton = new Button
                 {
-                    Content = L("Backups.Delete.ForceCredentialsConfirm", "Use credentials"),
+                    Content = AppViewModel.L("Backups.Delete.ForceCredentialsConfirm", "Use credentials"),
                     MinWidth = 160
                 };
                 forceButton.Classes.Add("action-primary");
 
                 Window? window = null;
-                var confirmed = false;
+                bool confirmed = false;
                 cancelButton.Click += (_, _) => window?.Close();
                 forceButton.Click += (_, _) =>
                 {
@@ -652,7 +652,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Title = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
                     Content = card,
                     CanResize = false,
                     Width = 540,
@@ -660,7 +660,7 @@ namespace VaultSync.UI.ViewModels
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     window.Icon = owner.Icon;
@@ -676,8 +676,8 @@ namespace VaultSync.UI.ViewModels
                     window.Closed -= OnClosed;
                 }
 
-                var username = usernameBox.Text?.Trim() ?? string.Empty;
-                var password = passwordBox.Text ?? string.Empty;
+                string username = usernameBox.Text?.Trim() ?? string.Empty;
+                string password = passwordBox.Text ?? string.Empty;
                 if (confirmed && (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password)))
                     return (false, string.Empty, string.Empty);
 
@@ -699,11 +699,11 @@ namespace VaultSync.UI.ViewModels
                 return true;
 
             // Clear read-only attributes on files and dirs before deletion.
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
             {
                 try
                 {
-                    var attrs = File.GetAttributes(file);
+                    FileAttributes attrs = File.GetAttributes(file);
                     if ((attrs & FileAttributes.ReadOnly) != 0)
                         File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
                 }
@@ -717,11 +717,11 @@ namespace VaultSync.UI.ViewModels
                 }
             }
 
-            foreach (var dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories).Reverse())
+            foreach (string? dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories).Reverse())
             {
                 try
                 {
-                    var attrs = File.GetAttributes(dir);
+                    FileAttributes attrs = File.GetAttributes(dir);
                     if ((attrs & FileAttributes.ReadOnly) != 0)
                         File.SetAttributes(dir, attrs & ~FileAttributes.ReadOnly);
                 }
@@ -743,7 +743,7 @@ namespace VaultSync.UI.ViewModels
             catch (UnauthorizedAccessException ex)
             {
                 permissionDenied = true;
-                if (TryDeleteDirectoryManually(path, ref permissionDenied, out var manualError))
+                if (TryDeleteDirectoryManually(path, ref permissionDenied, out string? manualError))
                     return true;
 
                 error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
@@ -751,7 +751,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (IOException ex)
             {
-                if (TryDeleteDirectoryManually(path, ref permissionDenied, out var manualError))
+                if (TryDeleteDirectoryManually(path, ref permissionDenied, out string? manualError))
                     return true;
 
                 error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
@@ -774,7 +774,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
                 {
                     try
                     {
@@ -804,7 +804,7 @@ namespace VaultSync.UI.ViewModels
                     }
                 }
 
-                foreach (var dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
+                foreach (string? dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
                                              .OrderByDescending(d => d.Length))
                 {
                     try
@@ -847,18 +847,18 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var normalizedRoot = Path.GetFullPath(root)
+                string normalizedRoot = Path.GetFullPath(root)
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                     + Path.DirectorySeparatorChar;
 
-                var safeRelative = string.IsNullOrWhiteSpace(relativePath) ? string.Empty : relativePath.Trim();
+                string safeRelative = string.IsNullOrWhiteSpace(relativePath) ? string.Empty : relativePath.Trim();
                 if (Path.IsPathFullyQualified(safeRelative))
                 {
                     error = "Backup path is absolute and outside destination root.";
                     return false;
                 }
 
-                var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, safeRelative));
+                string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, safeRelative));
                 if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
                 {
                     error = "Backup path resolves outside destination root.";
@@ -907,15 +907,15 @@ namespace VaultSync.UI.ViewModels
                 return false;
             }
 
-            var trimmed = path.TrimStart('\\', '/');
-            var parts = trimmed.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+            string trimmed = path.TrimStart('\\', '/');
+            string[] parts = trimmed.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2)
                 return false;
 
             root = $@"\\{parts[0]}\{parts[1]}";
             if (parts.Length > 2)
             {
-                subPath = Path.Combine(parts.Skip(2).ToArray());
+                subPath = Path.Combine([.. parts.Skip(2)]);
             }
 
             return !string.IsNullOrWhiteSpace(subPath);
@@ -952,19 +952,19 @@ namespace VaultSync.UI.ViewModels
             if (path.Length < 2 || path[1] != ':')
                 return false;
 
-            var bufferSize = 0;
-            var result = WNetGetUniversalName(path, UniversalNameInfoLevel, IntPtr.Zero, ref bufferSize);
+            int bufferSize = 0;
+            int result = WNetGetUniversalName(path, UniversalNameInfoLevel, IntPtr.Zero, ref bufferSize);
             if (result != ErrorMoreData || bufferSize <= 0)
                 return false;
 
-            var buffer = Marshal.AllocHGlobal(bufferSize);
+            nint buffer = Marshal.AllocHGlobal(bufferSize);
             try
             {
                 result = WNetGetUniversalName(path, UniversalNameInfoLevel, buffer, ref bufferSize);
                 if (result != 0)
                     return false;
 
-                var info = Marshal.PtrToStructure<UniversalNameInfo>(buffer);
+                UniversalNameInfo info = Marshal.PtrToStructure<UniversalNameInfo>(buffer);
                 if (string.IsNullOrWhiteSpace(info.lpUniversalName))
                     return false;
 
@@ -979,18 +979,18 @@ namespace VaultSync.UI.ViewModels
 
         private DeleteBackupPreparation PrepareDeleteBackup(int backupId)
         {
-            var backup = _repo.GetBackupById(backupId);
+            Backup? backup = _repo.GetBackupById(backupId);
             if (backup is null)
                 return DeleteBackupPreparation.Failure;
 
-            var cfg = AppConfigStore.GetSnapshot();
-            var destinations = GetAllDestinations(cfg);
-            var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
+            AppConfig cfg = AppConfigStore.GetSnapshot();
+            List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
+            string? backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
                 return DeleteBackupPreparation.Failure;
 
-            var project = _repo.GetProjectById(backup.ProjectId);
-            var projectName = project?.Name ?? "Backup";
+            Project? project = _repo.GetProjectById(backup.ProjectId);
+            string projectName = project?.Name ?? "Backup";
 
             return new DeleteBackupPreparation(true, backup, backupRoot, projectName, project?.Id ?? 0, backup.SnapshotId);
         }
@@ -1002,7 +1002,7 @@ namespace VaultSync.UI.ViewModels
         {
             if (!string.IsNullOrWhiteSpace(backup.DestinationAlias))
             {
-                var aliasMatch = destinations.FirstOrDefault(d =>
+                BackupDestination? aliasMatch = destinations.FirstOrDefault(d =>
                     string.Equals(d.Alias ?? string.Empty, backup.DestinationAlias, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(d.Path ?? string.Empty, backup.DestinationAlias, StringComparison.OrdinalIgnoreCase));
                 if (aliasMatch is not null)
@@ -1011,18 +1011,18 @@ namespace VaultSync.UI.ViewModels
 
             if (!string.IsNullOrWhiteSpace(backup.DestinationPath))
             {
-                var pathMatch = destinations.FirstOrDefault(d =>
+                BackupDestination? pathMatch = destinations.FirstOrDefault(d =>
                     string.Equals(d.Path ?? string.Empty, backup.DestinationPath, StringComparison.OrdinalIgnoreCase));
                 if (pathMatch is not null)
                     return pathMatch;
             }
 
-            var rootMatch = destinations.FirstOrDefault(d =>
+            BackupDestination? rootMatch = destinations.FirstOrDefault(d =>
                 string.Equals(d.Path ?? string.Empty, backupRoot, StringComparison.OrdinalIgnoreCase));
             if (rootMatch is not null)
                 return rootMatch;
 
-            var prefixMatch = destinations.FirstOrDefault(d =>
+            BackupDestination? prefixMatch = destinations.FirstOrDefault(d =>
                 !string.IsNullOrWhiteSpace(d.Path) &&
                 !string.IsNullOrWhiteSpace(backupRoot) &&
                 backupRoot.StartsWith(d.Path!, StringComparison.OrdinalIgnoreCase));
@@ -1054,16 +1054,16 @@ namespace VaultSync.UI.ViewModels
 
         private RestoreBackupPreparation PrepareRestoreBackup(int backupId)
         {
-            var backup = _repo.GetBackupById(backupId);
+            Backup? backup = _repo.GetBackupById(backupId);
             if (backup is null)
             {
                 RuntimeLog.WriteVerbose($"[Restore] Backup id {backupId} not found.");
                 return RestoreBackupPreparation.Failure;
             }
 
-            var cfg = AppConfigStore.GetSnapshot();
-            var destinations = GetAllDestinations(cfg);
-            var backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
+            AppConfig cfg = AppConfigStore.GetSnapshot();
+            List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
+            string? backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
             {
                 RuntimeLog.WriteVerbose($"[Restore] No backup root found for id={backupId}, path='{backup.Path}', dest='{backup.DestinationPath}', alias='{backup.DestinationAlias}'.");
@@ -1076,7 +1076,7 @@ namespace VaultSync.UI.ViewModels
                 return RestoreBackupPreparation.Failure;
             }
 
-            if (!TryCombinePathUnderRoot(backupRoot, backup.Path, out var backupFullPath, out var backupPathError))
+            if (!TryCombinePathUnderRoot(backupRoot, backup.Path, out string? backupFullPath, out string? backupPathError))
             {
                 RuntimeLog.WriteVerbose($"[Restore] Backup path rejected for id={backupId}. Root='{backupRoot}', rel='{backup.Path}', error='{backupPathError}'.");
                 return RestoreBackupPreparation.Failure;
@@ -1087,20 +1087,20 @@ namespace VaultSync.UI.ViewModels
                 return RestoreBackupPreparation.Failure;
             }
 
-            var project = _repo.GetProjectById(backup.ProjectId);
+            Project? project = _repo.GetProjectById(backup.ProjectId);
             if (project is null)
             {
                 RuntimeLog.WriteVerbose($"[Restore] Project id {backup.ProjectId} not found for backup id {backupId}.");
                 return RestoreBackupPreparation.Failure;
             }
 
-            var restoreMode = ProjectRestoreMode.Normalize(project.RestoreMode);
-            var projectRoot = ResolveRestoreTarget(project, restoreMode);
+            string restoreMode = ProjectRestoreMode.Normalize(project.RestoreMode);
+            string projectRoot = ResolveRestoreTarget(project, restoreMode);
             if (string.IsNullOrWhiteSpace(projectRoot))
                 return RestoreBackupPreparation.Failure;
 
-            var encryptedArchivePath = Path.Combine(backupFullPath, BackupArchiveCryptoService.EncryptedArchiveFileName);
-            var isEncrypted = backup.IsEncrypted || File.Exists(encryptedArchivePath);
+            string encryptedArchivePath = Path.Combine(backupFullPath, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            bool isEncrypted = backup.IsEncrypted || File.Exists(encryptedArchivePath);
 
             return new RestoreBackupPreparation(
                 true,
@@ -1139,19 +1139,19 @@ namespace VaultSync.UI.ViewModels
 
         private List<string> ResolveEncryptedRestorePasswordCandidates(int projectId)
         {
-            var project = _repo.GetProjectById(projectId);
+            Project? project = _repo.GetProjectById(projectId);
             if (project is null)
-                return new List<string>();
+                return [];
 
-            var cfg = AppConfigStore.GetSnapshot();
-            var keyRefs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg.Backups.Encryption);
+            AppConfig cfg = AppConfigStore.GetSnapshot();
+            IReadOnlyList<string> keyRefs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg.Backups.Encryption);
             if (keyRefs.Count == 0)
-                return new List<string>();
+                return [];
 
             var candidates = new List<string>(keyRefs.Count);
-            foreach (var keyRef in keyRefs)
+            foreach (string keyRef in keyRefs)
             {
-                var secret = _credentialVault.GetSecret(
+                string? secret = _credentialVault.GetSecret(
                     keyRef,
                     BackupEncryptionSecretUsername,
                     preferKeychain: true,
@@ -1166,15 +1166,15 @@ namespace VaultSync.UI.ViewModels
 
         private string ResolveRestoreTarget(Project project, string restoreMode)
         {
-            var mode = ProjectRestoreMode.Normalize(restoreMode);
+            string mode = ProjectRestoreMode.Normalize(restoreMode);
             if (string.Equals(mode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase))
             {
-                var safeProjectName = string.Concat(project.Name.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch));
+                string safeProjectName = string.Concat(project.Name.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch));
                 if (string.IsNullOrWhiteSpace(safeProjectName))
                     safeProjectName = "Project";
 
-                var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-                var sandboxRoot = Path.Combine(
+                string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+                string sandboxRoot = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "VaultSync",
                     "restore-sandbox",
@@ -1189,17 +1189,17 @@ namespace VaultSync.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
                 return project.RootPath;
 
-            var cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = AppConfigStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(cfg.ProjectsRoot))
             {
-                var projectsRoot = Path.Combine(cfg.ProjectsRoot, project.Name);
+                string projectsRoot = Path.Combine(cfg.ProjectsRoot, project.Name);
                 Directory.CreateDirectory(projectsRoot);
                 TryUpdateProjectRootPath(project, projectsRoot);
                 RuntimeLog.WriteVerbose($"[Restore] Project root missing. Using ProjectsRoot '{projectsRoot}'.");
                 return projectsRoot;
             }
 
-            var fallbackRoot = Path.Combine(
+            string fallbackRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 "VaultSync Restores",
                 project.Name);
@@ -1213,16 +1213,16 @@ namespace VaultSync.UI.ViewModels
 
         private AutoBackupPreparation PrepareAutoBackupRun()
         {
-                    var cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = AppConfigStore.GetSnapshot();
             if (!cfg.Backups.EnableAutoBackups)
                 return AutoBackupPreparation.Failure("disabled");
 
-            var destinations = GetAllDestinations(cfg);
+            List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
             if (destinations.Count == 0)
                 return AutoBackupPreparation.Failure("no_destination");
 
             var projects = _repo.GetAllProjects().ToList();
-            var disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? new HashSet<int>();
+            HashSet<int> disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? [];
 
             return AutoBackupPreparation.Success(cfg, projects, disabled);
         }
@@ -1250,7 +1250,7 @@ namespace VaultSync.UI.ViewModels
             {
                 var title = new TextBlock
                 {
-                    Text = L("Backups.Restore.EncryptedPasswordTitle", "Encrypted backup password"),
+                    Text = AppViewModel.L("Backups.Restore.EncryptedPasswordTitle", "Encrypted backup password"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
@@ -1259,14 +1259,14 @@ namespace VaultSync.UI.ViewModels
                 {
                     Text = string.Format(
                         CultureInfo.CurrentCulture,
-                        L("Backups.Restore.EncryptedPasswordPrompt", "Enter the encryption password to restore '{0}'."),
+                        AppViewModel.L("Backups.Restore.EncryptedPasswordPrompt", "Enter the encryption password to restore '{0}'."),
                         projectName),
                     TextWrapping = TextWrapping.Wrap
                 };
 
                 var passwordLabel = new TextBlock
                 {
-                    Text = L("Backups.Restore.EncryptedPasswordLabel", "Password"),
+                    Text = AppViewModel.L("Backups.Restore.EncryptedPasswordLabel", "Password"),
                     FontWeight = FontWeight.SemiBold,
                     Margin = new Thickness(0, 6, 0, 0)
                 };
@@ -1286,20 +1286,20 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
                     MinWidth = 120
                 };
                 cancelButton.Classes.Add("action-ghost");
 
                 var restoreButton = new Button
                 {
-                    Content = L("Backups.Section.Restore", "Restore"),
+                    Content = AppViewModel.L("Backups.Section.Restore", "Restore"),
                     MinWidth = 140
                 };
                 restoreButton.Classes.Add("action-primary");
 
                 Window? window = null;
-                var confirmed = false;
+                bool confirmed = false;
                 cancelButton.Click += (_, _) => window?.Close();
                 restoreButton.Click += (_, _) =>
                 {
@@ -1327,7 +1327,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = L("Backups.Restore.EncryptedPasswordTitle", "Encrypted backup password"),
+                    Title = AppViewModel.L("Backups.Restore.EncryptedPasswordTitle", "Encrypted backup password"),
                     Content = card,
                     CanResize = false,
                     Width = 540,
@@ -1335,7 +1335,7 @@ namespace VaultSync.UI.ViewModels
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     window.Icon = owner.Icon;
@@ -1351,7 +1351,7 @@ namespace VaultSync.UI.ViewModels
                     window.Closed -= OnClosed;
                 }
 
-                var password = passwordBox.Text ?? string.Empty;
+                string password = passwordBox.Text ?? string.Empty;
                 if (confirmed && string.IsNullOrWhiteSpace(password))
                     return (false, string.Empty);
 
@@ -1367,14 +1367,14 @@ namespace VaultSync.UI.ViewModels
             {
                 var title = new TextBlock
                 {
-                    Text = L("Backups.Restore.ConfirmTitle", "Restore backup?"),
+                    Text = AppViewModel.L("Backups.Restore.ConfirmTitle", "Restore backup?"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
 
-                var targetLabel = string.Format(
+                string targetLabel = string.Format(
                     CultureInfo.CurrentCulture,
-                    L("Backups.Restore.ConfirmPrompt", "Restore '{0}' into:\n{1}"),
+                    AppViewModel.L("Backups.Restore.ConfirmPrompt", "Restore '{0}' into:\n{1}"),
                     preparation.ProjectName,
                     preparation.ProjectRoot);
 
@@ -1386,32 +1386,32 @@ namespace VaultSync.UI.ViewModels
 
                 var guidanceHeader = new TextBlock
                 {
-                    Text = L("Backups.Restore.GuidanceHeader", "What happens next"),
+                    Text = AppViewModel.L("Backups.Restore.GuidanceHeader", "What happens next"),
                     FontWeight = FontWeight.SemiBold
                 };
 
-                var backupTypeLabel = preparation.IsImported
-                    ? L("Backups.Snapshot.Type.Imported", "Imported")
+                string backupTypeLabel = preparation.IsImported
+                    ? AppViewModel.L("Backups.Snapshot.Type.Imported", "Imported")
                     : string.Equals(preparation.BackupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase)
-                        ? L("Backups.Snapshot.Type.Incremental", "Incremental")
-                        : L("Backups.Snapshot.Type.Full", "Full");
-                var restoreModeLabel = string.Equals(preparation.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
-                    ? L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")
-                    : L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)");
+                        ? AppViewModel.L("Backups.Snapshot.Type.Incremental", "Incremental")
+                        : AppViewModel.L("Backups.Snapshot.Type.Full", "Full");
+                string restoreModeLabel = string.Equals(preparation.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
+                    ? AppViewModel.L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")
+                    : AppViewModel.L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)");
 
-                var guidanceLines = new[]
+                string[] guidanceLines = new[]
                 {
                     Lf("Backups.Restore.GuidanceType", "Type: {0}", backupTypeLabel),
                     Lf("Backups.Restore.GuidanceMode", "Mode: {0}", restoreModeLabel),
-                    L("Backups.Restore.GuidanceOverwrite", "Files with matching paths are overwritten by restored files."),
-                    L("Backups.Restore.GuidanceKeepExtra", "Files that exist only in the current project folder are kept."),
+                    AppViewModel.L("Backups.Restore.GuidanceOverwrite", "Files with matching paths are overwritten by restored files."),
+                    AppViewModel.L("Backups.Restore.GuidanceKeepExtra", "Files that exist only in the current project folder are kept."),
                     preparation.IsEncrypted
-                        ? L("Backups.Restore.GuidanceEncrypted", "If needed, VaultSync will ask for the encryption password before restore starts.")
-                        : L("Backups.Restore.GuidancePlain", "No encryption password is required for this backup.")
+                        ? AppViewModel.L("Backups.Restore.GuidanceEncrypted", "If needed, VaultSync will ask for the encryption password before restore starts.")
+                        : AppViewModel.L("Backups.Restore.GuidancePlain", "No encryption password is required for this backup.")
                 };
 
                 var guidancePanel = new StackPanel { Spacing = 4 };
-                foreach (var line in guidanceLines)
+                foreach (string? line in guidanceLines)
                 {
                     var row = new TextBlock
                     {
@@ -1425,7 +1425,7 @@ namespace VaultSync.UI.ViewModels
 
                 var previewHeader = new TextBlock
                 {
-                    Text = L("Backups.Restore.Preview.Header", "Restore preview"),
+                    Text = AppViewModel.L("Backups.Restore.Preview.Header", "Restore preview"),
                     FontWeight = FontWeight.SemiBold
                 };
                 var previewPanel = new StackPanel { Spacing = 4 };
@@ -1434,7 +1434,7 @@ namespace VaultSync.UI.ViewModels
                     var unavailable = new TextBlock
                     {
                         Text = "• " + (string.IsNullOrWhiteSpace(preview.UnavailableReason)
-                            ? L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup.")
+                            ? AppViewModel.L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup.")
                             : preview.UnavailableReason),
                         TextWrapping = TextWrapping.Wrap
                     };
@@ -1444,7 +1444,7 @@ namespace VaultSync.UI.ViewModels
                 }
                 else
                 {
-                    var previewLines = new[]
+                    string[] previewLines = new[]
                     {
                         Lf("Backups.Restore.Preview.TotalFiles", "Files in backup: {0}", preview.TotalFiles.ToString(CultureInfo.CurrentCulture)),
                         Lf("Backups.Restore.Preview.NewFiles", "New files to add: {0}", preview.NewFiles.ToString(CultureInfo.CurrentCulture)),
@@ -1453,7 +1453,7 @@ namespace VaultSync.UI.ViewModels
                         Lf("Backups.Restore.Preview.ExtraFilesKept", "Existing project-only files that will be kept: {0}", preview.ExtraFilesKept.ToString(CultureInfo.CurrentCulture)),
                         Lf("Backups.Restore.Preview.TotalBytes", "Total restore data: {0}", BackupSnapshotItem.FormatSize(preview.TotalBytes))
                     };
-                    foreach (var line in previewLines)
+                    foreach (string? line in previewLines)
                     {
                         var row = new TextBlock
                         {
@@ -1468,8 +1468,8 @@ namespace VaultSync.UI.ViewModels
 
                 var restoreModeOptions = new List<RestoreModeOption>
                 {
-                    new(ProjectRestoreMode.Direct, L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)")),
-                    new(ProjectRestoreMode.Sandbox, L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)"))
+                    new(ProjectRestoreMode.Direct, AppViewModel.L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)")),
+                    new(ProjectRestoreMode.Sandbox, AppViewModel.L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)"))
                 };
                 var restoreModeCombo = new ComboBox
                 {
@@ -1489,30 +1489,30 @@ namespace VaultSync.UI.ViewModels
                 var restoreModeSelector = new StackPanel { Spacing = 5 };
                 restoreModeSelector.Children.Add(new TextBlock
                 {
-                    Text = L("Backups.Restore.Mode.Label", "Restore mode"),
+                    Text = AppViewModel.L("Backups.Restore.Mode.Label", "Restore mode"),
                     FontWeight = FontWeight.SemiBold
                 });
                 restoreModeSelector.Children.Add(restoreModeCombo);
 
                 var targetSelector = new StackPanel { Spacing = 5 };
                 var targetSelections = new List<CheckBox>();
-                var targetOptions = preview.TopLevelTargets;
-                var showTargetSelector = preview.IsAvailable && targetOptions.Count > 1;
+                IReadOnlyList<string> targetOptions = preview.TopLevelTargets;
+                bool showTargetSelector = preview.IsAvailable && targetOptions.Count > 1;
                 if (showTargetSelector)
                 {
                     targetSelector.Children.Add(new TextBlock
                     {
-                        Text = L("Backups.Restore.Selection.Header", "Restore targets"),
+                        Text = AppViewModel.L("Backups.Restore.Selection.Header", "Restore targets"),
                         FontWeight = FontWeight.SemiBold
                     });
                     targetSelector.Children.Add(new TextBlock
                     {
-                        Text = L("Backups.Restore.Selection.Description", "Choose which top-level folders/files to restore."),
+                        Text = AppViewModel.L("Backups.Restore.Selection.Description", "Choose which top-level folders/files to restore."),
                         TextWrapping = TextWrapping.Wrap,
                         Foreground = GetBrush("TextSecondary")
                     });
 
-                    foreach (var option in targetOptions)
+                    foreach (string option in targetOptions)
                     {
                         var cb = new CheckBox
                         {
@@ -1533,7 +1533,7 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
                     MinWidth = 120,
                     IsCancel = true
                 };
@@ -1541,14 +1541,14 @@ namespace VaultSync.UI.ViewModels
 
                 var restoreButton = new Button
                 {
-                    Content = L("Backups.Section.Restore", "Restore"),
+                    Content = AppViewModel.L("Backups.Section.Restore", "Restore"),
                     MinWidth = 140,
                     IsDefault = true
                 };
                 restoreButton.Classes.Add("action-primary");
 
                 Window? window = null;
-                var confirmed = false;
+                bool confirmed = false;
                 cancelButton.Click += (_, _) => window?.Close();
                 restoreButton.Click += (_, _) =>
                 {
@@ -1581,7 +1581,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = L("Backups.Restore.ConfirmTitle", "Restore backup?"),
+                    Title = AppViewModel.L("Backups.Restore.ConfirmTitle", "Restore backup?"),
                     Content = card,
                     CanResize = false,
                     Width = 620,
@@ -1589,7 +1589,7 @@ namespace VaultSync.UI.ViewModels
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     window.Icon = owner.Icon;
@@ -1605,14 +1605,14 @@ namespace VaultSync.UI.ViewModels
                     window.Closed -= OnClosed;
                 }
 
-                var selectedMode = (restoreModeCombo.SelectedItem as RestoreModeOption)?.Id ?? preparation.RestoreMode;
+                string selectedMode = (restoreModeCombo.SelectedItem as RestoreModeOption)?.Id ?? preparation.RestoreMode;
                 IReadOnlyList<string> selectedTargets = showTargetSelector
                     ? targetSelections.Where(cb => cb.IsChecked == true)
                         .Select(cb => cb.Content?.ToString() ?? string.Empty)
                         .Where(v => !string.IsNullOrWhiteSpace(v))
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .ToList()
-                    : targetOptions.ToList();
+                    : [.. targetOptions];
 
                 if (confirmed && showTargetSelector && selectedTargets.Count == 0)
                     return (false, ProjectRestoreMode.Normalize(selectedMode), Array.Empty<string>());
@@ -1638,7 +1638,7 @@ namespace VaultSync.UI.ViewModels
             {
                 var title = new TextBlock
                 {
-                    Text = L("Backups.Restore.Sandbox.Post.Title", "Sandbox restore completed"),
+                    Text = AppViewModel.L("Backups.Restore.Sandbox.Post.Title", "Sandbox restore completed"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
@@ -1662,7 +1662,7 @@ namespace VaultSync.UI.ViewModels
 
                 var deleteAfterApply = new CheckBox
                 {
-                    Content = L("Backups.Restore.Sandbox.Post.DeleteAfterApply", "Delete sandbox folder after apply"),
+                    Content = AppViewModel.L("Backups.Restore.Sandbox.Post.DeleteAfterApply", "Delete sandbox folder after apply"),
                     IsChecked = true
                 };
 
@@ -1675,27 +1675,27 @@ namespace VaultSync.UI.ViewModels
 
                 var keepButton = new Button
                 {
-                    Content = L("Backups.Restore.Sandbox.Post.Keep", "Keep for later"),
+                    Content = AppViewModel.L("Backups.Restore.Sandbox.Post.Keep", "Keep for later"),
                     MinWidth = 130
                 };
                 keepButton.Classes.Add("action-ghost");
 
                 var openButton = new Button
                 {
-                    Content = L("Backups.Restore.Sandbox.Post.Open", "Open sandbox"),
+                    Content = AppViewModel.L("Backups.Restore.Sandbox.Post.Open", "Open sandbox"),
                     MinWidth = 130
                 };
                 openButton.Classes.Add("action-ghost");
 
                 var applyButton = new Button
                 {
-                    Content = L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
+                    Content = AppViewModel.L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
                     MinWidth = 150
                 };
                 applyButton.Classes.Add("action-primary");
 
                 Window? window = null;
-                var action = SandboxPostRestoreAction.Keep;
+                SandboxPostRestoreAction action = SandboxPostRestoreAction.Keep;
                 keepButton.Click += (_, _) =>
                 {
                     action = SandboxPostRestoreAction.Keep;
@@ -1733,7 +1733,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = L("Backups.Restore.Sandbox.Post.Title", "Sandbox restore completed"),
+                    Title = AppViewModel.L("Backups.Restore.Sandbox.Post.Title", "Sandbox restore completed"),
                     Content = card,
                     CanResize = false,
                     Width = 650,
@@ -1741,7 +1741,7 @@ namespace VaultSync.UI.ViewModels
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     window.Icon = owner.Icon;
@@ -1772,37 +1772,37 @@ namespace VaultSync.UI.ViewModels
             if (!Directory.Exists(sandboxPath))
             {
                 BackupsViewModel.ShowNotification(
-                    L("Backups.Restore.Sandbox.ApplyMissing", "Sandbox folder no longer exists."),
+                    AppViewModel.L("Backups.Restore.Sandbox.ApplyMissing", "Sandbox folder no longer exists."),
                     "Error");
                 return;
             }
 
-            var targetPath = ResolveRestoreTarget(project, ProjectRestoreMode.Direct);
+            string targetPath = ResolveRestoreTarget(project, ProjectRestoreMode.Direct);
             if (string.IsNullOrWhiteSpace(targetPath))
             {
                 BackupsViewModel.ShowNotification(
-                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed."),
                     "Error");
                 return;
             }
 
-            var preview = await Task.Run(() => BuildSandboxApplyPreview(sandboxPath, targetPath));
-            var applyConfirmed = await ConfirmSandboxApplyAsync(projectName, targetPath, preview);
+            SandboxApplyPreview preview = await Task.Run(() => BuildSandboxApplyPreview(sandboxPath, targetPath));
+            bool applyConfirmed = await ConfirmSandboxApplyAsync(projectName, targetPath, preview);
             if (!applyConfirmed)
                 return;
 
-            var applyCardId = $"sandbox-apply-{project.Id}";
+            string applyCardId = $"sandbox-apply-{project.Id}";
             BackupsViewModel.IsBusy = true;
-            BackupsViewModel.BusyMessage = L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...");
+            BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...");
             BackupsViewModel.UpdateActiveBackup(
                 applyCardId,
                 projectName,
                 0,
-                L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore..."),
+                AppViewModel.L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore..."),
                 string.Empty,
                 allowCancel: false);
 
-            var applySucceeded = false;
+            bool applySucceeded = false;
             string? cleanupError = null;
             try
             {
@@ -1810,8 +1810,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     CopyDirectoryWithProgress(sandboxPath, targetPath, null, 0, 100, update =>
                     {
-                        var label = string.IsNullOrWhiteSpace(update.CurrentFile)
-                            ? L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...")
+                        string label = string.IsNullOrWhiteSpace(update.CurrentFile)
+                            ? AppViewModel.L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...")
                             : update.CurrentFile;
                         BackupsViewModel.UpdateActiveBackup(
                             applyCardId,
@@ -1830,7 +1830,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     if (!DeleteDirectoryRobust(sandboxPath, out cleanupError))
                     {
-                        cleanupError ??= L("Backups.Restore.Sandbox.CleanupFailed", "Sandbox cleanup failed.");
+                        cleanupError ??= AppViewModel.L("Backups.Restore.Sandbox.CleanupFailed", "Sandbox cleanup failed.");
                     }
                 }
             }
@@ -1854,7 +1854,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(cleanupError))
             {
                 BackupsViewModel.ShowNotification(
-                    L("Backups.Restore.Sandbox.ApplyCompleted", "Sandbox restore applied to project."),
+                    AppViewModel.L("Backups.Restore.Sandbox.ApplyCompleted", "Sandbox restore applied to project."),
                     "Success");
             }
             else
@@ -1894,7 +1894,7 @@ namespace VaultSync.UI.ViewModels
                 0,
                 0,
                 0,
-                Array.Empty<string>(),
+                [],
                 reason);
         }
 
@@ -1903,7 +1903,7 @@ namespace VaultSync.UI.ViewModels
             if (preparation.IsEncrypted)
             {
                 return RestoreExecutionPreview.Unavailable(
-                    L(
+                    AppViewModel.L(
                         "Backups.Restore.Preview.EncryptedUnavailable",
                         "Preview is unavailable before decrypt for encrypted backups."));
             }
@@ -1911,31 +1911,31 @@ namespace VaultSync.UI.ViewModels
             if (!Directory.Exists(preparation.BackupFullPath) || !Directory.Exists(preparation.ProjectRoot))
             {
                 return RestoreExecutionPreview.Unavailable(
-                    L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup."));
+                    AppViewModel.L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup."));
             }
 
             var sourceRelative = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var topLevelTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var totalFiles = 0;
-            var newFiles = 0;
-            var overwriteFiles = 0;
-            var conflictFiles = 0;
+            int totalFiles = 0;
+            int newFiles = 0;
+            int overwriteFiles = 0;
+            int conflictFiles = 0;
             long totalBytes = 0;
-            var archivePath = Path.Combine(preparation.BackupFullPath, BackupArchiveCryptoService.PlainArchiveFileName);
+            string archivePath = Path.Combine(preparation.BackupFullPath, BackupArchiveCryptoService.PlainArchiveFileName);
             if (File.Exists(archivePath))
             {
-                using var archive = ZipFile.OpenRead(archivePath);
-                foreach (var entry in archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)))
+                using ZipArchive archive = ZipFile.OpenRead(archivePath);
+                foreach (ZipArchiveEntry? entry in archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)))
                 {
-                    var relative = GetSafeArchiveEntryRelativePath(entry.FullName);
+                    string relative = GetSafeArchiveEntryRelativePath(entry.FullName);
                     sourceRelative.Add(relative);
-                    var topLevel = GetTopLevelSegment(relative);
+                    string topLevel = GetTopLevelSegment(relative);
                     if (!string.IsNullOrWhiteSpace(topLevel))
                         topLevelTargets.Add(topLevel);
                     totalFiles++;
                     totalBytes += Math.Max(0, entry.Length);
 
-                    var targetPath = Path.Combine(preparation.ProjectRoot, relative);
+                    string targetPath = Path.Combine(preparation.ProjectRoot, relative);
                     if (!File.Exists(targetPath))
                     {
                         newFiles++;
@@ -1944,24 +1944,24 @@ namespace VaultSync.UI.ViewModels
 
                     overwriteFiles++;
                     var targetInfo = new FileInfo(targetPath);
-                    var sourceWriteUtc = entry.LastWriteTime.UtcDateTime == DateTime.MinValue
+                    DateTime sourceWriteUtc = entry.LastWriteTime.UtcDateTime == DateTime.MinValue
                         ? DateTime.MinValue
                         : entry.LastWriteTime.UtcDateTime;
-                    var targetSeemsNewer = sourceWriteUtc != DateTime.MinValue
+                    bool targetSeemsNewer = sourceWriteUtc != DateTime.MinValue
                         && targetInfo.LastWriteTimeUtc > sourceWriteUtc.AddSeconds(1);
-                    var contentLooksDifferent = targetInfo.Length != entry.Length;
+                    bool contentLooksDifferent = targetInfo.Length != entry.Length;
                     if (targetSeemsNewer || contentLooksDifferent)
                         conflictFiles++;
                 }
             }
             else
             {
-                var sourceFiles = Directory.GetFiles(preparation.BackupFullPath, "*", SearchOption.AllDirectories);
-                foreach (var sourcePath in sourceFiles)
+                string[] sourceFiles = Directory.GetFiles(preparation.BackupFullPath, "*", SearchOption.AllDirectories);
+                foreach (string sourcePath in sourceFiles)
                 {
-                    var relative = Path.GetRelativePath(preparation.BackupFullPath, sourcePath);
+                    string relative = Path.GetRelativePath(preparation.BackupFullPath, sourcePath);
                     sourceRelative.Add(relative);
-                    var topLevel = GetTopLevelSegment(relative);
+                    string topLevel = GetTopLevelSegment(relative);
                     if (!string.IsNullOrWhiteSpace(topLevel))
                         topLevelTargets.Add(topLevel);
                     totalFiles++;
@@ -1969,7 +1969,7 @@ namespace VaultSync.UI.ViewModels
                     var sourceInfo = new FileInfo(sourcePath);
                     totalBytes += sourceInfo.Length;
 
-                    var targetPath = Path.Combine(preparation.ProjectRoot, relative);
+                    string targetPath = Path.Combine(preparation.ProjectRoot, relative);
                     if (!File.Exists(targetPath))
                     {
                         newFiles++;
@@ -1978,20 +1978,20 @@ namespace VaultSync.UI.ViewModels
 
                     overwriteFiles++;
                     var targetInfo = new FileInfo(targetPath);
-                    var targetSeemsNewer = targetInfo.LastWriteTimeUtc > sourceInfo.LastWriteTimeUtc.AddSeconds(1);
-                    var contentLooksDifferent = targetInfo.Length != sourceInfo.Length;
+                    bool targetSeemsNewer = targetInfo.LastWriteTimeUtc > sourceInfo.LastWriteTimeUtc.AddSeconds(1);
+                    bool contentLooksDifferent = targetInfo.Length != sourceInfo.Length;
                     if (targetSeemsNewer || contentLooksDifferent)
                         conflictFiles++;
                 }
             }
 
-            var extraFilesKept = 0;
+            int extraFilesKept = 0;
             try
             {
-                var targetFiles = Directory.GetFiles(preparation.ProjectRoot, "*", SearchOption.AllDirectories);
-                foreach (var targetPath in targetFiles)
+                string[] targetFiles = Directory.GetFiles(preparation.ProjectRoot, "*", SearchOption.AllDirectories);
+                foreach (string targetPath in targetFiles)
                 {
-                    var relative = Path.GetRelativePath(preparation.ProjectRoot, targetPath);
+                    string relative = Path.GetRelativePath(preparation.ProjectRoot, targetPath);
                     if (!sourceRelative.Contains(relative))
                         extraFilesKept++;
                 }
@@ -2015,20 +2015,20 @@ namespace VaultSync.UI.ViewModels
 
         private static SandboxApplyPreview BuildSandboxApplyPreview(string sandboxPath, string targetPath)
         {
-            var totalFiles = 0;
-            var newFiles = 0;
-            var overwriteFiles = 0;
+            int totalFiles = 0;
+            int newFiles = 0;
+            int overwriteFiles = 0;
             long totalBytes = 0;
             long overwriteBytes = 0;
 
-            foreach (var sourceFile in Directory.EnumerateFiles(sandboxPath, "*", SearchOption.AllDirectories))
+            foreach (string sourceFile in Directory.EnumerateFiles(sandboxPath, "*", SearchOption.AllDirectories))
             {
                 totalFiles++;
                 var fileInfo = new FileInfo(sourceFile);
                 totalBytes += fileInfo.Length;
 
-                var relativePath = Path.GetRelativePath(sandboxPath, sourceFile);
-                var destinationFile = Path.Combine(targetPath, relativePath);
+                string relativePath = Path.GetRelativePath(sandboxPath, sourceFile);
+                string destinationFile = Path.Combine(targetPath, relativePath);
                 if (File.Exists(destinationFile))
                 {
                     overwriteFiles++;
@@ -2049,7 +2049,7 @@ namespace VaultSync.UI.ViewModels
             {
                 var title = new TextBlock
                 {
-                    Text = L("Backups.Restore.Sandbox.ApplyConfirmTitle", "Apply sandbox restore to project?"),
+                    Text = AppViewModel.L("Backups.Restore.Sandbox.ApplyConfirmTitle", "Apply sandbox restore to project?"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
@@ -2066,11 +2066,11 @@ namespace VaultSync.UI.ViewModels
 
                 var summaryHeader = new TextBlock
                 {
-                    Text = L("Backups.Restore.Sandbox.ApplySummaryHeader", "Apply summary"),
+                    Text = AppViewModel.L("Backups.Restore.Sandbox.ApplySummaryHeader", "Apply summary"),
                     FontWeight = FontWeight.SemiBold
                 };
 
-                var summaryLines = new[]
+                string[] summaryLines = new[]
                 {
                     Lf("Backups.Restore.Sandbox.ApplySummaryTotalFiles", "Total files to copy: {0}", preview.TotalFiles.ToString(CultureInfo.CurrentCulture)),
                     Lf("Backups.Restore.Sandbox.ApplySummaryNewFiles", "New files: {0}", preview.NewFiles.ToString(CultureInfo.CurrentCulture)),
@@ -2080,7 +2080,7 @@ namespace VaultSync.UI.ViewModels
                 };
 
                 var summaryPanel = new StackPanel { Spacing = 4 };
-                foreach (var line in summaryLines)
+                foreach (string? line in summaryLines)
                 {
                     var row = new TextBlock
                     {
@@ -2094,7 +2094,7 @@ namespace VaultSync.UI.ViewModels
 
                 var warning = new TextBlock
                 {
-                    Text = L("Backups.Restore.Sandbox.ApplyConfirmWarning", "Existing files with matching paths will be overwritten."),
+                    Text = AppViewModel.L("Backups.Restore.Sandbox.ApplyConfirmWarning", "Existing files with matching paths will be overwritten."),
                     TextWrapping = TextWrapping.Wrap
                 };
                 if (GetBrush("TextSecondary") is { } warningBrush)
@@ -2109,20 +2109,20 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
                     MinWidth = 120
                 };
                 cancelButton.Classes.Add("action-ghost");
 
                 var applyButton = new Button
                 {
-                    Content = L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
+                    Content = AppViewModel.L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
                     MinWidth = 150
                 };
                 applyButton.Classes.Add("action-primary");
 
                 Window? window = null;
-                var confirmed = false;
+                bool confirmed = false;
                 cancelButton.Click += (_, _) => window?.Close();
                 applyButton.Click += (_, _) =>
                 {
@@ -2151,7 +2151,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = L("Backups.Restore.Sandbox.ApplyConfirmTitle", "Apply sandbox restore to project?"),
+                    Title = AppViewModel.L("Backups.Restore.Sandbox.ApplyConfirmTitle", "Apply sandbox restore to project?"),
                     Content = card,
                     CanResize = false,
                     Width = 700,
@@ -2159,7 +2159,7 @@ namespace VaultSync.UI.ViewModels
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                var owner = GetMainWindow();
+                Window? owner = GetMainWindow();
                 if (owner != null)
                 {
                     window.Icon = owner.Icon;
@@ -2181,7 +2181,7 @@ namespace VaultSync.UI.ViewModels
 
         private void OnRestoreBackupRequested(BackupSnapshotItem? snapshot)
         {
-            RunDetached(() => OnRestoreBackupRequestedAsync(snapshot), nameof(OnRestoreBackupRequestedAsync));
+            AppViewModel.RunDetached(() => OnRestoreBackupRequestedAsync(snapshot), nameof(OnRestoreBackupRequestedAsync));
         }
 
         private async Task OnRestoreBackupRequestedAsync(BackupSnapshotItem? snapshot)
@@ -2189,64 +2189,64 @@ namespace VaultSync.UI.ViewModels
             if (snapshot is null)
                 return;
 
-            if (!int.TryParse(snapshot.Id, out var backupId))
+            if (!int.TryParse(snapshot.Id, out int backupId))
                 return;
 
 
-            var preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
+            RestoreBackupPreparation preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
             if (!preparation.IsReady)
             {
                 BackupsViewModel.ShowNotification(
-                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed."),
                     "Error");
                 RuntimeLog.WriteVerbose($"[Restore] Restore preparation failed for backupId={backupId}.");
                 return;
             }
 
-            var restorePreview = await Task.Run(() => BuildRestoreExecutionPreview(preparation));
-            var restoreDecision = await ConfirmRestoreBackupAsync(preparation, restorePreview);
+            RestoreExecutionPreview restorePreview = await Task.Run(() => BuildRestoreExecutionPreview(preparation));
+            (bool Confirmed, string RestoreMode, IReadOnlyList<string> SelectedTopLevelTargets) restoreDecision = await ConfirmRestoreBackupAsync(preparation, restorePreview);
             if (!restoreDecision.Confirmed)
                 return;
 
-            var selectedRestoreMode = ProjectRestoreMode.Normalize(restoreDecision.RestoreMode);
-            var selectedTopLevelTargets = restoreDecision.SelectedTopLevelTargets;
-            var restoreProject = _repo.GetProjectById(preparation.ProjectId);
+            string selectedRestoreMode = ProjectRestoreMode.Normalize(restoreDecision.RestoreMode);
+            IReadOnlyList<string> selectedTopLevelTargets = restoreDecision.SelectedTopLevelTargets;
+            Project? restoreProject = _repo.GetProjectById(preparation.ProjectId);
             if (restoreProject is null)
             {
                 BackupsViewModel.ShowNotification(
-                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed."),
                     "Error");
                 RuntimeLog.WriteVerbose($"[Restore] Project not found during restore execution for backupId={backupId}.");
                 return;
             }
 
-            var projectRoot = ResolveRestoreTarget(restoreProject, selectedRestoreMode);
+            string projectRoot = ResolveRestoreTarget(restoreProject, selectedRestoreMode);
             if (string.IsNullOrWhiteSpace(projectRoot))
             {
                 BackupsViewModel.ShowNotification(
-                    L("Backups.Status.RestoreFailed", "Restore failed."),
+                    AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed."),
                     "Error");
                 RuntimeLog.WriteVerbose($"[Restore] Restore target resolution failed for backupId={backupId}.");
                 return;
             }
 
-            var backupFullPath = preparation.BackupFullPath;
+            string backupFullPath = preparation.BackupFullPath;
             BackupsViewModel.IsBusy      = true;
             BackupsViewModel.BusyMessage = $"Restoring {preparation.ProjectName}...";
-            var restoreCardId = $"restore-{backupId}";
+            string restoreCardId = $"restore-{backupId}";
             BackupsViewModel.UpdateActiveBackup(
                 restoreCardId,
                 preparation.ProjectName,
                 0,
-                L("Backups.Status.Restoring", "Restoring backup..."),
+                AppViewModel.L("Backups.Status.Restoring", "Restoring backup..."),
                 string.Empty,
                 allowCancel: false);
 
-            var restoreSucceeded = false;
+            bool restoreSucceeded = false;
             try
             {
                 long lastProcessedBytes = 0;
-                var lastProgressSampleUtc = DateTime.UtcNow;
+                DateTime lastProgressSampleUtc = DateTime.UtcNow;
                 double smoothedBytesPerSecond = 0;
 
                 string BuildRestoreEtaLabel(RestoreProgressUpdate update)
@@ -2254,11 +2254,11 @@ namespace VaultSync.UI.ViewModels
                     if (update.TotalBytes <= 0)
                         return string.Empty;
 
-                    var nowUtc = DateTime.UtcNow;
-                    var elapsedSeconds = (nowUtc - lastProgressSampleUtc).TotalSeconds;
+                    DateTime nowUtc = DateTime.UtcNow;
+                    double elapsedSeconds = (nowUtc - lastProgressSampleUtc).TotalSeconds;
                     if (elapsedSeconds >= 0.2 && update.ProcessedBytes >= lastProcessedBytes)
                     {
-                        var instantRate = (update.ProcessedBytes - lastProcessedBytes) / elapsedSeconds;
+                        double instantRate = (update.ProcessedBytes - lastProcessedBytes) / elapsedSeconds;
                         if (instantRate >= 0)
                         {
                             smoothedBytesPerSecond = smoothedBytesPerSecond <= 0
@@ -2270,13 +2270,13 @@ namespace VaultSync.UI.ViewModels
                         lastProgressSampleUtc = nowUtc;
                     }
 
-                    var speedLabel = smoothedBytesPerSecond > 0
+                    string speedLabel = smoothedBytesPerSecond > 0
                         ? $"{BackupSnapshotItem.FormatSize((long)smoothedBytesPerSecond)}/s"
-                        : L("Backups.Progress.Estimating", "Estimating...");
+                        : AppViewModel.L("Backups.Progress.Estimating", "Estimating...");
 
-                    var processedLabel = BackupSnapshotItem.FormatSize(Math.Max(0, update.ProcessedBytes));
-                    var totalLabel = BackupSnapshotItem.FormatSize(update.TotalBytes);
-                    var detailLabel = string.Format(
+                    string processedLabel = BackupSnapshotItem.FormatSize(Math.Max(0, update.ProcessedBytes));
+                    string totalLabel = BackupSnapshotItem.FormatSize(update.TotalBytes);
+                    string detailLabel = string.Format(
                         CultureInfo.CurrentCulture,
                         "Restoring ({0}/{1})",
                         processedLabel,
@@ -2288,10 +2288,10 @@ namespace VaultSync.UI.ViewModels
                 void RunRestore(string? encryptionPassword) =>
                     RestoreDirectory(backupFullPath, projectRoot, encryptionPassword, selectedTopLevelTargets, update =>
                     {
-                        var label = string.IsNullOrWhiteSpace(update.CurrentFile)
-                            ? L("Backups.Status.Restoring", "Restoring backup...")
+                        string label = string.IsNullOrWhiteSpace(update.CurrentFile)
+                            ? AppViewModel.L("Backups.Status.Restoring", "Restoring backup...")
                             : update.CurrentFile;
-                        var etaLabel = BuildRestoreEtaLabel(update);
+                        string etaLabel = BuildRestoreEtaLabel(update);
                         BackupsViewModel.UpdateActiveBackup(
                             restoreCardId,
                             preparation.ProjectName,
@@ -2321,14 +2321,14 @@ namespace VaultSync.UI.ViewModels
                     {
                         if (candidatePasswords.Count == 0)
                         {
-                            var passwordPrompt = await ConfirmEncryptedRestorePasswordAsync(preparation.ProjectName);
+                            (bool Confirmed, string Password) passwordPrompt = await ConfirmEncryptedRestorePasswordAsync(preparation.ProjectName);
                             if (!passwordPrompt.Confirmed)
                                 return;
 
                             if (string.IsNullOrWhiteSpace(passwordPrompt.Password))
                             {
                                 BackupsViewModel.ShowNotification(
-                                    L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
+                                    AppViewModel.L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
                                     "Error");
                                 continue;
                             }
@@ -2336,7 +2336,7 @@ namespace VaultSync.UI.ViewModels
                             candidatePasswords.Enqueue(passwordPrompt.Password);
                         }
 
-                        var restorePassword = candidatePasswords.Dequeue();
+                        string restorePassword = candidatePasswords.Dequeue();
                         if (!attemptedPasswords.Add(restorePassword))
                             continue;
 
@@ -2368,25 +2368,25 @@ namespace VaultSync.UI.ViewModels
             {
                 Console.WriteLine($"[Restore] Restore failed for '{preparation.ProjectName}': {ex.Message}");
 
-                var failureMessage = IsEncryptedRestorePasswordError(ex)
-                    ? L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted.")
+                string failureMessage = IsEncryptedRestorePasswordError(ex)
+                    ? AppViewModel.L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted.")
                     : ex.Message;
 
                 Dispatcher.UIThread.Post(() =>
                 {
-                    BackupsViewModel.BackupCurrentFile = L("Backups.Status.RestoreFailed", "Restore failed.");
+                    BackupsViewModel.BackupCurrentFile = AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed.");
                     BackupsViewModel.BackupEtaText =
                         string.IsNullOrWhiteSpace(BackupsViewModel.BackupEtaText)
                             ? failureMessage
-                                : BackupsViewModel.BackupEtaText + " - " + L("Backups.Status.FailedSuffix", "Failed");
+                                : BackupsViewModel.BackupEtaText + " - " + AppViewModel.L("Backups.Status.FailedSuffix", "Failed");
                 });
             }
             finally
             {
                 if (restoreSucceeded)
                 {
-                    var restoredProject = _repo.GetProjectByName(preparation.ProjectName);
-                    var isDirectRestore = !string.Equals(selectedRestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase);
+                    Project? restoredProject = _repo.GetProjectByName(preparation.ProjectName);
+                    bool isDirectRestore = !string.Equals(selectedRestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase);
                     if (isDirectRestore && restoredProject != null && restoredProject.NeedsRestore)
                     {
                         _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
@@ -2394,8 +2394,8 @@ namespace VaultSync.UI.ViewModels
 
                     if (!isDirectRestore)
                     {
-                        var sandboxPath = projectRoot;
-                        var decision = await ConfirmSandboxPostRestoreActionAsync(preparation.ProjectName, sandboxPath);
+                        string sandboxPath = projectRoot;
+                        SandboxPostRestoreDecision decision = await ConfirmSandboxPostRestoreActionAsync(preparation.ProjectName, sandboxPath);
                         if (decision.Action == SandboxPostRestoreAction.Open)
                         {
                             OpenPathInSystemFileManager(sandboxPath);
@@ -2484,14 +2484,14 @@ namespace VaultSync.UI.ViewModels
             // Ensure target root exists
             Directory.CreateDirectory(targetDir);
 
-            var archivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.PlainArchiveFileName);
+            string archivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.PlainArchiveFileName);
             if (File.Exists(archivePath))
             {
                 ExtractArchiveWithProgress(archivePath, targetDir, selectedTopLevelTargets, progress);
                 return;
             }
 
-            var encryptedArchivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            string encryptedArchivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.EncryptedArchiveFileName);
             if (File.Exists(encryptedArchivePath))
             {
                 if (string.IsNullOrWhiteSpace(encryptionPassword))
@@ -2504,15 +2504,15 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
+            HashSet<string>? selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
 
             // Create all directories
-            foreach (var dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
+            foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
             {
-                var relative = Path.GetRelativePath(sourceDir, dirPath);
+                string relative = Path.GetRelativePath(sourceDir, dirPath);
                 if (!ShouldIncludeRelativePath(relative, selectedTopLevels))
                     continue;
-                var target   = Path.Combine(targetDir, relative);
+                string target   = Path.Combine(targetDir, relative);
                 Directory.CreateDirectory(target);
             }
 
@@ -2526,26 +2526,24 @@ namespace VaultSync.UI.ViewModels
             IReadOnlyList<string>? selectedTopLevelTargets,
             Action<RestoreProgressUpdate>? progress)
         {
-            using var archive = ZipFile.OpenRead(archivePath);
-            var selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
-            var entries = archive.Entries
-                .Where(entry => ShouldIncludeRelativePath(entry.FullName, selectedTopLevels))
-                .ToArray();
-            var totalEntries = entries.Length;
-            var processed = 0;
-            var totalBytes = entries.Where(e => !string.IsNullOrEmpty(e.Name)).Sum(e => Math.Max(0, e.Length));
+            using ZipArchive archive = ZipFile.OpenRead(archivePath);
+            HashSet<string>? selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
+            ZipArchiveEntry[] entries = [.. archive.Entries.Where(entry => ShouldIncludeRelativePath(entry.FullName, selectedTopLevels))];
+            int totalEntries = entries.Length;
+            int processed = 0;
+            long totalBytes = entries.Where(e => !string.IsNullOrEmpty(e.Name)).Sum(e => Math.Max(0, e.Length));
             long processedBytes = 0;
 
-            foreach (var entry in entries)
+            foreach (ZipArchiveEntry? entry in entries)
             {
-                var destinationPath = GetSafeArchiveEntryPath(targetDir, entry.FullName);
+                string destinationPath = GetSafeArchiveEntryPath(targetDir, entry.FullName);
                 if (string.IsNullOrEmpty(entry.Name))
                 {
                     Directory.CreateDirectory(destinationPath);
                 }
                 else
                 {
-                    var parent = Path.GetDirectoryName(destinationPath);
+                    string? parent = Path.GetDirectoryName(destinationPath);
                     if (!string.IsNullOrEmpty(parent))
                         Directory.CreateDirectory(parent);
 
@@ -2567,7 +2565,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string GetSafeArchiveEntryRelativePath(string entryFullName)
         {
-            var normalized = (entryFullName ?? string.Empty)
+            string normalized = (entryFullName ?? string.Empty)
                 .Replace('/', Path.DirectorySeparatorChar)
                 .Trim();
 
@@ -2577,10 +2575,10 @@ namespace VaultSync.UI.ViewModels
             if (Path.IsPathFullyQualified(normalized))
                 throw new InvalidDataException($"Archive entry '{entryFullName}' is absolute.");
 
-            var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "vaultsync-archive-root"))
+            string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "vaultsync-archive-root"))
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 + Path.DirectorySeparatorChar;
-            var candidate = Path.GetFullPath(Path.Combine(root, normalized));
+            string candidate = Path.GetFullPath(Path.Combine(root, normalized));
             if (!candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the extraction root.");
 
@@ -2589,11 +2587,11 @@ namespace VaultSync.UI.ViewModels
 
         private static string GetSafeArchiveEntryPath(string root, string entryFullName)
         {
-            var relative = GetSafeArchiveEntryRelativePath(entryFullName);
-            var normalizedRoot = Path.GetFullPath(root)
+            string relative = GetSafeArchiveEntryRelativePath(entryFullName);
+            string normalizedRoot = Path.GetFullPath(root)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 + Path.DirectorySeparatorChar;
-            var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relative));
+            string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relative));
             if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the extraction destination.");
 
@@ -2607,9 +2605,9 @@ namespace VaultSync.UI.ViewModels
             IReadOnlyList<string>? selectedTopLevelTargets,
             Action<RestoreProgressUpdate>? progress)
         {
-            var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-restore-{Guid.NewGuid():N}");
-            var stagingExtracted = Path.Combine(stagingRoot, "content");
-            var stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
+            string stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-restore-{Guid.NewGuid():N}");
+            string stagingExtracted = Path.Combine(stagingRoot, "content");
+            string stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
 
             try
             {
@@ -2617,12 +2615,12 @@ namespace VaultSync.UI.ViewModels
                 progress?.Invoke(new RestoreProgressUpdate(5, "Decrypting backup...", 0, 0));
 
                 var cryptoService = new BackupArchiveCryptoService();
-                cryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
+                BackupArchiveCryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
                 progress?.Invoke(new RestoreProgressUpdate(30, "Decrypting backup...", 0, 0));
 
                 ExtractArchiveWithProgress(stagingArchive, stagingExtracted, selectedTopLevelTargets, update =>
                 {
-                    var mapped = 30 + (update.Percent * 0.5);
+                    double mapped = 30 + (update.Percent * 0.5);
                     progress?.Invoke(new RestoreProgressUpdate(
                         Math.Clamp(mapped, 30, 80),
                         update.CurrentFile,
@@ -2657,23 +2655,21 @@ namespace VaultSync.UI.ViewModels
             double endPercent,
             Action<RestoreProgressUpdate>? progress)
         {
-            var selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
-            var files = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories)
-                .Where(filePath => ShouldIncludeRelativePath(Path.GetRelativePath(sourceDir, filePath), selectedTopLevels))
-                .ToArray();
-            var totalFiles = files.Length;
-            var totalBytes = files
+            HashSet<string>? selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
+            string[] files = [.. Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories).Where(filePath => ShouldIncludeRelativePath(Path.GetRelativePath(sourceDir, filePath), selectedTopLevels))];
+            int totalFiles = files.Length;
+            long totalBytes = files
                 .Select(filePath => new FileInfo(filePath))
                 .Sum(fileInfo => Math.Max(0, fileInfo.Length));
             long processedBytes = 0;
-            var processed = 0;
-            foreach (var filePath in files)
+            int processed = 0;
+            foreach (string? filePath in files)
             {
-                var fileLength = Math.Max(0, new FileInfo(filePath).Length);
-                var relative = Path.GetRelativePath(sourceDir, filePath);
-                var target = Path.Combine(targetDir, relative);
+                long fileLength = Math.Max(0, new FileInfo(filePath).Length);
+                string relative = Path.GetRelativePath(sourceDir, filePath);
+                string target = Path.Combine(targetDir, relative);
 
-                var parentDir = Path.GetDirectoryName(target);
+                string? parentDir = Path.GetDirectoryName(target);
                 if (!string.IsNullOrEmpty(parentDir))
                     Directory.CreateDirectory(parentDir);
 
@@ -2682,8 +2678,8 @@ namespace VaultSync.UI.ViewModels
                 processed++;
                 if (progress is not null)
                 {
-                    var ratio = totalFiles == 0 ? 1d : processed / (double)totalFiles;
-                    var value = startPercent + ((endPercent - startPercent) * ratio);
+                    double ratio = totalFiles == 0 ? 1d : processed / (double)totalFiles;
+                    double value = startPercent + ((endPercent - startPercent) * ratio);
                     progress(new RestoreProgressUpdate(value, relative, processedBytes, totalBytes));
                 }
             }
@@ -2698,9 +2694,9 @@ namespace VaultSync.UI.ViewModels
                 return null;
 
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var value in selectedTopLevelTargets)
+            foreach (string value in selectedTopLevelTargets)
             {
-                var normalized = value?.Trim();
+                string? normalized = value?.Trim();
                 if (!string.IsNullOrWhiteSpace(normalized))
                     result.Add(normalized);
             }
@@ -2713,7 +2709,7 @@ namespace VaultSync.UI.ViewModels
             if (selectedTopLevels is null || selectedTopLevels.Count == 0)
                 return true;
 
-            var topLevel = GetTopLevelSegment(relativePath ?? string.Empty);
+            string topLevel = GetTopLevelSegment(relativePath ?? string.Empty);
             if (string.IsNullOrWhiteSpace(topLevel))
                 return false;
 
@@ -2725,11 +2721,11 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(relativePath))
                 return string.Empty;
 
-            var normalized = relativePath.Replace('\\', '/').Trim('/');
+            string normalized = relativePath.Replace('\\', '/').Trim('/');
             if (normalized.Length == 0)
                 return string.Empty;
 
-            var slashIndex = normalized.IndexOf('/');
+            int slashIndex = normalized.IndexOf('/');
             return slashIndex >= 0
                 ? normalized.Substring(0, slashIndex)
                 : normalized;

@@ -66,7 +66,7 @@ public sealed class ProjectEncryptionEnrollmentService
                 return;
             }
 
-            var selectedProjectId = await ConfirmProjectEncryptionEnrollmentTargetAsync(projects);
+            int? selectedProjectId = await ConfirmProjectEncryptionEnrollmentTargetAsync(projects);
             if (!selectedProjectId.HasValue)
                 return;
 
@@ -83,7 +83,7 @@ public sealed class ProjectEncryptionEnrollmentService
 
     public async Task EditProjectEncryptionSecretAsync(int projectId)
     {
-        var project = _repo.GetProjectById(projectId);
+        Project? project = _repo.GetProjectById(projectId);
         if (project is null)
         {
             _showNotification(
@@ -92,16 +92,16 @@ public sealed class ProjectEncryptionEnrollmentService
             return;
         }
 
-        var existingKeyRef = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
+        string? existingKeyRef = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
             ? null
             : project.EncryptionKeyRef.Trim();
-        var hasExistingSecret = !string.IsNullOrWhiteSpace(_credentialVault.GetSecret(
+        bool hasExistingSecret = !string.IsNullOrWhiteSpace(_credentialVault.GetSecret(
             existingKeyRef,
             BackupEncryptionSecretUsername,
             preferKeychain: true,
             fallbackPlaintext: null));
 
-        var dialogResult = await ConfirmProjectEncryptionSecretAsync(project.Name, hasExistingSecret);
+        ProjectEncryptionSecretDialogResult dialogResult = await ConfirmProjectEncryptionSecretAsync(project.Name, hasExistingSecret);
         if (!dialogResult.Confirmed)
             return;
 
@@ -114,11 +114,11 @@ public sealed class ProjectEncryptionEnrollmentService
             }
             else
             {
-                var normalizedPassword = dialogResult.Password?.Trim() ?? string.Empty;
+                string normalizedPassword = dialogResult.Password?.Trim() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(normalizedPassword))
                     return;
 
-                var keyRef = _credentialVault.EnsureKeyRef(existingKeyRef, $"project-{project.Name}");
+                string keyRef = _credentialVault.EnsureKeyRef(existingKeyRef, $"project-{project.Name}");
                 _credentialVault.SaveSecret(keyRef, BackupEncryptionSecretUsername, normalizedPassword, preferKeychain: true);
                 _repo.UpdateProjectEncryptionSettings(project.Id, project.EncryptionPolicy, keyRef);
             }
@@ -208,8 +208,8 @@ public sealed class ProjectEncryptionEnrollmentService
             };
             continueButton.Classes.Add("action-primary");
 
-            var selectedProjectId = 0;
-            var confirmed = false;
+            int selectedProjectId = 0;
+            bool confirmed = false;
             Window? window = null;
 
             cancelButton.Click += (_, _) => window?.Close();
@@ -255,7 +255,7 @@ public sealed class ProjectEncryptionEnrollmentService
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            var owner = _getOwner();
+            Window? owner = _getOwner();
             if (owner != null)
             {
                 window.Icon = owner.Icon;
@@ -358,8 +358,8 @@ public sealed class ProjectEncryptionEnrollmentService
             saveButton.Classes.Add("action-primary");
 
             Window? window = null;
-            var confirmed = false;
-            var clearRequested = false;
+            bool confirmed = false;
+            bool clearRequested = false;
 
             cancelButton.Click += (_, _) => window?.Close();
             clearButton.Click += (_, _) =>
@@ -370,8 +370,8 @@ public sealed class ProjectEncryptionEnrollmentService
             };
             saveButton.Click += (_, _) =>
             {
-                var password = passwordBox.Text ?? string.Empty;
-                var confirm = confirmBox.Text ?? string.Empty;
+                string password = passwordBox.Text ?? string.Empty;
+                string confirm = confirmBox.Text ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(password))
                 {
                     validationText.Text = L("Projects.Encryption.PasswordValidationRequired", "Password and confirmation are required.");
@@ -422,7 +422,7 @@ public sealed class ProjectEncryptionEnrollmentService
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            var owner = _getOwner();
+            Window? owner = _getOwner();
             if (owner != null)
             {
                 window.Icon = owner.Icon;
@@ -447,7 +447,7 @@ public sealed class ProjectEncryptionEnrollmentService
 
     private static string L(string key, string fallback)
     {
-        var value = LocalizationProvider.Service?.GetString(key);
+        string? value = LocalizationProvider.Service?.GetString(key);
         if (string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal))
             return fallback;
         return value;
@@ -455,7 +455,7 @@ public sealed class ProjectEncryptionEnrollmentService
 
     private static string Lf(string key, string fallback, params object[] args)
     {
-        var text = L(key, fallback);
+        string text = L(key, fallback);
         return args is { Length: > 0 }
             ? string.Format(CultureInfo.CurrentCulture, text, args)
             : text;

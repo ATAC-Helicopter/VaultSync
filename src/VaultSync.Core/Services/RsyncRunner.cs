@@ -48,7 +48,7 @@ namespace VaultSync.Core.Services
             if (filter.HasRules)
             {
                 tempExcludeFile = Path.Combine(Path.GetTempPath(), $"vaultsync_exclude_{Guid.NewGuid():N}.txt");
-                var patterns = filter.RawPatterns ?? Array.Empty<string>();
+                IReadOnlyList<string> patterns = filter.RawPatterns ?? Array.Empty<string>();
                 File.WriteAllLines(tempExcludeFile, patterns.Where(p => !string.IsNullOrWhiteSpace(p)));
             }
 
@@ -68,7 +68,7 @@ namespace VaultSync.Core.Services
             }
 
             // trailing slash on source for rsync semantics (copy contents)
-            var src = project.RootPath.EndsWith(Path.DirectorySeparatorChar)
+            string src = project.RootPath.EndsWith(Path.DirectorySeparatorChar)
                 ? project.RootPath
                 : project.RootPath + Path.DirectorySeparatorChar;
 
@@ -96,7 +96,7 @@ namespace VaultSync.Core.Services
 
             if (!string.IsNullOrWhiteSpace(linkDest))
             {
-                var linkPath = OperatingSystem.IsWindows() ? ToRsyncPath(linkDest) : linkDest;
+                string linkPath = OperatingSystem.IsWindows() ? ToRsyncPath(linkDest) : linkDest;
                 psi.ArgumentList.Add($"--link-dest={linkPath}");
             }
 
@@ -141,7 +141,7 @@ namespace VaultSync.Core.Services
                 if (string.IsNullOrWhiteSpace(data) || progressCallback is null)
                     return;
 
-                var line = data.Trim();
+                string line = data.Trim();
 
                 // rsync typically prints the file path on one line, then a separate line
                 // with the numeric progress (bytes, percent, speed, ETA).
@@ -160,11 +160,11 @@ namespace VaultSync.Core.Services
                     return;
                 }
 
-                var percent = TryParsePercent(line);
+                double? percent = TryParsePercent(line);
                 if (percent is double p)
                 {
                     // Use the last-seen file path as the "current file" for this progress tick.
-                    var fileLabel = currentFile ?? string.Empty;
+                    string fileLabel = currentFile ?? string.Empty;
                     progressCallback(p, fileLabel, string.Empty);
                 }
             }
@@ -219,10 +219,10 @@ namespace VaultSync.Core.Services
 
         private static RsyncCapabilities GetCapabilities(string rsyncPath)
         {
-            if (s_capabilityCache.TryGetValue(rsyncPath, out var cached))
+            if (s_capabilityCache.TryGetValue(rsyncPath, out RsyncCapabilities? cached))
                 return cached;
 
-            var detected = DetectCapabilities(rsyncPath);
+            RsyncCapabilities detected = DetectCapabilities(rsyncPath);
             s_capabilityCache[rsyncPath] = detected;
             return detected;
         }
@@ -252,9 +252,9 @@ namespace VaultSync.Core.Services
                     return new RsyncCapabilities(null, false);
                 }
 
-                var output = proc.StandardOutput.ReadToEnd();
-                var version = ParseVersion(output);
-                var supportsProgress2 = version is not null && version >= new Version(3, 1, 0);
+                string output = proc.StandardOutput.ReadToEnd();
+                Version? version = ParseVersion(output);
+                bool supportsProgress2 = version is not null && version >= new Version(3, 1, 0);
                 return new RsyncCapabilities(version, supportsProgress2);
             }
             catch
@@ -268,26 +268,26 @@ namespace VaultSync.Core.Services
             if (string.IsNullOrWhiteSpace(output))
                 return null;
 
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (lines.Length == 0)
                 return null;
 
             // Expected: "rsync  version 3.4.1  protocol version 32"
-            var tokens = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var versionToken = tokens.FirstOrDefault(t => t.Any(char.IsDigit) && t.Contains('.'));
-            return Version.TryParse(versionToken, out var parsed) ? parsed : null;
+            string[] tokens = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string? versionToken = tokens.FirstOrDefault(t => t.Any(char.IsDigit) && t.Contains('.'));
+            return Version.TryParse(versionToken, out Version? parsed) ? parsed : null;
         }
 
         private static double? TryParsePercent(string line)
         {
             // Very simple heuristic: find the first '%' and read the preceding digits.
-            var idx = line.IndexOf('%');
+            int idx = line.IndexOf('%');
             if (idx <= 0)
                 return null;
 
             // Walk backwards to gather digits
-            var end = idx - 1;
-            var start = end;
+            int end = idx - 1;
+            int start = end;
             while (start >= 0 && char.IsDigit(line[start]))
                 start--;
 
@@ -296,8 +296,8 @@ namespace VaultSync.Core.Services
             if (start > end)
                 return null;
 
-            var numberSpan = line[start..(end + 1)];
-            if (double.TryParse(numberSpan, out var value))
+            string numberSpan = line[start..(end + 1)];
+            if (double.TryParse(numberSpan, out double value))
             {
                 if (value >= 0 && value <= 100)
                     return value;
@@ -311,7 +311,7 @@ namespace VaultSync.Core.Services
             if (string.IsNullOrWhiteSpace(path))
                 return path;
 
-            var normalized = path;
+            string normalized = path;
             if (normalized.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
             {
                 normalized = "\\" + normalized.Substring(7);
@@ -326,11 +326,11 @@ namespace VaultSync.Core.Services
                 return "//" + normalized.TrimStart('\\').Replace('\\', '/');
             }
 
-            var full = Path.GetFullPath(normalized);
+            string full = Path.GetFullPath(normalized);
             if (full.Length >= 2 && full[1] == ':')
             {
-                var drive = char.ToLowerInvariant(full[0]);
-                var rest = full.Substring(2).TrimStart('\\').Replace('\\', '/');
+                char drive = char.ToLowerInvariant(full[0]);
+                string rest = full.Substring(2).TrimStart('\\').Replace('\\', '/');
                 return $"/cygdrive/{drive}/{rest}";
             }
 
@@ -345,20 +345,20 @@ namespace VaultSync.Core.Services
             if (string.IsNullOrWhiteSpace(rsyncPath))
                 return;
 
-            var directory = Path.GetDirectoryName(rsyncPath);
+            string? directory = Path.GetDirectoryName(rsyncPath);
             if (string.IsNullOrWhiteSpace(directory))
                 return;
 
-            var libDir = Path.GetFullPath(Path.Combine(directory, "..", "lib"));
+            string libDir = Path.GetFullPath(Path.Combine(directory, "..", "lib"));
             if (!Directory.Exists(libDir))
                 return;
 
-            var existing = psi.Environment.TryGetValue("DYLD_LIBRARY_PATH", out var current)
+            string existing = psi.Environment.TryGetValue("DYLD_LIBRARY_PATH", out string? current)
                 ? current ?? string.Empty
                 : string.Empty;
             psi.Environment["DYLD_LIBRARY_PATH"] = PrependPathEntry(existing, libDir);
 
-            var fallback = psi.Environment.TryGetValue("DYLD_FALLBACK_LIBRARY_PATH", out var fallbackCurrent)
+            string fallback = psi.Environment.TryGetValue("DYLD_FALLBACK_LIBRARY_PATH", out string? fallbackCurrent)
                 ? fallbackCurrent ?? string.Empty
                 : string.Empty;
             psi.Environment["DYLD_FALLBACK_LIBRARY_PATH"] = PrependPathEntry(fallback, libDir);
@@ -369,8 +369,8 @@ namespace VaultSync.Core.Services
             if (string.IsNullOrWhiteSpace(existing))
                 return entry;
 
-            var separator = ':';
-            var parts = existing.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+            char separator = ':';
+            string[] parts = existing.Split(separator, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Any(p => string.Equals(p, entry, StringComparison.Ordinal)))
                 return existing;
 

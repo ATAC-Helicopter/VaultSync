@@ -31,7 +31,7 @@ public sealed class UpdaterViewModel : ViewModelBase
 
     public event Action? RequestClose;
 
-    public string Title => L("Updater.Title", "Updating VaultSync");
+    public static string Title => L("Updater.Title", "Updating VaultSync");
 
     public string Status
     {
@@ -63,7 +63,7 @@ public sealed class UpdaterViewModel : ViewModelBase
         }
     }
 
-    public string CloseButtonText => L("Updater.Close", "Close");
+    public static string CloseButtonText => L("Updater.Close", "Close");
 
     public ICommand CloseCommand => _closeCommand;
 
@@ -77,7 +77,7 @@ public sealed class UpdaterViewModel : ViewModelBase
         AppendLog(L("Updater.Log.Starting", "Starting updater helper."));
         Status = L("Updater.Status.Applying", "Applying update...");
 
-        var result = await PatchInstallService.ApplyPatchAsync(
+        PatchApplyResult result = await PatchInstallService.ApplyPatchAsync(
             _request,
             AppendLog,
             CancellationToken.None);
@@ -118,7 +118,7 @@ public sealed class UpdaterViewModel : ViewModelBase
             }
 
             _logBuilder.Clear();
-            foreach (var item in _logLines)
+            foreach (string item in _logLines)
             {
                 _logBuilder.AppendLine(item);
             }
@@ -129,7 +129,7 @@ public sealed class UpdaterViewModel : ViewModelBase
 
     private static string L(string key, string fallback)
     {
-        var value = LocalizationProvider.Service?.GetString(key);
+        string? value = LocalizationProvider.Service?.GetString(key);
         if (string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.OrdinalIgnoreCase))
             return fallback;
 

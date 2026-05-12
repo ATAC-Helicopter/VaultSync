@@ -130,7 +130,7 @@ namespace VaultSync.UI.Notifications
             string? actionLabel,
             ICommand? actionCommand)
         {
-            var seconds = severity switch
+            int seconds = severity switch
             {
                 NotificationSeverity.Error => 9,
                 NotificationSeverity.Warning => 7,
@@ -140,7 +140,7 @@ namespace VaultSync.UI.Notifications
             if (!string.IsNullOrWhiteSpace(actionLabel) && actionCommand is not null)
                 seconds += 2;
 
-            var length = message?.Length ?? 0;
+            int length = message?.Length ?? 0;
             if (length > 180)
                 seconds += 2;
             else if (length > 90)

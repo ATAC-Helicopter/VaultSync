@@ -66,14 +66,16 @@ namespace VaultSync.UI.Services
                 if (!string.Equals(Source, "diagnostics", StringComparison.Ordinal))
                     return Source;
 
-                var text = Message.TrimStart();
+                string text = Message.TrimStart();
                 if (text.Contains("CONSOLE[stderr]", StringComparison.Ordinal))
                     return "stderr";
                 if (text.Contains("CONSOLE[stdout]", StringComparison.Ordinal))
                     return "stdout";
                 if (text.Contains("TRACE ", StringComparison.Ordinal) ||
                     text.Contains("TRACE[", StringComparison.Ordinal))
+                {
                     return "trace";
+                }
 
                 return Source;
             }
@@ -84,11 +86,11 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(message))
                 return string.Empty;
 
-            var text = message.Trim();
-            var threadMarker = text.IndexOf(" [t", StringComparison.Ordinal);
+            string text = message.Trim();
+            int threadMarker = text.IndexOf(" [t", StringComparison.Ordinal);
             if (threadMarker > 0 && text.Length > 24 && char.IsDigit(text[0]))
             {
-                var threadEnd = text.IndexOf("] ", threadMarker, StringComparison.Ordinal);
+                int threadEnd = text.IndexOf("] ", threadMarker, StringComparison.Ordinal);
                 if (threadEnd >= 0 && threadEnd + 2 < text.Length)
                 {
                     text = text[(threadEnd + 2)..].TrimStart();
@@ -97,10 +99,10 @@ namespace VaultSync.UI.Services
 
             if (text.StartsWith("CONSOLE[", StringComparison.Ordinal))
             {
-                var sourceEnd = text.IndexOf("] ", StringComparison.Ordinal);
+                int sourceEnd = text.IndexOf("] ", StringComparison.Ordinal);
                 if (sourceEnd > 8 && sourceEnd + 2 < text.Length)
                 {
-                    var consoleSource = text[8..sourceEnd].ToUpperInvariant();
+                    string consoleSource = text[8..sourceEnd].ToUpperInvariant();
                     text = $"{consoleSource}: {text[(sourceEnd + 2)..]}";
                 }
             }
@@ -113,10 +115,10 @@ namespace VaultSync.UI.Services
     {
         private const int DefaultMaxLines = 2000;
         private const int ReducedMaxLines = 200;
-        private readonly ObservableCollection<LogLine> _lines = new();
+        private readonly ObservableCollection<LogLine> _lines = [];
         private readonly ReadOnlyObservableCollection<LogLine> _readOnlyLines;
         private readonly object _snapshotGate = new();
-        private readonly List<LogLine> _snapshotLines = new();
+        private readonly List<LogLine> _snapshotLines = [];
         private readonly ConcurrentQueue<LogLine> _pending = new();
         private int _pendingCount;
         private readonly object _fileGate = new();
@@ -163,7 +165,7 @@ namespace VaultSync.UI.Services
                     {
                         if (_snapshotLines.Count > MaxLines)
                         {
-                            var toRemove = _snapshotLines.Count - MaxLines;
+                            int toRemove = _snapshotLines.Count - MaxLines;
                             _snapshotLines.RemoveRange(0, toRemove);
                         }
                     }
@@ -193,7 +195,7 @@ namespace VaultSync.UI.Services
 
         public void SetUiCaptureEnabled(bool enabled, bool loadSnapshot = false)
         {
-            var value = enabled ? 1 : 0;
+            int value = enabled ? 1 : 0;
             Interlocked.Exchange(ref _uiCaptureEnabled, value);
             _maxFlushBatch = enabled
                 ? (OperatingSystem.IsMacOS() ? 20 : 50)
@@ -205,13 +207,13 @@ namespace VaultSync.UI.Services
                 List<LogLine> snapshot;
                 lock (_snapshotGate)
                 {
-                    snapshot = _snapshotLines.ToList();
+                    snapshot = [.. _snapshotLines];
                 }
 
                 Dispatcher.UIThread.Post(() =>
                 {
                     _lines.Clear();
-                    foreach (var line in snapshot)
+                    foreach (LogLine line in snapshot)
                         _lines.Add(line);
                 });
             }
@@ -256,18 +258,18 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                var exportsDir = Path.Combine(GetLogRoot(), "exports");
+                string exportsDir = Path.Combine(GetLogRoot(), "exports");
                 Directory.CreateDirectory(exportsDir);
 
-                var path = Path.Combine(exportsDir, $"vaultsync-ui-log-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.txt");
+                string path = Path.Combine(exportsDir, $"vaultsync-ui-log-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.txt");
                 List<LogLine> snapshot;
                 lock (_snapshotGate)
                 {
-                    snapshot = _snapshotLines.ToList();
+                    snapshot = [.. _snapshotLines];
                 }
 
                 var sb = new StringBuilder();
-                foreach (var line in snapshot)
+                foreach (LogLine line in snapshot)
                 {
                     sb.AppendLine($"[{line.Timestamp:O}] {line.Source}: {line.Message}");
                 }
@@ -291,22 +293,22 @@ namespace VaultSync.UI.Services
                 List<LogLine> snapshot;
                 lock (_snapshotGate)
                 {
-                    snapshot = _snapshotLines.ToList();
+                    snapshot = [.. _snapshotLines];
                 }
 
                 if (snapshot.Count == 0)
                     return null;
 
-                var start = Math.Max(0, snapshot.Count - maxLines);
+                int start = Math.Max(0, snapshot.Count - maxLines);
                 var sb = new StringBuilder();
                 if (!string.IsNullOrWhiteSpace(header))
                 {
                     sb.AppendLine(header);
                 }
 
-                for (var i = start; i < snapshot.Count; i++)
+                for (int i = start; i < snapshot.Count; i++)
                 {
-                    var line = snapshot[i];
+                    LogLine line = snapshot[i];
                     sb.AppendLine($"[{line.Timestamp:O}] {line.Source}: {line.Message}");
                 }
 
@@ -325,7 +327,7 @@ namespace VaultSync.UI.Services
 
             if (Dispatcher.UIThread.CheckAccess())
             {
-                var captured = message;
+                string captured = message;
                 ThreadPool.QueueUserWorkItem(_ => AppendCore(captured, source));
                 return;
             }
@@ -335,7 +337,7 @@ namespace VaultSync.UI.Services
 
         private void AppendCore(string message, string source)
         {
-            foreach (var line in message.Replace("\r", string.Empty).Split('\n'))
+            foreach (string line in message.Replace("\r", string.Empty).Split('\n'))
             {
                 if (string.IsNullOrWhiteSpace(line))
                     continue;
@@ -349,7 +351,7 @@ namespace VaultSync.UI.Services
                     _snapshotLines.Add(entry);
                     if (_snapshotLines.Count > MaxLines)
                     {
-                        var toRemove = _snapshotLines.Count - MaxLines;
+                        int toRemove = _snapshotLines.Count - MaxLines;
                         _snapshotLines.RemoveRange(0, toRemove);
                     }
                 }
@@ -358,7 +360,7 @@ namespace VaultSync.UI.Services
                 {
                     if (OperatingSystem.IsMacOS())
                     {
-                        var queued = Interlocked.Increment(ref _pendingCount);
+                        int queued = Interlocked.Increment(ref _pendingCount);
                         if (queued > 200)
                         {
                             Interlocked.Decrement(ref _pendingCount);
@@ -397,7 +399,7 @@ namespace VaultSync.UI.Services
         {
             if (Dispatcher.UIThread.CheckAccess())
             {
-                var captured = line;
+                string captured = line;
                 ThreadPool.QueueUserWorkItem(_ => AppendCore(captured, "diagnostics"));
                 return;
             }
@@ -407,11 +409,11 @@ namespace VaultSync.UI.Services
 
         private void SeedDiagnosticsSnapshot()
         {
-            var recent = DiagnosticsLogger.GetRecentLog();
+            string? recent = DiagnosticsLogger.GetRecentLog();
             if (string.IsNullOrWhiteSpace(recent))
                 return;
 
-            foreach (var line in recent.Replace("\r", string.Empty).Split('\n'))
+            foreach (string line in recent.Replace("\r", string.Empty).Split('\n'))
             {
                 if (string.IsNullOrWhiteSpace(line))
                     continue;
@@ -461,8 +463,8 @@ namespace VaultSync.UI.Services
             if (_lines.Count <= MaxLines)
                 return;
 
-            var toRemove = _lines.Count - MaxLines;
-            for (var i = 0; i < toRemove; i++)
+            int toRemove = _lines.Count - MaxLines;
+            for (int i = 0; i < toRemove; i++)
                 _lines.RemoveAt(0);
         }
 
@@ -472,7 +474,7 @@ namespace VaultSync.UI.Services
                 return;
 
             var minInterval = TimeSpan.FromMilliseconds(200);
-            var now = DateTime.UtcNow;
+            DateTime now = DateTime.UtcNow;
             if ((now - _lastFlushUtc) < minInterval)
             {
                 if (Interlocked.Exchange(ref _flushDelayed, 1) == 0)
@@ -499,13 +501,13 @@ namespace VaultSync.UI.Services
                 return;
 
             var batch = new List<LogLine>(_maxFlushBatch);
-            while (batch.Count < _maxFlushBatch && _pending.TryDequeue(out var entry))
+            while (batch.Count < _maxFlushBatch && _pending.TryDequeue(out LogLine? entry))
             {
                 Interlocked.Decrement(ref _pendingCount);
                 batch.Add(entry);
             }
 
-            foreach (var entry in batch)
+            foreach (LogLine entry in batch)
                 _lines.Add(entry);
 
             TrimIfNeeded();
@@ -518,7 +520,7 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                var path = GetDailyLogPath();
+                string path = GetDailyLogPath();
                 lock (_fileGate)
                 {
                     _fileBuffer.Append('[')
@@ -549,7 +551,7 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                var path = GetDailyLogPath();
+                string path = GetDailyLogPath();
                 lock (_fileGate)
                 {
                     _fileFlushTimer?.Dispose();
@@ -655,7 +657,7 @@ namespace VaultSync.UI.Services
                 if (string.IsNullOrEmpty(value))
                     return;
 
-                foreach (var ch in value)
+                foreach (char ch in value)
                 {
                     Write(ch);
                 }
@@ -674,7 +676,7 @@ namespace VaultSync.UI.Services
 
             private void FlushBuffer()
             {
-                var line = _buffer.ToString();
+                string line = _buffer.ToString();
                 _buffer.Clear();
                 if (!string.IsNullOrWhiteSpace(line))
                 {

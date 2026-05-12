@@ -4,6 +4,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
@@ -14,20 +16,15 @@ using Microsoft.Data.Sqlite;
 
 namespace VaultSync.Core.Services;
 
-public sealed class MetadataSyncService
+public sealed class MetadataSyncService(SqliteRepository repo)
 {
-    private readonly SqliteRepository _repo;
+    private readonly SqliteRepository _repo = repo;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly SemaphoreSlim MetadataIoGate = new(1, 1);
 
     public static Func<Project, string?>? ProjectColorResolver { get; set; }
     public static Action<string, string>? ProjectColorApplier { get; set; }
-
-    public MetadataSyncService(SqliteRepository repo)
-    {
-        _repo = repo;
-    }
 
     public MetadataSyncResult ImportFromStore(string rootPath, MetadataSyncOptions? options = null)
     {
@@ -40,7 +37,7 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            var opts = options ?? MetadataSyncOptions.Default;
+            MetadataSyncOptions opts = options ?? MetadataSyncOptions.Default;
 
             if (string.IsNullOrWhiteSpace(rootPath))
             {
@@ -52,15 +49,24 @@ public sealed class MetadataSyncService
             if (!File.Exists(store.DatabasePath))
             {
                 Console.WriteLine($"[MetadataSync] Import skipped: store not found at '{store.DatabasePath}'.");
+                MetadataSyncResult legacyResult = ImportBackupFoldersFromDestination(rootPath, opts, AppConfigStore.Load());
+                if (legacyResult.Status == MetadataSyncStatus.Success &&
+                    (legacyResult.ImportedProjects > 0 ||
+                     legacyResult.ImportedSnapshots > 0 ||
+                     legacyResult.ImportedBackups > 0))
+                {
+                    return legacyResult;
+                }
+
                 return MetadataSyncResult.Failure(MetadataSyncStatus.NoStore, "Metadata store not found.");
             }
 
-            if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out var walTempRoot))
+            if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out string? walTempRoot))
             {
-                Console.WriteLine($"[MetadataSync] Import using temp copy (wal detected): '{walTempRoot}'.");
+                Console.WriteLine($"[MetadataSync] Import using temp copy (SQLite sidecar detected): '{walTempRoot}'.");
                 try
                 {
-                    return ImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot), opts);
+                    return ImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot, allowReadRecovery: true), opts);
                 }
                 finally
                 {
@@ -75,13 +81,13 @@ public sealed class MetadataSyncService
             catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
             {
                 Console.WriteLine($"[MetadataSync] Import failed opening store at '{store.DatabasePath}': {ex.Message}");
-                if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
+                if (!TryCopyStoreForRead(store.DatabasePath, out string? tempRoot))
                     return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
 
                 Console.WriteLine($"[MetadataSync] Import retrying from temp copy: '{tempRoot}'.");
                 try
                 {
-                    return ImportFromStoreInternal(rootPath, new MetadataStore(tempRoot), opts);
+                    return ImportFromStoreInternal(rootPath, new MetadataStore(tempRoot, allowReadRecovery: true), opts);
                 }
                 finally
                 {
@@ -106,7 +112,7 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            var opts = options ?? MetadataSyncOptions.Default;
+            MetadataSyncOptions opts = options ?? MetadataSyncOptions.Default;
 
             if (string.IsNullOrWhiteSpace(rootPath))
             {
@@ -118,15 +124,24 @@ public sealed class MetadataSyncService
             if (!File.Exists(store.DatabasePath))
             {
                 Console.WriteLine($"[MetadataSync] Preview skipped: store not found at '{store.DatabasePath}'.");
+                MetadataSyncPreview legacyPreview = PreviewBackupFoldersFromDestination(rootPath, opts, store.DatabasePath);
+                if (legacyPreview.Status == MetadataSyncStatus.Success &&
+                    (legacyPreview.NewProjects > 0 ||
+                     legacyPreview.NewSnapshots > 0 ||
+                     legacyPreview.NewBackups > 0))
+                {
+                    return legacyPreview;
+                }
+
                 return MetadataSyncPreview.Failure(MetadataSyncStatus.NoStore, rootPath, store.DatabasePath, "Metadata store not found.");
             }
 
-            if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out var walTempRoot))
+            if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out string? walTempRoot))
             {
-                Console.WriteLine($"[MetadataSync] Preview using temp copy (wal detected): '{walTempRoot}'.");
+                Console.WriteLine($"[MetadataSync] Preview using temp copy (SQLite sidecar detected): '{walTempRoot}'.");
                 try
                 {
-                    return PreviewImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot), opts);
+                    return PreviewImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot, allowReadRecovery: true), opts);
                 }
                 finally
                 {
@@ -141,13 +156,13 @@ public sealed class MetadataSyncService
             catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
             {
                 Console.WriteLine($"[MetadataSync] Preview failed opening store at '{store.DatabasePath}': {ex.Message}");
-                if (!TryCopyStoreForRead(store.DatabasePath, out var tempRoot))
+                if (!TryCopyStoreForRead(store.DatabasePath, out string? tempRoot))
                     return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
 
                 Console.WriteLine($"[MetadataSync] Preview retrying from temp copy: '{tempRoot}'.");
                 try
                 {
-                    return PreviewImportFromStoreInternal(rootPath, new MetadataStore(tempRoot), opts);
+                    return PreviewImportFromStoreInternal(rootPath, new MetadataStore(tempRoot, allowReadRecovery: true), opts);
                 }
                 finally
                 {
@@ -168,15 +183,13 @@ public sealed class MetadataSyncService
         {
             metaInfo = store.GetMetaInfo();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Import failed: invalid store at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
         }
 
-        if (metaInfo != null && metaInfo.SchemaVersion > MetadataStore.CurrentSchemaVersion)
+        if (metaInfo?.SchemaVersion > MetadataStore.CurrentSchemaVersion)
         {
             Console.WriteLine($"[MetadataSync] Import blocked: schema {metaInfo.SchemaVersion} > supported {MetadataStore.CurrentSchemaVersion}.");
             return MetadataSyncResult.Failure(
@@ -184,21 +197,21 @@ public sealed class MetadataSyncService
                 $"Metadata schema {metaInfo.SchemaVersion} is newer than supported {MetadataStore.CurrentSchemaVersion}.");
         }
 
-        var importedProjects = 0;
-        var importedSnapshots = 0;
-        var importedBackups = 0;
-        var appliedTombstones = 0;
+        int importedProjects = 0;
+        int importedSnapshots = 0;
+        int importedBackups = 0;
+        int appliedTombstones = 0;
         var affectedProjectIds = new HashSet<int>();
         var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var snapshotMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        var config = AppConfigStore.Load();
+        AppConfig config = AppConfigStore.Load();
         var localProjects = _repo.GetAllProjects().ToList();
-        var pendingConflicts = config.Advanced.ProjectMetadataConflicts ??= new List<ProjectMetadataConflictRecord>();
-        var metadataConflictChanged = false;
+        List<ProjectMetadataConflictRecord> pendingConflicts = config.Advanced.ProjectMetadataConflicts ??= [];
+        bool metadataConflictChanged = false;
 
-        var projectExternalMap = _repo.GetProjectExternalIdMap();
-        foreach (var pair in projectExternalMap)
+        IReadOnlyDictionary<string, int> projectExternalMap = _repo.GetProjectExternalIdMap();
+        foreach (KeyValuePair<string, int> pair in projectExternalMap)
         {
             projectMap[pair.Key] = pair.Value;
         }
@@ -210,15 +223,13 @@ public sealed class MetadataSyncService
 
         try
         {
-            metaProjects = store.ListProjects().ToList();
-            metaSnapshots = store.ListSnapshots().ToList();
-            metaBackups = store.ListBackups().ToList();
-            metaTombstones = store.ListTombstones().ToList();
+            metaProjects = [.. store.ListProjects()];
+            metaSnapshots = [.. store.ListSnapshots()];
+            metaBackups = [.. store.ListBackups()];
+            metaTombstones = [.. store.ListTombstones()];
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Import failed while reading store '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, ex.Message);
         }
@@ -229,9 +240,9 @@ public sealed class MetadataSyncService
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var tombstonedProjectId in tombstonedProjectIds)
+        foreach (string? tombstonedProjectId in tombstonedProjectIds)
         {
-            if (!projectMap.TryGetValue(tombstonedProjectId, out var existingId))
+            if (!projectMap.TryGetValue(tombstonedProjectId, out int existingId))
                 continue;
 
             _repo.RemoveProject(existingId);
@@ -243,7 +254,7 @@ public sealed class MetadataSyncService
             metadataConflictChanged = true;
         }
 
-        foreach (var metaProject in metaProjects)
+        foreach (MetaProject metaProject in metaProjects)
         {
             if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
                 continue;
@@ -251,10 +262,10 @@ public sealed class MetadataSyncService
             if (tombstonedProjectIds.Contains(metaProject.ExternalId))
                 continue;
 
-            var parsedSettings = ParseProjectSettings(metaProject.SettingsJson);
+            ParsedProjectSettings parsedSettings = ParseProjectSettings(metaProject.SettingsJson);
             TryApplyProjectColor(metaProject);
 
-            if (projectMap.TryGetValue(metaProject.ExternalId, out var mappedProjectId))
+            if (projectMap.TryGetValue(metaProject.ExternalId, out int mappedProjectId))
             {
                 metadataConflictChanged |= ApplyImportedProjectSettings(
                     mappedProjectId,
@@ -266,12 +277,12 @@ public sealed class MetadataSyncService
                 continue;
             }
 
-            var existingByName = localProjects.FirstOrDefault(p =>
+            Project? existingByName = localProjects.FirstOrDefault(p =>
                 string.Equals(p.Name, metaProject.Name, StringComparison.OrdinalIgnoreCase));
 
             if (existingByName != null)
             {
-                var importedRoot = ResolveImportedProjectRoot(
+                string importedRoot = ResolveImportedProjectRoot(
                     metaProject.RootPathHint,
                     config.ProjectsRoot,
                     metaProject.Name,
@@ -303,7 +314,7 @@ public sealed class MetadataSyncService
             if (!opts.AllowCreateProjects)
                 continue;
 
-            var projectRoot = ResolveImportedProjectRoot(
+            string projectRoot = ResolveImportedProjectRoot(
                 metaProject.RootPathHint,
                 config.ProjectsRoot,
                 metaProject.Name,
@@ -337,15 +348,15 @@ public sealed class MetadataSyncService
                     : string.Empty
             };
 
-            var newId = _repo.AddProject(project);
+            int newId = _repo.AddProject(project);
             if (parsedSettings.HasAutoBackupEnabled)
                 metadataConflictChanged |= ApplyImportedProjectAutoBackupSetting(config, newId, parsedSettings.AutoBackupEnabled);
             projectMap[metaProject.ExternalId] = newId;
             importedProjects++;
         }
 
-        var snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
-        foreach (var pair in snapshotExternalMap)
+        IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
+        foreach (KeyValuePair<string, int> pair in snapshotExternalMap)
         {
             snapshotMap[pair.Key] = pair.Value;
         }
@@ -362,22 +373,20 @@ public sealed class MetadataSyncService
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var liveSnapshotExternalIds = new HashSet<string>(
             metaBackups
-                .Where(b => !string.IsNullOrWhiteSpace(b.SnapshotExternalId))
-                .Where(b => !tombstonedBackupIds.Contains(b.ExternalId))
+                .Where(b => !string.IsNullOrWhiteSpace(b.SnapshotExternalId) && !tombstonedBackupIds.Contains(b.ExternalId))
                 .Select(b => b.SnapshotExternalId),
             StringComparer.OrdinalIgnoreCase);
         var missingSnapshotExternalIds = metaSnapshots
-            .Where(s => !string.IsNullOrWhiteSpace(s.ExternalId))
-            .Where(s => !liveSnapshotExternalIds.Contains(s.ExternalId))
+            .Where(s => !string.IsNullOrWhiteSpace(s.ExternalId) && !liveSnapshotExternalIds.Contains(s.ExternalId))
             .Select(s => s.ExternalId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var missingSnapshotId in missingSnapshotExternalIds)
+        foreach (string? missingSnapshotId in missingSnapshotExternalIds)
         {
             tombstonedSnapshotIds.Add(missingSnapshotId);
         }
 
-        foreach (var metaSnapshot in metaSnapshots)
+        foreach (MetaSnapshot metaSnapshot in metaSnapshots)
         {
             if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
                 continue;
@@ -385,13 +394,13 @@ public sealed class MetadataSyncService
             if (tombstonedSnapshotIds.Contains(metaSnapshot.ExternalId))
                 continue;
 
-            if (!projectMap.TryGetValue(metaSnapshot.ProjectExternalId, out var projectId))
+            if (!projectMap.TryGetValue(metaSnapshot.ProjectExternalId, out int projectId))
                 continue;
 
             if (snapshotMap.ContainsKey(metaSnapshot.ExternalId))
                 continue;
 
-            var id = _repo.CreateSnapshotFromMetadata(
+            int id = _repo.CreateSnapshotFromMetadata(
                 metaSnapshot.ExternalId,
                 projectId,
                 metaSnapshot.CreatedUtc,
@@ -408,11 +417,11 @@ public sealed class MetadataSyncService
             importedSnapshots++;
         }
 
-        var backupExternalMap = _repo.GetBackupExternalIdMap();
+        IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
         var missingBackupExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var localLatestByProjectBeforeBackupImport = _repo.GetLatestBackupUtcByProject();
+        IReadOnlyDictionary<int, DateTime> localLatestByProjectBeforeBackupImport = _repo.GetLatestBackupUtcByProject();
 
-        foreach (var metaBackup in metaBackups)
+        foreach (MetaBackup metaBackup in metaBackups)
         {
             if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
                 continue;
@@ -420,18 +429,17 @@ public sealed class MetadataSyncService
             if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
 
-            var normalizedPathRel = NormalizeBackupPathRel(metaBackup.PathRel);
-            if (!BackupPathExists(rootPath, normalizedPathRel))
+            if (!TryResolveBackupPath(rootPath, metaBackup.PathRel, out string? normalizedPathRel))
             {
                 missingBackupExternalIds.Add(metaBackup.ExternalId);
                 tombstonedBackupIds.Add(metaBackup.ExternalId);
                 continue;
             }
 
-            if (!projectMap.TryGetValue(metaBackup.ProjectExternalId, out var projectId))
+            if (!projectMap.TryGetValue(metaBackup.ProjectExternalId, out int projectId))
                 continue;
 
-            if (!snapshotMap.TryGetValue(metaBackup.SnapshotExternalId, out var snapshotId))
+            if (!snapshotMap.TryGetValue(metaBackup.SnapshotExternalId, out int snapshotId))
             {
                 continue;
             }
@@ -459,14 +467,14 @@ public sealed class MetadataSyncService
             affectedProjectIds.Add(projectId);
         }
 
-        foreach (var tombstone in metaTombstones)
+        foreach (MetaTombstone tombstone in metaTombstones)
         {
             if (string.IsNullOrWhiteSpace(tombstone.EntityId))
                 continue;
 
             if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
             {
-                if (backupExternalMap.TryGetValue(tombstone.EntityId, out var existingId))
+                if (backupExternalMap.TryGetValue(tombstone.EntityId, out int existingId))
                 {
                     _repo.DeleteBackupById(existingId);
                     appliedTombstones++;
@@ -476,42 +484,57 @@ public sealed class MetadataSyncService
 
         if (missingBackupExternalIds.Count > 0)
         {
-            foreach (var missingExternalId in missingBackupExternalIds)
+            foreach (string missingExternalId in missingBackupExternalIds)
             {
-                if (backupExternalMap.TryGetValue(missingExternalId, out var existingId))
+                if (backupExternalMap.TryGetValue(missingExternalId, out int existingId))
                 {
                     _repo.DeleteBackupById(existingId);
                     appliedTombstones++;
                 }
             }
 
-            TryExportMissingBackupTombstones(rootPath, missingBackupExternalIds);
+            if (opts.ExportMissingTombstonesOnImport)
+            {
+                TryExportMissingBackupTombstones(rootPath, missingBackupExternalIds);
+            }
         }
 
         if (missingSnapshotExternalIds.Count > 0)
         {
-            var removedSnapshots = 0;
-            foreach (var missingExternalId in missingSnapshotExternalIds)
+            int removedSnapshots = 0;
+            foreach (string? missingExternalId in missingSnapshotExternalIds)
             {
-                var snapshot = _repo.GetSnapshotByExternalId(missingExternalId);
+                Snapshot? snapshot = _repo.GetSnapshotByExternalId(missingExternalId);
                 if (snapshot == null)
                     continue;
 
                 if (_repo.HasBackupForSnapshot(snapshot.ProjectId, snapshot.Id))
                     continue;
 
-                var project = _repo.GetProjectById(snapshot.ProjectId);
+                Project? project = _repo.GetProjectById(snapshot.ProjectId);
                 if (project == null)
                     continue;
 
-                var deleted = _repo.DeleteSnapshotsById(project.Name, new[] { snapshot.Id });
-                removedSnapshots += deleted.Snapshots;
+                (int Snapshots, int Files) = _repo.DeleteSnapshotsById(project.Name, [snapshot.Id]);
+                removedSnapshots += Snapshots;
             }
 
             if (removedSnapshots > 0)
             {
-                TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
+                if (opts.ExportMissingTombstonesOnImport)
+                {
+                    TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
+                }
             }
+        }
+
+        MetadataSyncResult filesystemResult = ImportBackupFoldersFromDestination(rootPath, opts, config);
+        importedProjects += filesystemResult.ImportedProjects;
+        importedSnapshots += filesystemResult.ImportedSnapshots;
+        importedBackups += filesystemResult.ImportedBackups;
+        foreach (int projectId in filesystemResult.AffectedProjectIds)
+        {
+            affectedProjectIds.Add(projectId);
         }
 
         if (metadataConflictChanged)
@@ -527,11 +550,11 @@ public sealed class MetadataSyncService
             appliedTombstones,
             string.Empty)
         {
-            AffectedProjectIds = affectedProjectIds.ToArray()
+            AffectedProjectIds = [.. affectedProjectIds]
         };
         if (opts.MarkNeedsRestoreOnImport)
         {
-            var liveBackups = metaBackups
+            IEnumerable<MetaBackup> liveBackups = metaBackups
                 .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
             UpdateNeedsRestoreFlags(projectMap, liveBackups, localLatestByProjectBeforeBackupImport);
         }
@@ -552,16 +575,16 @@ public sealed class MetadataSyncService
             .GroupBy(b => b.ProjectExternalId)
             .ToDictionary(g => g.Key, g => g.Max(b => b.CreatedUtc), StringComparer.OrdinalIgnoreCase);
 
-        foreach (var (externalId, projectId) in projectMap)
+        foreach ((string externalId, int projectId) in projectMap)
         {
-            if (!importedLatestByExternalId.TryGetValue(externalId, out var importedLatest))
+            if (!importedLatestByExternalId.TryGetValue(externalId, out DateTime importedLatest))
                 continue;
 
-            localLatestByProject.TryGetValue(projectId, out var localLatest);
-            var needsRestore = importedLatest > localLatest;
+            localLatestByProject.TryGetValue(projectId, out DateTime localLatest);
+            bool needsRestore = importedLatest > localLatest;
             if (needsRestore)
             {
-                var project = _repo.GetProjectById(projectId);
+                Project? project = _repo.GetProjectById(projectId);
                 if (!string.IsNullOrWhiteSpace(project?.RootPath) &&
                     Directory.Exists(project.RootPath) &&
                     HasLocalChangesNewerThan(project.RootPath, importedLatest))
@@ -582,7 +605,7 @@ public sealed class MetadataSyncService
 
             while (stack.Count > 0)
             {
-                var current = stack.Pop();
+                string current = stack.Pop();
 
                 IEnumerable<string> dirs;
                 try
@@ -594,9 +617,9 @@ public sealed class MetadataSyncService
                     continue;
                 }
 
-                foreach (var dir in dirs)
+                foreach (string dir in dirs)
                 {
-                    var name = Path.GetFileName(dir);
+                    string name = Path.GetFileName(dir);
                     if (string.Equals(name, ".vaultsync", StringComparison.OrdinalIgnoreCase))
                         continue;
 
@@ -624,7 +647,7 @@ public sealed class MetadataSyncService
                     continue;
                 }
 
-                foreach (var file in files)
+                foreach (string file in files)
                 {
                     try
                     {
@@ -653,15 +676,13 @@ public sealed class MetadataSyncService
         {
             metaInfo = store.GetMetaInfo();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Preview failed: invalid store at '{rootPath}': {ex.Message}");
             return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
         }
 
-        if (metaInfo != null && metaInfo.SchemaVersion > MetadataStore.CurrentSchemaVersion)
+        if (metaInfo?.SchemaVersion > MetadataStore.CurrentSchemaVersion)
         {
             Console.WriteLine($"[MetadataSync] Preview blocked: schema {metaInfo.SchemaVersion} > supported {MetadataStore.CurrentSchemaVersion}.");
             return MetadataSyncPreview.Failure(
@@ -672,22 +693,22 @@ public sealed class MetadataSyncService
         }
 
         if (metaInfo != null &&
-            _previewCache.TryGetValue(rootPath, out var cached) &&
+            _previewCache.TryGetValue(rootPath, out (DateTime LastWriteUtc, MetadataSyncPreview Preview) cached) &&
             cached.LastWriteUtc == metaInfo.LastWriteUtc)
         {
             return cached.Preview;
         }
 
-        var addProjects = 0;
-        var linkProjects = 0;
-        var addSnapshots = 0;
-        var addBackups = 0;
-        var deleteBackups = 0;
+        int addProjects = 0;
+        int linkProjects = 0;
+        int addSnapshots = 0;
+        int addBackups = 0;
+        int deleteBackups = 0;
 
         var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var localProjects = _repo.GetAllProjects().ToList();
-        var projectExternalMap = _repo.GetProjectExternalIdMap();
-        foreach (var pair in projectExternalMap)
+        IReadOnlyDictionary<string, int> projectExternalMap = _repo.GetProjectExternalIdMap();
+        foreach (KeyValuePair<string, int> pair in projectExternalMap)
         {
             projectMap[pair.Key] = pair.Value;
         }
@@ -704,15 +725,13 @@ public sealed class MetadataSyncService
             metaBackups = store.ListBackups();
             metaTombstones = store.ListTombstones();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Preview failed while reading store '{rootPath}': {ex.Message}");
             return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
         }
 
-        foreach (var metaProject in metaProjects)
+        foreach (MetaProject metaProject in metaProjects)
         {
             if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
                 continue;
@@ -720,7 +739,7 @@ public sealed class MetadataSyncService
             if (projectMap.ContainsKey(metaProject.ExternalId))
                 continue;
 
-            var existingByName = localProjects.FirstOrDefault(p =>
+            Project? existingByName = localProjects.FirstOrDefault(p =>
                 string.Equals(p.Name, metaProject.Name, StringComparison.OrdinalIgnoreCase));
 
             if (existingByName != null)
@@ -741,13 +760,19 @@ public sealed class MetadataSyncService
             projectMap[metaProject.ExternalId] = -1;
         }
 
-        var snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
-        var backupExternalMap = _repo.GetBackupExternalIdMap();
+        IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
+        IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
+        var existingBackupPaths = _repo
+            .GetAllProjects()
+            .SelectMany(project => _repo.GetBackupsForProject(project.Id))
+            .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var tombstonedBackupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var tombstonedSnapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var liveSnapshotExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var tombstone in metaTombstones)
+        foreach (MetaTombstone tombstone in metaTombstones)
         {
             if (string.IsNullOrWhiteSpace(tombstone.EntityId))
                 continue;
@@ -764,7 +789,7 @@ public sealed class MetadataSyncService
             }
         }
 
-        foreach (var metaBackup in metaBackups)
+        foreach (MetaBackup metaBackup in metaBackups)
         {
             if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
                 continue;
@@ -778,8 +803,7 @@ public sealed class MetadataSyncService
             if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
                 continue;
 
-            var normalizedPathRel = NormalizeBackupPathRel(metaBackup.PathRel);
-            if (!BackupPathExists(rootPath, normalizedPathRel))
+            if (!TryResolveBackupPath(rootPath, metaBackup.PathRel, out _))
             {
                 tombstonedBackupIds.Add(metaBackup.ExternalId);
                 if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
@@ -796,7 +820,7 @@ public sealed class MetadataSyncService
             addBackups++;
         }
 
-        foreach (var metaSnapshot in metaSnapshots)
+        foreach (MetaSnapshot metaSnapshot in metaSnapshots)
         {
             if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
                 continue;
@@ -819,6 +843,10 @@ public sealed class MetadataSyncService
             addSnapshots++;
         }
 
+        MetadataSyncPreview filesystemPreview = PreviewBackupFoldersFromDestination(rootPath, opts, store.DatabasePath);
+        addProjects += filesystemPreview.NewProjects;
+        addSnapshots += filesystemPreview.NewSnapshots;
+        addBackups += filesystemPreview.NewBackups;
 
         var preview = new MetadataSyncPreview(
             MetadataSyncStatus.Success,
@@ -839,6 +867,282 @@ public sealed class MetadataSyncService
         return preview;
     }
 
+    private MetadataSyncResult ImportBackupFoldersFromDestination(string rootPath, MetadataSyncOptions opts, AppConfig config)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+        {
+            return new MetadataSyncResult(MetadataSyncStatus.Success, 0, 0, 0, 0, string.Empty);
+        }
+
+        IReadOnlyList<LegacyBackupFolder> discovered = DiscoverLegacyBackupFolders(rootPath);
+        if (discovered.Count == 0)
+        {
+            return new MetadataSyncResult(MetadataSyncStatus.Success, 0, 0, 0, 0, string.Empty);
+        }
+
+        int importedProjects = 0;
+        int importedSnapshots = 0;
+        int importedBackups = 0;
+        var affectedProjectIds = new HashSet<int>();
+        var projectsByName = _repo
+            .GetAllProjects()
+            .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
+        IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
+        var existingBackupPaths = _repo
+            .GetAllProjects()
+            .SelectMany(project => _repo.GetBackupsForProject(project.Id))
+            .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (IGrouping<string, LegacyBackupFolder> projectGroup in discovered.GroupBy(folder => folder.ProjectName, StringComparer.OrdinalIgnoreCase))
+        {
+            List<LegacyBackupFolder> importableFolders = [.. projectGroup
+                .Where(folder => !existingBackupPaths.Contains(NormalizeStablePath(folder.RelativePath)))
+                .OrderBy(folder => folder.CreatedUtc)];
+            if (importableFolders.Count == 0)
+                continue;
+
+            string projectName = projectGroup.Key;
+            string projectExternalId = BuildStableExternalId("legacy-project", rootPath, projectName);
+
+            if (!projectsByName.TryGetValue(projectName, out Project? project))
+            {
+                if (!opts.AllowCreateProjects)
+                    continue;
+
+                string projectRoot = ResolveImportedProjectRoot(null, config.ProjectsRoot, projectName, projectExternalId);
+                int projectId = _repo.AddProject(new Project
+                {
+                    ExternalId = projectExternalId,
+                    Name = projectName,
+                    RootPath = projectRoot,
+                    Preset = "generic",
+                    CreatedUtc = projectGroup.Min(folder => folder.CreatedUtc),
+                    NeedsRestore = false
+                });
+
+                project = _repo.GetProjectById(projectId);
+                if (project is null)
+                    continue;
+
+                projectsByName[projectName] = project;
+                importedProjects++;
+            }
+            else if (string.IsNullOrWhiteSpace(project.ExternalId))
+            {
+                _repo.UpdateProjectExternalId(project.Id, projectExternalId);
+                project = project with { ExternalId = projectExternalId };
+                projectsByName[projectName] = project;
+            }
+
+            foreach (LegacyBackupFolder folder in importableFolders)
+            {
+                string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
+                string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
+                string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
+
+                if (!snapshotExternalMap.TryGetValue(snapshotExternalId, out int snapshotId))
+                {
+                    snapshotId = _repo.CreateSnapshotFromMetadata(
+                        snapshotExternalId,
+                        project.Id,
+                        folder.CreatedUtc,
+                        fileCount: 0,
+                        totalBytes: 0);
+                    importedSnapshots++;
+                }
+
+                if (backupExternalMap.ContainsKey(backupExternalId))
+                    continue;
+
+                _repo.CreateBackupFromMetadata(
+                    backupExternalId,
+                    project.Id,
+                    snapshotId,
+                    folder.CreatedUtc,
+                    "manual",
+                    0,
+                    folder.RelativePath,
+                    rootPath,
+                    string.Empty,
+                    isProtected: false,
+                    isImported: true,
+                    backupMode: BackupModes.Full);
+
+                importedBackups++;
+                affectedProjectIds.Add(project.Id);
+                existingBackupPaths.Add(normalizedRelativePath);
+            }
+
+            if (opts.MarkNeedsRestoreOnImport && affectedProjectIds.Contains(project.Id))
+            {
+                _repo.UpdateProjectNeedsRestore(project.Id, true);
+            }
+        }
+
+        return new MetadataSyncResult(
+            MetadataSyncStatus.Success,
+            importedProjects,
+            importedSnapshots,
+            importedBackups,
+            0,
+            string.Empty)
+        {
+            AffectedProjectIds = [.. affectedProjectIds]
+        };
+    }
+
+    private MetadataSyncPreview PreviewBackupFoldersFromDestination(string rootPath, MetadataSyncOptions opts, string databasePath)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+        {
+            return new MetadataSyncPreview(MetadataSyncStatus.Success, rootPath, databasePath, 0, 0, 0, 0, 0, string.Empty);
+        }
+
+        IReadOnlyList<LegacyBackupFolder> discovered = DiscoverLegacyBackupFolders(rootPath);
+        if (discovered.Count == 0)
+        {
+            return new MetadataSyncPreview(MetadataSyncStatus.Success, rootPath, databasePath, 0, 0, 0, 0, 0, string.Empty);
+        }
+
+        var projectsByName = _repo
+            .GetAllProjects()
+            .Select(p => p.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
+        IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
+        var existingBackupPaths = _repo
+            .GetAllProjects()
+            .SelectMany(project => _repo.GetBackupsForProject(project.Id))
+            .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        int addProjects = 0;
+        int addSnapshots = 0;
+        int addBackups = 0;
+        var previewedProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var previewedSnapshots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var previewedBackups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (LegacyBackupFolder folder in discovered)
+        {
+            string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
+            if (existingBackupPaths.Contains(normalizedRelativePath))
+                continue;
+
+            bool projectExists = projectsByName.Contains(folder.ProjectName);
+            if (!projectExists && !opts.AllowCreateProjects)
+                continue;
+
+            if (!projectExists && previewedProjects.Add(folder.ProjectName))
+            {
+                addProjects++;
+            }
+
+            string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
+            if (!snapshotExternalMap.ContainsKey(snapshotExternalId) && previewedSnapshots.Add(snapshotExternalId))
+                addSnapshots++;
+
+            string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
+            if (!backupExternalMap.ContainsKey(backupExternalId) && previewedBackups.Add(backupExternalId))
+                addBackups++;
+        }
+
+        return new MetadataSyncPreview(
+            MetadataSyncStatus.Success,
+            rootPath,
+            databasePath,
+            addProjects,
+            0,
+            addSnapshots,
+            addBackups,
+            0,
+            string.Empty);
+    }
+
+    private static IReadOnlyList<LegacyBackupFolder> DiscoverLegacyBackupFolders(string rootPath)
+    {
+        var result = new List<LegacyBackupFolder>();
+
+        IEnumerable<string> projectDirs;
+        try
+        {
+            projectDirs = Directory.EnumerateDirectories(rootPath);
+        }
+        catch
+        {
+            return result;
+        }
+
+        foreach (string projectDir in projectDirs)
+        {
+            string projectName = Path.GetFileName(projectDir);
+            if (string.IsNullOrWhiteSpace(projectName) ||
+                string.Equals(projectName, ".vaultsync", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            IEnumerable<string> backupDirs;
+            try
+            {
+                backupDirs = Directory.EnumerateDirectories(projectDir);
+            }
+            catch
+            {
+                continue;
+            }
+
+            foreach (string backupDir in backupDirs)
+            {
+                string folderName = Path.GetFileName(backupDir);
+                if (!TryParseBackupFolderTimestamp(folderName, out DateTime createdUtc))
+                    continue;
+
+                string relativePath = Path.Combine(projectName, folderName);
+                result.Add(new LegacyBackupFolder(projectName, relativePath, createdUtc));
+            }
+        }
+
+        return result;
+    }
+
+    private static bool TryParseBackupFolderTimestamp(string folderName, out DateTime createdUtc)
+    {
+        createdUtc = default;
+        if (string.IsNullOrWhiteSpace(folderName))
+            return false;
+
+        return DateTime.TryParseExact(
+            folderName,
+            "yyyy-MM-dd_HH-mm-ss",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out createdUtc);
+    }
+
+    private static string BuildStableExternalId(string prefix, string rootPath, string relativePath)
+    {
+        _ = rootPath;
+        string normalized = $"{prefix}|{NormalizeStablePath(relativePath)}";
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return $"{prefix}-{Convert.ToHexString(hash)[..32].ToLowerInvariant()}";
+    }
+
+    private static string NormalizeStablePath(string value)
+    {
+        return (value ?? string.Empty)
+            .Trim()
+            .Replace('\\', '/')
+            .TrimEnd('/')
+            .ToLowerInvariant();
+    }
+
+    private sealed record LegacyBackupFolder(string ProjectName, string RelativePath, DateTime CreatedUtc);
+
     private static bool IsCannotOpenOrLocked(SqliteException ex)
     {
         return ex.SqliteErrorCode == 14 || ex.SqliteErrorCode == 5;
@@ -849,13 +1153,14 @@ public sealed class MetadataSyncService
         tempRoot = string.Empty;
         try
         {
-            var root = Path.Combine(Path.GetTempPath(), "vaultsync-meta-import", Guid.NewGuid().ToString("N"));
-            var tempDir = Path.Combine(root, ".vaultsync", "meta");
+            string root = Path.Combine(Path.GetTempPath(), "vaultsync-meta-import", Guid.NewGuid().ToString("N"));
+            string tempDir = Path.Combine(root, ".vaultsync", "meta");
             Directory.CreateDirectory(tempDir);
-            var destPath = Path.Combine(tempDir, Path.GetFileName(databasePath));
+            string destPath = Path.Combine(tempDir, Path.GetFileName(databasePath));
             File.Copy(databasePath, destPath, overwrite: true);
             TryCopySidecar(databasePath, destPath, "-wal");
             TryCopySidecar(databasePath, destPath, "-shm");
+            TryCopySidecar(databasePath, destPath, "-journal");
             tempRoot = root;
             return true;
         }
@@ -883,11 +1188,11 @@ public sealed class MetadataSyncService
     {
         try
         {
-            var source = sourceDbPath + suffix;
+            string source = sourceDbPath + suffix;
             if (!File.Exists(source))
                 return;
 
-            var dest = destDbPath + suffix;
+            string dest = destDbPath + suffix;
             File.Copy(source, dest, overwrite: true);
         }
         catch (Exception ex)
@@ -898,7 +1203,9 @@ public sealed class MetadataSyncService
 
     private static bool ShouldUseTempCopy(string databasePath)
     {
-        return File.Exists(databasePath + "-wal") || File.Exists(databasePath + "-shm");
+        return File.Exists(databasePath + "-wal") ||
+               File.Exists(databasePath + "-shm") ||
+               File.Exists(databasePath + "-journal");
     }
 
     private static bool BackupPathExists(string rootPath, string pathRel)
@@ -906,11 +1213,57 @@ public sealed class MetadataSyncService
         if (string.IsNullOrWhiteSpace(pathRel))
             return false;
 
-        var fullPath = IsRootedPath(pathRel)
+        string fullPath = IsRootedPath(pathRel)
             ? pathRel
             : Path.Combine(rootPath, pathRel);
 
         return Directory.Exists(fullPath) || File.Exists(fullPath);
+    }
+
+    private static bool TryResolveBackupPath(string rootPath, string pathRel, out string normalizedPathRel)
+    {
+        normalizedPathRel = NormalizeBackupPathRel(pathRel);
+        if (string.IsNullOrWhiteSpace(normalizedPathRel))
+            return false;
+
+        if (BackupPathExists(rootPath, normalizedPathRel))
+            return true;
+
+        if (TryResolveRootedBackupPathUnderRoot(rootPath, normalizedPathRel, out string? remappedPathRel))
+        {
+            normalizedPathRel = remappedPathRel;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveRootedBackupPathUnderRoot(string rootPath, string pathRel, out string remappedPathRel)
+    {
+        remappedPathRel = string.Empty;
+        if (string.IsNullOrWhiteSpace(rootPath) || !IsRootedPath(pathRel))
+            return false;
+
+        string[] segments = [.. pathRel
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
+            .Where(static segment => !segment.EndsWith(':'))];
+
+        // Rooted paths from another machine may include that machine's destination root.
+        // Try suffixes under the configured destination, but keep at least project/timestamp.
+        for (int start = 0; start <= segments.Length - 2; start++)
+        {
+            string candidateRel = Path.Combine(segments[start..]);
+            string candidateFull = Path.Combine(rootPath, candidateRel);
+            if (Directory.Exists(candidateFull) || File.Exists(candidateFull))
+            {
+                remappedPathRel = candidateRel;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string NormalizeBackupPathRel(string pathRel)
@@ -918,7 +1271,7 @@ public sealed class MetadataSyncService
         if (string.IsNullOrWhiteSpace(pathRel))
             return string.Empty;
 
-        var normalized = pathRel
+        string normalized = pathRel
             .Replace('\\', Path.DirectorySeparatorChar)
             .Replace('/', Path.DirectorySeparatorChar);
 
@@ -953,7 +1306,7 @@ public sealed class MetadataSyncService
 
         if (IsAcceptableProjectsRoot(projectsRoot))
         {
-            var folderName = BuildImportedProjectFolderName(projectName, externalId);
+            string folderName = BuildImportedProjectFolderName(projectName, externalId);
             return Path.Combine(Path.GetFullPath(projectsRoot!), folderName);
         }
 
@@ -965,7 +1318,7 @@ public sealed class MetadataSyncService
         if (string.IsNullOrWhiteSpace(rootPathHint))
             return string.Empty;
 
-        var trimmed = rootPathHint.Trim();
+        string trimmed = rootPathHint.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))
             return string.Empty;
 
@@ -987,7 +1340,7 @@ public sealed class MetadataSyncService
 
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
             return Directory.Exists(fullPath);
         }
         catch
@@ -1003,7 +1356,7 @@ public sealed class MetadataSyncService
 
         try
         {
-            var fullPath = Path.GetFullPath(projectsRoot);
+            string fullPath = Path.GetFullPath(projectsRoot);
             return Directory.Exists(fullPath);
         }
         catch
@@ -1014,15 +1367,14 @@ public sealed class MetadataSyncService
 
     private static string BuildImportedProjectFolderName(string? projectName, string? externalId)
     {
-        var source = string.IsNullOrWhiteSpace(projectName) ? externalId : projectName;
+        string? source = string.IsNullOrWhiteSpace(projectName) ? externalId : projectName;
         if (string.IsNullOrWhiteSpace(source))
             return "ImportedProject";
 
         var invalidChars = Path.GetInvalidFileNameChars().ToHashSet();
-        var cleaned = new string(source
+        string cleaned = new string([.. source
             .Trim()
-            .Select(ch => invalidChars.Contains(ch) ? '-' : ch)
-            .ToArray())
+            .Select(ch => invalidChars.Contains(ch) ? '-' : ch)])
             .Trim(' ', '.');
 
         return string.IsNullOrWhiteSpace(cleaned)
@@ -1046,8 +1398,8 @@ public sealed class MetadataSyncService
             return;
         }
 
-        var now = DateTime.UtcNow;
-        var metaInfo = store.GetMetaInfo();
+        DateTime now = DateTime.UtcNow;
+        MetaInfo? metaInfo = store.GetMetaInfo();
         if (metaInfo == null)
         {
             metaInfo = new MetaInfo
@@ -1068,7 +1420,7 @@ public sealed class MetadataSyncService
         try
         {
             store.UpsertMetaInfo(metaInfo);
-            foreach (var externalId in missingExternalIds)
+            foreach (string externalId in missingExternalIds)
             {
                 if (string.IsNullOrWhiteSpace(externalId))
                     continue;
@@ -1104,8 +1456,8 @@ public sealed class MetadataSyncService
             return;
         }
 
-        var now = DateTime.UtcNow;
-        var metaInfo = store.GetMetaInfo();
+        DateTime now = DateTime.UtcNow;
+        MetaInfo? metaInfo = store.GetMetaInfo();
         if (metaInfo == null)
         {
             metaInfo = new MetaInfo
@@ -1126,7 +1478,7 @@ public sealed class MetadataSyncService
         try
         {
             store.UpsertMetaInfo(metaInfo);
-            foreach (var externalId in missingExternalIds)
+            foreach (string externalId in missingExternalIds)
             {
                 if (string.IsNullOrWhiteSpace(externalId))
                     continue;
@@ -1162,9 +1514,9 @@ public sealed class MetadataSyncService
             return;
         }
 
-        var now = DateTime.UtcNow;
-        var machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
-        var metaInfo = store.GetMetaInfo();
+        DateTime now = DateTime.UtcNow;
+        string machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
+        MetaInfo? metaInfo = store.GetMetaInfo();
         if (metaInfo == null)
         {
             metaInfo = new MetaInfo
@@ -1222,14 +1574,16 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            var retryDelays = new[]
-            {
+            TimeSpan[] retryDelays =
+            [
                 TimeSpan.FromMilliseconds(200),
                 TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromMilliseconds(1000)
-            };
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(2),
+                TimeSpan.FromSeconds(5)
+            ];
 
-            for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
+            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
             {
                 try
                 {
@@ -1243,7 +1597,7 @@ public sealed class MetadataSyncService
                         return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
                     }
 
-                    var delay = retryDelays[attempt];
+                    TimeSpan delay = retryDelays[attempt];
                     Console.WriteLine($"[MetadataSync] Project export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
                     await Task.Delay(delay, ct).ConfigureAwait(false);
                 }
@@ -1267,9 +1621,9 @@ public sealed class MetadataSyncService
 
         TryFlushDeferredExport(rootPath);
 
-        var storeRoot = rootPath;
-        var isDeferred = false;
-        var destMetaDir = GetMetaDir(rootPath);
+        string storeRoot = rootPath;
+        bool isDeferred = false;
+        string destMetaDir = GetMetaDir(rootPath);
         if (!TryEnsureMetadataDirWritable(destMetaDir))
         {
             storeRoot = GetDeferredExportRoot(rootPath);
@@ -1282,24 +1636,22 @@ public sealed class MetadataSyncService
         {
             store.EnsureSchema();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Project export failed: store init error at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
 
-        var project = _repo.GetProjectById(projectId);
+        Project? project = _repo.GetProjectById(projectId);
         if (project == null)
         {
             Console.WriteLine($"[MetadataSync] Project export failed: project {projectId} not found.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
         }
 
-        var projectExternalId = EnsureProjectExternalId(project);
-        var now = DateTime.UtcNow;
-        var metaInfo = store.GetMetaInfo();
+        string projectExternalId = EnsureProjectExternalId(project);
+        DateTime now = DateTime.UtcNow;
+        MetaInfo? metaInfo = store.GetMetaInfo();
         if (metaInfo == null)
         {
             metaInfo = new MetaInfo
@@ -1332,10 +1684,8 @@ public sealed class MetadataSyncService
                 UpdatedUtc = now
             });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Project export failed writing store '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
@@ -1375,14 +1725,16 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            var retryDelays = new[]
-            {
+            TimeSpan[] retryDelays =
+            [
                 TimeSpan.FromMilliseconds(200),
                 TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromMilliseconds(1000)
-            };
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(2),
+                TimeSpan.FromSeconds(5)
+            ];
 
-            for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
+            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
             {
                 try
                 {
@@ -1396,7 +1748,7 @@ public sealed class MetadataSyncService
                         return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
                     }
 
-                    var delay = retryDelays[attempt];
+                    TimeSpan delay = retryDelays[attempt];
                     Console.WriteLine($"[MetadataSync] Export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
                     await Task.Delay(delay, ct).ConfigureAwait(false);
                 }
@@ -1420,9 +1772,9 @@ public sealed class MetadataSyncService
 
         TryFlushDeferredExport(rootPath);
 
-        var storeRoot = rootPath;
-        var isDeferred = false;
-        var destMetaDir = GetMetaDir(rootPath);
+        string storeRoot = rootPath;
+        bool isDeferred = false;
+        string destMetaDir = GetMetaDir(rootPath);
         if (!TryEnsureMetadataDirWritable(destMetaDir))
         {
             storeRoot = GetDeferredExportRoot(rootPath);
@@ -1435,41 +1787,39 @@ public sealed class MetadataSyncService
         {
             store.EnsureSchema();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Export failed: store init error at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
 
-        var backup = _repo.GetBackupById(backupId);
+        Backup? backup = _repo.GetBackupById(backupId);
         if (backup == null)
         {
             Console.WriteLine($"[MetadataSync] Export failed: backup {backupId} not found.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Backup not found.");
         }
 
-        var project = _repo.GetProjectById(backup.ProjectId);
+        Project? project = _repo.GetProjectById(backup.ProjectId);
         if (project == null)
         {
             Console.WriteLine($"[MetadataSync] Export failed: project {backup.ProjectId} not found.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
         }
 
-        var snapshot = _repo.GetSnapshotById(backup.SnapshotId);
+        Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
         if (snapshot == null)
         {
             Console.WriteLine($"[MetadataSync] Export failed: snapshot {backup.SnapshotId} not found.");
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Snapshot not found.");
         }
 
-        var projectExternalId = EnsureProjectExternalId(project);
-        var snapshotExternalId = EnsureSnapshotExternalId(snapshot);
-        var backupExternalId = EnsureBackupExternalId(backup);
+        string projectExternalId = EnsureProjectExternalId(project);
+        string snapshotExternalId = EnsureSnapshotExternalId(snapshot);
+        string backupExternalId = EnsureBackupExternalId(backup);
 
-        var now = DateTime.UtcNow;
-        var metaInfo = store.GetMetaInfo();
+        DateTime now = DateTime.UtcNow;
+        MetaInfo? metaInfo = store.GetMetaInfo();
         if (metaInfo == null)
         {
             metaInfo = new MetaInfo
@@ -1488,10 +1838,10 @@ public sealed class MetadataSyncService
             metaInfo.WriterMachineId = machineId;
         }
 
-        var exportedProjects = 0;
-        var exportedSnapshots = 0;
-        var exportedBackups = 0;
-        var backfilled = false;
+        int exportedProjects = 0;
+        int exportedSnapshots = 0;
+        int exportedBackups = 0;
+        bool backfilled = false;
 
         try
         {
@@ -1499,10 +1849,10 @@ public sealed class MetadataSyncService
         if (forceBackfill || !store.HasProject(projectExternalId))
         {
             backfilled = true;
-            var counts = ExportProjectHistory(store, project, projectExternalId, now, machineId);
+                (int snapshots, int backups) = ExportProjectHistory(store, project, projectExternalId, now, machineId);
             exportedProjects = 1;
-            exportedSnapshots = counts.snapshots;
-            exportedBackups = counts.backups;
+            exportedSnapshots = snapshots;
+            exportedBackups = backups;
             }
             else
             {
@@ -1549,10 +1899,8 @@ public sealed class MetadataSyncService
                 exportedBackups = 1;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Export failed writing store '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
         }
@@ -1581,13 +1929,13 @@ public sealed class MetadataSyncService
         return exportResult;
     }
 
-    public void ExportBackupTombstoneToStore(string rootPath, string backupExternalId, string appVersion, string machineId)
+    public static void ExportBackupTombstoneToStore(string rootPath, string backupExternalId, string appVersion, string machineId)
     {
         ExportBackupTombstoneToStoreAsync(rootPath, backupExternalId, appVersion, machineId, CancellationToken.None)
             .GetAwaiter().GetResult();
     }
 
-    public async Task ExportBackupTombstoneToStoreAsync(
+    public static async Task ExportBackupTombstoneToStoreAsync(
         string rootPath,
         string backupExternalId,
         string appVersion,
@@ -1601,14 +1949,16 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            var retryDelays = new[]
-            {
+            TimeSpan[] retryDelays =
+            [
                 TimeSpan.FromMilliseconds(200),
                 TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromMilliseconds(1000)
-            };
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(2),
+                TimeSpan.FromSeconds(5)
+            ];
 
-            for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
+            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
             {
                 try
                 {
@@ -1620,10 +1970,11 @@ public sealed class MetadataSyncService
                     if (attempt >= retryDelays.Length)
                     {
                         Console.WriteLine($"[MetadataSync] Tombstone export failed after retries: {ex.Message}");
+                        TryExportBackupTombstoneToDeferred(rootPath, backupExternalId, appVersion, machineId);
                         return;
                     }
 
-                    var delay = retryDelays[attempt];
+                    TimeSpan delay = retryDelays[attempt];
                     Console.WriteLine($"[MetadataSync] Tombstone store locked; retrying in {delay.TotalMilliseconds:0}ms.");
                     await Task.Delay(delay, ct).ConfigureAwait(false);
                 }
@@ -1635,12 +1986,61 @@ public sealed class MetadataSyncService
         }
     }
 
-    private void ExportBackupTombstoneInternal(string rootPath, string backupExternalId, string appVersion, string machineId)
+    private static void TryExportBackupTombstoneToDeferred(
+        string rootPath,
+        string backupExternalId,
+        string appVersion,
+        string machineId)
+    {
+        try
+        {
+            string deferredRoot = GetDeferredExportRoot(rootPath);
+            var store = new MetadataStore(deferredRoot);
+            store.EnsureSchema();
+
+            DateTime now = DateTime.UtcNow;
+            MetaInfo? metaInfo = store.GetMetaInfo();
+            if (metaInfo == null)
+            {
+                metaInfo = new MetaInfo
+                {
+                    SchemaVersion = MetadataStore.CurrentSchemaVersion,
+                    CreatedUtc = now,
+                    LastWriteUtc = now,
+                    WriterAppVersion = appVersion,
+                    WriterMachineId = machineId
+                };
+            }
+            else
+            {
+                metaInfo.LastWriteUtc = now;
+                metaInfo.WriterAppVersion = appVersion;
+                metaInfo.WriterMachineId = machineId;
+            }
+
+            store.UpsertMetaInfo(metaInfo);
+            store.AddTombstone(new MetaTombstone
+            {
+                EntityType = "backup",
+                EntityId = backupExternalId,
+                DeletedUtc = now,
+                OriginMachineId = machineId
+            });
+
+            Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{rootPath}'.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MetadataSync] Tombstone defer failed for '{rootPath}': {ex.Message}");
+        }
+    }
+
+    private static void ExportBackupTombstoneInternal(string rootPath, string backupExternalId, string appVersion, string machineId)
     {
         TryFlushDeferredExport(rootPath);
-        var storeRoot = rootPath;
-        var isDeferred = false;
-        var destMetaDir = GetMetaDir(rootPath);
+        string storeRoot = rootPath;
+        bool isDeferred = false;
+        string destMetaDir = GetMetaDir(rootPath);
         if (!TryEnsureMetadataDirWritable(destMetaDir))
         {
             storeRoot = GetDeferredExportRoot(rootPath);
@@ -1652,16 +2052,14 @@ public sealed class MetadataSyncService
         {
             store.EnsureSchema();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Tombstone export failed: store init error at '{rootPath}': {ex.Message}");
             return;
         }
 
-        var now = DateTime.UtcNow;
-        var metaInfo = store.GetMetaInfo();
+        DateTime now = DateTime.UtcNow;
+        MetaInfo? metaInfo = store.GetMetaInfo();
         if (metaInfo == null)
         {
             metaInfo = new MetaInfo
@@ -1691,10 +2089,8 @@ public sealed class MetadataSyncService
                 OriginMachineId = machineId
             });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            if (ex is SqliteException sqliteEx && IsCannotOpenOrLocked(sqliteEx))
-                throw;
             Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{rootPath}': {ex.Message}");
             return;
         }
@@ -1710,7 +2106,7 @@ public sealed class MetadataSyncService
 
     private static string GetDeferredExportRoot(string rootPath)
     {
-        var hash = Convert.ToHexString(
+        string hash = Convert.ToHexString(
             System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(rootPath)));
         return Path.Combine(Path.GetTempPath(), "vaultsync-meta-export", hash.ToLowerInvariant());
     }
@@ -1720,7 +2116,7 @@ public sealed class MetadataSyncService
         if (!IsLikelyNetworkPath(rootPath))
             return;
 
-        for (var attempt = 0; attempt < 3; attempt++)
+        for (int attempt = 0; attempt < 3; attempt++)
         {
             ct.ThrowIfCancellationRequested();
             if (Directory.Exists(rootPath))
@@ -1737,10 +2133,19 @@ public sealed class MetadataSyncService
 
         if (path.StartsWith("//", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase))
+        {
             return true;
+        }
 
         if (path.StartsWith("/Volumes/", StringComparison.OrdinalIgnoreCase))
             return true;
+
+        if (path.StartsWith("/mnt/", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/media/", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/run/media/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
 
         if (path.Contains("/Library/Application Support/VaultSync/mounts/", StringComparison.OrdinalIgnoreCase))
             return true;
@@ -1752,16 +2157,14 @@ public sealed class MetadataSyncService
     {
         try
         {
-            var rootDir = Directory.GetParent(Directory.GetParent(metaDir)?.FullName ?? string.Empty)?.FullName;
+            string? rootDir = Directory.GetParent(Directory.GetParent(metaDir)?.FullName ?? string.Empty)?.FullName;
             if (string.IsNullOrWhiteSpace(rootDir) || !Directory.Exists(rootDir))
                 return false;
 
-            Directory.CreateDirectory(metaDir);
-            var probe = Path.Combine(metaDir, ".write_test");
-            using (var fs = new FileStream(probe, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose))
-            {
-                fs.WriteByte(0);
-            }
+            _ = Directory.CreateDirectory(metaDir);
+            string probe = Path.Combine(metaDir, ".write_test");
+            using var fs = new FileStream(probe, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
+            fs.WriteByte(0);
             return true;
         }
         catch
@@ -1772,7 +2175,7 @@ public sealed class MetadataSyncService
 
     private static bool TryFlushDeferredExport(string rootPath)
     {
-        var deferredRoot = GetDeferredExportRoot(rootPath);
+        string deferredRoot = GetDeferredExportRoot(rootPath);
         return TryCopyStoreFiles(deferredRoot, rootPath);
     }
 
@@ -1780,24 +2183,24 @@ public sealed class MetadataSyncService
     {
         try
         {
-            var sourceDir = GetMetaDir(fromRoot);
+            string sourceDir = GetMetaDir(fromRoot);
             if (!Directory.Exists(sourceDir))
                 return false;
 
             if (!Directory.Exists(toRoot))
                 return false;
 
-            var destDir = GetMetaDir(toRoot);
+            string destDir = GetMetaDir(toRoot);
             Directory.CreateDirectory(destDir);
 
-            var copied = false;
-            foreach (var suffix in new[] { "vaultsync.meta.db", "vaultsync.meta.db-wal", "vaultsync.meta.db-shm" })
+            bool copied = false;
+            foreach (string? suffix in new[] { "vaultsync.meta.db", "vaultsync.meta.db-wal", "vaultsync.meta.db-shm", "vaultsync.meta.db-journal" })
             {
-                var src = Path.Combine(sourceDir, suffix);
+                string src = Path.Combine(sourceDir, suffix);
                 if (!File.Exists(src))
                     continue;
 
-                var dst = Path.Combine(destDir, suffix);
+                string dst = Path.Combine(destDir, suffix);
                 File.Copy(src, dst, overwrite: true);
                 if (suffix.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
                     copied = true;
@@ -1834,9 +2237,9 @@ public sealed class MetadataSyncService
             UpdatedUtc = now
         });
 
-        foreach (var snap in snapshots)
+        foreach (Snapshot? snap in snapshots)
         {
-            var snapExternal = EnsureSnapshotExternalId(snap);
+            string snapExternal = EnsureSnapshotExternalId(snap);
             snapshotExternalIds[snap.Id] = snapExternal;
             store.UpsertSnapshot(new MetaSnapshot
             {
@@ -1853,13 +2256,13 @@ public sealed class MetadataSyncService
             });
         }
 
-        var exportedBackups = 0;
-        var skippedBackups = 0;
-        foreach (var backup in backups)
+        int exportedBackups = 0;
+        int skippedBackups = 0;
+        foreach (Backup? backup in backups)
         {
-            if (!snapshotExternalIds.TryGetValue(backup.SnapshotId, out var snapshotExternalId))
+            if (!snapshotExternalIds.TryGetValue(backup.SnapshotId, out string? snapshotExternalId))
             {
-                var snap = _repo.GetSnapshotById(backup.SnapshotId);
+                Snapshot? snap = _repo.GetSnapshotById(backup.SnapshotId);
                 if (snap is null)
                 {
                     skippedBackups++;
@@ -1883,7 +2286,7 @@ public sealed class MetadataSyncService
                 });
             }
 
-            var backupExternalId = EnsureBackupExternalId(backup);
+            string backupExternalId = EnsureBackupExternalId(backup);
             var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
             store.UpsertBackup(new MetaBackup
             {
@@ -1916,9 +2319,9 @@ public sealed class MetadataSyncService
     {
         try
         {
-            var projects = store.ListProjects().Count();
-            var snapshots = store.ListSnapshots().Count();
-            var backups = store.ListBackups().Count();
+            int projects = store.ListProjects().Count();
+            int snapshots = store.ListSnapshots().Count();
+            int backups = store.ListBackups().Count();
             Console.WriteLine($"[MetadataSync] Store counts at '{store.DatabasePath}': projects={projects}, snapshots={snapshots}, backups={backups}.");
         }
         catch (Exception ex)
@@ -1932,7 +2335,7 @@ public sealed class MetadataSyncService
         if (!string.IsNullOrWhiteSpace(project.ExternalId))
             return project.ExternalId;
 
-        var id = NewExternalId();
+        string id = NewExternalId();
         _repo.UpdateProjectExternalId(project.Id, id);
         return id;
     }
@@ -1942,7 +2345,7 @@ public sealed class MetadataSyncService
         if (!string.IsNullOrWhiteSpace(snapshot.ExternalId))
             return snapshot.ExternalId;
 
-        var id = NewExternalId();
+        string id = NewExternalId();
         _repo.UpdateSnapshotExternalId(snapshot.Id, id);
         return id;
     }
@@ -1952,7 +2355,7 @@ public sealed class MetadataSyncService
         if (!string.IsNullOrWhiteSpace(backup.ExternalId))
             return backup.ExternalId;
 
-        var id = NewExternalId();
+        string id = NewExternalId();
         _repo.UpdateBackupExternalId(backup.Id, id);
         return id;
     }
@@ -1963,7 +2366,7 @@ public sealed class MetadataSyncService
     {
         try
         {
-            var color = ProjectColorResolver?.Invoke(project);
+            string? color = ProjectColorResolver?.Invoke(project);
             var settings = new Dictionary<string, object?>();
             if (!string.IsNullOrWhiteSpace(color))
             {
@@ -1979,7 +2382,7 @@ public sealed class MetadataSyncService
                 : project.PreferredDestinationId;
             settings["restoreMode"] = ProjectRestoreMode.Normalize(project.RestoreMode);
             settings["verificationPolicy"] = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
-            var disabledProjects = AppConfigStore.GetSnapshot().Backups.AutoBackupDisabledProjects ?? new List<int>();
+            List<int> disabledProjects = AppConfigStore.GetSnapshot().Backups.AutoBackupDisabledProjects ?? [];
             settings["autoBackupEnabled"] = !disabledProjects.Contains(project.Id);
             settings["tags"] = string.IsNullOrWhiteSpace(project.Tags)
                 ? string.Empty
@@ -2033,41 +2436,41 @@ public sealed class MetadataSyncService
         try
         {
             using var doc = JsonDocument.Parse(settingsJson);
-            var policy = ProjectEncryptionPolicy.Inherit;
+            string policy = ProjectEncryptionPolicy.Inherit;
             string? keyRef = null;
-            var preferredDestinationId = string.Empty;
-            var restoreMode = ProjectRestoreMode.Direct;
-            var verificationPolicy = ProjectVerificationPolicy.Always;
-            var autoBackupEnabled = true;
-            var tags = string.Empty;
-            var hasPolicy = false;
-            var hasKeyRef = false;
-            var hasPreferredDestinationId = false;
-            var hasRestoreMode = false;
-            var hasVerificationPolicy = false;
-            var hasAutoBackupEnabled = false;
-            var hasTags = false;
+            string preferredDestinationId = string.Empty;
+            string restoreMode = ProjectRestoreMode.Direct;
+            string verificationPolicy = ProjectVerificationPolicy.Always;
+            bool autoBackupEnabled = true;
+            string tags = string.Empty;
+            bool hasPolicy = false;
+            bool hasKeyRef = false;
+            bool hasPreferredDestinationId = false;
+            bool hasRestoreMode = false;
+            bool hasVerificationPolicy = false;
+            bool hasAutoBackupEnabled = false;
+            bool hasTags = false;
 
-            if (doc.RootElement.TryGetProperty("encryptionPolicy", out var policyProp))
+            if (doc.RootElement.TryGetProperty("encryptionPolicy", out JsonElement policyProp))
             {
                 policy = ProjectEncryptionPolicy.Normalize(policyProp.GetString());
                 hasPolicy = true;
             }
 
-            if (doc.RootElement.TryGetProperty("encryptionKeyRef", out var keyRefProp))
+            if (doc.RootElement.TryGetProperty("encryptionKeyRef", out JsonElement keyRefProp))
             {
-                var rawKeyRef = keyRefProp.GetString();
+                string? rawKeyRef = keyRefProp.GetString();
                 keyRef = string.IsNullOrWhiteSpace(rawKeyRef) ? null : rawKeyRef;
                 hasKeyRef = true;
             }
 
-            if (doc.RootElement.TryGetProperty("verificationPolicy", out var verificationProp))
+            if (doc.RootElement.TryGetProperty("verificationPolicy", out JsonElement verificationProp))
             {
                 verificationPolicy = ProjectVerificationPolicy.Normalize(verificationProp.GetString());
                 hasVerificationPolicy = true;
             }
 
-            if (doc.RootElement.TryGetProperty("preferredDestinationId", out var destinationProp))
+            if (doc.RootElement.TryGetProperty("preferredDestinationId", out JsonElement destinationProp))
             {
                 preferredDestinationId = NormalizePreferredDestinationId(
                     destinationProp.GetString(),
@@ -2075,13 +2478,13 @@ public sealed class MetadataSyncService
                 hasPreferredDestinationId = true;
             }
 
-            if (doc.RootElement.TryGetProperty("restoreMode", out var restoreModeProp))
+            if (doc.RootElement.TryGetProperty("restoreMode", out JsonElement restoreModeProp))
             {
                 restoreMode = ProjectRestoreMode.Normalize(restoreModeProp.GetString());
                 hasRestoreMode = true;
             }
 
-            if (doc.RootElement.TryGetProperty("autoBackupEnabled", out var autoBackupEnabledProp))
+            if (doc.RootElement.TryGetProperty("autoBackupEnabled", out JsonElement autoBackupEnabledProp))
             {
                 autoBackupEnabled = autoBackupEnabledProp.ValueKind switch
                 {
@@ -2092,9 +2495,9 @@ public sealed class MetadataSyncService
                 hasAutoBackupEnabled = autoBackupEnabledProp.ValueKind is JsonValueKind.True or JsonValueKind.False;
             }
 
-            if (doc.RootElement.TryGetProperty("tags", out var tagsProp))
+            if (doc.RootElement.TryGetProperty("tags", out JsonElement tagsProp))
             {
-                var rawTags = tagsProp.GetString();
+                string? rawTags = tagsProp.GetString();
                 tags = string.IsNullOrWhiteSpace(rawTags) ? string.Empty : rawTags.Trim();
                 hasTags = true;
             }
@@ -2150,52 +2553,54 @@ public sealed class MetadataSyncService
             !parsedSettings.HasVerificationPolicy &&
             !parsedSettings.HasAutoBackupEnabled &&
             !parsedSettings.HasTags)
+        {
             return false;
+        }
 
-        var current = _repo.GetProjectById(projectId);
+        Project? current = _repo.GetProjectById(projectId);
         if (current is null)
             return false;
 
-        var currentPolicy = ProjectEncryptionPolicy.Normalize(current.EncryptionPolicy);
-        var incomingPolicy = parsedSettings.HasEncryptionPolicy
+        string currentPolicy = ProjectEncryptionPolicy.Normalize(current.EncryptionPolicy);
+        string incomingPolicy = parsedSettings.HasEncryptionPolicy
             ? ProjectEncryptionPolicy.Normalize(parsedSettings.EncryptionPolicy)
             : currentPolicy;
 
         // Do not downgrade an explicit local policy to "inherit" from stale metadata.
-        var applyPolicy = parsedSettings.HasEncryptionPolicy
+        bool applyPolicy = parsedSettings.HasEncryptionPolicy
             && !string.Equals(incomingPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase)
             && !(string.Equals(incomingPolicy, ProjectEncryptionPolicy.Inherit, StringComparison.OrdinalIgnoreCase)
                  && !string.Equals(currentPolicy, ProjectEncryptionPolicy.Inherit, StringComparison.OrdinalIgnoreCase));
 
-        var nextPolicy = applyPolicy ? incomingPolicy : currentPolicy;
-        var nextKeyRef = parsedSettings.HasEncryptionKeyRef
+        string nextPolicy = applyPolicy ? incomingPolicy : currentPolicy;
+        string? nextKeyRef = parsedSettings.HasEncryptionKeyRef
             ? parsedSettings.EncryptionKeyRef
             : current.EncryptionKeyRef;
-        var currentVerificationPolicy = ProjectVerificationPolicy.Normalize(current.VerificationPolicy);
-        var nextVerificationPolicy = parsedSettings.HasVerificationPolicy
+        string currentVerificationPolicy = ProjectVerificationPolicy.Normalize(current.VerificationPolicy);
+        string nextVerificationPolicy = parsedSettings.HasVerificationPolicy
             ? ProjectVerificationPolicy.Normalize(parsedSettings.VerificationPolicy)
             : currentVerificationPolicy;
-        var destinations = AppConfigStore.Load().Backups.Destinations;
-        var currentPreferredDestinationId = NormalizePreferredDestinationId(current.PreferredDestinationId, destinations);
-        var nextPreferredDestinationId = parsedSettings.HasPreferredDestinationId
+        List<BackupDestination> destinations = AppConfigStore.Load().Backups.Destinations;
+        string currentPreferredDestinationId = NormalizePreferredDestinationId(current.PreferredDestinationId, destinations);
+        string nextPreferredDestinationId = parsedSettings.HasPreferredDestinationId
             ? NormalizePreferredDestinationId(parsedSettings.PreferredDestinationId, destinations)
             : currentPreferredDestinationId;
-        var currentRestoreMode = ProjectRestoreMode.Normalize(current.RestoreMode);
-        var nextRestoreMode = parsedSettings.HasRestoreMode
+        string currentRestoreMode = ProjectRestoreMode.Normalize(current.RestoreMode);
+        string nextRestoreMode = parsedSettings.HasRestoreMode
             ? ProjectRestoreMode.Normalize(parsedSettings.RestoreMode)
             : currentRestoreMode;
-        config.Backups.AutoBackupDisabledProjects ??= new List<int>();
-        var currentAutoBackupEnabled = !config.Backups.AutoBackupDisabledProjects.Contains(projectId);
-        var nextAutoBackupEnabled = parsedSettings.HasAutoBackupEnabled
+        config.Backups.AutoBackupDisabledProjects ??= [];
+        bool currentAutoBackupEnabled = !config.Backups.AutoBackupDisabledProjects.Contains(projectId);
+        bool nextAutoBackupEnabled = parsedSettings.HasAutoBackupEnabled
             ? parsedSettings.AutoBackupEnabled
             : currentAutoBackupEnabled;
-        var currentTags = current.Tags?.Trim() ?? string.Empty;
-        var nextTags = parsedSettings.HasTags
+        string currentTags = current.Tags?.Trim() ?? string.Empty;
+        string nextTags = parsedSettings.HasTags
             ? (parsedSettings.Tags?.Trim() ?? string.Empty)
             : currentTags;
 
-        var currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
-        var normalizedNextKeyRef = string.IsNullOrWhiteSpace(nextKeyRef) ? null : nextKeyRef;
+        string? currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
+        string? normalizedNextKeyRef = string.IsNullOrWhiteSpace(nextKeyRef) ? null : nextKeyRef;
         if (string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(normalizedNextKeyRef, currentKeyRef, StringComparison.Ordinal) &&
             string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
@@ -2209,7 +2614,7 @@ public sealed class MetadataSyncService
 
         _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, normalizedNextKeyRef);
 
-        var conflictValuesDiffer =
+        bool conflictValuesDiffer =
             !string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) ||
@@ -2245,26 +2650,25 @@ public sealed class MetadataSyncService
 
     private static bool ApplyImportedProjectAutoBackupSetting(AppConfig config, int projectId, bool enabled)
     {
-        config.Backups.AutoBackupDisabledProjects ??= new List<int>();
-        var disabled = config.Backups.AutoBackupDisabledProjects;
-        var changed = false;
+        config.Backups.AutoBackupDisabledProjects ??= [];
+        List<int> disabled = config.Backups.AutoBackupDisabledProjects;
 
         if (enabled)
         {
-            changed = disabled.Remove(projectId);
+            return disabled.Remove(projectId);
         }
         else if (!disabled.Contains(projectId))
         {
             disabled.Add(projectId);
-            changed = true;
+            return true;
         }
 
-        return changed;
+        return false;
     }
 
     private static bool RemoveProjectMetadataConflict(int projectId, IList<ProjectMetadataConflictRecord> pendingConflicts)
     {
-        var existing = pendingConflicts.FirstOrDefault(conflict => conflict.ProjectId == projectId);
+        ProjectMetadataConflictRecord? existing = pendingConflicts.FirstOrDefault(conflict => conflict.ProjectId == projectId);
         if (existing is null)
             return false;
 
@@ -2311,7 +2715,7 @@ public sealed class MetadataSyncService
             }
         };
 
-        var existing = pendingConflicts.FirstOrDefault(conflict =>
+        ProjectMetadataConflictRecord? existing = pendingConflicts.FirstOrDefault(conflict =>
             conflict.ProjectId == current.Id ||
             (!string.IsNullOrWhiteSpace(conflict.ProjectExternalId) &&
              string.Equals(conflict.ProjectExternalId, next.ProjectExternalId, StringComparison.OrdinalIgnoreCase)));
@@ -2368,10 +2772,10 @@ public sealed class MetadataSyncService
                 return;
 
             using var doc = JsonDocument.Parse(metaProject.SettingsJson);
-            if (!doc.RootElement.TryGetProperty("avatarColor", out var colorProp))
+            if (!doc.RootElement.TryGetProperty("avatarColor", out JsonElement colorProp))
                 return;
 
-            var color = colorProp.GetString();
+            string? color = colorProp.GetString();
             if (string.IsNullOrWhiteSpace(color))
                 return;
 
@@ -2384,9 +2788,13 @@ public sealed class MetadataSyncService
     }
 }
 
-public sealed record MetadataSyncOptions(bool AllowCreateProjects, bool MarkNeedsRestoreOnImport)
+public sealed record MetadataSyncOptions(
+    bool AllowCreateProjects,
+    bool MarkNeedsRestoreOnImport,
+    bool ExportMissingTombstonesOnImport = true)
 {
     public static MetadataSyncOptions Default => new(true, true);
+    public MetadataSyncOptions AsReadOnlySource() => this with { ExportMissingTombstonesOnImport = false };
 }
 
 public sealed record MetadataSyncResult(
@@ -2397,7 +2805,7 @@ public sealed record MetadataSyncResult(
     int AppliedTombstones,
     string Message)
 {
-    public IReadOnlyCollection<int> AffectedProjectIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyCollection<int> AffectedProjectIds { get; init; } = [];
 
     public static MetadataSyncResult Failure(MetadataSyncStatus status, string message) =>
         new(status, 0, 0, 0, 0, message);

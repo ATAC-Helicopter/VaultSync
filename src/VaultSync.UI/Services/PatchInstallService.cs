@@ -59,7 +59,7 @@ namespace VaultSync.UI.Services
 
         public static bool TryHandlePatchArgs(string[] args)
         {
-            if (!TryParsePatchArgs(args, out var request, out _))
+            if (!TryParsePatchArgs(args, out PatchApplyRequest? request, out _))
                 return false;
 
             _ = ApplyPatch(request, null, CancellationToken.None);
@@ -76,11 +76,11 @@ namespace VaultSync.UI.Services
 
             if (args.Length >= 2 && string.Equals(args[0], ApplyRequestArg, StringComparison.OrdinalIgnoreCase))
             {
-                var requestPath = args[1];
+                string requestPath = args[1];
                 if (!File.Exists(requestPath))
                     return false;
 
-                var requestHashArg = args.FirstOrDefault(a => a.StartsWith(RequestHashArg, StringComparison.OrdinalIgnoreCase));
+                string? requestHashArg = args.FirstOrDefault(a => a.StartsWith(RequestHashArg, StringComparison.OrdinalIgnoreCase));
                 if (string.IsNullOrWhiteSpace(requestHashArg))
                     return false;
 
@@ -93,12 +93,12 @@ namespace VaultSync.UI.Services
 
                 try
                 {
-                    var requestBytes = File.ReadAllBytes(requestPath);
-                    var actualHash = ComputeSha256(requestBytes);
+                    byte[] requestBytes = File.ReadAllBytes(requestPath);
+                    string actualHash = ComputeSha256(requestBytes);
                     if (!actualHash.Equals(expectedRequestHash, StringComparison.OrdinalIgnoreCase))
                         return false;
 
-                    var parsed = JsonSerializer.Deserialize<PatchApplyRequest>(requestBytes);
+                    PatchApplyRequest? parsed = JsonSerializer.Deserialize<PatchApplyRequest>(requestBytes);
                     if (!TryNormalizeRequest(parsed, out request, out _))
                         return false;
 
@@ -116,17 +116,17 @@ namespace VaultSync.UI.Services
             if (args.Length < 4 || !string.Equals(args[0], ApplyArg, StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            var archivePath = args[1];
-            var manifestPath = args[2];
-            var installDir = args[3];
-            var restart = args.Any(a => string.Equals(a, RestartArg, StringComparison.OrdinalIgnoreCase));
-            var waitArg = args.FirstOrDefault(a => a.StartsWith(WaitPidArg, StringComparison.OrdinalIgnoreCase));
+            string archivePath = args[1];
+            string manifestPath = args[2];
+            string installDir = args[3];
+            bool restart = args.Any(a => string.Equals(a, RestartArg, StringComparison.OrdinalIgnoreCase));
+            string? waitArg = args.FirstOrDefault(a => a.StartsWith(WaitPidArg, StringComparison.OrdinalIgnoreCase));
             int? waitPid = null;
 
             if (!string.IsNullOrWhiteSpace(waitArg))
             {
-                var raw = waitArg.Substring(WaitPidArg.Length);
-                if (int.TryParse(raw, out var parsed))
+                string raw = waitArg.Substring(WaitPidArg.Length);
+                if (int.TryParse(raw, out int parsed))
                 {
                     waitPid = parsed;
                 }
@@ -150,36 +150,36 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                var processPath = Environment.ProcessPath;
+                string? processPath = Environment.ProcessPath;
                 if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))
                 {
                     error = "Cannot locate current executable.";
                     return false;
                 }
 
-                var installDir = AppContext.BaseDirectory;
-                var helperDir = PrepareHelperDirectory(installDir);
-                var helperExe = Path.Combine(helperDir, Path.GetFileName(processPath));
+                string installDir = AppContext.BaseDirectory;
+                string helperDir = PrepareHelperDirectory(installDir);
+                string helperExe = Path.Combine(helperDir, Path.GetFileName(processPath));
                 if (!File.Exists(helperExe))
                 {
                     File.Copy(processPath, helperExe, overwrite: true);
                 }
 
-                var manifestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.manifest.json");
-                var manifestJson = JsonSerializer.Serialize(plan.Manifest);
+                string manifestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.manifest.json");
+                string manifestJson = JsonSerializer.Serialize(plan.Manifest);
                 File.WriteAllText(manifestPath, manifestJson, Encoding.UTF8);
-                var requestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.apply-request.json");
+                string requestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.apply-request.json");
                 var request = new PatchApplyRequest(
                     archivePath,
                     manifestPath,
                     installDir,
                     restart: true,
                     waitPid: Process.GetCurrentProcess().Id);
-                var requestBytes = JsonSerializer.SerializeToUtf8Bytes(request);
+                byte[] requestBytes = JsonSerializer.SerializeToUtf8Bytes(request);
                 File.WriteAllBytes(requestPath, requestBytes);
-                var requestHash = ComputeSha256(requestBytes);
+                string requestHash = ComputeSha256(requestBytes);
 
-                var needsElevation = NeedsElevation(installDir);
+                bool needsElevation = NeedsElevation(installDir);
 
                 // When elevation is needed (Program Files installs), we must use the shell + arguments string.
                 var psi = new ProcessStartInfo
@@ -223,10 +223,10 @@ namespace VaultSync.UI.Services
 
         private static string PrepareHelperDirectory(string installDir)
         {
-            var root = Path.Combine(Path.GetTempPath(), "VaultSync");
+            string root = Path.Combine(Path.GetTempPath(), "VaultSync");
             Directory.CreateDirectory(root);
 
-            var helperDir = Path.Combine(root, "patch-helper");
+            string helperDir = Path.Combine(root, "patch-helper");
             try
             {
                 if (Directory.Exists(helperDir))
@@ -246,18 +246,18 @@ namespace VaultSync.UI.Services
 
         private static void CopyInstallToHelper(string installDir, string helperDir)
         {
-            foreach (var dir in Directory.GetDirectories(installDir, "*", SearchOption.AllDirectories))
+            foreach (string dir in Directory.GetDirectories(installDir, "*", SearchOption.AllDirectories))
             {
-                var relative = Path.GetRelativePath(installDir, dir);
-                var targetDir = Path.Combine(helperDir, relative);
+                string relative = Path.GetRelativePath(installDir, dir);
+                string targetDir = Path.Combine(helperDir, relative);
                 Directory.CreateDirectory(targetDir);
             }
 
-            foreach (var file in Directory.GetFiles(installDir, "*", SearchOption.AllDirectories))
+            foreach (string file in Directory.GetFiles(installDir, "*", SearchOption.AllDirectories))
             {
-                var relative = Path.GetRelativePath(installDir, file);
-                var destination = Path.Combine(helperDir, relative);
-                var destinationDir = Path.GetDirectoryName(destination);
+                string relative = Path.GetRelativePath(installDir, file);
+                string destination = Path.Combine(helperDir, relative);
+                string? destinationDir = Path.GetDirectoryName(destination);
                 if (!string.IsNullOrWhiteSpace(destinationDir))
                 {
                     Directory.CreateDirectory(destinationDir);
@@ -272,14 +272,14 @@ namespace VaultSync.UI.Services
             Action<string>? onLog,
             CancellationToken cancellationToken)
         {
-            var logDir = Path.Combine(Path.GetTempPath(), "VaultSync");
+            string logDir = Path.Combine(Path.GetTempPath(), "VaultSync");
             Directory.CreateDirectory(logDir);
-            var logPath = Path.Combine(logDir, "patch-helper.log");
+            string logPath = Path.Combine(logDir, "patch-helper.log");
 
             using var log = new StreamWriter(logPath, append: true) { AutoFlush = true };
             void LogLine(string message)
             {
-                var line = $"[{DateTime.UtcNow:O}] {message}";
+                string line = $"[{DateTime.UtcNow:O}] {message}";
                 log.WriteLine(line);
                 onLog?.Invoke(line);
             }
@@ -290,7 +290,7 @@ namespace VaultSync.UI.Services
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (!TryNormalizeRequest(request, out var normalizedRequest, out var normalizeError))
+                if (!TryNormalizeRequest(request, out PatchApplyRequest? normalizedRequest, out string? normalizeError))
                     throw new InvalidOperationException($"Invalid patch apply request: {normalizeError}");
 
                 request = normalizedRequest!;
@@ -319,13 +319,13 @@ namespace VaultSync.UI.Services
                     throw new FileNotFoundException("Patch manifest not found.", request.ManifestPath);
 
                 LogLine("Loading patch manifest.");
-                var manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(request.ManifestPath));
+                PatchManifest? manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(request.ManifestPath));
                 if (manifest is null)
                     throw new InvalidOperationException("Unable to parse patch manifest.");
                 VerifyBaseVersionCompatibility(manifest);
                 VerifyArchivePreflight(request.ArchivePath, manifest);
 
-                var stagingDir = Path.Combine(Path.GetTempPath(), "VaultSync", $"patch-{Guid.NewGuid():N}");
+                string stagingDir = Path.Combine(Path.GetTempPath(), "VaultSync", $"patch-{Guid.NewGuid():N}");
                 Directory.CreateDirectory(stagingDir);
 
                 try
@@ -367,22 +367,22 @@ namespace VaultSync.UI.Services
 
         private static void VerifyExtractedFiles(PatchManifest manifest, string stagingDir)
         {
-            foreach (var file in manifest.Files)
+            foreach (PatchFileEntry file in manifest.Files)
             {
-                var candidate = CombineUnderRoot(stagingDir, file.RelativePath, "manifest file path");
+                string candidate = CombineUnderRoot(stagingDir, file.RelativePath, "manifest file path");
                 if (!File.Exists(candidate))
                     throw new FileNotFoundException($"Patched file missing: {file.RelativePath}", candidate);
 
                 if (file.Size > 0)
                 {
-                    var size = new FileInfo(candidate).Length;
+                    long size = new FileInfo(candidate).Length;
                     if (size != file.Size)
                         throw new InvalidOperationException($"File size mismatch for {file.RelativePath}. Expected {file.Size}, got {size}.");
                 }
 
                 if (!string.IsNullOrWhiteSpace(file.Sha256))
                 {
-                    var hash = ComputeSha256(candidate);
+                    string hash = ComputeSha256(candidate);
                     if (!hash.Equals(file.Sha256.Trim(), StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"Checksum mismatch for {file.RelativePath}.");
                 }
@@ -391,11 +391,11 @@ namespace VaultSync.UI.Services
 
         private static void CopyIntoInstall(PatchManifest manifest, string stagingDir, string installDir, Action<string> logLine)
         {
-            foreach (var file in manifest.Files)
+            foreach (PatchFileEntry file in manifest.Files)
             {
-                var source = CombineUnderRoot(stagingDir, file.RelativePath, "manifest source path");
-                var target = CombineUnderRoot(installDir, file.RelativePath, "manifest target path");
-                var targetDir = Path.GetDirectoryName(target);
+                string source = CombineUnderRoot(stagingDir, file.RelativePath, "manifest source path");
+                string target = CombineUnderRoot(installDir, file.RelativePath, "manifest target path");
+                string? targetDir = Path.GetDirectoryName(target);
                 if (!string.IsNullOrWhiteSpace(targetDir))
                 {
                     Directory.CreateDirectory(targetDir);
@@ -408,7 +408,7 @@ namespace VaultSync.UI.Services
 
         private static void RestartUpdatedApp(string installDir, Action<string> logLine)
         {
-            var exe = Path.Combine(installDir, "VaultSync.UI.exe");
+            string exe = Path.Combine(installDir, "VaultSync.UI.exe");
             if (!File.Exists(exe))
             {
                 exe = Path.Combine(installDir, "VaultSync.UI");
@@ -434,16 +434,16 @@ namespace VaultSync.UI.Services
 
         private static string ComputeSha256(string path)
         {
-            using var stream = File.OpenRead(path);
+            using FileStream stream = File.OpenRead(path);
             using var sha = SHA256.Create();
-            var bytes = sha.ComputeHash(stream);
+            byte[] bytes = sha.ComputeHash(stream);
             return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
         }
 
         private static string ComputeSha256(byte[] payload)
         {
             using var sha = SHA256.Create();
-            var bytes = sha.ComputeHash(payload);
+            byte[] bytes = sha.ComputeHash(payload);
             return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
         }
 
@@ -461,8 +461,8 @@ namespace VaultSync.UI.Services
 
             if (!string.IsNullOrWhiteSpace(manifest.ArchiveSha256))
             {
-                var actual = ComputeSha256(archivePath);
-                var expected = manifest.ArchiveSha256.Trim();
+                string actual = ComputeSha256(archivePath);
+                string expected = manifest.ArchiveSha256.Trim();
                 if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Patch archive checksum mismatch.");
             }
@@ -470,14 +470,14 @@ namespace VaultSync.UI.Services
 
         private static void VerifyBaseVersionCompatibility(PatchManifest manifest)
         {
-            var currentVersion = GetCurrentVersionString();
+            string currentVersion = GetCurrentVersionString();
             if (!PatchUpdateService.TryValidateAllowedBaseVersions(
                     manifest,
                     currentVersion,
                     out _,
                     out _,
-                    out var statusCode,
-                    out var message))
+                    out string? statusCode,
+                    out string? message))
             {
                 throw new InvalidOperationException($"Patch manifest rejected for helper apply ({statusCode}): {message}");
             }
@@ -486,7 +486,7 @@ namespace VaultSync.UI.Services
         private static string GetCurrentVersionString()
         {
             var assembly = Assembly.GetExecutingAssembly();
-            var informationalVersion = assembly
+            string? informationalVersion = assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
                 .InformationalVersion;
             if (!string.IsNullOrWhiteSpace(informationalVersion))
@@ -499,9 +499,9 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                var normalizedPath = Path.GetFullPath(path);
-                var root = Path.Combine(Path.GetTempPath(), "VaultSync");
-                var normalizedRoot = Path.GetFullPath(root)
+                string normalizedPath = Path.GetFullPath(path);
+                string root = Path.Combine(Path.GetTempPath(), "VaultSync");
+                string normalizedRoot = Path.GetFullPath(root)
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                     + Path.DirectorySeparatorChar;
                 return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
@@ -517,9 +517,9 @@ namespace VaultSync.UI.Services
             if (!OperatingSystem.IsWindows())
                 return false;
 
-            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            var underProgramFiles = (!string.IsNullOrWhiteSpace(programFiles) &&
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            bool underProgramFiles = (!string.IsNullOrWhiteSpace(programFiles) &&
                                      installDir.StartsWith(programFiles, StringComparison.OrdinalIgnoreCase)) ||
                                     (!string.IsNullOrWhiteSpace(programFilesX86) &&
                                      installDir.StartsWith(programFilesX86, StringComparison.OrdinalIgnoreCase));
@@ -557,13 +557,13 @@ namespace VaultSync.UI.Services
                 return false;
             }
 
-            if (!TryNormalizeFilePath(request.ArchivePath, out var archivePath, out error))
+            if (!TryNormalizeFilePath(request.ArchivePath, out string? archivePath, out error))
                 return false;
 
-            if (!TryNormalizeFilePath(request.ManifestPath, out var manifestPath, out error))
+            if (!TryNormalizeFilePath(request.ManifestPath, out string? manifestPath, out error))
                 return false;
 
-            if (!TryNormalizeDirectoryPath(request.InstallDir, out var installDir, out error))
+            if (!TryNormalizeDirectoryPath(request.InstallDir, out string? installDir, out error))
                 return false;
 
             if (request.WaitPid is <= 0)
@@ -592,10 +592,10 @@ namespace VaultSync.UI.Services
                 return false;
             }
 
-            var trimmed = path.Trim();
+            string trimmed = path.Trim();
             try
             {
-                var fullPath = Path.GetFullPath(trimmed);
+                string fullPath = Path.GetFullPath(trimmed);
                 if (!Path.IsPathFullyQualified(fullPath))
                 {
                     error = "File path must be absolute.";
@@ -623,10 +623,10 @@ namespace VaultSync.UI.Services
                 return false;
             }
 
-            var trimmed = path.Trim();
+            string trimmed = path.Trim();
             try
             {
-                var fullPath = Path.GetFullPath(trimmed);
+                string fullPath = Path.GetFullPath(trimmed);
                 if (!Path.IsPathFullyQualified(fullPath))
                 {
                     error = "Install directory must be absolute.";
@@ -648,14 +648,14 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(relativePath))
                 throw new InvalidOperationException($"Invalid {context}: path is empty.");
 
-            var sanitizedRelative = relativePath.Replace('\\', Path.DirectorySeparatorChar)
+            string sanitizedRelative = relativePath.Replace('\\', Path.DirectorySeparatorChar)
                 .Replace('/', Path.DirectorySeparatorChar);
 
             if (Path.IsPathFullyQualified(sanitizedRelative))
                 throw new InvalidOperationException($"Invalid {context}: absolute paths are not allowed ({relativePath}).");
 
-            var candidate = Path.GetFullPath(Path.Combine(root, sanitizedRelative));
-            var normalizedRoot = Path.GetFullPath(root)
+            string candidate = Path.GetFullPath(Path.Combine(root, sanitizedRelative));
+            string normalizedRoot = Path.GetFullPath(root)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 + Path.DirectorySeparatorChar;
 

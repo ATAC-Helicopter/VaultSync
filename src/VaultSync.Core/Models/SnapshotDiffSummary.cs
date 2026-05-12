@@ -16,32 +16,31 @@ public sealed record SnapshotDiffSummary(
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public string TopChangedPathsJson => JsonSerializer.Serialize(TopChangedPaths ?? Array.Empty<SnapshotDiffPathStat>(), JsonOptions);
+    public string TopChangedPathsJson => JsonSerializer.Serialize(TopChangedPaths ?? [], JsonOptions);
 
     public static IReadOnlyList<SnapshotDiffPathStat> ParseTopChangedPaths(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
-            return Array.Empty<SnapshotDiffPathStat>();
+            return [];
 
         try
         {
-            var parsed = JsonSerializer.Deserialize<List<SnapshotDiffPathStat>>(json, JsonOptions);
+            List<SnapshotDiffPathStat>? parsed = JsonSerializer.Deserialize<List<SnapshotDiffPathStat>>(json, JsonOptions);
             if (parsed is null || parsed.Count == 0)
-                return Array.Empty<SnapshotDiffPathStat>();
+                return [];
 
-            return parsed
+            return [.. parsed
                 .Where(stat => !string.IsNullOrWhiteSpace(stat.Path))
-                .Select(stat => new SnapshotDiffPathStat(stat.Path.Trim(), Math.Max(0, stat.Changes), Math.Max(0L, stat.ChangedBytes)))
-                .ToArray();
+                .Select(stat => new SnapshotDiffPathStat(stat.Path.Trim(), Math.Max(0, stat.Changes), Math.Max(0L, stat.ChangedBytes)))];
         }
         catch
         {
-            return Array.Empty<SnapshotDiffPathStat>();
+            return [];
         }
     }
 
     public static SnapshotDiffSummary Empty { get; } =
-        new(Added: 0, Modified: 0, Deleted: 0, NetSizeBytes: 0, TopChangedPaths: Array.Empty<SnapshotDiffPathStat>());
+        new(Added: 0, Modified: 0, Deleted: 0, NetSizeBytes: 0, TopChangedPaths: []);
 }
 
 public sealed record SnapshotDiffPathStat(

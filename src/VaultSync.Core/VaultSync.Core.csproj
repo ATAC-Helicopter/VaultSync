@@ -2,14 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.72" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.5" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.7" />
   </ItemGroup>
 
   <ItemGroup>

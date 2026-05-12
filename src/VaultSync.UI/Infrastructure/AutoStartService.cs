@@ -32,12 +32,13 @@ namespace VaultSync.UI.Infrastructure
             }
             catch (Exception ex)
             {
+                DiagnosticsLogger.RecordException("Launch-on-login update failed", ex);
             }
         }
 
         private static string GetExecutablePath()
         {
-            var path = Environment.ProcessPath;
+            string? path = Environment.ProcessPath;
             if (string.IsNullOrWhiteSpace(path))
             {
                 path = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
@@ -47,16 +48,16 @@ namespace VaultSync.UI.Infrastructure
 
         private static (string FileName, string[] Args) GetLaunchCommand()
         {
-            var exe = GetExecutablePath();
+            string exe = GetExecutablePath();
             if (string.IsNullOrWhiteSpace(exe))
                 return (string.Empty, Array.Empty<string>());
 
-            var baseDir = AppContext.BaseDirectory;
-            var dllPath = Path.Combine(baseDir, "VaultSync.UI.dll");
+            string baseDir = AppContext.BaseDirectory;
+            string dllPath = Path.Combine(baseDir, "VaultSync.UI.dll");
 
             if (exe.EndsWith("dotnet", StringComparison.OrdinalIgnoreCase) && File.Exists(dllPath))
             {
-                return (exe, new[] { dllPath });
+                return (exe, [dllPath]);
             }
 
             if (File.Exists(exe))
@@ -75,18 +76,18 @@ namespace VaultSync.UI.Infrastructure
         [SupportedOSPlatform("windows")]
         private static void SetWindowsAutoStart(bool enable)
         {
-            using var key = Registry.CurrentUser.OpenSubKey(WindowsRunKey, writable: true)
+            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(WindowsRunKey, writable: true)
                            ?? Registry.CurrentUser.CreateSubKey(WindowsRunKey);
             if (key is null)
                 return;
 
             if (enable)
             {
-                var launch = GetLaunchCommand();
-                if (string.IsNullOrWhiteSpace(launch.FileName))
+                (string fileName, string[] args) = GetLaunchCommand();
+                if (string.IsNullOrWhiteSpace(fileName))
                     return;
 
-                var command = BuildCommandLine(launch.FileName, launch.Args);
+                string command = BuildCommandLine(fileName, args);
                 key.SetValue(AppId, command);
             }
             else
@@ -98,10 +99,10 @@ namespace VaultSync.UI.Infrastructure
 
         private static void SetMacAutoStart(bool enable)
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            var agentDir = Path.Combine(home, "Library", "LaunchAgents");
-            var plistPath = Path.Combine(agentDir, "com.vaultsync.autostart.plist");
-            var uid = GetMacUid();
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            string agentDir = Path.Combine(home, "Library", "LaunchAgents");
+            string plistPath = Path.Combine(agentDir, "com.vaultsync.autostart.plist");
+            string? uid = GetMacUid();
 
             if (!enable)
             {
@@ -118,15 +119,15 @@ namespace VaultSync.UI.Infrastructure
             }
 
             Directory.CreateDirectory(agentDir);
-            var launch = GetLaunchCommand();
-            if (string.IsNullOrWhiteSpace(launch.FileName))
+            (string fileName, string[] launchArgs) = GetLaunchCommand();
+            if (string.IsNullOrWhiteSpace(fileName))
                 return;
 
-            var args = new[] { launch.FileName }.Concat(launch.Args).ToArray();
-            var programArgs = string.Join(
+            string[] args = [fileName, .. launchArgs];
+            string programArgs = string.Join(
                 Environment.NewLine,
                 args.Select(arg => $"      <string>{XmlEscape(arg)}</string>"));
-            var plist = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+            string plist = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <!DOCTYPE plist PUBLIC ""-//Apple//DTD PLIST 1.0//EN"" ""http://www.apple.com/DTDs/PropertyList-1.0.dtd"">
 <plist version=""1.0"">
   <dict>
@@ -154,7 +155,7 @@ namespace VaultSync.UI.Infrastructure
         {
             try
             {
-                var uid = Environment.GetEnvironmentVariable("UID");
+                string? uid = Environment.GetEnvironmentVariable("UID");
                 if (string.IsNullOrWhiteSpace(uid))
                 {
                     using var id = Process.Start(new ProcessStartInfo
@@ -209,12 +210,12 @@ namespace VaultSync.UI.Infrastructure
 
         private static void SetLinuxAutoStart(bool enable)
         {
-            var configDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string configDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             if (string.IsNullOrWhiteSpace(configDir))
                 return;
 
-            var autostartDir = Path.Combine(configDir, "autostart");
-            var desktopPath = Path.Combine(autostartDir, "vaultsync.desktop");
+            string autostartDir = Path.Combine(configDir, "autostart");
+            string desktopPath = Path.Combine(autostartDir, "vaultsync.desktop");
 
             if (!enable)
             {
@@ -226,18 +227,18 @@ namespace VaultSync.UI.Infrastructure
             }
 
             Directory.CreateDirectory(autostartDir);
-            var launch = GetLaunchCommand();
-            if (string.IsNullOrWhiteSpace(launch.FileName))
+            (string fileName, string[] args) = GetLaunchCommand();
+            if (string.IsNullOrWhiteSpace(fileName))
                 return;
 
-            var execLine = BuildCommandLine(launch.FileName, launch.Args);
-            var desktop = $"[Desktop Entry]\nType=Application\nName=VaultSync\nExec={execLine}\nX-GNOME-Autostart-enabled=true\n";
+            string execLine = BuildCommandLine(fileName, args);
+            string desktop = $"[Desktop Entry]\nType=Application\nName=VaultSync\nExec={execLine}\nX-GNOME-Autostart-enabled=true\n";
             File.WriteAllText(desktopPath, desktop);
         }
 
         private static string BuildCommandLine(string fileName, string[] args)
         {
-            var parts = new[] { fileName }.Concat(args ?? Array.Empty<string>());
+            System.Collections.Generic.IEnumerable<string> parts = [fileName, .. args];
             return string.Join(" ", parts.Select(QuoteArgument));
         }
 

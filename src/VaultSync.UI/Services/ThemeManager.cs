@@ -141,11 +141,11 @@ namespace VaultSync.UI.Services
         public static IReadOnlyList<(string Id, string Description, ThemePaletteConfig Palette)> GetThemePresets()
         {
             var items = new List<(string, string, ThemePaletteConfig)>(ThemePresets.Length);
-            foreach (var preset in ThemePresets)
+            foreach (ThemePresetDefinition preset in ThemePresets)
             {
-                var palette = preset.Palette.Clone();
+                ThemePaletteConfig palette = preset.Palette.Clone();
                 palette.Name = L($"Settings.Appearance.ThemePresets.{preset.Id}.Name", palette.Name);
-                var description = L($"Settings.Appearance.ThemePresets.{preset.Id}.Description", preset.Description);
+                string description = L($"Settings.Appearance.ThemePresets.{preset.Id}.Description", preset.Description);
                 items.Add((preset.Id, description, palette));
             }
             return items;
@@ -153,14 +153,14 @@ namespace VaultSync.UI.Services
 
         public static ThemePaletteConfig GetDefaultCustomTheme()
         {
-            var palette = ThemePresets[0].Palette.Clone();
+            ThemePaletteConfig palette = ThemePresets[0].Palette.Clone();
             palette.Name = L("Settings.Appearance.ThemePresets.vaultsync-midnight.Name", palette.Name);
             return palette;
         }
 
         public static void ApplyAppearance(AppearanceConfig appearance)
         {
-            var app = Application.Current;
+            Application? app = Application.Current;
             if (app is null)
                 return;
 
@@ -170,7 +170,7 @@ namespace VaultSync.UI.Services
 
         public static void ApplyTheme(string themeName)
         {
-            var app = Application.Current;
+            Application? app = Application.Current;
             if (app is null)
                 return;
 
@@ -181,7 +181,7 @@ namespace VaultSync.UI.Services
 
         public static void ApplyCompactLayout(bool compact)
         {
-            var app = Application.Current;
+            Application? app = Application.Current;
             if (app == null) return;
 
             app.Resources["CardPadding"]         = compact ? new Thickness(10)    : new Thickness(16);
@@ -237,7 +237,7 @@ namespace VaultSync.UI.Services
 
         private static string L(string key, string fallback)
         {
-            var value = LocalizationProvider.Service?.GetString(key);
+            string? value = LocalizationProvider.Service?.GetString(key);
             return string.Equals(value, key, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(value)
                 ? fallback
                 : value;
@@ -251,15 +251,15 @@ namespace VaultSync.UI.Services
                 return;
             }
 
-            var palette = NormalizePalette(customTheme ?? GetDefaultCustomTheme());
-            var accentSoft = WithAlpha(palette.Accent, palette.BaseTheme == "Light" ? 0.14 : 0.24);
-            var textMuted = Blend(palette.TextSecondary, palette.Background, palette.BaseTheme == "Light" ? 0.45 : 0.60);
-            var inputBackground = Blend(palette.SurfaceAlt, palette.Background, palette.BaseTheme == "Light" ? 0.45 : 0.25);
-            var inputBorder = Blend(palette.SurfaceAlt, palette.TextSecondary, palette.BaseTheme == "Light" ? 0.35 : 0.28);
-            var divider = Blend(palette.SurfaceAlt, palette.TextSecondary, palette.BaseTheme == "Light" ? 0.25 : 0.18);
-            var shellStart = Blend(palette.Accent, palette.Background, palette.BaseTheme == "Light" ? 0.12 : 0.35);
-            var shellEnd = Blend(palette.Accent, palette.SurfaceAlt, palette.BaseTheme == "Light" ? 0.20 : 0.45);
-            var shellText = IsDark(palette.Surface) ? Colors.White : Color.Parse("#11131A");
+            ThemePaletteConfig palette = NormalizePalette(customTheme ?? GetDefaultCustomTheme());
+            Color accentSoft = WithAlpha(palette.Accent, palette.BaseTheme == "Light" ? 0.14 : 0.24);
+            Color textMuted = Blend(palette.TextSecondary, palette.Background, palette.BaseTheme == "Light" ? 0.45 : 0.60);
+            Color inputBackground = Blend(palette.SurfaceAlt, palette.Background, palette.BaseTheme == "Light" ? 0.45 : 0.25);
+            Color inputBorder = Blend(palette.SurfaceAlt, palette.TextSecondary, palette.BaseTheme == "Light" ? 0.35 : 0.28);
+            Color divider = Blend(palette.SurfaceAlt, palette.TextSecondary, palette.BaseTheme == "Light" ? 0.25 : 0.18);
+            Color shellStart = Blend(palette.Accent, palette.Background, palette.BaseTheme == "Light" ? 0.12 : 0.35);
+            Color shellEnd = Blend(palette.Accent, palette.SurfaceAlt, palette.BaseTheme == "Light" ? 0.20 : 0.45);
+            Color shellText = IsDark(palette.Surface) ? Colors.White : Color.Parse("#11131A");
 
             SetColorOverride(app, "VsBackgroundColor", palette.Background);
             SetColorOverride(app, "VsCardColor", palette.Surface);
@@ -283,13 +283,13 @@ namespace VaultSync.UI.Services
 
         private static void ClearPaletteOverrides(Application app)
         {
-            foreach (var key in PaletteResourceKeys)
+            foreach (string key in PaletteResourceKeys)
                 app.Resources.Remove(key);
         }
 
         private static ThemePaletteConfig NormalizePalette(ThemePaletteConfig palette)
         {
-            var defaults = GetDefaultCustomTheme();
+            ThemePaletteConfig defaults = GetDefaultCustomTheme();
             return new ThemePaletteConfig
             {
                 Name = string.IsNullOrWhiteSpace(palette.Name) ? defaults.Name : palette.Name.Trim(),
@@ -311,11 +311,11 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(value))
                 return fallback;
 
-            var candidate = value.Trim();
+            string candidate = value.Trim();
             if (!candidate.StartsWith("#", StringComparison.Ordinal))
                 candidate = "#" + candidate;
 
-            return Color.TryParse(candidate, out var color)
+            return Color.TryParse(candidate, out Color color)
                 ? $"#{color.R:X2}{color.G:X2}{color.B:X2}"
                 : fallback;
         }
@@ -329,10 +329,10 @@ namespace VaultSync.UI.Services
 
         private static Color Blend(Color foreground, Color background, double amount)
         {
-            var alpha = Math.Clamp(amount, 0d, 1d);
-            var red = (byte)Math.Round((foreground.R * alpha) + (background.R * (1d - alpha)));
-            var green = (byte)Math.Round((foreground.G * alpha) + (background.G * (1d - alpha)));
-            var blue = (byte)Math.Round((foreground.B * alpha) + (background.B * (1d - alpha)));
+            double alpha = Math.Clamp(amount, 0d, 1d);
+            byte red = (byte)Math.Round((foreground.R * alpha) + (background.R * (1d - alpha)));
+            byte green = (byte)Math.Round((foreground.G * alpha) + (background.G * (1d - alpha)));
+            byte blue = (byte)Math.Round((foreground.B * alpha) + (background.B * (1d - alpha)));
             return Color.FromRgb(red, green, blue);
         }
 
@@ -345,7 +345,7 @@ namespace VaultSync.UI.Services
         private static bool IsDark(string hex)
         {
             var color = Color.Parse(hex);
-            var luminance = ((0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B)) / 255d;
+            double luminance = ((0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B)) / 255d;
             return luminance < 0.55;
         }
 

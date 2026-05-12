@@ -22,7 +22,7 @@ namespace VaultSync.UI.ViewModels
             if (item is null)
                 return;
 
-            if (!int.TryParse(item.ProjectId, out var projectId))
+            if (!int.TryParse(item.ProjectId, out int projectId))
             {
                 return;
             }
@@ -34,7 +34,7 @@ namespace VaultSync.UI.ViewModels
                 item.ProjectId,
                 item.ProjectName,
                 item.Progress,
-                L("Backups.Status.Cancelling", "Cancelling..."),
+                AppViewModel.L("Backups.Status.Cancelling", "Cancelling..."),
                 string.Empty,
                 allowCancel: false,
                 policyText: item.PolicyText);
@@ -78,7 +78,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var projectItem = BackupsViewModel.ProjectBackups.FirstOrDefault(p => p.Id == projectId);
+            ProjectBackupItem? projectItem = BackupsViewModel.ProjectBackups.FirstOrDefault(p => p.Id == projectId);
             if (projectItem == null)
             {
                 return;
@@ -129,7 +129,7 @@ namespace VaultSync.UI.ViewModels
         /// </summary>
         public void RequestBackupSelectedProjectFromTray()
         {
-            var selected = BackupsViewModel.SelectedProject;
+            ProjectBackupItem? selected = BackupsViewModel.SelectedProject;
 
             Dispatcher.UIThread.Post(() =>
             {
@@ -202,12 +202,12 @@ namespace VaultSync.UI.ViewModels
 
         private static string? TryResolveBackupPathForRead(string relativePath, IReadOnlyList<BackupDestination> destinations, string? legacyRoot)
         {
-            foreach (var dest in destinations.OrderByDescending(d => d.Active))
+            foreach (BackupDestination? dest in destinations.OrderByDescending(d => d.Active))
             {
                 if (string.IsNullOrWhiteSpace(dest.Path))
                     continue;
 
-                if (!TryCombinePathUnderRoot(dest.Path, relativePath, out var combined))
+                if (!TryCombinePathUnderRoot(dest.Path, relativePath, out string? combined))
                     continue;
                 if (Directory.Exists(combined) || File.Exists(combined))
                     return dest.Path;
@@ -215,14 +215,14 @@ namespace VaultSync.UI.ViewModels
 
             if (!string.IsNullOrWhiteSpace(legacyRoot))
             {
-                if (!TryCombinePathUnderRoot(legacyRoot, relativePath, out var combined))
+                if (!TryCombinePathUnderRoot(legacyRoot, relativePath, out string? combined))
                     return null;
                 if (Directory.Exists(combined) || File.Exists(combined))
                     return legacyRoot;
             }
 
             // fall back to first destination path even if not present, so caller can attempt/create
-            var first = destinations.FirstOrDefault();
+            BackupDestination? first = destinations.FirstOrDefault();
             return first?.Path ?? legacyRoot;
         }
 
@@ -230,9 +230,9 @@ namespace VaultSync.UI.ViewModels
         {
             if (!string.IsNullOrWhiteSpace(backup.Path))
             {
-                foreach (var dest in destinations.Where(d => !string.IsNullOrWhiteSpace(d.Path)))
+                foreach (BackupDestination? dest in destinations.Where(d => !string.IsNullOrWhiteSpace(d.Path)))
                 {
-                    if (!TryCombinePathUnderRoot(dest.Path!, backup.Path, out var combined))
+                    if (!TryCombinePathUnderRoot(dest.Path!, backup.Path, out string? combined))
                         continue;
                     if (Directory.Exists(combined) || File.Exists(combined))
                         return dest.Path;
@@ -244,13 +244,13 @@ namespace VaultSync.UI.ViewModels
 
             if (!string.IsNullOrWhiteSpace(backup.DestinationAlias))
             {
-                var match = destinations.FirstOrDefault(d =>
+                BackupDestination? match = destinations.FirstOrDefault(d =>
                     string.Equals(d.Alias ?? string.Empty, backup.DestinationAlias, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(d.Path ?? string.Empty, backup.DestinationAlias, StringComparison.OrdinalIgnoreCase));
 
                 if (match is not null && !string.IsNullOrWhiteSpace(match.Path))
                 {
-                    if (TryCombinePathUnderRoot(match.Path, backup.Path ?? string.Empty, out var combined) &&
+                    if (TryCombinePathUnderRoot(match.Path, backup.Path ?? string.Empty, out string? combined) &&
                         (Directory.Exists(combined) || File.Exists(combined)))
                     {
                         return match.Path;
@@ -272,7 +272,7 @@ namespace VaultSync.UI.ViewModels
 
         private void OnLockEncryptedOpenWorkspacesRequested()
         {
-            RunDetached(OnLockEncryptedOpenWorkspacesRequestedAsync, nameof(OnLockEncryptedOpenWorkspacesRequestedAsync));
+            AppViewModel.RunDetached(OnLockEncryptedOpenWorkspacesRequestedAsync, nameof(OnLockEncryptedOpenWorkspacesRequestedAsync));
         }
 
         private async Task OnLockEncryptedOpenWorkspacesRequestedAsync()
@@ -281,30 +281,30 @@ namespace VaultSync.UI.ViewModels
             {
                 await LockEncryptedOpenWorkspacesNowAsync();
                 BackupsViewModel.ShowNotification(
-                    L("Backups.OpenEncrypted.LockedNow", "Encrypted open folders were locked and cleaned up."),
+                    AppViewModel.L("Backups.OpenEncrypted.LockedNow", "Encrypted open folders were locked and cleaned up."),
                     "Info");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[OpenEncrypted] Lock-now cleanup failed: {ex.Message}");
                 BackupsViewModel.ShowNotification(
-                    L("Backups.OpenEncrypted.LockedNowFailed", "Failed to lock encrypted open folders."),
+                    AppViewModel.L("Backups.OpenEncrypted.LockedNowFailed", "Failed to lock encrypted open folders."),
                     "Warning");
             }
         }
 
         private void OpenBackupFolder(int backupId)
         {
-            RunDetached(() => OpenBackupFolderAsync(backupId), nameof(OpenBackupFolderAsync));
+            AppViewModel.RunDetached(() => OpenBackupFolderAsync(backupId), nameof(OpenBackupFolderAsync));
         }
 
         private async Task OpenBackupFolderAsync(int backupId)
         {
-            var openCardId = $"open-{backupId}";
+            string? openCardId = $"open-{backupId}";
             string? extractedDirForCleanup = null;
             try
             {
-                var preparation = await Task.Run(() => PrepareBackupFolderOpen(backupId));
+                BackupFolderOpenPreparation preparation = await Task.Run(() => PrepareBackupFolderOpen(backupId));
                 if (!preparation.IsReady || string.IsNullOrWhiteSpace(preparation.BackupFolder))
                 {
                     BackupsViewModel.ShowNotification(
@@ -319,11 +319,11 @@ namespace VaultSync.UI.ViewModels
                         openCardId,
                         preparation.ProjectName,
                         0,
-                        L("Backups.OpenEncrypted.Opening", "Opening encrypted backup..."),
+                        AppViewModel.L("Backups.OpenEncrypted.Opening", "Opening encrypted backup..."),
                         string.Empty,
                         allowCancel: false);
 
-                    var extractedDir = await OpenEncryptedBackupFolderAsync(preparation, openCardId);
+                    string? extractedDir = await OpenEncryptedBackupFolderAsync(preparation, openCardId);
                     if (string.IsNullOrWhiteSpace(extractedDir))
                         return;
 
@@ -332,8 +332,8 @@ namespace VaultSync.UI.ViewModels
                         openCardId,
                         preparation.ProjectName,
                         100,
-                        L("Backups.OpenEncrypted.Ready", "Open complete"),
-                        L("Backups.OpenEncrypted.ReadyEta", "Decrypted content is ready."),
+                        AppViewModel.L("Backups.OpenEncrypted.Ready", "Open complete"),
+                        AppViewModel.L("Backups.OpenEncrypted.ReadyEta", "Decrypted content is ready."),
                         allowCancel: false);
 
                     // Schedule cleanup before shell-open so temp decrypted data is never left unscheduled.
@@ -370,26 +370,26 @@ namespace VaultSync.UI.ViewModels
             {
                 var activeKeyRefs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                var cfg = _config;
+                AppConfig cfg = _config;
                 if (!string.IsNullOrWhiteSpace(cfg.Backups.Encryption.KeyRef))
                     activeKeyRefs.Add(cfg.Backups.Encryption.KeyRef.Trim());
 
                 if (cfg.Network.Credentials is { Count: > 0 })
                 {
-                    foreach (var cred in cfg.Network.Credentials)
+                    foreach (NetworkCredentialProfile cred in cfg.Network.Credentials)
                     {
                         if (!string.IsNullOrWhiteSpace(cred.KeyRef))
                             activeKeyRefs.Add(cred.KeyRef.Trim());
                     }
                 }
 
-                foreach (var project in _repo.GetAllProjects())
+                foreach (Project project in _repo.GetAllProjects())
                 {
                     if (!string.IsNullOrWhiteSpace(project.EncryptionKeyRef))
                         activeKeyRefs.Add(project.EncryptionKeyRef.Trim());
                 }
 
-                var removed = _credentialVault.CleanupUnusedSecrets(activeKeyRefs, TimeSpan.FromDays(30));
+                int removed = _credentialVault.CleanupUnusedSecrets(activeKeyRefs, TimeSpan.FromDays(30));
                 if (removed > 0)
                 {
                     Console.WriteLine($"[Security] Removed {removed} stale credential vault entries at startup.");
@@ -403,26 +403,26 @@ namespace VaultSync.UI.ViewModels
 
         private BackupFolderOpenPreparation PrepareBackupFolderOpen(int backupId)
         {
-            var backup = _repo.GetBackupById(backupId);
+            Backup? backup = _repo.GetBackupById(backupId);
             if (backup is null)
                 return BackupFolderOpenPreparation.Failure;
 
-            var cfg = AppConfigStore.GetSnapshot();
-            var destinations = GetAllDestinations(cfg);
-            var destinationRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
+            AppConfig cfg = AppConfigStore.GetSnapshot();
+            List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
+            string? destinationRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(destinationRoot))
                 return BackupFolderOpenPreparation.Failure;
 
             if (string.IsNullOrWhiteSpace(backup.Path))
                 return BackupFolderOpenPreparation.Failure;
 
-            if (!TryCombinePathUnderRoot(destinationRoot, backup.Path, out var fullPath))
+            if (!TryCombinePathUnderRoot(destinationRoot, backup.Path, out string? fullPath))
                 return BackupFolderOpenPreparation.Failure;
             if (!Directory.Exists(fullPath))
                 return BackupFolderOpenPreparation.Failure;
 
-            var encryptedArchivePath = Path.Combine(fullPath, BackupArchiveCryptoService.EncryptedArchiveFileName);
-            var projectName = _repo.GetProjectById(backup.ProjectId)?.Name ?? "backup";
+            string encryptedArchivePath = Path.Combine(fullPath, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            string projectName = _repo.GetProjectById(backup.ProjectId)?.Name ?? "backup";
 
             return new BackupFolderOpenPreparation(
                 IsReady: true,
@@ -450,7 +450,7 @@ namespace VaultSync.UI.ViewModels
 
             var attemptedPasswords = new HashSet<string>(StringComparer.Ordinal);
             var candidatePasswords = new Queue<string>(ResolveEncryptedRestorePasswordCandidates(preparation.ProjectId));
-            if (TryGetEncryptedOpenSessionPassword(preparation.ProjectId, out var cachedSessionPassword) &&
+            if (TryGetEncryptedOpenSessionPassword(preparation.ProjectId, out string? cachedSessionPassword) &&
                 !string.IsNullOrWhiteSpace(cachedSessionPassword))
             {
                 candidatePasswords.Enqueue(cachedSessionPassword);
@@ -460,14 +460,14 @@ namespace VaultSync.UI.ViewModels
             {
                 if (candidatePasswords.Count == 0)
                 {
-                    var passwordPrompt = await ConfirmEncryptedRestorePasswordAsync(preparation.ProjectName);
+                    (bool Confirmed, string Password) passwordPrompt = await ConfirmEncryptedRestorePasswordAsync(preparation.ProjectName);
                     if (!passwordPrompt.Confirmed)
                         return null;
 
                     if (string.IsNullOrWhiteSpace(passwordPrompt.Password))
                     {
                         BackupsViewModel.ShowNotification(
-                            L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
+                            AppViewModel.L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
                             "Warning");
                         continue;
                     }
@@ -475,13 +475,13 @@ namespace VaultSync.UI.ViewModels
                     candidatePasswords.Enqueue(passwordPrompt.Password);
                 }
 
-                var password = candidatePasswords.Dequeue();
+                string password = candidatePasswords.Dequeue();
                 if (!attemptedPasswords.Add(password))
                     continue;
 
                 try
                 {
-                    var extractedPath = await Task.Run(() => ExtractEncryptedBackupForOpen(preparation.BackupFolder, password, (percent, status, eta) =>
+                    string extractedPath = await Task.Run(() => ExtractEncryptedBackupForOpen(preparation.BackupFolder, password, (percent, status, eta) =>
                     {
                         Dispatcher.UIThread.Post(() =>
                         {
@@ -502,7 +502,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     InvalidateEncryptedOpenSession(preparation.ProjectId, password);
                     BackupsViewModel.ShowNotification(
-                        L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted."),
+                        AppViewModel.L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted."),
                         "Warning");
                 }
                 catch (Exception ex)
@@ -518,13 +518,13 @@ namespace VaultSync.UI.ViewModels
 
         private static string ExtractEncryptedBackupForOpen(string backupFolder, string password, Action<double, string, string>? progress)
         {
-            var encryptedArchivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            string encryptedArchivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
             if (!File.Exists(encryptedArchivePath))
                 throw new FileNotFoundException("Encrypted archive not found.", encryptedArchivePath);
 
-            var stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-open-{Guid.NewGuid():N}");
-            var stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
-            var extractDir = Path.Combine(stagingRoot, "content");
+            string stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-open-{Guid.NewGuid():N}");
+            string stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
+            string extractDir = Path.Combine(stagingRoot, "content");
 
             try
             {
@@ -532,22 +532,22 @@ namespace VaultSync.UI.ViewModels
                 progress?.Invoke(10, "Decrypting archive...", string.Empty);
 
                 var cryptoService = new BackupArchiveCryptoService();
-                cryptoService.DecryptArchiveToPlainZip(backupFolder, password, stagingArchive);
+                BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, password, stagingArchive);
                 progress?.Invoke(40, "Decrypting archive...", string.Empty);
 
-                using var archive = ZipFile.OpenRead(stagingArchive);
-                var totalEntries = archive.Entries.Count;
-                var processed = 0;
-                foreach (var entry in archive.Entries)
+                using ZipArchive archive = ZipFile.OpenRead(stagingArchive);
+                int totalEntries = archive.Entries.Count;
+                int processed = 0;
+                foreach (ZipArchiveEntry entry in archive.Entries)
                 {
-                    var destinationPath = GetSafeArchiveEntryPath(extractDir, entry.FullName);
+                    string destinationPath = GetSafeArchiveEntryPath(extractDir, entry.FullName);
                     if (string.IsNullOrEmpty(entry.Name))
                     {
                         Directory.CreateDirectory(destinationPath);
                     }
                     else
                     {
-                        var parentDir = Path.GetDirectoryName(destinationPath);
+                        string? parentDir = Path.GetDirectoryName(destinationPath);
                         if (!string.IsNullOrEmpty(parentDir))
                             Directory.CreateDirectory(parentDir);
 
@@ -555,10 +555,10 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     processed++;
-                    var extractPercent = totalEntries == 0 ? 100d : (processed * 100d / totalEntries);
-                    var mappedPercent = 40d + (extractPercent * 0.6d);
-                    var fileLabel = string.IsNullOrWhiteSpace(entry.FullName) ? "Extracting..." : $"Extracting {entry.FullName}";
-                    var etaLabel = totalEntries == 0
+                    double extractPercent = totalEntries == 0 ? 100d : (processed * 100d / totalEntries);
+                    double mappedPercent = 40d + (extractPercent * 0.6d);
+                    string fileLabel = string.IsNullOrWhiteSpace(entry.FullName) ? "Extracting..." : $"Extracting {entry.FullName}";
+                    string etaLabel = totalEntries == 0
                         ? string.Empty
                         : $"Extracting {processed}/{totalEntries}";
                     progress?.Invoke(mappedPercent, fileLabel, etaLabel);
@@ -586,14 +586,14 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var nowUtc = DateTime.UtcNow;
-                foreach (var dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
+                DateTime nowUtc = DateTime.UtcNow;
+                foreach (string dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
                 {
                     try
                     {
-                        var createdUtc = Directory.GetCreationTimeUtc(dir);
-                        var modifiedUtc = Directory.GetLastWriteTimeUtc(dir);
-                        var referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
+                        DateTime createdUtc = Directory.GetCreationTimeUtc(dir);
+                        DateTime modifiedUtc = Directory.GetLastWriteTimeUtc(dir);
+                        DateTime referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
                         if ((nowUtc - referenceUtc) < EncryptedOpenStaleRetention)
                             continue;
 
@@ -613,13 +613,13 @@ namespace VaultSync.UI.ViewModels
 
         private void ScheduleEncryptedOpenCleanup(string extractedDir)
         {
-            var stagingRoot = ResolveEncryptedOpenStagingRoot(extractedDir);
+            string? stagingRoot = ResolveEncryptedOpenStagingRoot(extractedDir);
             if (string.IsNullOrWhiteSpace(stagingRoot))
                 return;
-            var cleanupDelay = GetEncryptedOpenTimeout();
+            TimeSpan cleanupDelay = GetEncryptedOpenTimeout();
 
             var cts = new CancellationTokenSource();
-            var previous = _encryptedOpenCleanup.AddOrUpdate(stagingRoot, cts, (_, old) =>
+            CancellationTokenSource previous = _encryptedOpenCleanup.AddOrUpdate(stagingRoot, cts, (_, old) =>
             {
                 try { old.Cancel(); } catch { }
                 old.Dispose();
@@ -647,7 +647,7 @@ namespace VaultSync.UI.ViewModels
                 }
                 finally
                 {
-                    if (_encryptedOpenCleanup.TryRemove(stagingRoot, out var token))
+                    if (_encryptedOpenCleanup.TryRemove(stagingRoot, out CancellationTokenSource? token))
                     {
                         token.Dispose();
                     }
@@ -662,8 +662,8 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var full = Path.GetFullPath(extractedDir);
-                var tempRoot = Path.GetFullPath(Path.GetTempPath());
+                string full = Path.GetFullPath(extractedDir);
+                string tempRoot = Path.GetFullPath(Path.GetTempPath());
                 if (!full.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
                     return null;
 
@@ -685,7 +685,7 @@ namespace VaultSync.UI.ViewModels
 
         private static async Task TryDeleteEncryptedOpenStagingRootAsync(string stagingRoot, CancellationToken ct)
         {
-            for (var attempt = 0; attempt < 8; attempt++)
+            for (int attempt = 0; attempt < 8; attempt++)
             {
                 ct.ThrowIfCancellationRequested();
                 try
@@ -706,10 +706,10 @@ namespace VaultSync.UI.ViewModels
 
         private TimeSpan GetEncryptedOpenTimeout()
         {
-            var minutes = DefaultEncryptedOpenTimeoutMinutes;
+            int minutes = DefaultEncryptedOpenTimeoutMinutes;
             try
             {
-                var configured = _config?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes;
+                int configured = _config?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes;
                 minutes = Math.Clamp(configured, 1, 240);
             }
             catch
@@ -723,7 +723,7 @@ namespace VaultSync.UI.ViewModels
         private bool TryGetEncryptedOpenSessionPassword(int projectId, out string password)
         {
             password = string.Empty;
-            if (!_encryptedOpenSessions.TryGetValue(projectId, out var session))
+            if (!_encryptedOpenSessions.TryGetValue(projectId, out EncryptedOpenUnlockSession? session))
                 return false;
 
             if (session.ExpiresUtc <= DateTime.UtcNow)
@@ -748,7 +748,7 @@ namespace VaultSync.UI.ViewModels
 
         private void InvalidateEncryptedOpenSession(int projectId, string attemptedPassword)
         {
-            if (!_encryptedOpenSessions.TryGetValue(projectId, out var session))
+            if (!_encryptedOpenSessions.TryGetValue(projectId, out EncryptedOpenUnlockSession? session))
                 return;
 
             if (string.Equals(session.Password, attemptedPassword, StringComparison.Ordinal))
@@ -761,7 +761,7 @@ namespace VaultSync.UI.ViewModels
         {
             _encryptedOpenSessions.Clear();
 
-            foreach (var entry in _encryptedOpenCleanup.ToArray())
+            foreach (KeyValuePair<string, CancellationTokenSource> entry in _encryptedOpenCleanup.ToArray())
             {
                 try { entry.Value.Cancel(); } catch { }
                 entry.Value.Dispose();
@@ -775,7 +775,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                foreach (var dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
+                foreach (string dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
                 {
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
                     await TryDeleteEncryptedOpenStagingRootAsync(dir, cts.Token).ConfigureAwait(false);
@@ -795,14 +795,14 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var normalizedRoot = Path.GetFullPath(root)
+                string normalizedRoot = Path.GetFullPath(root)
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                     + Path.DirectorySeparatorChar;
 
                 if (Path.IsPathFullyQualified(relativePath))
                     return false;
 
-                var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath ?? string.Empty));
+                string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath ?? string.Empty));
                 if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
                     return false;
 
@@ -844,11 +844,11 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var fullPath = PrepareBackupFolderOpen(backupId).BackupFolder;
+                string fullPath = PrepareBackupFolderOpen(backupId).BackupFolder;
                 if (string.IsNullOrWhiteSpace(fullPath))
                     return;
 
-                var markerPath = Path.Combine(fullPath, BackupProtectionMarkerFileName);
+                string markerPath = Path.Combine(fullPath, BackupProtectionMarkerFileName);
                 if (isProtected)
                 {
                     File.WriteAllText(markerPath, $"keep:{DateTime.UtcNow:O}");
@@ -869,8 +869,8 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 ReloadBackupsVmData();
-                var projectItem = BackupsViewModel.ProjectBackups
-                    .FirstOrDefault(p => int.TryParse(p.Id, out var pid) && pid == projectId);
+                ProjectBackupItem? projectItem = BackupsViewModel.ProjectBackups
+                    .FirstOrDefault(p => int.TryParse(p.Id, out int pid) && pid == projectId);
                 if (projectItem is not null)
                 {
                     BackupsViewModel.SelectedProject = projectItem;
@@ -896,21 +896,21 @@ namespace VaultSync.UI.ViewModels
                 var projectsById = projects
                     .GroupBy(p => p.Id)
                     .ToDictionary(g => g.Key, g => g.First());
-                var recent = _repo.GetRecentBackupsByProject(maxPerProject);
+                IReadOnlyList<Backup> recent = _repo.GetRecentBackupsByProject(maxPerProject);
                 var grouped = recent
                     .GroupBy(b => b.ProjectId)
                     .ToDictionary(g => g.Key, g => g.ToList());
 
-                foreach (var project in projects)
+                foreach (Project? project in projects)
                 {
-                    grouped.TryGetValue(project.Id, out var projectBackups);
-                    var backups = (projectBackups ?? new List<Backup>())
+                    grouped.TryGetValue(project.Id, out List<Backup>? projectBackups);
+                    var backups = (projectBackups ?? [])
                         .OrderByDescending(b => b.CreatedUtc)
                         .Select(b =>
                         {
-                            var ts   = b.CreatedUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
-                            var keep = b.IsProtected ? L("Tray.Recent.KeptSuffix", " * Keep") : string.Empty;
-                            var label = $"{ts}{keep}";
+                            string ts   = b.CreatedUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+                            string keep = b.IsProtected ? AppViewModel.L("Tray.Recent.KeptSuffix", " * Keep") : string.Empty;
+                            string label = $"{ts}{keep}";
                             return new TrayBackupItem(b.Id, project.Id, label, b.IsProtected);
                         })
                         .ToList();
@@ -922,7 +922,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch
             {
-                return Array.Empty<TrayProjectBackups>();
+                return [];
             }
         }
 
@@ -930,11 +930,11 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var backup = _repo.GetBackupById(backupId);
+                Backup? backup = _repo.GetBackupById(backupId);
                 if (backup is null)
                     return;
 
-                var newValue = !backup.IsProtected;
+                bool newValue = !backup.IsProtected;
                 _repo.SetBackupProtection(backupId, newValue);
                 UpdateBackupProtectionMarker(backupId, newValue);
                 BackupsViewModel.MarkBackupProtection(backupId, newValue);

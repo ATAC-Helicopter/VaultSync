@@ -24,12 +24,12 @@ public static class ScanCacheStore
     {
         try
         {
-            var path = GetCachePath(project);
+            string path = GetCachePath(project);
             if (!File.Exists(path))
                 return null;
 
-            var json = File.ReadAllText(path);
-            var cache = JsonSerializer.Deserialize<ScanCacheState>(json, s_jsonOptions);
+            string json = File.ReadAllText(path);
+            ScanCacheState? cache = JsonSerializer.Deserialize<ScanCacheState>(json, s_jsonOptions);
             if (cache is null)
                 return null;
 
@@ -54,13 +54,13 @@ public static class ScanCacheStore
     {
         try
         {
-            var path = GetCachePath(project);
-            var dir = Path.GetDirectoryName(path);
+            string path = GetCachePath(project);
+            string? dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrWhiteSpace(dir))
                 Directory.CreateDirectory(dir);
 
             cache.RootPath = project.RootPath;
-            var json = JsonSerializer.Serialize(cache, s_jsonOptions);
+            string json = JsonSerializer.Serialize(cache, s_jsonOptions);
             File.WriteAllText(path, json);
         }
         catch
@@ -70,8 +70,8 @@ public static class ScanCacheStore
 
     private static string GetCachePath(Project project)
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var dir = Path.Combine(appData, "VaultSync", "cache", "scan");
+        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        string dir = Path.Combine(appData, "VaultSync", "cache", "scan");
         return Path.Combine(dir, $"{project.Id}.json");
     }
 }

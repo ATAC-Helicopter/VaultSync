@@ -29,7 +29,7 @@ class DownloadStatsTests(unittest.TestCase):
                     ],
                 },
                 {
-                    "tag_name": "v1.8.0-beta.1",
+                    "tag_name": "v1.7.4-beta.1",
                     "total_downloads": 4,
                     "assets": [
                         {"name": "vaultsync-beta.zip", "download_count": 4},
@@ -41,8 +41,8 @@ class DownloadStatsTests(unittest.TestCase):
         raw_releases = [
             {
                 "id": 200,
-                "tag_name": "v1.8.0-beta.2",
-                "name": "1.8.0 Beta 2",
+                "tag_name": "v1.7.4-beta.2",
+                "name": "1.7.4 Beta 2",
                 "draft": False,
                 "prerelease": True,
                 "created_at": "2026-03-29T10:00:00Z",
@@ -96,7 +96,7 @@ class DownloadStatsTests(unittest.TestCase):
         prerelease = snapshot["highlights"]["latest_prerelease"]
         self.assertEqual(stable["tag_name"], "v1.7.0")
         self.assertEqual(stable["downloads_delta"], 5)
-        self.assertEqual(prerelease["tag_name"], "v1.8.0-beta.2")
+        self.assertEqual(prerelease["tag_name"], "v1.7.4-beta.2")
         self.assertEqual(prerelease["downloads_delta"], 9)
 
         top_assets = snapshot["highlights"]["top_assets"]

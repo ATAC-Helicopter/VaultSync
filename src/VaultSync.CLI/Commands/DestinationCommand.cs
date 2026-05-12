@@ -20,10 +20,10 @@ namespace VaultSync.CLI.Commands
 
     sealed class DestinationCommand : AsyncCommand<DestinationSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken ct)
         {
-            var config = AppConfigStore.Load();
-            var destinations = BuildActiveDestinations(config);
+            AppConfig config = AppConfigStore.Load();
+            List<BackupDestination> destinations = BuildActiveDestinations(config);
             if (destinations.Count == 0)
             {
                 AnsiConsole.MarkupLine("[yellow]No backup destinations configured.[/]");
@@ -37,20 +37,20 @@ namespace VaultSync.CLI.Commands
             }
 
             var results = new List<DestinationInfo>();
-            foreach (var dest in destinations)
+            foreach (BackupDestination dest in destinations)
             {
-                var alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias;
-                var path = dest.Path ?? string.Empty;
-                var status = dest.Active ? "Active" : "Inactive";
-                var message = "Configured";
-                var reachable = false;
+                string alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias;
+                string path = dest.Path ?? string.Empty;
+                string status = dest.Active ? "Active" : "Inactive";
+                string message = "Configured";
+                bool reachable = false;
 
                 if (settings.Test && dest.Active)
                 {
-                    var profile = ResolveCredential(config, dest);
+                    NetworkCredentialProfile? profile = ResolveCredential(config, dest);
                     try
                     {
-                        var resolution = mountService!.PrepareDestination(dest, profile);
+                        DestinationResolution resolution = mountService!.PrepareDestination(dest, profile);
                         reachable = resolution.IsSuccess;
                         message = string.IsNullOrWhiteSpace(resolution.Message)
                             ? (reachable ? "Reachable" : "Unreachable")
@@ -73,24 +73,23 @@ namespace VaultSync.CLI.Commands
                 {
                     r.Alias,
                     r.Path,
-                    Status = r.Status,
-                    Reachable = r.Reachable,
+                    r.Status,
+                    r.Reachable,
                     r.Message
                 });
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                Console.WriteLine(JsonSerializer.Serialize(payload, options));
+                Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
                 return Task.FromResult(0);
             }
 
-            var table = new Table().Border(TableBorder.Rounded);
+            Table table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("Alias");
             table.AddColumn(new TableColumn("Path").Width(35));
             table.AddColumn("Status");
             table.AddColumn("Details");
 
-            foreach (var row in results)
+            foreach (DestinationInfo row in results)
             {
-                var detail = settings.Test
+                string detail = settings.Test
                     ? (row.Reachable ? "Reachable" : row.Message)
                     : row.Message;
 

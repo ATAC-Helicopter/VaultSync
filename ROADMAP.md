@@ -7,7 +7,7 @@
 
 ## Planning convention
 - Use `VS-xxxx` IDs as the default planning unit for roadmap items, implementation tasks, and release work.
-- Pre-`2.0` planning uses explicit `1.x` release streams (for example: `1.5.x`, `1.6.x`, `1.7.x`, `1.8.x`, `1.9.x`) instead of a generic long-term bucket.
+- Pre-`2.0` planning uses explicit active release streams plus a future backlog; do not open a numbered future stream until work actually starts.
 - ID pattern:
   - `VS` = VaultSync work item.
   - First two digits map to release family (`15xx` for `1.5`, `16xx` for `1.6`, etc.).
@@ -19,6 +19,8 @@
 - `CHANGELOG.md` rule:
   - Use `VS-xxxx` IDs for actual feature entries.
   - Cleanup/doc-only/test-only notes may omit IDs unless they map to a planned roadmap item.
+  - Keep each entry to one sentence and roughly 110 characters after the ID.
+  - If an entry needs more detail, put it in `docs/WHATS_NEW.md`, the issue, or the PR body.
 - If a task spans releases, split it into release-specific IDs to keep scope and acceptance criteria explicit.
 
 ## Roadmap sync format (project automation)
@@ -26,7 +28,7 @@
   - `- [ ] \`VS-xxxx\` Title`
   - Optional details/acceptance criteria stay as indented bullets below the ticket.
 - Use release sections as routing signals:
-  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## 1.8.x`, `## 1.9.x`
+  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## Future backlog`, `## 1.9.x`
 - For new work, always include:
   - ID (`VS-xxxx`)
   - Priority marker (`P0/P1/P2`) at the start of the ticket line when relevant.
@@ -863,7 +865,7 @@
    - Goal: modernize the dashboard information hierarchy and visual clarity without losing VaultSync's current identity or familiar navigation, then carry shared project-tag color semantics consistently across the app.
 
 ### Revised planning notes
-- `VS-1704` is moved out of `1.7` and into `1.8` as a deliberate scope cut.
+- `VS-1704` is moved out of the active `1.7` release checklist and into the future backlog as a deliberate scope cut.
   - Reason: shared-vault access control and audit trails are a separate product stream and would dilute the reliability/repair focus of `1.7`.
   - `1.7` release should not ship until:
     - orphan detection/remap is deterministic and idempotent,
@@ -1205,6 +1207,16 @@
     - Theme section selection is explicit before palette colors are applied.
     - Theme quick colors update the selected section immediately instead of appearing to do nothing.
 
+- [x] `VS-1723` `P1` Refactor SettingsViewModel into feature partials. _(Done)_
+  - Scope: split Settings viewmodel responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce risk for platform and settings changes.
+  - Current status:
+    - Done: the theme-editor logic now lives in `SettingsViewModel.ThemeEditor.cs`.
+    - Issue `#182` tracks the completed refactor slice.
+  - Acceptance:
+    - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
+    - Existing Settings bindings continue to work without regressions.
+    - The split makes later platform-specific settings work lower-risk and easier to review.
+
 
 - [x] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(Done)_
   - Scope:
@@ -1519,10 +1531,10 @@
   - Acceptance:
     - projects with recoverable blank roots are repaired during startup without waiting for backup/restore flows
     - project root repairs prefer stable project identity over name-only matching
-- [ ] `BUG-17106` `P2` Add explicit auto-scroll and selected-line copy controls to the in-app log console.
+- [x] `BUG-17106` `P2` Add explicit auto-scroll and selected-line copy controls to the in-app log console. _(Done)_
   - Scope: expose an explicit tail-follow toggle, stop manual scroll from fighting live capture, and allow copying the selected log line via button and standard shortcut.
   - Current status:
-    - In progress: implemented on PR `#222`.
+    - Done: implemented and shipped in the `1.7.x` release line.
     - Issue `#229` tracks the user-facing log console controls.
   - Acceptance:
     - the log console exposes an explicit auto-scroll toggle
@@ -1534,10 +1546,11 @@
   - Acceptance:
     - Linux read-only destinations stay visibly `Read-only` during background and navigation refreshes
     - status refresh paths preserve warning/read-only state instead of repainting it as success
-- [ ] `BUG-17108` `P1` Make the in-app log console reliably surface runtime errors and exception paths.
+- [x] `BUG-17108` `P1` Make the in-app log console reliably surface runtime errors and exception paths. _(Done)_
   - Scope: ensure exceptions and error-level diagnostics that currently only appear in terminal/stdout or external console paths are also routed into the in-app log console consistently across Linux and other desktop targets.
   - Current status:
-    - Reported via issue `#231`: some reproducible runtime errors do not appear in the in-app log console even though they are visible from `dotnet run` output.
+    - Done: implemented on PR `#255`.
+    - Issue `#231` tracks the original runtime-error visibility report.
   - Acceptance:
     - reproducible runtime errors appear in the in-app log console without requiring an external terminal
     - log console coverage is consistent for handled and surfaced error paths on supported desktop targets
@@ -1549,7 +1562,7 @@
   - Acceptance:
     - destination status cards always render in the active UI language after navigation and menu reopen flows
     - cached view reuse does not keep stale localized destination labels alive
-- [ ] `VS-1805` `P1` Add Linux release assets and architecture-aware patch packaging to the release workflow.
+- [ ] `VS-1732` `P1` Add Linux release assets and architecture-aware patch packaging to the release workflow.
   - Scope: build Linux `tar.gz` assets for `x64` and `arm64`, produce a desktop-friendly `linux-x64` AppImage, generate Linux patch assets, and make updater asset selection architecture-aware.
   - Current status:
     - In progress: workflow, updater, and docs changes are prepared locally on `Dev`.
@@ -1558,32 +1571,76 @@
     - release-assets workflow uploads Linux install artifacts and Linux patch assets
     - Linux update discovery prefers architecture-specific installers and patch assets before generic Linux fallback
 
-## 1.8.x
-- [x] `BUG-17106` `P2` Improve in-app log console tail-following and selected-line copy. _(Done)_
-  - Scope: expose log tail-following as a real UI control and let users copy the selected log line without exporting the full console.
-  - Acceptance:
-    - the log console exposes an Auto-scroll toggle
-    - new log lines follow automatically when the toggle is enabled
-    - users can scroll away from the bottom without the view forcing itself back down unless auto-scroll is enabled
-    - the selected log line can be copied from the UI and via the usual platform copy shortcut
-- [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
-  - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.
+### 1.7.4 patch backlog
+- [x] `BUG-17115` `P2` Make Linux tray actions selectable through a compact native menu. _(Done)_
+  - Scope: simplify the fragile nested native tray menu on Linux/Windows so right-click actions reliably open the richer tray panel.
   - Current status:
-    - Deferred from `1.7.x`: this remains a behavior-preserving refactor, not a release-critical shipping item.
-    - The partial split can continue after `1.7` stabilization without blocking the release.
+    - Done: implemented on PR `#256`.
+    - Issue `#250` tracks the Linux tray-menu selection regression.
   - Acceptance:
-    - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
-    - Existing Settings bindings continue to work without regressions.
-    - The split makes later platform-specific settings work lower-risk and easier to review.
+    - Linux desktop environments can select tray actions from the native menu.
+    - deeper backup actions remain available from the richer tray panel.
+- [ ] `BUG-17116` `P1` Harden notification auto-dismiss cleanup after dismiss.
+  - Scope: avoid disposed-token races when notifications are dismissed while auto-dismiss cleanup is still pending.
+  - Current status:
+    - In progress: implemented on PR `#258`.
+    - Issue `#257` tracks the notification cleanup crash.
+  - Acceptance:
+    - dismissing toast-heavy notification flows no longer produces disposed-token crash reports.
+- [x] `BUG-17117` `P2` Keep tray panel action labels fitting in localized layouts. _(Done)_
+  - Scope: wrap long tray-panel button labels inside the fixed popover width.
+  - Current status:
+    - Done: implemented on PR `#252`.
+    - Issue `#249` tracks the original text-fit report.
+  - Acceptance:
+    - long localized tray panel action labels wrap instead of clipping or overflowing.
+- [x] `BUG-17118` `P2` Improve log console row formatting. _(Done)_
+  - Scope: format live diagnostics into readable time/source/message rows while keeping raw lines available for copy/export.
+  - Current status:
+    - Done: implemented alongside the log-console diagnostics work in PR `#255`.
+  - Acceptance:
+    - log console entries are easier to scan without losing raw diagnostic text.
+- [ ] `BUG-17119` `P1` Preserve Linux metadata imports when source backup paths are rooted.
+  - Scope: remap rooted metadata backup paths from another machine to matching backup suffixes under the configured destination before marking imported history missing.
+  - Current status:
+    - In progress: implemented on PR `#263`.
+    - Issue `#259` tracks the Linux import-history regression.
+  - Acceptance:
+    - Linux installs import backup history when the configured destination contains the backup folder even if metadata stores a rooted source-machine path.
+    - missing backup detection still tombstones genuinely absent backup paths.
+- [ ] `BUG-17120` `P1` Isolate test config writes from real app settings.
+  - Scope: keep core tests that use `AppConfigStore` from writing temporary project roots into a developer's `~/.vaultsync/appsettings.json`.
+  - Current status:
+    - In progress: implemented on PR `#263`.
+    - Issue `#260` tracks the test-config leakage.
+  - Acceptance:
+    - test runs use a temporary config directory unless `VAULTSYNC_CONFIG_DIR` is explicitly provided.
+    - running metadata/config tests no longer changes the visible Projects root in a developer app install.
+- [ ] `BUG-17121` `P2` Separate imported origin from manual/auto trigger counts.
+  - Scope: adjust Backups summaries and activity charts so imported restore points are not misleadingly double-counted as both imported and manual/auto totals.
+  - Current status:
+    - Issue `#261` tracks the follow-up from the import/history audit.
+  - Acceptance:
+    - Backups totals make origin (`Local`/`Imported`) distinct from trigger (`Manual`/`Auto`).
+    - summary counts are internally consistent for mixed local/imported history.
+- [ ] `VS-1731` `P1` Versioned backup history with imported timestamps and file-change identity.
+  - Scope: add explicit version/history identity fields so backup history can lead with restore-point version and file-change deltas instead of relying primarily on source timestamps.
+  - Current status:
+    - Issue `#262` tracks the design and implementation plan.
+  - Acceptance:
+    - history can show per-project restore-point versions alongside added/modified/deleted/net-size changes.
+    - imported history distinguishes source-created time from local imported/discovered time.
+    - future metadata sync can reconcile equal content across machines via a stable content fingerprint.
 
-- [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.
-- [ ] `VS-1802` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
-- [ ] `VS-1803` `P2` Automation hooks (webhooks/scripts on backup/restore events).
-- [ ] `VS-1804` `P2` CLI parity with all major UI features.
+## Future backlog
+- [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
+- [ ] `VS-1734` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
+- [ ] `VS-1735` `P2` Automation hooks (webhooks/scripts on backup/restore events).
+- [ ] `VS-1736` `P2` CLI parity with all major UI features.
 - [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).
   - Scope: shared-vault collaboration primitives and operator audit visibility.
   - Planning note:
-    - Moved from `1.7.x` so `1.7` can stay focused on reliability, repair, and updater determinism.
+    - Moved out of the active `1.7.x` release checklist so `1.7` can stay focused on reliability, repair, and updater determinism.
   - Acceptance:
     - Shared workflows stay optional and do not regress solo mode defaults.
 
@@ -1593,4 +1650,3 @@
   - Revisit the `2.0` decision near the end of `1.9` based on actual scope, not milestone vanity.
 - [ ] `VS-1902` `P1` App signing for trusted distribution.
 - [ ] `VS-1903` `P2` Background integrity audits with alerts.
-

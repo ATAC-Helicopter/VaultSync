@@ -19,13 +19,13 @@ public class ScannerService
     /// </summary>
     public IEnumerable<FileEntry> Scan(string root)
     {
-        foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        foreach (string path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
         {
             if (_filter.ShouldExclude(root, path))
                 continue;
 
             var fi  = new FileInfo(path);
-            var rel = Path.GetRelativePath(root, path).Replace('\\', '/');
+            string rel = Path.GetRelativePath(root, path).Replace('\\', '/');
 
             yield return new FileEntry(rel, fi.Length, fi.LastWriteTimeUtc, "");
         }
@@ -44,7 +44,7 @@ public class ScannerService
         {
             var results = new List<FileEntry>();
 
-            foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            foreach (string path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -54,7 +54,7 @@ public class ScannerService
                 try
                 {
                     var fi  = new FileInfo(path);
-                    var rel = Path.GetRelativePath(root, path).Replace('\\', '/');
+                    string rel = Path.GetRelativePath(root, path).Replace('\\', '/');
 
                     results.Add(new FileEntry(rel, fi.Length, fi.LastWriteTimeUtc, ""));
                 }

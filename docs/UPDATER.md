@@ -20,6 +20,10 @@ VaultSync uses GitHub Releases for update discovery and supports patch assets to
   - `VaultSync-<version>-linux-x64.tar.gz`
   - `VaultSync-<version>-linux-arm64.tar.gz`
 
+The Linux `.tar.gz` bundles include `install.sh` and `uninstall.sh` for a
+per-user install that creates a desktop launcher, icon, and `vaultsync`
+command under `~/.local` without requiring a distro-specific package manager.
+
 macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`

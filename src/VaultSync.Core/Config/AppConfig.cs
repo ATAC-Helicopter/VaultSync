@@ -43,7 +43,7 @@ namespace VaultSync.Core.Config
         public bool   EnableAutoBackups     { get; set; } = true;
         public int    IntervalMinutes       { get; set; } = 30;
         public int    MaxSnapshotsPerProject{ get; set; } = 20;
-        public List<int> AutoBackupDisabledProjects { get; set; } = new();
+        public List<int> AutoBackupDisabledProjects { get; set; } = [];
         public string? Location             { get; set; } = string.Empty;
         public bool   EnableMetadataSync    { get; set; } = true;
         public bool   AutoImportMetadata    { get; set; } = true;
@@ -145,7 +145,7 @@ namespace VaultSync.Core.Config
         /// Preferred backup destinations (local / external / network).
         /// When empty, BackupRoot is used for legacy compatibility.
         /// </summary>
-        public List<BackupDestination> Destinations { get; set; } = new();
+        public List<BackupDestination> Destinations { get; set; } = [];
 
         /// <summary>
         /// Global backup encryption policy and non-secret key/material references.
@@ -191,7 +191,7 @@ namespace VaultSync.Core.Config
         /// Saved credential profiles that can be assigned to NAS destinations.
         /// Secrets should be stored in platform keychain/credential manager; KeyRef points to that entry.
         /// </summary>
-        public List<NetworkCredentialProfile> Credentials { get; set; } = new();
+        public List<NetworkCredentialProfile> Credentials { get; set; } = [];
     }
 
     public sealed class NetworkCredentialProfile
@@ -252,7 +252,7 @@ namespace VaultSync.Core.Config
         public string Theme { get; set; } = "System";
         public bool    CompactLayout      { get; set; } = false;
         public bool    ShowProjectAvatars { get; set; } = true;
-        public Dictionary<string, TagColorConfig> TagColors { get; set; } = new();
+        public Dictionary<string, TagColorConfig> TagColors { get; set; } = [];
         public ThemePaletteConfig CustomTheme { get; set; } = ThemePaletteConfig.CreateDefault();
     }
 
@@ -337,7 +337,7 @@ namespace VaultSync.Core.Config
         public string LastWhatsNewVersion { get; set; } = string.Empty;
         public bool HasSeenOnboarding { get; set; } = false;
         public BackupIndexScanSummary BackupIndexLastScan { get; set; } = new();
-        public List<ProjectMetadataConflictRecord> ProjectMetadataConflicts { get; set; } = new();
+        public List<ProjectMetadataConflictRecord> ProjectMetadataConflicts { get; set; } = [];
         public UpdateCheckDiagnostics UpdateDiagnostics { get; set; } = new();
         public BackupRepairTelemetry BackupRepairTelemetry { get; set; } = new();
         public MetadataConflictTelemetry MetadataConflictTelemetry { get; set; } = new();
@@ -366,7 +366,7 @@ namespace VaultSync.Core.Config
         public int BackupCount { get; set; }
         public int ErrorCount { get; set; }
         public int WarningCount { get; set; }
-        public List<string> TopFindingCodes { get; set; } = new();
+        public List<string> TopFindingCodes { get; set; } = [];
     }
 
     public sealed class ProjectMetadataConflictRecord
@@ -417,7 +417,7 @@ namespace VaultSync.Core.Config
         public string Message { get; set; } = string.Empty;
         public string CurrentVersion { get; set; } = string.Empty;
         public string ManifestPreviousVersion { get; set; } = string.Empty;
-        public List<string> ManifestAllowedBaseVersions { get; set; } = new();
+        public List<string> ManifestAllowedBaseVersions { get; set; } = [];
         public string MatchedBaseVersion { get; set; } = string.Empty;
         public string ManifestTargetVersion { get; set; } = string.Empty;
         public bool Eligible { get; set; }
@@ -432,8 +432,8 @@ namespace VaultSync.Core.Config
         public string LastScanUtc { get; set; } = string.Empty;
         public int PlannedActionCount { get; set; }
         public int BlockedIssueBucketCount { get; set; }
-        public List<string> PlannedActionCodes { get; set; } = new();
-        public List<string> BlockedIssueCodes { get; set; } = new();
+        public List<string> PlannedActionCodes { get; set; } = [];
+        public List<string> BlockedIssueCodes { get; set; } = [];
         public string LastApplyUtc { get; set; } = string.Empty;
         public int LastAppliedCount { get; set; }
         public string LastStatus { get; set; } = string.Empty;
@@ -451,7 +451,7 @@ namespace VaultSync.Core.Config
     {
         public string LastCompletedUtc { get; set; } = string.Empty;
         public long TotalDurationMs { get; set; }
-        public List<StartupDiagnosticsPhase> Phases { get; set; } = new();
+        public List<StartupDiagnosticsPhase> Phases { get; set; } = [];
     }
 
     public sealed class CheckpointResumeTelemetry
@@ -489,8 +489,8 @@ public sealed class AppBehaviorConfig
     /// will run in the background without showing the window.
     /// </summary>
     public bool ShowWindowOnTrayActions { get; set; } = true;
-    
-        /// <summary>
+
+    /// <summary>
     /// If true, show a tray icon (Windows) or menu bar icon (macOS).
     /// </summary>
     public bool ShowTrayIcon { get; set; } = true;
@@ -524,6 +524,6 @@ public sealed class AppBehaviorConfig
         /// <summary>
         /// Discovered project root paths hidden from the Projects page list.
         /// </summary>
-        public List<string> HiddenProjectPaths { get; set; } = new();
+        public List<string> HiddenProjectPaths { get; set; } = [];
     }
 }

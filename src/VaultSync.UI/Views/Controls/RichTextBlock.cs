@@ -44,7 +44,7 @@ public class RichTextBlock : TextBlock
         if (string.IsNullOrEmpty(text))
             return;
 
-        var i = 0;
+        int i = 0;
         while (i < text.Length)
         {
             if (text[i] == '\n')
@@ -54,7 +54,7 @@ public class RichTextBlock : TextBlock
                 continue;
             }
 
-            if (IsAt(text, i, "~~") && TryReadToken(text, i + 2, "~~", out var strikeText, out var nextStrike))
+            if (IsAt(text, i, "~~") && TryReadToken(text, i + 2, "~~", out string? strikeText, out int nextStrike))
             {
                 var run = new Run(strikeText)
                 {
@@ -65,9 +65,9 @@ public class RichTextBlock : TextBlock
                 continue;
             }
 
-            if (IsAt(text, i, "[") && TryReadLink(text, i, out var linkText, out var linkUrl, out var nextLink))
+            if (IsAt(text, i, "[") && TryReadLink(text, i, out string? linkText, out string? linkUrl, out int nextLink))
             {
-                if (TryCreateUri(linkUrl, out var uri))
+                if (TryCreateUri(linkUrl, out Uri? uri))
                 {
                     _primaryLinkUri ??= uri;
                     Cursor = new Cursor(StandardCursorType.Hand);
@@ -91,7 +91,7 @@ public class RichTextBlock : TextBlock
                 continue;
             }
 
-            if (IsAt(text, i, "{") && TryReadToken(text, i + 1, "}", out var badgeText, out var nextBadge))
+            if (IsAt(text, i, "{") && TryReadToken(text, i + 1, "}", out string? badgeText, out int nextBadge))
             {
                 var run = new Run($"[{badgeText.Trim()}]")
                 {
@@ -102,7 +102,7 @@ public class RichTextBlock : TextBlock
                 continue;
             }
 
-            if (IsAt(text, i, "**") && TryReadToken(text, i + 2, "**", out var boldText, out var nextBold))
+            if (IsAt(text, i, "**") && TryReadToken(text, i + 2, "**", out string? boldText, out int nextBold))
             {
                 var bold = new Bold();
                 bold.Inlines.Add(new Run(boldText));
@@ -111,7 +111,7 @@ public class RichTextBlock : TextBlock
                 continue;
             }
 
-            if (IsAt(text, i, "`") && TryReadToken(text, i + 1, "`", out var codeText, out var nextCode))
+            if (IsAt(text, i, "`") && TryReadToken(text, i + 1, "`", out string? codeText, out int nextCode))
             {
                 var run = new Run(codeText)
                 {
@@ -122,7 +122,7 @@ public class RichTextBlock : TextBlock
                 continue;
             }
 
-            if (IsAt(text, i, "*") && TryReadToken(text, i + 1, "*", out var italicText, out var nextItalic))
+            if (IsAt(text, i, "*") && TryReadToken(text, i + 1, "*", out string? italicText, out int nextItalic))
             {
                 var italic = new Italic();
                 italic.Inlines.Add(new Run(italicText));
@@ -131,8 +131,8 @@ public class RichTextBlock : TextBlock
                 continue;
             }
 
-            var next = FindNextSpecial(text, i);
-            var chunk = text.Substring(i, next - i);
+            int next = FindNextSpecial(text, i);
+            string chunk = text[i..next];
             if (chunk.Length > 0)
             {
                 Inlines?.Add(new Run(chunk));
@@ -162,7 +162,7 @@ public class RichTextBlock : TextBlock
 
     private static bool TryReadToken(string value, int start, string token, out string content, out int nextIndex)
     {
-        var end = value.IndexOf(token, start, StringComparison.Ordinal);
+        int end = value.IndexOf(token, start, StringComparison.Ordinal);
         if (end < 0)
         {
             content = string.Empty;
@@ -170,33 +170,33 @@ public class RichTextBlock : TextBlock
             return false;
         }
 
-        content = value.Substring(start, end - start);
+        content = value[start..end];
         nextIndex = end + token.Length;
         return true;
     }
 
     private static int FindNextSpecial(string value, int start)
     {
-        var next = value.Length;
-        var newline = value.IndexOf('\n', start);
+        int next = value.Length;
+        int newline = value.IndexOf('\n', start);
         if (newline >= 0)
             next = Math.Min(next, newline);
-        var bold = value.IndexOf("**", start, StringComparison.Ordinal);
+        int bold = value.IndexOf("**", start, StringComparison.Ordinal);
         if (bold >= 0)
             next = Math.Min(next, bold);
-        var strike = value.IndexOf("~~", start, StringComparison.Ordinal);
+        int strike = value.IndexOf("~~", start, StringComparison.Ordinal);
         if (strike >= 0)
             next = Math.Min(next, strike);
-        var italic = value.IndexOf('*', start);
+        int italic = value.IndexOf('*', start);
         if (italic >= 0)
             next = Math.Min(next, italic);
-        var code = value.IndexOf('`', start);
+        int code = value.IndexOf('`', start);
         if (code >= 0)
             next = Math.Min(next, code);
-        var link = value.IndexOf('[', start);
+        int link = value.IndexOf('[', start);
         if (link >= 0)
             next = Math.Min(next, link);
-        var badge = value.IndexOf('{', start);
+        int badge = value.IndexOf('{', start);
         if (badge >= 0)
             next = Math.Min(next, badge);
         return next;
@@ -208,27 +208,27 @@ public class RichTextBlock : TextBlock
         url = string.Empty;
         nextIndex = start;
 
-        var closeBracket = value.IndexOf(']', start + 1);
+        int closeBracket = value.IndexOf(']', start + 1);
         if (closeBracket < 0)
             return false;
         if (closeBracket + 1 >= value.Length || value[closeBracket + 1] != '(')
             return false;
-        var closeParen = value.IndexOf(')', closeBracket + 2);
+        int closeParen = value.IndexOf(')', closeBracket + 2);
         if (closeParen < 0)
             return false;
 
-        var label = value.Substring(start + 1, closeBracket - start - 1);
-        var link = value.Substring(closeBracket + 2, closeParen - closeBracket - 2);
+        string label = value.Substring(start + 1, closeBracket - start - 1);
+        string link = value.Substring(closeBracket + 2, closeParen - closeBracket - 2);
         text = string.IsNullOrWhiteSpace(label) ? link : label;
         url = link;
         nextIndex = closeParen + 1;
         return true;
     }
 
-    private IBrush? GetAccentBrush()
+    private static IBrush? GetAccentBrush()
     {
         if (Application.Current is not null &&
-            Application.Current.TryFindResource("AccentBrush", out var value))
+            Application.Current.TryFindResource("AccentBrush", out object? value))
         {
             return value as IBrush;
         }
@@ -237,10 +237,10 @@ public class RichTextBlock : TextBlock
     }
 
     private static TextDecorationCollection CreateUnderline()
-        => new() { new TextDecoration { Location = TextDecorationLocation.Underline } };
+        => [new TextDecoration { Location = TextDecorationLocation.Underline }];
 
     private static TextDecorationCollection CreateStrikethrough()
-        => new() { new TextDecoration { Location = TextDecorationLocation.Strikethrough } };
+        => [new TextDecoration { Location = TextDecorationLocation.Strikethrough }];
 
     private static bool TryCreateUri(string raw, out Uri uri)
     {

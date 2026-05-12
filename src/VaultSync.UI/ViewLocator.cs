@@ -25,17 +25,17 @@ namespace VaultSync.UI
             // Avoid the previous crash when data was a string
             if (data is string s) return new TextBlock { Text = s };
 
-            var vmType = data.GetType();
+            Type vmType = data.GetType();
 
             // Map "VaultSync.UI.ViewModels.XxxViewModel"
             //   -> "VaultSync.UI.Views.XxxView"
-            var viewTypeName = vmType.FullName?
+            string? viewTypeName = vmType.FullName?
                 .Replace(".ViewModels.", ".Views.")
                 .Replace("ViewModel", "View");
 
             // Try to resolve the view type from the current assembly first.
             var asm = Assembly.GetExecutingAssembly();
-            var viewType =
+            Type? viewType =
                 (viewTypeName is not null ? asm.GetType(viewTypeName) : null)
                 ?? (viewTypeName is not null ? Type.GetType(viewTypeName) : null);
 
@@ -62,7 +62,7 @@ namespace VaultSync.UI
             if (data is Control || data is string)
                 return true;
 
-            var name = data.GetType().FullName ?? string.Empty;
+            string name = data.GetType().FullName ?? string.Empty;
             return name.Contains(".ViewModels.", StringComparison.Ordinal) ||
                    name.EndsWith("ViewModel", StringComparison.Ordinal);
         }

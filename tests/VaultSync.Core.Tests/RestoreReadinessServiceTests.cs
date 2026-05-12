@@ -14,14 +14,14 @@ public sealed class RestoreReadinessServiceTests
     {
         var service = new RestoreReadinessService();
         var config = new AppConfig();
-        var projects = new[]
-        {
+        Project[] projects =
+        [
             new Project { Id = 1, Name = "VaultSync", RootPath = "C:\\Repo", Preset = "default" }
-        };
+        ];
 
-        var summary = service.BuildSummary(
+        RestoreReadinessSummary summary = service.BuildSummary(
             projects,
-            Array.Empty<Backup>(),
+            [],
             config,
             new BackupIndexScanSummary(),
             new Dictionary<string, bool>());
@@ -39,7 +39,7 @@ public sealed class RestoreReadinessServiceTests
             Backups = new BackupsConfig
             {
                 UseAdvancedDestinations = true,
-                Destinations = new List<BackupDestination> { destination }
+                Destinations = [destination]
             }
         };
 
@@ -65,9 +65,9 @@ public sealed class RestoreReadinessServiceTests
             DestinationPath = destination.Path
         };
 
-        var summary = new RestoreReadinessService().BuildSummary(
-            new[] { project },
-            new[] { backup },
+        RestoreReadinessSummary summary = new RestoreReadinessService().BuildSummary(
+            [project],
+            [backup],
             config,
             new BackupIndexScanSummary(),
             new Dictionary<string, bool> { [DestinationIdentityService.GetId(destination)] = true });
@@ -85,7 +85,7 @@ public sealed class RestoreReadinessServiceTests
             Backups = new BackupsConfig
             {
                 UseAdvancedDestinations = true,
-                Destinations = new List<BackupDestination> { destination }
+                Destinations = [destination]
             }
         };
 
@@ -111,9 +111,9 @@ public sealed class RestoreReadinessServiceTests
             DestinationPath = destination.Path
         };
 
-        var summary = new RestoreReadinessService().BuildSummary(
-            new[] { project },
-            new[] { backup },
+        RestoreReadinessSummary summary = new RestoreReadinessService().BuildSummary(
+            [project],
+            [backup],
             config,
             new BackupIndexScanSummary { ErrorCount = 1 },
             new Dictionary<string, bool> { [DestinationIdentityService.GetId(destination)] = false });

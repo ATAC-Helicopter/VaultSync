@@ -19,16 +19,16 @@ public static class QuietHoursPolicy
         if (!enabled)
             return QuietHoursDecision.Disabled;
 
-        if (!TryParseTimeOfDay(start, out var startTime) || !TryParseTimeOfDay(end, out var endTime))
+        if (!TryParseTimeOfDay(start, out TimeSpan startTime) || !TryParseTimeOfDay(end, out TimeSpan endTime))
             return QuietHoursDecision.Disabled;
 
         if (startTime == endTime)
             return QuietHoursDecision.Disabled;
 
-        var wrapsMidnight = endTime <= startTime;
-        var nowTime = nowLocal.TimeOfDay;
+        bool wrapsMidnight = endTime <= startTime;
+        TimeSpan nowTime = nowLocal.TimeOfDay;
 
-        var inQuietHours = wrapsMidnight
+        bool inQuietHours = wrapsMidnight
             ? nowTime >= startTime || nowTime < endTime
             : nowTime >= startTime && nowTime < endTime;
 
@@ -57,7 +57,7 @@ public static class QuietHoursPolicy
             return false;
         }
 
-        foreach (var format in SupportedFormats)
+        foreach (string format in SupportedFormats)
         {
             if (format.Contains(@"\:"))
             {
@@ -69,7 +69,7 @@ public static class QuietHoursPolicy
                 format,
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
-                out var dt))
+                out DateTime dt))
             {
                 timeOfDay = dt.TimeOfDay;
                 return true;

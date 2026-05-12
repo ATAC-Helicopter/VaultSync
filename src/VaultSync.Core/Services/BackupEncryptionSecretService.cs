@@ -6,12 +6,16 @@ using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Services;
 
-public sealed class BackupEncryptionSecretService
+public sealed class BackupEncryptionSecretService(
+    Func<string?, string, string> ensureKeyRef,
+    Func<string?, string, bool, string?, string?> getSecret,
+    Action<string, string, string, bool> saveSecret,
+    Action<string?, string> deleteSecret)
 {
-    private readonly Func<string?, string, string> _ensureKeyRef;
-    private readonly Func<string?, string, bool, string?, string?> _getSecret;
-    private readonly Action<string, string, string, bool> _saveSecret;
-    private readonly Action<string?, string> _deleteSecret;
+    private readonly Func<string?, string, string> _ensureKeyRef = ensureKeyRef;
+    private readonly Func<string?, string, bool, string?, string?> _getSecret = getSecret;
+    private readonly Action<string, string, string, bool> _saveSecret = saveSecret;
+    private readonly Action<string?, string> _deleteSecret = deleteSecret;
     private readonly ConcurrentDictionary<string, byte[]> _sessionSecrets = new(StringComparer.OrdinalIgnoreCase);
 
     public BackupEncryptionSecretService()
@@ -21,18 +25,6 @@ public sealed class BackupEncryptionSecretService
             (keyRef, username, secret, preferKeychain) => CredentialVault.Instance.SaveSecret(keyRef, username, secret, preferKeychain),
             (keyRef, username) => CredentialVault.Instance.DeleteSecret(keyRef, username))
     {
-    }
-
-    public BackupEncryptionSecretService(
-        Func<string?, string, string> ensureKeyRef,
-        Func<string?, string, bool, string?, string?> getSecret,
-        Action<string, string, string, bool> saveSecret,
-        Action<string?, string> deleteSecret)
-    {
-        _ensureKeyRef = ensureKeyRef;
-        _getSecret = getSecret;
-        _saveSecret = saveSecret;
-        _deleteSecret = deleteSecret;
     }
 
     public string EnsureSecretRef(string? existingRef, string nameHint) =>
@@ -64,7 +56,7 @@ public sealed class BackupEncryptionSecretService
         }
         catch (Exception ex)
         {
-            var guidance = allowSessionFallback
+            string guidance = allowSessionFallback
                 ? "Session fallback is allowed but requires explicit confirmation."
                 : "Session fallback is disabled for this operation.";
             throw new InvalidOperationException(
@@ -78,7 +70,7 @@ public sealed class BackupEncryptionSecretService
         if (string.IsNullOrWhiteSpace(keyRef))
             return null;
 
-        var stored = _getSecret(keyRef, username, preferKeychain, null);
+        string? stored = _getSecret(keyRef, username, preferKeychain, null);
         if (!string.IsNullOrWhiteSpace(stored))
             return stored;
 
@@ -96,14 +88,14 @@ public sealed class BackupEncryptionSecretService
 
     public void ClearSessionSecrets()
     {
-        foreach (var keyRef in _sessionSecrets.Keys)
+        foreach (string keyRef in _sessionSecrets.Keys)
             RemoveSessionSecret(keyRef);
     }
 
     private void StoreSessionSecret(string keyRef, string secret)
     {
-        var secretBytes = Encoding.UTF8.GetBytes(secret);
-        if (_sessionSecrets.TryGetValue(keyRef, out var existing))
+        byte[] secretBytes = Encoding.UTF8.GetBytes(secret);
+        if (_sessionSecrets.TryGetValue(keyRef, out byte[]? existing))
         {
             _sessionSecrets[keyRef] = secretBytes;
             ClearBuffer(existing);
@@ -115,7 +107,7 @@ public sealed class BackupEncryptionSecretService
 
     private string? TryReadSessionSecret(string keyRef)
     {
-        if (!_sessionSecrets.TryGetValue(keyRef, out var sessionSecret) || sessionSecret.Length == 0)
+        if (!_sessionSecrets.TryGetValue(keyRef, out byte[]? sessionSecret) || sessionSecret.Length == 0)
             return null;
 
         return Encoding.UTF8.GetString(sessionSecret);
@@ -123,7 +115,7 @@ public sealed class BackupEncryptionSecretService
 
     private void RemoveSessionSecret(string keyRef)
     {
-        if (_sessionSecrets.TryRemove(keyRef, out var existing))
+        if (_sessionSecrets.TryRemove(keyRef, out byte[]? existing))
             ClearBuffer(existing);
     }
 

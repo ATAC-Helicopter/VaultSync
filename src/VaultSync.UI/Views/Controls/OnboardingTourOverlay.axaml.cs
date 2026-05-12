@@ -56,14 +56,14 @@ public partial class OnboardingTourOverlay : UserControl
         if (_vm is null)
             return;
 
-        var name = _vm.TargetName;
+        string name = _vm.TargetName;
         if (string.IsNullOrWhiteSpace(name))
         {
             _target = null;
             return;
         }
 
-        var root = (Visual?)TopLevel.GetTopLevel(this) ?? this;
+        Visual root = (Visual?)TopLevel.GetTopLevel(this) ?? this;
         _contentHost = root.GetVisualDescendants()
             .OfType<Control>()
             .FirstOrDefault(c => string.Equals(c.Name, "MainContent", StringComparison.Ordinal));
@@ -123,11 +123,11 @@ public partial class OnboardingTourOverlay : UserControl
         if (topLevel is null)
             return;
 
-        var origin = _target.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0);
+        Point origin = _target.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0);
         var bounds = new Rect(origin, _target.Bounds.Size);
 
-        var pad = GetHighlightPadding(_target.Name);
-        var highlightRect = bounds.Inflate(pad);
+        double pad = GetHighlightPadding(_target.Name);
+        Rect highlightRect = bounds.Inflate(pad);
 
         HighlightBorder.IsVisible = true;
         HighlightBorder.Width = highlightRect.Width;
@@ -144,19 +144,19 @@ public partial class OnboardingTourOverlay : UserControl
         const double margin = 12;
         const double centerClampPadding = 40;
 
-        var calloutWidth = CalloutCard.Width;
-        var calloutHeight = CalloutCard.Bounds.Height > 0 ? CalloutCard.Bounds.Height : 180;
-        var contentBounds = GetContentBounds(containerSize);
+        double calloutWidth = CalloutCard.Width;
+        double calloutHeight = CalloutCard.Bounds.Height > 0 ? CalloutCard.Bounds.Height : 180;
+        Rect contentBounds = GetContentBounds(containerSize);
 
-        var left = contentBounds.Left + (contentBounds.Width * 0.35) - (calloutWidth / 2);
-        var top = contentBounds.Bottom - calloutHeight - 32;
+        double left = contentBounds.Left + (contentBounds.Width * 0.35) - (calloutWidth / 2);
+        double top = contentBounds.Bottom - calloutHeight - 32;
 
-        var minX = contentBounds.Left + margin;
-        var maxX = Math.Max(minX, contentBounds.Right - calloutWidth - margin);
+        double minX = contentBounds.Left + margin;
+        double maxX = Math.Max(minX, contentBounds.Right - calloutWidth - margin);
         left = Math.Clamp(left, minX, maxX);
 
-        var minY = Math.Max(contentBounds.Top + centerClampPadding, contentBounds.Top + margin);
-        var maxY = Math.Max(minY, contentBounds.Bottom - calloutHeight - margin);
+        double minY = Math.Max(contentBounds.Top + centerClampPadding, contentBounds.Top + margin);
+        double maxY = Math.Max(minY, contentBounds.Bottom - calloutHeight - margin);
         top = Math.Clamp(top, minY, maxY);
 
         CalloutPopup.HorizontalOffset = left;
@@ -165,13 +165,13 @@ public partial class OnboardingTourOverlay : UserControl
 
     private void PositionCalloutCenter()
     {
-        var size = Bounds.Size;
-        var contentBounds = GetContentBounds(size);
-        var calloutWidth = CalloutCard.Width;
-        var calloutHeight = CalloutCard.Bounds.Height > 0 ? CalloutCard.Bounds.Height : 180;
+        Size size = Bounds.Size;
+        Rect contentBounds = GetContentBounds(size);
+        double calloutWidth = CalloutCard.Width;
+        double calloutHeight = CalloutCard.Bounds.Height > 0 ? CalloutCard.Bounds.Height : 180;
 
-        var left = Math.Max(contentBounds.Left + 20, contentBounds.Left + (contentBounds.Width * 0.35) - (calloutWidth / 2));
-        var top = Math.Max(contentBounds.Top + 20, contentBounds.Bottom - calloutHeight - 32);
+        double left = Math.Max(contentBounds.Left + 20, contentBounds.Left + (contentBounds.Width * 0.35) - (calloutWidth / 2));
+        double top = Math.Max(contentBounds.Top + 20, contentBounds.Bottom - calloutHeight - 32);
 
         CalloutPopup.HorizontalOffset = left;
         CalloutPopup.VerticalOffset = top;
@@ -179,7 +179,7 @@ public partial class OnboardingTourOverlay : UserControl
 
     private void UpdateOverlayMask(Rect? highlightRect)
     {
-        var size = Bounds.Size;
+        Size size = Bounds.Size;
         if (size.Width <= 0 || size.Height <= 0)
             return;
 
@@ -195,7 +195,7 @@ public partial class OnboardingTourOverlay : UserControl
             return;
         }
 
-        var clamped = ClampRectToBounds(highlightRect.Value, size);
+        Rect clamped = ClampRectToBounds(highlightRect.Value, size);
         SetOverlayRect(OverlayTop, new Rect(0, 0, size.Width, clamped.Top));
         SetOverlayRect(OverlayBottom, new Rect(0, clamped.Bottom, size.Width, Math.Max(0, size.Height - clamped.Bottom)));
         SetOverlayRect(OverlayLeft, new Rect(0, clamped.Top, clamped.Left, clamped.Height));
@@ -207,28 +207,28 @@ public partial class OnboardingTourOverlay : UserControl
         if (_target is null)
             return;
 
-        var scrollViewer = ResolveScrollViewerForTarget(_target);
+        ScrollViewer? scrollViewer = ResolveScrollViewerForTarget(_target);
         if (scrollViewer is null || scrollViewer.Bounds.Height <= 0)
             return;
 
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
         if ((now - _lastScrollAt).TotalMilliseconds < 650)
             return;
 
         if (_isScrolling)
             return;
 
-        var origin = _target.TranslatePoint(new Point(0, 0), scrollViewer);
+        Point? origin = _target.TranslatePoint(new Point(0, 0), scrollViewer);
         if (origin is null)
             return;
 
-        var targetRect = new Rect(origin.Value, _target.Bounds.Size).Inflate(12);
+        Rect targetRect = new Rect(origin.Value, _target.Bounds.Size).Inflate(12);
         var viewport = new Rect(0, 0, scrollViewer.Bounds.Width, scrollViewer.Bounds.Height);
-        var viewportSafe = viewport.Deflate(24);
+        Rect viewportSafe = viewport.Deflate(24);
 
-        var targetCenter = targetRect.Top + (targetRect.Height / 2);
-        var viewportCenter = viewport.Top + (viewport.Height / 2);
-        var centerDelta = Math.Abs(targetCenter - viewportCenter);
+        double targetCenter = targetRect.Top + (targetRect.Height / 2);
+        double viewportCenter = viewport.Top + (viewport.Height / 2);
+        double centerDelta = Math.Abs(targetCenter - viewportCenter);
 
         if (viewportSafe.Contains(targetRect) && centerDelta < 24)
         {
@@ -236,9 +236,9 @@ public partial class OnboardingTourOverlay : UserControl
             return;
         }
 
-        var desiredY = ComputeTargetScrollY(scrollViewer, targetRect);
-        var maxY = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
-        var targetY = Math.Clamp(desiredY, 0, maxY);
+        double desiredY = ComputeTargetScrollY(scrollViewer, targetRect);
+        double maxY = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
+        double targetY = Math.Clamp(desiredY, 0, maxY);
 
         if (Math.Abs(targetY - scrollViewer.Offset.Y) < 1)
         {
@@ -251,7 +251,7 @@ public partial class OnboardingTourOverlay : UserControl
             return;
         }
 
-        var targetName = _target.Name ?? string.Empty;
+        string targetName = _target.Name ?? string.Empty;
         if (string.Equals(targetName, _lastScrollTarget, StringComparison.Ordinal) &&
             !double.IsNaN(_lastScrollY) &&
             Math.Abs(_lastScrollY - targetY) < 4)
@@ -289,21 +289,21 @@ public partial class OnboardingTourOverlay : UserControl
 
     private static double ComputeTargetScrollY(ScrollViewer scrollViewer, Rect targetRect)
     {
-        var viewportHeight = scrollViewer.Bounds.Height;
+        double viewportHeight = scrollViewer.Bounds.Height;
         if (viewportHeight <= 0)
             return scrollViewer.Offset.Y;
 
-        var safeMargin = 40;
-        var safeHeight = Math.Max(0, viewportHeight - (safeMargin * 2));
+        int safeMargin = 40;
+        double safeHeight = Math.Max(0, viewportHeight - (safeMargin * 2));
 
         if (targetRect.Height >= safeHeight && safeHeight > 0)
         {
             return scrollViewer.Offset.Y + targetRect.Top - safeMargin;
         }
 
-        var targetCenterInViewport = targetRect.Top + (targetRect.Height / 2);
-        var viewportCenter = viewportHeight / 2;
-        var deltaToCenter = targetCenterInViewport - viewportCenter;
+        double targetCenterInViewport = targetRect.Top + (targetRect.Height / 2);
+        double viewportCenter = viewportHeight / 2;
+        double deltaToCenter = targetCenterInViewport - viewportCenter;
         return scrollViewer.Offset.Y + deltaToCenter;
     }
 
@@ -312,9 +312,9 @@ public partial class OnboardingTourOverlay : UserControl
         if (scrollViewer is null)
             return;
 
-        var start = scrollViewer.Offset;
-        var startY = start.Y;
-        var delta = targetY - startY;
+        Vector start = scrollViewer.Offset;
+        double startY = start.Y;
+        double delta = targetY - startY;
         if (Math.Abs(delta) < 1)
             return;
 
@@ -323,14 +323,14 @@ public partial class OnboardingTourOverlay : UserControl
         {
             const int steps = 12;
             const int delayMs = 16;
-            for (var i = 1; i <= steps; i++)
+            for (int i = 1; i <= steps; i++)
             {
                 if (token.IsCancellationRequested)
                     return;
 
-                var t = i / (double)steps;
-                var eased = 1 - Math.Pow(1 - t, 3);
-                var y = startY + (delta * eased);
+                double t = i / (double)steps;
+                double eased = 1 - Math.Pow(1 - t, 3);
+                double y = startY + (delta * eased);
                 scrollViewer.Offset = new Vector(start.X, y);
                 await Task.Delay(delayMs, token);
             }
@@ -351,7 +351,7 @@ public partial class OnboardingTourOverlay : UserControl
     {
         if (_contentHost is null)
         {
-            var root = (Visual?)TopLevel.GetTopLevel(this) ?? this;
+            Visual root = (Visual?)TopLevel.GetTopLevel(this) ?? this;
             _contentHost = root.GetVisualDescendants()
                 .OfType<Control>()
                 .FirstOrDefault(c => string.Equals(c.Name, "MainContent", StringComparison.Ordinal));
@@ -359,7 +359,7 @@ public partial class OnboardingTourOverlay : UserControl
 
         if (_contentHost is not null)
         {
-            var origin = _contentHost.TranslatePoint(new Point(0, 0), this);
+            Point? origin = _contentHost.TranslatePoint(new Point(0, 0), this);
             if (origin is not null && _contentHost.Bounds.Width > 0 && _contentHost.Bounds.Height > 0)
             {
                 return new Rect(origin.Value, _contentHost.Bounds.Size);
@@ -371,10 +371,10 @@ public partial class OnboardingTourOverlay : UserControl
 
     private static Rect ClampRectToBounds(Rect rect, Size size)
     {
-        var left = Math.Clamp(rect.Left, 0, size.Width);
-        var top = Math.Clamp(rect.Top, 0, size.Height);
-        var right = Math.Clamp(rect.Right, 0, size.Width);
-        var bottom = Math.Clamp(rect.Bottom, 0, size.Height);
+        double left = Math.Clamp(rect.Left, 0, size.Width);
+        double top = Math.Clamp(rect.Top, 0, size.Height);
+        double right = Math.Clamp(rect.Right, 0, size.Width);
+        double bottom = Math.Clamp(rect.Bottom, 0, size.Height);
         return new Rect(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
     }
 

@@ -15,7 +15,7 @@ public sealed class PatchManifestCompatibilityTests
             TargetVersion = "1.7.0"
         };
 
-        var ok = PatchUpdateService.TryGetAllowedBaseVersions(manifest, out var allowed, out _, out _);
+        bool ok = PatchUpdateService.TryGetAllowedBaseVersions(manifest, out IReadOnlyList<string> allowed, out _, out _);
 
         Assert.True(ok);
         Assert.Equal(new[] { "1.6.2" }, allowed);
@@ -31,10 +31,10 @@ public sealed class PatchManifestCompatibilityTests
             TargetVersion = "1.7.0"
         };
 
-        var ok = PatchUpdateService.TryGetAllowedBaseVersions(
+        bool ok = PatchUpdateService.TryGetAllowedBaseVersions(
             manifest,
             out _,
-            out var statusCode,
+            out string statusCode,
             out _);
 
         Assert.False(ok);
@@ -51,10 +51,51 @@ public sealed class PatchManifestCompatibilityTests
             TargetVersion = "1.7.0"
         };
 
-        var ok = PatchUpdateService.TryGetAllowedBaseVersions(manifest, out var allowed, out _, out _);
+        bool ok = PatchUpdateService.TryGetAllowedBaseVersions(manifest, out IReadOnlyList<string> allowed, out _, out _);
 
         Assert.True(ok);
         Assert.Equal(new[] { "1.6.0", "1.6.1", "1.6.2" }, allowed);
+    }
+
+    [Fact]
+    public void TryGetAllowedBaseVersions_RejectsManifestWithoutAnyBaseVersion()
+    {
+        var manifest = new PatchManifest
+        {
+            TargetVersion = "1.7.0"
+        };
+
+        bool ok = PatchUpdateService.TryGetAllowedBaseVersions(
+            manifest,
+            out IReadOnlyList<string> allowed,
+            out string statusCode,
+            out string message);
+
+        Assert.False(ok);
+        Assert.Empty(allowed);
+        Assert.Equal("manifest-invalid-base-allowlist", statusCode);
+        Assert.Contains("does not declare", message);
+    }
+
+    [Fact]
+    public void TryGetAllowedBaseVersions_RejectsEmptyAllowlistEntry()
+    {
+        var manifest = new PatchManifest
+        {
+            PreviousVersion = "1.6.1",
+            BaseVersions = new List<string> { "1.6.1", " " },
+            TargetVersion = "1.7.0"
+        };
+
+        bool ok = PatchUpdateService.TryGetAllowedBaseVersions(
+            manifest,
+            out _,
+            out string statusCode,
+            out string message);
+
+        Assert.False(ok);
+        Assert.Equal("manifest-invalid-base-allowlist", statusCode);
+        Assert.Contains("empty", message);
     }
 
     [Fact]
@@ -67,18 +108,65 @@ public sealed class PatchManifestCompatibilityTests
             TargetVersion = "1.7.0"
         };
 
-        var ok = PatchUpdateService.TryValidateAllowedBaseVersions(
+        bool ok = PatchUpdateService.TryValidateAllowedBaseVersions(
             manifest,
             "v1.6.2",
-            out var allowed,
-            out var matched,
-            out var statusCode,
+            out IReadOnlyList<string> allowed,
+            out string matched,
+            out string statusCode,
             out _);
 
         Assert.True(ok);
         Assert.Equal("eligible", statusCode);
         Assert.Equal("1.6.2", matched);
         Assert.Equal(3, allowed.Count);
+    }
+
+    [Fact]
+    public void TryValidateAllowedBaseVersions_IgnoresBuildMetadataForBaseMatch()
+    {
+        var manifest = new PatchManifest
+        {
+            PreviousVersion = "1.6.2+manifest.5",
+            BaseVersions = new List<string> { "v1.6.2+manifest.5" },
+            TargetVersion = "1.7.0"
+        };
+
+        bool ok = PatchUpdateService.TryValidateAllowedBaseVersions(
+            manifest,
+            "v1.6.2+local.9",
+            out IReadOnlyList<string> allowed,
+            out string matched,
+            out string statusCode,
+            out _);
+
+        Assert.True(ok);
+        Assert.Equal("eligible", statusCode);
+        Assert.Equal("1.6.2", matched);
+        Assert.Equal(new[] { "1.6.2" }, allowed);
+    }
+
+    [Fact]
+    public void TryValidateAllowedBaseVersions_RejectsDifferentPrereleaseLabel()
+    {
+        var manifest = new PatchManifest
+        {
+            PreviousVersion = "1.7.0-beta.1",
+            BaseVersions = new List<string> { "1.7.0-beta.1" },
+            TargetVersion = "1.7.0"
+        };
+
+        bool ok = PatchUpdateService.TryValidateAllowedBaseVersions(
+            manifest,
+            "1.7.0-beta.2",
+            out _,
+            out _,
+            out string statusCode,
+            out string message);
+
+        Assert.False(ok);
+        Assert.Equal("base-version-not-allowed", statusCode);
+        Assert.Contains("1.7.0-beta.2", message);
     }
 
     [Fact]
@@ -91,13 +179,13 @@ public sealed class PatchManifestCompatibilityTests
             TargetVersion = "1.7.0"
         };
 
-        var ok = PatchUpdateService.TryValidateAllowedBaseVersions(
+        bool ok = PatchUpdateService.TryValidateAllowedBaseVersions(
             manifest,
             "1.6.3",
             out _,
             out _,
-            out var statusCode,
-            out var message);
+            out string statusCode,
+            out string message);
 
         Assert.False(ok);
         Assert.Equal("base-version-not-allowed", statusCode);
