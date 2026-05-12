@@ -948,7 +948,7 @@
         <!-- RUNNING BACKUPS CARD (inline, below summary cards) -->
         <Expander Classes="backup-group"
                   IsExpanded="True"
-                  IsVisible="{Binding IsBusy}">
+                  IsVisible="{Binding HasActiveBackups}">
           <Expander.Header>
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Grid.Column="0"
