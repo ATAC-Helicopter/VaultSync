@@ -14,6 +14,7 @@
 - [VS-1739] CLI command implementations were updated for the current Spectre.Console.Cli command override model.
 - [VS-1740] Refreshed the safe dependency set for 1.7.4, including Avalonia 11.3.14, LiveCharts 2.0.2, ReactiveUI 23.2.27, SQLite/ProtectedData/System.Text.Json 10.0.7, Spectre.Console 0.55.x, and the current DBus/test SDK packages.
 ### Fixed
+- [BUG-17116] Notification dismiss and auto-dismiss cleanup now avoid disposed-token races, preventing soft crash reports after toast-heavy UI flows.
 - [BUG-17118] Log console rows now show readable time, source, and message fields.
 - [BUG-17108] In-app logs now capture runtime errors without verbose logging.
 - [BUG-17115] Windows/Linux tray menus now open the richer tray panel reliably.
