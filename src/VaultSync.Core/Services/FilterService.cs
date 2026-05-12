@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace VaultSync.Core.Services;
 
@@ -22,13 +22,17 @@ public class FilterService
     /// <summary>
     /// The normalized ignore patterns used by this filter. These patterns use forward
     /// slashes and have directory rules normalized (trailing '/' turned into '/*').
+    /// VaultSync-owned backup artifacts are always appended as safety exclusions.
     /// </summary>
     public IReadOnlyList<string> RawPatterns => _patterns;
 
     public FilterService(IEnumerable<string> patterns)
     {
-        _patterns = [.. patterns.Select(Normalize)];
-        _compiledPatterns = [.. _patterns.Select(CompilePattern)];
+        _patterns = BackupSafetyService.AddReservedIgnorePatterns(patterns)
+            .Select(Normalize)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        _compiledPatterns = _patterns.Select(CompilePattern).ToList();
     }
 
     public static FilterService FromPresetAndLocal(string projectRoot, string presetName, string? presetsDir = null)
@@ -67,7 +71,7 @@ public class FilterService
             patterns.AddRange(localLines);
         }
 
-        Console.WriteLine($"[FilterService] Total rules in combined filter: {patterns.Count}");
+        Console.WriteLine($"[FilterService] Total rules in combined filter: {patterns.Count} user/preset + {BackupSafetyService.ReservedIgnorePatterns.Count} reserved safety rules");
 
         return new FilterService(patterns);
     }
@@ -165,8 +169,11 @@ public class FilterService
 
     public bool ShouldExclude(string root, string fullPath)
     {
-        string rel = Path.GetRelativePath(root, fullPath).Replace('\\', '/');
-        foreach (Regex rx in _compiledPatterns)
+        if (BackupSafetyService.IsReservedPath(root, fullPath))
+            return true;
+
+        var rel = Path.GetRelativePath(root, fullPath).Replace('\\', '/');
+        foreach (var rx in _compiledPatterns)
             if (rx.IsMatch(rel)) return true;
         return false;
     }

@@ -219,6 +219,7 @@ namespace VaultSync.UI.ViewModels
         // Active per-project backup progress items (for running backups)
         public ObservableCollection<BackupProgressItem> ActiveBackups { get; } =
             [];
+        public bool HasActiveBackups => ActiveBackups.Count > 0;
         private readonly DispatcherTimer _activeBackupTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
 
         // Per-destination status for the current backup run
@@ -981,7 +982,7 @@ namespace VaultSync.UI.ViewModels
                 RebuildActiveDestinationStatuses();
             };
             ActiveDestinationStatuses.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasActiveDestinationStatuses));
-            ActiveBackups.CollectionChanged += (_, _) => UpdateActiveBackupTimer();
+            ActiveBackups.CollectionChanged += (_, _) => OnActiveBackupsCollectionChanged();
             _activeBackupTimer.Tick += (_, _) => TickActiveBackupDurations();
 
             // NOTE:
@@ -994,6 +995,12 @@ namespace VaultSync.UI.ViewModels
             RefreshVerificationPolicyOptions();
             RefreshDestinationOptionsInternal(AppConfigStore.GetSnapshot());
             RefreshProjectSortOptions();
+        }
+
+        private void OnActiveBackupsCollectionChanged()
+        {
+            UpdateActiveBackupTimer();
+            OnPropertyChanged(nameof(HasActiveBackups));
         }
 
         private void UpdateActiveBackupTimer()
@@ -1660,6 +1667,8 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(projectId))
                 return;
 
+            _pendingActiveBackupUpdates.TryRemove(projectId, out _);
+
             if (!Dispatcher.UIThread.CheckAccess())
             {
                 Dispatcher.UIThread.Post(() => RemoveActiveBackup(projectId));
@@ -1928,9 +1937,14 @@ namespace VaultSync.UI.ViewModels
         /// <summary>
         /// Shows a non-cancellable transient operation (e.g., deleting a backup) in the active list.
         /// </summary>
-        public void ShowTransientOperation(string operationId, string title, string detail)
+        public void ShowTransientOperation(
+            string operationId,
+            string title,
+            string detail,
+            string etaText = "",
+            string? destinationLabel = null)
         {
-            UpdateActiveBackup(operationId, title, 0, detail, string.Empty, allowCancel: false);
+            UpdateActiveBackup(operationId, title, 0, detail, etaText, allowCancel: false, destinationLabel: destinationLabel);
         }
 
         /// <summary>
@@ -4698,7 +4712,7 @@ namespace VaultSync.UI.ViewModels
 
         public bool ShowPercent => AllowCancel && HasProgress && IsProgressReliable;
 
-        public bool IsIndeterminate => !AllowCancel || !IsProgressReliable || IsStageIndeterminate;
+        public bool IsIndeterminate => !IsProgressReliable || IsStageIndeterminate;
 
         public string ProgressLabel =>
             IsProgressReliable && HasProgress

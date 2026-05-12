@@ -66,10 +66,6 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        /// <summary>
-        /// Resolve the effective backup root to use for a project, honoring preferences for external/NAS paths.
-        /// If the preferred NAS path is unavailable, a temporary backup folder is used next to the project.
-        /// </summary>
         private DestinationResolution PrepareDestination(BackupDestination dest, AppConfig cfg)
         {
             NetworkCredentialProfile? profile = cfg.Network.Credentials?
@@ -98,16 +94,10 @@ namespace VaultSync.UI.ViewModels
             return BackupAllPreparationResult.Success(cfg);
         }
 
-        private sealed record BackupAllPreparationResult(
-            bool IsReady,
-            string? FailureCode,
-            AppConfig? Config)
+        private sealed record BackupAllPreparationResult(bool IsReady, string? FailureCode, AppConfig? Config)
         {
-            public static BackupAllPreparationResult Failure(string reason) =>
-                new(false, reason, null);
-
-            public static BackupAllPreparationResult Success(AppConfig cfg) =>
-                new(true, null, cfg);
+            public static BackupAllPreparationResult Failure(string reason) => new(false, reason, null);
+            public static BackupAllPreparationResult Success(AppConfig cfg) => new(true, null, cfg);
         }
 
         private void ResolveBackupRoots(
@@ -116,36 +106,41 @@ namespace VaultSync.UI.ViewModels
             out string effectiveBackupRoot,
             out string? preferredFinalBackupRoot)
         {
+            BackupSafetyService.EnsureSafeBackupRoot(project, configuredBackupRoot);
+
             effectiveBackupRoot = configuredBackupRoot;
             preferredFinalBackupRoot = null;
 
-            if (_settingsViewModel?.PreferExternalDrives == true &&
-                IsNetworkPath(configuredBackupRoot))
+            if (_settingsViewModel?.PreferExternalDrives == true && IsNetworkPath(configuredBackupRoot))
             {
                 if (Directory.Exists(configuredBackupRoot))
                 {
-                    // If the NAS just came back, try to migrate any temp backups into it.
                     TryMigrateTempBackups(project, configuredBackupRoot);
                 }
                 else
                 {
-                    string tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+                    var tempRoot = BackupSafetyService.GetOfflineStagingRoot(project);
                     Directory.CreateDirectory(tempRoot);
+                    BackupSafetyService.EnsureSafeBackupRoot(project, tempRoot);
 
                     effectiveBackupRoot = tempRoot;
                     preferredFinalBackupRoot = configuredBackupRoot;
                     EnsureNasMonitorStarted();
+                    RuntimeLog.WriteVerbose($"[Backup] Network destination unavailable for project '{project.Name}'. Using safe offline staging root '{tempRoot}'.");
                 }
             }
         }
 
         private static void TryMigrateTempBackups(Project project, string targetRoot)
         {
-            string tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+            TryMigrateTempBackupsFromRoot(BackupSafetyService.GetOfflineStagingRoot(project), targetRoot);
+            TryMigrateTempBackupsFromRoot(BackupSafetyService.GetLegacyProjectTempRoot(project), targetRoot);
+        }
+
+        private static void TryMigrateTempBackupsFromRoot(string tempRoot, string targetRoot)
+        {
             if (!Directory.Exists(tempRoot))
-            {
                 return;
-            }
 
             Directory.CreateDirectory(targetRoot);
 
@@ -155,38 +150,28 @@ namespace VaultSync.UI.ViewModels
 
                 try
                 {
-                    if (Directory.Exists(dest))
-                    {
-                        continue;
-                    }
-
-                    Directory.Move(dir, dest);
+                    if (!Directory.Exists(dest))
+                        Directory.Move(dir, dest);
                 }
                 catch
                 {
-                    // Ignore and continue with other folders.
                 }
             }
 
             try
             {
                 if (!Directory.EnumerateFileSystemEntries(tempRoot).Any())
-                {
                     Directory.Delete(tempRoot, recursive: true);
-                }
             }
             catch
             {
-                // Ignore cleanup failures.
             }
         }
 
         private static bool IsNetworkPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
-            {
                 return false;
-            }
 
             return path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
                    path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||
