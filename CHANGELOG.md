@@ -5,6 +5,7 @@
 - [VS-1737] Added VS Code Linux debug launch/tasks for the UI, CLI, and full test suite.
 - [VS-1738] Linux tarball releases now include rootless install/uninstall scripts that create a user desktop launcher, icon, and `vaultsync` command across distro families.
 - [VS-1739] CLI JSON-producing commands now share a single indented serializer configuration so config, destination, snapshot, sync, restore, and prune output stays consistent.
+
 ### Changed
 - [BUG-17119] Startup metadata import now also checks reachable backup destinations.
 - [BUG-17119] UI metadata imports now treat source stores as read-only.
@@ -12,7 +13,9 @@
 - [VS-1724] Patch manifest compatibility tests now cover empty allowlists, build metadata normalization, and prerelease mismatch edge cases.
 - [VS-1739] CLI command implementations were updated for the current Spectre.Console.Cli command override model.
 - [VS-1740] Refreshed the safe dependency set for 1.7.4, including Avalonia 11.3.14, LiveCharts 2.0.2, ReactiveUI 23.2.27, SQLite/ProtectedData/System.Text.Json 10.0.7, Spectre.Console 0.55.x, and the current DBus/test SDK packages.
+
 ### Fixed
+- [BUG-17116] Notification dismiss and auto-dismiss cleanup now avoid disposed-token races, preventing soft crash reports after toast-heavy UI flows.
 - [BUG-17118] Log console rows now show readable time, source, and message fields.
 - [BUG-17108] In-app logs now capture runtime errors without verbose logging.
 - [BUG-17115] Windows/Linux tray menus now open the richer tray panel reliably.
