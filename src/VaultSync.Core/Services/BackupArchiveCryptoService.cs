@@ -175,12 +175,12 @@ public sealed class BackupArchiveCryptoService
         string tempOutputPath = outputArchivePath + ".tmp";
         try
         {
-            using var pbkdf2 = new Rfc2898DeriveBytes(
+            byte[] derived = Rfc2898DeriveBytes.Pbkdf2(
                 password,
                 saltBytes,
                 iterations,
-                HashAlgorithmName.SHA256);
-            byte[] derived = pbkdf2.GetBytes(keyMaterial.Length);
+                HashAlgorithmName.SHA256,
+                keyMaterial.Length);
             Buffer.BlockCopy(derived, 0, keyMaterial, 0, keyMaterial.Length);
             Buffer.BlockCopy(keyMaterial, 0, encryptionKey, 0, encryptionKey.Length);
             Buffer.BlockCopy(keyMaterial, encryptionKey.Length, hmacKey, 0, hmacKey.Length);
@@ -307,12 +307,12 @@ public sealed class BackupArchiveCryptoService
 
         try
         {
-            using var pbkdf2 = new Rfc2898DeriveBytes(
+            byte[] derived = Rfc2898DeriveBytes.Pbkdf2(
                 password,
                 saltBytes,
                 iterations,
-                HashAlgorithmName.SHA256);
-            byte[] derived = pbkdf2.GetBytes(keyMaterial.Length);
+                HashAlgorithmName.SHA256,
+                keyMaterial.Length);
             Buffer.BlockCopy(derived, 0, keyMaterial, 0, keyMaterial.Length);
             Buffer.BlockCopy(keyMaterial, 0, encryptionKey, 0, encryptionKey.Length);
             Buffer.BlockCopy(keyMaterial, encryptionKey.Length, hmacKey, 0, hmacKey.Length);

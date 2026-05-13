@@ -3,7 +3,7 @@
 This document defines the current release packaging flow.
 
 ## Prerequisites
-- .NET 8 SDK
+- .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
 - The current stable release target is `1.7.3`; prerelease builds for the active patch train use `1.7.4-Beta.N`.
@@ -11,7 +11,7 @@ This document defines the current release packaging flow.
 ## 1) Windows Installer
 1. Publish:
    ```bash
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0-windows10.0.19041.0 -r win-x64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0-windows10.0.19041.0 -r win-x64 --self-contained true
    ```
 2. Build installer using `installer/VaultSyncInstaller.iss`.
 3. Upload generated `VaultSyncInstaller.exe` to GitHub Release assets.
@@ -19,8 +19,8 @@ This document defines the current release packaging flow.
 ## 2) macOS DMG
 1. Publish both architectures:
    ```bash
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r osx-arm64 --self-contained true
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r osx-x64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0 -r osx-arm64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0 -r osx-x64 --self-contained true
    ```
 2. Build `.app` and `.dmg` using repository scripts.
 3. Upload both DMGs to release assets.
@@ -28,13 +28,13 @@ This document defines the current release packaging flow.
 ## 3) Linux Direct Assets
 1. Publish both Linux architectures:
    ```bash
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r linux-x64 --self-contained true
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r linux-arm64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0 -r linux-x64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0 -r linux-arm64 --self-contained true
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.7.3 x64 src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.7.3 arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.7.3 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.7.3 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz` artifacts and the `linux-x64` `.AppImage`.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
