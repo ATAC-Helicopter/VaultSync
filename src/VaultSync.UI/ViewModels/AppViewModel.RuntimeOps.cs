@@ -43,10 +43,13 @@ namespace VaultSync.UI.ViewModels
             _nasMonitorTimer = null;
         }
 
-        private void EnsureDestinationProbeStarted()
+        private async Task RunStartupDestinationProbeAsync()
         {
-            _destinationProbeTimer?.Dispose();
-            _destinationProbeTimer = null;
+            if (Interlocked.Exchange(ref _startupDestinationProbeQueued, 1) == 1)
+                return;
+
+            DiagnosticsLogger.Record("Destination startup probe running.");
+            await ProbeDestinationsAsync().ConfigureAwait(false);
         }
 
         public IReadOnlyList<DestinationProbeSummary> GetDestinationProbeSummaries()

@@ -79,8 +79,6 @@ namespace VaultSync.UI.ViewModels
                     bool allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
                     vm.ResetDestinationStatuses(destinations, allowToggle);
 
-                    EnsureDestinationProbeStarted();
-
                     IReadOnlyList<DestinationProbeSummary> summaries = GetDestinationProbeSummaries(cfg);
                     foreach (DestinationProbeSummary summary in summaries)
                     {

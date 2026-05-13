@@ -236,8 +236,8 @@ namespace VaultSync.UI.ViewModels
                     RecordStartupPhase("deferred-startup-begin");
 
                     AppConfig cfg = AppConfigStore.GetSnapshot();
-                    EnsureDestinationProbeStarted();
-                    RecordStartupPhase("destination-probe-deferred");
+                    await RunStartupDestinationProbeAsync().ConfigureAwait(false);
+                    RecordStartupPhase("destination-probe-complete");
 
                     if (cfg.Backups.EnableMetadataSync)
                     {
