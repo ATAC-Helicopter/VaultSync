@@ -286,16 +286,6 @@ namespace VaultSync.UI.ViewModels
                         ? [.. _repo.GetRecentBackupsByProject(limitPerProject: 5)]
                         : [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
 
-                    if (onBackupsPage || force)
-                    {
-                        int pruned = PruneMissingBackupsFromReachableDestinations(backups);
-                        if (pruned > 0)
-                        {
-                            backups = [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
-                            useLightweight = false;
-                        }
-                    }
-
                     HashSet<int> disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? [];
 
                     _backupsCacheProjects = projects;
@@ -313,30 +303,8 @@ namespace VaultSync.UI.ViewModels
                         }
                     });
 
-                    if (onBackupsPage || force)
-                    {
-                        if (backups.Count > 0)
-                        {
-                            int scanAdded = ScanDestinationsForUntrackedBackups(projects, backups);
-                            if (scanAdded > 0)
-                            {
-                                backups = [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
-                                useLightweight = false;
-                                _backupsCacheBackups = backups;
-                                _backupsCachePartial = useLightweight;
-                                _backupsCacheUpdatedUtc = DateTime.UtcNow;
-
-                                Dispatcher.UIThread.Post(() =>
-                                {
-                                    if (onBackupsPage || force)
-                                    {
-                                        BackupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
-                                        BackupsViewModel.RefreshBackupDriveHealth();
-                                    }
-                                });
-                            }
-                        }
-                    }
+                    // Destination reconciliation runs when a backup has already prepared the destination.
+                    // Backups-page refresh should not wake sleeping disks or network shares just to test status.
                 }
                 finally
                 {
@@ -359,61 +327,42 @@ namespace VaultSync.UI.ViewModels
             return new BackupProjectPreparation(cfg, selection.Destinations, project, selection.WarningMessage, selection.WarningCode);
         }
 
-        private int PruneMissingBackupsFromReachableDestinations(List<Backup> backups)
+        private int PruneMissingBackupsFromPreparedDestination(BackupDestination dest, string effectivePath, AppConfig cfg)
         {
+            if (string.IsNullOrWhiteSpace(effectivePath))
+                return 0;
+
+            List<Backup> backups = [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
             if (backups.Count == 0)
                 return 0;
 
-            AppConfig cfg = _config;
             List<BackupDestination> destinations = AppViewModel.GetActiveDestinations(cfg);
             if (destinations.Count == 0)
                 return 0;
 
             int removed = 0;
-            foreach (BackupDestination dest in destinations)
+            foreach (Backup backup in backups)
             {
-                if (!ShouldScanDestination(dest))
+                if (string.IsNullOrWhiteSpace(backup.Path))
                     continue;
 
-                NetworkCredentialProfile? profile = string.IsNullOrWhiteSpace(dest.CredentialName)
-                    ? null
-                    : cfg.Network.Credentials.FirstOrDefault(c =>
-                        c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
-
-                DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
-                if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                if (!BackupBelongsToDestination(backup, dest, destinations.Count))
                     continue;
 
-                try
-                {
-                    foreach (Backup backup in backups)
-                    {
-                        if (string.IsNullOrWhiteSpace(backup.Path))
-                            continue;
+                if (!TryCombinePathUnderRoot(effectivePath, backup.Path, out string? fullPath))
+                    continue;
 
-                        if (!BackupBelongsToDestination(backup, dest, destinations.Count))
-                            continue;
+                if (Directory.Exists(fullPath) || File.Exists(fullPath))
+                    continue;
 
-                        if (!TryCombinePathUnderRoot(resolution.EffectivePath, backup.Path, out string? fullPath))
-                            continue;
-
-                        if (Directory.Exists(fullPath) || File.Exists(fullPath))
-                            continue;
-
-                        _repo.DeleteBackupById(backup.Id);
-                        TryDeleteSnapshotIfOrphan(backup.ProjectId, backup.SnapshotId);
-                        removed++;
-                    }
-                }
-                finally
-                {
-                    _networkMountService.Cleanup(resolution);
-                }
+                _repo.DeleteBackupById(backup.Id);
+                TryDeleteSnapshotIfOrphan(backup.ProjectId, backup.SnapshotId);
+                removed++;
             }
 
             if (removed > 0)
             {
-                RuntimeLog.WriteVerbose($"[Backups] Pruned {removed} missing backup database entr{(removed == 1 ? "y" : "ies")} from reachable destinations.");
+                RuntimeLog.WriteVerbose($"[Backups] Pruned {removed} missing backup database entr{(removed == 1 ? "y" : "ies")} from prepared destination '{dest.Alias ?? dest.Path}'.");
             }
 
             return removed;

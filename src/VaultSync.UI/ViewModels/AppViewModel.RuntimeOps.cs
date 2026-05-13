@@ -45,25 +45,8 @@ namespace VaultSync.UI.ViewModels
 
         private void EnsureDestinationProbeStarted()
         {
-            if (_destinationProbeTimer is not null)
-                return;
-
-            _destinationProbeTimer = new Timer(
-                _ => _ = ProbeDestinationsAsync(),
-                null,
-                TimeSpan.FromMinutes(10),
-                TimeSpan.FromMinutes(10));
-
-            TimeSpan initialDelay = DateTime.UtcNow - _appStartUtc < DestinationProbeStartupDelay
-                ? DestinationProbeStartupDelay
-                : TimeSpan.Zero;
-            _ = Task.Run(async () =>
-            {
-                if (initialDelay > TimeSpan.Zero)
-                    await Task.Delay(initialDelay).ConfigureAwait(false);
-                DiagnosticsLogger.Record("Destination startup probe running.");
-                await ProbeDestinationsAsync().ConfigureAwait(false);
-            });
+            _destinationProbeTimer?.Dispose();
+            _destinationProbeTimer = null;
         }
 
         public IReadOnlyList<DestinationProbeSummary> GetDestinationProbeSummaries()

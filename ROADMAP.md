@@ -1045,6 +1045,18 @@
   - Acceptance:
     - parallel backup startup emits one archive buffer tune attempt per destination instead of duplicate timeout probes.
     - nested generated outputs are not included in new snapshots for common development presets.
+- [x] `BUG-18008` `P1` Avoid waking destinations for passive status checks. _(Done in PR #283, issue #286; completed 2026-05-13)_
+  - Scope: make destination reachability updates opportunistic from backup execution and manual tests instead of startup/page-refresh probes.
+  - What it takes:
+    - stop scheduling startup and periodic destination reachability tests from the Backups overview path.
+    - keep cached destination status updated when backup execution already prepares a destination.
+    - run stale backup-entry cleanup only against a destination that backup execution has already prepared.
+  - Current status:
+    - Done: passive Backups refresh no longer resolves destinations or scans destination roots.
+    - Done: backup preparation updates cached destination status and runs safe stale-entry cleanup for that prepared root.
+  - Acceptance:
+    - opening the Backups page or leaving the app idle does not wake sleeping backup destinations for reachability checks.
+    - backup runs still fail fast and visibly when their destination cannot be prepared.
 - [x] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard. _(Done)_
   - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
   - What it takes:
