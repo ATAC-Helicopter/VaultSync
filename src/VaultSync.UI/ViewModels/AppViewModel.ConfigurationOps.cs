@@ -286,6 +286,16 @@ namespace VaultSync.UI.ViewModels
                         ? [.. _repo.GetRecentBackupsByProject(limitPerProject: 5)]
                         : [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
 
+                    if (onBackupsPage || force)
+                    {
+                        int pruned = PruneMissingBackupsFromReachableDestinations(backups);
+                        if (pruned > 0)
+                        {
+                            backups = [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
+                            useLightweight = false;
+                        }
+                    }
+
                     HashSet<int> disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? [];
 
                     _backupsCacheProjects = projects;
@@ -347,6 +357,86 @@ namespace VaultSync.UI.ViewModels
                 ? new ProjectDestinationSelection(AppViewModel.GetActiveDestinations(cfg), null, null)
                 : ResolveDestinationsForProject(project, cfg);
             return new BackupProjectPreparation(cfg, selection.Destinations, project, selection.WarningMessage, selection.WarningCode);
+        }
+
+        private int PruneMissingBackupsFromReachableDestinations(List<Backup> backups)
+        {
+            if (backups.Count == 0)
+                return 0;
+
+            AppConfig cfg = _config;
+            List<BackupDestination> destinations = AppViewModel.GetActiveDestinations(cfg);
+            if (destinations.Count == 0)
+                return 0;
+
+            int removed = 0;
+            foreach (BackupDestination dest in destinations)
+            {
+                if (!ShouldScanDestination(dest))
+                    continue;
+
+                NetworkCredentialProfile? profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+                    ? null
+                    : cfg.Network.Credentials.FirstOrDefault(c =>
+                        c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+
+                DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
+                if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                    continue;
+
+                try
+                {
+                    foreach (Backup backup in backups)
+                    {
+                        if (string.IsNullOrWhiteSpace(backup.Path))
+                            continue;
+
+                        if (!BackupBelongsToDestination(backup, dest, destinations.Count))
+                            continue;
+
+                        if (!TryCombinePathUnderRoot(resolution.EffectivePath, backup.Path, out string? fullPath))
+                            continue;
+
+                        if (Directory.Exists(fullPath) || File.Exists(fullPath))
+                            continue;
+
+                        _repo.DeleteBackupById(backup.Id);
+                        TryDeleteSnapshotIfOrphan(backup.ProjectId, backup.SnapshotId);
+                        removed++;
+                    }
+                }
+                finally
+                {
+                    _networkMountService.Cleanup(resolution);
+                }
+            }
+
+            if (removed > 0)
+            {
+                RuntimeLog.WriteVerbose($"[Backups] Pruned {removed} missing backup database entr{(removed == 1 ? "y" : "ies")} from reachable destinations.");
+            }
+
+            return removed;
+        }
+
+        private static bool BackupBelongsToDestination(Backup backup, BackupDestination dest, int activeDestinationCount)
+        {
+            if (!string.IsNullOrWhiteSpace(backup.DestinationPath) &&
+                string.Equals(backup.DestinationPath, dest.Path, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(backup.DestinationPath))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(backup.DestinationAlias))
+            {
+                return string.Equals(backup.DestinationAlias, dest.Alias, StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(backup.DestinationAlias, dest.Path, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return activeDestinationCount == 1;
         }
 
         private int ScanDestinationsForUntrackedBackups(List<Project> projects, List<Backup> backups)
