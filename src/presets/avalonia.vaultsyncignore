@@ -1,10 +1,27 @@
 bin/**
 obj/**
+**/bin/**
+**/obj/**
+TestResults/**
+**/TestResults/**
+artifacts/**
+**/artifacts/**
+packages/**
+**/packages/**
 *.exe
+*.dll
 *.log
 *.pdb
 *.tmp
 *.db
+*.db-shm
+*.db-wal
+*.cache
+*.nupkg
+*.snupkg
+*.user
+*.csproj.user
+*.suo
 
 # IDE
 .vscode/

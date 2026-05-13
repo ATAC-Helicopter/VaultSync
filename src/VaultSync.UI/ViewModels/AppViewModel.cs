@@ -126,6 +126,7 @@ namespace VaultSync.UI.ViewModels
         private readonly LogConsoleService _logConsoleService;
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
+        private readonly ConcurrentDictionary<string, Lazy<Task<int?>>> _archiveUploadBufferTuneTasks = new(StringComparer.OrdinalIgnoreCase);
         private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan DestinationProbeFailureBackoff = TimeSpan.FromMinutes(15);
         private static readonly TimeSpan DestinationProbeStartupDelay = TimeSpan.Zero;

@@ -818,6 +818,30 @@ namespace VaultSync.UI.ViewModels
             if (existing.HasValue && existing.Value > 0)
                 return existing.Value;
 
+            string key = DestinationStatusItem.GetId(dest);
+            Lazy<Task<int?>> lazyTuneTask = _archiveUploadBufferTuneTasks.GetOrAdd(
+                key,
+                _ => new Lazy<Task<int?>>(
+                    () => TuneArchiveUploadBufferAsync(dest, cfg, effectivePath),
+                    LazyThreadSafetyMode.ExecutionAndPublication));
+            Task<int?> tuneTask = lazyTuneTask.Value;
+
+            try
+            {
+                return await tuneTask.WaitAsync(ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                if (tuneTask.IsCompleted)
+                    _archiveUploadBufferTuneTasks.TryRemove(new KeyValuePair<string, Lazy<Task<int?>>>(key, lazyTuneTask));
+            }
+        }
+
+        private async Task<int?> TuneArchiveUploadBufferAsync(
+            BackupDestination dest,
+            AppConfig cfg,
+            string effectivePath)
+        {
             try
             {
                 string display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
@@ -826,13 +850,13 @@ namespace VaultSync.UI.ViewModels
                 int timeoutSeconds = IsSmbPath(dest.Path) || IsSmbPath(effectivePath) ? 8 : 3;
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
                 ArchiveProbeResult result = await Task.Run(
-                    () => ProbeArchiveUploadBufferBytes(effectivePath, ct, timeoutCts.Token),
-                    ct);
+                    () => ProbeArchiveUploadBufferBytes(effectivePath, CancellationToken.None, timeoutCts.Token));
 
                 if (result.TimedOut)
                 {
-                    Console.WriteLine($"[DestinationProbe] Auto-tune timed out for '{dest.Path}'. Falling back to default buffer.");
-                    return null;
+                    SaveArchiveUploadBufferBytes(cfg, dest, result.BufferBytes);
+                    Console.WriteLine($"[DestinationProbe] Auto-tune timed out for '{dest.Path}'. Cached fallback buffer.");
+                    return result.BufferBytes;
                 }
 
                 SaveArchiveUploadBufferBytes(cfg, dest, result.BufferBytes);
@@ -844,7 +868,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (OperationCanceledException)
             {
-                throw;
+                return null;
             }
             catch (Exception ex)
             {

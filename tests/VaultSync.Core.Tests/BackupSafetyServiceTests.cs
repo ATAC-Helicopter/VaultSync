@@ -98,6 +98,23 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Assert.Single(entries);
     }
 
+    [Fact]
+    public void FilterService_DoubleStarDirectoryPatternExcludesNestedBuildOutput()
+    {
+        var projectRoot = Path.Combine(_tempDir, "project");
+        var nestedBin = Path.Combine(projectRoot, "src", "App", "bin", "Debug");
+        Directory.CreateDirectory(nestedBin);
+        File.WriteAllText(Path.Combine(projectRoot, "Program.cs"), "keep");
+        File.WriteAllText(Path.Combine(nestedBin, "App.dll"), "exclude");
+
+        var scanner = new ScannerService(new FilterService(["**/bin/**"]));
+        var entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
+
+        Assert.Contains("Program.cs", entries);
+        Assert.DoesNotContain(entries, path => path.Contains("App.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.Single(entries);
+    }
+
     public void Dispose()
     {
         try
