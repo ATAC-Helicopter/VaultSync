@@ -2,11 +2,16 @@ node_modules/**
 dist/**
 build/**
 .cache/**
+**/node_modules/**
+**/dist/**
+**/build/**
+**/.cache/**
 *.log
 *.tmp
 
 # tooling
 coverage/**
+**/coverage/**
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

@@ -1032,19 +1032,19 @@
   - Acceptance:
     - Manually deleted backup folders disappear from the Backups page after the destination is reachable and the page refreshes.
     - Offline destinations do not lose history entries during refresh.
-- [x] `BUG-18007` `P2` Reduce duplicate destination probe work and nested Avalonia output scans. _(Done in PR #283, issue #285; completed 2026-05-13)_
-  - Scope: coalesce archive upload buffer auto-tune work per destination and tighten the Avalonia preset around nested generated output.
+- [x] `BUG-18007` `P2` Reduce duplicate destination probe work and nested generated-output scans. _(Done in PR #283, issue #285; completed 2026-05-13)_
+  - Scope: coalesce archive upload buffer auto-tune work per destination and tighten development presets around nested generated output.
   - What it takes:
     - share an in-flight archive upload buffer probe when parallel backups target the same destination.
     - cache the timeout fallback buffer so later backups do not repeat the same slow probe.
-    - exclude nested `bin`, `obj`, test-result, artifact, and package outputs from Avalonia project scans.
+    - exclude nested build, dependency, test-result, artifact, package, and cache outputs from development project scans.
   - Current status:
     - Done: destination buffer tuning now uses a single lazy in-flight task per destination.
     - Done: timed-out probes persist the fallback buffer.
-    - Done: Avalonia preset exclusions cover nested build/package outputs, with scanner regression coverage.
+    - Done: development preset exclusions cover nested generated outputs, with scanner regression coverage.
   - Acceptance:
     - parallel backup startup emits one archive buffer tune attempt per destination instead of duplicate timeout probes.
-    - nested Avalonia build outputs are not included in new snapshots.
+    - nested generated outputs are not included in new snapshots for common development presets.
 - [x] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard. _(Done)_
   - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
   - What it takes:

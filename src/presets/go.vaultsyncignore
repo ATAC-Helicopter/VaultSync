@@ -1,5 +1,7 @@
 bin/**
 pkg/**
+**/bin/**
+**/pkg/**
 *.exe
 *.test
 *.tmp

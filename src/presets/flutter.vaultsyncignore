@@ -1,9 +1,11 @@
 build/**
+**/build/**
 .ios/**
 .android/**
 .flutter-plugins
 .flutter-plugins-dependencies
 .dart_tool/**
+**/.dart_tool/**
 .packages
 *.exe
 
