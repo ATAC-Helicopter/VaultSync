@@ -16,6 +16,11 @@
 - VaultSync can prompt for credentials if a delete fails; use a one-time admin or root user only when required.
 - On Windows SMB, disconnect existing connections using different credentials before retrying.
 
+## Deleted backup still appears in history
+- Open the Backups page while the destination is reachable.
+- VaultSync removes stale local history entries only after it can resolve the matching active destination and confirm the recorded backup path is gone.
+- If the destination is offline or no longer configured, the entry is preserved to avoid losing valid history for disconnected drives.
+
 ## Update banner stuck
 - Click Close on the banner.
 - Run `Check for updates now` in Settings > Advanced.

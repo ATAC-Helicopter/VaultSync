@@ -33,7 +33,7 @@
 - [BUG-18003] Backup safety now blocks source/destination overlap and recursive backup growth. Refs #281.
 - [BUG-18004] Backup delete cards now stay visible and show deletion progress details. Refs #279.
 - [BUG-18005] Manual metadata refresh no longer hangs the UI or maps temporary roots. Refs #280.
-- [BUG-18006] Backups now prune stale database entries when recorded backup folders are missing from reachable destinations. Refs #283.
+- [BUG-18006] Backups now prune stale database entries when recorded backup folders are missing from reachable destinations. Refs #284.
 
 ## [1.7.3] - 23.04.2026
 ### Added

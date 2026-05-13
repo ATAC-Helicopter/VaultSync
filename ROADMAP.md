@@ -1020,6 +1020,18 @@
   - Acceptance:
     - Re-adding the same destination path/identity preserves project routing and history linkage where exact identity matches.
     - Mismatch cases are reported with explicit remediation guidance.
+- [x] `BUG-18006` `P1` Backups page stale-entry pruning for manually deleted destination backups. _(Done)_
+  - Scope: when the Backups page reloads, remove local database entries whose recorded backup path is missing from a reachable active destination.
+  - What it takes:
+    - resolve only active destinations that pass reachability checks, including configured credentials/mount behavior.
+    - validate recorded relative backup paths remain under the resolved destination root before trusting them for cleanup.
+    - leave offline, unresolved, or destination-mismatched histories untouched so disconnected drives are not mistaken for deleted backups.
+  - Current status:
+    - Done: Backups reload prunes missing backup rows before shaping the page cache and refreshes the history data afterward.
+    - Done: orphan snapshots are cleaned when the pruned backup was their last reference.
+  - Acceptance:
+    - Manually deleted backup folders disappear from the Backups page after the destination is reachable and the page refreshes.
+    - Offline destinations do not lose history entries during refresh.
 - [x] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard. _(Done)_
   - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
   - What it takes:
