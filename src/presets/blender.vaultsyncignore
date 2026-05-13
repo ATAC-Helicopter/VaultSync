@@ -6,6 +6,10 @@ __pycache__/**
 cache/**
 backup/**
 autosave/**
+**/__pycache__/**
+**/cache/**
+**/backup/**
+**/autosave/**
 *.swp
 *.tmp
 Thumbs.db

@@ -115,6 +115,26 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Assert.Single(entries);
     }
 
+    [Theory]
+    [InlineData("**/Intermediate/**", "Plugins/Module/Intermediate/cache.bin")]
+    [InlineData("**/.import/**", "addons/tool/.import/asset.import")]
+    [InlineData("**/RenderCache/**", "episodes/scene/RenderCache/frame.tmp")]
+    public void FilterService_NestedGeneratedOutputPatternsExcludeExpectedFiles(string pattern, string generatedPath)
+    {
+        var projectRoot = Path.Combine(_tempDir, Guid.NewGuid().ToString("N"));
+        string generatedFile = Path.Combine(projectRoot, generatedPath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(generatedFile)!);
+        File.WriteAllText(Path.Combine(projectRoot, "source.txt"), "keep");
+        File.WriteAllText(generatedFile, "exclude");
+
+        var scanner = new ScannerService(new FilterService([pattern]));
+        var entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
+
+        Assert.Contains("source.txt", entries);
+        Assert.DoesNotContain(entries, path => path.Equals(generatedPath, StringComparison.OrdinalIgnoreCase));
+        Assert.Single(entries);
+    }
+
     public void Dispose()
     {
         try

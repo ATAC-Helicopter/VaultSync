@@ -1,6 +1,8 @@
 # Godot generated
 .import/**
 mono/**
+**/.import/**
+**/mono/**
 export_presets.cfg
 *.exe
 
