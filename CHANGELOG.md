@@ -2,41 +2,40 @@
 ## [1.7.4] - Unreleased
 ### Added
 - [VS-1732] Release publish restore now declares Windows, Linux, and macOS RIDs.
-- [VS-1737] Added VS Code Linux debug launch/tasks for the UI, CLI, and full test suite.
-- [VS-1738] Linux tarball releases now include rootless install/uninstall scripts that create a user desktop launcher, icon, and `vaultsync` command across distro families.
-- [VS-1739] CLI JSON-producing commands now share a single indented serializer configuration so config, destination, snapshot, sync, restore, and prune output stays consistent.
-
+- [VS-1737] Added VS Code Linux debug configs for UI, CLI, and tests.
+- [VS-1738] Linux tarballs now include rootless install/uninstall scripts with launcher, icon, and `vaultsync` command setup.
+- [VS-1739] CLI JSON output now uses a shared indented serializer.
 ### Changed
-- [BUG-17119] Startup metadata import now also checks reachable backup destinations.
+- [BUG-17119] Startup metadata import now checks reachable backup destinations.
 - [BUG-17119] UI metadata imports now treat source stores as read-only.
 - [BUG-17120] Core tests now isolate config writes from real app settings.
-- [VS-1724] Patch manifest compatibility tests now cover empty allowlists, build metadata normalization, and prerelease mismatch edge cases.
-- [VS-1739] CLI command implementations were updated for the current Spectre.Console.Cli command override model.
-- [VS-1740] Refreshed the safe dependency set for 1.7.4, including Avalonia 11.3.14, LiveCharts 2.0.2, ReactiveUI 23.2.27, SQLite/ProtectedData/System.Text.Json 10.0.7, Spectre.Console 0.55.x, and the current DBus/test SDK packages.
-
+- [VS-1724] Patch manifest compatibility tests now cover key edge cases.
+- [VS-1739] CLI commands were updated for the current Spectre.Console.Cli override model.
+- [VS-1740] Refreshed the safe dependency set for 1.7.4.
 ### Fixed
-- [BUG-17116] Notification dismiss and auto-dismiss cleanup now avoid disposed-token races, preventing soft crash reports after toast-heavy UI flows.
+- [BUG-17116] Notification cleanup now avoids disposed-token races.
 - [BUG-17118] Log console rows now show readable time, source, and message fields.
 - [BUG-17108] In-app logs now capture runtime errors without verbose logging.
 - [BUG-17115] Windows/Linux tray menus now open the richer tray panel reliably.
 - [BUG-17117] Tray panel action labels now wrap in localized layouts.
 - [BUG-17119] Linux metadata imports now remap rooted backup paths to the active destination.
-- [BUG-17122] Linux debug builds now use an Avalonia/LiveCharts-compatible dependency set, preventing silent startup exits and dashboard chart crashes in local runs.
-- [BUG-17123] Destination metadata imports now recover SQLite sidecar journals through a temporary copy, preventing read-only source stores from importing as empty.
-- [BUG-17124] Destination imports now rebuild missing backup history from timestamped backup folders when metadata backup rows are absent or the store is missing, including Linux-mounted Windows backup roots.
-- [BUG-17125] Destination reachability probes now run during deferred startup instead of waiting for the periodic timer, and locked tombstone exports defer locally for a later retry instead of being dropped.
-- [BUG-17126] Crash dialog chrome now uses Avalonia 11's `SystemDecorations` API, restoring clean builds after the dependency refresh.
-- [BUG-17127] Onboarding's manual test hook now keeps the environment-variable override reachable without producing unreachable-code diagnostics.
-- [BUG-17128] System notification service creation now records fallback exceptions instead of swallowing an empty catch.
-- [BUG-17129] Drive health checks now prefer `smartctl` when available across platforms and avoid surfacing SMART health rows for network destinations where local drive data is unavailable.
-- [BUG-17130] Metadata tombstone exports now treat Linux mount roots as network-style SQLite stores, avoiding WAL locks on mounted backup destinations.
-- [BUG-18002] The log console now formats live diagnostics into readable time/source/message rows with fixed color-coded source chips while keeping raw lines available for copy and export.
-- [BUG-17108] The in-app log console now captures live output when opened and mirrors diagnostics-session errors, so runtime failures are visible without enabling verbose logging first.
-- [BUG-17115] Windows/Linux tray right-click now uses a compact native menu that opens the richer tray panel instead of fragile nested submenus, making tray actions selectable on Linux desktop environments.
-- [BUG-18001] Tray panel action buttons now wrap localized labels within the fixed popover width, preventing longer non-English text from clipping or overflowing.
-- [BUG-18003] Backup safety now blocks source/destination overlap, keeps offline staging outside project trees, and always excludes VaultSync-owned backup artifacts from scans to prevent recursive backup growth. Refs #281.
-- [BUG-18004] Backup delete cards now stay visible while overlapping deletes continue and show destination, target, current file, file counts, and removed bytes during deletion. Refs #279.
-- [BUG-18005] Manual metadata refresh now keeps import work off the UI thread and ignores VaultSync temporary root hints, preventing Refresh History hangs and temp-root project mappings. Refs #280.
+- [BUG-17122] Linux debug builds no longer silently exit or crash dashboard charts.
+- [BUG-17123] Destination metadata imports now recover SQLite sidecar journals through a temporary copy.
+- [BUG-17124] Destination imports now rebuild missing backup history from timestamped folders.
+- [BUG-17125] Destination reachability probes now run during deferred startup.
+- [BUG-17125] Locked tombstone exports now defer locally for retry instead of being dropped.
+- [BUG-17126] Crash dialog chrome now uses Avalonia 11 `SystemDecorations`.
+- [BUG-17127] Onboarding’s manual test hook no longer causes unreachable-code diagnostics.
+- [BUG-17128] System notification fallback exceptions are now logged.
+- [BUG-17129] Drive health checks now prefer `smartctl` and skip unavailable network-drive SMART data.
+- [BUG-17130] Metadata tombstone exports now avoid WAL locks on Linux-mounted backup destinations.
+- [BUG-18002] Log console diagnostics now display readable, color-coded rows while preserving raw lines.
+- [BUG-18003] Backup safety now blocks source/destination overlap and recursive backup growth. Refs #281.
+- [BUG-18004] Backup delete cards now stay visible and show deletion progress details. Refs #279.
+- [BUG-18005] Manual metadata refresh no longer hangs the UI or maps temporary roots. Refs #280.
+- [BUG-18006] Backups now prune stale database entries when recorded backup folders are missing from reachable destinations. Refs #284.
+- [BUG-18007] Backup probes now share in-flight buffer tuning and dev presets skip nested generated outputs. Refs #285.
+- [BUG-18008] Passive Backups refreshes no longer wake destinations just to update reachability. Refs #286.
 
 ## [1.7.3] - 23.04.2026
 ### Added

@@ -79,8 +79,6 @@ namespace VaultSync.UI.ViewModels
                     bool allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
                     vm.ResetDestinationStatuses(destinations, allowToggle);
 
-                    EnsureDestinationProbeStarted();
-
                     IReadOnlyList<DestinationProbeSummary> summaries = GetDestinationProbeSummaries(cfg);
                     foreach (DestinationProbeSummary summary in summaries)
                     {
@@ -303,30 +301,8 @@ namespace VaultSync.UI.ViewModels
                         }
                     });
 
-                    if (onBackupsPage || force)
-                    {
-                        if (backups.Count > 0)
-                        {
-                            int scanAdded = ScanDestinationsForUntrackedBackups(projects, backups);
-                            if (scanAdded > 0)
-                            {
-                                backups = [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
-                                useLightweight = false;
-                                _backupsCacheBackups = backups;
-                                _backupsCachePartial = useLightweight;
-                                _backupsCacheUpdatedUtc = DateTime.UtcNow;
-
-                                Dispatcher.UIThread.Post(() =>
-                                {
-                                    if (onBackupsPage || force)
-                                    {
-                                        BackupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
-                                        BackupsViewModel.RefreshBackupDriveHealth();
-                                    }
-                                });
-                            }
-                        }
-                    }
+                    // Destination reconciliation runs when a backup has already prepared the destination.
+                    // Backups-page refresh should not wake sleeping disks or network shares just to test status.
                 }
                 finally
                 {
@@ -347,6 +323,67 @@ namespace VaultSync.UI.ViewModels
                 ? new ProjectDestinationSelection(AppViewModel.GetActiveDestinations(cfg), null, null)
                 : ResolveDestinationsForProject(project, cfg);
             return new BackupProjectPreparation(cfg, selection.Destinations, project, selection.WarningMessage, selection.WarningCode);
+        }
+
+        private int PruneMissingBackupsFromPreparedDestination(BackupDestination dest, string effectivePath, AppConfig cfg)
+        {
+            if (string.IsNullOrWhiteSpace(effectivePath))
+                return 0;
+
+            List<Backup> backups = [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
+            if (backups.Count == 0)
+                return 0;
+
+            List<BackupDestination> destinations = AppViewModel.GetActiveDestinations(cfg);
+            if (destinations.Count == 0)
+                return 0;
+
+            int removed = 0;
+            foreach (Backup backup in backups)
+            {
+                if (string.IsNullOrWhiteSpace(backup.Path))
+                    continue;
+
+                if (!BackupBelongsToDestination(backup, dest, destinations.Count))
+                    continue;
+
+                if (!TryCombinePathUnderRoot(effectivePath, backup.Path, out string? fullPath))
+                    continue;
+
+                if (Directory.Exists(fullPath) || File.Exists(fullPath))
+                    continue;
+
+                _repo.DeleteBackupById(backup.Id);
+                TryDeleteSnapshotIfOrphan(backup.ProjectId, backup.SnapshotId);
+                removed++;
+            }
+
+            if (removed > 0)
+            {
+                RuntimeLog.WriteVerbose($"[Backups] Pruned {removed} missing backup database entr{(removed == 1 ? "y" : "ies")} from prepared destination '{dest.Alias ?? dest.Path}'.");
+            }
+
+            return removed;
+        }
+
+        private static bool BackupBelongsToDestination(Backup backup, BackupDestination dest, int activeDestinationCount)
+        {
+            if (!string.IsNullOrWhiteSpace(backup.DestinationPath) &&
+                string.Equals(backup.DestinationPath, dest.Path, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(backup.DestinationPath))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(backup.DestinationAlias))
+            {
+                return string.Equals(backup.DestinationAlias, dest.Alias, StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(backup.DestinationAlias, dest.Path, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return activeDestinationCount == 1;
         }
 
         private int ScanDestinationsForUntrackedBackups(List<Project> projects, List<Backup> backups)

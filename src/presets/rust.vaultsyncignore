@@ -1,4 +1,5 @@
 target/**
+**/target/**
 *.exe
 Cargo.lock.bak
 *.rs.bk

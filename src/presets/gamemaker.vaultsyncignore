@@ -6,6 +6,10 @@ backup/
 output/
 build/
 cache/
+**/backup/
+**/output/
+**/build/
+**/cache/
 *.exe
 
 # IDE

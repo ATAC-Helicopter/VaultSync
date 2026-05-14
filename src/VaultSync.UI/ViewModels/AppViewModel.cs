@@ -108,8 +108,8 @@ namespace VaultSync.UI.ViewModels
         private int _autoBackupInFlight;
         private Timer? _maintenanceTimer;
         private int _maintenanceInFlight;
-        private Timer? _destinationProbeTimer;
         private int _destinationProbeInFlight;
+        private int _startupDestinationProbeQueued;
 
         // Core services for live data
         private readonly SqliteRepository _repo;
@@ -126,9 +126,9 @@ namespace VaultSync.UI.ViewModels
         private readonly LogConsoleService _logConsoleService;
         private LogConsoleWindow? _logConsoleWindow;
         private readonly ConcurrentDictionary<string, DestinationProbeSummary> _destinationProbeSummaries = new();
+        private readonly ConcurrentDictionary<string, Lazy<Task<int?>>> _archiveUploadBufferTuneTasks = new(StringComparer.OrdinalIgnoreCase);
         private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan DestinationProbeFailureBackoff = TimeSpan.FromMinutes(15);
-        private static readonly TimeSpan DestinationProbeStartupDelay = TimeSpan.Zero;
         private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
         private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
         private const int DefaultEncryptedOpenTimeoutMinutes = 10;

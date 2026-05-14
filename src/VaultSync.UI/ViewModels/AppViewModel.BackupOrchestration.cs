@@ -74,6 +74,15 @@ namespace VaultSync.UI.ViewModels
 
             DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
             RuntimeLog.WriteVerbose($"[Backup] Destination resolved: alias='{dest.Alias ?? dest.Path}', path='{dest.Path}', effective='{resolution.EffectivePath}', success={resolution.IsSuccess}, mountedByUs={resolution.MountedByUs}");
+            UpdateDestinationProbeSummary(dest, new DestinationTestResult(
+                resolution.IsSuccess,
+                resolution.IsSuccess,
+                resolution.EffectivePath,
+                resolution.Message));
+
+            if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                PruneMissingBackupsFromPreparedDestination(dest, resolution.EffectivePath, cfg);
+
             return resolution;
         }
 

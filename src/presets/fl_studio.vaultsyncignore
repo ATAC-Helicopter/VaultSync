@@ -1,5 +1,7 @@
 Backup/**
 Rendered/**
+**/Backup/**
+**/Rendered/**
 *.fst
 *.tmp
 *.bak

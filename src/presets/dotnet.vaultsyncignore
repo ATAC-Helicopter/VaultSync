@@ -1,7 +1,10 @@
 bin/**
 obj/**
+**/bin/**
+**/obj/**
 *.exe
 TestResults/**
+**/TestResults/**
 *.user
 *.csproj.user
 *.suo
