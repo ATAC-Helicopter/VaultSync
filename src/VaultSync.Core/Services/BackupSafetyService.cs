@@ -129,6 +129,31 @@ public static class BackupSafetyService
         return ReservedFileNames.Any(name => string.Equals(fileName, name, StringComparison.OrdinalIgnoreCase));
     }
 
+    public static bool TryCombinePathUnderRoot(string root, string? relativePath, out string fullPath)
+    {
+        fullPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(root))
+            return false;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(relativePath) && Path.IsPathFullyQualified(relativePath))
+                return false;
+
+            string normalizedRoot = NormalizeDirectoryPath(root);
+            string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath ?? string.Empty));
+            if (!IsSameOrChildPath(normalizedRoot, candidate))
+                return false;
+
+            fullPath = candidate;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static string NormalizeDirectoryPath(string path)
     {
         var full = Path.GetFullPath(path)

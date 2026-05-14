@@ -1057,10 +1057,6 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                string normalizedRoot = Path.GetFullPath(root)
-                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                    + Path.DirectorySeparatorChar;
-
                 string safeRelative = string.IsNullOrWhiteSpace(relativePath) ? string.Empty : relativePath.Trim();
                 if (Path.IsPathFullyQualified(safeRelative))
                 {
@@ -1068,14 +1064,12 @@ namespace VaultSync.UI.ViewModels
                     return false;
                 }
 
-                string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, safeRelative));
-                if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                if (!BackupSafetyService.TryCombinePathUnderRoot(root, safeRelative, out fullPath))
                 {
                     error = "Backup path resolves outside destination root.";
                     return false;
                 }
 
-                fullPath = candidate;
                 return true;
             }
             catch (Exception ex)

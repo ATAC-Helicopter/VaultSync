@@ -78,6 +78,47 @@ public sealed class BackupSafetyServiceTests : IDisposable
     }
 
     [Fact]
+    public void TryCombinePathUnderRoot_AllowsNestedRelativePath()
+    {
+        var backupRoot = Path.Combine(_tempDir, "backups");
+        Directory.CreateDirectory(backupRoot);
+
+        bool combined = BackupSafetyService.TryCombinePathUnderRoot(
+            backupRoot,
+            "Project/2026-05-14_10-00-00",
+            out string fullPath);
+
+        Assert.True(combined);
+        Assert.StartsWith(Path.GetFullPath(backupRoot), fullPath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(Path.Combine("Project", "2026-05-14_10-00-00"), fullPath);
+    }
+
+    [Theory]
+    [InlineData("../outside")]
+    [InlineData("Project/../../outside")]
+    public void TryCombinePathUnderRoot_BlocksTraversal(string relativePath)
+    {
+        var backupRoot = Path.Combine(_tempDir, "backups");
+        Directory.CreateDirectory(backupRoot);
+
+        bool combined = BackupSafetyService.TryCombinePathUnderRoot(backupRoot, relativePath, out _);
+
+        Assert.False(combined);
+    }
+
+    [Fact]
+    public void TryCombinePathUnderRoot_BlocksAbsolutePath()
+    {
+        var backupRoot = Path.Combine(_tempDir, "backups");
+        Directory.CreateDirectory(backupRoot);
+        string absolutePath = Path.Combine(_tempDir, "outside");
+
+        bool combined = BackupSafetyService.TryCombinePathUnderRoot(backupRoot, absolutePath, out _);
+
+        Assert.False(combined);
+    }
+
+    [Fact]
     public void FilterService_AlwaysExcludesVaultSyncBackupArtifacts()
     {
         var projectRoot = Path.Combine(_tempDir, "project");

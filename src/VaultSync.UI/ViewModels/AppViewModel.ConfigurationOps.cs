@@ -347,7 +347,7 @@ namespace VaultSync.UI.ViewModels
                 if (!BackupBelongsToDestination(backup, dest, destinations.Count))
                     continue;
 
-                if (!TryCombinePathUnderRoot(effectivePath, backup.Path, out string? fullPath))
+                if (!BackupSafetyService.TryCombinePathUnderRoot(effectivePath, backup.Path, out string fullPath))
                     continue;
 
                 if (Directory.Exists(fullPath) || File.Exists(fullPath))

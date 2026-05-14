@@ -207,7 +207,7 @@ namespace VaultSync.UI.ViewModels
                 if (string.IsNullOrWhiteSpace(dest.Path))
                     continue;
 
-                if (!TryCombinePathUnderRoot(dest.Path, relativePath, out string? combined))
+                if (!BackupSafetyService.TryCombinePathUnderRoot(dest.Path, relativePath, out string combined))
                     continue;
                 if (Directory.Exists(combined) || File.Exists(combined))
                     return dest.Path;
@@ -215,7 +215,7 @@ namespace VaultSync.UI.ViewModels
 
             if (!string.IsNullOrWhiteSpace(legacyRoot))
             {
-                if (!TryCombinePathUnderRoot(legacyRoot, relativePath, out string? combined))
+                if (!BackupSafetyService.TryCombinePathUnderRoot(legacyRoot, relativePath, out string combined))
                     return null;
                 if (Directory.Exists(combined) || File.Exists(combined))
                     return legacyRoot;
@@ -232,7 +232,7 @@ namespace VaultSync.UI.ViewModels
             {
                 foreach (BackupDestination? dest in destinations.Where(d => !string.IsNullOrWhiteSpace(d.Path)))
                 {
-                    if (!TryCombinePathUnderRoot(dest.Path!, backup.Path, out string? combined))
+                    if (!BackupSafetyService.TryCombinePathUnderRoot(dest.Path!, backup.Path, out string combined))
                         continue;
                     if (Directory.Exists(combined) || File.Exists(combined))
                         return dest.Path;
@@ -250,7 +250,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (match is not null && !string.IsNullOrWhiteSpace(match.Path))
                 {
-                    if (TryCombinePathUnderRoot(match.Path, backup.Path ?? string.Empty, out string? combined) &&
+                    if (BackupSafetyService.TryCombinePathUnderRoot(match.Path, backup.Path ?? string.Empty, out string combined) &&
                         (Directory.Exists(combined) || File.Exists(combined)))
                     {
                         return match.Path;
@@ -416,7 +416,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(backup.Path))
                 return BackupFolderOpenPreparation.Failure;
 
-            if (!TryCombinePathUnderRoot(destinationRoot, backup.Path, out string? fullPath))
+            if (!BackupSafetyService.TryCombinePathUnderRoot(destinationRoot, backup.Path, out string fullPath))
                 return BackupFolderOpenPreparation.Failure;
             if (!Directory.Exists(fullPath))
                 return BackupFolderOpenPreparation.Failure;
@@ -784,34 +784,6 @@ namespace VaultSync.UI.ViewModels
             catch
             {
                 // best effort cleanup
-            }
-        }
-
-        private static bool TryCombinePathUnderRoot(string root, string relativePath, out string fullPath)
-        {
-            fullPath = string.Empty;
-            if (string.IsNullOrWhiteSpace(root))
-                return false;
-
-            try
-            {
-                string normalizedRoot = Path.GetFullPath(root)
-                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                    + Path.DirectorySeparatorChar;
-
-                if (Path.IsPathFullyQualified(relativePath))
-                    return false;
-
-                string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath ?? string.Empty));
-                if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-                    return false;
-
-                fullPath = candidate;
-                return true;
-            }
-            catch
-            {
-                return false;
             }
         }
 

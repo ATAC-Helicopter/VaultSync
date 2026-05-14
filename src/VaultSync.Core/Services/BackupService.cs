@@ -2929,7 +2929,7 @@ public sealed class BackupService(
                         .TrimStart(Path.DirectorySeparatorChar);
                 string? fullPath = string.Empty;
                 if (!string.IsNullOrWhiteSpace(baseRoot) &&
-                    !TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
+                    !BackupSafetyService.TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
                 {
                     RuntimeLog.WriteVerbose(
                         $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}); code=out-of-root.");
@@ -3299,27 +3299,6 @@ public sealed class BackupService(
             {
                 return (DateTime.UtcNow - _lastUpdateUtc) <= window;
             }
-        }
-    }
-
-    private static bool TryCombinePathUnderRoot(string root, string relativePath, out string fullPath)
-    {
-        fullPath = string.Empty;
-        try
-        {
-            string normalizedRoot = Path.GetFullPath(root)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                + Path.DirectorySeparatorChar;
-            string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath ?? string.Empty));
-            if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            fullPath = candidate;
-            return true;
-        }
-        catch
-        {
-            return false;
         }
     }
 
