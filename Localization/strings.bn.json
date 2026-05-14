@@ -1174,6 +1174,7 @@
   "WhatsNew.Close": "বুঝেছি",
   "WhatsNew.Fallback": "এই আপডেটে VaultSync-এ বিভিন্ন উন্নতি এবং বাগ ফিক্স রয়েছে।",
   "WhatsNew.Section.General": "হাইলাইটস",
+  "WhatsNew.Subtitle": "আপনি যে পরিবর্তনগুলো ব্যবহার করতে যাচ্ছেন তার সংক্ষিপ্ত সারাংশ।",
   "WhatsNew.Title": "নতুন কী",
   "Backups.Restore.Mode.Label": "রিস্টোর মোড",
   "Backups.Restore.Mode.Direct": "সরাসরি (প্রকল্প পথ ওভাররাইট)",

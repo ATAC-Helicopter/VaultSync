@@ -6,85 +6,110 @@
     xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
     x:Class="VaultSync.UI.Views.WhatsNewWindow"
     x:DataType="vm:WhatsNewViewModel"
-    Width="520"
-    Height="680"
+    Width="640"
+    Height="720"
     CanResize="True"
     WindowStartupLocation="CenterOwner"
     Title="{infra:LocalizedString Key=WhatsNew.Title}">
 
-  <Border Padding="20" Background="{DynamicResource Surface0}">
-    <Border Background="{DynamicResource Surface1}"
-            BorderBrush="{DynamicResource BorderSoft}"
-            BorderThickness="1"
-            CornerRadius="22"
-            Padding="18">
-      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
-        <StackPanel Grid.Row="0" Spacing="8">
-          <TextBlock Text="{CompiledBinding Title}"
-                     FontSize="22"
-                     FontWeight="SemiBold" />
-          <TextBlock Text="{CompiledBinding VersionLabel}"
-                     Foreground="{DynamicResource TextSecondary}"
-                     FontSize="12" />
-        </StackPanel>
-
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="18">
-            <ItemsControl ItemsSource="{CompiledBinding Sections}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:WhatsNewSection">
-                  <Border Background="{DynamicResource Surface2}"
-                          BorderBrush="{DynamicResource BorderSoft}"
-                          BorderThickness="1"
-                          CornerRadius="14"
-                          Padding="16">
-                    <StackPanel Spacing="10">
-                      <TextBlock Text="{CompiledBinding Title}"
-                                 FontWeight="SemiBold"
-                                 FontSize="14" />
-                      <ItemsControl ItemsSource="{CompiledBinding Items}">
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                              <Border Width="8"
-                                      Height="8"
-                                      CornerRadius="4"
-                                      Background="{DynamicResource AccentBrush}"
-                                      Margin="0,8,0,0" />
-                              <controls:RichTextBlock Grid.Column="1"
-                                                      RichText="{Binding}"
-                                                      TextWrapping="Wrap"
-                                                      LineHeight="22"
-                                                      Foreground="{DynamicResource TextSecondary}" />
-                            </Grid>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+  <Border Background="{DynamicResource Surface0}">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <Border Grid.Row="0"
+              Background="{DynamicResource Surface1}"
+              BorderBrush="{DynamicResource BorderSoft}"
+              BorderThickness="0,0,0,1"
+              Padding="28,24,28,20">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="18">
+          <StackPanel Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Spacing="8">
+            <TextBlock Text="{CompiledBinding Title}"
+                       FontSize="26"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimary}" />
+            <TextBlock Text="{CompiledBinding Subtitle}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       MaxWidth="420" />
           </StackPanel>
-        </ScrollViewer>
 
-        <Border Grid.Row="2"
-                Background="{DynamicResource Surface2}"
-                BorderBrush="{DynamicResource BorderSoft}"
-                BorderThickness="1"
-                CornerRadius="16"
-                Padding="12"
-                Margin="0">
-          <Button Content="{infra:LocalizedString Key=WhatsNew.Close}"
-                  Command="{CompiledBinding CloseCommand}"
-                  Background="{DynamicResource AccentBrush}"
-                  Foreground="{DynamicResource TextOnPillBrush}"
+          <Border Grid.Row="0"
+                  Grid.Column="1"
+                  Background="{DynamicResource AccentSoftBrush}"
                   BorderBrush="{DynamicResource AccentBrush}"
-                  CornerRadius="10"
-                  HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Center" />
-        </Border>
-      </Grid>
-    </Border>
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Padding="12,6"
+                  VerticalAlignment="Top">
+            <TextBlock Text="{CompiledBinding VersionLabel}"
+                       Foreground="{DynamicResource TextPrimary}"
+                       FontWeight="SemiBold"
+                       FontSize="13" />
+          </Border>
+        </Grid>
+      </Border>
+
+      <ScrollViewer Grid.Row="1"
+                    VerticalScrollBarVisibility="Auto"
+                    Padding="0">
+        <ItemsControl ItemsSource="{CompiledBinding Sections}"
+                      Margin="28,22,28,22">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:WhatsNewSection">
+              <Grid ColumnDefinitions="4,*"
+                    ColumnSpacing="16"
+                    Margin="0,0,0,24">
+                <Border Grid.Column="0"
+                        Width="4"
+                        CornerRadius="2"
+                        Background="{DynamicResource AccentBrush}" />
+
+                <StackPanel Grid.Column="1" Spacing="12">
+                  <TextBlock Text="{CompiledBinding Title}"
+                             Foreground="{DynamicResource TextPrimary}"
+                             FontWeight="SemiBold"
+                             FontSize="16" />
+                  <ItemsControl ItemsSource="{CompiledBinding Items}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="10"
+                              Margin="0,0,0,9">
+                          <Border Width="6"
+                                  Height="6"
+                                  CornerRadius="3"
+                                  Background="{DynamicResource TextMuted}"
+                                  Margin="0,8,0,0" />
+                          <controls:RichTextBlock Grid.Column="1"
+                                                  RichText="{Binding}"
+                                                  TextWrapping="Wrap"
+                                                  LineHeight="22"
+                                                  Foreground="{DynamicResource TextSecondary}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <Border Grid.Row="2"
+              Background="{DynamicResource Surface1}"
+              BorderBrush="{DynamicResource BorderSoft}"
+              BorderThickness="0,1,0,0"
+              Padding="20">
+        <Button Content="{infra:LocalizedString Key=WhatsNew.Close}"
+                Command="{CompiledBinding CloseCommand}"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="{DynamicResource TextOnPillBrush}"
+                BorderBrush="{DynamicResource AccentBrush}"
+                CornerRadius="8"
+                MinWidth="132"
+                HorizontalAlignment="Right"
+                HorizontalContentAlignment="Center" />
+      </Border>
+    </Grid>
   </Border>
 </Window>

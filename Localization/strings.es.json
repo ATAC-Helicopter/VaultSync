@@ -1174,6 +1174,7 @@
   "WhatsNew.Close": "Entendido",
   "WhatsNew.Fallback": "Esta actualización incluye mejoras y correcciones en VaultSync.",
   "WhatsNew.Section.General": "Destacados",
+  "WhatsNew.Subtitle": "Un resumen breve de los cambios que estás a punto de usar.",
   "WhatsNew.Title": "Novedades",
   "Backups.Restore.Mode.Label": "Modo de restauración",
   "Backups.Restore.Mode.Direct": "Directo (sobrescribir ruta del proyecto)",

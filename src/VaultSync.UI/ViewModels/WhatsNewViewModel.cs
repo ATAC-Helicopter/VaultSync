@@ -10,6 +10,7 @@ public sealed class WhatsNewViewModel : ViewModelBase
 {
     public string Title { get; }
     public string VersionLabel { get; }
+    public string Subtitle { get; }
     public ObservableCollection<WhatsNewSection> Sections { get; } = [];
 
     public ICommand CloseCommand { get; }
@@ -20,6 +21,7 @@ public sealed class WhatsNewViewModel : ViewModelBase
     {
         Title = L("WhatsNew.Title", "What's new");
         VersionLabel = versionLabel;
+        Subtitle = L("WhatsNew.Subtitle", "A short release digest for the changes you are about to run.");
         CloseCommand = new RelayCommand(_ => CloseRequested?.Invoke());
     }
 

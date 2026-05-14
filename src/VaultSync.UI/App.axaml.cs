@@ -554,21 +554,18 @@ public partial class App : Application
 
         string[] lines = content.Split(["\r\n", "\n"], StringSplitOptions.None);
         bool hasWhatsNewHeader = Array.Exists(lines, line => line.StartsWith('#') && line.Contains("What's New", StringComparison.OrdinalIgnoreCase));
-        int startIndex = 0;
-        if (!hasWhatsNewHeader)
-        {
-            string headerPrefix = $"## [{currentVersion}]";
-            startIndex = Array.FindIndex(lines, line => line.StartsWith(headerPrefix, StringComparison.OrdinalIgnoreCase));
-            if (startIndex < 0)
-                return sections;
-        }
+        string headerPrefix = $"## [{currentVersion}]";
+        int startIndex = Array.FindIndex(lines, line => line.StartsWith(headerPrefix, StringComparison.OrdinalIgnoreCase));
+        if (startIndex < 0 && !hasWhatsNewHeader)
+            return sections;
 
         WhatsNewSection? currentSection = null;
-        int lineStart = hasWhatsNewHeader ? 0 : startIndex + 1;
+        int lineStart = startIndex >= 0 ? startIndex + 1 : 0;
+        bool stopAtNextVersion = startIndex >= 0;
         for (int i = lineStart; i < lines.Length; i++)
         {
             string line = lines[i].TrimEnd();
-            if (!hasWhatsNewHeader && line.StartsWith("## [", StringComparison.Ordinal))
+            if (stopAtNextVersion && line.StartsWith("## [", StringComparison.Ordinal))
                 break;
 
             if (line.StartsWith("### ", StringComparison.Ordinal))

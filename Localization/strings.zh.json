@@ -1174,6 +1174,7 @@
   "WhatsNew.Close": "知道了",
   "WhatsNew.Fallback": "此更新包含 VaultSync 的改进和问题修复。",
   "WhatsNew.Section.General": "主要更新",
+  "WhatsNew.Subtitle": "简要了解你即将使用的更改。",
   "WhatsNew.Title": "新内容",
   "Backups.Restore.Mode.Label": "恢复模式",
   "Backups.Restore.Mode.Direct": "直接（覆盖项目路径）",
