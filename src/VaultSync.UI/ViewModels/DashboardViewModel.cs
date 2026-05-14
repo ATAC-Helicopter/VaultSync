@@ -2198,19 +2198,8 @@ namespace VaultSync.UI.ViewModels
             return Lf("RestoreReadiness.Detail", "Ready {0} - Attention {1} - Risk {2} - Unavailable {3}", ready, attention, risk, unavailable);
         }
 
-        private static string FormatBytes(long bytes)
-        {
-            if (bytes <= 0) return "0 B";
-            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-            int order = 0;
-            double len = bytes;
-            while (len >= 1024 && order < sizes.Length - 1)
-            {
-                order++;
-                len /= 1024;
-            }
-            return $"{len:0.#} {sizes[order]}";
-        }
+        private static string FormatBytes(long bytes) =>
+            bytes <= 0 ? "0 B" : UiFormat.FormatBytes(bytes, "0.#");
 
         private static string GetDefaultDbPath()
         {

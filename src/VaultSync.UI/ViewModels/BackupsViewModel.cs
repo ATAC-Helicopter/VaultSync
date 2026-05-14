@@ -3574,14 +3574,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         private static string FormatSignedSize(long bytes)
-        {
-            string absolute = BackupSnapshotItem.FormatSize(Math.Abs(bytes));
-            if (bytes > 0)
-                return $"+{absolute}";
-            if (bytes < 0)
-                return $"-{absolute}";
-            return absolute;
-        }
+            => UiFormat.FormatSignedBytes(bytes);
 
         private static int ComputeAutoBackupSignature(ISet<int>? disabledProjects)
         {
@@ -3978,21 +3971,8 @@ namespace VaultSync.UI.ViewModels
 
         public static IBrush ImportedTagBackground => ImportedBrush;
 
-        internal static string FormatSize(long bytes)
-        {
-            const double kb = 1024;
-            const double mb = kb * 1024;
-            const double gb = mb * 1024;
-
-            if (bytes >= gb)
-                return $"{bytes / gb:0.##} GB";
-            if (bytes >= mb)
-                return $"{bytes / mb:0.##} MB";
-            if (bytes >= kb)
-                return $"{bytes / kb:0.##} KB";
-
-            return $"{bytes} B";
-        }
+        internal static string FormatSize(long bytes) =>
+            UiFormat.FormatBytes(bytes);
     }
 
     public class SnapshotProjectGroup

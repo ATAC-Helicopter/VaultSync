@@ -35,6 +35,15 @@ public class ProjectsViewModel : ViewModelBase
 {
     private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
     private static readonly string[] DefaultReusableTags = ["Work", "Games", "Media", "Critical", "Archive"];
+    private sealed record ProjectRegistrationSnapshot(
+        bool Missing,
+        int ProjectId,
+        string Preset,
+        string TagsCsv,
+        string PreferredDestinationId,
+        string EncryptionPolicy,
+        string EncryptionKeyRef);
+
     private readonly ProjectDiscoveryService _discovery = new();
     private IReadOnlyList<DiscoveredProject> _cachedDiscovery = [];
     private string? _cachedDiscoveryRoot;
@@ -554,16 +563,16 @@ public class ProjectsViewModel : ViewModelBase
         _exportPresetEditorCommand = new RelayCommand(_ => ExportPresetEditor(), _ => HasPresetEditorTarget);
         _importPresetEditorCommand = new RelayCommand(_ => ImportPresetEditor());
         _snapshotGroupCommand = new RelayCommand(
-            _ => _ = RunDetachedAsync(SnapshotSelectedGroupAsync, "snapshot-selected-group"),
+            _ => _ = DetachedTask.RunAsync(SnapshotSelectedGroupAsync, "snapshot-selected-group"),
             _ => CanSnapshotSelectedGroup());
         _backupGroupCommand = new RelayCommand(
-            _ => _ = RunDetachedAsync(BackupSelectedGroupAsync, "backup-selected-group"),
+            _ => _ = DetachedTask.RunAsync(BackupSelectedGroupAsync, "backup-selected-group"),
             _ => CanBackupSelectedGroup());
         _disableAutoBackupGroupCommand = new RelayCommand(
-            _ => _ = RunDetachedAsync(() => SetAutoBackupForSelectedGroupAsync(false), "disable-auto-backup-selected-group"),
+            _ => _ = DetachedTask.RunAsync(() => SetAutoBackupForSelectedGroupAsync(false), "disable-auto-backup-selected-group"),
             _ => CanDisableAutoBackupForSelectedGroup());
         _enableAutoBackupGroupCommand = new RelayCommand(
-            _ => _ = RunDetachedAsync(() => SetAutoBackupForSelectedGroupAsync(true), "enable-auto-backup-selected-group"),
+            _ => _ = DetachedTask.RunAsync(() => SetAutoBackupForSelectedGroupAsync(true), "enable-auto-backup-selected-group"),
             _ => CanEnableAutoBackupForSelectedGroup());
         _commitProjectTagInputCommand = new RelayCommand(_ => CommitProjectTagInput(), _ => SelectedProject is not null);
         _removeProjectTagCommand = new RelayCommand(tag => RemoveProjectTag(tag as string), _ => SelectedProject is not null);
@@ -576,10 +585,10 @@ public class ProjectsViewModel : ViewModelBase
         _resetProjectTagColorCommand = new RelayCommand(_ => ResetProjectTagColor(), _ => CanEditProjectTagColor);
         _applyProjectTagColorSwatchCommand = new RelayCommand(hex => ApplyProjectTagColorSwatch(hex as string), hex => !string.IsNullOrWhiteSpace(hex as string));
         _applyTagToGroupCommand = new RelayCommand(
-            _ => _ = RunDetachedAsync(() => SetTagForSelectedGroupAsync(add: true), "apply-tag-selected-group"),
+            _ => _ = DetachedTask.RunAsync(() => SetTagForSelectedGroupAsync(add: true), "apply-tag-selected-group"),
             _ => CanSetTagForSelectedGroup());
         _removeTagFromGroupCommand = new RelayCommand(
-            _ => _ = RunDetachedAsync(() => SetTagForSelectedGroupAsync(add: false), "remove-tag-selected-group"),
+            _ => _ = DetachedTask.RunAsync(() => SetTagForSelectedGroupAsync(add: false), "remove-tag-selected-group"),
             _ => CanSetTagForSelectedGroup());
         _selectGroupTagCommand = new RelayCommand(tag => SelectGroupTag(tag as string));
         _removeGroupTagCommand = new RelayCommand(tag => RemoveGroupTag(tag as string), _ => true);
@@ -640,7 +649,23 @@ public class ProjectsViewModel : ViewModelBase
         if (Interlocked.Exchange(ref _initialLoadQueued, 1) == 1)
             return;
 
-        _ = RefreshAsync(forceDiscovery: false).ContinueWith(_ => Interlocked.Exchange(ref _initialLoadQueued, 0));
+        _ = RunInitialLoadAsync();
+    }
+
+    private async Task RunInitialLoadAsync()
+    {
+        try
+        {
+            await RefreshAsync(forceDiscovery: false).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Projects initial load failed: {ex.GetType().Name} - {ex.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _initialLoadQueued, 0);
+        }
     }
 
     private void ShowNotification(string message, NotificationSeverity severity = NotificationSeverity.Info)
@@ -2289,7 +2314,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void TakeSnapshot()
     {
-        _ = RunDetachedAsync(TakeSnapshotCoreAsync, nameof(TakeSnapshotCoreAsync));
+        _ = DetachedTask.RunAsync(TakeSnapshotCoreAsync, nameof(TakeSnapshotCoreAsync));
     }
 
     private async Task TakeSnapshotCoreAsync()
@@ -2570,77 +2595,90 @@ public class ProjectsViewModel : ViewModelBase
         var refreshToken = Interlocked.Increment(ref _selectedProjectRefreshToken);
         var projectName = SelectedProject.Name;
 
-        _ = Task.Run(() =>
+        _ = RefreshSelectedProjectRegistrationAsync(refreshToken, projectName);
+    }
+
+    private async Task RefreshSelectedProjectRegistrationAsync(int refreshToken, string projectName)
+    {
+        try
         {
-            try
-            {
-                var config = AppConfigStore.GetSnapshot();
-                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                    ? config.DbPath
-                    : GetDefaultDbPath();
-
-                var repo = new SqliteRepository(dbPath);
-                var existing = repo.GetProjectByName(projectName);
-                return (
-                    existing is null,
-                    existing?.Id ?? 0,
-                    existing?.Preset ?? string.Empty,
-                    existing?.Tags ?? string.Empty,
-                    existing?.PreferredDestinationId ?? string.Empty,
-                    ProjectEncryptionPolicy.Normalize(existing?.EncryptionPolicy),
-                    existing?.EncryptionKeyRef ?? string.Empty);
-            }
-            catch
-            {
-                return (true, 0, string.Empty, string.Empty, string.Empty, ProjectEncryptionPolicy.Inherit, string.Empty);
-            }
-        }).ContinueWith(t =>
+            ProjectRegistrationSnapshot snapshot = await Task.Run(() => LoadProjectRegistrationSnapshot(projectName)).ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(() => ApplyProjectRegistrationSnapshot(refreshToken, projectName, snapshot));
+        }
+        catch (Exception ex)
         {
-            Dispatcher.UIThread.Post(() =>
+            DiagnosticsLogger.Record($"Project registration refresh failed for '{projectName}': {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private static ProjectRegistrationSnapshot LoadProjectRegistrationSnapshot(string projectName)
+    {
+        try
+        {
+            var config = AppConfigStore.GetSnapshot();
+            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                ? config.DbPath
+                : GetDefaultDbPath();
+
+            var repo = new SqliteRepository(dbPath);
+            var existing = repo.GetProjectByName(projectName);
+            return new ProjectRegistrationSnapshot(
+                existing is null,
+                existing?.Id ?? 0,
+                existing?.Preset ?? string.Empty,
+                existing?.Tags ?? string.Empty,
+                existing?.PreferredDestinationId ?? string.Empty,
+                ProjectEncryptionPolicy.Normalize(existing?.EncryptionPolicy),
+                existing?.EncryptionKeyRef ?? string.Empty);
+        }
+        catch
+        {
+            return new ProjectRegistrationSnapshot(true, 0, string.Empty, string.Empty, string.Empty, ProjectEncryptionPolicy.Inherit, string.Empty);
+        }
+    }
+
+    private void ApplyProjectRegistrationSnapshot(int refreshToken, string projectName, ProjectRegistrationSnapshot snapshot)
+    {
+        if (refreshToken != _selectedProjectRefreshToken)
+            return;
+
+        if (SelectedProject is null ||
+            !string.Equals(SelectedProject.Name, projectName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (snapshot.Missing)
+        {
+            SnapshotActionLabel = L("Snapshots.Action.AddProject", "Add project");
+            SelectedProject.IsRegistered = false;
+            SelectedProject.ProjectId = 0;
+            SelectedProject.EncryptionKeyRef = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
             {
-                if (refreshToken != _selectedProjectRefreshToken)
-                    return;
-
-                if (SelectedProject is null ||
-                    !string.Equals(SelectedProject.Name, projectName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
-
-                var (missing, projectId, preset, tagsCsv, preferredDestinationId, encryptionPolicy, encryptionKeyRef) = t.Result;
-                if (missing)
-                {
-                    SnapshotActionLabel = L("Snapshots.Action.AddProject", "Add project");
-                    SelectedProject.IsRegistered = false;
-                    SelectedProject.ProjectId = 0;
-                    SelectedProject.EncryptionKeyRef = string.Empty;
-
-                    if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
-                    {
-                        SelectedProject.Preset = string.Empty;
-                    }
-                    if (string.IsNullOrWhiteSpace(SelectedProject.TagsCsv))
-                    {
-                        SelectedProject.TagsCsv = string.Empty;
-                    }
-                }
-                else
-                {
-                    SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
-                    SelectedProject.IsRegistered = true;
-                    SelectedProject.ProjectId = projectId;
-                    SelectedProject.Preset = preset;
-                    SelectedProject.TagsCsv = tagsCsv;
-                    SelectedProject.PreferredDestinationId = preferredDestinationId;
-                    SelectedProject.EncryptionPolicy = encryptionPolicy;
-                    SelectedProject.EncryptionKeyRef = encryptionKeyRef;
-                    var cfg = AppConfigStore.GetSnapshot();
-                    UpdateProjectDestinationDisplay(SelectedProject, cfg);
-                    UpdateProjectEncryptionDisplay(SelectedProject, cfg);
-                    UpdateProjectPresetDisplay(SelectedProject);
-                }
-            });
-        });
+                SelectedProject.Preset = string.Empty;
+            }
+            if (string.IsNullOrWhiteSpace(SelectedProject.TagsCsv))
+            {
+                SelectedProject.TagsCsv = string.Empty;
+            }
+        }
+        else
+        {
+            SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
+            SelectedProject.IsRegistered = true;
+            SelectedProject.ProjectId = snapshot.ProjectId;
+            SelectedProject.Preset = snapshot.Preset;
+            SelectedProject.TagsCsv = snapshot.TagsCsv;
+            SelectedProject.PreferredDestinationId = snapshot.PreferredDestinationId;
+            SelectedProject.EncryptionPolicy = snapshot.EncryptionPolicy;
+            SelectedProject.EncryptionKeyRef = snapshot.EncryptionKeyRef;
+            var cfg = AppConfigStore.GetSnapshot();
+            UpdateProjectDestinationDisplay(SelectedProject, cfg);
+            UpdateProjectEncryptionDisplay(SelectedProject, cfg);
+            UpdateProjectPresetDisplay(SelectedProject);
+        }
     }
 
     private void OnProjectItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -2713,19 +2751,6 @@ public class ProjectsViewModel : ViewModelBase
         }
     }
 
-    private static async Task RunDetachedAsync(Func<Task> operation, string operationName)
-    {
-        try
-        {
-            await operation().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            DiagnosticsLogger.Record(
-                $"Projects detached operation failed ({operationName}): {ex.GetType().Name} - {ex.Message}");
-        }
-    }
-
     private void LoadSnapshotHistoryForSelectedProject()
     {
         if (SelectedProject is null || !SelectedProject.IsRegistered || SelectedProject.SnapshotHistoryLoaded)
@@ -2734,56 +2759,68 @@ public class ProjectsViewModel : ViewModelBase
         var refreshToken = Interlocked.Increment(ref _selectedProjectHistoryToken);
         var projectName = SelectedProject.Name;
 
-        _ = Task.Run(async () =>
+        _ = LoadSnapshotHistoryForSelectedProjectAsync(refreshToken, projectName);
+    }
+
+    private async Task LoadSnapshotHistoryForSelectedProjectAsync(int refreshToken, string projectName)
+    {
+        try
         {
-            try
+            List<ProjectSnapshotViewModel> history = await Task.Run(async () =>
             {
-                var config = AppConfigStore.GetSnapshot();
-                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                    ? config.DbPath
-                    : GetDefaultDbPath();
+                try
+                {
+                    var config = AppConfigStore.GetSnapshot();
+                    var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
+                        ? config.DbPath
+                        : GetDefaultDbPath();
 
-                var repo = new SqliteRepository(dbPath);
-                var snapshots = await repo.GetSnapshotsForProjectAsync(projectName);
-                return snapshots.ConvertAll(CreateProjectSnapshotViewModel);
-            }
-            catch
-            {
-                return [];
-            }
-        }).ContinueWith(t =>
+                    var repo = new SqliteRepository(dbPath);
+                    var snapshots = await repo.GetSnapshotsForProjectAsync(projectName);
+                    return snapshots.ConvertAll(CreateProjectSnapshotViewModel);
+                }
+                catch
+                {
+                    return [];
+                }
+            }).ConfigureAwait(false);
+
+            await Dispatcher.UIThread.InvokeAsync(() => ApplySnapshotHistory(refreshToken, projectName, history));
+        }
+        catch (Exception ex)
         {
-            Dispatcher.UIThread.Post(() =>
+            DiagnosticsLogger.Record($"Project snapshot history load failed for '{projectName}': {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private void ApplySnapshotHistory(int refreshToken, string projectName, List<ProjectSnapshotViewModel> history)
+    {
+        if (refreshToken != _selectedProjectHistoryToken)
+            return;
+
+        if (SelectedProject is null ||
+            !string.Equals(SelectedProject.Name, projectName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (history.Count > 0)
+        {
+            var latest = history[0];
+            if (SelectedProject.LastSnapshot == default ||
+                latest.Timestamp > SelectedProject.LastSnapshot)
             {
-                if (refreshToken != _selectedProjectHistoryToken)
-                    return;
+                SelectedProject.LastSnapshot = latest.Timestamp;
+                SelectedProject.SizeBytes = latest.SizeBytes;
+            }
+        }
 
-                if (SelectedProject is null ||
-                    !string.Equals(SelectedProject.Name, projectName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
-
-                var history = t.Result;
-                if (history.Count > 0)
-                {
-                    var latest = history[0];
-                    if (SelectedProject.LastSnapshot == default ||
-                        latest.Timestamp > SelectedProject.LastSnapshot)
-                    {
-                        SelectedProject.LastSnapshot = latest.Timestamp;
-                        SelectedProject.SizeBytes = latest.SizeBytes;
-                    }
-                }
-
-                SelectedProject.SetSnapshots(history);
-                SelectedProject.SnapshotHistoryLoaded = true;
-                ApplyProjectHealth(
-                    SelectedProject,
-                    SelectedProject.LastSnapshot == default ? null : SelectedProject.LastSnapshot,
-                    SelectedProject.IsRegistered);
-            });
-        });
+        SelectedProject.SetSnapshots(history);
+        SelectedProject.SnapshotHistoryLoaded = true;
+        ApplyProjectHealth(
+            SelectedProject,
+            SelectedProject.LastSnapshot == default ? null : SelectedProject.LastSnapshot,
+            SelectedProject.IsRegistered);
     }
 
     private static void ApplyProjectHealth(ProjectItemViewModel vm, DateTime? lastSnapshotTime, bool isRegistered)
@@ -4185,41 +4222,11 @@ public sealed class ProjectSnapshotViewModel(
     // Used by tooltip: date + size in one string
     public string TooltipText => $"{DateDisplay}\n{SizeDisplay}";
 
-    public static string FormatSize(long bytes)
-    {
-        double size = bytes;
-        string unit = "B";
-
-        if (size >= 1024)
-        {
-            size /= 1024;
-            unit = "KB";
-        }
-
-        if (size >= 1024)
-        {
-            size /= 1024;
-            unit = "MB";
-        }
-
-        if (size >= 1024)
-        {
-            size /= 1024;
-            unit = "GB";
-        }
-
-        return $"{size:0.0} {unit}";
-    }
+    public static string FormatSize(long bytes) =>
+        UiFormat.FormatBytes(bytes, "0.0");
 
     private static string FormatSignedSize(long value)
-    {
-        var abs = FormatSize(Math.Abs(value));
-        if (value > 0)
-            return $"+{abs}";
-        if (value < 0)
-            return $"-{abs}";
-        return abs;
-    }
+        => UiFormat.FormatSignedBytes(value, "0.0");
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;

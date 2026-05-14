@@ -23,7 +23,7 @@ namespace VaultSync.UI.ViewModels
             {
                 string systemLang = ResolveSystemLanguageCode(_localizationService);
                 _config.Advanced.Language = systemLang;
-                _ = Task.Run(async () => await PersistStartupConfigAsync("initial-language"));
+                _ = PersistStartupConfigAsync("initial-language");
             }
 
             string targetLang = string.IsNullOrWhiteSpace(_config.Advanced.Language)

@@ -1301,7 +1301,7 @@ namespace VaultSync.UI
 
         private void TriggerAutoSave()
         {
-            _ = RunDetachedAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
+            _ = DetachedTask.RunAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
         }
 
         private async Task TriggerAutoSaveAsync()
@@ -1335,7 +1335,7 @@ namespace VaultSync.UI
                 if (_savePending)
                 {
                     _savePending = false;
-                    _ = RunDetachedAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
+                    _ = DetachedTask.RunAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
                 }
             }
         }
@@ -2770,7 +2770,7 @@ namespace VaultSync.UI
 
         private void BrowseProjectsRoot()
         {
-            _ = RunDetachedAsync(BrowseProjectsRootAsync, nameof(BrowseProjectsRootAsync));
+            _ = DetachedTask.RunAsync(BrowseProjectsRootAsync, nameof(BrowseProjectsRootAsync));
         }
 
         private async Task BrowseProjectsRootAsync()
@@ -2806,7 +2806,7 @@ namespace VaultSync.UI
 
         private void BrowseBackupLocation()
         {
-            _ = RunDetachedAsync(BrowseBackupLocationAsync, nameof(BrowseBackupLocationAsync));
+            _ = DetachedTask.RunAsync(BrowseBackupLocationAsync, nameof(BrowseBackupLocationAsync));
         }
 
         private async Task BrowseBackupLocationAsync()
@@ -2832,7 +2832,7 @@ namespace VaultSync.UI
 
         private void BrowseDestination(BackupDestinationViewModel? dest)
         {
-            _ = RunDetachedAsync(() => BrowseDestinationAsync(dest), nameof(BrowseDestinationAsync));
+            _ = DetachedTask.RunAsync(() => BrowseDestinationAsync(dest), nameof(BrowseDestinationAsync));
         }
 
         private async Task BrowseDestinationAsync(BackupDestinationViewModel? dest)
@@ -2940,7 +2940,7 @@ namespace VaultSync.UI
 
         private void TestDestination(BackupDestinationViewModel? dest)
         {
-            _ = RunDetachedAsync(() => TestDestinationAsync(dest), nameof(TestDestinationAsync));
+            _ = DetachedTask.RunAsync(() => TestDestinationAsync(dest), nameof(TestDestinationAsync));
         }
 
         private async Task TestDestinationAsync(BackupDestinationViewModel? dest)
@@ -3081,18 +3081,6 @@ namespace VaultSync.UI
 
                 await ClipboardHelper.TryCopyAsync(snippet);
             });
-        }
-
-        private static async Task RunDetachedAsync(Func<Task> operation, string operationName)
-        {
-            try
-            {
-                await operation().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[SettingsViewModel] Detached operation failed ({operationName}): {ex}");
-            }
         }
 
         private void RaiseRepairCommandStateChanged()
@@ -3495,12 +3483,12 @@ namespace VaultSync.UI
 
         private void ImportSupportBundle()
         {
-            _ = RunDetachedAsync(ImportSupportBundleAsync, nameof(ImportSupportBundleAsync));
+            _ = DetachedTask.RunAsync(ImportSupportBundleAsync, nameof(ImportSupportBundleAsync));
         }
 
         private void RunRetentionSimulation()
         {
-            _ = RunDetachedAsync(RunRetentionSimulationAsync, nameof(RunRetentionSimulationAsync));
+            _ = DetachedTask.RunAsync(RunRetentionSimulationAsync, nameof(RunRetentionSimulationAsync));
         }
 
         private async Task RunRetentionSimulationAsync()
@@ -3565,7 +3553,7 @@ namespace VaultSync.UI
 
         private void ScanBackupIndexRepairPlan()
         {
-            _ = RunDetachedAsync(ScanBackupIndexRepairPlanAsync, nameof(ScanBackupIndexRepairPlanAsync));
+            _ = DetachedTask.RunAsync(ScanBackupIndexRepairPlanAsync, nameof(ScanBackupIndexRepairPlanAsync));
         }
 
         private string BuildRetentionSimulationSummary(BackupRetentionSimulationResult result)
@@ -3628,29 +3616,8 @@ namespace VaultSync.UI
             return string.Join(Environment.NewLine, lines);
         }
 
-        private static string FormatByteSize(long bytes)
-        {
-            const double Kb = 1024d;
-            const double Mb = Kb * 1024d;
-            const double Gb = Mb * 1024d;
-
-            if (bytes >= Gb)
-            {
-                return $"{bytes / Gb:0.##} GB";
-            }
-
-            if (bytes >= Mb)
-            {
-                return $"{bytes / Mb:0.##} MB";
-            }
-
-            if (bytes >= Kb)
-            {
-                return $"{bytes / Kb:0.##} KB";
-            }
-
-            return $"{bytes} B";
-        }
+        private static string FormatByteSize(long bytes) =>
+            UiFormat.FormatBytes(bytes);
 
         private async Task ScanBackupIndexRepairPlanAsync()
         {
@@ -3719,7 +3686,7 @@ namespace VaultSync.UI
 
         private void ApplyBackupIndexRepairPlan()
         {
-            _ = RunDetachedAsync(ApplyBackupIndexRepairPlanAsync, nameof(ApplyBackupIndexRepairPlanAsync));
+            _ = DetachedTask.RunAsync(ApplyBackupIndexRepairPlanAsync, nameof(ApplyBackupIndexRepairPlanAsync));
         }
 
         private async Task ApplyBackupIndexRepairPlanAsync()
@@ -3885,7 +3852,7 @@ namespace VaultSync.UI
             if (item is null)
                 return;
 
-            _ = RunDetachedAsync(() => AcceptProjectMetadataConflictAsync(item), nameof(AcceptProjectMetadataConflictAsync));
+            _ = DetachedTask.RunAsync(() => AcceptProjectMetadataConflictAsync(item), nameof(AcceptProjectMetadataConflictAsync));
         }
 
         private async Task AcceptProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
@@ -3955,7 +3922,7 @@ namespace VaultSync.UI
             if (item is null)
                 return;
 
-            _ = RunDetachedAsync(() => KeepLocalProjectMetadataConflictAsync(item), nameof(KeepLocalProjectMetadataConflictAsync));
+            _ = DetachedTask.RunAsync(() => KeepLocalProjectMetadataConflictAsync(item), nameof(KeepLocalProjectMetadataConflictAsync));
         }
 
         private async Task KeepLocalProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
