@@ -15,6 +15,7 @@
 - [VS-1741] Release-facing docs, examples, and What's New content now target the prepared `1.7.4` release.
 - [VS-1741] The in-app What's New dialog now uses a cleaner release-digest layout with section dividers instead of nested cards.
 - [VS-1742] Shared UI formatting and detached async helpers reduce duplicated view-model code.
+- [VS-1743] Source-code presets now keep repository metadata such as `.github`, `.gitignore`, `.gitattributes`, and `.gitmodules` while still excluding generated build outputs.
 ### Fixed
 - [BUG-17116] Notification cleanup now avoids disposed-token races.
 - [BUG-17118] Log console rows now show readable time, source, and message fields.

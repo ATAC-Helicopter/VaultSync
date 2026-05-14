@@ -176,6 +176,61 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Assert.Single(entries);
     }
 
+    [Theory]
+    [InlineData("avalonia", "src/App/bin/Release/app.dll")]
+    [InlineData("dotnet", "src/App/obj/project.assets.json")]
+    [InlineData("node", "web/node_modules/package/index.js")]
+    [InlineData("python", "module/__pycache__/tool.cpython-310.pyc")]
+    [InlineData("unity", "Library/metadata/cache.bin")]
+    [InlineData("unreal", "Intermediate/Build/cache.bin")]
+    public void BuiltInSourcePresets_ExcludeGeneratedOutputsButKeepRepoMetadata(string preset, string generatedPath)
+    {
+        var projectRoot = Path.Combine(_tempDir, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(projectRoot);
+
+        WriteProjectFile(projectRoot, "src/source.txt", "keep");
+        WriteProjectFile(projectRoot, ".github/workflows/ci.yml", "workflow");
+        WriteProjectFile(projectRoot, ".gitignore", "bin/");
+        WriteProjectFile(projectRoot, ".gitattributes", "* text=auto");
+        WriteProjectFile(projectRoot, generatedPath, "generated");
+
+        var filter = FilterService.FromPresetAndLocal(projectRoot, preset, ResolveRepoPresetsDir());
+        var scanner = new ScannerService(filter);
+        var entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
+
+        Assert.Contains("src/source.txt", entries);
+        Assert.Contains(".github/workflows/ci.yml", entries);
+        Assert.Contains(".gitignore", entries);
+        Assert.Contains(".gitattributes", entries);
+        Assert.DoesNotContain(entries, path => path.Equals(generatedPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void WriteProjectFile(string projectRoot, string relativePath, string contents)
+    {
+        string fullPath = Path.Combine(projectRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, contents);
+    }
+
+    private static string ResolveRepoPresetsDir()
+    {
+        string dir = AppContext.BaseDirectory;
+        for (int i = 0; i < 8; i++)
+        {
+            string candidate = Path.Combine(dir, "src", "presets");
+            if (Directory.Exists(candidate))
+                return candidate;
+
+            string parent = Directory.GetParent(dir)?.FullName ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(parent))
+                break;
+
+            dir = parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate src/presets from test output.");
+    }
+
     public void Dispose()
     {
         try

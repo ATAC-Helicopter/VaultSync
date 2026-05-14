@@ -29,7 +29,3 @@ Thumbs.db
 
 # Git / metadata
 .git/
-.github/
-.gitattributes
-.gitmodules
-.gitignore

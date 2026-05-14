@@ -62,10 +62,6 @@ Thumbs.db
 
 # Git metadata
 .git/
-.gitmodules
-.gitattributes
-.gitignore
-.github/
 
 # --- Temporary / backup / lock files ---
 *.tmp
