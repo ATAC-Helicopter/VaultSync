@@ -30,7 +30,7 @@ internal static class Program
         DiagnosticsLogger.Record($"Process start. PID={Environment.ProcessId}, Args='{string.Join(' ', args)}'.");
         LogParentProcessInfo("startup");
         RegisterPosixSignals();
-        RegisterDiagnosticHooks();
+        RegisterDiagnosticHooks(args);
         DiagnosticsLogger.RecordStartupSnapshot(args, useSoftwareFallback: false);
         CrashHandler.RegisterEarly();
         if (PatchInstallService.TryParsePatchArgs(args, out PatchApplyRequest? request))
@@ -86,17 +86,37 @@ internal static class Program
         }
     }
 
-    private static void RegisterDiagnosticHooks()
+    private static void RegisterDiagnosticHooks(string[] args)
     {
         try
         {
-            AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
+            if (IsFirstChanceDiagnosticsEnabled(args))
+            {
+                AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
+                DiagnosticsLogger.Record("First-chance exception diagnostics enabled.");
+            }
+
             TaskScheduler.UnobservedTaskException += OnDiagnosticUnobservedTaskException;
         }
         catch (Exception ex)
         {
             DiagnosticsLogger.Record($"Diagnostic hooks registration failed: {ex.GetType().Name} - {ex.Message}");
         }
+    }
+
+    internal static bool IsFirstChanceDiagnosticsEnabled(string[]? args)
+    {
+        if (args?.Any(arg =>
+                string.Equals(arg, "--diagnostic-first-chance", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(arg, "--diagnostics-first-chance", StringComparison.OrdinalIgnoreCase)) is true)
+        {
+            return true;
+        }
+
+        string? value = Environment.GetEnvironmentVariable("VAULTSYNC_FIRST_CHANCE_DIAGNOSTICS");
+        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void OnFirstChanceException(object? sender, FirstChanceExceptionEventArgs e)

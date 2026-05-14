@@ -216,11 +216,23 @@ internal static class DiagnosticsLogger
         if (count > MaxFirstChancePerSignature)
             return;
 
+        Record($"FirstChance[{source}] #{count}: {ex.GetType().Name} - {ex.Message} @ {FormatFirstChanceLocation(ex)}");
+    }
+
+    private static string FormatFirstChanceLocation(Exception ex)
+    {
         string topFrame = ex.StackTrace?
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .FirstOrDefault() ?? "no-stack";
 
-        Record($"FirstChance[{source}] #{count}: {ex.GetType().Name} - {ex.Message} @ {topFrame}");
+        if (ex is not System.Reflection.TargetInvocationException { InnerException: { } inner })
+            return topFrame;
+
+        string innerTopFrame = inner.StackTrace?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault() ?? "no-inner-stack";
+
+        return $"{topFrame}; inner={inner.GetType().Name} - {inner.Message} @ {innerTopFrame}";
     }
 
     private static bool ShouldSuppressFirstChanceException(Exception ex)
