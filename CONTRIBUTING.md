@@ -25,11 +25,11 @@ Rules:
 - For risky or cross-cutting changes, align scope first.
 
 ## 3) Development Setup
-1. Install .NET 8 SDK.
+1. Install .NET 10 SDK.
 2. Restore:
    `dotnet restore`
 3. Run UI:
-   `dotnet run -f net8.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
+   `dotnet run -f net10.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
 
 ## 4) Implementation Rules
 - Keep changes focused.

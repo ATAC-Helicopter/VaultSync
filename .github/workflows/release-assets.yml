@@ -122,13 +122,13 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Publish (win-x64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0-windows10.0.19041.0
+          -f net10.0-windows10.0.19041.0
           -r win-x64
           --self-contained true
 
@@ -153,7 +153,7 @@ jobs:
           }
           $previousArgs = foreach ($baseVersion in $baseVersions) { "--previous"; $baseVersion }
           python scripts/build_patch.py `
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish" `
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish" `
             --out-zip "$patchDir/vaultsync-patch-windows.zip" `
             --out-manifest "$patchDir/vaultsync-patch-windows.json" `
             --platform windows `
@@ -179,13 +179,13 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Publish (osx-arm64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -r osx-arm64
           --self-contained true
 
@@ -193,14 +193,14 @@ jobs:
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -r osx-x64
           --self-contained true
 
       - name: Build DMGs
         run: |
-          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net8.0/osx-arm64/publish
-          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net8.0/osx-x64/publish
+          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish
+          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish
 
       - name: Build patch assets
         env:
@@ -215,14 +215,14 @@ jobs:
           ${{ needs.validate.outputs.patch_base_versions }}
           EOF
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0/osx-arm64/publish" \
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.json" \
             --platform macos \
             "${previous_args[@]}" \
             --target "${{ inputs.target_version }}"
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0/osx-x64/publish" \
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.json" \
             --platform macos \
@@ -251,13 +251,13 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Publish (linux-x64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -r linux-x64
           --self-contained true
 
@@ -265,14 +265,14 @@ jobs:
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -r linux-arm64
           --self-contained true
 
       - name: Build Linux archives
         run: |
-          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish
-          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
+          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
 
       - name: Build patch assets
         env:
@@ -287,14 +287,14 @@ jobs:
           ${{ needs.validate.outputs.patch_base_versions }}
           EOF
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish" \
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.json" \
             --platform linux \
             "${previous_args[@]}" \
             --target "${{ inputs.target_version }}"
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish" \
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json" \
             --platform linux \

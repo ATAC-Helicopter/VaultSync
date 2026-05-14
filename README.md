@@ -61,7 +61,7 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
   <img src="https://img.shields.io/badge/platform-macOS%20|%20Windows%20|%20Linux-green" />
-  <img src="https://img.shields.io/badge/.NET-8.0-blueviolet" />
+  <img src="https://img.shields.io/badge/.NET-10.0-blueviolet" />
 </p>
 
 <p align="center" style="margin-top:14px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
