@@ -2,19 +2,27 @@
 
 ## [1.7.4]
 
-Current `1.7.4` highlights focus on the .NET 10 migration, safer destination cleanup, quieter backup history refreshes, and the latest backup reliability fixes from the 1.7 release train.
+Current `1.7.4` highlights focus on the .NET 10 migration, safer destination cleanup, quieter diagnostics, and release-readiness polish across the 1.7 train.
 
 ### Platform and release updates
 - Core, CLI, UI, and tests now target .NET 10.
 - Release workflows and documentation now use the .NET 10 SDK and publish paths.
 - The Windows installer metadata now points at the .NET 10 Windows publish output.
 - CLI packaging now includes the repository README from the correct path.
+- Release examples, issue templates, and release notes now target the prepared `1.7.4` release.
 
 ### Backup and destination reliability
 - Backups now prune stale database entries when recorded backup folders are missing from reachable prepared destinations.
 - Offline or unresolved destinations are left untouched, so disconnected drives are not treated as deleted backups.
 - Passive Backups refreshes no longer wake destinations just to update reachability.
 - Backup probes now share in-flight archive buffer tuning work per destination.
+- Backup path-containment checks now share one hardened implementation across delete, restore, tray, and open-folder flows.
+
+### Diagnostics and app polish
+- The log console copy button now uses the active console window clipboard.
+- Normal diagnostics no longer show caught SQLite/WinRT first-chance probes unless first-chance diagnostics are explicitly enabled.
+- The in-app What's New dialog now reads only the current release slice and presents it as a cleaner release digest.
+- Repeated UI byte-size formatting and detached async-command wrappers now use shared helpers.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.

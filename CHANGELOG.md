@@ -12,6 +12,9 @@
 - [VS-1724] Patch manifest compatibility tests now cover key edge cases.
 - [VS-1739] CLI commands were updated for the current Spectre.Console.Cli override model.
 - [VS-1740] Refreshed the safe dependency set for 1.7.4.
+- [VS-1741] Release-facing docs, examples, and What's New content now target the prepared `1.7.4` release.
+- [VS-1741] The in-app What's New dialog now uses a cleaner release-digest layout with section dividers instead of nested cards.
+- [VS-1742] Shared UI formatting and detached async helpers reduce duplicated view-model code.
 ### Fixed
 - [BUG-17116] Notification cleanup now avoids disposed-token races.
 - [BUG-17118] Log console rows now show readable time, source, and message fields.
@@ -36,6 +39,9 @@
 - [BUG-18006] Backups now prune stale database entries when recorded backup folders are missing from reachable destinations. Refs #284.
 - [BUG-18007] Backup probes now share in-flight buffer tuning and dev presets skip nested generated outputs. Refs #285.
 - [BUG-18008] Passive Backups refreshes no longer wake destinations just to update reachability. Refs #286.
+- [BUG-18009] The log console copy button now uses the console window clipboard instead of relying only on the main window.
+- [BUG-18010] Normal app runs no longer show caught first-chance SQLite/WinRT probes in diagnostics unless first-chance diagnostics are explicitly enabled.
+- [BUG-18011] The What's New parser now displays the current release notes slice instead of carrying older release sections into the dialog.
 
 ## [1.7.3] - 23.04.2026
 ### Added
