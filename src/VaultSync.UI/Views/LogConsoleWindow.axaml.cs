@@ -31,6 +31,7 @@ namespace VaultSync.UI.Views
             _viewModel = viewModel;
             InitializeComponent();
             DataContext = _viewModel;
+            _viewModel.SetClipboardProvider(() => Clipboard);
 
             if (_viewModel.Lines is INotifyCollectionChanged notifier)
             {

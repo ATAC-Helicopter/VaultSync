@@ -3,7 +3,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Input.Platform;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 using VaultSync.UI.Notifications;
@@ -14,6 +16,7 @@ namespace VaultSync.UI.ViewModels
     public sealed class LogConsoleViewModel : ViewModelBase
     {
         private readonly LogConsoleService _service;
+        private Func<string, Task<bool>>? _copyTextAsync;
         private string _statusMessage = string.Empty;
         private bool _autoScrollEnabled = true;
         private LogLine? _selectedLine;
@@ -27,6 +30,19 @@ namespace VaultSync.UI.ViewModels
             ExportCommand = new RelayCommand(async _ => await ExportLogsAsync());
             OpenFolderCommand = new RelayCommand(_ => OpenLogFolder());
             CopySelectedLineCommand = new RelayCommand(async _ => await CopySelectedLineAsync(), _ => SelectedLine is not null);
+        }
+
+        public void SetClipboardProvider(Func<IClipboard?> clipboardProvider)
+        {
+            if (clipboardProvider is null)
+                throw new ArgumentNullException(nameof(clipboardProvider));
+
+            SetCopyTextAsync(text => ClipboardHelper.TryCopyAsync(text, clipboardProvider()));
+        }
+
+        public void SetCopyTextAsync(Func<string, Task<bool>> copyTextAsync)
+        {
+            _copyTextAsync = copyTextAsync ?? throw new ArgumentNullException(nameof(copyTextAsync));
         }
 
         public void SetUiCaptureEnabled(bool enabled)
@@ -140,7 +156,9 @@ namespace VaultSync.UI.ViewModels
             if (SelectedLine is null)
                 return false;
 
-            bool copied = await ClipboardHelper.TryCopyAsync(SelectedLine.RawDisplay);
+            bool copied = _copyTextAsync is { } copyTextAsync
+                ? await copyTextAsync(SelectedLine.RawDisplay)
+                : await ClipboardHelper.TryCopyAsync(SelectedLine.RawDisplay);
             StatusMessage = copied
                 ? L("LogConsole.CopySelectedSuccess", "Selected line copied.")
                 : L("LogConsole.CopySelectedFailed", "Failed to copy selected line.");
