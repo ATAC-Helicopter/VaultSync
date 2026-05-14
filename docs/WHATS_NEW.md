@@ -1,5 +1,25 @@
 # What's New
 
+## [1.7.4]
+
+Current `1.7.4` highlights focus on the .NET 10 migration, safer destination cleanup, quieter backup history refreshes, and the latest backup reliability fixes from the 1.7 release train.
+
+### Platform and release updates
+- Core, CLI, UI, and tests now target .NET 10.
+- Release workflows and documentation now use the .NET 10 SDK and publish paths.
+- The Windows installer metadata now points at the .NET 10 Windows publish output.
+- CLI packaging now includes the repository README from the correct path.
+
+### Backup and destination reliability
+- Backups now prune stale database entries when recorded backup folders are missing from reachable prepared destinations.
+- Offline or unresolved destinations are left untouched, so disconnected drives are not treated as deleted backups.
+- Passive Backups refreshes no longer wake destinations just to update reachability.
+- Backup probes now share in-flight archive buffer tuning work per destination.
+
+### Presets and generated output
+- Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
+- Filter coverage now includes nested `**/bin/**`, `**/Intermediate/**`, `.import`, and render-cache style folders.
+
 ## [1.7.3]
 
 Current `1.7.3` highlights focus on Linux reliability, release asset coverage, safer startup/config recovery, and the final backup and metadata fixes from the 1.7 stabilization cycle.
