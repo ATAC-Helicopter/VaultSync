@@ -79,6 +79,10 @@
             <Setter Property="ScrollViewer.BringIntoViewOnFocusChange" Value="False" />
         </Style>
 
+        <Style Selector="Window.linux-performance Border.pulse-ring">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
         <!-- Card surface -->
         <Style Selector="Border.card">
             <Setter Property="Background" Value="{DynamicResource Surface1}" />

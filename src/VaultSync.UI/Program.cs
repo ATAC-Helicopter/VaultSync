@@ -356,9 +356,35 @@ internal static class Program
             builder = builder.UsePlatformDetect();
         }
 
+        builder = builder
+            .With(new Win32PlatformOptions
+            {
+                OverlayPopups = true
+            })
+            .With(new X11PlatformOptions
+            {
+                OverlayPopups = IsX11OverlayPopupEnabled()
+            });
+
+        DiagnosticsLogger.Record(
+            "Avalonia platform options: " +
+            $"x11OverlayPopups={IsX11OverlayPopupEnabled()}, " +
+            $"sessionType='{Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") ?? string.Empty}', " +
+            $"desktop='{Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? string.Empty}', " +
+            $"waylandDisplay='{Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") ?? string.Empty}', " +
+            $"display='{Environment.GetEnvironmentVariable("DISPLAY") ?? string.Empty}'.");
+
         return builder
             // Avoid spamming stdout/in-app logs with Avalonia internals (e.g., binding trace).
             .LogToTrace(LogEventLevel.Warning);
+    }
+
+    private static bool IsX11OverlayPopupEnabled()
+    {
+        string? value = Environment.GetEnvironmentVariable("VAULTSYNC_X11_OVERLAY_POPUPS");
+        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static AppBuilder BuildUpdaterApp()
@@ -367,14 +393,5 @@ internal static class Program
             .LogToTrace(LogEventLevel.Warning);
 
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .With(new Win32PlatformOptions
-            {
-                OverlayPopups = true // For Windows
-            })
-            .With(new X11PlatformOptions
-            {
-                OverlayPopups = true // For Linux
-            });
+        => BuildAvaloniaApp(useSoftwareFallback: false);
 }
