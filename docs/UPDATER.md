@@ -16,6 +16,8 @@ VaultSync uses GitHub Releases for update discovery and supports patch assets to
 - macOS bundles:
   - architecture-specific DMGs
 - Linux bundles:
+  - `VaultSync-<version>-linux-x64.deb`
+  - `VaultSync-<version>-linux-arm64.deb`
   - `VaultSync-<version>-linux-x64.AppImage`
   - `VaultSync-<version>-linux-x64.tar.gz`
   - `VaultSync-<version>-linux-arm64.tar.gz`

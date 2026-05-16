@@ -36,7 +36,7 @@ This document defines the current release packaging flow.
    bash scripts/build_linux_release.sh 1.7.4 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
    bash scripts/build_linux_release.sh 1.7.4 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
-3. Upload the generated `.tar.gz` artifacts and the `linux-x64` `.AppImage`.
+3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
    per-user Linux install that works across distro families:
    ```bash
@@ -111,6 +111,11 @@ Linux tarball users can install VaultSync into their user app menu without root:
 ```bash
 tar -xzf VaultSync-<version>-linux-<arch>.tar.gz
 ./install.sh
+```
+
+Linux `.deb` users on Debian/Ubuntu/Zorin can install through the graphical package installer, or with:
+```bash
+sudo apt install ./VaultSync-<version>-linux-<arch>.deb
 ```
 
 ## Related Docs

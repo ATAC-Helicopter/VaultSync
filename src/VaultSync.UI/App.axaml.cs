@@ -1881,6 +1881,12 @@ public partial class App : Application
                 // Windows toast/notification implementation.
                 return new WindowsSystemNotificationService();
             }
+
+            if (OperatingSystem.IsLinux())
+            {
+                // Linux desktop notification implementation via notify-send/libnotify.
+                return new LinuxSystemNotificationService();
+            }
         }
         catch (Exception ex)
         {

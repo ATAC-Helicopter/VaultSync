@@ -25,10 +25,15 @@ mkdir -p "$dist_dir"
 
 base_name="VaultSync-${version}-linux-${arch}"
 tarball_path="${dist_dir}/${base_name}.tar.gz"
+deb_arch="$arch"
+if [[ "$arch" == "x64" ]]; then
+  deb_arch="amd64"
+fi
 package_dir="$(mktemp -d)"
+deb_root=""
 tool_dir=""
 appdir=""
-trap 'rm -rf "$package_dir" ${tool_dir:+"$tool_dir"} ${appdir:+"$appdir"}' EXIT
+trap 'rm -rf "$package_dir" ${deb_root:+"$deb_root"} ${tool_dir:+"$tool_dir"} ${appdir:+"$appdir"}' EXIT
 
 cp -a "${publish_dir}/." "$package_dir/"
 cat > "${package_dir}/install.sh" <<'EOF'
@@ -114,6 +119,80 @@ EOF
 chmod +x "${package_dir}/uninstall.sh"
 
 tar -C "$package_dir" -czf "$tarball_path" .
+
+if command -v dpkg-deb >/dev/null 2>&1; then
+  deb_root="$(mktemp -d)"
+  deb_package_dir="${deb_root}/opt/vaultsync"
+  deb_bin_dir="${deb_root}/usr/bin"
+  deb_applications_dir="${deb_root}/usr/share/applications"
+  deb_icon_dir="${deb_root}/usr/share/icons/hicolor/256x256/apps"
+  deb_control_dir="${deb_root}/DEBIAN"
+
+  mkdir -p "$deb_package_dir" "$deb_bin_dir" "$deb_applications_dir" "$deb_icon_dir" "$deb_control_dir"
+  cp -a "${publish_dir}/." "$deb_package_dir/"
+  chmod +x "${deb_package_dir}/VaultSync.UI" 2>/dev/null || true
+  ln -s "/opt/vaultsync/VaultSync.UI" "${deb_bin_dir}/vaultsync"
+
+  if [[ -f "${publish_dir}/Assets/vaultsync-tray.png" ]]; then
+    cp "${publish_dir}/Assets/vaultsync-tray.png" "${deb_icon_dir}/vaultsync.png"
+  fi
+
+  cat > "${deb_applications_dir}/vaultsync.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=VaultSync
+Comment=Backup and synchronization tool
+Exec=/opt/vaultsync/VaultSync.UI %U
+Icon=vaultsync
+Categories=Utility;Archiving;
+Terminal=false
+StartupWMClass=VaultSync
+EOF
+
+  installed_size="$(du -sk "$deb_root" | awk '{print $1}')"
+  cat > "${deb_control_dir}/control" <<EOF
+Package: vaultsync
+Version: ${version}
+Section: utils
+Priority: optional
+Architecture: ${deb_arch}
+Installed-Size: ${installed_size}
+Maintainer: Flavio Giacchetti
+Description: Backup and synchronization tool
+ VaultSync keeps project snapshots and backup history available across destinations.
+EOF
+
+  cat > "${deb_control_dir}/postinst" <<'EOF'
+#!/bin/sh
+set -e
+chmod +x /opt/vaultsync/VaultSync.UI 2>/dev/null || true
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache /usr/share/icons/hicolor >/dev/null 2>&1 || true
+fi
+exit 0
+EOF
+  chmod 755 "${deb_control_dir}/postinst"
+
+  cat > "${deb_control_dir}/postrm" <<'EOF'
+#!/bin/sh
+set -e
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache /usr/share/icons/hicolor >/dev/null 2>&1 || true
+fi
+exit 0
+EOF
+  chmod 755 "${deb_control_dir}/postrm"
+
+  dpkg-deb --root-owner-group --build "$deb_root" "${dist_dir}/${base_name}.deb"
+else
+  echo "dpkg-deb not found; skipping Debian package." >&2
+fi
 
 if [[ "$arch" != "x64" ]]; then
   exit 0

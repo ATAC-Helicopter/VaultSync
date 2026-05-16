@@ -308,6 +308,8 @@ jobs:
           path: |
             dist/linux/VaultSync-*-linux-x64.tar.gz
             dist/linux/VaultSync-*-linux-arm64.tar.gz
+            dist/linux/VaultSync-*-linux-x64.deb
+            dist/linux/VaultSync-*-linux-arm64.deb
             dist/linux/VaultSync-*-linux-x64.AppImage
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip

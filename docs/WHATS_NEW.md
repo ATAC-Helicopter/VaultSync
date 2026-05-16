@@ -36,7 +36,7 @@ Current `1.7.4-Beta.1` highlights focus on the .NET 10 migration, safer destinat
 Current `1.7.3` highlights focus on Linux reliability, release asset coverage, safer startup/config recovery, and the final backup and metadata fixes from the 1.7 stabilization cycle.
 
 ### Linux and release assets
-- Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`.
+- Release asset builds now produce Linux `tar.gz` and `.deb` downloads for `x64` and `arm64`.
 - Release asset builds also produce a desktop-friendly `linux-x64` AppImage for direct Linux installs.
 - Linux `tar.gz` downloads include a rootless `install.sh` that adds VaultSync to the user app menu and creates a `vaultsync` terminal command across distro families.
 - Linux update discovery now prefers architecture-specific installer and patch names before falling back to generic Linux assets.
