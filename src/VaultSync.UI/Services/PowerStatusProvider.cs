@@ -37,7 +37,7 @@ namespace VaultSync.UI.Services
                     return GetMacState();
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    return GetLinuxState();
+                    return GetLinuxState("/sys/class/power_supply");
             }
             catch
             {
@@ -100,9 +100,8 @@ namespace VaultSync.UI.Services
             return PowerState.Unknown;
         }
 
-        private static PowerState GetLinuxState()
+        internal static PowerState GetLinuxState(string root)
         {
-            const string root = "/sys/class/power_supply";
             try
             {
                 if (!Directory.Exists(root))
@@ -134,6 +133,14 @@ namespace VaultSync.UI.Services
 
                     if (string.Equals(type, "Battery", StringComparison.OrdinalIgnoreCase))
                     {
+                        string scopePath = Path.Combine(dir, "scope");
+                        if (File.Exists(scopePath))
+                        {
+                            string scope = File.ReadAllText(scopePath).Trim();
+                            if (scope.Equals("Device", StringComparison.OrdinalIgnoreCase))
+                                continue;
+                        }
+
                         string statusPath = Path.Combine(dir, "status");
                         if (File.Exists(statusPath))
                         {

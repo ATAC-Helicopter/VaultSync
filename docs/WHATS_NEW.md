@@ -18,6 +18,7 @@ Current `1.7.4-Beta.1` highlights focus on the .NET 10 migration, safer destinat
 - Backup probes now share in-flight archive buffer tuning work per destination.
 - Backup path-containment checks now share one hardened implementation across delete, restore, tray, and open-folder flows.
 - Imported destination history rebuilt from legacy backup folders now keeps real backup sizes instead of showing `0 B`, and existing imported `0 B` rows are repaired when their folders are still present.
+- Linux auto backups now ignore peripheral batteries when deciding whether to pause on battery power, and timer decisions are easier to diagnose from logs.
 
 ### Diagnostics and app polish
 - The log console copy button now uses the active console window clipboard.

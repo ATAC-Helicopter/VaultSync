@@ -658,7 +658,11 @@ namespace VaultSync.UI.ViewModels
 
             int intervalMinutes = _config.Backups.IntervalMinutes;
             if (!_config.Backups.EnableAutoBackups || intervalMinutes <= 0)
+            {
+                DiagnosticsLogger.Record(
+                    $"[AutoBackup] Timer disabled. Enabled={_config.Backups.EnableAutoBackups}; IntervalMinutes={intervalMinutes}.");
                 return;
+            }
 
             var interval = TimeSpan.FromMinutes(intervalMinutes);
 
@@ -668,6 +672,7 @@ namespace VaultSync.UI.ViewModels
                 null,
                 interval,
                 interval);
+            DiagnosticsLogger.Record($"[AutoBackup] Timer configured. IntervalMinutes={intervalMinutes}; FirstDueUtc={DateTime.UtcNow.Add(interval):O}.");
         }
 
         private async Task SafeRunAutoBackupsAsync()
@@ -686,14 +691,19 @@ namespace VaultSync.UI.ViewModels
         private async Task RunAutoBackupsAsync()
         {
             if (Interlocked.Exchange(ref _autoBackupInFlight, 1) == 1)
+            {
+                DiagnosticsLogger.Record("[AutoBackup] Tick skipped: previous run still in flight.");
                 return;
+            }
 
             try
             {
+                DiagnosticsLogger.Record("[AutoBackup] Tick started.");
                 LogBackupPolicyTransitionIfChanged(_config, "auto-backup-tick");
 
                 if (BackupsViewModel.IsBusy)
                 {
+                    DiagnosticsLogger.Record("[AutoBackup] Tick skipped: backups view is busy.");
                     Telemetry.Log("auto_backup_skipped", b => b
                         .WithCode("reason", "busy"));
                     return;
@@ -701,6 +711,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (ShouldPauseBackupsForBattery(out string? pauseReason))
                 {
+                    DiagnosticsLogger.Record($"[AutoBackup] Tick skipped: {pauseReason}");
                     Dispatcher.UIThread.Post(() =>
                     {
                         BackupsViewModel.BackupCurrentFile = pauseReason;
@@ -713,6 +724,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (ShouldPauseAutoBackupsForQuietHours(_config, out string? quietReason, out DateTimeOffset? quietResumeAtLocal))
                 {
+                    DiagnosticsLogger.Record($"[AutoBackup] Tick skipped: {quietReason}");
                     Dispatcher.UIThread.Post(() =>
                     {
                         BackupsViewModel.BackupCurrentFile = quietReason;
@@ -731,6 +743,7 @@ namespace VaultSync.UI.ViewModels
                 AutoBackupPreparation preparation = await Task.Run(PrepareAutoBackupRun);
                 if (!preparation.IsReady)
                 {
+                    DiagnosticsLogger.Record($"[AutoBackup] Tick skipped: {preparation.FailureCode ?? "preflight_failed"}.");
                     Telemetry.Log("auto_backup_skipped", b => b
                         .WithCode("reason", preparation.FailureCode ?? "preflight_failed"));
                     return;
@@ -745,6 +758,8 @@ namespace VaultSync.UI.ViewModels
                 int backupSucceeded = 0;
                 int backupFailed = 0;
                 int destinationUnreachable = 0;
+                DiagnosticsLogger.Record(
+                    $"[AutoBackup] Prepared run. Projects={projects.Count}; Disabled={disabled.Count}; Destinations={AppViewModel.GetAllDestinations(cfg).Count}; ArchiveMode={useArchiveMode}.");
 
                 int maxParallel = Math.Max(1, Environment.ProcessorCount);
                 using var throttler = new SemaphoreSlim(maxParallel);
@@ -1002,6 +1017,8 @@ namespace VaultSync.UI.ViewModels
                     .WithCount("destinationsUnreachable", destinationUnreachable)
                     .WithFlag("useArchiveMode", useArchiveMode)
                     .WithNumber("intervalMinutes", cfg.Backups.IntervalMinutes));
+                DiagnosticsLogger.Record(
+                    $"[AutoBackup] Tick complete. Projects={projects.Count}; Attempts={backupAttempts}; Succeeded={backupSucceeded}; Failed={backupFailed}; DestinationsUnreachable={destinationUnreachable}.");
             }
             finally
             {
