@@ -120,7 +120,7 @@ chmod +x "${package_dir}/uninstall.sh"
 
 tar -C "$package_dir" -czf "$tarball_path" .
 
-if command -v dpkg-deb >/dev/null 2>&1; then
+if command -v dpkg-deb >/dev/null 2>&1 && dpkg-deb --version >/dev/null 2>&1; then
   deb_root="$(mktemp -d)"
   deb_package_dir="${deb_root}/opt/vaultsync"
   deb_bin_dir="${deb_root}/usr/bin"
@@ -191,7 +191,7 @@ EOF
 
   dpkg-deb --root-owner-group --build "$deb_root" "${dist_dir}/${base_name}.deb"
 else
-  echo "dpkg-deb not found; skipping Debian package." >&2
+  echo "dpkg-deb is unavailable or cannot start; skipping Debian package." >&2
 fi
 
 if [[ "$arch" != "x64" ]]; then
