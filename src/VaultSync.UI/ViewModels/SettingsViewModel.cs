@@ -156,6 +156,7 @@ namespace VaultSync.UI
         private bool _isSaving;
         private bool _savePending;
         private bool _isReloadingFromConfig;
+        private bool _isRefreshingLocalizedOptions;
         private bool? _lastLaunchOnLoginApplied;
 
         public event Action? OpenLogConsoleRequested;
@@ -457,10 +458,18 @@ namespace VaultSync.UI
             {
                 string normalizedTheme = NormalizeThemeOption(_selectedTheme);
                 string normalizedBaseTheme = NormalizeThemeBaseOption(_customThemeBase);
-                RefreshThemeOptions();
-                RefreshCustomThemeBaseOptions();
-                _selectedTheme = DisplayThemeOption(normalizedTheme);
-                _customThemeBase = DisplayThemeBaseOption(normalizedBaseTheme);
+                _isRefreshingLocalizedOptions = true;
+                try
+                {
+                    RefreshThemeOptions();
+                    RefreshCustomThemeBaseOptions();
+                    _selectedTheme = DisplayThemeOption(normalizedTheme);
+                    _customThemeBase = DisplayThemeBaseOption(normalizedBaseTheme);
+                }
+                finally
+                {
+                    _isRefreshingLocalizedOptions = false;
+                }
                 OnPropertyChanged(nameof(SelectedLanguage));
                 OnPropertyChanged(nameof(SelectedTheme));
                 OnPropertyChanged(nameof(CustomThemeBase));
@@ -1342,7 +1351,7 @@ namespace VaultSync.UI
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_isReloadingFromConfig || e.PropertyName is null || !ShouldAutoSaveProperty(e.PropertyName))
+            if (_isReloadingFromConfig || _isRefreshingLocalizedOptions || e.PropertyName is null || !ShouldAutoSaveProperty(e.PropertyName))
                 return;
 
             TriggerAutoSave();
@@ -1460,6 +1469,18 @@ namespace VaultSync.UI
 
         private string NormalizeThemeOption(string theme)
         {
+            int existingIndex = ThemeOptions.IndexOf(theme);
+            if (existingIndex >= 0)
+            {
+                return existingIndex switch
+                {
+                    1 => "Dark",
+                    2 => "Light",
+                    3 => "Custom",
+                    _ => "System"
+                };
+            }
+
             return theme switch
             {
                 var value when string.Equals(value, ThemeOptionDarkLabel, StringComparison.OrdinalIgnoreCase) => "Dark",
@@ -1488,6 +1509,12 @@ namespace VaultSync.UI
 
         private string NormalizeThemeBaseOption(string value)
         {
+            int existingIndex = CustomThemeBaseOptions.IndexOf(value);
+            if (existingIndex >= 0)
+            {
+                return existingIndex == 1 ? "Light" : "Dark";
+            }
+
             return value switch
             {
                 var candidate when string.Equals(candidate, ThemeBaseLightLabel, StringComparison.OrdinalIgnoreCase) => "Light",
@@ -1822,6 +1849,9 @@ namespace VaultSync.UI
             get => _selectedTheme;
             set
             {
+                if (_isRefreshingLocalizedOptions)
+                    return;
+
                 if (SetField(ref _selectedTheme, value))
                 {
                     OnPropertyChanged(nameof(IsCustomThemeSelected));
@@ -1856,6 +1886,9 @@ namespace VaultSync.UI
             get => _customThemeBase;
             set
             {
+                if (_isRefreshingLocalizedOptions)
+                    return;
+
                 string normalized = DisplayThemeBaseOption(NormalizeThemeBaseOption(value));
                 if (!SetField(ref _customThemeBase, normalized))
                     return;
@@ -4584,5 +4617,3 @@ namespace VaultSync.UI
         public bool ShowPassword { get => _showPassword; set => SetField(ref _showPassword, value); }
     }
 }
-
-

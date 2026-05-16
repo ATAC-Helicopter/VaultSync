@@ -53,7 +53,8 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                 if (legacyResult.Status == MetadataSyncStatus.Success &&
                     (legacyResult.ImportedProjects > 0 ||
                      legacyResult.ImportedSnapshots > 0 ||
-                     legacyResult.ImportedBackups > 0))
+                     legacyResult.ImportedBackups > 0 ||
+                     legacyResult.RepairedBackups > 0))
                 {
                     return legacyResult;
                 }
@@ -883,25 +884,37 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         int importedProjects = 0;
         int importedSnapshots = 0;
         int importedBackups = 0;
+        int repairedBackups = 0;
         var affectedProjectIds = new HashSet<int>();
         var projectsByName = _repo
             .GetAllProjects()
             .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
         IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
-        var existingBackupPaths = _repo
+        var existingBackupByPath = _repo
             .GetAllProjects()
             .SelectMany(project => _repo.GetBackupsForProject(project.Id))
-            .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .Select(backup => new
+            {
+                Backup = backup,
+                Path = NormalizeStablePath(NormalizeBackupPathRel(backup.Path))
+            })
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Path))
+            .GroupBy(entry => entry.Path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Backup, StringComparer.OrdinalIgnoreCase);
 
         foreach (IGrouping<string, LegacyBackupFolder> projectGroup in discovered.GroupBy(folder => folder.ProjectName, StringComparer.OrdinalIgnoreCase))
         {
             List<LegacyBackupFolder> importableFolders = [.. projectGroup
-                .Where(folder => !existingBackupPaths.Contains(NormalizeStablePath(folder.RelativePath)))
+                .Where(folder => !existingBackupByPath.ContainsKey(NormalizeStablePath(folder.RelativePath)))
                 .OrderBy(folder => folder.CreatedUtc)];
-            if (importableFolders.Count == 0)
+            List<LegacyBackupFolder> repairableFolders = [.. projectGroup
+                .Where(folder =>
+                    existingBackupByPath.TryGetValue(NormalizeStablePath(folder.RelativePath), out Backup? backup) &&
+                    backup.IsImported &&
+                    backup.TotalBytes <= 0)
+                .OrderBy(folder => folder.CreatedUtc)];
+            if (importableFolders.Count == 0 && repairableFolders.Count == 0)
                 continue;
 
             string projectName = projectGroup.Key;
@@ -937,11 +950,31 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                 projectsByName[projectName] = project;
             }
 
+            foreach (LegacyBackupFolder folder in repairableFolders)
+            {
+                string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
+                if (!existingBackupByPath.TryGetValue(normalizedRelativePath, out Backup? existingBackup))
+                    continue;
+
+                long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
+                if (sizeBytes <= 0)
+                    continue;
+
+                _repo.UpdateBackupTotalBytes(existingBackup.Id, sizeBytes);
+                Snapshot? existingSnapshot = _repo.GetSnapshotById(existingBackup.SnapshotId);
+                if (existingSnapshot is not null && existingSnapshot.TotalBytes <= 0)
+                    _repo.UpdateSnapshotTotalBytes(existingSnapshot.Id, sizeBytes);
+
+                repairedBackups++;
+                affectedProjectIds.Add(existingBackup.ProjectId);
+            }
+
             foreach (LegacyBackupFolder folder in importableFolders)
             {
                 string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
                 string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
                 string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
+                long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
 
                 if (!snapshotExternalMap.TryGetValue(snapshotExternalId, out int snapshotId))
                 {
@@ -950,7 +983,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                         project.Id,
                         folder.CreatedUtc,
                         fileCount: 0,
-                        totalBytes: 0);
+                        totalBytes: sizeBytes);
                     importedSnapshots++;
                 }
 
@@ -963,7 +996,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                     snapshotId,
                     folder.CreatedUtc,
                     "manual",
-                    0,
+                    sizeBytes,
                     folder.RelativePath,
                     rootPath,
                     string.Empty,
@@ -973,7 +1006,8 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 
                 importedBackups++;
                 affectedProjectIds.Add(project.Id);
-                existingBackupPaths.Add(normalizedRelativePath);
+                existingBackupByPath[normalizedRelativePath] = _repo.GetBackupByExternalId(backupExternalId)
+                    ?? new Backup { Id = 0, ProjectId = project.Id, SnapshotId = snapshotId, Path = folder.RelativePath, TotalBytes = sizeBytes, IsImported = true };
             }
 
             if (opts.MarkNeedsRestoreOnImport && affectedProjectIds.Contains(project.Id))
@@ -990,7 +1024,8 @@ public sealed class MetadataSyncService(SqliteRepository repo)
             0,
             string.Empty)
         {
-            AffectedProjectIds = [.. affectedProjectIds]
+            AffectedProjectIds = [.. affectedProjectIds],
+            RepairedBackups = repairedBackups
         };
     }
 
@@ -1122,6 +1157,64 @@ public sealed class MetadataSyncService(SqliteRepository repo)
             CultureInfo.InvariantCulture,
             DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
             out createdUtc);
+    }
+
+    private static long GetLegacyBackupFolderSize(string rootPath, string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(relativePath))
+            return 0;
+
+        try
+        {
+            string backupFolder = Path.Combine(rootPath, relativePath);
+            long archiveSize = BackupArchiveCryptoService.GetStoredArchiveSize(backupFolder);
+            return archiveSize > 0 ? archiveSize : GetDirectorySize(backupFolder);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static long GetDirectorySize(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            return 0;
+
+        long total = 0;
+        var pending = new Stack<string>();
+        pending.Push(path);
+
+        while (pending.Count > 0)
+        {
+            string current = pending.Pop();
+
+            try
+            {
+                foreach (string file in Directory.EnumerateFiles(current))
+                {
+                    try
+                    {
+                        total += Math.Max(0, new FileInfo(file).Length);
+                    }
+                    catch
+                    {
+                        // Best-effort size recovery for legacy imports.
+                    }
+                }
+
+                foreach (string directory in Directory.EnumerateDirectories(current))
+                {
+                    pending.Push(directory);
+                }
+            }
+            catch
+            {
+                // Skip folders that disappear or cannot be read.
+            }
+        }
+
+        return total;
     }
 
     private static string BuildStableExternalId(string prefix, string rootPath, string relativePath)
@@ -2852,6 +2945,7 @@ public sealed record MetadataSyncResult(
     string Message)
 {
     public IReadOnlyCollection<int> AffectedProjectIds { get; init; } = [];
+    public int RepairedBackups { get; init; }
 
     public static MetadataSyncResult Failure(MetadataSyncStatus status, string message) =>
         new(status, 0, 0, 0, 0, message);

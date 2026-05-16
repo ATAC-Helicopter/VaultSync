@@ -17,12 +17,14 @@ Current `1.7.4` highlights focus on the .NET 10 migration, safer destination cle
 - Passive Backups refreshes no longer wake destinations just to update reachability.
 - Backup probes now share in-flight archive buffer tuning work per destination.
 - Backup path-containment checks now share one hardened implementation across delete, restore, tray, and open-folder flows.
+- Imported destination history rebuilt from legacy backup folders now keeps real backup sizes instead of showing `0 B`, and existing imported `0 B` rows are repaired when their folders are still present.
 
 ### Diagnostics and app polish
 - The log console copy button now uses the active console window clipboard.
 - Normal diagnostics no longer show caught SQLite/WinRT first-chance probes unless first-chance diagnostics are explicitly enabled.
 - The in-app What's New dialog now reads only the current release slice and presents it as a cleaner release digest.
 - Repeated UI byte-size formatting and detached async-command wrappers now use shared helpers.
+- Changing language in Settings now preserves the active theme and keeps the page near the same scroll position through the relayout.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.

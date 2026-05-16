@@ -1143,7 +1143,8 @@ namespace VaultSync.UI.ViewModels
             if (result.ImportedProjects <= 0 &&
                 result.ImportedSnapshots <= 0 &&
                 result.ImportedBackups <= 0 &&
-                result.AppliedTombstones <= 0)
+                result.AppliedTombstones <= 0 &&
+                result.RepairedBackups <= 0)
             {
                 return;
             }

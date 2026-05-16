@@ -43,6 +43,8 @@
 - [BUG-18009] The log console copy button now uses the console window clipboard instead of relying only on the main window.
 - [BUG-18010] Normal app runs no longer show caught first-chance SQLite/WinRT probes in diagnostics unless first-chance diagnostics are explicitly enabled.
 - [BUG-18011] The What's New parser now displays the current release notes slice instead of carrying older release sections into the dialog.
+- [BUG-18012] Imported destination history rebuilt from legacy backup folders now records and repairs real backup sizes instead of showing `0 B`. Refs #298.
+- [BUG-18013] Changing language no longer resets the selected theme or jumps Settings back to its initial scroll position. Refs #297.
 
 ## [1.7.3] - 23.04.2026
 ### Added
