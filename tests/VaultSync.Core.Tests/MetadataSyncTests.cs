@@ -86,8 +86,12 @@ public sealed class MetadataSyncTests : IDisposable
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
         string projectsRoot = CreateTempDir();
         string projectFolder = Path.Combine(metaRoot, "blueprints");
-        Directory.CreateDirectory(Path.Combine(projectFolder, "2026-05-06_08-15-06"));
-        Directory.CreateDirectory(Path.Combine(projectFolder, "2026-05-07_12-42-10"));
+        string firstBackupFolder = Path.Combine(projectFolder, "2026-05-06_08-15-06");
+        string secondBackupFolder = Path.Combine(projectFolder, "2026-05-07_12-42-10");
+        Directory.CreateDirectory(firstBackupFolder);
+        Directory.CreateDirectory(secondBackupFolder);
+        File.WriteAllBytes(Path.Combine(firstBackupFolder, "data.bin"), new byte[123]);
+        File.WriteAllBytes(Path.Combine(secondBackupFolder, "data.bin"), new byte[456]);
         AppConfig originalConfig = CloneConfig(AppConfigStore.Load());
 
         try
@@ -125,6 +129,8 @@ public sealed class MetadataSyncTests : IDisposable
             List<Backup> backups = [.. repo.GetBackupsForProject(project.Id)];
             Assert.Equal(2, backups.Count);
             Assert.All(backups, backup => Assert.True(backup.IsImported));
+            Assert.Contains(backups, backup => backup.TotalBytes == 123);
+            Assert.Contains(backups, backup => backup.TotalBytes == 456);
             Assert.Contains(backups, backup => backup.Path == Path.Combine("blueprints", "2026-05-06_08-15-06"));
             Assert.Contains(backups, backup => backup.Path == Path.Combine("blueprints", "2026-05-07_12-42-10"));
         }
@@ -140,8 +146,12 @@ public sealed class MetadataSyncTests : IDisposable
         string backupRoot = CreateTempDir();
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
         string projectsRoot = CreateTempDir();
-        Directory.CreateDirectory(Path.Combine(backupRoot, "risiko-3d", "2026-05-06_10-14-22"));
-        Directory.CreateDirectory(Path.Combine(backupRoot, "risiko-3d", "2026-05-07_09-00-00"));
+        string firstBackupFolder = Path.Combine(backupRoot, "risiko-3d", "2026-05-06_10-14-22");
+        string secondBackupFolder = Path.Combine(backupRoot, "risiko-3d", "2026-05-07_09-00-00");
+        Directory.CreateDirectory(firstBackupFolder);
+        Directory.CreateDirectory(secondBackupFolder);
+        File.WriteAllBytes(Path.Combine(firstBackupFolder, "data.bin"), new byte[321]);
+        File.WriteAllBytes(Path.Combine(secondBackupFolder, "data.bin"), new byte[654]);
         Directory.CreateDirectory(Path.Combine(backupRoot, ".vaultsync"));
         AppConfig originalConfig = CloneConfig(AppConfigStore.Load());
 
@@ -163,7 +173,58 @@ public sealed class MetadataSyncTests : IDisposable
             Project project = repo.GetProjectByName("risiko-3d");
             Assert.NotNull(project);
             Assert.Equal(Path.Combine(projectsRoot, "risiko-3d"), project!.RootPath);
-            Assert.Equal(2, repo.GetBackupsForProject(project.Id).Count());
+            List<Backup> backups = [.. repo.GetBackupsForProject(project.Id)];
+            Assert.Equal(2, backups.Count);
+            Assert.Contains(backups, backup => backup.TotalBytes == 321);
+            Assert.Contains(backups, backup => backup.TotalBytes == 654);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
+    public void ImportFromStore_RepairsZeroByteLegacyImportedBackups()
+    {
+        string backupRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string projectsRoot = CreateTempDir();
+        string backupFolder = Path.Combine(backupRoot, "legacy-project", "2026-05-08_10-00-00");
+        Directory.CreateDirectory(backupFolder);
+        AppConfig originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            AppConfig cfg = CloneConfig(originalConfig);
+            cfg.ProjectsRoot = projectsRoot;
+            AppConfigStore.Save(cfg);
+
+            SqliteRepository repo = CreateRepository(dbPath);
+            var service = new MetadataSyncService(repo);
+            MetadataSyncResult firstImport = service.ImportFromStore(backupRoot, MetadataSyncOptions.Default);
+
+            Assert.Equal(MetadataSyncStatus.Success, firstImport.Status);
+            Assert.Equal(1, firstImport.ImportedBackups);
+
+            Project project = repo.GetProjectByName("legacy-project");
+            Assert.NotNull(project);
+            Backup originalBackup = Assert.Single(repo.GetBackupsForProject(project!.Id));
+            Assert.Equal(0, originalBackup.TotalBytes);
+
+            File.WriteAllBytes(Path.Combine(backupFolder, "restored-size.bin"), new byte[789]);
+
+            MetadataSyncResult repairImport = service.ImportFromStore(backupRoot, MetadataSyncOptions.Default);
+
+            Assert.Equal(MetadataSyncStatus.Success, repairImport.Status);
+            Assert.Equal(0, repairImport.ImportedBackups);
+            Assert.Equal(1, repairImport.RepairedBackups);
+
+            Backup repairedBackup = Assert.Single(repo.GetBackupsForProject(project.Id));
+            Assert.Equal(789, repairedBackup.TotalBytes);
+            Snapshot repairedSnapshot = repo.GetSnapshotById(repairedBackup.SnapshotId);
+            Assert.NotNull(repairedSnapshot);
+            Assert.Equal(789, repairedSnapshot!.TotalBytes);
         }
         finally
         {

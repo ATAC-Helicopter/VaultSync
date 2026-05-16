@@ -44,6 +44,7 @@ namespace VaultSync.UI.Services
 
         public string CurrentLanguage { get; private set; }
 
+        public event Action? LanguageChanging;
         public event Action? LanguageChanged;
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -62,6 +63,7 @@ namespace VaultSync.UI.Services
             if (!LoadLanguage(normalized))
                 return false;
 
+            LanguageChanging?.Invoke();
             CurrentLanguage = normalized;
             _pendingLanguage = normalized;
             LanguageChanged?.Invoke();

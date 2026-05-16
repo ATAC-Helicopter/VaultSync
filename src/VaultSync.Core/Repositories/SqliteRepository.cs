@@ -690,6 +690,14 @@ DELETE FROM sqlite_sequence;";
                 new { externalId, id = snapshotId });
         }
 
+        public void UpdateSnapshotTotalBytes(int snapshotId, long totalBytes)
+        {
+            using SqliteConnection c = Open();
+            c.Execute(
+                "UPDATE snapshots SET total_bytes = @totalBytes WHERE id = @id;",
+                new { totalBytes = Math.Max(0, totalBytes), id = snapshotId });
+        }
+
         public Snapshot? GetLatestSnapshot(int projectId)
         {
             return GetLatestSnapshotForProject(projectId);
@@ -1122,6 +1130,14 @@ DELETE FROM sqlite_sequence;";
             c.Execute(
                 "UPDATE backups SET external_id = @externalId WHERE id = @id;",
                 new { externalId, id = backupId });
+        }
+
+        public void UpdateBackupTotalBytes(int backupId, long totalBytes)
+        {
+            using SqliteConnection c = Open();
+            c.Execute(
+                "UPDATE backups SET total_bytes = @totalBytes WHERE id = @id;",
+                new { totalBytes = Math.Max(0, totalBytes), id = backupId });
         }
 
         public void UpdateBackupProjectId(int backupId, int projectId)

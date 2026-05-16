@@ -12,6 +12,8 @@ namespace VaultSync.UI
         private ScrollViewer? _scrollViewer;
         private double _pendingScrollOffset;
         private bool _restoreScrollPending;
+        private int _restoreScrollAttempts;
+        private DispatcherTimer? _restoreScrollTimer;
 
         public SettingsView()
         {
@@ -36,6 +38,7 @@ namespace VaultSync.UI
             LocalizationService? localization = LocalizationProvider.Service;
             if (localization != null)
             {
+                localization.LanguageChanging += CaptureScrollOffset;
                 localization.LanguageChanged += OnLanguageChanged;
             }
         }
@@ -45,6 +48,7 @@ namespace VaultSync.UI
             LocalizationService? localization = LocalizationProvider.Service;
             if (localization != null)
             {
+                localization.LanguageChanging -= CaptureScrollOffset;
                 localization.LanguageChanged -= OnLanguageChanged;
             }
 
@@ -53,6 +57,12 @@ namespace VaultSync.UI
                 _scrollViewer.LayoutUpdated -= OnScrollViewerLayoutUpdated;
                 _scrollViewer = null;
             }
+
+            if (_restoreScrollTimer != null)
+            {
+                _restoreScrollTimer.Stop();
+                _restoreScrollTimer = null;
+            }
         }
 
         private void OnLanguageChanged()
@@ -60,25 +70,60 @@ namespace VaultSync.UI
             if (_scrollViewer == null)
                 return;
 
+            _restoreScrollPending = true;
+            _restoreScrollAttempts = 12;
+            EnsureScrollRestoreTimer();
+            ApplyPendingScroll(countAttempt: false);
+        }
+
+        private void CaptureScrollOffset()
+        {
+            if (_scrollViewer == null)
+                return;
+
             _pendingScrollOffset = _scrollViewer.Offset.Y;
             _restoreScrollPending = true;
-
-            Dispatcher.UIThread.Post(ApplyPendingScroll, DispatcherPriority.Background);
         }
 
         private void OnScrollViewerLayoutUpdated(object? sender, EventArgs e)
         {
-            ApplyPendingScroll();
+            ApplyPendingScroll(countAttempt: false);
         }
 
-        private void ApplyPendingScroll()
+        private void ApplyPendingScroll(bool countAttempt = true)
         {
             if (!_restoreScrollPending || _scrollViewer == null)
                 return;
 
-            _restoreScrollPending = false;
             Vector current = _scrollViewer.Offset;
             _scrollViewer.Offset = new Vector(current.X, _pendingScrollOffset);
+
+            if (countAttempt && _restoreScrollAttempts > 0)
+                _restoreScrollAttempts--;
+
+            if (_restoreScrollAttempts > 0)
+                return;
+
+            _restoreScrollPending = false;
+            _restoreScrollTimer?.Stop();
+        }
+
+        private void EnsureScrollRestoreTimer()
+        {
+            if (_restoreScrollTimer is not null)
+            {
+                _restoreScrollTimer.Stop();
+            }
+            else
+            {
+                _restoreScrollTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(50)
+                };
+                _restoreScrollTimer.Tick += (_, _) => ApplyPendingScroll(countAttempt: true);
+            }
+
+            _restoreScrollTimer.Start();
         }
     }
 }
