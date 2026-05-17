@@ -34,6 +34,7 @@ Current `1.7.4-Beta.3` highlights focus on the .NET 10 migration, safer destinat
 - Linux `.deb` packages now carry AppStream metadata, richer details, homepage data, and matching desktop/icon IDs for better software-center previews.
 - Linux windows now set the app icon explicitly and launcher metadata uses the executable WM class so taskbars can show the VaultSync icon.
 - Linux tray refreshes now reuse the existing native menu object to avoid duplicate tray indicators on AppIndicator hosts.
+- Linux packages now include hidden desktop identity fallbacks so taskbars can match the `VaultSync.UI` runtime window to the VaultSync icon.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.

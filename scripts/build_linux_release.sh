@@ -48,6 +48,7 @@ BIN_DIR="${HOME}/.local/bin"
 APPLICATIONS_DIR="${XDG_DATA_HOME:-"$HOME/.local/share"}/applications"
 ICON_DIR="${XDG_DATA_HOME:-"$HOME/.local/share"}/icons/hicolor/256x256/apps"
 DESKTOP_FILE="${APPLICATIONS_DIR}/${APP_ID}.desktop"
+COMPAT_DESKTOP_FILE="${APPLICATIONS_DIR}/VaultSync.UI.desktop"
 ICON_SOURCE="${SOURCE_DIR}/Assets/vaultsync-tray.png"
 ICON_TARGET="${ICON_DIR}/${APP_ID}.png"
 
@@ -69,10 +70,27 @@ Exec="${INSTALL_ROOT}/VaultSync.UI" %U
 Icon=${ICON_TARGET}
 Categories=Utility;Archiving;
 Terminal=false
+StartupNotify=true
 StartupWMClass=VaultSync.UI
+X-GNOME-WMClass=VaultSync.UI
+DESKTOP
+
+cat > "$COMPAT_DESKTOP_FILE" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=${APP_NAME}
+Comment=Backup and synchronization tool
+Exec="${INSTALL_ROOT}/VaultSync.UI" %U
+Icon=${ICON_TARGET}
+Terminal=false
+NoDisplay=true
+StartupNotify=true
+StartupWMClass=VaultSync.UI
+X-GNOME-WMClass=VaultSync.UI
 DESKTOP
 
 chmod +x "$DESKTOP_FILE" 2>/dev/null || true
+chmod +x "$COMPAT_DESKTOP_FILE" 2>/dev/null || true
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$APPLICATIONS_DIR" >/dev/null 2>&1 || true
 fi
@@ -101,10 +119,11 @@ INSTALL_ROOT="${XDG_DATA_HOME:-"$HOME/.local/share"}/${APP_ID}"
 BIN_LINK="${HOME}/.local/bin/vaultsync"
 APPLICATIONS_DIR="${XDG_DATA_HOME:-"$HOME/.local/share"}/applications"
 DESKTOP_FILE="${APPLICATIONS_DIR}/${APP_ID}.desktop"
+COMPAT_DESKTOP_FILE="${APPLICATIONS_DIR}/VaultSync.UI.desktop"
 ICON_ROOT="${XDG_DATA_HOME:-"$HOME/.local/share"}/icons/hicolor"
 ICON_TARGET="${ICON_ROOT}/256x256/apps/${APP_ID}.png"
 
-rm -f "$BIN_LINK" "$DESKTOP_FILE" "$ICON_TARGET"
+rm -f "$BIN_LINK" "$DESKTOP_FILE" "$COMPAT_DESKTOP_FILE" "$ICON_TARGET"
 rm -rf "$INSTALL_ROOT"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -149,7 +168,23 @@ Exec=/opt/vaultsync/VaultSync.UI %U
 Icon=${deb_appstream_id}
 Categories=Utility;Archiving;
 Terminal=false
+StartupNotify=true
 StartupWMClass=VaultSync.UI
+X-GNOME-WMClass=VaultSync.UI
+EOF
+
+  cat > "${deb_applications_dir}/VaultSync.UI.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=VaultSync
+Comment=Backup and synchronization tool
+Exec=/opt/vaultsync/VaultSync.UI %U
+Icon=${deb_appstream_id}
+Terminal=false
+NoDisplay=true
+StartupNotify=true
+StartupWMClass=VaultSync.UI
+X-GNOME-WMClass=VaultSync.UI
 EOF
 
   release_date="$(date -u +%Y-%m-%d)"
@@ -267,10 +302,26 @@ Exec=VaultSync.UI
 Icon=vaultsync
 Categories=Utility;Archiving;
 Terminal=false
+StartupNotify=true
 StartupWMClass=VaultSync.UI
+X-GNOME-WMClass=VaultSync.UI
 EOF
 
 cp "${appdir}/vaultsync.desktop" "${appdir}/usr/share/applications/vaultsync.desktop"
+
+cat > "${appdir}/usr/share/applications/VaultSync.UI.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=VaultSync
+Comment=Backup and synchronization tool
+Exec=VaultSync.UI
+Icon=vaultsync
+Terminal=false
+NoDisplay=true
+StartupNotify=true
+StartupWMClass=VaultSync.UI
+X-GNOME-WMClass=VaultSync.UI
+EOF
 
 appimage_path="${dist_dir}/${base_name}.AppImage"
 APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 "$appimage_tool" "$appdir" "$appimage_path"
