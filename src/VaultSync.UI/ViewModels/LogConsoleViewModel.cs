@@ -1,8 +1,11 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Input.Platform;
@@ -13,11 +16,12 @@ using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI.ViewModels
 {
-    public sealed class LogConsoleViewModel : ViewModelBase
+    public sealed class LogConsoleViewModel : ViewModelBase, IDisposable
     {
         private readonly LogConsoleService _service;
         private Func<string, Task<bool>>? _copyTextAsync;
         private string _statusMessage = string.Empty;
+        private string _consoleText = string.Empty;
         private bool _autoScrollEnabled = true;
         private LogLine? _selectedLine;
 
@@ -30,6 +34,10 @@ namespace VaultSync.UI.ViewModels
             ExportCommand = new RelayCommand(async _ => await ExportLogsAsync());
             OpenFolderCommand = new RelayCommand(_ => OpenLogFolder());
             CopySelectedLineCommand = new RelayCommand(async _ => await CopySelectedLineAsync(), _ => SelectedLine is not null);
+            RebuildConsoleText();
+
+            if (_service.Lines is INotifyCollectionChanged notifier)
+                notifier.CollectionChanged += OnLinesChanged;
         }
 
         public void SetClipboardProvider(Func<IClipboard?> clipboardProvider)
@@ -51,6 +59,12 @@ namespace VaultSync.UI.ViewModels
         }
 
         public ReadOnlyObservableCollection<LogLine> Lines => _service.Lines;
+
+        public string ConsoleText
+        {
+            get => _consoleText;
+            private set => SetField(ref _consoleText, value);
+        }
 
         public bool IsEnabled => _service.Enabled;
         public bool IsSaving => _service.SaveToFile;
@@ -169,6 +183,33 @@ namespace VaultSync.UI.ViewModels
         {
             OnPropertyChanged(nameof(IsEnabled));
             OnPropertyChanged(nameof(IsSaving));
+        }
+
+        private void OnLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            RebuildConsoleText();
+        }
+
+        private void RebuildConsoleText()
+        {
+            if (_service.Lines.Count == 0)
+            {
+                ConsoleText = string.Empty;
+                return;
+            }
+
+            var builder = new StringBuilder(_service.Lines.Sum(line => line.RawDisplay.Length + Environment.NewLine.Length));
+            foreach (LogLine line in _service.Lines)
+                builder.AppendLine(line.RawDisplay);
+
+            ConsoleText = builder.ToString();
+        }
+
+        public void Dispose()
+        {
+            _service.StateChanged -= OnServiceStateChanged;
+            if (_service.Lines is INotifyCollectionChanged notifier)
+                notifier.CollectionChanged -= OnLinesChanged;
         }
 
         private static string L(string key, string fallback) =>

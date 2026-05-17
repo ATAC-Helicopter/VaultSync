@@ -1,7 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
-        xmlns:svc="clr-namespace:VaultSync.UI.Services"
         xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
         x:Class="VaultSync.UI.Views.LogConsoleWindow"
         x:DataType="vm:LogConsoleViewModel"
@@ -33,7 +32,7 @@
                     VerticalAlignment="Center" />
           <Button Content="{infra:LocalizedString Key=LogConsole.CopySelected}"
                   Classes="action-ghost"
-                  Command="{Binding CopySelectedLineCommand}" />
+                  Click="OnCopySelectionClicked" />
           <Button Content="{infra:LocalizedString Key=LogConsole.OpenFolder}"
                   Classes="action-ghost"
                   Command="{Binding OpenFolderCommand}" />
@@ -57,53 +56,17 @@
             Classes="card"
             Margin="0"
             Padding="{DynamicResource CardPaddingSmall}">
-      <ListBox x:Name="LogList"
-               ItemsSource="{Binding Lines}"
-               SelectedItem="{Binding SelectedLine, Mode=TwoWay}"
+      <TextBox x:Name="LogTextBox"
+               Text="{Binding ConsoleText}"
+               AcceptsReturn="True"
+               IsReadOnly="True"
+               TextWrapping="NoWrap"
+               FontFamily="Consolas"
+               FontSize="12"
                Background="Transparent"
-               BorderThickness="0">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="svc:LogLine">
-            <Border Padding="6,4"
-                    CornerRadius="4"
-                    ToolTip.Tip="{Binding RawDisplay}">
-              <Grid ColumnDefinitions="72,64,*"
-                    ColumnSpacing="8">
-                <TextBlock Text="{Binding TimeText}"
-                           FontFamily="Consolas"
-                           FontSize="12"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           VerticalAlignment="Top"
-                           Margin="0,3,0,0" />
-                <Border Grid.Column="1"
-                        Width="52"
-                        Height="24"
-                        Background="{Binding SourceBackground}"
-                        CornerRadius="4"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Top">
-                  <TextBlock Text="{Binding SourceText}"
-                             FontFamily="Consolas"
-                             FontSize="10"
-                             FontWeight="SemiBold"
-                             Foreground="{Binding SourceForeground}"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"
-                             TextAlignment="Center" />
-                </Border>
-                <TextBlock Grid.Column="2"
-                           Text="{Binding MessageText}"
-                           FontFamily="Consolas"
-                           FontSize="12"
-                           TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           VerticalAlignment="Top"
-                           LineHeight="18" />
-              </Grid>
-            </Border>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+               BorderThickness="0"
+               ScrollViewer.HorizontalScrollBarVisibility="Auto"
+               ScrollViewer.VerticalScrollBarVisibility="Auto" />
     </Border>
   </Grid>
 </Window>

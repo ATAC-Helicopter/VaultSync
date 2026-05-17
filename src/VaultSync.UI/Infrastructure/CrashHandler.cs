@@ -54,6 +54,12 @@ internal static class CrashHandler
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
+        if (ExpectedDesktopNoise.IsExpectedUnobservedTaskException(e.Exception))
+        {
+            e.SetObserved();
+            return;
+        }
+
         DiagnosticsLogger.Record($"Unobserved task exception: {e.Exception.GetType().Name} - {e.Exception.Message}");
         WriteCrashLog(e.Exception, "UnobservedTaskException", isTerminating: false);
         e.SetObserved();

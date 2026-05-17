@@ -121,6 +121,7 @@ namespace VaultSync.UI.Services
         private readonly List<LogLine> _snapshotLines = [];
         private readonly ConcurrentQueue<LogLine> _pending = new();
         private int _pendingCount;
+        private int _suppressNextIbusTraceStackFrames;
         private readonly object _fileGate = new();
         private readonly StringBuilder _fileBuffer = new();
         private int _uiCaptureEnabled;
@@ -449,7 +450,35 @@ namespace VaultSync.UI.Services
             }
         }
 
-        private static bool IsNoisyTrace(string line)
+        private bool IsNoisyTrace(string line)
+        {
+            if (Interlocked.CompareExchange(ref _suppressNextIbusTraceStackFrames, 0, 0) > 0)
+            {
+                if (line.Contains("Tmds.DBus.Protocol", StringComparison.Ordinal) ||
+                    line.Contains("Avalonia.FreeDesktop.DBusIme", StringComparison.Ordinal) ||
+                    line.Contains("IValueTaskSource", StringComparison.Ordinal) ||
+                    line.Contains("CallMethodAsync", StringComparison.Ordinal) ||
+                    line.StartsWith("at ", StringComparison.Ordinal) ||
+                    line.StartsWith("   at ", StringComparison.Ordinal))
+                {
+                    Interlocked.Decrement(ref _suppressNextIbusTraceStackFrames);
+                    return true;
+                }
+
+                Interlocked.Exchange(ref _suppressNextIbusTraceStackFrames, 0);
+            }
+
+            if (line.Contains("[IME] Error while destroying the context", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("org.freedesktop.DBus.Error.UnknownMethod: Method Destroy is not implemented on interface org.freedesktop.IBus.Service", StringComparison.OrdinalIgnoreCase))
+            {
+                Interlocked.Exchange(ref _suppressNextIbusTraceStackFrames, 8);
+                return true;
+            }
+
+            return IsNoisyTraceLine(line);
+        }
+
+        private static bool IsNoisyTraceLine(string line)
         {
             return line.Contains("Layout cycle detected", StringComparison.OrdinalIgnoreCase)
                 || line.Contains("PlatformImpl is null, couldn't handle input", StringComparison.OrdinalIgnoreCase)

@@ -126,6 +126,12 @@ internal static class Program
 
     private static void OnDiagnosticUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
+        if (ExpectedDesktopNoise.IsExpectedUnobservedTaskException(e.Exception))
+        {
+            e.SetObserved();
+            return;
+        }
+
         DiagnosticsLogger.RecordException("Diagnostic unobserved task exception", e.Exception, includeStack: true);
     }
 

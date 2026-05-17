@@ -16,7 +16,7 @@ namespace VaultSync.UI.Views
     {
         private readonly LogConsoleViewModel _viewModel;
         private ScrollViewer? _scrollViewer;
-        private ListBox? _logList;
+        private TextBox? _logTextBox;
         private bool _autoScroll = true;
         private DispatcherTimer? _scrollTimer;
         private bool _scrollPending;
@@ -49,10 +49,10 @@ namespace VaultSync.UI.Views
             if (OperatingSystem.IsMacOS())
                 _viewModel.AutoScrollEnabled = false;
             _autoScroll = _viewModel.AutoScrollEnabled;
-            if (this.FindControl<ListBox>("LogList") is { } list)
+            if (this.FindControl<TextBox>("LogTextBox") is { } textBox)
             {
-                _logList = list;
-                _scrollViewer = list.GetVisualDescendants()
+                _logTextBox = textBox;
+                _scrollViewer = textBox.GetVisualDescendants()
                     .OfType<ScrollViewer>()
                     .FirstOrDefault();
 
@@ -120,7 +120,7 @@ namespace VaultSync.UI.Views
                 _scrollViewer.ScrollChanged -= OnScrollChanged;
                 _scrollViewer = null;
             }
-            _logList = null;
+            _logTextBox = null;
             if (_scrollTimer is not null)
             {
                 _scrollTimer.Stop();
@@ -128,6 +128,7 @@ namespace VaultSync.UI.Views
             }
             Opened -= OnOpened;
             Closed -= OnClosed;
+            _viewModel.Dispose();
         }
 
         private async void OnKeyDown(object? sender, KeyEventArgs e)
@@ -140,8 +141,25 @@ namespace VaultSync.UI.Views
             if (!isCopyGesture)
                 return;
 
+            if (e.Source is TextBox textBox && !string.IsNullOrEmpty(textBox.SelectedText))
+                return;
+
             if (await _viewModel.CopySelectedLineAsync())
                 e.Handled = true;
+        }
+
+        private async void OnCopySelectionClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            string? selectedText = _logTextBox?.SelectedText;
+            if (!string.IsNullOrEmpty(selectedText) && Clipboard is not null)
+            {
+                await Clipboard.SetTextAsync(selectedText);
+                e.Handled = true;
+                return;
+            }
+
+            _ = await _viewModel.CopySelectedLineAsync();
+            e.Handled = true;
         }
 
         private void FlushPendingScroll()
@@ -162,10 +180,12 @@ namespace VaultSync.UI.Views
                 return;
             }
 
-            if (_logList is not null && _logList.ItemCount > 0)
+            if (_logTextBox is not null)
             {
-                object? last = _logList.Items[_logList.ItemCount - 1];
-                _logList.ScrollIntoView(last);
+                int end = _logTextBox.Text?.Length ?? 0;
+                _logTextBox.CaretIndex = end;
+                _logTextBox.SelectionStart = end;
+                _logTextBox.SelectionEnd = end;
             }
         }
     }

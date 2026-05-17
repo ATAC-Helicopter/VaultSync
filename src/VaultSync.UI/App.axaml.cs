@@ -1127,6 +1127,9 @@ public partial class App : Application
             {
                 try
                 {
+                    if (ExpectedDesktopNoise.IsExpectedUnobservedTaskException(e.Exception))
+                        return;
+
                     DiagnosticsLogger.RecordException("Global unobserved task exception", e.Exception, includeStack: true);
                     Telemetry.Log("app_crash", b => b
                         .WithException(e.Exception)
