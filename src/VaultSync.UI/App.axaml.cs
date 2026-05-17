@@ -145,7 +145,8 @@ public partial class App : Application
         var mainWindow = new MainWindow
         {
             DataContext = AppViewModelInstance,
-            WindowState = WindowState.Maximized
+            WindowState = WindowState.Maximized,
+            Icon = LoadAppWindowIcon()
         };
             desktop.MainWindow = mainWindow;
             ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
@@ -231,6 +232,21 @@ public partial class App : Application
         ApplyThemeFromConfig();
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static WindowIcon? LoadAppWindowIcon()
+    {
+        try
+        {
+            var uri = new Uri("avares://VaultSync.UI/Assets/vaultsync-tray.png");
+            using Stream iconStream = AssetLoader.Open(uri);
+            return new WindowIcon(iconStream);
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Window icon load failed: {ex.Message}");
+            return null;
+        }
     }
 
     private static void InitializeLocalizationProviderEarly()

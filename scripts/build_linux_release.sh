@@ -69,7 +69,7 @@ Exec="${INSTALL_ROOT}/VaultSync.UI" %U
 Icon=${ICON_TARGET}
 Categories=Utility;Archiving;
 Terminal=false
-StartupWMClass=VaultSync
+StartupWMClass=VaultSync.UI
 DESKTOP
 
 chmod +x "$DESKTOP_FILE" 2>/dev/null || true
@@ -149,7 +149,7 @@ Exec=/opt/vaultsync/VaultSync.UI %U
 Icon=${deb_appstream_id}
 Categories=Utility;Archiving;
 Terminal=false
-StartupWMClass=VaultSync
+StartupWMClass=VaultSync.UI
 EOF
 
   release_date="$(date -u +%Y-%m-%d)"
@@ -267,7 +267,7 @@ Exec=VaultSync.UI
 Icon=vaultsync
 Categories=Utility;Archiving;
 Terminal=false
-StartupWMClass=VaultSync
+StartupWMClass=VaultSync.UI
 EOF
 
 cp "${appdir}/vaultsync.desktop" "${appdir}/usr/share/applications/vaultsync.desktop"
