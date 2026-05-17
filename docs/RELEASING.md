@@ -62,8 +62,8 @@ Stable example:
 Current beta example:
 - branch: `Dev`
 - release channel: `beta`
-- `previous_version = 1.7.3`
-- `target_version = 1.7.4-Beta.2`
+- `previous_version = 1.7.4-Beta.2`
+- `target_version = 1.7.4-Beta.3`
 
 Example multi-base input:
 - `previous_version = 1.6.2`
