@@ -122,31 +122,64 @@ tar -C "$package_dir" -czf "$tarball_path" .
 
 if command -v dpkg-deb >/dev/null 2>&1 && dpkg-deb --version >/dev/null 2>&1; then
   deb_root="$(mktemp -d)"
+  deb_appstream_id="io.github.atac_helicopter.VaultSync"
   deb_package_dir="${deb_root}/opt/vaultsync"
   deb_bin_dir="${deb_root}/usr/bin"
   deb_applications_dir="${deb_root}/usr/share/applications"
   deb_icon_dir="${deb_root}/usr/share/icons/hicolor/256x256/apps"
+  deb_metainfo_dir="${deb_root}/usr/share/metainfo"
   deb_control_dir="${deb_root}/DEBIAN"
 
-  mkdir -p "$deb_package_dir" "$deb_bin_dir" "$deb_applications_dir" "$deb_icon_dir" "$deb_control_dir"
+  mkdir -p "$deb_package_dir" "$deb_bin_dir" "$deb_applications_dir" "$deb_icon_dir" "$deb_metainfo_dir" "$deb_control_dir"
   cp -a "${publish_dir}/." "$deb_package_dir/"
   chmod +x "${deb_package_dir}/VaultSync.UI" 2>/dev/null || true
   ln -s "/opt/vaultsync/VaultSync.UI" "${deb_bin_dir}/vaultsync"
 
   if [[ -f "${publish_dir}/Assets/vaultsync-tray.png" ]]; then
-    cp "${publish_dir}/Assets/vaultsync-tray.png" "${deb_icon_dir}/vaultsync.png"
+    cp "${publish_dir}/Assets/vaultsync-tray.png" "${deb_icon_dir}/${deb_appstream_id}.png"
+    ln -s "${deb_appstream_id}.png" "${deb_icon_dir}/vaultsync.png"
   fi
 
-  cat > "${deb_applications_dir}/vaultsync.desktop" <<'EOF'
+  cat > "${deb_applications_dir}/${deb_appstream_id}.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=VaultSync
 Comment=Backup and synchronization tool
 Exec=/opt/vaultsync/VaultSync.UI %U
-Icon=vaultsync
+Icon=${deb_appstream_id}
 Categories=Utility;Archiving;
 Terminal=false
 StartupWMClass=VaultSync
+EOF
+
+  release_date="$(date -u +%Y-%m-%d)"
+  cat > "${deb_metainfo_dir}/${deb_appstream_id}.metainfo.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>${deb_appstream_id}</id>
+  <name>VaultSync</name>
+  <summary>Project backup and synchronization tool</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer_name>Flavio Giacchetti</developer_name>
+  <url type="homepage">https://github.com/ATAC-Helicopter/VaultSync</url>
+  <launchable type="desktop-id">${deb_appstream_id}.desktop</launchable>
+  <icon type="stock">${deb_appstream_id}</icon>
+  <provides>
+    <binary>vaultsync</binary>
+  </provides>
+  <categories>
+    <category>Utility</category>
+    <category>Archiving</category>
+  </categories>
+  <description>
+    <p>VaultSync keeps project snapshots and backup history available across local, removable, and network destinations.</p>
+    <p>It includes scheduled backups, destination metadata sync, restore tools, and diagnostics for release support.</p>
+  </description>
+  <releases>
+    <release version="${version}" date="${release_date}" />
+  </releases>
+</component>
 EOF
 
   installed_size="$(du -sk "$deb_root" | awk '{print $1}')"
@@ -158,8 +191,11 @@ Priority: optional
 Architecture: ${deb_arch}
 Installed-Size: ${installed_size}
 Maintainer: Flavio Giacchetti
-Description: Backup and synchronization tool
- VaultSync keeps project snapshots and backup history available across destinations.
+Homepage: https://github.com/ATAC-Helicopter/VaultSync
+Description: Project backup and synchronization tool
+ VaultSync keeps project snapshots and backup history available across local,
+ removable, and network destinations. It provides scheduled backups, destination
+ metadata sync, restore tools, and diagnostics for release support.
 EOF
 
   cat > "${deb_control_dir}/postinst" <<'EOF'

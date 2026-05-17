@@ -50,6 +50,8 @@
 - [BUG-18016] Auto backups now warm up active destinations and retry preparation after a short cooldown so sleeping drives can wake before backup starts.
 - [BUG-18017] Linux log console now suppresses expected DBus/IBus desktop-integration noise and supports multi-row selection while keeping the readable styled console layout.
 - [BUG-18018] The What's New dialog now opens centered over the main app window instead of drifting to another monitor.
+- [BUG-18019] Linux SMART probe errors such as permission, unsupported-device, or read failures no longer masquerade as failing disks and block backups.
+- [BUG-18020] Linux `.deb` packages now include AppStream metadata, a richer package description, homepage data, and matching desktop/icon IDs for better software-center previews.
 
 ## [1.7.3] - 23.04.2026
 ### Added

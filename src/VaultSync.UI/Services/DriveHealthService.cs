@@ -251,9 +251,18 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(smartOutput))
                 return false;
 
-            if (smartOutput.Contains("PASSED", StringComparison.OrdinalIgnoreCase) ||
-                smartOutput.Contains("OK", StringComparison.OrdinalIgnoreCase))
+            if (TryParseSmartCtlHealth(smartOutput, out DriveHealthStatus status))
             {
+                if (status == DriveHealthStatus.Failing)
+                {
+                    result = new DriveHealthResult(
+                        DriveHealthStatus.Failing,
+                        L("DriveHealth.Failing.SmartFailing", "SMART reports failing."),
+                        DriveId: device,
+                        Path: fullPath);
+                    return true;
+                }
+
                 result = new DriveHealthResult(
                     DriveHealthStatus.Healthy,
                     L("DriveHealth.Healthy.SmartOk", "SMART reports OK."),
@@ -262,16 +271,42 @@ namespace VaultSync.UI.Services
                 return true;
             }
 
-            if (smartOutput.Contains("FAILED", StringComparison.OrdinalIgnoreCase) ||
-                smartOutput.Contains("FAIL", StringComparison.OrdinalIgnoreCase) ||
-                smartOutput.Contains("PRE-FAIL", StringComparison.OrdinalIgnoreCase))
+            return false;
+        }
+
+        internal static bool TryParseSmartCtlHealth(string smartOutput, out DriveHealthStatus status)
+        {
+            status = DriveHealthStatus.Unknown;
+            if (string.IsNullOrWhiteSpace(smartOutput))
+                return false;
+
+            foreach (string rawLine in smartOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
-                result = new DriveHealthResult(
-                    DriveHealthStatus.Failing,
-                    L("DriveHealth.Failing.SmartFailing", "SMART reports failing."),
-                    DriveId: device,
-                    Path: fullPath);
-                return true;
+                string line = rawLine.Trim();
+                if (line.Length == 0)
+                    continue;
+
+                if (line.Contains("overall-health self-assessment test result", StringComparison.OrdinalIgnoreCase) ||
+                    line.Contains("SMART Health Status", StringComparison.OrdinalIgnoreCase) ||
+                    line.Contains("SMART Status", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (line.Contains("PASSED", StringComparison.OrdinalIgnoreCase) ||
+                        line.EndsWith(": OK", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains(": OK", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Verified", StringComparison.OrdinalIgnoreCase))
+                    {
+                        status = DriveHealthStatus.Healthy;
+                        return true;
+                    }
+
+                    if (line.Contains("FAILED", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("FAILING", StringComparison.OrdinalIgnoreCase) ||
+                        line.EndsWith(": FAIL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        status = DriveHealthStatus.Failing;
+                        return true;
+                    }
+                }
             }
 
             return false;

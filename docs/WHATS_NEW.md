@@ -30,6 +30,8 @@ Current `1.7.4-Beta.2` highlights focus on the .NET 10 migration, safer destinat
 - Backup summary cards plus action and filter buttons now keep long localized labels inside their bounds in windowed layouts.
 - The log console keeps its readable styled rows, supports selecting and copying multiple log entries, and filters expected Linux DBus/IBus desktop noise.
 - The What's New dialog now opens centered over the main app window on multi-monitor desktops.
+- Linux SMART probe errors such as permission or unsupported-device output no longer look like failing disks or block backups.
+- Linux `.deb` packages now carry AppStream metadata, richer details, homepage data, and matching desktop/icon IDs for better software-center previews.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
