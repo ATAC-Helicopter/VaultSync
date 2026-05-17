@@ -11,8 +11,8 @@ on:
           - beta
           - stable
       previous_version:
-        description: "Previous version for patch manifests (e.g., 1.6.0 or 1.7.x-beta.N)"
-        required: true
+        description: "Primary previous/base version for patch manifests (optional if the allowlist is provided)"
+        required: false
       previous_versions:
         description: "Optional comma/newline separated exact base-version allowlist for one manifest (defaults to previous_version only)"
         required: false
@@ -29,6 +29,9 @@ jobs:
     outputs:
       patch_base_versions: ${{ steps.validate_inputs.outputs.patch_base_versions }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Validate release inputs
         id: validate_inputs
         shell: bash
@@ -41,40 +44,65 @@ jobs:
           target="${{ inputs.target_version }}"
           branch="${{ github.ref_name }}"
 
-          if [[ -z "$previous" || -z "$target" ]]; then
-            echo "previous_version and target_version are required."
+          trim() {
+            sed 's/\r//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+          }
+
+          normalize_version() {
+            local value
+            value="$(printf '%s' "$1" | trim)"
+            value="${value#v}"
+            value="${value#V}"
+            printf '%s' "${value,,}"
+          }
+
+          target="$(printf '%s' "$target" | trim)"
+          previous="$(printf '%s' "$previous" | trim)"
+          target_key="$(normalize_version "$target")"
+
+          if [[ -z "$target" ]]; then
+            echo "target_version is required."
             exit 1
           fi
 
-          if [[ "$previous" == "$target" ]]; then
-            echo "previous_version and target_version must be different."
+          project_version="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/VaultSync.UI/VaultSync.UI.csproj | head -n 1 | trim)"
+          if [[ -z "$project_version" ]]; then
+            echo "Could not read src/VaultSync.UI/VaultSync.UI.csproj <Version>."
             exit 1
           fi
 
-          mapfile -t requested_versions < <(
+          if [[ "$(normalize_version "$project_version")" != "$target_key" ]]; then
+            echo "target_version '$target' does not match project version '$project_version'."
+            exit 1
+          fi
+
+          declare -A seen_versions=()
+          requested_versions=()
+          while IFS= read -r candidate; do
+            candidate="$(printf '%s' "$candidate" | trim)"
+            [[ -n "$candidate" ]] || continue
+
+            candidate_key="$(normalize_version "$candidate")"
+            if [[ "$candidate_key" == "$target_key" ]]; then
+              echo "::warning::Ignoring base version '$candidate' because it matches target_version '$target'."
+              continue
+            fi
+
+            if [[ -z "${seen_versions[$candidate_key]+x}" ]]; then
+              seen_versions[$candidate_key]=1
+              requested_versions+=("$candidate")
+            fi
+          done < <(
             {
               printf '%s\n' "$previous"
-              printf '%s' "$previous_versions_raw" | tr ',;' '\n'
-            } | sed 's/\r//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | awk 'NF' | awk '!seen[$0]++'
+              printf '%s\n' "$previous_versions_raw" | tr ',;' '\n'
+            }
           )
 
           if [[ ${#requested_versions[@]} -eq 0 ]]; then
-            echo "At least one previous/base version is required."
+            echo "At least one previous/base version different from target_version '$target' is required."
             exit 1
           fi
-
-          for base in "${requested_versions[@]}"; do
-            if [[ "$base" == "$target" ]]; then
-              echo "Base version '$base' must not equal target_version '$target'."
-              exit 1
-            fi
-          done
-
-          {
-            echo "patch_base_versions<<EOF"
-            printf '%s\n' "${requested_versions[@]}"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
 
           if [[ "$channel" == "beta" ]]; then
             if [[ "$branch" != "Dev" ]]; then
@@ -98,11 +126,18 @@ jobs:
             fi
           fi
 
+          {
+            echo "patch_base_versions<<EOF"
+            printf '%s\n' "${requested_versions[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
           cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           ## Release asset validation
           - Channel: \`$channel\`
           - Branch: \`$branch\`
-          - Previous version: \`$previous\`
+          - Project version: \`$project_version\`
+          - Primary previous version: \`${previous:-"(none)"}\`
           - Base allow-list:
           EOF
           for base in "${requested_versions[@]}"; do
