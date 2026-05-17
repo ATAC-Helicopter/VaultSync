@@ -27,7 +27,7 @@ Current `1.7.4-Beta.1` highlights focus on the .NET 10 migration, safer destinat
 - The in-app What's New dialog now reads only the current release slice and presents it as a cleaner release digest.
 - Repeated UI byte-size formatting and detached async-command wrappers now use shared helpers.
 - Changing language in Settings now preserves the active theme and keeps the page near the same scroll position through the relayout.
-- Backup action and filter buttons now wrap long localized labels cleanly in windowed layouts.
+- Backup summary cards plus action and filter buttons now keep long localized labels inside their bounds in windowed layouts.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
