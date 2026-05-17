@@ -33,6 +33,7 @@ Current `1.7.4-Beta.2` highlights focus on the .NET 10 migration, safer destinat
 - Linux SMART probe errors such as permission or unsupported-device output no longer look like failing disks or block backups.
 - Linux `.deb` packages now carry AppStream metadata, richer details, homepage data, and matching desktop/icon IDs for better software-center previews.
 - Linux windows now set the app icon explicitly and launcher metadata uses the executable WM class so taskbars can show the VaultSync icon.
+- Linux tray refreshes now reuse the existing native menu object to avoid duplicate tray indicators on AppIndicator hosts.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.

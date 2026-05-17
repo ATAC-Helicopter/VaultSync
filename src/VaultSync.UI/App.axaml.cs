@@ -1353,10 +1353,24 @@ public partial class App : Application
                     return;
                 }
 
-                var newMenu = new NativeMenu();
-                PopulateTrayMenu(newMenu, desktop, recent, policySummary);
-                _trayMenu = newMenu;
-                _trayIcon.Menu = newMenu;
+                NativeMenu targetMenu;
+                if (OperatingSystem.IsMacOS())
+                {
+                    targetMenu = new NativeMenu();
+                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary);
+                    _trayMenu = targetMenu;
+                    _trayIcon.Menu = targetMenu;
+                }
+                else
+                {
+                    // Linux AppIndicator hosts can duplicate or flicker tray icons when the menu
+                    // object is replaced repeatedly. Keep one native menu and mutate its items.
+                    targetMenu = _trayMenu ?? new NativeMenu();
+                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary);
+                    _trayMenu = targetMenu;
+                    if (_trayIcon.Menu is null)
+                        _trayIcon.Menu = targetMenu;
+                }
                 _trayMenuSignature = signature;
 
                 _trayMenuRefreshFailureCount = 0;

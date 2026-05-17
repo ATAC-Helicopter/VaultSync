@@ -53,6 +53,7 @@
 - [BUG-18019] Linux SMART probe errors such as permission, unsupported-device, or read failures no longer masquerade as failing disks and block backups.
 - [BUG-18020] Linux `.deb` packages now include AppStream metadata, a richer package description, homepage data, and matching desktop/icon IDs for better software-center previews.
 - [BUG-18021] Linux windows now set the app icon explicitly and launcher metadata uses the executable WM class so taskbars can match VaultSync to its icon.
+- [BUG-18022] Linux tray refreshes now reuse the existing native menu object to avoid duplicate tray indicators on AppIndicator hosts.
 
 ## [1.7.3] - 23.04.2026
 ### Added
