@@ -1,11 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Input.Platform;
@@ -21,7 +20,6 @@ namespace VaultSync.UI.ViewModels
         private readonly LogConsoleService _service;
         private Func<string, Task<bool>>? _copyTextAsync;
         private string _statusMessage = string.Empty;
-        private string _consoleText = string.Empty;
         private bool _autoScrollEnabled = true;
         private LogLine? _selectedLine;
 
@@ -34,10 +32,6 @@ namespace VaultSync.UI.ViewModels
             ExportCommand = new RelayCommand(async _ => await ExportLogsAsync());
             OpenFolderCommand = new RelayCommand(_ => OpenLogFolder());
             CopySelectedLineCommand = new RelayCommand(async _ => await CopySelectedLineAsync(), _ => SelectedLine is not null);
-            RebuildConsoleText();
-
-            if (_service.Lines is INotifyCollectionChanged notifier)
-                notifier.CollectionChanged += OnLinesChanged;
         }
 
         public void SetClipboardProvider(Func<IClipboard?> clipboardProvider)
@@ -59,12 +53,6 @@ namespace VaultSync.UI.ViewModels
         }
 
         public ReadOnlyObservableCollection<LogLine> Lines => _service.Lines;
-
-        public string ConsoleText
-        {
-            get => _consoleText;
-            private set => SetField(ref _consoleText, value);
-        }
 
         public bool IsEnabled => _service.Enabled;
         public bool IsSaving => _service.SaveToFile;
@@ -179,37 +167,34 @@ namespace VaultSync.UI.ViewModels
             return copied;
         }
 
+        public async System.Threading.Tasks.Task<bool> CopyLinesAsync(IEnumerable<LogLine> lines)
+        {
+            if (lines is null)
+                throw new ArgumentNullException(nameof(lines));
+
+            var selectedLines = lines.Where(line => line is not null).ToList();
+            if (selectedLines.Count == 0)
+                return await CopySelectedLineAsync();
+
+            string text = string.Join(Environment.NewLine, selectedLines.Select(line => line.RawDisplay));
+            bool copied = _copyTextAsync is { } copyTextAsync
+                ? await copyTextAsync(text)
+                : await ClipboardHelper.TryCopyAsync(text);
+            StatusMessage = copied
+                ? Lf("LogConsole.CopySelectedManySuccess", "Copied {0} selected lines.", selectedLines.Count)
+                : L("LogConsole.CopySelectedFailed", "Failed to copy selected line.");
+            return copied;
+        }
+
         private void OnServiceStateChanged()
         {
             OnPropertyChanged(nameof(IsEnabled));
             OnPropertyChanged(nameof(IsSaving));
         }
 
-        private void OnLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        {
-            RebuildConsoleText();
-        }
-
-        private void RebuildConsoleText()
-        {
-            if (_service.Lines.Count == 0)
-            {
-                ConsoleText = string.Empty;
-                return;
-            }
-
-            var builder = new StringBuilder(_service.Lines.Sum(line => line.RawDisplay.Length + Environment.NewLine.Length));
-            foreach (LogLine line in _service.Lines)
-                builder.AppendLine(line.RawDisplay);
-
-            ConsoleText = builder.ToString();
-        }
-
         public void Dispose()
         {
             _service.StateChanged -= OnServiceStateChanged;
-            if (_service.Lines is INotifyCollectionChanged notifier)
-                notifier.CollectionChanged -= OnLinesChanged;
         }
 
         private static string L(string key, string fallback) =>

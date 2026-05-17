@@ -1244,5 +1244,6 @@
   "LogConsole.CopySelected": "Auswahl kopieren",
   "LogConsole.CopySelectedFailed": "Auswahl konnte nicht kopiert werden",
   "LogConsole.CopySelectedSuccess": "Auswahl kopiert",
+  "LogConsole.CopySelectedManySuccess": "{0} ausgewählte Zeilen kopiert",
   "Update.Store.OpenStore": "Store öffnen"
 }

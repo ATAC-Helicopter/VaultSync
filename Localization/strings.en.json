@@ -404,6 +404,7 @@
   "LogConsole.CopySelected": "Copy selected",
   "LogConsole.CopySelectedFailed": "Failed to copy selected line.",
   "LogConsole.CopySelectedSuccess": "Selected line copied.",
+  "LogConsole.CopySelectedManySuccess": "Copied {0} selected lines.",
   "LogConsole.Description": "Enable verbose logging to capture new entries.",
   "LogConsole.Export": "Export",
   "LogConsole.ExportedTo": "Exported to {0}",
@@ -1246,5 +1247,4 @@
   "Backups.Compare.NewerNet": "Î” net {0}",
   "Projects.Tags.Color.Close": "Close color"
 }
-
 

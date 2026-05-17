@@ -1244,5 +1244,6 @@
   "LogConsole.CopySelected": "Копировать выделенное",
   "LogConsole.CopySelectedFailed": "Не удалось скопировать выделенное",
   "LogConsole.CopySelectedSuccess": "Выделенное скопировано",
+  "LogConsole.CopySelectedManySuccess": "Скопировано выбранных строк: {0}",
   "Update.Store.OpenStore": "Открыть магазин"
 }

@@ -1244,5 +1244,6 @@
   "LogConsole.CopySelected": "نسخ المحدد",
   "LogConsole.CopySelectedFailed": "فشل نسخ المحدد",
   "LogConsole.CopySelectedSuccess": "تم نسخ المحدد",
+  "LogConsole.CopySelectedManySuccess": "تم نسخ {0} أسطر محددة",
   "Update.Store.OpenStore": "فتح المتجر"
   }

@@ -1244,5 +1244,6 @@
   "LogConsole.CopySelected": "चयनित कॉपी करें",
   "LogConsole.CopySelectedFailed": "चयनित कॉपी नहीं हो सका",
   "LogConsole.CopySelectedSuccess": "चयनित कॉपी किया गया",
+  "LogConsole.CopySelectedManySuccess": "{0} चयनित पंक्तियां कॉपी की गईं",
   "Update.Store.OpenStore": "स्टोर खोलें"
 }

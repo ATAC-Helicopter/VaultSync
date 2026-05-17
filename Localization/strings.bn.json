@@ -1244,5 +1244,6 @@
   "LogConsole.CopySelected": "নির্বাচিত অংশ কপি করুন",
   "LogConsole.CopySelectedFailed": "নির্বাচিত অংশ কপি করা যায়নি",
   "LogConsole.CopySelectedSuccess": "নির্বাচিত অংশ কপি করা হয়েছে",
+  "LogConsole.CopySelectedManySuccess": "{0}টি নির্বাচিত লাইন কপি করা হয়েছে",
   "Update.Store.OpenStore": "স্টোর খুলুন"
 }
