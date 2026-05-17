@@ -1,8 +1,8 @@
 # What's New
 
-## [1.7.4-Beta.1]
+## [1.7.4-Beta.2]
 
-Current `1.7.4-Beta.1` highlights focus on the .NET 10 migration, safer destination cleanup, quieter diagnostics, and release-readiness polish across the 1.7 train.
+Current `1.7.4-Beta.2` highlights focus on the .NET 10 migration, safer destination cleanup, quieter diagnostics, and release-readiness polish across the 1.7 train.
 
 ### Platform and release updates
 - Core, CLI, UI, and tests now target .NET 10.
