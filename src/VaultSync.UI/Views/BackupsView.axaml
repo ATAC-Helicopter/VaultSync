@@ -1586,16 +1586,17 @@
                   </WrapPanel>
                 </Grid>
 
-                <StackPanel Orientation="Horizontal"
-                            Spacing="6"
-                            Margin="0,2,0,0">
+                <WrapPanel Orientation="Horizontal"
+                           ItemSpacing="6"
+                           LineSpacing="6"
+                           Margin="0,2,0,0">
                   <ToggleButton Content="{infra:LocalizedString Key=Backups.Section.FilterOnlyErrors}"
                                 Classes="small-pill"
                                 IsChecked="{Binding OnlyErrorsFilter, Mode=TwoWay}" />
                   <ToggleButton Content="{infra:LocalizedString Key=Backups.Section.FilterOnlyManual}"
                                 Classes="small-pill"
                                 IsChecked="{Binding OnlyManualFilter, Mode=TwoWay}" />
-                </StackPanel>
+                </WrapPanel>
 
                 <Grid ColumnDefinitions="*,*,Auto"
                       ColumnSpacing="8"

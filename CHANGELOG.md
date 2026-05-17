@@ -46,6 +46,8 @@
 - [BUG-18012] Imported destination history rebuilt from legacy backup folders now records and repairs real backup sizes instead of showing `0 B`. Refs #298.
 - [BUG-18013] Changing language no longer resets the selected theme or jumps Settings back to its initial scroll position. Refs #297.
 - [BUG-18014] Linux auto backups no longer pause because of device-scoped batteries such as wireless controllers, and auto-backup timer decisions are logged for diagnostics.
+- [BUG-18015] Backup action and filter buttons now wrap long localized labels in windowed layouts instead of overflowing their bounds.
+- [BUG-18016] Auto backups now warm up active destinations and retry preparation after a short cooldown so sleeping drives can wake before backup starts.
 
 ## [1.7.3] - 23.04.2026
 ### Added

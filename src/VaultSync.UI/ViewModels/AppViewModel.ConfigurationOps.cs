@@ -23,6 +23,8 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
+        private static readonly TimeSpan AutoBackupDestinationWakeDelay = TimeSpan.FromSeconds(10);
+
         private void InitializeDestinationStatusOverview(BackupsViewModel vm)
         {
             AppConfig cfg = _config;
@@ -758,8 +760,10 @@ namespace VaultSync.UI.ViewModels
                 int backupSucceeded = 0;
                 int backupFailed = 0;
                 int destinationUnreachable = 0;
+                List<BackupDestination> activeDestinations = AppViewModel.GetActiveDestinations(cfg);
                 DiagnosticsLogger.Record(
-                    $"[AutoBackup] Prepared run. Projects={projects.Count}; Disabled={disabled.Count}; Destinations={AppViewModel.GetAllDestinations(cfg).Count}; ArchiveMode={useArchiveMode}.");
+                    $"[AutoBackup] Prepared run. Projects={projects.Count}; Disabled={disabled.Count}; Destinations={AppViewModel.GetAllDestinations(cfg).Count}; ActiveDestinations={activeDestinations.Count}; ArchiveMode={useArchiveMode}.");
+                await WarmAutoBackupDestinationsAsync(cfg, activeDestinations).ConfigureAwait(false);
 
                 int maxParallel = Math.Max(1, Environment.ProcessorCount);
                 using var throttler = new SemaphoreSlim(maxParallel);
@@ -812,7 +816,7 @@ namespace VaultSync.UI.ViewModels
                                 var destinationResolutions = new List<(BackupDestination Dest, DestinationResolution Resolution)>();
                                 foreach (BackupDestination dest in selection.Destinations)
                                 {
-                                    DestinationResolution resolution = PrepareDestination(dest, cfg);
+                                    DestinationResolution resolution = await PrepareDestinationForAutoBackupAsync(dest, cfg).ConfigureAwait(false);
                                     if (!resolution.IsSuccess)
                                     {
                                         _ = Interlocked.Increment(ref destinationUnreachable);

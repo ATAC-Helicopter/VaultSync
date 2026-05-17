@@ -19,6 +19,7 @@ Current `1.7.4-Beta.1` highlights focus on the .NET 10 migration, safer destinat
 - Backup path-containment checks now share one hardened implementation across delete, restore, tray, and open-folder flows.
 - Imported destination history rebuilt from legacy backup folders now keeps real backup sizes instead of showing `0 B`, and existing imported `0 B` rows are repaired when their folders are still present.
 - Linux auto backups now ignore peripheral batteries when deciding whether to pause on battery power, and timer decisions are easier to diagnose from logs.
+- Auto backups now warm up active destinations before running and retry preparation after a short cooldown, helping sleeping drives wake before the backup attempt.
 
 ### Diagnostics and app polish
 - The log console copy button now uses the active console window clipboard.
@@ -26,6 +27,7 @@ Current `1.7.4-Beta.1` highlights focus on the .NET 10 migration, safer destinat
 - The in-app What's New dialog now reads only the current release slice and presents it as a cleaner release digest.
 - Repeated UI byte-size formatting and detached async-command wrappers now use shared helpers.
 - Changing language in Settings now preserves the active theme and keeps the page near the same scroll position through the relayout.
+- Backup action and filter buttons now wrap long localized labels cleanly in windowed layouts.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.

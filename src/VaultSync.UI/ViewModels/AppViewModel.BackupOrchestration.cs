@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -89,6 +92,60 @@ namespace VaultSync.UI.ViewModels
         private Task<DestinationResolution> PrepareDestinationAsync(BackupDestination dest, AppConfig cfg)
         {
             return Task.Run(() => PrepareDestination(dest, cfg));
+        }
+
+        private async Task<DestinationResolution> PrepareDestinationForAutoBackupAsync(BackupDestination dest, AppConfig cfg)
+        {
+            DestinationResolution first = await PrepareDestinationAsync(dest, cfg).ConfigureAwait(false);
+            if (first.IsSuccess)
+                return first;
+
+            string display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias!;
+            DiagnosticsLogger.Record($"[AutoBackup] Destination '{display}' unavailable on first prepare; probing wake path before retry. Message='{first.Message}'");
+
+            DestinationTestResult probe = await Task.Run(() => TryTestDestination(dest, cfg)).ConfigureAwait(false);
+            UpdateDestinationProbeSummary(dest, probe);
+
+            await Task.Delay(AutoBackupDestinationWakeDelay).ConfigureAwait(false);
+
+            DestinationResolution second = await PrepareDestinationAsync(dest, cfg).ConfigureAwait(false);
+            DiagnosticsLogger.Record(
+                $"[AutoBackup] Destination '{display}' prepare retry complete. Success={second.IsSuccess}; Message='{second.Message}'");
+            return second;
+        }
+
+        private async Task WarmAutoBackupDestinationsAsync(AppConfig cfg, IReadOnlyCollection<BackupDestination> destinations)
+        {
+            if (destinations.Count == 0)
+                return;
+
+            bool anyUnreachable = false;
+            foreach (BackupDestination dest in destinations)
+            {
+                string display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias!;
+                try
+                {
+                    DiagnosticsLogger.Record($"[AutoBackup] Warm-up probe start: '{display}'.");
+                    DestinationTestResult result = await Task.Run(() => TryTestDestination(dest, cfg)).ConfigureAwait(false);
+                    UpdateDestinationProbeSummary(dest, result);
+                    if (!result.Reachable)
+                    {
+                        anyUnreachable = true;
+                        DiagnosticsLogger.Record($"[AutoBackup] Warm-up probe did not reach '{display}': {result.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    anyUnreachable = true;
+                    DiagnosticsLogger.Record($"[AutoBackup] Warm-up probe failed for '{display}': {ex.GetType().Name} - {ex.Message}");
+                }
+            }
+
+            if (anyUnreachable)
+            {
+                DiagnosticsLogger.Record($"[AutoBackup] Waiting {AutoBackupDestinationWakeDelay.TotalSeconds:0}s before retrying warmed destinations.");
+                await Task.Delay(AutoBackupDestinationWakeDelay).ConfigureAwait(false);
+            }
         }
 
         private BackupAllPreparationResult PrepareBackupAll()
