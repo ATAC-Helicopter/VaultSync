@@ -431,8 +431,11 @@ public partial class App : Application
 
         var window = new WhatsNewWindow
         {
-            DataContext = vm
+            DataContext = vm,
+            WindowStartupLocation = WindowStartupLocation.Manual
         };
+        Window? owner = desktop.MainWindow;
+        window.Opened += (_, _) => CenterWindowOnOwner(window, owner);
 
         vm.CloseRequested += () =>
         {
@@ -441,7 +444,56 @@ public partial class App : Application
             window.Close();
         };
 
-        window.ShowDialog(desktop.MainWindow);
+        if (owner is not null)
+            window.ShowDialog(owner);
+        else
+            window.Show();
+    }
+
+    private static void CenterWindowOnOwner(Window window, Window? owner)
+    {
+        if (window is null || owner is null)
+            return;
+
+        Avalonia.Platform.Screen? screen =
+            owner.Screens.ScreenFromWindow(owner) ??
+            owner.Screens.ScreenFromVisual(owner) ??
+            owner.Screens.Primary;
+        if (screen is null)
+            return;
+
+        PixelRect area = screen.WorkingArea;
+        double ownerWidth = owner.Bounds.Width > 0 ? owner.Bounds.Width : area.Width;
+        double ownerHeight = owner.Bounds.Height > 0 ? owner.Bounds.Height : area.Height;
+        int ownerX = owner.Position.X;
+        int ownerY = owner.Position.Y;
+
+        if (owner.WindowState == WindowState.Maximized || ownerWidth <= 0 || ownerHeight <= 0)
+        {
+            ownerX = area.X;
+            ownerY = area.Y;
+            ownerWidth = area.Width;
+            ownerHeight = area.Height;
+        }
+
+        double windowWidth = window.Bounds.Width > 0 ? window.Bounds.Width : window.Width;
+        double windowHeight = window.Bounds.Height > 0 ? window.Bounds.Height : window.Height;
+        if (windowWidth <= 0)
+            windowWidth = 640;
+        if (windowHeight <= 0)
+            windowHeight = 720;
+
+        int x = ownerX + (int)Math.Round((ownerWidth - windowWidth) / 2);
+        int y = ownerY + (int)Math.Round((ownerHeight - windowHeight) / 2);
+
+        int minX = area.X;
+        int minY = area.Y;
+        int maxX = area.X + area.Width - (int)Math.Ceiling(windowWidth);
+        int maxY = area.Y + area.Height - (int)Math.Ceiling(windowHeight);
+
+        window.Position = new PixelPoint(
+            Math.Clamp(x, minX, Math.Max(minX, maxX)),
+            Math.Clamp(y, minY, Math.Max(minY, maxY)));
     }
 
     private bool TryShowOnboarding(IClassicDesktopStyleApplicationLifetime desktop)

@@ -29,6 +29,7 @@ Current `1.7.4-Beta.2` highlights focus on the .NET 10 migration, safer destinat
 - Changing language in Settings now preserves the active theme and keeps the page near the same scroll position through the relayout.
 - Backup summary cards plus action and filter buttons now keep long localized labels inside their bounds in windowed layouts.
 - The log console now uses a selectable text surface for normal multi-line copy and filters expected Linux DBus/IBus desktop noise.
+- The What's New dialog now opens centered over the main app window on multi-monitor desktops.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.

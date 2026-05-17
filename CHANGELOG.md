@@ -49,6 +49,7 @@
 - [BUG-18015] Backup summary cards plus action and filter buttons now constrain long localized labels in windowed layouts instead of overflowing their bounds.
 - [BUG-18016] Auto backups now warm up active destinations and retry preparation after a short cooldown so sleeping drives can wake before backup starts.
 - [BUG-18017] Linux log console now suppresses expected DBus/IBus desktop-integration noise and supports normal multi-line text selection.
+- [BUG-18018] The What's New dialog now opens centered over the main app window instead of drifting to another monitor.
 
 ## [1.7.3] - 23.04.2026
 ### Added
