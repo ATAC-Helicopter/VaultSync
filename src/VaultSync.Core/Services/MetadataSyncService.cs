@@ -294,8 +294,8 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                     _repo.UpdateProjectExternalId(existingByName.Id, metaProject.ExternalId);
                 }
 
-                if (string.IsNullOrWhiteSpace(existingByName.RootPath) &&
-                    !string.IsNullOrWhiteSpace(importedRoot))
+                if (!string.IsNullOrWhiteSpace(importedRoot) &&
+                    ShouldRepairImportedProjectRoot(existingByName.RootPath, importedRoot))
                 {
                     _repo.UpdateProjectPath(existingByName.Name, importedRoot, out _);
                     existingByName = existingByName with { RootPath = importedRoot };
@@ -1397,6 +1397,15 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         if (IsAcceptableImportedProjectRoot(rootPathHint))
             return Path.GetFullPath(rootPathHint!);
 
+        if (ProjectRootResolver.TryResolveExistingProjectRoot(
+                projectsRoot,
+                projectName,
+                rootPathHint,
+                out string mappedRoot))
+        {
+            return mappedRoot;
+        }
+
         if (IsAcceptableProjectsRoot(projectsRoot))
         {
             string folderName = BuildImportedProjectFolderName(projectName, externalId);
@@ -1404,6 +1413,23 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         }
 
         return PreserveImportedProjectRootHint(rootPathHint);
+    }
+
+    private static bool ShouldRepairImportedProjectRoot(string? existingRoot, string importedRoot)
+    {
+        if (string.IsNullOrWhiteSpace(existingRoot))
+            return true;
+
+        try
+        {
+            if (Directory.Exists(existingRoot))
+                return false;
+        }
+        catch
+        {
+        }
+
+        return Directory.Exists(importedRoot);
     }
 
     private static string PreserveImportedProjectRootHint(string? rootPathHint)

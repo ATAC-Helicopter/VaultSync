@@ -477,22 +477,26 @@ namespace VaultSync.UI.ViewModels
                 return false;
             }
 
-            if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
-                return true;
-
             string? projectsRoot = cfg.ProjectsRoot;
-            if (!string.IsNullOrWhiteSpace(projectsRoot))
+            if (ProjectRootResolver.TryResolveExistingProjectRoot(
+                    projectsRoot,
+                    project.Name,
+                    project.RootPath,
+                    out string resolvedRoot))
             {
-                string fallback = Path.Combine(projectsRoot, project.Name);
-                if (Directory.Exists(fallback))
+                if (!string.Equals(
+                        NormalizePathForComparison(project.RootPath),
+                        NormalizePathForComparison(resolvedRoot),
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    TryUpdateProjectRootPath(project, fallback);
-                    resolvedProject = project with
-                    {
-                        RootPath = fallback
-                    };
-                    return true;
+                    TryUpdateProjectRootPath(project, resolvedRoot);
                 }
+
+                resolvedProject = project with
+                {
+                    RootPath = resolvedRoot
+                };
+                return true;
             }
 
             string expected = string.IsNullOrWhiteSpace(project.RootPath)

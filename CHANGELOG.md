@@ -56,6 +56,7 @@
 - [BUG-18022] Linux tray refreshes now reuse the existing native menu object to avoid duplicate tray indicators on AppIndicator hosts.
 - [BUG-18023] Linux packages now install hidden desktop identity fallbacks so taskbars can match the `VaultSync.UI` runtime window to the VaultSync icon.
 - [BUG-18026] Refreshed vulnerable/dependency-alert package versions across core, UI, and tests while staying on the Avalonia 11 line.
+- [BUG-18027] Project roots imported from another OS are now remapped to matching folders under the local Projects root, including Windows-path leaf names and case-only folder differences on Linux.
 
 ## [1.7.3] - 23.04.2026
 ### Added

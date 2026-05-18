@@ -612,6 +612,58 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_RepairsExistingProjectWithStaleCrossOsRootPath()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string projectsRoot = CreateTempDir();
+        string localProjectRoot = Path.Combine(projectsRoot, "real-folder");
+        Directory.CreateDirectory(localProjectRoot);
+        AppConfig originalConfig = CloneConfig(AppConfigStore.Load());
+
+        try
+        {
+            AppConfig cfg = CloneConfig(originalConfig);
+            cfg.ProjectsRoot = projectsRoot;
+            AppConfigStore.Save(cfg);
+
+            MetadataStore store = CreateStore(metaRoot);
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = "proj-cross-os-root",
+                Name = "Display Name",
+                Preset = "dotnet",
+                RootPathHint = @"D:\Dev\real-folder",
+                CreatedUtc = DateTime.UtcNow,
+                SettingsJson = "{}",
+                UpdatedUtc = DateTime.UtcNow
+            });
+
+            SqliteRepository repo = CreateRepository(dbPath);
+            repo.AddProject(new Project
+            {
+                Name = "Display Name",
+                RootPath = @"D:\Dev\real-folder",
+                Preset = "dotnet",
+                CreatedUtc = DateTime.UtcNow
+            });
+
+            var service = new MetadataSyncService(repo);
+            MetadataSyncResult result = service.ImportFromStore(metaRoot, new MetadataSyncOptions(true, false));
+
+            Assert.Equal(MetadataSyncStatus.Success, result.Status);
+
+            Project project = repo.GetProjectByName("Display Name");
+            Assert.NotNull(project);
+            Assert.Equal(localProjectRoot, project!.RootPath);
+        }
+        finally
+        {
+            AppConfigStore.Save(originalConfig);
+        }
+    }
+
+    [Fact]
     public void ImportFromStore_BlocksNewerSchema()
     {
         string metaRoot = CreateTempDir();
