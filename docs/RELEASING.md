@@ -64,6 +64,7 @@ Current beta example:
 - release channel: `beta`
 - `previous_version = 1.7.4-Beta.2`
 - `target_version = 1.7.4-Beta.3`
+- `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
 
 Example multi-base input:
 - `previous_version = 1.6.2`
