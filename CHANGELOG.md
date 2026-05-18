@@ -59,6 +59,7 @@
 - [BUG-18027] Project roots imported from another OS are now remapped to matching folders under the local Projects root, including Windows-path leaf names and case-only folder differences on Linux.
 - [BUG-18028] Pinned patched SkiaSharp and HarfBuzzSharp runtime packages so dependency graph alerts no longer resolve Avalonia's older transitive graphics stack.
 - [BUG-18029] Linux protected installs such as `/opt/vaultsync` now use the installer fallback instead of attempting a patch update that cannot write to root-owned files, and release asset builds can omit Linux patch assets when an installer-only Linux update is required.
+- [BUG-18030] Linux updater fallback now prefers `.deb` installers on Debian-family systems and marks downloaded AppImages executable before launch.
 
 ## [1.7.3] - 23.04.2026
 ### Added

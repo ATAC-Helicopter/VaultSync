@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -449,21 +450,16 @@ namespace VaultSync.UI.Services
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                foreach (string suffix in GetLinuxAssetSuffixes())
+                bool preferDebianPackage = ShouldPreferDebianPackage();
+
+                if (preferDebianPackage)
                 {
-                    asset = assets.FirstOrDefault(a =>
-                        a.Name is not null &&
-                        a.Name.Contains(suffix, StringComparison.OrdinalIgnoreCase) &&
-                        (a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) ||
-                         a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)));
-                    if (asset != null)
-                        break;
+                    asset = FindLinuxAsset(assets, ".deb");
                 }
 
-                asset ??= assets.FirstOrDefault(a =>
-                    a.Name is not null &&
-                    (a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) ||
-                     a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)));
+                asset ??= FindLinuxAsset(assets, ".AppImage");
+                asset ??= FindLinuxAsset(assets, ".tar.gz");
+                asset ??= preferDebianPackage ? null : FindLinuxAsset(assets, ".deb");
             }
 
             if (asset is null || string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
@@ -472,6 +468,52 @@ namespace VaultSync.UI.Services
             return Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out Uri? url)
                 ? (url, asset.Name)
                 : (null, null);
+        }
+
+        private static GitHubAsset? FindLinuxAsset(List<GitHubAsset> assets, string extension)
+        {
+            foreach (string suffix in GetLinuxAssetSuffixes())
+            {
+                GitHubAsset? asset = assets.FirstOrDefault(a =>
+                    a.Name is not null &&
+                    a.Name.Contains(suffix, StringComparison.OrdinalIgnoreCase) &&
+                    a.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+                if (asset != null)
+                    return asset;
+            }
+
+            return assets.FirstOrDefault(a =>
+                a.Name is not null &&
+                a.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool ShouldPreferDebianPackage()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return false;
+
+            if (File.Exists("/usr/bin/dpkg") || File.Exists("/bin/dpkg"))
+                return true;
+
+            try
+            {
+                const string osReleasePath = "/etc/os-release";
+                if (!File.Exists(osReleasePath))
+                    return false;
+
+                string osRelease = File.ReadAllText(osReleasePath);
+                return osRelease.Contains("ID=debian", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID=ubuntu", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID=zorin", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID_LIKE=debian", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID_LIKE=\"debian", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID_LIKE=ubuntu", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID_LIKE=\"ubuntu", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static List<string> GetPlatformSuffixes()

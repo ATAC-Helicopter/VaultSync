@@ -879,6 +879,7 @@ namespace VaultSync.UI.ViewModels
 
                 File.Copy(tempPath, finalPath, overwrite: true);
                 File.Delete(tempPath);
+                EnsureInstallerLaunchPermissions(finalPath);
 
                 PatchStatusMessage = L("Update.Installer.Launching", "Launching installer...");
 
@@ -924,6 +925,25 @@ namespace VaultSync.UI.ViewModels
             catch
             {
                 return false;
+            }
+        }
+
+        private static void EnsureInstallerLaunchPermissions(string installerPath)
+        {
+            if (!OperatingSystem.IsLinux() || !installerPath.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                File.SetUnixFileMode(
+                    installerPath,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"AppImage permission update failed: {ex.GetType().Name} - {ex.Message}");
             }
         }
 
