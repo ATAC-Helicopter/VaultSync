@@ -29,20 +29,6 @@ public static class ProjectRootResolver
         string fullProjectsRoot = Path.GetFullPath(projectsRoot);
         var names = GetCandidateFolderNames(projectName, currentRoot);
 
-        foreach (string name in names)
-        {
-            string candidate = Path.Combine(fullProjectsRoot, name);
-            if (Directory.Exists(candidate))
-            {
-                string fullCandidate = Path.GetFullPath(candidate);
-                if (IsVaultSyncTransientTempPath(fullCandidate))
-                    continue;
-
-                resolvedRoot = fullCandidate;
-                return true;
-            }
-        }
-
         try
         {
             foreach (string child in Directory.EnumerateDirectories(fullProjectsRoot))
@@ -62,6 +48,20 @@ public static class ProjectRootResolver
         catch
         {
             return false;
+        }
+
+        foreach (string name in names)
+        {
+            string candidate = Path.Combine(fullProjectsRoot, name);
+            if (Directory.Exists(candidate))
+            {
+                string fullCandidate = Path.GetFullPath(candidate);
+                if (IsVaultSyncTransientTempPath(fullCandidate))
+                    continue;
+
+                resolvedRoot = fullCandidate;
+                return true;
+            }
         }
 
         return false;
