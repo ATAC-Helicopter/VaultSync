@@ -323,11 +323,12 @@ namespace VaultSync.UI.ViewModels
             if (!IsPatchAvailable || _pendingUpdateResult is null || IsPatchInstalling)
                 return;
 
-            if (OperatingSystem.IsMacOS() && !CanWriteInstallDir(AppContext.BaseDirectory))
+            if (PatchInstallRequiresInstallerFallback(AppContext.BaseDirectory))
             {
                 PatchStatusMessage = L("Patch.Status.ManifestIncompatible", "Patch not available for this version. Use the installer instead.");
                 _patchBlocked = true;
                 _patchFailed = true;
+                DiagnosticsLogger.Record($"Patch install blocked: install directory is not writable ({AppContext.BaseDirectory}).");
                 NotifyPatchAvailabilityChanged();
                 OnPropertyChanged(nameof(ShowInstallerFallback));
                 return;
@@ -449,6 +450,11 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private static bool PatchInstallRequiresInstallerFallback(string installDir)
+        {
+            return !OperatingSystem.IsWindows() && !CanWriteInstallDir(installDir);
+        }
+
         private void NotifyPatchAvailabilityChanged()
         {
             OnPropertyChanged(nameof(IsPatchAvailable));
@@ -494,6 +500,19 @@ namespace VaultSync.UI.ViewModels
                         _patchBlocked = true;
                         Console.WriteLine($"[Update] Patch preflight blocked: code={preflight.StatusCode}, installerFallback={preflight.RequiresInstaller}.");
                         DiagnosticsLogger.Record($"Patch preflight blocked: code={preflight.StatusCode}, installerFallback={preflight.RequiresInstaller}.");
+                    }
+                    else if (PatchInstallRequiresInstallerFallback(AppContext.BaseDirectory))
+                    {
+                        PatchPreflightDiagnostics diagnostics = result.Diagnostics.PatchPreflight;
+                        diagnostics.StatusCode = "protected-install-requires-installer";
+                        diagnostics.Message = "Install directory is not writable by the current user; installer fallback is required.";
+                        diagnostics.Eligible = false;
+                        diagnostics.RequiresInstaller = true;
+                        PersistUpdateDiagnostics(result.Diagnostics);
+
+                        _patchBlocked = true;
+                        Console.WriteLine($"[Update] Patch preflight blocked: protected install requires installer fallback; installDir={AppContext.BaseDirectory}.");
+                        DiagnosticsLogger.Record($"Patch preflight blocked: protected install requires installer fallback; installDir={AppContext.BaseDirectory}.");
                     }
                     else
                     {

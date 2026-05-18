@@ -38,6 +38,7 @@ Current `1.7.4-Beta.3` highlights focus on the .NET 10 migration, safer destinat
 - Dependency-alert package versions were refreshed across core, UI, and tests while keeping the app on the Avalonia 11 release line.
 - Project roots imported from another OS now remap to matching local folders under the configured Projects root, including Windows-path leaf names and case-only folder differences on Linux.
 - Patched SkiaSharp and HarfBuzzSharp runtime packages are now pinned explicitly so dependency graph alerts do not resolve Avalonia's older transitive graphics stack.
+- Linux protected installs such as `/opt/vaultsync` now use the installer fallback instead of attempting a patch update that cannot write to root-owned files.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
