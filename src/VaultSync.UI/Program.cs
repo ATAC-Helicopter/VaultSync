@@ -369,7 +369,8 @@ internal static class Program
             })
             .With(new X11PlatformOptions
             {
-                OverlayPopups = IsX11OverlayPopupEnabled()
+                OverlayPopups = IsX11OverlayPopupEnabled(),
+                WmClass = "io.github.atachelicopter.vaultsync"
             });
 
         DiagnosticsLogger.Record(

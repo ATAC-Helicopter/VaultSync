@@ -372,6 +372,18 @@ DELETE FROM sqlite_sequence;";
                 });
         }
 
+        public void UpdateProjectPreset(int projectId, string? preset)
+        {
+            using SqliteConnection c = Open();
+            c.Execute(
+                "UPDATE projects SET preset = @preset WHERE id = @id;",
+                new
+                {
+                    preset = string.IsNullOrWhiteSpace(preset) ? string.Empty : preset.Trim(),
+                    id = projectId
+                });
+        }
+
         public void UpdateProjectEncryptionPolicy(int projectId, string? encryptionPolicy)
         {
             using SqliteConnection c = Open();

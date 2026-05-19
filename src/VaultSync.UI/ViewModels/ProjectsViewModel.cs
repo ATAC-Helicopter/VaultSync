@@ -2702,7 +2702,7 @@ public class ProjectsViewModel : ViewModelBase
         if (changedRecommendedPreset && ReferenceEquals(vm, SelectedProject))
             _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
 
-        if (!changedDestination && !changedEncryption && !changedTags)
+        if (!changedPreset && !changedDestination && !changedEncryption && !changedTags)
             return;
 
         try
@@ -2716,6 +2716,11 @@ public class ProjectsViewModel : ViewModelBase
             var project = repo.GetProjectByName(vm.Name);
             if (project is null)
                 return;
+
+            if (changedPreset)
+            {
+                repo.UpdateProjectPreset(project.Id, vm.Preset);
+            }
 
             if (changedDestination)
             {
@@ -2742,7 +2747,7 @@ public class ProjectsViewModel : ViewModelBase
                     RefreshSelectedProjectTags();
             }
 
-            if (changedDestination || changedTags)
+            if (changedPreset || changedDestination || changedTags)
                 ProjectSettingsMetadataChanged?.Invoke(project.Id);
         }
         catch (Exception ex)

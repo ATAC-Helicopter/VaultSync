@@ -61,6 +61,8 @@
 - [BUG-18029] Linux protected installs such as `/opt/vaultsync` now use the installer fallback instead of attempting a patch update that cannot write to root-owned files, and release asset builds can omit Linux patch assets when an installer-only Linux update is required.
 - [BUG-18030] Linux updater fallback now prefers `.deb` installers on Debian-family systems and marks downloaded AppImages executable before launch.
 - [BUG-18031] Linux startup now keeps Avalonia's compatible DBus protocol dependency instead of overriding it with an incompatible newer package.
+- [BUG-18032] Linux packages now use one AppStream/desktop/window identity to improve software-center previews and avoid duplicate taskbar grouping.
+- [BUG-18033] Project preset changes now persist immediately for registered projects instead of reverting after refresh.
 
 ## [1.7.3] - 23.04.2026
 ### Added
