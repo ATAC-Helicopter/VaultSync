@@ -35,6 +35,19 @@ public sealed class UiFormatTests
         Assert.Equal(expected, ProjectSnapshotViewModel.FormatSize(1536));
     }
 
+    [Fact]
+    public void ProjectLatestSnapshotSizeDisplay_DoesNotPretendUnknownSizeIsZeroMegabytes()
+    {
+        var project = new ProjectItemViewModel
+        {
+            IsRegistered = true,
+            LastSnapshot = new System.DateTime(2026, 5, 20, 10, 0, 0, System.DateTimeKind.Utc),
+            SizeBytes = 0
+        };
+
+        Assert.Equal("Size unavailable", project.LatestSnapshotSizeDisplay);
+    }
+
     private static string WithDecimalSeparator(string value) =>
         string.Format(
             System.Globalization.CultureInfo.InvariantCulture,

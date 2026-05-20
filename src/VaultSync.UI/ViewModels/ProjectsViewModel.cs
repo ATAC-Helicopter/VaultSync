@@ -3564,6 +3564,7 @@ public class ProjectItemViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(LastSnapshotSummary));
                 OnPropertyChanged(nameof(LastSnapshotShort));
+                OnPropertyChanged(nameof(LatestSnapshotSizeDisplay));
                 OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
             }
         }
@@ -3578,6 +3579,7 @@ public class ProjectItemViewModel : ViewModelBase
             if (SetProperty(ref _sizeBytes, value))
             {
                 OnPropertyChanged(nameof(SizeDisplay));
+                OnPropertyChanged(nameof(LatestSnapshotSizeDisplay));
             }
         }
     }
@@ -3934,6 +3936,7 @@ public class ProjectItemViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(LastSnapshotSummary));
         OnPropertyChanged(nameof(LastSnapshotShort));
+        OnPropertyChanged(nameof(LatestSnapshotSizeDisplay));
         OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
     }
 
@@ -3944,6 +3947,20 @@ public class ProjectItemViewModel : ViewModelBase
             double gb = SizeBytes / (1024d * 1024d * 1024d);
             if (gb < 0.01) return $"{SizeBytes / (1024d * 1024d):0.#} MB";
             return $"{gb:0.0} GB";
+        }
+    }
+
+    public string LatestSnapshotSizeDisplay
+    {
+        get
+        {
+            if (LastSnapshot == default)
+                return L("Projects.SnapshotSize.NoSnapshots", "No snapshots yet");
+
+            if (SizeBytes <= 0)
+                return L("Projects.SnapshotSize.Unavailable", "Size unavailable");
+
+            return UiFormat.FormatBytes(SizeBytes, "0.#");
         }
     }
 

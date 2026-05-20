@@ -63,6 +63,9 @@
 - [BUG-18031] Linux startup now keeps Avalonia's compatible DBus protocol dependency instead of overriding it with an incompatible newer package.
 - [BUG-18032] Linux packages now use one AppStream/desktop/window identity to improve software-center previews and avoid duplicate taskbar grouping. Refs #315.
 - [BUG-18033] Project preset changes now persist immediately for registered projects instead of reverting after refresh. Refs #316.
+- [BUG-18034] Projects now label and display latest snapshot size explicitly, and show unavailable sizes instead of misleading `0 MB` values. Refs #317.
+- [BUG-18035] The sidebar collapse button now uses vector geometry instead of a platform font glyph so Linux no longer renders a missing-glyph rectangle. Refs #318.
+- [BUG-18036] Projects list scrolling now uses the ListBox's own virtualized scroll host and sidebar navigation labels align vertically with their icons. Refs #319.
 
 ## [1.7.3] - 23.04.2026
 ### Added

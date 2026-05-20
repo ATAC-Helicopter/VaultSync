@@ -397,21 +397,21 @@
 
           <!-- Projects list -->
           <Grid Grid.Row="3">
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled"
-                          Padding="0,0,0,8"
-                          IsVisible="{Binding HasProjects}">
-              <ListBox
-                x:Name="ProjectList"
-                ItemsSource="{Binding Projects}"
-                SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
-                Background="Transparent"
-                BorderThickness="0"
-                HorizontalAlignment="Stretch">
+            <ListBox
+              x:Name="ProjectList"
+              ItemsSource="{Binding Projects}"
+              SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+              Background="Transparent"
+              BorderThickness="0"
+              HorizontalAlignment="Stretch"
+              ScrollViewer.VerticalScrollBarVisibility="Auto"
+              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+              Padding="0,0,0,8"
+              IsVisible="{Binding HasProjects}">
 
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
                     <!-- Name + last snapshot short + size + avatar -->
                     <Grid Grid.Row="0"
                           ColumnDefinitions="Auto,*,Auto,Auto"
@@ -454,7 +454,7 @@
                         Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBlock
                         Grid.Column="3"
-                        Text="{Binding SizeDisplay}"
+                        Text="{Binding LatestSnapshotSizeDisplay}"
                         FontSize="{DynamicResource PageSubtitleFontSize}"
                         FontWeight="SemiBold"
                         Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -551,10 +551,9 @@
                         Foreground="{Binding HealthForeground}" />
                     </Border>
                   </Grid>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-            </ScrollViewer>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
 
             <Border IsVisible="{Binding ShowProjectsEmptyState}"
                     CornerRadius="18"
@@ -638,8 +637,8 @@
                                  MaxWidth="220" />
                     </Border>
                     <Border Classes="stat-pill sm info"
-                            ToolTip.Tip="{infra:LocalizedString Key=Projects.Stat.ProjectSize}">
-                      <TextBlock Text="{Binding SizeDisplay}"
+                            ToolTip.Tip="{infra:LocalizedString Key=Projects.Stat.LatestSnapshotSize}">
+                      <TextBlock Text="{Binding LatestSnapshotSizeDisplay}"
                                  FontSize="11" />
                     </Border>
                   </StackPanel>

@@ -681,10 +681,13 @@
   "Projects.Stat.EncryptionPolicy": "Encryption policy",
   "Projects.Stat.Increasing": "Increasing size",
   "Projects.Stat.LastSnapshotLabel": "Last snapshot taken",
+  "Projects.Stat.LatestSnapshotSize": "Latest snapshot size",
   "Projects.Stat.ProjectHealth": "Project health",
   "Projects.Stat.ProjectSize": "Project size on disk",
   "Projects.Stat.RecentSnapshots": "Recent snapshots",
   "Projects.Stat.SnapshotPreset": "Snapshot preset",
+  "Projects.SnapshotSize.NoSnapshots": "No snapshots yet",
+  "Projects.SnapshotSize.Unavailable": "Size unavailable",
   "Projects.Stat.SnapshotStorage": "Snapshot storage",
   "Projects.Stat.SnapshotTrend": "Snapshot size trend",
   "Projects.Stat.TimeSinceLast": "Time since last snapshot",
@@ -1247,4 +1250,3 @@
   "Backups.Compare.NewerNet": "Î” net {0}",
   "Projects.Tags.Color.Close": "Close color"
 }
-

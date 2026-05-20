@@ -55,12 +55,14 @@
                   VerticalAlignment="Top"
                   Margin="0,0,0,2"
                   ToolTip.Tip="{infra:LocalizedString Key=Shell.SidebarCollapse}">
-            <TextBlock x:Name="SidebarToggleGlyph"
-                       Text="&#xE700;"
-                       FontFamily="Segoe MDL2 Assets"
-                       FontSize="11"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
+            <Viewbox Width="13" Height="13" Stretch="Uniform">
+              <shapes:Path x:Name="SidebarToggleGlyph"
+                           Data="M9.5 2 L4.5 7 L9.5 12"
+                           Stroke="{DynamicResource TextPrimaryBrush}"
+                           StrokeThickness="1.8"
+                           StrokeLineCap="Round"
+                           Fill="Transparent" />
+            </Viewbox>
           </Button>
 
         <Border x:Name="ShellCompactBadge"
@@ -159,7 +161,7 @@
                                Fill="Transparent" />
                 </Viewbox>
               </Border>
-              <TextBlock x:Name="NavDashboardText" Text="{infra:LocalizedString Key=Nav.Dashboard}"/>
+              <TextBlock x:Name="NavDashboardText" Text="{infra:LocalizedString Key=Nav.Dashboard}" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
 
@@ -173,7 +175,7 @@
                                Fill="Transparent" />
                 </Viewbox>
               </Border>
-              <TextBlock x:Name="NavProjectsText" Text="{infra:LocalizedString Key=Nav.Projects}"/>
+              <TextBlock x:Name="NavProjectsText" Text="{infra:LocalizedString Key=Nav.Projects}" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
 
@@ -185,7 +187,7 @@
                                Fill="{DynamicResource TextPrimaryBrush}" />
                 </Viewbox>
               </Border>
-              <TextBlock x:Name="NavBackupsText" Text="{infra:LocalizedString Key=Nav.Backups}"/>
+              <TextBlock x:Name="NavBackupsText" Text="{infra:LocalizedString Key=Nav.Backups}" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
 
@@ -200,7 +202,7 @@
                                Fill="Transparent" />
                 </Viewbox>
               </Border>
-              <TextBlock x:Name="NavSettingsText" Text="{infra:LocalizedString Key=Nav.Settings}"/>
+              <TextBlock x:Name="NavSettingsText" Text="{infra:LocalizedString Key=Nav.Settings}" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
         </StackPanel>

@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
 using VaultSync.UI.Infrastructure;
@@ -164,7 +165,7 @@ public partial class MainWindow : Window
         SidebarDestinations.IsVisible = !collapsed;
         SidebarFooter.IsVisible = !collapsed;
 
-        SidebarToggleGlyph.Text = collapsed ? "\uE70D" : "\uE700";
+        SidebarToggleGlyph.Data = StreamGeometry.Parse(collapsed ? "M4.5 2 L9.5 7 L4.5 12" : "M9.5 2 L4.5 7 L9.5 12");
         SidebarToggleButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Right;
         SidebarToggleButton.Margin = collapsed ? new Thickness(0, 0, 0, 4) : new Thickness(0, 0, 0, 2);
         ToolTip.SetTip(
