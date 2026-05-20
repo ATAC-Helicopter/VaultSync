@@ -1,6 +1,6 @@
 # What's New
 
-## [1.7.4-Beta.3]
+## [1.7.4]
 
 Current `1.7.4-Beta.3` highlights focus on the .NET 10 migration, safer destination cleanup, quieter diagnostics, and release-readiness polish across the 1.7 train.
 

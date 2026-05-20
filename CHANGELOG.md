@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.7.4-Beta.3] - Unreleased
+## [1.7.4] - 20.05.2026
 ### Added
 - [VS-1732] Release publish restore now declares Windows, Linux, and macOS RIDs.
 - [VS-1737] Added VS Code Linux debug configs for UI, CLI, and tests.

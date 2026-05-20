@@ -302,8 +302,6 @@ See the full license here: [LICENSE](LICENSE).
 Bundled helper tools may ship under their own licenses. See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Prepared desktop beta release target: `1.7.4-Beta.3`. The published stable line remains `1.7.3` until the release is cut.
-
 ## Credits
 
 Created by **Flavio Giacchetti** & **Contributors**
