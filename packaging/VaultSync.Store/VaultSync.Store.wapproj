@@ -11,6 +11,7 @@
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
     <GenerateAppInstallerFile>false</GenerateAppInstallerFile>
     <EntryPointProjectUniqueName>..\..\src\VaultSync.UI\VaultSync.UI.csproj</EntryPointProjectUniqueName>
+    <EntryPointExe>VaultSync.UI.exe</EntryPointExe>
     <PackageCertificateThumbprint />
     <PackageCertificateKeyFile />
     <PackageCertificatePassword />
