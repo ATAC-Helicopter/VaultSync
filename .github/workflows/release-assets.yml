@@ -173,6 +173,27 @@ jobs:
         if: ${{ inputs.include_store_upload }}
         uses: microsoft/setup-msbuild@v2
 
+      - name: Resolve Microsoft Store packaging SDK
+        if: ${{ inputs.include_store_upload }}
+        shell: pwsh
+        run: |
+          $platformRoot = Join-Path ${env:ProgramFiles(x86)} "Windows Kits/10/Platforms/UAP"
+          if (-not (Test-Path $platformRoot)) {
+            throw "Could not find UAP SDK platform root: $platformRoot"
+          }
+
+          $sdk = Get-ChildItem $platformRoot -Directory |
+            Where-Object { Test-Path (Join-Path $_.FullName "UAP.props") } |
+            Sort-Object { [version]$_.Name } -Descending |
+            Select-Object -First 1
+
+          if ($null -eq $sdk) {
+            throw "No installed UAP SDK with UAP.props was found under $platformRoot."
+          }
+
+          "STORE_TARGET_PLATFORM_VERSION=$($sdk.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Store packaging SDK: ``$($sdk.Name)``"
+
       - name: Publish (win-x64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
@@ -249,6 +270,8 @@ jobs:
             /restore `
             /p:Configuration=Release `
             /p:Platform=x64 `
+            /p:TargetPlatformVersion=$env:STORE_TARGET_PLATFORM_VERSION `
+            /p:TargetPlatformMinVersion=10.0.19041.0 `
             /p:RuntimeIdentifier=win-x64 `
             /p:SelfContained=true `
             /p:GenerateAppxPackageOnBuild=true `
