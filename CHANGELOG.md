@@ -66,7 +66,7 @@
 - [BUG-18034] Projects now label and display latest snapshot size explicitly, and show unavailable sizes instead of misleading `0 MB` values. Refs #317.
 - [BUG-18035] The sidebar collapse button now uses vector geometry instead of a platform font glyph so Linux no longer renders a missing-glyph rectangle. Refs #318.
 - [BUG-18036] Projects list scrolling now uses the ListBox's own virtualized scroll host and sidebar navigation labels align vertically with their icons. Refs #319.
-- [BUG-18037] Projects now keep snapshot presets populated by applying detected recommendations first and a generic fallback preset when no specific preset applies.
+- [BUG-18037] Projects now keep snapshot presets populated by applying detected recommendations first and a generic fallback preset when no specific preset applies. Refs #320.
 
 ## [1.7.3] - 23.04.2026
 ### Added
