@@ -173,6 +173,40 @@ jobs:
         if: ${{ inputs.include_store_upload }}
         uses: microsoft/setup-msbuild@v2
 
+      - name: Install Microsoft Store packaging workload
+        if: ${{ inputs.include_store_upload }}
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio/Installer/vswhere.exe"
+          $installer = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio/Installer/vs_installer.exe"
+          if (-not (Test-Path $vswhere)) {
+            throw "Could not find vswhere at $vswhere."
+          }
+          if (-not (Test-Path $installer)) {
+            throw "Could not find Visual Studio Installer at $installer."
+          }
+
+          $installPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $installPath) {
+            throw "Could not resolve a Visual Studio installation path."
+          }
+
+          $args = @(
+            "modify",
+            "--installPath", $installPath,
+            "--add", "Microsoft.VisualStudio.Workload.Universal",
+            "--add", "Microsoft.VisualStudio.Component.Windows10SDK.19041",
+            "--includeRecommended",
+            "--quiet",
+            "--norestart",
+            "--wait"
+          )
+
+          & $installer @args
+          if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3010) {
+            throw "Visual Studio Installer failed with exit code $LASTEXITCODE."
+          }
+
       - name: Resolve Microsoft Store packaging SDK
         if: ${{ inputs.include_store_upload }}
         shell: pwsh
