@@ -63,6 +63,7 @@
   <ItemGroup>
     <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj">
       <SetTargetFramework>TargetFramework=net10.0</SetTargetFramework>
+      <AdditionalProperties>TargetFramework=net10.0</AdditionalProperties>
     </ProjectReference>
   </ItemGroup>
 
