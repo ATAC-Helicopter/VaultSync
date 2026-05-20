@@ -1,0 +1,49 @@
+# Generic project backup preset:
+# Exclude generated output, caches, temporary files, and local IDE state.
+
+bin/**
+obj/**
+build/**
+dist/**
+out/**
+target/**
+tmp/**
+temp/**
+cache/**
+.cache/**
+coverage/**
+logs/**
+
+**/bin/**
+**/obj/**
+**/build/**
+**/dist/**
+**/out/**
+**/target/**
+**/tmp/**
+**/temp/**
+**/cache/**
+**/.cache/**
+**/coverage/**
+**/logs/**
+
+*.tmp
+*.temp
+*.bak
+*.old
+*.cache
+*.log
+*.pdb
+*.user
+*.suo
+*~
+
+# IDE
+.vscode/
+.vs/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -34,6 +34,8 @@ namespace VaultSync.UI.ViewModels;
 public class ProjectsViewModel : ViewModelBase
 {
     private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
+    private const string GenericPresetId = "generic";
+    private const string NoPresetId = "no preset";
     private static readonly string[] DefaultReusableTags = ["Work", "Games", "Media", "Critical", "Archive"];
     private sealed record ProjectRegistrationSnapshot(
         bool Missing,
@@ -959,11 +961,21 @@ public class ProjectsViewModel : ViewModelBase
 
             ApplyProjectHealth(vm, lastSnapshotTime, isRegistered);
 
-            // Auto-detect preset for unregistered projects if none is set yet.
-            if (!isRegistered && string.IsNullOrWhiteSpace(vm.Preset))
+            var resolvedPreset = ResolveRequiredPreset(vm);
+            if (!string.Equals(vm.Preset, resolvedPreset, StringComparison.Ordinal))
             {
-                var autoPreset = DetectPreset(p.Path);
-                vm.Preset = autoPreset ?? string.Empty;
+                vm.Preset = resolvedPreset;
+                if (isRegistered && existingProject is not null && repo is not null)
+                {
+                    try
+                    {
+                        repo.UpdateProjectPreset(existingProject.Id, resolvedPreset);
+                    }
+                    catch (Exception ex)
+                    {
+                        DiagnosticsLogger.Record($"Project preset fallback persist failed for '{vm.Name}': {ex.GetType().Name} - {ex.Message}");
+                    }
+                }
             }
             UpdateProjectPresetRecommendation(vm);
 
@@ -1989,6 +2001,35 @@ public class ProjectsViewModel : ViewModelBase
         return DetectPresetRecommendation(projectPath)?.PresetId;
     }
 
+    private string ResolveRequiredPreset(ProjectItemViewModel project, string? presetOverride = null)
+    {
+        var current = presetOverride?.Trim() ?? project.Preset?.Trim() ?? string.Empty;
+        var recommended = DetectPreset(project.Path);
+        if (!string.IsNullOrWhiteSpace(recommended) &&
+            (string.IsNullOrWhiteSpace(current) ||
+             string.Equals(current, NoPresetId, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(current, GenericPresetId, StringComparison.OrdinalIgnoreCase)))
+        {
+            return recommended;
+        }
+
+        if (!string.IsNullOrWhiteSpace(current) &&
+            !string.Equals(current, NoPresetId, StringComparison.OrdinalIgnoreCase))
+        {
+            return current;
+        }
+
+        return ResolveGenericPreset();
+    }
+
+    private string ResolveGenericPreset()
+    {
+        return PresetAvailable(GenericPresetId)
+               ?? PresetAvailable("documents")
+               ?? AvailablePresets.FirstOrDefault(p => !string.Equals(p, NoPresetId, StringComparison.OrdinalIgnoreCase))
+               ?? NoPresetId;
+    }
+
     private string? PresetAvailable(string presetName)
     {
         return AvailablePresets.Any(p => p.Equals(presetName, StringComparison.OrdinalIgnoreCase))
@@ -2655,10 +2696,7 @@ public class ProjectsViewModel : ViewModelBase
             SelectedProject.ProjectId = 0;
             SelectedProject.EncryptionKeyRef = string.Empty;
 
-            if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
-            {
-                SelectedProject.Preset = string.Empty;
-            }
+            SelectedProject.Preset = ResolveRequiredPreset(SelectedProject);
             if (string.IsNullOrWhiteSpace(SelectedProject.TagsCsv))
             {
                 SelectedProject.TagsCsv = string.Empty;
@@ -2669,7 +2707,7 @@ public class ProjectsViewModel : ViewModelBase
             SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
             SelectedProject.IsRegistered = true;
             SelectedProject.ProjectId = snapshot.ProjectId;
-            SelectedProject.Preset = snapshot.Preset;
+            SelectedProject.Preset = ResolveRequiredPreset(SelectedProject, snapshot.Preset);
             SelectedProject.TagsCsv = snapshot.TagsCsv;
             SelectedProject.PreferredDestinationId = snapshot.PreferredDestinationId;
             SelectedProject.EncryptionPolicy = snapshot.EncryptionPolicy;
@@ -2964,9 +3002,10 @@ public class ProjectsViewModel : ViewModelBase
                 _presetCatalogById[preset.Id] = preset;
             }
 
-            // Always offer an explicit "no preset" option.
-            if (!AvailablePresets.Contains("no preset"))
-                AvailablePresets.Add("no preset");
+            // Keep the explicit "no preset" option for existing configs and power users, but
+            // normal project flows now fall back to a real preset instead of staying blank.
+            if (!AvailablePresets.Contains(NoPresetId))
+                AvailablePresets.Add(NoPresetId);
 
             foreach (var project in Projects)
             {
@@ -2978,11 +3017,12 @@ public class ProjectsViewModel : ViewModelBase
 
             // Fallback to a minimal hard-coded set so the UI stays usable.
             AvailablePresets.Clear();
+            AvailablePresets.Add(GenericPresetId);
             AvailablePresets.Add("unity");
             AvailablePresets.Add("dotnet");
             AvailablePresets.Add("blender");
             AvailablePresets.Add("video");
-            AvailablePresets.Add("no preset");
+            AvailablePresets.Add(NoPresetId);
             _presetCatalogById.Clear();
             _presetRecommendationCache.Clear();
         }
@@ -3062,7 +3102,7 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         if (string.IsNullOrWhiteSpace(vm.Preset) ||
-            string.Equals(vm.Preset, "no preset", StringComparison.OrdinalIgnoreCase))
+            string.Equals(vm.Preset, NoPresetId, StringComparison.OrdinalIgnoreCase))
         {
             vm.PresetDescription = L("Projects.Preset.NoPresetDescription", "No exclusion preset is active for this project.");
             vm.PresetExample = string.Empty;
@@ -3305,7 +3345,7 @@ public class ProjectsViewModel : ViewModelBase
         }
 
         if (string.IsNullOrWhiteSpace(project.Preset) ||
-            string.Equals(project.Preset, "no preset", StringComparison.OrdinalIgnoreCase))
+            string.Equals(project.Preset, NoPresetId, StringComparison.OrdinalIgnoreCase))
         {
             HasPresetEditorTarget = false;
             IsPresetEditorVisible = false;
@@ -3344,7 +3384,7 @@ public class ProjectsViewModel : ViewModelBase
         presetPath = string.Empty;
         presetId = SelectedProject?.Preset?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(presetId) ||
-            string.Equals(presetId, "no preset", StringComparison.OrdinalIgnoreCase))
+            string.Equals(presetId, NoPresetId, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

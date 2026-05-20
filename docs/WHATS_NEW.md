@@ -46,6 +46,7 @@ Current `1.7.4-Beta.3` highlights focus on the .NET 10 migration, safer destinat
 - Projects now call out latest snapshot size explicitly and show unavailable size data instead of misleading `0 MB` values.
 - The sidebar collapse control now uses a vector icon so Linux desktops no longer render it as a missing-glyph rectangle.
 - Projects list scrolling now keeps ListBox virtualization active, and sidebar navigation labels align cleanly with their icons.
+- Project snapshot presets now stay populated by applying detected recommendations first and falling back to a generic preset when no specific project type is detected.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
