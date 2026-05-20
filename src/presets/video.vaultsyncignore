@@ -1,6 +1,9 @@
 Cache/**
 Proxies/**
 RenderCache/**
+**/Cache/**
+**/Proxies/**
+**/RenderCache/**
 *.tmp
 *.log
 *.sync

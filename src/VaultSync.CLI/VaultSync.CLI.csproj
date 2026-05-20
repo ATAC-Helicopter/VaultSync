@@ -5,14 +5,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Namotion.Reflection" Version="3.5.0" />
-    <PackageReference Include="Spectre.Console" Version="0.54.0" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.53.1" />
+    <PackageReference Include="Namotion.Reflection" Version="3.5.1" />
+    <PackageReference Include="Spectre.Console" Version="0.55.2" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
   </ItemGroup>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -43,7 +43,7 @@
 
   <ItemGroup>
     <!-- Ensure README is included in the package -->
-    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

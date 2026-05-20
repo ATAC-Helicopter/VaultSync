@@ -3,10 +3,14 @@ Gallery/**
 Proxies/**
 Capture/**
 AudioCache/**
+**/CacheClip/**
+**/Gallery/**
+**/Proxies/**
+**/Capture/**
+**/AudioCache/**
 *.tmp
 *.log
 .DS_Store
 Thumbs.db
 
 .git/
-.github/

@@ -1,6 +1,9 @@
 build/**
 bin/**
 obj/**
+**/build/**
+**/bin/**
+**/obj/**
 *.o
 *.obj
 *.pdb
@@ -13,6 +16,7 @@ obj/**
 
 # CMake
 CMakeFiles/**
+**/CMakeFiles/**
 CMakeCache.txt
 cmake_install.cmake
 Makefile
@@ -27,4 +31,3 @@ Makefile
 
 # Git
 .git/
-.github/

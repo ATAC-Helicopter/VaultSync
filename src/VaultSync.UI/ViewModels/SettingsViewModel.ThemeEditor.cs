@@ -37,7 +37,7 @@ namespace VaultSync.UI
                 get => _hex;
                 set
                 {
-                    var normalized = NormalizeHex(value, _hex);
+                    string normalized = NormalizeHex(value, _hex);
                     if (_hex == normalized)
                         return;
 
@@ -70,11 +70,11 @@ namespace VaultSync.UI
                 if (string.IsNullOrWhiteSpace(value))
                     return fallback;
 
-                var candidate = value.Trim();
+                string candidate = value.Trim();
                 if (!candidate.StartsWith("#", StringComparison.Ordinal))
                     candidate = "#" + candidate;
 
-                return Color.TryParse(candidate, out var color)
+                return Color.TryParse(candidate, out Color color)
                     ? $"#{color.R:X2}{color.G:X2}{color.B:X2}"
                     : fallback;
             }
@@ -126,15 +126,15 @@ namespace VaultSync.UI
 
             private static IBrush CreateOutlineBrush(Color color)
             {
-                var luminance = ((0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B)) / 255d;
+                double luminance = ((0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B)) / 255d;
                 return new SolidColorBrush(luminance > 0.62 ? Color.Parse("#24344A") : Color.Parse("#E2E8F0"));
             }
         }
 
-        public ObservableCollection<ThemeColorSlotViewModel> ThemeColorSlots { get; } = new();
-        public ObservableCollection<ThemePresetOptionViewModel> ThemePresets { get; } = new();
-        public ObservableCollection<ThemePaletteSwatchViewModel> ThemePaletteSwatches { get; } = new();
-        public ObservableCollection<string> CustomThemeBaseOptions { get; } = new();
+        public ObservableCollection<ThemeColorSlotViewModel> ThemeColorSlots { get; } = [];
+        public ObservableCollection<ThemePresetOptionViewModel> ThemePresets { get; } = [];
+        public ObservableCollection<ThemePaletteSwatchViewModel> ThemePaletteSwatches { get; } = [];
+        public ObservableCollection<string> CustomThemeBaseOptions { get; } = [];
 
         private void OnThemeColorSlotsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
@@ -194,7 +194,7 @@ namespace VaultSync.UI
             ThemeColorSlots.Add(new ThemeColorSlotViewModel("Danger", L("Settings.Appearance.ThemeSlots.Danger", "Danger"), "#FF7676"));
 
             ThemePresets.Clear();
-            foreach (var preset in ThemeManager.GetThemePresets())
+            foreach ((string Id, string Description, ThemePaletteConfig Palette) preset in ThemeManager.GetThemePresets())
             {
                 ThemePresets.Add(new ThemePresetOptionViewModel
                 {
@@ -206,7 +206,7 @@ namespace VaultSync.UI
             }
 
             ThemePaletteSwatches.Clear();
-            foreach (var hex in GetAllThemePaletteHexes())
+            foreach (string hex in GetAllThemePaletteHexes())
                 ThemePaletteSwatches.Add(new ThemePaletteSwatchViewModel(hex));
 
             SelectedThemeColorSlot = ThemeColorSlots.FirstOrDefault();
@@ -271,7 +271,7 @@ namespace VaultSync.UI
 
         private void LoadCustomTheme(ThemePaletteConfig? palette)
         {
-            var theme = palette?.Clone() ?? ThemeManager.GetDefaultCustomTheme();
+            ThemePaletteConfig theme = palette?.Clone() ?? ThemeManager.GetDefaultCustomTheme();
             _customThemeName = string.IsNullOrWhiteSpace(theme.Name)
                 ? L("Settings.Appearance.ThemePresets.vaultsync-midnight.Name", "VaultSync Midnight")
                 : theme.Name.Trim();
@@ -299,7 +299,7 @@ namespace VaultSync.UI
 
         private void SetThemeSlotHex(string slotId, string hex)
         {
-            var slot = ThemeColorSlots.FirstOrDefault(x => string.Equals(x.Id, slotId, StringComparison.Ordinal));
+            ThemeColorSlotViewModel? slot = ThemeColorSlots.FirstOrDefault(x => string.Equals(x.Id, slotId, StringComparison.Ordinal));
             if (slot is not null)
                 slot.Hex = hex;
         }
@@ -353,8 +353,8 @@ namespace VaultSync.UI
 
         private void UpdateSelectedThemePaletteSwatchState()
         {
-            var selectedHex = SelectedThemeColorHex;
-            foreach (var swatch in ThemePaletteSwatches)
+            string selectedHex = SelectedThemeColorHex;
+            foreach (ThemePaletteSwatchViewModel swatch in ThemePaletteSwatches)
                 swatch.IsSelected = string.Equals(swatch.Hex, selectedHex, StringComparison.OrdinalIgnoreCase);
         }
 

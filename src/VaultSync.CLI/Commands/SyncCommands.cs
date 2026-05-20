@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -6,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.CLI.Config;
@@ -23,7 +25,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SyncCommand : AsyncCommand<SyncSettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken ct)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -69,7 +71,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class VerifyCommand : AsyncCommand<VerifySettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken ct)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -96,11 +98,11 @@ namespace VaultSync.CLI.Commands
                     full = s.Full,
                     percent = s.Percent,
                     checkedFiles = result.Checked,
-                    failures = result.Failures.Select(f => new { f.Reason, f.RelPath, expected = f.expected, actual = f.actual }).ToList(),
+                    failures = result.Failures.ConvertAll(f => new { f.Reason, f.RelPath, expected = f.Expected, actual = f.Actual }),
                     tookSeconds = Math.Round(took.TotalSeconds, 3),
                     exitCode = result.Failures.Count == 0 ? 0 : 2
                 };
-                Console.WriteLine(JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
                 return result.Failures.Count == 0 ? 0 : 2;
             }
 
@@ -117,7 +119,7 @@ namespace VaultSync.CLI.Commands
             table.AddColumn("Expected");
             table.AddColumn("Actual");
             foreach (var f in result.Failures.Take(100))
-                table.AddRow(f.Reason, f.RelPath, f.expected ?? "-", f.actual ?? "-");
+                table.AddRow(f.Reason, f.RelPath, f.Expected ?? "-", f.Actual ?? "-");
             AnsiConsole.Write(table);
 
             if (!s.Quiet)
@@ -142,7 +144,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class RestoreCommand : AsyncCommand<RestoreSettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken ct)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -169,7 +171,7 @@ namespace VaultSync.CLI.Commands
             }
 
             var snapFiles = repo.GetFilesForSnapshot(snapshotId).ToList();
-            if (!snapFiles.Any()) throw new Exception($"Snapshot {snapshotId} has no files");
+            if (snapFiles.Count == 0) throw new Exception($"Snapshot {snapshotId} has no files");
 
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var destRoot = s.Destination.Replace("~", home);
@@ -187,9 +189,9 @@ namespace VaultSync.CLI.Commands
             int deleted = 0;
             if (s.Clean)
             {
-                var existing = Directory.Exists(destRootFull)
-                    ? Directory.EnumerateFiles(destRootFull, "*", SearchOption.AllDirectories).ToList()
-                    : new List<string>();
+                List<string> existing = Directory.Exists(destRootFull)
+                    ? [.. Directory.EnumerateFiles(destRootFull, "*", SearchOption.AllDirectories)]
+                    : [];
 
                 foreach (var full in existing)
                 {
@@ -259,7 +261,7 @@ namespace VaultSync.CLI.Commands
                     tookSeconds = Math.Round(took.TotalSeconds, 3),
                     exitCode = skippedMissing > 0 ? 1 : 0
                 };
-                Console.WriteLine(JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
             }
             else if (!s.Quiet)
             {
@@ -279,7 +281,7 @@ namespace VaultSync.CLI.Commands
                     AnsiConsole.MarkupLine("[yellow]Note[/]: Some files listed in the snapshot were not present in the current project folder; they were skipped.");
             }
 
-            return skippedMissing > 0 ? 1 : 0;
+            return Task.FromResult(skippedMissing > 0 ? 1 : 0);
         }
     }
 
@@ -291,7 +293,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SelfTestCommand : AsyncCommand<SelfTestSettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken ct)
         {
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var tmpRoot = Path.Combine(home, ".vaultsync", "selftest");
@@ -312,7 +314,7 @@ namespace VaultSync.CLI.Commands
 
             if (!s.Quiet) AnsiConsole.MarkupLine($"[blue]Self-test[/] using database {Markup.Escape(db)}");
 
-            var id = repo.AddProject(new VaultSync.Core.Models.Project { Name = name, RootPath = src, Preset = "custom" });
+            var id = repo.AddProject(new Project { Name = name, RootPath = src, Preset = "custom" });
             if (!s.Quiet) AnsiConsole.MarkupLine($"Registered project [bold]{Markup.Escape(name)}[/] (id {id}) -> {Markup.Escape(src)}");
 
             var snapSvc = new SnapshotService(repo, new HashService());
@@ -330,7 +332,7 @@ namespace VaultSync.CLI.Commands
 
             var verifySvc = new VerifyService(repo, new HashService());
             var result = await verifySvc.VerifyAsync(repo.GetProjectByName(name)!, dst, percent: 100, full: true, ct);
-            if (result.Failures.Any())
+            if (result.Failures.Count > 0)
             {
                 if (!s.Quiet) AnsiConsole.MarkupLine($"[red]Verify failed[/]: {result.Failures.Count} issues");
                 return 2;

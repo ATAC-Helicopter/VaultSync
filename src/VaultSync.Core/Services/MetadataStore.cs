@@ -15,18 +15,20 @@ public sealed class MetadataStore
     public const int CurrentSchemaVersion = 1;
 
     private readonly string _dbPath;
+    private readonly bool _allowReadRecovery;
 
-    public MetadataStore(string rootPath)
+    public MetadataStore(string rootPath, bool allowReadRecovery = false)
     {
-        var metaRoot = Path.Combine(rootPath, ".vaultsync", "meta");
+        string metaRoot = Path.Combine(rootPath, ".vaultsync", "meta");
         _dbPath = Path.Combine(metaRoot, "vaultsync.meta.db");
+        _allowReadRecovery = allowReadRecovery;
     }
 
     public string DatabasePath => _dbPath;
 
     public void EnsureSchema()
     {
-        using var c = Open(write: true);
+        using SqliteConnection c = Open(write: true);
         c.Execute("""
             CREATE TABLE IF NOT EXISTS meta_info(
               schema_version INTEGER NOT NULL,
@@ -112,11 +114,11 @@ public sealed class MetadataStore
 
     private static bool HasColumn(SqliteConnection connection, string tableName, string columnName)
     {
-        var escapedTable = tableName.Replace("'", "''", StringComparison.Ordinal);
-        var columns = connection.Query($"PRAGMA table_info('{escapedTable}');");
-        foreach (var column in columns)
+        string escapedTable = tableName.Replace("'", "''", StringComparison.Ordinal);
+        IEnumerable<dynamic> columns = connection.Query($"PRAGMA table_info('{escapedTable}');");
+        foreach (dynamic column in columns)
         {
-            var name = (string?)column.name;
+            string? name = (string?)column.name;
             if (string.Equals(name, columnName, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
@@ -128,7 +130,7 @@ public sealed class MetadataStore
 
     public MetaInfo? GetMetaInfo()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         return SafeQueryFirstOrDefault<MetaInfo>(
             c,
             """
@@ -145,7 +147,7 @@ public sealed class MetadataStore
 
     public void UpsertMetaInfo(MetaInfo info)
     {
-        using var c = Open(write: true);
+        using SqliteConnection c = Open(write: true);
         c.Execute("DELETE FROM meta_info;");
         c.Execute(
             """
@@ -164,7 +166,7 @@ public sealed class MetadataStore
 
     public void UpsertProject(MetaProject project)
     {
-        using var c = Open(write: true);
+        using SqliteConnection c = Open(write: true);
         c.Execute(
             """
             INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc)
@@ -190,7 +192,7 @@ public sealed class MetadataStore
 
     public void UpsertSnapshot(MetaSnapshot snapshot)
     {
-        using var c = Open(write: true);
+        using SqliteConnection c = Open(write: true);
         c.Execute(
             """
             INSERT INTO snapshots(
@@ -244,9 +246,9 @@ public sealed class MetadataStore
     public void UpsertBackup(MetaBackup backup)
     {
         var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.KdfParamsJson);
-        var descriptorJson = descriptor.ToMetadataJson(backup.IsEncrypted);
+        string descriptorJson = descriptor.ToMetadataJson(backup.IsEncrypted);
 
-        using var c = Open(write: true);
+        using SqliteConnection c = Open(write: true);
         c.Execute(
             """
             INSERT INTO backups(external_id, project_external_id, snapshot_external_id, created_utc, type, backup_mode, total_bytes, path_rel, destination_alias, origin_machine_name, is_protected, enc_flag, kdf_params_json)
@@ -285,7 +287,7 @@ public sealed class MetadataStore
 
     public void AddTombstone(MetaTombstone tombstone)
     {
-        using var c = Open(write: true);
+        using SqliteConnection c = Open(write: true);
         c.Execute(
             """
             INSERT INTO tombstones(entity_type, entity_id, deleted_utc, origin_machine_id)
@@ -303,7 +305,7 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaProject> ListProjects()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         return SafeQuery<MetaProject>(
             c,
             """
@@ -321,7 +323,7 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaProjectRef> ListProjectRefs()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         return SafeQuery<MetaProjectRef>(
             c,
             """
@@ -337,7 +339,7 @@ public sealed class MetadataStore
         if (string.IsNullOrWhiteSpace(externalId))
             return false;
 
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         return SafeExecuteScalarInt(
             c,
             "SELECT 1 FROM projects WHERE external_id = @id LIMIT 1;",
@@ -346,28 +348,28 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaSnapshot> ListSnapshots()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         if (c is null)
             return Array.Empty<MetaSnapshot>();
 
-        var snapshotColumns = GetTableColumns(c, "snapshots");
-        var diffAddedProjection = snapshotColumns.Contains("diff_added")
+        HashSet<string> snapshotColumns = GetTableColumns(c, "snapshots");
+        string diffAddedProjection = snapshotColumns.Contains("diff_added")
             ? "diff_added as DiffAdded"
             : "0 as DiffAdded";
-        var diffModifiedProjection = snapshotColumns.Contains("diff_modified")
+        string diffModifiedProjection = snapshotColumns.Contains("diff_modified")
             ? "diff_modified as DiffModified"
             : "0 as DiffModified";
-        var diffDeletedProjection = snapshotColumns.Contains("diff_deleted")
+        string diffDeletedProjection = snapshotColumns.Contains("diff_deleted")
             ? "diff_deleted as DiffDeleted"
             : "0 as DiffDeleted";
-        var diffNetBytesProjection = snapshotColumns.Contains("diff_net_bytes")
+        string diffNetBytesProjection = snapshotColumns.Contains("diff_net_bytes")
             ? "diff_net_bytes as DiffNetBytes"
             : "0 as DiffNetBytes";
-        var diffTopPathsProjection = snapshotColumns.Contains("diff_top_paths_json")
+        string diffTopPathsProjection = snapshotColumns.Contains("diff_top_paths_json")
             ? "diff_top_paths_json as DiffTopPathsJson"
             : "'[]' as DiffTopPathsJson";
 
-        var sql = $"""
+        string sql = $"""
             SELECT
               external_id as ExternalId,
               project_external_id as ProjectExternalId,
@@ -387,7 +389,7 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaSnapshotRef> ListSnapshotRefs()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         return SafeQuery<MetaSnapshotRef>(
             c,
             """
@@ -400,28 +402,28 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaBackup> ListBackups()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         if (c is null)
             return Array.Empty<MetaBackup>();
 
-        var backupColumns = GetTableColumns(c, "backups");
-        var originMachineProjection = backupColumns.Contains("origin_machine_name")
+        HashSet<string> backupColumns = GetTableColumns(c, "backups");
+        string originMachineProjection = backupColumns.Contains("origin_machine_name")
             ? "origin_machine_name as OriginMachineName"
             : "'' as OriginMachineName";
-        var protectedProjection = backupColumns.Contains("is_protected")
+        string protectedProjection = backupColumns.Contains("is_protected")
             ? "is_protected as IsProtected"
             : "0 as IsProtected";
-        var encryptedProjection = backupColumns.Contains("enc_flag")
+        string encryptedProjection = backupColumns.Contains("enc_flag")
             ? "enc_flag as IsEncrypted"
             : "0 as IsEncrypted";
-        var descriptorProjection = backupColumns.Contains("kdf_params_json")
+        string descriptorProjection = backupColumns.Contains("kdf_params_json")
             ? "kdf_params_json as KdfParamsJson"
             : "'{}' as KdfParamsJson";
-        var backupModeProjection = backupColumns.Contains("backup_mode")
+        string backupModeProjection = backupColumns.Contains("backup_mode")
             ? "backup_mode as BackupMode"
             : "'full' as BackupMode";
 
-        var sql = $"""
+        string sql = $"""
             SELECT
               external_id as ExternalId,
               project_external_id as ProjectExternalId,
@@ -444,7 +446,7 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaBackupRef> ListBackupRefs()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         return SafeQuery<MetaBackupRef>(
             c,
             """
@@ -457,7 +459,7 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaTombstone> ListTombstones()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         return SafeQuery<MetaTombstone>(
             c,
             """
@@ -472,7 +474,7 @@ public sealed class MetadataStore
 
     public IEnumerable<MetaTombstoneRef> ListTombstoneRefs()
     {
-        using var c = TryOpenRead();
+        using SqliteConnection? c = TryOpenRead();
         return SafeQuery<MetaTombstoneRef>(
             c,
             """
@@ -485,10 +487,10 @@ public sealed class MetadataStore
 
     private SqliteConnection Open(bool write)
     {
-        var attempts = write && IsLikelyNetworkPath(_dbPath) ? 3 : 1;
-        var delayMs = 200;
+        int attempts = write && IsLikelyNetworkPath(_dbPath) ? 3 : 1;
+        int delayMs = 200;
         Exception? lastError = null;
-        for (var attempt = 0; attempt < attempts; attempt++)
+        for (int attempt = 0; attempt < attempts; attempt++)
         {
             try
             {
@@ -519,7 +521,7 @@ public sealed class MetadataStore
 
     private SqliteConnection OpenCore(bool write)
     {
-        var dir = Path.GetDirectoryName(_dbPath);
+        string? dir = Path.GetDirectoryName(_dbPath);
         if (write && !string.IsNullOrWhiteSpace(dir))
             Directory.CreateDirectory(dir);
 
@@ -536,7 +538,7 @@ public sealed class MetadataStore
         ConfigureConnection(conn, write);
         try
         {
-            var timeoutMs = IsLikelyNetworkPath(_dbPath) ? 10000 : 5000;
+            int timeoutMs = IsLikelyNetworkPath(_dbPath) ? 10000 : 5000;
             conn.Execute($"PRAGMA busy_timeout = {timeoutMs};");
         }
         catch
@@ -553,7 +555,7 @@ public sealed class MetadataStore
             if (!File.Exists(_dbPath))
                 return null;
 
-            return Open(write: false);
+            return Open(write: _allowReadRecovery);
         }
         catch (SqliteException)
         {
@@ -690,7 +692,7 @@ public sealed class MetadataStore
         {
             try
             {
-                var root = GetVolumeRoot(path);
+                string root = GetVolumeRoot(path);
                 if (!string.IsNullOrWhiteSpace(root) && Directory.Exists(root))
                 {
                     var driveInfo = new DriveInfo(root);
@@ -701,6 +703,13 @@ public sealed class MetadataStore
             {
                 // Fall through to non-network default.
             }
+        }
+
+        if (path.StartsWith("/mnt/", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/media/", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/run/media/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
         }
 
         if (path.Contains("/Library/Application Support/VaultSync/mounts/", StringComparison.OrdinalIgnoreCase))
@@ -714,8 +723,8 @@ public sealed class MetadataStore
         if (string.IsNullOrWhiteSpace(path))
             return string.Empty;
 
-        var normalized = path.Replace('\\', '/').TrimEnd('/');
-        var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string normalized = path.Replace('\\', '/').TrimEnd('/');
+        string[] parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 2 || !string.Equals(parts[0], "Volumes", StringComparison.OrdinalIgnoreCase))
             return string.Empty;
 

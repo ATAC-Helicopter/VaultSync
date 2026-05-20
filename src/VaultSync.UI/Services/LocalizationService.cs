@@ -16,8 +16,8 @@ namespace VaultSync.UI.Services
     public sealed class LocalizationService : INotifyPropertyChanged
     {
         private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _cache = new(StringComparer.OrdinalIgnoreCase);
-        private readonly List<LanguageOption> _languageOptions = new()
-        {
+        private readonly List<LanguageOption> _languageOptions =
+        [
             new LanguageOption { Code = "en", DisplayName = "English" },
             new LanguageOption { Code = "it", DisplayName = "Italiano" },
             new LanguageOption { Code = "es", DisplayName = "Español" },
@@ -29,7 +29,7 @@ namespace VaultSync.UI.Services
             new LanguageOption { Code = "ar", DisplayName = "العربية" },
             new LanguageOption { Code = "bn", DisplayName = "বাংলা" },
             new LanguageOption { Code = "ru", DisplayName = "Русский" }
-        };
+        ];
 
         private string _pendingLanguage = "en";
 
@@ -44,6 +44,7 @@ namespace VaultSync.UI.Services
 
         public string CurrentLanguage { get; private set; }
 
+        public event Action? LanguageChanging;
         public event Action? LanguageChanged;
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -52,7 +53,7 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(code))
                 return false;
 
-            var normalized = code.Trim();
+            string normalized = code.Trim();
             if (string.Equals(normalized, CurrentLanguage, StringComparison.OrdinalIgnoreCase))
             {
                 _pendingLanguage = normalized;
@@ -62,6 +63,7 @@ namespace VaultSync.UI.Services
             if (!LoadLanguage(normalized))
                 return false;
 
+            LanguageChanging?.Invoke();
             CurrentLanguage = normalized;
             _pendingLanguage = normalized;
             LanguageChanged?.Invoke();
@@ -75,10 +77,10 @@ namespace VaultSync.UI.Services
 
         public string GetString(string key)
         {
-            if (_cache.TryGetValue(CurrentLanguage, out var dict) && dict.TryGetValue(key, out var value))
+            if (_cache.TryGetValue(CurrentLanguage, out IReadOnlyDictionary<string, string>? dict) && dict.TryGetValue(key, out string? value))
                 return value;
 
-            if (_cache.TryGetValue("en", out var enDict) && enDict.TryGetValue(key, out var enValue))
+            if (_cache.TryGetValue("en", out IReadOnlyDictionary<string, string>? enDict) && enDict.TryGetValue(key, out string? enValue))
                 return enValue;
 
             return key;
@@ -91,7 +93,7 @@ namespace VaultSync.UI.Services
             if (_cache.ContainsKey(code))
                 return true;
 
-            var path = Path.Combine(AppContext.BaseDirectory, "Localization", $"strings.{code}.json");
+            string path = Path.Combine(AppContext.BaseDirectory, "Localization", $"strings.{code}.json");
             if (!File.Exists(path))
             {
                 Console.WriteLine($"[Localization] Missing file: {path}");
@@ -100,14 +102,14 @@ namespace VaultSync.UI.Services
 
             try
             {
-                var json = ReadTextWithFallback(path);
+                string? json = ReadTextWithFallback(path);
                 if (string.IsNullOrWhiteSpace(json))
                 {
                     Console.WriteLine($"[Localization] Empty or unreadable file: {path}");
                     return false;
                 }
-                var dictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
-                    ?? new Dictionary<string, string>();
+                Dictionary<string, string> dictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                    ?? [];
                 _cache[code] = dictionary;
                 return true;
             }
@@ -120,7 +122,7 @@ namespace VaultSync.UI.Services
 
         private void WarmCache()
         {
-            foreach (var option in _languageOptions)
+            foreach (LanguageOption option in _languageOptions)
             {
                 if (!LoadLanguage(option.Code))
                     Console.WriteLine($"[Localization] Failed to load language: {option.Code}");
@@ -131,7 +133,7 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                using var stream = File.OpenRead(path);
+                using FileStream stream = File.OpenRead(path);
                 using var reader = new StreamReader(
                     stream,
                     new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true),

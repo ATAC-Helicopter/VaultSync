@@ -22,7 +22,7 @@ public sealed class OnboardingViewModel : ViewModelBase
 {
     public string Title { get; }
     public string Subtitle { get; }
-    public ObservableCollection<OnboardingStep> Steps { get; } = new();
+    public ObservableCollection<OnboardingStep> Steps { get; } = [];
 
     public ICommand OpenProjectsCommand { get; }
     public ICommand CloseCommand { get; }

@@ -1,18 +1,28 @@
 __pycache__/**
+**/__pycache__/**
 *.pyc
 *.pyo
 *.pyd
 *.egg-info/**
+**/*.egg-info/**
 build/**
 dist/**
+**/build/**
+**/dist/**
 pip-wheel-metadata/**
 pytest_cache/**
 htmlcov/**
+**/pip-wheel-metadata/**
+**/pytest_cache/**
+**/htmlcov/**
 
 # environments
 env/**
 .venv/**
 venv/**
+**/env/**
+**/.venv/**
+**/venv/**
 
 # IDE
 .vscode/
@@ -23,4 +33,3 @@ venv/**
 
 # Git
 .git/
-.github/

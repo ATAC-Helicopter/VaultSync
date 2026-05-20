@@ -10,7 +10,8 @@ public sealed class WhatsNewViewModel : ViewModelBase
 {
     public string Title { get; }
     public string VersionLabel { get; }
-    public ObservableCollection<WhatsNewSection> Sections { get; } = new();
+    public string Subtitle { get; }
+    public ObservableCollection<WhatsNewSection> Sections { get; } = [];
 
     public ICommand CloseCommand { get; }
 
@@ -20,6 +21,7 @@ public sealed class WhatsNewViewModel : ViewModelBase
     {
         Title = L("WhatsNew.Title", "What's new");
         VersionLabel = versionLabel;
+        Subtitle = L("WhatsNew.Subtitle", "A short release digest for the changes you are about to run.");
         CloseCommand = new RelayCommand(_ => CloseRequested?.Invoke());
     }
 
@@ -29,7 +31,7 @@ public sealed class WhatsNewViewModel : ViewModelBase
             return;
 
         var section = new WhatsNewSection(title);
-        foreach (var item in items)
+        foreach (string item in items)
         {
             if (!string.IsNullOrWhiteSpace(item))
                 section.Items.Add(item.Trim());
@@ -45,7 +47,7 @@ public sealed class WhatsNewViewModel : ViewModelBase
 public sealed class WhatsNewSection
 {
     public string Title { get; }
-    public ObservableCollection<string> Items { get; } = new();
+    public ObservableCollection<string> Items { get; } = [];
 
     public WhatsNewSection(string title)
     {

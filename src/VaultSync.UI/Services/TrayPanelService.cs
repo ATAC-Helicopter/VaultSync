@@ -40,7 +40,7 @@ public sealed class TrayPanelService : IDisposable
 
     public void Show()
     {
-        var appVm = _getViewModel();
+        AppViewModel? appVm = _getViewModel();
         if (appVm is null)
             return;
 
@@ -72,7 +72,7 @@ public sealed class TrayPanelService : IDisposable
         if (_window is not { IsVisible: true })
             return;
 
-        var appVm = _getViewModel();
+        AppViewModel? appVm = _getViewModel();
         if (appVm is null || _viewModel is null)
             return;
 
@@ -91,9 +91,9 @@ public sealed class TrayPanelService : IDisposable
 
     private TrayPanelViewModel CreateViewModel(AppViewModel appVm)
     {
-        var title = LocalizationProvider.Service?.GetString("Shell.Title") ?? "VaultSync";
-        var version = appVm.CurrentVersionDisplay;
-        var header = string.IsNullOrWhiteSpace(version) ? title : $"{title} {version}";
+        string title = LocalizationProvider.Service?.GetString("Shell.Title") ?? "VaultSync";
+        string version = appVm.CurrentVersionDisplay;
+        string header = string.IsNullOrWhiteSpace(version) ? title : $"{title} {version}";
 
         return new TrayPanelViewModel(
             header,
@@ -143,26 +143,26 @@ public sealed class TrayPanelService : IDisposable
         LoadRecentBackups(_viewModel, appVm);
     }
 
-    private void LoadDestinations(TrayPanelViewModel viewModel, AppViewModel appVm)
+    private static void LoadDestinations(TrayPanelViewModel viewModel, AppViewModel appVm)
     {
-        var summaries = appVm.GetDestinationProbeSummaries();
+        IReadOnlyList<AppViewModel.DestinationProbeSummary> summaries = appVm.GetDestinationProbeSummaries();
         var items = new List<TrayPanelViewModel.TrayDestinationItem>();
 
         if (summaries.Count > 0)
         {
-            foreach (var summary in summaries)
+            foreach (AppViewModel.DestinationProbeSummary summary in summaries)
             {
-                var name = string.IsNullOrWhiteSpace(summary.Alias) ? summary.Path : summary.Alias;
+                string name = string.IsNullOrWhiteSpace(summary.Alias) ? summary.Path : summary.Alias;
                 items.Add(new TrayPanelViewModel.TrayDestinationItem(name, summary.Path, summary.Reachable));
             }
         }
         else
         {
-            var cfg = appVm.GetConfigSnapshot();
+            AppConfig cfg = appVm.GetConfigSnapshot();
             var configured = new List<BackupDestination>();
             if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
             {
-                configured = cfg.Backups.Destinations.Where(d => d.Active).ToList();
+                configured = [.. cfg.Backups.Destinations.Where(d => d.Active)];
             }
             else if (!string.IsNullOrWhiteSpace(cfg.Backups.BackupLocation))
             {
@@ -177,14 +177,14 @@ public sealed class TrayPanelService : IDisposable
                 });
             }
 
-            foreach (var dest in configured)
+            foreach (BackupDestination dest in configured)
             {
-                var name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias;
+                string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias;
                 items.Add(new TrayPanelViewModel.TrayDestinationItem(name, dest.Path ?? string.Empty, true));
             }
         }
 
-        var summaryText = BuildDestinationSummary(items, appVm.GetBackupPolicyTraySummary());
+        string summaryText = BuildDestinationSummary(items, appVm.GetBackupPolicyTraySummary());
         viewModel.LoadDestinations(items, summaryText);
     }
 
@@ -192,7 +192,7 @@ public sealed class TrayPanelService : IDisposable
         IReadOnlyCollection<TrayPanelViewModel.TrayDestinationItem> items,
         string policySummary)
     {
-        var baseSummary = string.Empty;
+        string baseSummary = string.Empty;
         if (items.Count == 0)
         {
             baseSummary = LocalizationProvider.Service?.GetString("Tray.Destinations.None")
@@ -200,7 +200,7 @@ public sealed class TrayPanelService : IDisposable
         }
         else
         {
-            var reachable = items.Count(i => i.Reachable);
+            int reachable = items.Count(i => i.Reachable);
             if (reachable == items.Count)
             {
                 baseSummary = LocalizationProvider.Service?.GetString("Tray.Destinations.Ready")
@@ -208,7 +208,7 @@ public sealed class TrayPanelService : IDisposable
             }
             else
             {
-                var status = LocalizationProvider.Service?.GetString("Tray.Destinations.Unreachable")
+                string status = LocalizationProvider.Service?.GetString("Tray.Destinations.Unreachable")
                          ?? "Unreachable";
                 baseSummary = $"{reachable}/{items.Count} {status}";
             }
@@ -220,14 +220,14 @@ public sealed class TrayPanelService : IDisposable
         return $"{baseSummary} - {policySummary}";
     }
 
-    private void LoadRecentBackups(TrayPanelViewModel viewModel, AppViewModel appVm)
+    private static void LoadRecentBackups(TrayPanelViewModel viewModel, AppViewModel appVm)
     {
-        var recent = appVm.GetRecentBackupsForTray(4);
+        IReadOnlyList<AppViewModel.TrayProjectBackups> recent = appVm.GetRecentBackupsForTray(4);
         var items = new List<TrayPanelViewModel.TrayRecentBackupItem>();
 
-        foreach (var project in recent)
+        foreach (AppViewModel.TrayProjectBackups project in recent)
         {
-            foreach (var backup in project.Backups)
+            foreach (AppViewModel.TrayBackupItem backup in project.Backups)
             {
                 var item = new TrayPanelViewModel.TrayRecentBackupItem(
                     project.ProjectName,
@@ -244,27 +244,27 @@ public sealed class TrayPanelService : IDisposable
         viewModel.LoadRecentBackups(items.Take(6));
     }
 
-    private void PositionWindow(Window window)
+    private static void PositionWindow(Window window)
     {
-        var screen = window.Screens.Primary ?? window.Screens.ScreenFromVisual(window) ?? window.Screens.All.FirstOrDefault();
+        Avalonia.Platform.Screen? screen = window.Screens.Primary ?? window.Screens.ScreenFromVisual(window) ?? window.Screens.All.FirstOrDefault();
         if (screen == null) return;
-        var working = screen.WorkingArea;
-        var width = (int)Math.Ceiling(window.Bounds.Width > 0 ? window.Bounds.Width : window.Width);
-        var height = (int)Math.Ceiling(window.Bounds.Height > 0 ? window.Bounds.Height : window.Height);
-        var margin = 12;
-        var inset = 80;
-        var left = working.X;
-        var top = working.Y;
-        var right = working.X + working.Width;
-        var bottom = working.Y + working.Height;
+        PixelRect working = screen.WorkingArea;
+        int width = (int)Math.Ceiling(window.Bounds.Width > 0 ? window.Bounds.Width : window.Width);
+        int height = (int)Math.Ceiling(window.Bounds.Height > 0 ? window.Bounds.Height : window.Height);
+        int margin = 12;
+        int inset = 80;
+        int left = working.X;
+        int top = working.Y;
+        int right = working.X + working.Width;
+        int bottom = working.Y + working.Height;
 
         int x;
         int y;
 
-        var minX = left + margin;
-        var maxX = right - width - margin;
-        var minY = top + margin;
-        var maxY = bottom - height - margin;
+        int minX = left + margin;
+        int maxX = right - width - margin;
+        int minY = top + margin;
+        int maxY = bottom - height - margin;
 
         if (IsLinux)
         {
@@ -292,7 +292,7 @@ public sealed class TrayPanelService : IDisposable
 
     private void BringMainWindowToFront()
     {
-        var window = _desktop.MainWindow;
+        Window? window = _desktop.MainWindow;
         if (window is null)
             return;
 

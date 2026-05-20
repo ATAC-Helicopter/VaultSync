@@ -26,7 +26,7 @@ public sealed partial class UpdaterApp : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var request = PendingRequest;
+            PatchApplyRequest? request = PendingRequest;
             if (request is null)
             {
                 desktop.Shutdown();
@@ -57,7 +57,7 @@ public sealed partial class UpdaterApp : Application
 
         try
         {
-            var config = AppConfigStore.GetSnapshot();
+            AppConfig config = AppConfigStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(config.Advanced.Language))
             {
                 localizationService.SetLanguage(config.Advanced.Language);
@@ -69,9 +69,9 @@ public sealed partial class UpdaterApp : Application
         }
     }
 
-    private void ApplyThemeFromConfig()
+    private static void ApplyThemeFromConfig()
     {
-        var config = AppConfigStore.GetSnapshot();
+        AppConfig config = AppConfigStore.GetSnapshot();
         ThemeManager.ApplyAppearance(config.Appearance);
     }
 }

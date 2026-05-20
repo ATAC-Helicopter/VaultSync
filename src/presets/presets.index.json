@@ -2,6 +2,13 @@
   "version": 1,
   "presets": [
     {
+      "id": "generic",
+      "name": "Generic Project",
+      "category": "General",
+      "file": "generic.vaultsyncignore",
+      "description": "Default fallback preset for projects without a more specific recommendation. Excludes common generated output, caches, temporary files, and local IDE state."
+    },
+    {
       "id": "unity",
       "name": "Unity",
       "category": "Game Engines",

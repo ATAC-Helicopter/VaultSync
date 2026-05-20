@@ -22,7 +22,7 @@ public sealed class NetworkMountServiceTests
         };
 
         var service = new NetworkMountService();
-        var result = service.PrepareDestination(destination, null);
+        DestinationResolution result = service.PrepareDestination(destination, null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(tempDir.Path, result.EffectivePath);
@@ -42,7 +42,7 @@ public sealed class NetworkMountServiceTests
         };
 
         var service = new NetworkMountService();
-        var result = service.PrepareDestination(destination, null);
+        DestinationResolution result = service.PrepareDestination(destination, null);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("unreachable", result.Message, StringComparison.OrdinalIgnoreCase);
@@ -78,10 +78,10 @@ public sealed class CredentialVaultTests
     [Fact]
     public void EnsureKeyRef_WithExistingReference_ReturnsSameReference()
     {
-        var vault = CredentialVault.Instance;
-        var existingRef = "existing-ref";
+        CredentialVault vault = CredentialVault.Instance;
+        string existingRef = "existing-ref";
 
-        var actual = vault.EnsureKeyRef(existingRef, "test");
+        string actual = vault.EnsureKeyRef(existingRef, "test");
 
         Assert.Equal(existingRef, actual);
     }
@@ -89,11 +89,11 @@ public sealed class CredentialVaultTests
     [Fact]
     public void GetSecret_WithMissingReference_ReturnsFallbackValue()
     {
-        var vault = CredentialVault.Instance;
-        var keyRef = $"vaultsync-test-{Guid.NewGuid():N}";
+        CredentialVault vault = CredentialVault.Instance;
+        string keyRef = $"vaultsync-test-{Guid.NewGuid():N}";
         vault.DeleteSecret(keyRef, "user");
 
-        var secret = vault.GetSecret(
+        string secret = vault.GetSecret(
             keyRef,
             "user",
             preferKeychain: false,
@@ -105,14 +105,14 @@ public sealed class CredentialVaultTests
     [Fact]
     public void TryUnprotect_RejectsNonDpapiPayloads()
     {
-        var method = typeof(CredentialVault).GetMethod(
+        MethodInfo method = typeof(CredentialVault).GetMethod(
             "TryUnprotect",
             BindingFlags.NonPublic | BindingFlags.Static);
 
         Assert.NotNull(method);
 
-        var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("plain-secret"));
-        var result = method!.Invoke(null, new object[] { encoded, false });
+        string encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("plain-secret"));
+        object result = method!.Invoke(null, new object[] { encoded, false });
 
         Assert.Null(result);
     }

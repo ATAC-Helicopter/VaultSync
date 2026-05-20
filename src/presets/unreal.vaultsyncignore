@@ -5,6 +5,12 @@ Intermediate/**
 Saved/**
 Build/**
 Builds/**
+**/Binaries/**
+**/DerivedDataCache/**
+**/Intermediate/**
+**/Saved/**
+**/Build/**
+**/Builds/**
 *.exe
 
 # IDE junk
@@ -23,7 +29,3 @@ Thumbs.db
 
 # Git / metadata
 .git/
-.github/
-.gitattributes
-.gitmodules
-.gitignore

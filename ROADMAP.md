@@ -7,7 +7,7 @@
 
 ## Planning convention
 - Use `VS-xxxx` IDs as the default planning unit for roadmap items, implementation tasks, and release work.
-- Pre-`2.0` planning uses explicit `1.x` release streams (for example: `1.5.x`, `1.6.x`, `1.7.x`, `1.8.x`, `1.9.x`) instead of a generic long-term bucket.
+- Pre-`2.0` planning uses explicit active release streams plus a future backlog; do not open a numbered future stream until work actually starts.
 - ID pattern:
   - `VS` = VaultSync work item.
   - First two digits map to release family (`15xx` for `1.5`, `16xx` for `1.6`, etc.).
@@ -19,6 +19,8 @@
 - `CHANGELOG.md` rule:
   - Use `VS-xxxx` IDs for actual feature entries.
   - Cleanup/doc-only/test-only notes may omit IDs unless they map to a planned roadmap item.
+  - Keep each entry to one sentence and roughly 110 characters after the ID.
+  - If an entry needs more detail, put it in `docs/WHATS_NEW.md`, the issue, or the PR body.
 - If a task spans releases, split it into release-specific IDs to keep scope and acceptance criteria explicit.
 
 ## Roadmap sync format (project automation)
@@ -26,7 +28,7 @@
   - `- [ ] \`VS-xxxx\` Title`
   - Optional details/acceptance criteria stay as indented bullets below the ticket.
 - Use release sections as routing signals:
-  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## 1.8.x`, `## 1.9.x`
+  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## Future backlog`, `## 1.9.x`
 - For new work, always include:
   - ID (`VS-xxxx`)
   - Priority marker (`P0/P1/P2`) at the start of the ticket line when relevant.
@@ -863,7 +865,7 @@
    - Goal: modernize the dashboard information hierarchy and visual clarity without losing VaultSync's current identity or familiar navigation, then carry shared project-tag color semantics consistently across the app.
 
 ### Revised planning notes
-- `VS-1704` is moved out of `1.7` and into `1.8` as a deliberate scope cut.
+- `VS-1704` is moved out of the active `1.7` release checklist and into the future backlog as a deliberate scope cut.
   - Reason: shared-vault access control and audit trails are a separate product stream and would dilute the reliability/repair focus of `1.7`.
   - `1.7` release should not ship until:
     - orphan detection/remap is deterministic and idempotent,
@@ -934,9 +936,9 @@
     - classify findings as `warning`, `repairable`, `critical`.
     - cache last scan summary so UI can show status without rescanning synchronously.
   - Current status:
-    - In progress: first pass now runs as a deferred startup task after metadata auto-import and before update checks.
-    - In progress: initial scan covers missing/duplicate external IDs plus snapshot/project/backup relationship mismatches, with runtime diagnostics summary state in `AppViewModel`.
-    - In progress: findings now emit deterministic samples and persist a lightweight last-scan summary for support-bundle reuse.
+    - Done: first pass now runs as a deferred startup task after metadata auto-import and before update checks.
+    - Done: initial scan covers missing/duplicate external IDs plus snapshot/project/backup relationship mismatches, with runtime diagnostics summary state in `AppViewModel`.
+    - Done: findings now emit deterministic samples and persist a lightweight last-scan summary for support-bundle reuse.
   - Acceptance:
     - Startup scan surfaces actionable warnings without blocking app launch.
     - Scan output is available in diagnostics/support bundle.
@@ -947,9 +949,9 @@
     - add operator-facing diagnostics surface and support-bundle export.
     - keep messages user-readable without exposing internal-only noise by default.
   - Current status:
-    - In progress: update checks now persist channel/decision/candidate diagnostics alongside the selected release result.
-    - In progress: Settings > Advanced now surfaces the persisted diagnostics summary next to the existing update status block.
-    - In progress: support bundles now export the same redacted update diagnostics so release-target decisions can be inspected off-box.
+    - Done: update checks now persist channel/decision/candidate diagnostics alongside the selected release result.
+    - Done: Settings > Advanced now surfaces the persisted diagnostics summary next to the existing update status block.
+    - Done: support bundles now export the same redacted update diagnostics so release-target decisions can be inspected off-box.
   - Acceptance:
     - Support diagnostics clearly show selected candidate release and why.
     - Channel mismatch scenarios are visible to operators without debug builds.
@@ -977,9 +979,9 @@
     - extend support-bundle schema with stable redacted sections for updater/repair outcomes.
     - version the schema so support tooling can rely on field names across minor releases.
   - Current status:
-    - In progress: support bundles now export persisted updater decision traces and patch-preflight eligibility results from advanced config.
-    - In progress: doctor repair dry-run/apply flows now persist lightweight repair telemetry (actions, blocked buckets, codes, last apply state) for support exports.
-    - In progress: metadata conflict tracking now persists conflict-resolution telemetry and exports pending conflict summaries for cross-machine triage.
+    - Done: support bundles now export persisted updater decision traces and patch-preflight eligibility results from advanced config.
+    - Done: doctor repair dry-run/apply flows now persist lightweight repair telemetry (actions, blocked buckets, codes, last apply state) for support exports.
+    - Done: metadata conflict tracking now persists conflict-resolution telemetry and exports pending conflict summaries for cross-machine triage.
   - Acceptance:
     - New telemetry sections are redacted and stable for support use.
 - [x] `VS-1710` `P2` Scheduled maintenance window jobs. _(Done)_
@@ -989,8 +991,8 @@
     - job history/logging so maintenance is explainable and non-silent.
     - opt-in defaults only; no surprise background mutation on upgrade.
   - Current status:
-    - In progress: Settings > Advanced now exposes an opt-in maintenance window with per-task toggles for consistency scan, repair dry-run, and metadata refresh.
-    - In progress: App startup/settings reload now wire a maintenance timer that runs only inside the configured window and records last-run status in advanced config.
+    - Done: Settings > Advanced now exposes an opt-in maintenance window with per-task toggles for consistency scan, repair dry-run, and metadata refresh.
+    - Done: App startup/settings reload now wire a maintenance timer that runs only inside the configured window and records last-run status in advanced config.
   - Acceptance:
     - Maintenance jobs run only within configured windows and emit clear run summaries.
 - [x] `VS-1711` `P0` Backup chain preflight before retention prune. _(Done)_
@@ -1000,7 +1002,7 @@
     - integrate with retention planner before delete execution, not after.
     - emit clear block reasons when prune would violate restore safety.
   - Current status:
-    - In progress: retention now simulates prune candidates and blocks when deletion would remove the last metadata-valid restore point for the project.
+    - Done: retention now simulates prune candidates and blocks when deletion would remove the last metadata-valid restore point for the project.
   - Depends on:
     - `VS-1706` consistency scan.
   - Acceptance:
@@ -1018,6 +1020,44 @@
   - Acceptance:
     - Re-adding the same destination path/identity preserves project routing and history linkage where exact identity matches.
     - Mismatch cases are reported with explicit remediation guidance.
+- [x] `BUG-18006` `P1` Backups page stale-entry pruning for manually deleted destination backups. _(Done)_
+  - Scope: when the Backups page reloads, remove local database entries whose recorded backup path is missing from a reachable active destination.
+  - What it takes:
+    - resolve only active destinations that pass reachability checks, including configured credentials/mount behavior.
+    - validate recorded relative backup paths remain under the resolved destination root before trusting them for cleanup.
+    - leave offline, unresolved, or destination-mismatched histories untouched so disconnected drives are not mistaken for deleted backups.
+  - Current status:
+    - Done: Backups reload prunes missing backup rows before shaping the page cache and refreshes the history data afterward.
+    - Done: orphan snapshots are cleaned when the pruned backup was their last reference.
+  - Acceptance:
+    - Manually deleted backup folders disappear from the Backups page after the destination is reachable and the page refreshes.
+    - Offline destinations do not lose history entries during refresh.
+- [x] `BUG-18007` `P2` Reduce duplicate destination probe work and nested generated-output scans. _(Done in PR #283, issue #285; completed 2026-05-13)_
+  - Scope: coalesce archive upload buffer auto-tune work per destination and tighten development presets around nested generated output.
+  - What it takes:
+    - share an in-flight archive upload buffer probe when parallel backups target the same destination.
+    - cache the timeout fallback buffer so later backups do not repeat the same slow probe.
+    - exclude nested build, dependency, test-result, artifact, package, and cache outputs from development project scans.
+  - Current status:
+    - Done: destination buffer tuning now uses a single lazy in-flight task per destination.
+    - Done: timed-out probes persist the fallback buffer.
+    - Done: development preset exclusions cover nested generated outputs, with scanner regression coverage.
+  - Acceptance:
+    - parallel backup startup emits one archive buffer tune attempt per destination instead of duplicate timeout probes.
+    - nested generated outputs are not included in new snapshots for common development presets.
+- [x] `BUG-18008` `P1` Avoid waking destinations for passive status checks. _(Done in PR #283, issue #286; completed 2026-05-13)_
+  - Scope: run one deferred startup reachability probe, then update destinations only from backup execution and manual tests.
+  - What it takes:
+    - stop scheduling periodic destination reachability tests from the Backups overview path.
+    - keep cached destination status updated when backup execution already prepares a destination.
+    - run stale backup-entry cleanup only against a destination that backup execution has already prepared.
+  - Current status:
+    - Done: passive Backups refresh no longer resolves destinations or scans destination roots.
+    - Done: deferred startup runs a single destination probe and does not start a recurring probe timer.
+    - Done: backup preparation updates cached destination status and runs safe stale-entry cleanup for that prepared root.
+  - Acceptance:
+    - after the startup probe, opening the Backups page or leaving the app idle does not wake sleeping backup destinations for reachability checks.
+    - backup runs still fail fast and visibly when their destination cannot be prepared.
 - [x] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard. _(Done)_
   - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
   - What it takes:
@@ -1056,8 +1096,8 @@
     - Timeline is available in diagnostics and support bundle.
     - Normal startup path remains non-blocking.
   - Current status:
-    - In progress: startup now records stable constructor/deferred-startup phase checkpoints and persists the latest timeline summary in advanced config.
-    - In progress: Settings diagnostics and support bundles now surface the last startup timeline with total duration and per-phase elapsed milliseconds.
+    - Done: startup now records stable constructor/deferred-startup phase checkpoints and persists the latest timeline summary in advanced config.
+    - Done: Settings diagnostics and support bundles now surface the last startup timeline with total duration and per-phase elapsed milliseconds.
 - [x] `VS-1716` `P2` Retention simulation mode in settings. _(Done)_
     - Scope: preview retention outcomes per project/destination without deleting data.
     - What it takes:
@@ -1089,9 +1129,9 @@
     - one scripted gate command with machine-readable + human-readable output.
     - GitHub/project/release-asset queries wired into a deterministic checklist.
   - Current status:
-    - In progress: added `scripts/release_readiness_gate.ps1` to validate UI/installer version parity, unreleased changelog alignment, What's New version alignment, release asset presence, and project-board completion for the target release slice.
-    - In progress: release docs now point to the gate command as part of the release checklist.
-    - In progress: gate now distinguishes `PrePublish` vs `PostPublish` verification so asset-generation steps are emitted as warnings before upload and hard-fail only during final release verification.
+    - Done: added `scripts/release_readiness_gate.ps1` to validate UI/installer version parity, unreleased changelog alignment, What's New version alignment, release asset presence, and project-board completion for the target release slice.
+    - Done: release docs now point to the gate command as part of the release checklist.
+    - Done: gate now distinguishes `PrePublish` vs `PostPublish` verification so asset-generation steps are emitted as warnings before upload and hard-fail only during final release verification.
   - Acceptance:
     - One command emits pass/fail with actionable errors.
     - Gate output is attachable to release notes/support workflows.
@@ -1130,14 +1170,14 @@
 - [x] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(Done)_
   - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
   - Current status:
-    - In progress: backup repair and metadata-conflict flows now dispatch busy-state, status, notification, and command refresh updates through Avalonia's UI thread.
+    - Done: backup repair and metadata-conflict flows now dispatch busy-state, status, notification, and command refresh updates through Avalonia's UI thread.
   - Acceptance:
     - Doctor workflows no longer emit `Call from invalid thread` traces during dry-run/apply operations.
 
 - [x] `BUG-17002` `P1` Restore corrupted bundled UI font assets. _(Done)_
   - Scope: replace invalid bundled `.ttf` placeholders with valid Noto Sans binaries so the shipped font pack is deterministic across machines.
   - Current status:
-    - In progress: corrupted `NotoSans*` and `NotoSansArabic*` placeholder assets have been replaced with valid binaries so Avalonia stops ingesting HTML masquerading as font files.
+    - Done: corrupted `NotoSans*` and `NotoSansArabic*` placeholder assets have been replaced with valid binaries so Avalonia stops ingesting HTML masquerading as font files.
   - Acceptance:
     - bundled font assets open as valid font binaries instead of text/HTML payloads.
     - UI text rendering no longer depends on unpredictable system fallback caused by broken embedded assets.
@@ -1145,8 +1185,8 @@
 - [x] `BUG-17003` `P1` Projects page discovery fallback when filesystem scan is empty. _(Done)_
   - Scope: keep the Projects page populated from registered database projects when directory discovery returns no items or misses known projects.
   - Current status:
-    - In progress: registered projects are now merged into the Projects page source list so tracked entries still render when folder discovery is unavailable or partial.
-    - In progress: Projects now render explicit empty-state and no-selection placeholders instead of leaving the list/detail panes visually broken when scan results or selection state are empty.
+    - Done: registered projects are now merged into the Projects page source list so tracked entries still render when folder discovery is unavailable or partial.
+    - Done: Projects now render explicit empty-state and no-selection placeholders instead of leaving the list/detail panes visually broken when scan results or selection state are empty.
   - Acceptance:
     - Projects page no longer appears blank just because discovery root scanning returned zero items.
     - Registered projects remain visible and selectable from stored metadata paths.
@@ -1154,8 +1194,8 @@
 - [x] `BUG-17004` `P1` Preserve Projects root across startup config read/write races. _(Done)_
   - Scope: stop `Projects root` from clearing itself across restarts when config reads race startup writes or transiently deserialize invalid/partial JSON.
   - Current status:
-    - In progress: config writes now use temp-file replace semantics with a backup file, and config loads fall back to backup/last-known-good snapshots before defaulting to empty values.
-    - In progress: safeguard is being verified against unreachable destination/startup stress scenarios so unrelated config saves cannot persist a blank projects root.
+    - Done: config writes now use temp-file replace semantics with a backup file, and config loads fall back to backup/last-known-good snapshots before defaulting to empty values.
+    - Done: safeguard was verified against unreachable destination/startup stress scenarios so unrelated config saves cannot persist a blank projects root.
   - Acceptance:
     - `Projects root` persists across restart even if startup writes happen while the destination is unreachable or config reads are transiently busy.
     - transient config read failures no longer downgrade the in-memory config to defaults and then overwrite the saved root path.
@@ -1204,6 +1244,16 @@
     - Theme quick colors always apply to the visibly selected theme section instead of an ambiguous stale target.
     - Theme section selection is explicit before palette colors are applied.
     - Theme quick colors update the selected section immediately instead of appearing to do nothing.
+
+- [x] `VS-1723` `P1` Refactor SettingsViewModel into feature partials. _(Done)_
+  - Scope: split Settings viewmodel responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce risk for platform and settings changes.
+  - Current status:
+    - Done: the theme-editor logic now lives in `SettingsViewModel.ThemeEditor.cs`.
+    - Issue `#182` tracks the completed refactor slice.
+  - Acceptance:
+    - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
+    - Existing Settings bindings continue to work without regressions.
+    - The split makes later platform-specific settings work lower-risk and easier to review.
 
 
 - [x] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(Done)_
@@ -1503,87 +1553,154 @@
   - Acceptance:
     - enabling checkpointed retry no longer silently disables parallel archive uploads
     - interrupted parallel uploads can resume safely without re-sending already validated chunks
-- [ ] `BUG-17104` `P1` Keep Settings `Projects root` synchronized after config reloads in the cached Settings view.
+- [x] `BUG-17104` `P1` Keep Settings `Projects root` synchronized after config reloads in the cached Settings view. _(Done in PR #222, issue #227; completed 2026-04-18)_
   - Scope: ensure `LoadFromConfig()` refreshes visible Settings fields reliably, avoids reload-time autosave churn, and keeps the persisted `ProjectsRoot` value visible after navigation or startup reloads.
   - Current status:
-    - In progress: implemented on PR `#222`.
+    - Done: implemented on PR `#222`.
     - Issue `#227` tracks the regression report and expected behavior.
   - Acceptance:
     - Settings no longer shows `Projects root` as blank when the config file still contains a valid value
     - reload-time field refreshes do not trigger spurious saves
-- [ ] `BUG-17105` `P1` Repair blank project roots during startup when the project folder still exists under `ProjectsRoot`.
+- [x] `BUG-17105` `P1` Repair blank project roots during startup when the project folder still exists under `ProjectsRoot`. _(Done in PR #222, issue #228; completed 2026-04-18)_
   - Scope: reconcile blank `RootPath` values after startup initialization, repair from `ProjectsRoot\\ProjectName` when present, and prefer project-id-based updates where available.
   - Current status:
-    - In progress: implemented on PR `#222`.
+    - Done: implemented on PR `#222`.
     - Issue `#228` tracks the startup repair gap.
   - Acceptance:
     - projects with recoverable blank roots are repaired during startup without waiting for backup/restore flows
     - project root repairs prefer stable project identity over name-only matching
-- [ ] `BUG-17106` `P2` Add explicit auto-scroll and selected-line copy controls to the in-app log console.
+- [x] `BUG-17106` `P2` Add explicit auto-scroll and selected-line copy controls to the in-app log console. _(Done)_
   - Scope: expose an explicit tail-follow toggle, stop manual scroll from fighting live capture, and allow copying the selected log line via button and standard shortcut.
   - Current status:
-    - In progress: implemented on PR `#222`.
+    - Done: implemented and shipped in the `1.7.x` release line.
     - Issue `#229` tracks the user-facing log console controls.
   - Acceptance:
     - the log console exposes an explicit auto-scroll toggle
     - users can copy the selected log line from the UI and with the platform shortcut
-- [ ] `BUG-17107` `P1` Preserve `Read-only` destination status for Linux paths that fail real write access.
+- [x] `BUG-17107` `P1` Preserve `Read-only` destination status for Linux paths that fail real write access. _(Done in PR #236, issue #230; completed 2026-04-21)_
   - Scope: replace the Linux-unreliable read-only heuristic in background destination probes with a real writability check, and preserve read-only warning state instead of collapsing it back to green reachable success on status refresh.
   - Current status:
-    - Reported via issue `#230`: `chmod 555` paths can flip from `Read-only` back to green `Reachable` during background/status refresh even though backups still fail with write denial.
+    - Done: implemented on PR `#236`.
+    - Issue `#230` tracked the `chmod 555` read-only refresh regression.
   - Acceptance:
     - Linux read-only destinations stay visibly `Read-only` during background and navigation refreshes
     - status refresh paths preserve warning/read-only state instead of repainting it as success
-- [ ] `BUG-17108` `P1` Make the in-app log console reliably surface runtime errors and exception paths.
+- [x] `BUG-17108` `P1` Make the in-app log console reliably surface runtime errors and exception paths. _(Done)_
   - Scope: ensure exceptions and error-level diagnostics that currently only appear in terminal/stdout or external console paths are also routed into the in-app log console consistently across Linux and other desktop targets.
   - Current status:
-    - Reported via issue `#231`: some reproducible runtime errors do not appear in the in-app log console even though they are visible from `dotnet run` output.
+    - Done: implemented on PR `#255`.
+    - Issue `#231` tracks the original runtime-error visibility report.
   - Acceptance:
     - reproducible runtime errors appear in the in-app log console without requiring an external terminal
     - log console coverage is consistent for handled and surfaced error paths on supported desktop targets
-- [ ] `BUG-17109` `P1` Fix destination status localization staying stale after navigation with cached views.
+- [x] `BUG-17109` `P1` Fix destination status localization staying stale after navigation with cached views. _(Done in PR #222, issue #223; completed 2026-04-18)_
   - Scope: keep destination status state in invariant internal keys, localize only at display time, and force destination-status refreshes when localization changes so cached navigation does not resurrect stale-language labels.
   - Current status:
-    - Reported via issue `#223`.
-    - Related work lives on PR `#222`.
+    - Done: implemented on PR `#222`.
+    - Issue `#223` tracked the cached-view localization regression.
   - Acceptance:
     - destination status cards always render in the active UI language after navigation and menu reopen flows
     - cached view reuse does not keep stale localized destination labels alive
-- [ ] `VS-1805` `P1` Add Linux release assets and architecture-aware patch packaging to the release workflow.
+- [x] `VS-1732` `P1` Add Linux release assets and architecture-aware patch packaging to the release workflow. _(Done in PR #233, issue #232; completed 2026-04-18)_
   - Scope: build Linux `tar.gz` assets for `x64` and `arm64`, produce a desktop-friendly `linux-x64` AppImage, generate Linux patch assets, and make updater asset selection architecture-aware.
   - Current status:
-    - In progress: workflow, updater, and docs changes are prepared locally on `Dev`.
+    - Done: implemented on PR `#233`.
     - Issue `#232` tracks the release-asset work item.
   - Acceptance:
     - release-assets workflow uploads Linux install artifacts and Linux patch assets
     - Linux update discovery prefers architecture-specific installers and patch assets before generic Linux fallback
 
-## 1.8.x
-- [x] `BUG-17106` `P2` Improve in-app log console tail-following and selected-line copy. _(Done)_
-  - Scope: expose log tail-following as a real UI control and let users copy the selected log line without exporting the full console.
-  - Acceptance:
-    - the log console exposes an Auto-scroll toggle
-    - new log lines follow automatically when the toggle is enabled
-    - users can scroll away from the bottom without the view forcing itself back down unless auto-scroll is enabled
-    - the selected log line can be copied from the UI and via the usual platform copy shortcut
-- [ ] `VS-1723` `P1` Refactor SettingsViewModel into feature partials.
-  - Scope: split large settings responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce change risk before the macOS work.
+### 1.7.4 patch backlog
+- [x] `BUG-17115` `P2` Make Linux tray actions selectable through a compact native menu. _(Done)_
+  - Scope: simplify the fragile nested native tray menu on Linux/Windows so right-click actions reliably open the richer tray panel.
   - Current status:
-    - Deferred from `1.7.x`: this remains a behavior-preserving refactor, not a release-critical shipping item.
-    - The partial split can continue after `1.7` stabilization without blocking the release.
+    - Done: implemented on PR `#256`.
+    - Issue `#250` tracks the Linux tray-menu selection regression.
   - Acceptance:
-    - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
-    - Existing Settings bindings continue to work without regressions.
-    - The split makes later platform-specific settings work lower-risk and easier to review.
+    - Linux desktop environments can select tray actions from the native menu.
+    - deeper backup actions remain available from the richer tray panel.
+- [x] `BUG-17116` `P1` Harden notification auto-dismiss cleanup after dismiss. _(Done in PR #258, issue #257; completed 2026-05-12)_
+  - Scope: avoid disposed-token races when notifications are dismissed while auto-dismiss cleanup is still pending.
+  - Current status:
+    - Done: implemented on PR `#258`.
+    - Issue `#257` tracks the notification cleanup crash.
+  - Acceptance:
+    - dismissing toast-heavy notification flows no longer produces disposed-token crash reports.
+- [x] `BUG-17117` `P2` Keep tray panel action labels fitting in localized layouts. _(Done)_
+  - Scope: wrap long tray-panel button labels inside the fixed popover width.
+  - Current status:
+    - Done: implemented on PR `#252`.
+    - Issue `#249` tracks the original text-fit report.
+  - Acceptance:
+    - long localized tray panel action labels wrap instead of clipping or overflowing.
+- [x] `BUG-17118` `P2` Improve log console row formatting. _(Done)_
+  - Scope: format live diagnostics into readable time/source/message rows while keeping raw lines available for copy/export.
+  - Current status:
+    - Done: implemented alongside the log-console diagnostics work in PR `#255`.
+  - Acceptance:
+    - log console entries are easier to scan without losing raw diagnostic text.
+- [x] `BUG-17119` `P1` Preserve Linux metadata imports when source backup paths are rooted. _(Done in PR #263, issue #259; completed 2026-05-12)_
+  - Scope: remap rooted metadata backup paths from another machine to matching backup suffixes under the configured destination before marking imported history missing.
+  - Current status:
+    - Done: implemented on PR `#263`.
+    - Issue `#259` tracks the Linux import-history regression.
+  - Acceptance:
+    - Linux installs import backup history when the configured destination contains the backup folder even if metadata stores a rooted source-machine path.
+    - missing backup detection still tombstones genuinely absent backup paths.
+- [x] `BUG-17120` `P1` Isolate test config writes from real app settings. _(Done in PR #263, issue #260; completed 2026-05-12)_
+  - Scope: keep core tests that use `AppConfigStore` from writing temporary project roots into a developer's `~/.vaultsync/appsettings.json`.
+  - Current status:
+    - Done: implemented on PR `#263`.
+    - Issue `#260` tracks the test-config leakage.
+  - Acceptance:
+    - test runs use a temporary config directory unless `VAULTSYNC_CONFIG_DIR` is explicitly provided.
+    - running metadata/config tests no longer changes the visible Projects root in a developer app install.
+- [x] `BUG-17121` `P2` Separate imported origin from manual/auto trigger counts. _(Done in PR #263, issue #261; completed 2026-05-12)_
+  - Scope: adjust Backups summaries and activity charts so imported restore points are not misleadingly double-counted as both imported and manual/auto totals.
+  - Current status:
+    - Done: implemented on PR `#263`.
+    - Issue `#261` tracks the follow-up from the import/history audit.
+  - Acceptance:
+    - Backups totals make origin (`Local`/`Imported`) distinct from trigger (`Manual`/`Auto`).
+    - summary counts are internally consistent for mixed local/imported history.
+- [x] `VS-1731` `P1` Versioned backup history with imported timestamps and file-change identity. _(Done in PR #263, issue #262; completed 2026-05-12)_
+  - Scope: add explicit version/history identity fields so backup history can lead with restore-point version and file-change deltas instead of relying primarily on source timestamps.
+  - Current status:
+    - Done: implemented on PR `#263`.
+    - Issue `#262` tracks the design and implementation plan.
+  - Acceptance:
+    - history can show per-project restore-point versions alongside added/modified/deleted/net-size changes.
+    - imported history distinguishes source-created time from local imported/discovered time.
+    - future metadata sync can reconcile equal content across machines via a stable content fingerprint.
 
-- [ ] `VS-1801` `P1` Multi-destination health scoring and auto-failover.
-- [ ] `VS-1802` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
-- [ ] `VS-1803` `P2` Automation hooks (webhooks/scripts on backup/restore events).
-- [ ] `VS-1804` `P2` CLI parity with all major UI features.
+- [x] `BUG-18003` `P0` Prevent recursive backup growth from nested backup destinations. _(Done in PR #278, issue #281; completed 2026-05-12)_
+  - Scope: block source/destination overlap, move offline staging outside project trees, force reserved VaultSync backup artifact exclusions, and prune reserved backup folders before scanner descent.
+  - Acceptance:
+    - backup roots inside project roots, project roots inside backup roots, and same-path roots are blocked
+    - offline staging is outside the project tree
+    - reserved VaultSync backup folders/files are excluded without requiring user ignore rules
+- [x] `BUG-18004` `P1` Keep backup delete operation cards visible and informative. _(Done in PR #278, issue #279; completed 2026-05-12)_
+  - Scope: keep the active-operation panel visible while operations remain, avoid delayed progress-card resurrection, and show delete target/progress details.
+  - Acceptance:
+    - overlapping backup deletes do not hide the active card area early
+    - delete cards show destination, target, current file, file counts, and removed bytes
+    - delete progress becomes determinate once file counts are known
+- [x] `BUG-18005` `P0` Keep metadata refresh/import work off the UI thread and ignore temp root hints. _(Done in PR #278, issue #280; completed 2026-05-12)_
+  - Scope: run manual metadata refresh/import work off the UI thread and reject VaultSync transient temp paths as imported project roots.
+  - Acceptance:
+    - accepting Refresh History changes does not freeze the app shell
+    - imported root hints under VaultSync temp folders fall back to the configured Projects Root
+    - temp root mapping behavior has regression coverage
+
+## Future backlog
+- [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
+- [ ] `VS-1734` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
+- [ ] `VS-1735` `P2` Automation hooks (webhooks/scripts on backup/restore events).
+- [ ] `VS-1736` `P2` CLI parity with all major UI features.
 - [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).
   - Scope: shared-vault collaboration primitives and operator audit visibility.
   - Planning note:
-    - Moved from `1.7.x` so `1.7` can stay focused on reliability, repair, and updater determinism.
+    - Moved out of the active `1.7.x` release checklist so `1.7` can stay focused on reliability, repair, and updater determinism.
   - Acceptance:
     - Shared workflows stay optional and do not regress solo mode defaults.
 
@@ -1593,4 +1710,3 @@
   - Revisit the `2.0` decision near the end of `1.9` based on actual scope, not milestone vanity.
 - [ ] `VS-1902` `P1` App signing for trusted distribution.
 - [ ] `VS-1903` `P2` Background integrity audits with alerts.
-

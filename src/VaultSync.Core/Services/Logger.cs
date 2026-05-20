@@ -29,7 +29,7 @@ namespace VaultSync.Core.Services
         {
             try
             {
-                var nowUtc = DateTime.UtcNow;
+                DateTime nowUtc = DateTime.UtcNow;
                 var lineObj = new
                 {
                     time = nowUtc.ToString("O"), // ISO-8601 with timezone (UTC)
@@ -38,8 +38,8 @@ namespace VaultSync.Core.Services
                     details
                 };
 
-                var json = JsonSerializer.Serialize(lineObj, JsonOptions);
-                var path = GetTodayLogPath(nowUtc);
+                string json = JsonSerializer.Serialize(lineObj, JsonOptions);
+                string path = GetTodayLogPath(nowUtc);
 
                 EnsureDirectoryExists(Path.GetDirectoryName(path)!);
 
@@ -60,9 +60,9 @@ namespace VaultSync.Core.Services
         /// </summary>
         private static string GetTodayLogPath(DateTime utcNow)
         {
-            var baseDir = GetVaultBaseDir();
-            var logsDir = Path.Combine(baseDir, "logs");
-            var file = $"{utcNow:yyyy-MM-dd}.log";
+            string baseDir = GetVaultBaseDir();
+            string logsDir = Path.Combine(baseDir, "logs");
+            string file = $"{utcNow:yyyy-MM-dd}.log";
             return Path.Combine(logsDir, file);
         }
 

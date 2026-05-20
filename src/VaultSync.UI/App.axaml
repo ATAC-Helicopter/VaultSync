@@ -79,6 +79,10 @@
             <Setter Property="ScrollViewer.BringIntoViewOnFocusChange" Value="False" />
         </Style>
 
+        <Style Selector="Window.linux-performance Border.pulse-ring">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
         <!-- Card surface -->
         <Style Selector="Border.card">
             <Setter Property="Background" Value="{DynamicResource Surface1}" />
@@ -220,6 +224,12 @@
         <Style Selector="Button.action-ghost:pressed">
             <Setter Property="Background" Value="{DynamicResource Surface2}" />
         </Style>
+        <Style Selector="Button.action-ghost TextBlock, Button.action-primary TextBlock, Button.action-danger TextBlock, Button.small-button TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="MaxLines" Value="2" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
 
         <Style Selector="Button.action-primary">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
@@ -348,6 +358,12 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="MinHeight" Value="24" />
             <Setter Property="MinWidth" Value="0" />
+        </Style>
+        <Style Selector="Button.small-pill TextBlock, ToggleButton.small-pill TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="MaxLines" Value="2" />
+            <Setter Property="TextAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.small-pill:pointerover, ToggleButton.small-pill:pointerover">
             <Setter Property="Background" Value="{DynamicResource Surface2}" />

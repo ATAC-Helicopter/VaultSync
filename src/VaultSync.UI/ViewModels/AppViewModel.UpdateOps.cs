@@ -164,7 +164,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            var now = DateTime.UtcNow;
+            DateTime now = DateTime.UtcNow;
             if (!ignoreSettings && (now - _lastUpdateCheckUtc) < UpdateCheckMinInterval)
             {
                 return;
@@ -201,7 +201,7 @@ namespace VaultSync.UI.ViewModels
             if (!_settingsViewModel.CheckForUpdatesOnStartup)
                 return;
 
-            var intervalMinutes = Math.Max(15, _settingsViewModel.UpdateCheckIntervalMinutes);
+            int intervalMinutes = Math.Max(15, _settingsViewModel.UpdateCheckIntervalMinutes);
             var interval = TimeSpan.FromMinutes(intervalMinutes);
 
             _updateCheckTimer = new Timer(_ =>
@@ -229,15 +229,15 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    var delay = OperatingSystem.IsMacOS()
+                    TimeSpan delay = OperatingSystem.IsMacOS()
                         ? TimeSpan.FromSeconds(30)
                         : TimeSpan.FromSeconds(2);
                     await Task.Delay(delay);
                     RecordStartupPhase("deferred-startup-begin");
 
-                    var cfg = AppConfigStore.GetSnapshot();
-                    EnsureDestinationProbeStarted();
-                    RecordStartupPhase("destination-probe-ready");
+                    AppConfig cfg = AppConfigStore.GetSnapshot();
+                    await RunStartupDestinationProbeAsync().ConfigureAwait(false);
+                    RecordStartupPhase("destination-probe-complete");
 
                     if (cfg.Backups.EnableMetadataSync)
                     {
@@ -274,7 +274,7 @@ namespace VaultSync.UI.ViewModels
         {
             RunDetached(async () =>
             {
-                var delay = TimeSpan.FromSeconds(4) - (DateTime.UtcNow - _appStartUtc);
+                TimeSpan delay = TimeSpan.FromSeconds(4) - (DateTime.UtcNow - _appStartUtc);
                 if (delay > TimeSpan.Zero)
                     await Task.Delay(delay).ConfigureAwait(false);
 
@@ -323,11 +323,12 @@ namespace VaultSync.UI.ViewModels
             if (!IsPatchAvailable || _pendingUpdateResult is null || IsPatchInstalling)
                 return;
 
-            if (OperatingSystem.IsMacOS() && !CanWriteInstallDir(AppContext.BaseDirectory))
+            if (PatchInstallRequiresInstallerFallback(AppContext.BaseDirectory))
             {
                 PatchStatusMessage = L("Patch.Status.ManifestIncompatible", "Patch not available for this version. Use the installer instead.");
                 _patchBlocked = true;
                 _patchFailed = true;
+                DiagnosticsLogger.Record($"Patch install blocked: install directory is not writable ({AppContext.BaseDirectory}).");
                 NotifyPatchAvailabilityChanged();
                 OnPropertyChanged(nameof(ShowInstallerFallback));
                 return;
@@ -340,7 +341,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var preflight = await _patchService.PreflightPatchAsync(
+                PatchPreflightResult preflight = await PatchUpdateService.PreflightPatchAsync(
                     _pendingUpdateResult,
                     _currentVersionString,
                     CancellationToken.None);
@@ -357,9 +358,9 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                var plan = preflight.Plan;
+                PatchPlan plan = preflight.Plan;
 
-                var archivePath = await _patchService.DownloadPatchArchiveAsync(
+                string? archivePath = await PatchUpdateService.DownloadPatchArchiveAsync(
                     plan,
                     (downloaded, total, rate) =>
                     {
@@ -380,7 +381,7 @@ namespace VaultSync.UI.ViewModels
 
                 PatchStatusMessage = L("Patch.Status.Installing", "Installing patch and restarting...");
 
-                if (!PatchInstallService.TryLaunchPatchInstaller(plan, archivePath, out var error))
+                if (!PatchInstallService.TryLaunchPatchInstaller(plan, archivePath, out string? error))
                 {
                     PatchStatusMessage = L("Patch.Status.InstallFailed", "Failed to start the patch installer.");
                     Debug.WriteLine($"[Patch] Failed to launch helper: {error}");
@@ -411,7 +412,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void ShutdownForPatchInstall()
+        private static void ShutdownForPatchInstall()
         {
             Dispatcher.UIThread.Post(() =>
             {
@@ -436,7 +437,7 @@ namespace VaultSync.UI.ViewModels
                     return false;
 
                 Directory.CreateDirectory(installDir);
-                var testPath = Path.Combine(installDir, $".vaultsync-write-test-{Guid.NewGuid():N}");
+                string testPath = Path.Combine(installDir, $".vaultsync-write-test-{Guid.NewGuid():N}");
                 using (new FileStream(testPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
                 }
@@ -447,6 +448,11 @@ namespace VaultSync.UI.ViewModels
             {
                 return false;
             }
+        }
+
+        private static bool PatchInstallRequiresInstallerFallback(string installDir)
+        {
+            return !OperatingSystem.IsWindows() && !CanWriteInstallDir(installDir);
         }
 
         private void NotifyPatchAvailabilityChanged()
@@ -462,11 +468,10 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 DiagnosticsLogger.Record("Update check running.");
-                var evaluation = await _updateService
-                    .CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken)
+                UpdateCheckEvaluation evaluation = await GitHubUpdateService.CheckForUpdateAsync(_currentVersionString, CurrentUpdateChannel, cancellationToken)
                     .ConfigureAwait(false);
                 PersistUpdateDiagnostics(evaluation.Diagnostics);
-                var result = evaluation.Update;
+                UpdateCheckResult? result = evaluation.Update;
                 if (result is null)
                 {
                     Console.WriteLine("[Update] No update available.");
@@ -486,8 +491,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (result.HasPatch)
                 {
-                    var preflight = await _patchService
-                        .PreflightPatchAsync(result, _currentVersionString, cancellationToken)
+                    PatchPreflightResult preflight = await PatchUpdateService.PreflightPatchAsync(result, _currentVersionString, cancellationToken)
                         .ConfigureAwait(false);
                     result.Diagnostics.PatchPreflight = ToPatchPreflightDiagnostics(preflight, _currentVersionString);
                     PersistUpdateDiagnostics(result.Diagnostics);
@@ -496,6 +500,19 @@ namespace VaultSync.UI.ViewModels
                         _patchBlocked = true;
                         Console.WriteLine($"[Update] Patch preflight blocked: code={preflight.StatusCode}, installerFallback={preflight.RequiresInstaller}.");
                         DiagnosticsLogger.Record($"Patch preflight blocked: code={preflight.StatusCode}, installerFallback={preflight.RequiresInstaller}.");
+                    }
+                    else if (PatchInstallRequiresInstallerFallback(AppContext.BaseDirectory))
+                    {
+                        PatchPreflightDiagnostics diagnostics = result.Diagnostics.PatchPreflight;
+                        diagnostics.StatusCode = "protected-install-requires-installer";
+                        diagnostics.Message = "Install directory is not writable by the current user; installer fallback is required.";
+                        diagnostics.Eligible = false;
+                        diagnostics.RequiresInstaller = true;
+                        PersistUpdateDiagnostics(result.Diagnostics);
+
+                        _patchBlocked = true;
+                        Console.WriteLine($"[Update] Patch preflight blocked: protected install requires installer fallback; installDir={AppContext.BaseDirectory}.");
+                        DiagnosticsLogger.Record($"Patch preflight blocked: protected install requires installer fallback; installDir={AppContext.BaseDirectory}.");
                     }
                     else
                     {
@@ -510,7 +527,7 @@ namespace VaultSync.UI.ViewModels
                         StatusCode = "no-patch-assets",
                         Message = "Release does not provide patch assets.",
                         CurrentVersion = _currentVersionString,
-                        ManifestAllowedBaseVersions = new System.Collections.Generic.List<string>(),
+                        ManifestAllowedBaseVersions = [],
                         Eligible = false,
                         RequiresInstaller = result.HasInstaller,
                         HasManifest = false,
@@ -589,11 +606,11 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(IsReleaseActionEnabled));
             OnPropertyChanged(nameof(CanSkipUpdate));
 
-            var title = L("Update.Available.Title", "Update available");
-            var channelLabel = CurrentUpdateChannel == GitHubReleaseChannel.Beta
+            string title = L("Update.Available.Title", "Update available");
+            string channelLabel = CurrentUpdateChannel == GitHubReleaseChannel.Beta
                 ? L("Update.Channel.Beta", "Beta")
                 : L("Update.Channel.Stable", "Stable");
-            var message = Lf("Update.Available.MessageChannel", "VaultSync {0} is ready on the {1} channel.", result.TagName, channelLabel);
+            string message = Lf("Update.Available.MessageChannel", "VaultSync {0} is ready on the {1} channel.", result.TagName, channelLabel);
 
             GlobalNotificationCenter.Instance.Show(
                 message,
@@ -620,7 +637,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(notes))
                 return string.Empty;
 
-            var normalized = notes.Replace("\r", string.Empty).Trim();
+            string normalized = notes.Replace("\r", string.Empty).Trim();
             const int maxChars = 1200;
             if (normalized.Length <= maxChars)
                 return normalized;
@@ -652,12 +669,12 @@ namespace VaultSync.UI.ViewModels
             if (_pendingUpdateResult is null)
                 return;
 
-            var tag = _pendingUpdateResult.TagName ?? string.Empty;
+            string tag = _pendingUpdateResult.TagName ?? string.Empty;
             _ = Task.Run(() =>
             {
                 try
                 {
-                    var cfg = AppConfigStore.Load();
+                    AppConfig cfg = AppConfigStore.Load();
                     cfg.Advanced.SkippedUpdateTag = tag;
                     AppConfigStore.Save(cfg);
                     Dispatcher.UIThread.Post(() => _config.Advanced.SkippedUpdateTag = tag);
@@ -721,7 +738,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var cfg = AppConfigStore.Load();
+                AppConfig cfg = AppConfigStore.Load();
                 cfg.Advanced.UpdateDiagnostics = diagnostics ?? new UpdateCheckDiagnostics();
                 AppConfigStore.Save(cfg);
                 Dispatcher.UIThread.Post(() => _settingsViewModel.ReloadUpdateDiagnostics());
@@ -742,16 +759,16 @@ namespace VaultSync.UI.ViewModels
                 ManifestPreviousVersion = preflight.Manifest?.PreviousVersion ?? string.Empty,
                 ManifestAllowedBaseVersions = PatchUpdateService.TryGetAllowedBaseVersions(
                     preflight.Manifest ?? new PatchManifest(),
-                    out var allowedBaseVersions,
+                    out System.Collections.Generic.IReadOnlyList<string>? allowedBaseVersions,
                     out _,
                     out _)
-                    ? new System.Collections.Generic.List<string>(allowedBaseVersions)
-                    : new System.Collections.Generic.List<string>(),
+                    ? [.. allowedBaseVersions]
+                    : [],
                 MatchedBaseVersion = PatchUpdateService.TryValidateAllowedBaseVersions(
                     preflight.Manifest ?? new PatchManifest(),
                     currentVersion,
                     out _,
-                    out var matchedBaseVersion,
+                    out string? matchedBaseVersion,
                     out _,
                     out _)
                     ? matchedBaseVersion
@@ -824,10 +841,10 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var downloadDir = Path.Combine(Path.GetTempPath(), "VaultSync", "updates");
+                string downloadDir = Path.Combine(Path.GetTempPath(), "VaultSync", "updates");
                 Directory.CreateDirectory(downloadDir);
 
-                var fileName = string.IsNullOrWhiteSpace(installerName)
+                string fileName = string.IsNullOrWhiteSpace(installerName)
                     ? Path.GetFileName(installerUrl.LocalPath)
                     : installerName;
                 if (string.IsNullOrWhiteSpace(fileName))
@@ -835,14 +852,14 @@ namespace VaultSync.UI.ViewModels
                     fileName = "VaultSync-Installer";
                 }
 
-                var tempPath = Path.Combine(downloadDir, $"{fileName}.download");
-                var finalPath = Path.Combine(downloadDir, fileName);
+                string tempPath = Path.Combine(downloadDir, $"{fileName}.download");
+                string finalPath = Path.Combine(downloadDir, fileName);
 
-                using var response = await s_installerClient.GetAsync(installerUrl, HttpCompletionOption.ResponseHeadersRead);
+                using HttpResponseMessage response = await s_installerClient.GetAsync(installerUrl, HttpCompletionOption.ResponseHeadersRead);
                 response.EnsureSuccessStatusCode();
 
-                var totalBytes = response.Content.Headers.ContentLength;
-                await using (var contentStream = await response.Content.ReadAsStreamAsync())
+                long? totalBytes = response.Content.Headers.ContentLength;
+                await using (Stream contentStream = await response.Content.ReadAsStreamAsync())
                 await using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
                     await CopyToWithProgressAsync(
@@ -862,6 +879,7 @@ namespace VaultSync.UI.ViewModels
 
                 File.Copy(tempPath, finalPath, overwrite: true);
                 File.Delete(tempPath);
+                EnsureInstallerLaunchPermissions(finalPath);
 
                 PatchStatusMessage = L("Update.Installer.Launching", "Launching installer...");
 
@@ -910,7 +928,26 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void ShutdownForInstallerLaunch()
+        private static void EnsureInstallerLaunchPermissions(string installerPath)
+        {
+            if (!OperatingSystem.IsLinux() || !installerPath.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                File.SetUnixFileMode(
+                    installerPath,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"AppImage permission update failed: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        private static void ShutdownForInstallerLaunch()
         {
             _ = Task.Run(async () =>
             {
@@ -947,7 +984,7 @@ namespace VaultSync.UI.ViewModels
             {
                 if (showError)
                 {
-                    var message = L("Update.Failed.Message", "Unable to open the release page; visit the GitHub releases manually.");
+                    string message = L("Update.Failed.Message", "Unable to open the release page; visit the GitHub releases manually.");
                     ShowUpdateError(message);
                 }
 
@@ -957,7 +994,7 @@ namespace VaultSync.UI.ViewModels
 
         private void ShowUpdateError(string message, string? titleOverride = null)
         {
-            var title = titleOverride ?? L("Update.Failed.Title", "Update failed");
+            string title = titleOverride ?? L("Update.Failed.Title", "Update failed");
             GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Error, title);
             if (ShouldRaiseSystemNotification)
             {

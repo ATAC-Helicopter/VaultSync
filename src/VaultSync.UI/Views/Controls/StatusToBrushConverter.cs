@@ -19,7 +19,7 @@ namespace VaultSync.UI.Views.Controls
 
         public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
         {
-            var text = value as string;
+            string? text = value as string;
             if (string.IsNullOrWhiteSpace(text))
                 return Brushes.Transparent;
 
@@ -40,7 +40,7 @@ namespace VaultSync.UI.Views.Controls
             else
                 brush = NeutralBrush;
 
-            var asBg = (parameter as string)?.Equals("bg", StringComparison.OrdinalIgnoreCase) == true;
+            bool asBg = (parameter as string)?.Equals("bg", StringComparison.OrdinalIgnoreCase) == true;
             if (asBg)
             {
                 // Soft translucent background
@@ -63,7 +63,7 @@ namespace VaultSync.UI.Views.Controls
         {
             if (source is ImmutableSolidColorBrush solid)
             {
-                var color = solid.Color;
+                Color color = solid.Color;
                 return new ImmutableSolidColorBrush(Color.FromArgb(40, color.R, color.G, color.B));
             }
 

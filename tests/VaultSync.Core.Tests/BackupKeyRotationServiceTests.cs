@@ -13,11 +13,11 @@ public sealed class BackupKeyRotationServiceTests
     [Fact]
     public void RotateEncryptedBackup_ReencryptsWithNewPassword_AndInvalidatesOldPassword()
     {
-        var backupFolder = CreateEncryptedBackupFolder("old-password");
+        string backupFolder = CreateEncryptedBackupFolder("old-password");
         try
         {
             var service = new BackupKeyRotationService();
-            var result = service.RotateEncryptedBackup(
+            BackupKeyRotationService.RotationResult result = BackupKeyRotationService.RotateEncryptedBackup(
                 backupFolder,
                 oldPassword: "old-password",
                 newPassword: "new-password",
@@ -27,13 +27,13 @@ public sealed class BackupKeyRotationServiceTests
             Assert.True(result.TotalBytes > 0);
 
             var crypto = new BackupArchiveCryptoService();
-            var restoredWithNew = Path.Combine(backupFolder, "restored-new.zip");
-            crypto.DecryptArchiveToPlainZip(backupFolder, "new-password", restoredWithNew);
+            string restoredWithNew = Path.Combine(backupFolder, "restored-new.zip");
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, "new-password", restoredWithNew);
             Assert.True(File.Exists(restoredWithNew));
 
-            var restoredWithOld = Path.Combine(backupFolder, "restored-old.zip");
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                crypto.DecryptArchiveToPlainZip(backupFolder, "old-password", restoredWithOld));
+            string restoredWithOld = Path.Combine(backupFolder, "restored-old.zip");
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, "old-password", restoredWithOld));
             Assert.Equal(BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, ex.Message);
         }
         finally
@@ -45,27 +45,27 @@ public sealed class BackupKeyRotationServiceTests
     [Fact]
     public void RotateEncryptedBackup_WithWrongOldPassword_LeavesOriginalArchiveIntact()
     {
-        var backupFolder = CreateEncryptedBackupFolder("old-password");
+        string backupFolder = CreateEncryptedBackupFolder("old-password");
         try
         {
-            var archivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
-            var before = File.ReadAllBytes(archivePath);
+            string archivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+            byte[] before = File.ReadAllBytes(archivePath);
 
             var service = new BackupKeyRotationService();
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                service.RotateEncryptedBackup(
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                BackupKeyRotationService.RotateEncryptedBackup(
                     backupFolder,
                     oldPassword: "wrong-password",
                     newPassword: "new-password",
                     new BackupEncryptionConfig { Enabled = true }));
             Assert.Equal(BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, ex.Message);
 
-            var after = File.ReadAllBytes(archivePath);
+            byte[] after = File.ReadAllBytes(archivePath);
             Assert.Equal(before, after);
 
             var crypto = new BackupArchiveCryptoService();
-            var restoredWithOld = Path.Combine(backupFolder, "restored-old.zip");
-            crypto.DecryptArchiveToPlainZip(backupFolder, "old-password", restoredWithOld);
+            string restoredWithOld = Path.Combine(backupFolder, "restored-old.zip");
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, "old-password", restoredWithOld);
             Assert.True(File.Exists(restoredWithOld));
         }
         finally
@@ -76,22 +76,22 @@ public sealed class BackupKeyRotationServiceTests
 
     private static string CreateEncryptedBackupFolder(string password)
     {
-        var root = Path.Combine(Path.GetTempPath(), $"vaultsync-rotate-tests-{Guid.NewGuid():N}");
-        var backupFolder = Path.Combine(root, "project", "2026-02-09_00-00-00");
+        string root = Path.Combine(Path.GetTempPath(), $"vaultsync-rotate-tests-{Guid.NewGuid():N}");
+        string backupFolder = Path.Combine(root, "project", "2026-02-09_00-00-00");
         Directory.CreateDirectory(backupFolder);
 
-        var sourceFile = Path.Combine(backupFolder, "sample.txt");
+        string sourceFile = Path.Combine(backupFolder, "sample.txt");
         File.WriteAllText(sourceFile, "vaultsync key rotation test");
 
-        var archivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.PlainArchiveFileName);
-        using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
+        string archivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.PlainArchiveFileName);
+        using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
         {
             archive.CreateEntryFromFile(sourceFile, "sample.txt");
         }
         File.Delete(sourceFile);
 
         var crypto = new BackupArchiveCryptoService();
-        crypto.EncryptArchiveInPlace(backupFolder, password, new BackupEncryptionConfig { Enabled = true });
+        BackupArchiveCryptoService.EncryptArchiveInPlace(backupFolder, password, new BackupEncryptionConfig { Enabled = true });
 
         return backupFolder;
     }

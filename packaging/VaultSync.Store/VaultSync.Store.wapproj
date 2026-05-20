@@ -11,6 +11,7 @@
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
     <GenerateAppInstallerFile>false</GenerateAppInstallerFile>
     <EntryPointProjectUniqueName>..\..\src\VaultSync.UI\VaultSync.UI.csproj</EntryPointProjectUniqueName>
+    <EntryPointExe>VaultSync.UI\VaultSync.UI.exe</EntryPointExe>
     <PackageCertificateThumbprint />
     <PackageCertificateKeyFile />
     <PackageCertificatePassword />
@@ -28,7 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\VaultSync.UI\VaultSync.UI.csproj">
-      <AdditionalProperties>TargetFramework=net8.0-windows10.0.19041.0</AdditionalProperties>
+      <AdditionalProperties>TargetFramework=net10.0-windows10.0.19041.0;RuntimeIdentifier=win-x64;SelfContained=true</AdditionalProperties>
     </ProjectReference>
   </ItemGroup>
 

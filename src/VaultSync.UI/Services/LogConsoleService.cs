@@ -8,25 +8,120 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.Services
 {
     public sealed record LogLine(DateTimeOffset Timestamp, string Source, string Message)
     {
-        public string Display => $"[{Timestamp:HH:mm:ss}] {Source}: {Message}";
+        private static readonly IBrush DiagnosticsBackground = new ImmutableSolidColorBrush(Color.Parse("#23304A"));
+        private static readonly IBrush DiagnosticsForeground = new ImmutableSolidColorBrush(Color.Parse("#BFD1FF"));
+        private static readonly IBrush OutputBackground = new ImmutableSolidColorBrush(Color.Parse("#173B34"));
+        private static readonly IBrush OutputForeground = new ImmutableSolidColorBrush(Color.Parse("#A7F3D0"));
+        private static readonly IBrush ErrorBackground = new ImmutableSolidColorBrush(Color.Parse("#4A1F28"));
+        private static readonly IBrush ErrorForeground = new ImmutableSolidColorBrush(Color.Parse("#FEB2B2"));
+        private static readonly IBrush TraceBackground = new ImmutableSolidColorBrush(Color.Parse("#3A314A"));
+        private static readonly IBrush TraceForeground = new ImmutableSolidColorBrush(Color.Parse("#DDD6FE"));
+
+        public string TimeText => Timestamp.ToString("HH:mm:ss");
+
+        public string SourceText => SourceKind switch
+        {
+            "diagnostics" => "DIAG",
+            "stderr" => "ERR",
+            "stdout" => "OUT",
+            "trace" => "TRACE",
+            _ => Source.ToUpperInvariant()
+        };
+
+        public IBrush SourceBackground => SourceKind switch
+        {
+            "stderr" => ErrorBackground,
+            "stdout" => OutputBackground,
+            "trace" => TraceBackground,
+            _ => DiagnosticsBackground
+        };
+
+        public IBrush SourceForeground => SourceKind switch
+        {
+            "stderr" => ErrorForeground,
+            "stdout" => OutputForeground,
+            "trace" => TraceForeground,
+            _ => DiagnosticsForeground
+        };
+
+        public string MessageText => SimplifyMessage(Message);
+
+        public string Display => $"[{TimeText}] {SourceText}: {MessageText}";
+
+        public string RawDisplay => $"[{Timestamp:O}] {Source}: {Message}";
+
+        private string SourceKind
+        {
+            get
+            {
+                if (!string.Equals(Source, "diagnostics", StringComparison.Ordinal))
+                    return Source;
+
+                string text = Message.TrimStart();
+                if (text.Contains("CONSOLE[stderr]", StringComparison.Ordinal))
+                    return "stderr";
+                if (text.Contains("CONSOLE[stdout]", StringComparison.Ordinal))
+                    return "stdout";
+                if (text.Contains("TRACE ", StringComparison.Ordinal) ||
+                    text.Contains("TRACE[", StringComparison.Ordinal))
+                {
+                    return "trace";
+                }
+
+                return Source;
+            }
+        }
+
+        private static string SimplifyMessage(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return string.Empty;
+
+            string text = message.Trim();
+            int threadMarker = text.IndexOf(" [t", StringComparison.Ordinal);
+            if (threadMarker > 0 && text.Length > 24 && char.IsDigit(text[0]))
+            {
+                int threadEnd = text.IndexOf("] ", threadMarker, StringComparison.Ordinal);
+                if (threadEnd >= 0 && threadEnd + 2 < text.Length)
+                {
+                    text = text[(threadEnd + 2)..].TrimStart();
+                }
+            }
+
+            if (text.StartsWith("CONSOLE[", StringComparison.Ordinal))
+            {
+                int sourceEnd = text.IndexOf("] ", StringComparison.Ordinal);
+                if (sourceEnd > 8 && sourceEnd + 2 < text.Length)
+                {
+                    string consoleSource = text[8..sourceEnd].ToUpperInvariant();
+                    text = $"{consoleSource}: {text[(sourceEnd + 2)..]}";
+                }
+            }
+
+            return text;
+        }
     }
 
     public sealed class LogConsoleService
     {
         private const int DefaultMaxLines = 2000;
         private const int ReducedMaxLines = 200;
-        private readonly ObservableCollection<LogLine> _lines = new();
+        private readonly ObservableCollection<LogLine> _lines = [];
         private readonly ReadOnlyObservableCollection<LogLine> _readOnlyLines;
         private readonly object _snapshotGate = new();
-        private readonly List<LogLine> _snapshotLines = new();
+        private readonly List<LogLine> _snapshotLines = [];
         private readonly ConcurrentQueue<LogLine> _pending = new();
         private int _pendingCount;
+        private int _suppressNextIbusTraceStackFrames;
         private readonly object _fileGate = new();
         private readonly StringBuilder _fileBuffer = new();
         private int _uiCaptureEnabled;
@@ -45,6 +140,8 @@ namespace VaultSync.UI.Services
         public LogConsoleService()
         {
             _readOnlyLines = new ReadOnlyObservableCollection<LogLine>(_lines);
+            SeedDiagnosticsSnapshot();
+            DiagnosticsLogger.Recorded += OnDiagnosticsRecorded;
         }
 
         public ReadOnlyObservableCollection<LogLine> Lines => _readOnlyLines;
@@ -62,14 +159,14 @@ namespace VaultSync.UI.Services
                 if (_enabled == value)
                     return;
                 _enabled = value;
-                MaxLines = _enabled ? DefaultMaxLines : ReducedMaxLines;
+                ApplyMaxLines();
                 if (!_enabled)
                 {
                     lock (_snapshotGate)
                     {
                         if (_snapshotLines.Count > MaxLines)
                         {
-                            var toRemove = _snapshotLines.Count - MaxLines;
+                            int toRemove = _snapshotLines.Count - MaxLines;
                             _snapshotLines.RemoveRange(0, toRemove);
                         }
                     }
@@ -99,24 +196,25 @@ namespace VaultSync.UI.Services
 
         public void SetUiCaptureEnabled(bool enabled, bool loadSnapshot = false)
         {
-            var value = enabled ? 1 : 0;
+            int value = enabled ? 1 : 0;
             Interlocked.Exchange(ref _uiCaptureEnabled, value);
             _maxFlushBatch = enabled
                 ? (OperatingSystem.IsMacOS() ? 20 : 50)
                 : 200;
+            ApplyMaxLines();
 
             if (enabled && loadSnapshot)
             {
                 List<LogLine> snapshot;
                 lock (_snapshotGate)
                 {
-                    snapshot = _snapshotLines.ToList();
+                    snapshot = [.. _snapshotLines];
                 }
 
                 Dispatcher.UIThread.Post(() =>
                 {
                     _lines.Clear();
-                    foreach (var line in snapshot)
+                    foreach (LogLine line in snapshot)
                         _lines.Add(line);
                 });
             }
@@ -129,6 +227,7 @@ namespace VaultSync.UI.Services
                 Interlocked.Exchange(ref _pendingCount, 0);
                 Interlocked.Exchange(ref _flushScheduled, 0);
                 Interlocked.Exchange(ref _flushDelayed, 0);
+                TrimSnapshotIfNeeded();
             }
         }
 
@@ -160,18 +259,18 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                var exportsDir = Path.Combine(GetLogRoot(), "exports");
+                string exportsDir = Path.Combine(GetLogRoot(), "exports");
                 Directory.CreateDirectory(exportsDir);
 
-                var path = Path.Combine(exportsDir, $"vaultsync-ui-log-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.txt");
+                string path = Path.Combine(exportsDir, $"vaultsync-ui-log-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.txt");
                 List<LogLine> snapshot;
                 lock (_snapshotGate)
                 {
-                    snapshot = _snapshotLines.ToList();
+                    snapshot = [.. _snapshotLines];
                 }
 
                 var sb = new StringBuilder();
-                foreach (var line in snapshot)
+                foreach (LogLine line in snapshot)
                 {
                     sb.AppendLine($"[{line.Timestamp:O}] {line.Source}: {line.Message}");
                 }
@@ -195,22 +294,22 @@ namespace VaultSync.UI.Services
                 List<LogLine> snapshot;
                 lock (_snapshotGate)
                 {
-                    snapshot = _snapshotLines.ToList();
+                    snapshot = [.. _snapshotLines];
                 }
 
                 if (snapshot.Count == 0)
                     return null;
 
-                var start = Math.Max(0, snapshot.Count - maxLines);
+                int start = Math.Max(0, snapshot.Count - maxLines);
                 var sb = new StringBuilder();
                 if (!string.IsNullOrWhiteSpace(header))
                 {
                     sb.AppendLine(header);
                 }
 
-                for (var i = start; i < snapshot.Count; i++)
+                for (int i = start; i < snapshot.Count; i++)
                 {
-                    var line = snapshot[i];
+                    LogLine line = snapshot[i];
                     sb.AppendLine($"[{line.Timestamp:O}] {line.Source}: {line.Message}");
                 }
 
@@ -224,12 +323,12 @@ namespace VaultSync.UI.Services
 
         internal void Append(string? message, string source)
         {
-            if (!Enabled || string.IsNullOrWhiteSpace(message))
+            if (!ShouldCapture() || string.IsNullOrWhiteSpace(message))
                 return;
 
             if (Dispatcher.UIThread.CheckAccess())
             {
-                var captured = message;
+                string captured = message;
                 ThreadPool.QueueUserWorkItem(_ => AppendCore(captured, source));
                 return;
             }
@@ -239,7 +338,7 @@ namespace VaultSync.UI.Services
 
         private void AppendCore(string message, string source)
         {
-            foreach (var line in message.Replace("\r", string.Empty).Split('\n'))
+            foreach (string line in message.Replace("\r", string.Empty).Split('\n'))
             {
                 if (string.IsNullOrWhiteSpace(line))
                     continue;
@@ -253,7 +352,7 @@ namespace VaultSync.UI.Services
                     _snapshotLines.Add(entry);
                     if (_snapshotLines.Count > MaxLines)
                     {
-                        var toRemove = _snapshotLines.Count - MaxLines;
+                        int toRemove = _snapshotLines.Count - MaxLines;
                         _snapshotLines.RemoveRange(0, toRemove);
                     }
                 }
@@ -262,7 +361,7 @@ namespace VaultSync.UI.Services
                 {
                     if (OperatingSystem.IsMacOS())
                     {
-                        var queued = Interlocked.Increment(ref _pendingCount);
+                        int queued = Interlocked.Increment(ref _pendingCount);
                         if (queued > 200)
                         {
                             Interlocked.Decrement(ref _pendingCount);
@@ -281,7 +380,105 @@ namespace VaultSync.UI.Services
             }
         }
 
-        private static bool IsNoisyTrace(string line)
+        private void OnDiagnosticsRecorded(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                return;
+
+            if (_captureInstalled &&
+                (line.Contains("CONSOLE[", StringComparison.Ordinal) ||
+                 line.Contains("TRACE ", StringComparison.Ordinal) ||
+                 line.Contains("TRACE[", StringComparison.Ordinal)))
+            {
+                return;
+            }
+
+            AppendDiagnostics(line);
+        }
+
+        private void AppendDiagnostics(string line)
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                string captured = line;
+                ThreadPool.QueueUserWorkItem(_ => AppendCore(captured, "diagnostics"));
+                return;
+            }
+
+            AppendCore(line, "diagnostics");
+        }
+
+        private void SeedDiagnosticsSnapshot()
+        {
+            string? recent = DiagnosticsLogger.GetRecentLog();
+            if (string.IsNullOrWhiteSpace(recent))
+                return;
+
+            foreach (string line in recent.Replace("\r", string.Empty).Split('\n'))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                _snapshotLines.Add(new LogLine(DateTimeOffset.Now, "diagnostics", line));
+                if (_snapshotLines.Count > MaxLines)
+                {
+                    _snapshotLines.RemoveAt(0);
+                }
+            }
+        }
+
+        private bool ShouldCapture() =>
+            Enabled ||
+            SaveToFile ||
+            Interlocked.CompareExchange(ref _uiCaptureEnabled, 0, 0) == 1;
+
+        private void ApplyMaxLines()
+        {
+            MaxLines = Enabled || Interlocked.CompareExchange(ref _uiCaptureEnabled, 0, 0) == 1
+                ? DefaultMaxLines
+                : ReducedMaxLines;
+        }
+
+        private void TrimSnapshotIfNeeded()
+        {
+            lock (_snapshotGate)
+            {
+                if (_snapshotLines.Count <= MaxLines)
+                    return;
+
+                _snapshotLines.RemoveRange(0, _snapshotLines.Count - MaxLines);
+            }
+        }
+
+        private bool IsNoisyTrace(string line)
+        {
+            if (Interlocked.CompareExchange(ref _suppressNextIbusTraceStackFrames, 0, 0) > 0)
+            {
+                if (line.Contains("Tmds.DBus.Protocol", StringComparison.Ordinal) ||
+                    line.Contains("Avalonia.FreeDesktop.DBusIme", StringComparison.Ordinal) ||
+                    line.Contains("IValueTaskSource", StringComparison.Ordinal) ||
+                    line.Contains("CallMethodAsync", StringComparison.Ordinal) ||
+                    line.StartsWith("at ", StringComparison.Ordinal) ||
+                    line.StartsWith("   at ", StringComparison.Ordinal))
+                {
+                    Interlocked.Decrement(ref _suppressNextIbusTraceStackFrames);
+                    return true;
+                }
+
+                Interlocked.Exchange(ref _suppressNextIbusTraceStackFrames, 0);
+            }
+
+            if (line.Contains("[IME] Error while destroying the context", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("org.freedesktop.DBus.Error.UnknownMethod: Method Destroy is not implemented on interface org.freedesktop.IBus.Service", StringComparison.OrdinalIgnoreCase))
+            {
+                Interlocked.Exchange(ref _suppressNextIbusTraceStackFrames, 8);
+                return true;
+            }
+
+            return IsNoisyTraceLine(line);
+        }
+
+        private static bool IsNoisyTraceLine(string line)
         {
             return line.Contains("Layout cycle detected", StringComparison.OrdinalIgnoreCase)
                 || line.Contains("PlatformImpl is null, couldn't handle input", StringComparison.OrdinalIgnoreCase)
@@ -295,8 +492,8 @@ namespace VaultSync.UI.Services
             if (_lines.Count <= MaxLines)
                 return;
 
-            var toRemove = _lines.Count - MaxLines;
-            for (var i = 0; i < toRemove; i++)
+            int toRemove = _lines.Count - MaxLines;
+            for (int i = 0; i < toRemove; i++)
                 _lines.RemoveAt(0);
         }
 
@@ -306,7 +503,7 @@ namespace VaultSync.UI.Services
                 return;
 
             var minInterval = TimeSpan.FromMilliseconds(200);
-            var now = DateTime.UtcNow;
+            DateTime now = DateTime.UtcNow;
             if ((now - _lastFlushUtc) < minInterval)
             {
                 if (Interlocked.Exchange(ref _flushDelayed, 1) == 0)
@@ -333,13 +530,13 @@ namespace VaultSync.UI.Services
                 return;
 
             var batch = new List<LogLine>(_maxFlushBatch);
-            while (batch.Count < _maxFlushBatch && _pending.TryDequeue(out var entry))
+            while (batch.Count < _maxFlushBatch && _pending.TryDequeue(out LogLine? entry))
             {
                 Interlocked.Decrement(ref _pendingCount);
                 batch.Add(entry);
             }
 
-            foreach (var entry in batch)
+            foreach (LogLine entry in batch)
                 _lines.Add(entry);
 
             TrimIfNeeded();
@@ -352,7 +549,7 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                var path = GetDailyLogPath();
+                string path = GetDailyLogPath();
                 lock (_fileGate)
                 {
                     _fileBuffer.Append('[')
@@ -383,7 +580,7 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                var path = GetDailyLogPath();
+                string path = GetDailyLogPath();
                 lock (_fileGate)
                 {
                     _fileFlushTimer?.Dispose();
@@ -489,7 +686,7 @@ namespace VaultSync.UI.Services
                 if (string.IsNullOrEmpty(value))
                     return;
 
-                foreach (var ch in value)
+                foreach (char ch in value)
                 {
                     Write(ch);
                 }
@@ -508,7 +705,7 @@ namespace VaultSync.UI.Services
 
             private void FlushBuffer()
             {
-                var line = _buffer.ToString();
+                string line = _buffer.ToString();
                 _buffer.Clear();
                 if (!string.IsNullOrWhiteSpace(line))
                 {

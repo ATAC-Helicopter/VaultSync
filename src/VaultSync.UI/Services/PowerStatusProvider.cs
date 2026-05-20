@@ -37,7 +37,7 @@ namespace VaultSync.UI.Services
                     return GetMacState();
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    return GetLinuxState();
+                    return GetLinuxState("/sys/class/power_supply");
             }
             catch
             {
@@ -49,7 +49,7 @@ namespace VaultSync.UI.Services
 
         private static PowerState GetWindowsState()
         {
-            if (!GetSystemPowerStatus(out var status))
+            if (!GetSystemPowerStatus(out SYSTEM_POWER_STATUS status))
                 return PowerState.Unknown;
 
             return status.ACLineStatus switch
@@ -83,7 +83,7 @@ namespace VaultSync.UI.Services
                 if (proc is null)
                     return PowerState.Unknown;
 
-                var output = proc.StandardOutput.ReadToEnd();
+                string output = proc.StandardOutput.ReadToEnd();
                 proc.WaitForExit(2000);
 
                 if (output.IndexOf("AC Power", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -100,32 +100,31 @@ namespace VaultSync.UI.Services
             return PowerState.Unknown;
         }
 
-        private static PowerState GetLinuxState()
+        internal static PowerState GetLinuxState(string root)
         {
-            const string root = "/sys/class/power_supply";
             try
             {
                 if (!Directory.Exists(root))
                     return PowerState.Unknown;
 
-                var entries = Directory.GetDirectories(root);
-                var anyAcOnline = false;
-                var anyBatteryDischarging = false;
+                string[] entries = Directory.GetDirectories(root);
+                bool anyAcOnline = false;
+                bool anyBatteryDischarging = false;
 
-                foreach (var dir in entries)
+                foreach (string dir in entries)
                 {
-                    var typePath = Path.Combine(dir, "type");
+                    string typePath = Path.Combine(dir, "type");
                     if (!File.Exists(typePath))
                         continue;
 
-                    var type = File.ReadAllText(typePath).Trim();
+                    string type = File.ReadAllText(typePath).Trim();
                     if (string.Equals(type, "Mains", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(type, "AC", StringComparison.OrdinalIgnoreCase))
                     {
-                        var onlinePath = Path.Combine(dir, "online");
+                        string onlinePath = Path.Combine(dir, "online");
                         if (File.Exists(onlinePath))
                         {
-                            var online = File.ReadAllText(onlinePath).Trim();
+                            string online = File.ReadAllText(onlinePath).Trim();
                             if (online == "1")
                                 anyAcOnline = true;
                         }
@@ -134,10 +133,18 @@ namespace VaultSync.UI.Services
 
                     if (string.Equals(type, "Battery", StringComparison.OrdinalIgnoreCase))
                     {
-                        var statusPath = Path.Combine(dir, "status");
+                        string scopePath = Path.Combine(dir, "scope");
+                        if (File.Exists(scopePath))
+                        {
+                            string scope = File.ReadAllText(scopePath).Trim();
+                            if (scope.Equals("Device", StringComparison.OrdinalIgnoreCase))
+                                continue;
+                        }
+
+                        string statusPath = Path.Combine(dir, "status");
                         if (File.Exists(statusPath))
                         {
-                            var status = File.ReadAllText(statusPath).Trim();
+                            string status = File.ReadAllText(statusPath).Trim();
                             if (status.Equals("Discharging", StringComparison.OrdinalIgnoreCase))
                             {
                                 anyBatteryDischarging = true;

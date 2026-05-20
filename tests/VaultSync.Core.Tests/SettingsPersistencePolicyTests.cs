@@ -8,9 +8,9 @@ public sealed class SettingsPersistencePolicyTests
     [Fact]
     public void ResolveProjectsRootForSave_PreservesPersistedRootWhenRequestedRootIsBlank()
     {
-        var persisted = @"D:\Projects";
+        string persisted = @"D:\Projects";
 
-        var resolved = SettingsViewModel.ResolveProjectsRootForSave("   ", persisted);
+        string resolved = SettingsViewModel.ResolveProjectsRootForSave("   ", persisted);
 
         Assert.Equal(persisted, resolved);
     }
@@ -18,7 +18,7 @@ public sealed class SettingsPersistencePolicyTests
     [Fact]
     public void ResolveProjectsRootForSave_UsesRequestedRootWhenProvided()
     {
-        var resolved = SettingsViewModel.ResolveProjectsRootForSave(@" E:\Work ", @"D:\Projects");
+        string resolved = SettingsViewModel.ResolveProjectsRootForSave(@" E:\Work ", @"D:\Projects");
 
         Assert.Equal(@"E:\Work", resolved);
     }
@@ -26,9 +26,9 @@ public sealed class SettingsPersistencePolicyTests
     [Fact]
     public void ResolveBackupRootForSave_PreservesPersistedRootWhenRequestedRootIsBlank()
     {
-        var persisted = @"F:\VaultSyncBackups";
+        string persisted = @"F:\VaultSyncBackups";
 
-        var resolved = SettingsViewModel.ResolveBackupRootForSave(null, persisted);
+        string resolved = SettingsViewModel.ResolveBackupRootForSave(null, persisted);
 
         Assert.Equal(persisted, resolved);
     }
@@ -36,7 +36,7 @@ public sealed class SettingsPersistencePolicyTests
     [Fact]
     public void ResolveBackupRootForSave_AllowsEmptyWhenNoPersistedRootExists()
     {
-        var resolved = SettingsViewModel.ResolveBackupRootForSave("", "");
+        string resolved = SettingsViewModel.ResolveBackupRootForSave("", "");
 
         Assert.Null(resolved);
     }

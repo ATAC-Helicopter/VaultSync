@@ -15,7 +15,7 @@ public sealed class ProjectEncryptionPolicyTests
     [InlineData("unknown", ProjectEncryptionPolicy.Inherit)]
     public void Normalize_ReturnsSupportedPolicy(string? input, string expected)
     {
-        var normalized = ProjectEncryptionPolicy.Normalize(input);
+        string normalized = ProjectEncryptionPolicy.Normalize(input);
         Assert.Equal(expected, normalized);
     }
 
@@ -26,7 +26,7 @@ public sealed class ProjectEncryptionPolicyTests
     [InlineData(ProjectEncryptionPolicy.Inherit, false, false)]
     public void IsEncrypted_ResolvesPolicyWithGlobalFallback(string policy, bool globalEnabled, bool expected)
     {
-        var result = ProjectEncryptionPolicy.IsEncrypted(policy, globalEnabled);
+        bool result = ProjectEncryptionPolicy.IsEncrypted(policy, globalEnabled);
         Assert.Equal(expected, result);
     }
 }

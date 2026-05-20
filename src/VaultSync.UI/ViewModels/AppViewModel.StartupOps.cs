@@ -21,12 +21,12 @@ namespace VaultSync.UI.ViewModels
             RecordStartupPhase("config-loaded");
             if (string.IsNullOrWhiteSpace(_config.Advanced.Language))
             {
-                var systemLang = ResolveSystemLanguageCode(_localizationService);
+                string systemLang = ResolveSystemLanguageCode(_localizationService);
                 _config.Advanced.Language = systemLang;
-                _ = Task.Run(async () => await PersistStartupConfigAsync("initial-language"));
+                _ = PersistStartupConfigAsync("initial-language");
             }
 
-            var targetLang = string.IsNullOrWhiteSpace(_config.Advanced.Language)
+            string targetLang = string.IsNullOrWhiteSpace(_config.Advanced.Language)
                 ? _localizationService.CurrentLanguage
                 : _config.Advanced.Language;
             _localizationService.SetLanguage(targetLang);
@@ -78,7 +78,7 @@ namespace VaultSync.UI.ViewModels
                 UpdateDestinationProbeSummary(dest, testResult);
             };
 
-            foreach (var dest in _settingsViewModel.Destinations)
+            foreach (BackupDestinationViewModel dest in _settingsViewModel.Destinations)
             {
                 TrackDestinationViewModel(dest);
             }

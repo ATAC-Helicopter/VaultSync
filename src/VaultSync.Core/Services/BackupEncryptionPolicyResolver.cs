@@ -14,14 +14,14 @@ public static class BackupEncryptionPolicyResolver
 
     public static ResolvedPolicy Resolve(Project project, BackupEncryptionConfig config)
     {
-        var effectivePolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy);
-        var encryptionRequested = ProjectEncryptionPolicy.IsEncrypted(effectivePolicy, config.Enabled);
+        string effectivePolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy);
+        bool encryptionRequested = ProjectEncryptionPolicy.IsEncrypted(effectivePolicy, config.Enabled);
         if (!encryptionRequested)
         {
             return new ResolvedPolicy(false, effectivePolicy, null, "none");
         }
 
-        var projectKeyRef = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
+        string? projectKeyRef = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
             ? null
             : project.EncryptionKeyRef.Trim();
         if (!string.IsNullOrWhiteSpace(projectKeyRef))
@@ -29,7 +29,7 @@ public static class BackupEncryptionPolicyResolver
             return new ResolvedPolicy(true, effectivePolicy, projectKeyRef, "project");
         }
 
-        var globalKeyRef = string.IsNullOrWhiteSpace(config.KeyRef)
+        string? globalKeyRef = string.IsNullOrWhiteSpace(config.KeyRef)
             ? null
             : config.KeyRef.Trim();
         return new ResolvedPolicy(true, effectivePolicy, globalKeyRef, "global");
@@ -39,13 +39,13 @@ public static class BackupEncryptionPolicyResolver
     {
         var ordered = new List<string>(2);
 
-        var projectKeyRef = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
+        string? projectKeyRef = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
             ? null
             : project.EncryptionKeyRef.Trim();
         if (!string.IsNullOrWhiteSpace(projectKeyRef))
             ordered.Add(projectKeyRef);
 
-        var globalKeyRef = string.IsNullOrWhiteSpace(config.KeyRef)
+        string? globalKeyRef = string.IsNullOrWhiteSpace(config.KeyRef)
             ? null
             : config.KeyRef.Trim();
         if (!string.IsNullOrWhiteSpace(globalKeyRef) &&

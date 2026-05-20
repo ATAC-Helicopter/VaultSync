@@ -42,13 +42,13 @@ namespace VaultSync.Core.Services
         private static bool IsOnPath(string tool)
         {
             // simple PATH probe
-            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            var sep = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':';
-            foreach (var dir in path.Split(sep, StringSplitOptions.RemoveEmptyEntries))
+            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            char sep = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':';
+            foreach (string dir in path.Split(sep, StringSplitOptions.RemoveEmptyEntries))
             {
                 try
                 {
-                    var candidate = Path.Combine(dir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"{tool}.exe" : tool);
+                    string candidate = Path.Combine(dir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"{tool}.exe" : tool);
                     if (File.Exists(candidate)) return true;
                 }
                 catch { /* ignore */ }

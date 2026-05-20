@@ -19,7 +19,7 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
-        private void RunDetached(Func<Task> operation, string operationName)
+        private static void RunDetached(Func<Task> operation, string operationName)
         {
             _ = RunDetachedCoreAsync(operation, operationName);
         }
@@ -39,7 +39,7 @@ namespace VaultSync.UI.ViewModels
 
         private string BuildBackupProgressLabel(string? etaText, string? currentFile, double percent)
         {
-            var isFinalizing = !string.IsNullOrWhiteSpace(etaText) &&
+            bool isFinalizing = !string.IsNullOrWhiteSpace(etaText) &&
                                etaText.Contains("Finalizing", StringComparison.OrdinalIgnoreCase);
             if (isFinalizing)
             {
@@ -81,23 +81,23 @@ namespace VaultSync.UI.ViewModels
 
         private void UpdateDownloadStatus(string prefix, long downloadedBytes, long? totalBytes, double? bytesPerSecond)
         {
-            var totalMb = totalBytes.HasValue && totalBytes.Value > 0
+            double? totalMb = totalBytes.HasValue && totalBytes.Value > 0
                 ? totalBytes.Value / (1024d * 1024d)
                 : (double?)null;
-            var downloadedMb = downloadedBytes / (1024d * 1024d);
-            var rateMb = bytesPerSecond.HasValue && bytesPerSecond.Value > 0
+            double downloadedMb = downloadedBytes / (1024d * 1024d);
+            double? rateMb = bytesPerSecond.HasValue && bytesPerSecond.Value > 0
                 ? bytesPerSecond.Value / (1024d * 1024d)
                 : (double?)null;
 
-            var sizeText = totalMb.HasValue
+            string sizeText = totalMb.HasValue
                 ? $"{downloadedMb:0.0}/{totalMb.Value:0.0} MB"
                 : $"{downloadedMb:0.0} MB";
 
-            var rateText = rateMb.HasValue
+            string rateText = rateMb.HasValue
                 ? $"{rateMb.Value:0.0} MB/s"
                 : L("Update.Download.Waiting", "Waiting for network...");
 
-            var status = $"{prefix} ({sizeText}) - {rateText}";
+            string status = $"{prefix} ({sizeText}) - {rateText}";
 
             if (Dispatcher.UIThread.CheckAccess())
             {
@@ -116,15 +116,15 @@ namespace VaultSync.UI.ViewModels
             Action<long, long?, double?>? progress,
             CancellationToken cancellationToken)
         {
-            var buffer = new byte[1024 * 128];
+            byte[] buffer = new byte[1024 * 128];
             long totalRead = 0;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var lastReport = TimeSpan.Zero;
+            TimeSpan lastReport = TimeSpan.Zero;
             long lastBytes = 0;
 
             while (true)
             {
-                var read = await source.ReadAsync(buffer, cancellationToken);
+                int read = await source.ReadAsync(buffer, cancellationToken);
                 if (read <= 0)
                     break;
 
@@ -134,13 +134,13 @@ namespace VaultSync.UI.ViewModels
                 if (progress is null)
                     continue;
 
-                var elapsed = stopwatch.Elapsed;
+                TimeSpan elapsed = stopwatch.Elapsed;
                 if (elapsed - lastReport < TimeSpan.FromMilliseconds(250))
                     continue;
 
-                var deltaBytes = totalRead - lastBytes;
-                var deltaTime = (elapsed - lastReport).TotalSeconds;
-                var bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
+                long deltaBytes = totalRead - lastBytes;
+                double deltaTime = (elapsed - lastReport).TotalSeconds;
+                double? bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
 
                 progress(totalRead, totalBytes, bytesPerSecond);
                 lastReport = elapsed;
@@ -149,18 +149,18 @@ namespace VaultSync.UI.ViewModels
 
             if (progress is not null)
             {
-                var elapsed = stopwatch.Elapsed;
-                var deltaBytes = totalRead - lastBytes;
-                var deltaTime = (elapsed - lastReport).TotalSeconds;
-                var bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
+                TimeSpan elapsed = stopwatch.Elapsed;
+                long deltaBytes = totalRead - lastBytes;
+                double deltaTime = (elapsed - lastReport).TotalSeconds;
+                double? bytesPerSecond = deltaTime > 0 ? deltaBytes / deltaTime : (double?)null;
                 progress(totalRead, totalBytes, bytesPerSecond);
             }
         }
 
         private static string GetCurrentVersionString()
         {
-            var assembly = typeof(AppViewModel).Assembly;
-            var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            Assembly assembly = typeof(AppViewModel).Assembly;
+            string? informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
             if (!string.IsNullOrWhiteSpace(informationalVersion))
                 return informationalVersion.Trim();
 
@@ -169,7 +169,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string StripBuildMetadata(string version)
         {
-            var plus = version.IndexOf('+');
+            int plus = version.IndexOf('+');
             return plus >= 0 ? version.Substring(0, plus) : version;
         }
 
@@ -193,19 +193,19 @@ namespace VaultSync.UI.ViewModels
                 $"{(IsThrottled ? 1 : 0)}|{BandwidthLimitMbps ?? 0}|{(IsInQuietHours ? 1 : 0)}|{QuietHoursRangeLabel}";
         }
 
-        private BackupPolicyState GetBackupPolicyState(AppConfig cfg, DateTimeOffset nowLocal)
+        private static BackupPolicyState GetBackupPolicyState(AppConfig cfg, DateTimeOffset nowLocal)
         {
-            var throttledMbps = TransferPolicy.NormalizeBandwidthLimitMbps(
+            int? throttledMbps = TransferPolicy.NormalizeBandwidthLimitMbps(
                 cfg.Backups.EnableBandwidthLimit,
                 cfg.Backups.MaxBandwidthMbps);
 
-            var quietDecision = QuietHoursPolicy.Evaluate(
+            QuietHoursDecision quietDecision = QuietHoursPolicy.Evaluate(
                 cfg.Backups.EnableQuietHours,
                 cfg.Backups.QuietHoursStart,
                 cfg.Backups.QuietHoursEnd,
                 nowLocal);
 
-            var quietRange = $"{quietDecision.StartTime:hh\\:mm}-{quietDecision.EndTime:hh\\:mm}";
+            string quietRange = $"{quietDecision.StartTime:hh\\:mm}-{quietDecision.EndTime:hh\\:mm}";
             return new BackupPolicyState(
                 IsThrottled: throttledMbps is > 0,
                 BandwidthLimitMbps: throttledMbps,
@@ -239,8 +239,8 @@ namespace VaultSync.UI.ViewModels
 
         public string GetBackupPolicyTraySummary()
         {
-            var state = GetBackupPolicyState(_config, DateTimeOffset.Now);
-            var chipText = BuildPolicyChipText(state);
+            BackupPolicyState state = GetBackupPolicyState(_config, DateTimeOffset.Now);
+            string chipText = BuildPolicyChipText(state);
             if (string.IsNullOrWhiteSpace(chipText))
                 return string.Empty;
 
@@ -259,8 +259,8 @@ namespace VaultSync.UI.ViewModels
 
         private void LogBackupPolicyTransitionIfChanged(AppConfig cfg, string source)
         {
-            var state = GetBackupPolicyState(cfg, DateTimeOffset.Now);
-            var changed = false;
+            BackupPolicyState state = GetBackupPolicyState(cfg, DateTimeOffset.Now);
+            bool changed = false;
             lock (_backupPolicyStateGate)
             {
                 if (!string.Equals(_lastBackupPolicySignature, state.Signature, StringComparison.Ordinal))
@@ -273,21 +273,21 @@ namespace VaultSync.UI.ViewModels
             if (!changed)
                 return;
 
-            var detail = BuildPolicyChipText(state);
+            string detail = BuildPolicyChipText(state);
             if (string.IsNullOrWhiteSpace(detail))
                 detail = L("Backups.Policy.None", "No active transfer policy");
 
-            var message = $"[Policy] source={source}; state={detail}";
+            string message = $"[Policy] source={source}; state={detail}";
             Console.WriteLine(message);
             DiagnosticsLogger.Record(message);
             TrayMenuRefreshRequested?.Invoke();
         }
 
-        private string L(string key, string fallback) => LStatic(key, fallback);
+        private static string L(string key, string fallback) => LStatic(key, fallback);
 
         private string Lf(string key, string fallback, params object[] args)
         {
-            var text = L(key, fallback);
+            string text = L(key, fallback);
             return args is { Length: > 0 }
                 ? string.Format(text, args)
                 : text;
@@ -295,7 +295,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string LStatic(string key, string fallback)
         {
-            var value = LocalizationProvider.Service?.GetString(key);
+            string? value = LocalizationProvider.Service?.GetString(key);
             if (string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal))
                 return fallback;
             return value;
@@ -303,7 +303,7 @@ namespace VaultSync.UI.ViewModels
 
         private static string ResolveSystemLanguageCode(LocalizationService localizationService)
         {
-            var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            string uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
             if (localizationService.SupportedLanguages.Any(l =>
                     string.Equals(l.Code, uiLang, StringComparison.OrdinalIgnoreCase)))
             {
@@ -318,7 +318,7 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(message))
                 return;
 
-            var title = severity switch
+            string title = severity switch
             {
                 NotificationSeverity.Error => L("Backups.Notification.ErrorTitle", "Backup error"),
                 NotificationSeverity.Warning => L("Backups.Notification.WarningTitle", "Backup paused"),
@@ -370,11 +370,11 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(projectName))
                 return;
 
-            var shouldSchedule = false;
+            bool shouldSchedule = false;
 
             lock (_groupedBackupNotificationGate)
             {
-                if (!_groupedBackupNotifications.TryGetValue(key, out var batch))
+                if (!_groupedBackupNotifications.TryGetValue(key, out GroupedBackupNotificationBatch? batch))
                 {
                     batch = new GroupedBackupNotificationBatch
                     {
@@ -415,7 +415,7 @@ namespace VaultSync.UI.ViewModels
             if (batch is null || batch.ProjectNames.Count == 0)
                 return;
 
-            var message = batch.MessageFactory(batch.ProjectNames);
+            string message = batch.MessageFactory(batch.ProjectNames);
             if (string.IsNullOrWhiteSpace(message))
                 return;
 
@@ -434,7 +434,7 @@ namespace VaultSync.UI.ViewModels
             if (names.Count <= visibleLimit)
                 return string.Join(", ", names);
 
-            var visible = string.Join(", ", names.Take(visibleLimit));
+            string visible = string.Join(", ", names.Take(visibleLimit));
             return $"{visible} +{names.Count - visibleLimit} more";
         }
 
@@ -446,8 +446,8 @@ namespace VaultSync.UI.ViewModels
             if (!_restoreAdvisoryShown.TryAdd(project.Id, 0))
                 return;
 
-            var title = L("Backups.Notification.RestoreRecommendedTitle", "Restore recommended");
-            var singleMessage = Lf(
+            string title = L("Backups.Notification.RestoreRecommendedTitle", "Restore recommended");
+            string singleMessage = Lf(
                 "Backups.Notification.RestoreRequiredForProject",
                 "Imported history is newer for '{0}'. Consider restoring before creating new backups.",
                 project.Name);
@@ -477,25 +477,29 @@ namespace VaultSync.UI.ViewModels
                 return false;
             }
 
-            if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
-                return true;
-
-            var projectsRoot = cfg.ProjectsRoot;
-            if (!string.IsNullOrWhiteSpace(projectsRoot))
+            string? projectsRoot = cfg.ProjectsRoot;
+            if (ProjectRootResolver.TryResolveExistingProjectRoot(
+                    projectsRoot,
+                    project.Name,
+                    project.RootPath,
+                    out string resolvedRoot))
             {
-                var fallback = Path.Combine(projectsRoot, project.Name);
-                if (Directory.Exists(fallback))
+                if (!string.Equals(
+                        NormalizePathForComparison(project.RootPath),
+                        NormalizePathForComparison(resolvedRoot),
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    TryUpdateProjectRootPath(project, fallback);
-                    resolvedProject = project with
-                    {
-                        RootPath = fallback
-                    };
-                    return true;
+                    TryUpdateProjectRootPath(project, resolvedRoot);
                 }
+
+                resolvedProject = project with
+                {
+                    RootPath = resolvedRoot
+                };
+                return true;
             }
 
-            var expected = string.IsNullOrWhiteSpace(project.RootPath)
+            string expected = string.IsNullOrWhiteSpace(project.RootPath)
                 ? (projectsRoot ?? string.Empty)
                 : project.RootPath;
             errorMessage = Lf(
@@ -514,7 +518,7 @@ namespace VaultSync.UI.ViewModels
             if (!_projectRootMissingNotified.TryAdd(project.Id, 0))
                 return;
 
-            var title = L("Backups.Notification.ProjectUnavailableTitle", "Projects unavailable");
+            string title = L("Backups.Notification.ProjectUnavailableTitle", "Projects unavailable");
 
             QueueGroupedBackupProjectNotification(
                 "backup-project-root-missing",

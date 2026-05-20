@@ -36,6 +36,7 @@ Archive-mode retries can resume from validated checkpoints when the destination 
 ## Delete and permissions
 - If a delete fails due to permissions, VaultSync can prompt for credentials to retry.
 - Read-only destinations can be imported from, but writes and deletes require permission.
+- If backup folders are manually removed outside the app, the Backups page prunes the stale local history entries only after the matching active destination is reachable.
 
 ## Where backups are stored
 - Simple mode: under the single backup root path.
@@ -55,5 +56,6 @@ Notes:
 - This sync is metadata-only; files are restored only when you choose to restore.
 - Read-only destinations can be imported from, but VaultSync will not write updates.
 - Destination scans can import untracked backups into history when enabled.
+- Destination refreshes can also remove local history entries for recorded backup paths that no longer exist, but only for reachable active destinations.
 - If a destination has partial history, enable `Force full history export` on that destination and run a backup to backfill the store.
 - If imported settings conflict with local project settings, review them in Settings > Advanced > Doctor instead of silently overwriting one side.

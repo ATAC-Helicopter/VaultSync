@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync 正在后台运行",
   "Tray.Tooltip": "VaultSync — 快照与备份",
   "Tray.Open": "打开 VaultSync",
+  "Tray.Panel.Open": "打开托盘面板",
   "Tray.Policy.Active": "策略：{0}",
   "Tray.Quit": "退出 VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",
@@ -1173,6 +1174,7 @@
   "WhatsNew.Close": "知道了",
   "WhatsNew.Fallback": "此更新包含 VaultSync 的改进和问题修复。",
   "WhatsNew.Section.General": "主要更新",
+  "WhatsNew.Subtitle": "简要了解你即将使用的更改。",
   "WhatsNew.Title": "新内容",
   "Backups.Restore.Mode.Label": "恢复模式",
   "Backups.Restore.Mode.Direct": "直接（覆盖项目路径）",
@@ -1242,5 +1244,6 @@
   "LogConsole.CopySelected": "复制所选内容",
   "LogConsole.CopySelectedFailed": "无法复制所选内容",
   "LogConsole.CopySelectedSuccess": "已复制所选内容",
+  "LogConsole.CopySelectedManySuccess": "已复制 {0} 行所选内容",
   "Update.Store.OpenStore": "打开商店"
 }

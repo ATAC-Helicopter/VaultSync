@@ -177,8 +177,7 @@ namespace VaultSync.UI.ViewModels.Notifications
                     return;
 
                 var previous = Interlocked.Exchange(ref _cts, null);
-                previous?.Cancel();
-                previous?.Dispose();
+                CancelAndDispose(previous);
 
                 Message = string.Empty;
                 Title = string.Empty;
@@ -199,8 +198,7 @@ namespace VaultSync.UI.ViewModels.Notifications
         private async Task StartAutoDismissAsync(TimeSpan duration)
         {
             var previous = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
-            previous?.Cancel();
-            previous?.Dispose();
+            CancelAndDispose(previous);
             var local = _cts!;
 
             try
@@ -218,17 +216,35 @@ namespace VaultSync.UI.ViewModels.Notifications
             finally
             {
                 // Dispose only if still current; avoid disposing a newer token source.
-                if (ReferenceEquals(_cts, local))
+                if (Interlocked.CompareExchange(ref _cts, null, local) == local)
                 {
                     local.Dispose();
-                    _cts = null;
                 }
+            }
+        }
+
+        private static void CancelAndDispose(CancellationTokenSource? cts)
+        {
+            if (cts is null)
+                return;
+
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Another UI/background path already retired this auto-dismiss token.
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 
         public bool Matches(NotificationRequest request)
         {
-            var requestKey = request.GroupKey ?? string.Empty;
+            string requestKey = request.GroupKey ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(requestKey) && string.Equals(GroupKey, requestKey, StringComparison.Ordinal))
                 return true;
 

@@ -24,7 +24,7 @@ public sealed class CredentialVault
 
     private CredentialVault()
     {
-        var dir = Path.Combine(
+        string dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "VaultSync");
         Directory.CreateDirectory(dir);
@@ -36,7 +36,7 @@ public sealed class CredentialVault
         if (!string.IsNullOrWhiteSpace(existing))
             return existing;
 
-        var slug = Slugify(nameHint);
+        string slug = Slugify(nameHint);
         return $"cred-{slug}-{Guid.NewGuid():N}";
     }
 
@@ -47,11 +47,11 @@ public sealed class CredentialVault
 
         lock (_sync)
         {
-            var map = Load();
+            Dictionary<string, StoredSecret> map = Load();
 
             if (OperatingSystem.IsMacOS() && preferKeychain)
             {
-                var kc = TryReadFromKeychain(keyRef, username);
+                string? kc = TryReadFromKeychain(keyRef, username);
                 if (!string.IsNullOrEmpty(kc))
                 {
                     TouchSecretIfNeeded(map, keyRef);
@@ -60,7 +60,7 @@ public sealed class CredentialVault
             }
             else if (OperatingSystem.IsLinux() && preferKeychain)
             {
-                var sec = TryReadFromSecretService(keyRef, username);
+                string? sec = TryReadFromSecretService(keyRef, username);
                 if (!string.IsNullOrEmpty(sec))
                 {
                     TouchSecretIfNeeded(map, keyRef);
@@ -68,12 +68,12 @@ public sealed class CredentialVault
                 }
             }
 
-            if (!map.TryGetValue(keyRef, out var record))
+            if (!map.TryGetValue(keyRef, out StoredSecret? record))
                 return fallbackPlaintext;
 
             if (record.StoredInKeychain && OperatingSystem.IsMacOS())
             {
-                var kc = TryReadFromKeychain(keyRef, record.Username ?? username);
+                string? kc = TryReadFromKeychain(keyRef, record.Username ?? username);
                 if (!string.IsNullOrEmpty(kc))
                 {
                     TouchSecretIfNeeded(map, keyRef);
@@ -82,7 +82,7 @@ public sealed class CredentialVault
             }
             if (record.StoredInKeychain && OperatingSystem.IsLinux())
             {
-                var sec = TryReadFromSecretService(keyRef, record.Username ?? username);
+                string? sec = TryReadFromSecretService(keyRef, record.Username ?? username);
                 if (!string.IsNullOrEmpty(sec))
                 {
                     TouchSecretIfNeeded(map, keyRef);
@@ -92,7 +92,7 @@ public sealed class CredentialVault
 
             if (!string.IsNullOrWhiteSpace(record.ProtectedSecret))
             {
-                var secret = TryUnprotect(record.ProtectedSecret, record.ProtectedWithDpapi);
+                string? secret = TryUnprotect(record.ProtectedSecret, record.ProtectedWithDpapi);
                 if (!string.IsNullOrEmpty(secret))
                 {
                     TouchSecretIfNeeded(map, keyRef);
@@ -111,8 +111,8 @@ public sealed class CredentialVault
 
         lock (_sync)
         {
-            var map = Load();
-            var record = map.TryGetValue(keyRef, out var existing)
+            Dictionary<string, StoredSecret> map = Load();
+            StoredSecret record = map.TryGetValue(keyRef, out StoredSecret? existing)
                 ? existing
                 : new StoredSecret();
 
@@ -168,7 +168,7 @@ public sealed class CredentialVault
 
         lock (_sync)
         {
-            var map = Load();
+            Dictionary<string, StoredSecret> map = Load();
             if (map.Remove(keyRef))
             {
                 Save(map);
@@ -197,28 +197,28 @@ public sealed class CredentialVault
 
         lock (_sync)
         {
-            var map = Load();
+            Dictionary<string, StoredSecret> map = Load();
             if (map.Count == 0)
                 return 0;
 
-            var now = DateTime.UtcNow;
-            var removed = 0;
-            foreach (var key in map.Keys.ToList())
+            DateTime now = DateTime.UtcNow;
+            int removed = 0;
+            foreach (string? key in map.Keys.ToList())
             {
                 if (activeSet.Contains(key))
                     continue;
 
-                if (!map.TryGetValue(key, out var record))
+                if (!map.TryGetValue(key, out StoredSecret? record))
                     continue;
 
                 // If a credential was re-created for the same logical profile/project
                 // (same "cred-<family>-<guid>" prefix), remove old unreferenced entries immediately.
-                var family = GetKeyFamily(key);
-                var forcePruneDuplicate = !string.IsNullOrWhiteSpace(family) && activeFamilies.Contains(family);
+                string? family = GetKeyFamily(key);
+                bool forcePruneDuplicate = !string.IsNullOrWhiteSpace(family) && activeFamilies.Contains(family);
 
                 if (!forcePruneDuplicate)
                 {
-                    var lastSeen = record.LastAccessUtc ?? record.CreatedUtc;
+                    DateTime? lastSeen = record.LastAccessUtc ?? record.CreatedUtc;
                     if (lastSeen.HasValue && now - lastSeen.Value < staleAge)
                         continue;
                 }
@@ -241,7 +241,7 @@ public sealed class CredentialVault
 
     private static void StoreProtected(StoredSecret record, string secret, bool requireProtection)
     {
-        if (TryProtect(secret, out var protectedSecret))
+        if (TryProtect(secret, out string? protectedSecret))
         {
             record.ProtectedSecret   = protectedSecret;
             record.ProtectedWithDpapi = OperatingSystem.IsWindows();
@@ -261,8 +261,8 @@ public sealed class CredentialVault
             if (!File.Exists(_storePath))
                 return new(StringComparer.OrdinalIgnoreCase);
 
-            var json = File.ReadAllText(_storePath);
-            var data = JsonSerializer.Deserialize<Dictionary<string, StoredSecret>>(json);
+            string json = File.ReadAllText(_storePath);
+            Dictionary<string, StoredSecret>? data = JsonSerializer.Deserialize<Dictionary<string, StoredSecret>>(json);
             return data ?? new(StringComparer.OrdinalIgnoreCase);
         }
         catch
@@ -273,16 +273,16 @@ public sealed class CredentialVault
 
     private void Save(Dictionary<string, StoredSecret> map)
     {
-        var json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
+        string json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_storePath, json);
     }
 
     private void TouchSecretIfNeeded(Dictionary<string, StoredSecret> map, string keyRef)
     {
-        if (!map.TryGetValue(keyRef, out var record))
+        if (!map.TryGetValue(keyRef, out StoredSecret? record))
             return;
 
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
         if (record.LastAccessUtc.HasValue && now - record.LastAccessUtc.Value < TimeSpan.FromHours(12))
             return;
 
@@ -296,11 +296,11 @@ public sealed class CredentialVault
         if (string.IsNullOrWhiteSpace(keyRef) || !keyRef.StartsWith("cred-", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        var lastDash = keyRef.LastIndexOf('-');
+        int lastDash = keyRef.LastIndexOf('-');
         if (lastDash <= 5 || lastDash >= keyRef.Length - 1)
             return null;
 
-        var suffix = keyRef[(lastDash + 1)..];
+        string suffix = keyRef[(lastDash + 1)..];
         if (suffix.Length != 32 || !suffix.All(ch => Uri.IsHexDigit(ch)))
             return null;
 
@@ -315,8 +315,8 @@ public sealed class CredentialVault
         {
             if (OperatingSystem.IsWindows())
             {
-                var bytes = Encoding.UTF8.GetBytes(secret);
-                var cipher = ProtectedData.Protect(bytes, optionalEntropy: null, DataProtectionScope.CurrentUser);
+                byte[] bytes = Encoding.UTF8.GetBytes(secret);
+                byte[] cipher = ProtectedData.Protect(bytes, optionalEntropy: null, DataProtectionScope.CurrentUser);
                 protectedSecret = Convert.ToBase64String(cipher);
                 return true;
             }
@@ -336,8 +336,8 @@ public sealed class CredentialVault
             if (!wasDpapi || !OperatingSystem.IsWindows())
                 return null;
 
-            var data = Convert.FromBase64String(protectedSecret);
-            var plain = ProtectedData.Unprotect(data, optionalEntropy: null, DataProtectionScope.CurrentUser);
+            byte[] data = Convert.FromBase64String(protectedSecret);
+            byte[] plain = ProtectedData.Unprotect(data, optionalEntropy: null, DataProtectionScope.CurrentUser);
             return Encoding.UTF8.GetString(plain);
         }
         catch
@@ -349,7 +349,7 @@ public sealed class CredentialVault
     private static string Slugify(string input)
     {
         var sb = new StringBuilder();
-        foreach (var ch in input.ToLowerInvariant())
+        foreach (char ch in input.ToLowerInvariant())
         {
             if (char.IsLetterOrDigit(ch))
             {
@@ -361,7 +361,7 @@ public sealed class CredentialVault
             }
         }
 
-        var slug = sb.ToString().Trim('-');
+        string slug = sb.ToString().Trim('-');
         return string.IsNullOrWhiteSpace(slug) ? "profile" : slug;
     }
 
@@ -419,7 +419,7 @@ public sealed class CredentialVault
             if (proc is null)
                 return null;
 
-            var output = proc.StandardOutput.ReadToEnd();
+            string output = proc.StandardOutput.ReadToEnd();
             proc.WaitForExit(30_000);
             return proc.ExitCode == 0 ? output.Trim() : null;
         }
@@ -512,7 +512,7 @@ public sealed class CredentialVault
             using var proc = Process.Start(psi);
             if (proc is null)
                 return null;
-            var output = proc.StandardOutput.ReadToEnd();
+            string output = proc.StandardOutput.ReadToEnd();
             proc.WaitForExit(30_000);
             return proc.ExitCode == 0 ? output.Trim() : null;
         }

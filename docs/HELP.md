@@ -12,8 +12,8 @@ Core actions:
 
 ## Install and Run
 - UI:
-  - macOS/Linux: `dotnet run -f net8.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
-  - Windows target: `dotnet run -f net8.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
+  - macOS/Linux: `dotnet run -f net10.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
+  - Windows target: `dotnet run -f net10.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
 - CLI tool build/install:
   - `dotnet pack src/VaultSync.CLI -c Release`
   - `dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli`

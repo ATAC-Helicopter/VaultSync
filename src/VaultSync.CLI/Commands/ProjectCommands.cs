@@ -25,20 +25,20 @@ namespace VaultSync.CLI.Commands
 
     sealed class AddProjectCommand : AsyncCommand<AddProjectSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, AddProjectSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, AddProjectSettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
+            string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var fullPath = Path.GetFullPath(s.PathArg.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
+            string fullPath = Path.GetFullPath(s.PathArg.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
             if (!Directory.Exists(fullPath))
                 throw new DirectoryNotFoundException(fullPath);
 
             if (repo.GetProjectByName(s.Name) is not null)
                 throw new Exception($"Project '{s.Name}' already exists");
 
-            var id = repo.AddProject(new Project { Name = s.Name, RootPath = fullPath, Preset = s.Preset });
+            int id = repo.AddProject(new Project { Name = s.Name, RootPath = fullPath, Preset = s.Preset });
 
             if (!s.Quiet)
                 AnsiConsole.MarkupLine($"[green]Added[/] project [bold]{Markup.Escape(s.Name)}[/] (id {id}) -> {Markup.Escape(fullPath)} [grey](preset: {Markup.Escape(s.Preset)})[/]");
@@ -57,22 +57,21 @@ namespace VaultSync.CLI.Commands
 
     sealed class RemoveProjectCommand : AsyncCommand<RemoveProjectSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, RemoveProjectSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, RemoveProjectSettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
+            string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name);
-            if (proj is null) throw new Exception($"Project '{s.Name}' not found");
+            Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
 
             if (!s.Yes && !s.Quiet)
             {
-                var confirm = AnsiConsole.Confirm($"Delete project [bold]{Markup.Escape(s.Name)}[/] and all its snapshots/files?");
+                bool confirm = AnsiConsole.Confirm($"Delete project [bold]{Markup.Escape(s.Name)}[/] and all its snapshots/files?");
                 if (!confirm) { AnsiConsole.MarkupLine("[yellow]Aborted[/]"); return Task.FromResult(1); }
             }
 
-            var stats = repo.DeleteProjectCascade(s.Name);
+            DeleteStats stats = repo.DeleteProjectCascade(s.Name);
             if (stats.Projects == 0) throw new Exception($"Project '{s.Name}' not found (nothing deleted)");
 
             if (!s.Quiet)
@@ -92,16 +91,16 @@ namespace VaultSync.CLI.Commands
 
     sealed class SetPathCommand : AsyncCommand<SetPathSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, SetPathSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, SetPathSettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
+            string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var full = Path.GetFullPath(s.NewPath.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
+            string full = Path.GetFullPath(s.NewPath.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
             if (!Directory.Exists(full)) throw new DirectoryNotFoundException(full);
 
-            if (!repo.UpdateProjectPath(s.Name, full, out var oldPath))
+            if (!repo.UpdateProjectPath(s.Name, full, out string? oldPath))
                 throw new Exception($"Project '{s.Name}' not found");
 
             if (!s.Quiet)
@@ -119,30 +118,29 @@ namespace VaultSync.CLI.Commands
 
     sealed class ListProjectsCommand : AsyncCommand<ListProjectsSettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, ListProjectsSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, ListProjectsSettings s, CancellationToken ct)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
+            string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var rows = repo.ListProjects();
+            IEnumerable<Project> rows = repo.ListProjects();
             if (s.Json)
             {
-                var options = new JsonSerializerOptions { WriteIndented = true };
                 Console.WriteLine(JsonSerializer.Serialize(rows.Select(r => new
                 {
                     r.Name, r.RootPath, r.Preset, CreatedUtc = r.CreatedUtc.ToString("u")
-                }), options));
+                }), CommandJsonOptions.Indented));
                 return Task.FromResult(0);
             }
 
-            var table = new Table().Border(TableBorder.Rounded);
+            Table table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("Name");
             table.AddColumn(new TableColumn("Path").NoWrap());
             table.AddColumn("Preset");
             table.AddColumn("Created (UTC)");
 
-            foreach (var p in rows) table.AddRow(p.Name, p.RootPath, p.Preset, p.CreatedUtc.ToString("u"));
+            foreach (Project p in rows) table.AddRow(p.Name, p.RootPath, p.Preset, p.CreatedUtc.ToString("u"));
             AnsiConsole.Write(table);
             return Task.FromResult(0);
         }
@@ -156,9 +154,9 @@ namespace VaultSync.CLI.Commands
 
     sealed class DiscoverProjectsCommand : AsyncCommand<DiscoverProjectsSettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, DiscoverProjectsSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, DiscoverProjectsSettings s, CancellationToken ct)
         {
-            var config = AppConfigStore.Load();
+            AppConfig config = AppConfigStore.Load();
 
             if (!string.IsNullOrWhiteSpace(s.OverrideRoot))
             {
@@ -166,12 +164,11 @@ namespace VaultSync.CLI.Commands
             }
 
             var discovery = new ProjectDiscoveryService();
-            var projects = await discovery.DiscoverAsync(config, ct);
+            IReadOnlyList<DiscoveredProject> projects = await discovery.DiscoverAsync(config, ct);
 
             if (s.Json)
             {
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                Console.WriteLine(JsonSerializer.Serialize(projects, options));
+                Console.WriteLine(JsonSerializer.Serialize(projects, CommandJsonOptions.Indented));
                 return 0;
             }
 
@@ -181,16 +178,16 @@ namespace VaultSync.CLI.Commands
                 return 0;
             }
 
-            var table = new Table().Border(TableBorder.Rounded);
+            Table table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("Name");
             table.AddColumn(new TableColumn("Path").NoWrap());
             table.AddColumn("Last snapshot");
             table.AddColumn("Last size");
 
-            foreach (var p in projects)
+            foreach (DiscoveredProject p in projects)
             {
-                var lastSnapshot = p.LastSnapshotTime?.ToString("u") ?? "-";
-                var size = p.LastSnapshotSizeBytes.HasValue ? FormatSize(p.LastSnapshotSizeBytes.Value) : "-";
+                string lastSnapshot = p.LastSnapshotTime?.ToString("u") ?? "-";
+                string size = p.LastSnapshotSizeBytes.HasValue ? FormatSize(p.LastSnapshotSizeBytes.Value) : "-";
                 table.AddRow(p.Name, p.Path, lastSnapshot, size);
             }
 
@@ -200,7 +197,7 @@ namespace VaultSync.CLI.Commands
 
         private static string FormatSize(long bytes)
         {
-            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            string[] sizes = ["B", "KB", "MB", "GB", "TB"];
             double len = bytes;
             int order = 0;
 

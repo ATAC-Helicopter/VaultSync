@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.Notifications
 {
@@ -14,20 +15,20 @@ namespace VaultSync.UI.Notifications
         {
             try
             {
-                var title = string.IsNullOrWhiteSpace(request.Title)
+                string title = string.IsNullOrWhiteSpace(request.Title)
                     ? "VaultSync"
                     : request.Title;
 
-                var message = request.Message ?? string.Empty;
+                string message = request.Message ?? string.Empty;
 
-                var escapedTitle   = EscapeAppleScriptString(title);
-                var escapedMessage = EscapeAppleScriptString(message);
-                var iconPath = ResolveNotificationIconPath();
+                string escapedTitle   = EscapeAppleScriptString(title);
+                string escapedMessage = EscapeAppleScriptString(message);
+                string? iconPath = ResolveNotificationIconPath();
 
                 if (TryShowWithTerminalNotifier(request, title, message, iconPath))
                     return;
 
-                var script =
+                string script =
                     $"display notification \"{escapedMessage}\" with title \"{escapedTitle}\"";
 
                 var psi = new ProcessStartInfo
@@ -46,6 +47,7 @@ namespace VaultSync.UI.Notifications
             }
             catch (Exception ex)
             {
+                DiagnosticsLogger.RecordException("macOS notification failed", ex, includeStack: false);
             }
         }
 
@@ -53,7 +55,7 @@ namespace VaultSync.UI.Notifications
         {
             try
             {
-                var notifierPath = FindExecutablePath("terminal-notifier");
+                string? notifierPath = FindExecutablePath("terminal-notifier");
                 if (string.IsNullOrWhiteSpace(notifierPath))
                     return false;
 
@@ -108,7 +110,7 @@ namespace VaultSync.UI.Notifications
                 if (process is null)
                     return null;
 
-                var output = process.StandardOutput.ReadToEnd().Trim();
+                string output = process.StandardOutput.ReadToEnd().Trim();
                 process.WaitForExit(1000);
                 return process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output)
                     ? output
@@ -124,12 +126,12 @@ namespace VaultSync.UI.Notifications
         {
             try
             {
-                var baseDir = AppContext.BaseDirectory;
-                var candidate = Path.Combine(baseDir, "Assets", "vaultsync-tray.png");
+                string baseDir = AppContext.BaseDirectory;
+                string candidate = Path.Combine(baseDir, "Assets", "vaultsync-tray.png");
                 if (File.Exists(candidate))
                     return candidate;
 
-                var flatCandidate = Path.Combine(baseDir, "vaultsync-tray.png");
+                string flatCandidate = Path.Combine(baseDir, "vaultsync-tray.png");
                 return File.Exists(flatCandidate) ? flatCandidate : null;
             }
             catch

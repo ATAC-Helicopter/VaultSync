@@ -1,7 +1,10 @@
 bin/**
 obj/**
+**/bin/**
+**/obj/**
 *.exe
 TestResults/**
+**/TestResults/**
 *.user
 *.csproj.user
 *.suo
@@ -23,5 +26,3 @@ Thumbs.db
 
 # Git
 .git/
-.github/
-.gitattributes

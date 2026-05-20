@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -89,7 +90,7 @@ namespace VaultSync.UI.Services
         private static DateTimeOffset? s_releaseCacheTimestamp;
         private static readonly TimeSpan s_releaseCacheTtl = TimeSpan.FromMinutes(5);
 
-        public async Task<UpdateCheckEvaluation> CheckForUpdateAsync(
+        public static async Task<UpdateCheckEvaluation> CheckForUpdateAsync(
             string currentVersion,
             GitHubReleaseChannel channel,
             CancellationToken cancellationToken)
@@ -101,7 +102,7 @@ namespace VaultSync.UI.Services
                 Channel = channel.ToString(),
                 CurrentVersion = currentVersion?.Trim() ?? string.Empty
             };
-            var releases = await FetchReleasesAsync(cancellationToken).ConfigureAwait(false);
+            List<GitHubRelease> releases = await FetchReleasesAsync(cancellationToken).ConfigureAwait(false);
             if (releases == null || releases.Count == 0)
             {
                 Console.WriteLine("[Update] No releases returned from GitHub.");
@@ -109,8 +110,8 @@ namespace VaultSync.UI.Services
                 return new UpdateCheckEvaluation(null, diagnostics);
             }
 
-            var betaCandidate = SelectBetaCandidate(releases);
-            var stableCandidate = SelectStableCandidate(releases);
+            GitHubRelease? betaCandidate = SelectBetaCandidate(releases);
+            GitHubRelease? stableCandidate = SelectStableCandidate(releases);
             diagnostics.BetaCandidate = ToDiagnostics(betaCandidate);
             diagnostics.StableCandidate = ToDiagnostics(stableCandidate);
 
@@ -124,7 +125,7 @@ namespace VaultSync.UI.Services
                 Console.WriteLine($"[Update] Stable candidate: {DescribeRelease(stableCandidate)}");
             }
 
-            var candidate = channel == GitHubReleaseChannel.Beta
+            GitHubRelease? candidate = channel == GitHubReleaseChannel.Beta
                 ? SelectBestBetaOrStableCandidate(releases)
                 : SelectStableCandidate(releases);
             diagnostics.SelectedCandidate = ToDiagnostics(candidate);
@@ -136,7 +137,7 @@ namespace VaultSync.UI.Services
                 return new UpdateCheckEvaluation(null, diagnostics);
             }
 
-            var releaseTag = (candidate.TagName ?? string.Empty).Trim();
+            string releaseTag = (candidate.TagName ?? string.Empty).Trim();
             if (string.IsNullOrEmpty(releaseTag))
             {
                 diagnostics.Decision = "candidate-missing-tag";
@@ -152,17 +153,17 @@ namespace VaultSync.UI.Services
                 return new UpdateCheckEvaluation(null, diagnostics);
             }
 
-            if (!Uri.TryCreate(candidate.HtmlUrl, UriKind.Absolute, out var releaseUri))
+            if (!Uri.TryCreate(candidate.HtmlUrl, UriKind.Absolute, out Uri? releaseUri))
             {
                 releaseUri = new Uri("https://github.com/ATAC-Helicopter/VaultSync/releases");
             }
 
-            var releaseName = string.IsNullOrWhiteSpace(candidate.Name) ? releaseTag : candidate.Name;
-            var releaseNotes = candidate.Body ?? string.Empty;
-            var publishedAt = candidate.PublishedAt ?? DateTime.MinValue;
+            string releaseName = string.IsNullOrWhiteSpace(candidate.Name) ? releaseTag : candidate.Name;
+            string releaseNotes = candidate.Body ?? string.Empty;
+            DateTime publishedAt = candidate.PublishedAt ?? DateTime.MinValue;
 
-            var (manifestUrl, archiveUrl, archiveName) = GetPatchAssets(candidate.Assets);
-            var (installerUrl, installerName) = GetInstallerAsset(candidate.Assets);
+            (string? manifestUrl, Uri? archiveUrl, string? archiveName) = GetPatchAssets(candidate.Assets);
+            (Uri? installerUrl, string? installerName) = GetInstallerAsset(candidate.Assets);
             diagnostics.SelectedCandidate = ToDiagnostics(candidate, !string.IsNullOrWhiteSpace(manifestUrl) && archiveUrl != null, installerUrl != null);
             diagnostics.Decision = channel == GitHubReleaseChannel.Beta
                 ? "beta-or-stable-candidate-selected"
@@ -186,37 +187,7 @@ namespace VaultSync.UI.Services
 
         private static bool IsReleaseNewer(string releaseTag, string currentVersion)
         {
-            var releaseVersion = VersionHelper.TryParse(releaseTag);
-            var localVersion = VersionHelper.TryParse(currentVersion);
-
-            if (releaseVersion is not null && localVersion is not null)
-            {
-                if (releaseVersion > localVersion)
-                    return true;
-                if (releaseVersion < localVersion)
-                    return false;
-
-                var currentIsPrerelease = IsPrereleaseTag(currentVersion);
-                var releaseIsPrerelease = IsPrereleaseTag(releaseTag);
-                return currentIsPrerelease && !releaseIsPrerelease;
-            }
-
-            return !string.Equals(
-                releaseTag,
-                currentVersion?.Trim(),
-                StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsPrereleaseTag(string? version)
-        {
-            if (string.IsNullOrWhiteSpace(version))
-                return false;
-
-            var trimmed = version.Trim();
-            if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
-                trimmed = trimmed[1..];
-
-            return trimmed.Contains('-', StringComparison.Ordinal);
+            return VersionHelper.CompareReleaseIdentities(releaseTag, currentVersion) > 0;
         }
 
         private static HttpClient CreateHttpClient()
@@ -229,7 +200,7 @@ namespace VaultSync.UI.Services
             client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-Updater/1.0");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
 
-            var token = Environment.GetEnvironmentVariable("VAULTSYNC_GH_TOKEN")
+            string? token = Environment.GetEnvironmentVariable("VAULTSYNC_GH_TOKEN")
                         ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
             if (!string.IsNullOrWhiteSpace(token))
             {
@@ -242,7 +213,7 @@ namespace VaultSync.UI.Services
         private static async Task<List<GitHubRelease>> FetchReleasesAsync(CancellationToken cancellationToken)
         {
             var releases = new List<GitHubRelease>();
-            var useCache = false;
+            bool useCache = false;
 
             lock (s_releaseCacheLock)
             {
@@ -250,13 +221,13 @@ namespace VaultSync.UI.Services
                     s_releaseCacheTimestamp.HasValue &&
                     (DateTimeOffset.UtcNow - s_releaseCacheTimestamp.Value) <= s_releaseCacheTtl)
                 {
-                    return new List<GitHubRelease>(s_releaseCache);
+                    return [.. s_releaseCache];
                 }
             }
 
-            for (var page = 1; page <= MaxReleasePages; page++)
+            for (int page = 1; page <= MaxReleasePages; page++)
             {
-                var endpoint = $"{ReleasesEndpointBase}?per_page={ReleasesPerPage}&page={page}";
+                string endpoint = $"{ReleasesEndpointBase}?per_page={ReleasesPerPage}&page={page}";
                 List<GitHubRelease>? pageReleases = null;
                 HttpResponseMessage? response = null;
 
@@ -302,13 +273,13 @@ namespace VaultSync.UI.Services
 
                 releases.AddRange(pageReleases);
 
-                var responseEtag = response?.Headers.ETag?.Tag;
+                string? responseEtag = response?.Headers.ETag?.Tag;
                 if (!string.IsNullOrWhiteSpace(responseEtag))
                 {
                     lock (s_releaseCacheLock)
                     {
                         s_releaseEtag = responseEtag;
-                        s_releaseCache = new List<GitHubRelease>(releases);
+                        s_releaseCache = [.. releases];
                         s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
                     }
                 }
@@ -319,7 +290,7 @@ namespace VaultSync.UI.Services
             {
                 lock (s_releaseCacheLock)
                 {
-                    return s_releaseCache ?? new List<GitHubRelease>();
+                    return s_releaseCache ?? [];
                 }
             }
 
@@ -327,7 +298,7 @@ namespace VaultSync.UI.Services
             {
                 lock (s_releaseCacheLock)
                 {
-                    s_releaseCache = new List<GitHubRelease>(releases);
+                    s_releaseCache = [.. releases];
                     s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
                 }
             }
@@ -337,7 +308,7 @@ namespace VaultSync.UI.Services
 
         private static GitHubRelease? SelectStableCandidate(List<GitHubRelease> releases)
         {
-            var stableBranch = releases
+            GitHubRelease? stableBranch = releases
                 .Where(r => !r.Draft && !r.Prerelease && string.Equals(r.TargetCommitish, StableBranchName, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(r => r.PublishedAt ?? DateTime.MinValue)
                 .FirstOrDefault();
@@ -347,7 +318,7 @@ namespace VaultSync.UI.Services
 
         private static GitHubRelease? SelectBetaCandidate(List<GitHubRelease> releases)
         {
-            var devBranch = releases
+            GitHubRelease? devBranch = releases
                 .Where(r => !r.Draft && string.Equals(r.TargetCommitish, DevBranchName, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(r => r.PublishedAt ?? DateTime.MinValue)
                 .FirstOrDefault();
@@ -357,28 +328,22 @@ namespace VaultSync.UI.Services
 
         private static GitHubRelease? SelectBestBetaOrStableCandidate(List<GitHubRelease> releases)
         {
-            var betaCandidate = SelectBetaCandidate(releases);
-            var stableCandidate = SelectStableCandidate(releases);
+            GitHubRelease? betaCandidate = SelectBetaCandidate(releases);
+            GitHubRelease? stableCandidate = SelectStableCandidate(releases);
 
             if (betaCandidate is null)
                 return stableCandidate;
             if (stableCandidate is null)
                 return betaCandidate;
 
-            var betaVersion = VersionHelper.TryParse(betaCandidate.TagName);
-            var stableVersion = VersionHelper.TryParse(stableCandidate.TagName);
-
-            if (betaVersion is not null && stableVersion is not null)
-            {
-                if (betaVersion > stableVersion)
-                    return betaCandidate;
-                if (stableVersion > betaVersion)
-                    return stableCandidate;
+            int versionCompare = VersionHelper.CompareReleaseIdentities(betaCandidate.TagName, stableCandidate.TagName);
+            if (versionCompare > 0)
+                return betaCandidate;
+            if (versionCompare < 0)
                 return stableCandidate;
-            }
 
-            var betaDate = betaCandidate.PublishedAt ?? DateTime.MinValue;
-            var stableDate = stableCandidate.PublishedAt ?? DateTime.MinValue;
+            DateTime betaDate = betaCandidate.PublishedAt ?? DateTime.MinValue;
+            DateTime stableDate = stableCandidate.PublishedAt ?? DateTime.MinValue;
 
             if (betaDate > stableDate)
                 return betaCandidate;
@@ -435,24 +400,24 @@ namespace VaultSync.UI.Services
             if (assets is null || assets.Count == 0)
                 return (null, null, null);
 
-            var suffixes = GetPlatformSuffixes();
+            List<string> suffixes = GetPlatformSuffixes();
             if (suffixes.Count == 0)
                 return (null, null, null);
 
-            foreach (var platformSuffix in suffixes)
+            foreach (string platformSuffix in suffixes)
             {
-                var manifestName = $"vaultsync-patch-{platformSuffix}.json";
-                var archiveName = $"vaultsync-patch-{platformSuffix}.zip";
+                string manifestName = $"vaultsync-patch-{platformSuffix}.json";
+                string archiveName = $"vaultsync-patch-{platformSuffix}.zip";
 
-                var manifest = assets.FirstOrDefault(a => string.Equals(a.Name, manifestName, StringComparison.OrdinalIgnoreCase));
-                var archive = assets.FirstOrDefault(a => string.Equals(a.Name, archiveName, StringComparison.OrdinalIgnoreCase));
+                GitHubAsset? manifest = assets.FirstOrDefault(a => string.Equals(a.Name, manifestName, StringComparison.OrdinalIgnoreCase));
+                GitHubAsset? archive = assets.FirstOrDefault(a => string.Equals(a.Name, archiveName, StringComparison.OrdinalIgnoreCase));
 
                 if (manifest is null || archive is null || string.IsNullOrEmpty(manifest.BrowserDownloadUrl))
                     continue;
 
                 Uri? archiveUri = null;
                 if (!string.IsNullOrWhiteSpace(archive.BrowserDownloadUrl) &&
-                    Uri.TryCreate(archive.BrowserDownloadUrl, UriKind.Absolute, out var parsed))
+                    Uri.TryCreate(archive.BrowserDownloadUrl, UriKind.Absolute, out Uri? parsed))
                 {
                     archiveUri = parsed;
                 }
@@ -485,57 +450,98 @@ namespace VaultSync.UI.Services
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                foreach (var suffix in GetLinuxAssetSuffixes())
+                bool preferDebianPackage = ShouldPreferDebianPackage();
+
+                if (preferDebianPackage)
                 {
-                    asset = assets.FirstOrDefault(a =>
-                        a.Name is not null &&
-                        a.Name.Contains(suffix, StringComparison.OrdinalIgnoreCase) &&
-                        (a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) ||
-                         a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)));
-                    if (asset != null)
-                        break;
+                    asset = FindLinuxAsset(assets, ".deb");
                 }
 
-                asset ??= assets.FirstOrDefault(a =>
-                    a.Name is not null &&
-                    (a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) ||
-                     a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)));
+                asset ??= FindLinuxAsset(assets, ".AppImage");
+                asset ??= FindLinuxAsset(assets, ".tar.gz");
+                asset ??= preferDebianPackage ? null : FindLinuxAsset(assets, ".deb");
             }
 
             if (asset is null || string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
                 return (null, null);
 
-            return Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var url)
+            return Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out Uri? url)
                 ? (url, asset.Name)
                 : (null, null);
+        }
+
+        private static GitHubAsset? FindLinuxAsset(List<GitHubAsset> assets, string extension)
+        {
+            foreach (string suffix in GetLinuxAssetSuffixes())
+            {
+                GitHubAsset? asset = assets.FirstOrDefault(a =>
+                    a.Name is not null &&
+                    a.Name.Contains(suffix, StringComparison.OrdinalIgnoreCase) &&
+                    a.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+                if (asset != null)
+                    return asset;
+            }
+
+            return assets.FirstOrDefault(a =>
+                a.Name is not null &&
+                a.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool ShouldPreferDebianPackage()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return false;
+
+            if (File.Exists("/usr/bin/dpkg") || File.Exists("/bin/dpkg"))
+                return true;
+
+            try
+            {
+                const string osReleasePath = "/etc/os-release";
+                if (!File.Exists(osReleasePath))
+                    return false;
+
+                string osRelease = File.ReadAllText(osReleasePath);
+                return osRelease.Contains("ID=debian", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID=ubuntu", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID=zorin", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID_LIKE=debian", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID_LIKE=\"debian", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID_LIKE=ubuntu", StringComparison.OrdinalIgnoreCase) ||
+                       osRelease.Contains("ID_LIKE=\"ubuntu", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static List<string> GetPlatformSuffixes()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return new List<string> { "windows" };
+                return ["windows"];
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                var suffix = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                string suffix = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
                     ? "macos-apple-silicon"
                     : "macos-intel";
-                return new List<string> { suffix, "macos" };
+                return [suffix, "macos"];
             }
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                var suffixes = GetLinuxPatchSuffixes();
+                List<string> suffixes = GetLinuxPatchSuffixes();
                 suffixes.Add("linux");
                 return suffixes;
             }
-            return new List<string>();
+            return [];
         }
 
         private static List<string> GetLinuxPatchSuffixes()
         {
             return RuntimeInformation.ProcessArchitecture switch
             {
-                Architecture.Arm64 => new List<string> { "linux-arm64" },
-                _ => new List<string> { "linux-x64" }
+                Architecture.Arm64 => ["linux-arm64"],
+                _ => ["linux-x64"]
             };
         }
 
@@ -543,8 +549,8 @@ namespace VaultSync.UI.Services
         {
             return RuntimeInformation.ProcessArchitecture switch
             {
-                Architecture.Arm64 => new List<string> { "linux-arm64", "arm64", "aarch64" },
-                _ => new List<string> { "linux-x64", "x64", "x86_64", "amd64" }
+                Architecture.Arm64 => ["linux-arm64", "arm64", "aarch64"],
+                _ => ["linux-x64", "x64", "x86_64", "amd64"]
             };
         }
 
@@ -553,9 +559,9 @@ namespace VaultSync.UI.Services
             if (release is null)
                 return "none";
 
-            var tag = release.TagName ?? "?";
-            var target = string.IsNullOrWhiteSpace(release.TargetCommitish) ? "?" : release.TargetCommitish;
-            var published = release.PublishedAt?.ToString("O") ?? "?";
+            string tag = release.TagName ?? "?";
+            string target = string.IsNullOrWhiteSpace(release.TargetCommitish) ? "?" : release.TargetCommitish;
+            string published = release.PublishedAt?.ToString("O") ?? "?";
             return $"tag={tag}, prerelease={release.Prerelease}, published={published}, target={target}";
         }
 
@@ -564,8 +570,8 @@ namespace VaultSync.UI.Services
             if (release is null)
                 return new UpdateReleaseCandidateDiagnostics();
 
-            var (manifestUrl, archiveUrl, _) = GetPatchAssets(release.Assets);
-            var (installerUrl, _) = GetInstallerAsset(release.Assets);
+            (string? manifestUrl, Uri? archiveUrl, string? _) = GetPatchAssets(release.Assets);
+            (Uri? installerUrl, string? _) = GetInstallerAsset(release.Assets);
             return new UpdateReleaseCandidateDiagnostics
             {
                 Tag = (release.TagName ?? string.Empty).Trim(),

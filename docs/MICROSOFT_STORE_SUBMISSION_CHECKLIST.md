@@ -12,10 +12,10 @@ Reference:
 - Added runtime `Direct` vs `Store` channel detection.
 - Disabled GitHub self-update for Store builds.
 - Added `Open Microsoft Store` action and Store-managed update messaging.
-- Added a manual Store package workflow: `.github/workflows/store-package.yml`.
+- Added Microsoft Store upload package generation to `.github/workflows/release-assets.yml` behind the `include_store_upload` option.
 
 ## Needs code / packaging validation
-- Build a real Store package in GitHub Actions and verify the artifact shape (`.msixupload` or equivalent upload package).
+- Build a real Store package in GitHub Actions with `include_store_upload` enabled and verify the artifact shape (`.msixupload` or equivalent upload package).
 - Install the packaged build and validate:
   - local folder backup
   - local restore

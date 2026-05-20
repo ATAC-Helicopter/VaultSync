@@ -37,34 +37,29 @@ public sealed record BackupIndexRepairPlan(
     public bool HasActions => Actions.Count > 0;
 }
 
-public sealed class BackupIndexRepairService
+public sealed class BackupIndexRepairService(SqliteRepository repo)
 {
-    private readonly SqliteRepository _repo;
-
-    public BackupIndexRepairService(SqliteRepository repo)
-    {
-        _repo = repo ?? throw new ArgumentNullException(nameof(repo));
-    }
+    private readonly SqliteRepository _repo = repo ?? throw new ArgumentNullException(nameof(repo));
 
     public BackupIndexRepairPlan BuildPlan()
     {
-        var generatedUtc = DateTime.UtcNow;
+        DateTime generatedUtc = DateTime.UtcNow;
         var projects = _repo.GetAllProjects().ToList();
         var snapshots = _repo.GetAllSnapshots().ToList();
-        var backups = _repo.GetAllBackups();
+        List<Backup> backups = _repo.GetAllBackups();
 
         var projectsById = projects.ToDictionary(static project => project.Id);
         var snapshotsById = snapshots.ToDictionary(static snapshot => snapshot.Id);
 
         var actions = backups
-            .Where(backup => snapshotsById.TryGetValue(backup.SnapshotId, out var snapshot) &&
+            .Where(backup => snapshotsById.TryGetValue(backup.SnapshotId, out Snapshot? snapshot) &&
                              snapshot.ProjectId != backup.ProjectId &&
                              projectsById.ContainsKey(snapshot.ProjectId))
             .OrderBy(static backup => backup.CreatedUtc)
             .ThenBy(static backup => backup.Id)
             .Select(backup =>
             {
-                var snapshot = snapshotsById[backup.SnapshotId];
+                Snapshot snapshot = snapshotsById[backup.SnapshotId];
                 return new BackupIndexRepairAction(
                     BackupIndexRepairCode.ReassignBackupProjectFromSnapshot,
                     backup.Id,
@@ -72,13 +67,12 @@ public sealed class BackupIndexRepairService
                     backup.ProjectId,
                     snapshot.ProjectId,
                     "Repair backup->project link using the authoritative snapshot->project relationship.",
-                    new[]
-                    {
+                    [
                         $"backup:{backup.Id}",
                         $"snapshot:{backup.SnapshotId}",
                         $"currentProject:{backup.ProjectId}",
                         $"targetProject:{snapshot.ProjectId}"
-                    });
+                    ]);
             })
             .ToList();
 
@@ -87,29 +81,26 @@ public sealed class BackupIndexRepairService
             blockedIssues,
             BackupIndexRepairCode.BackupSnapshotMissing,
             "Backups reference snapshots that do not exist and cannot be remapped deterministically.",
-            backups
+            [.. backups
                 .Where(backup => !snapshotsById.ContainsKey(backup.SnapshotId))
                 .Select(backup => $"{backup.Id}:snapshot={backup.SnapshotId}")
-                .OrderBy(static sample => sample, StringComparer.Ordinal)
-                .ToList());
+                .OrderBy(static sample => sample, StringComparer.Ordinal)]);
         AddBlockedIssue(
             blockedIssues,
             BackupIndexRepairCode.BackupProjectMissing,
             "Backups reference projects that do not exist and require manual repair or import.",
-            backups
+            [.. backups
                 .Where(backup => !projectsById.ContainsKey(backup.ProjectId))
                 .Select(backup => $"{backup.Id}:project={backup.ProjectId}")
-                .OrderBy(static sample => sample, StringComparer.Ordinal)
-                .ToList());
+                .OrderBy(static sample => sample, StringComparer.Ordinal)]);
         AddBlockedIssue(
             blockedIssues,
             BackupIndexRepairCode.SnapshotProjectMissing,
             "Snapshots reference projects that do not exist and cannot be reassigned without an exact project match.",
-            snapshots
+            [.. snapshots
                 .Where(snapshot => !projectsById.ContainsKey(snapshot.ProjectId))
                 .Select(snapshot => $"{snapshot.Id}:project={snapshot.ProjectId}")
-                .OrderBy(static sample => sample, StringComparer.Ordinal)
-                .ToList());
+                .OrderBy(static sample => sample, StringComparer.Ordinal)]);
 
         return new BackupIndexRepairPlan(
             generatedUtc,
@@ -121,8 +112,8 @@ public sealed class BackupIndexRepairService
     {
         ArgumentNullException.ThrowIfNull(plan);
 
-        var applied = 0;
-        foreach (var action in plan.Actions
+        int applied = 0;
+        foreach (BackupIndexRepairAction? action in plan.Actions
                      .OrderBy(static action => action.BackupId)
                      .ThenBy(static action => action.TargetProjectId))
         {
@@ -137,7 +128,7 @@ public sealed class BackupIndexRepairService
     }
 
     private static void AddBlockedIssue(
-        ICollection<BackupIndexRepairBlockedIssue> blockedIssues,
+        List<BackupIndexRepairBlockedIssue> blockedIssues,
         string code,
         string message,
         IReadOnlyList<string> samples)
@@ -149,6 +140,6 @@ public sealed class BackupIndexRepairService
             code,
             message,
             samples.Count,
-            samples.Take(5).ToList()));
+            [.. samples.Take(5)]));
     }
 }

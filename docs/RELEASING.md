@@ -3,15 +3,15 @@
 This document defines the current release packaging flow.
 
 ## Prerequisites
-- .NET 8 SDK
+- .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The current stable release target is `1.7.3`; prerelease builds are for future development cycles only.
+- The prepared stable release target is `1.7.4`; prerelease builds for the active patch train use `1.7.4-Beta.N` until the stable release is cut.
 
 ## 1) Windows Installer
 1. Publish:
    ```bash
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0-windows10.0.19041.0 -r win-x64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0-windows10.0.19041.0 -r win-x64 --self-contained true
    ```
 2. Build installer using `installer/VaultSyncInstaller.iss`.
 3. Upload generated `VaultSyncInstaller.exe` to GitHub Release assets.
@@ -19,8 +19,8 @@ This document defines the current release packaging flow.
 ## 2) macOS DMG
 1. Publish both architectures:
    ```bash
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r osx-arm64 --self-contained true
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r osx-x64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0 -r osx-arm64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0 -r osx-x64 --self-contained true
    ```
 2. Build `.app` and `.dmg` using repository scripts.
 3. Upload both DMGs to release assets.
@@ -28,15 +28,21 @@ This document defines the current release packaging flow.
 ## 3) Linux Direct Assets
 1. Publish both Linux architectures:
    ```bash
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r linux-x64 --self-contained true
-   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net8.0 -r linux-arm64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0 -r linux-x64 --self-contained true
+   dotnet publish src/VaultSync.UI/VaultSync.UI.csproj -c Release -f net10.0 -r linux-arm64 --self-contained true
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.7.3 x64 src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.7.3 arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.7.4 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.7.4 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
-3. Upload the generated `.tar.gz` artifacts and the `linux-x64` `.AppImage`.
+3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
+   The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
+   per-user Linux install that works across distro families:
+   ```bash
+   tar -xzf VaultSync-<version>-linux-<arch>.tar.gz
+   ./install.sh
+   ```
 
 ## 4) Patch/Updater Assets
 Create patch manifest and patch archives as described in `docs/UPDATER.md`.
@@ -50,14 +56,15 @@ For `VS-1724` multi-base patch support:
 Stable example:
 - branch: `Stable`
 - release channel: `stable`
-- `previous_version = 1.6.0`
-- `target_version = 1.7.3`
+- `previous_version = 1.7.3`
+- `target_version = 1.7.4`
 
-Future beta example:
+Current beta example:
 - branch: `Dev`
 - release channel: `beta`
-- `previous_version = 1.7.3`
-- `target_version = 1.8.0-Beta.1`
+- `previous_version = 1.7.4-Beta.2`
+- `target_version = 1.7.4-Beta.3`
+- `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
 
 Example multi-base input:
 - `previous_version = 1.6.2`
@@ -99,6 +106,17 @@ Linux AppImage users may need to run:
 ```bash
 chmod +x VaultSync-<version>-linux-x64.AppImage
 ./VaultSync-<version>-linux-x64.AppImage
+```
+
+Linux tarball users can install VaultSync into their user app menu without root:
+```bash
+tar -xzf VaultSync-<version>-linux-<arch>.tar.gz
+./install.sh
+```
+
+Linux `.deb` users on Debian/Ubuntu/Zorin can install through the graphical package installer, or with:
+```bash
+sudo apt install ./VaultSync-<version>-linux-<arch>.deb
 ```
 
 ## Related Docs

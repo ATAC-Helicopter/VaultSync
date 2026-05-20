@@ -34,6 +34,7 @@ internal static class DiagnosticsLogger
     private static int _writerStarted;
 
     public static string? SessionLogPath => _sessionPath;
+    public static event Action<string>? Recorded;
 
     public static void Initialize()
     {
@@ -42,7 +43,7 @@ internal static class DiagnosticsLogger
 
         try
         {
-            var dir = Path.Combine(
+            string dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync",
                 "diagnostics");
@@ -68,15 +69,16 @@ internal static class DiagnosticsLogger
         if (string.IsNullOrWhiteSpace(message))
             return;
 
-        var line = $"{DateTimeOffset.UtcNow:O} [t{Thread.CurrentThread.ManagedThreadId}] {message}";
+        string line = $"{DateTimeOffset.UtcNow:O} [t{Thread.CurrentThread.ManagedThreadId}] {message}";
+        RaiseRecorded(line);
         Recent.Enqueue(line);
-        var count = Interlocked.Increment(ref _recentCount);
+        int count = Interlocked.Increment(ref _recentCount);
         while (count > MaxRecent && Recent.TryDequeue(out _))
         {
             count = Interlocked.Decrement(ref _recentCount);
         }
 
-        var path = _sessionPath;
+        string? path = _sessionPath;
         if (string.IsNullOrWhiteSpace(path))
             return;
 
@@ -84,19 +86,39 @@ internal static class DiagnosticsLogger
         WriterSignal.Set();
     }
 
+    private static void RaiseRecorded(string line)
+    {
+        Action<string>? handlers = Recorded;
+        if (handlers is null)
+            return;
+
+        foreach (Delegate callback in handlers.GetInvocationList())
+        {
+            try
+            {
+                if (callback is Action<string> handler)
+                    handler(line);
+            }
+            catch
+            {
+                // Diagnostics must never fail the caller.
+            }
+        }
+    }
+
     public static void RecordWithStack(string message, int maxLines = 10)
     {
         Record(message);
         try
         {
-            var stack = Environment.StackTrace;
+            string stack = Environment.StackTrace;
             if (string.IsNullOrWhiteSpace(stack))
                 return;
 
-            var lines = stack.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var take = Math.Min(maxLines, lines.Length);
+            string[] lines = stack.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            int take = Math.Min(maxLines, lines.Length);
             var sb = new StringBuilder();
-            for (var i = 0; i < take; i++)
+            for (int i = 0; i < take; i++)
             {
                 sb.AppendLine(lines[i]);
             }
@@ -112,11 +134,11 @@ internal static class DiagnosticsLogger
     {
         try
         {
-            var osDescription = RuntimeInformation.OSDescription;
-            var framework = RuntimeInformation.FrameworkDescription;
-            var processPath = Environment.ProcessPath ?? string.Empty;
-            var baseDir = AppContext.BaseDirectory;
-            var envKeys = new[]
+            string osDescription = RuntimeInformation.OSDescription;
+            string framework = RuntimeInformation.FrameworkDescription;
+            string processPath = Environment.ProcessPath ?? string.Empty;
+            string baseDir = AppContext.BaseDirectory;
+            string[] envKeys = new[]
             {
                 "DOTNET_ENVIRONMENT",
                 "DOTNET_ROOT",
@@ -134,15 +156,15 @@ internal static class DiagnosticsLogger
                 $"pid={Environment.ProcessId}, softwareFallback={useSoftwareFallback}, cwd='{Environment.CurrentDirectory}', " +
                 $"baseDir='{baseDir}', processPath='{processPath}', args='{string.Join(' ', args)}'.");
 
-            foreach (var key in envKeys)
+            foreach (string? key in envKeys)
             {
-                var value = Environment.GetEnvironmentVariable(key);
+                string? value = Environment.GetEnvironmentVariable(key);
                 if (string.IsNullOrWhiteSpace(value))
                     continue;
 
                 if (string.Equals(key, "PATH", StringComparison.Ordinal))
                 {
-                    var segments = value
+                    System.Collections.Generic.IEnumerable<string> segments = value
                         .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                         .Take(8);
                     Record($"Environment {key}={string.Join(Path.PathSeparator, segments)}");
@@ -185,20 +207,32 @@ internal static class DiagnosticsLogger
         if (ShouldSuppressFirstChanceException(ex))
             return;
 
-        var total = Interlocked.Increment(ref _firstChanceTotal);
+        int total = Interlocked.Increment(ref _firstChanceTotal);
         if (total > MaxFirstChanceTotal)
             return;
 
-        var signature = $"{source}|{ex.GetType().FullName}|{ex.Message}";
-        var count = FirstChanceCounts.AddOrUpdate(signature, 1, static (_, current) => current + 1);
+        string signature = $"{source}|{ex.GetType().FullName}|{ex.Message}";
+        int count = FirstChanceCounts.AddOrUpdate(signature, 1, static (_, current) => current + 1);
         if (count > MaxFirstChancePerSignature)
             return;
 
-        var topFrame = ex.StackTrace?
+        Record($"FirstChance[{source}] #{count}: {ex.GetType().Name} - {ex.Message} @ {FormatFirstChanceLocation(ex)}");
+    }
+
+    private static string FormatFirstChanceLocation(Exception ex)
+    {
+        string topFrame = ex.StackTrace?
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .FirstOrDefault() ?? "no-stack";
 
-        Record($"FirstChance[{source}] #{count}: {ex.GetType().Name} - {ex.Message} @ {topFrame}");
+        if (ex is not System.Reflection.TargetInvocationException { InnerException: { } inner })
+            return topFrame;
+
+        string innerTopFrame = inner.StackTrace?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault() ?? "no-inner-stack";
+
+        return $"{topFrame}; inner={inner.GetType().Name} - {inner.Message} @ {innerTopFrame}";
     }
 
     private static bool ShouldSuppressFirstChanceException(Exception ex)
@@ -209,17 +243,16 @@ internal static class DiagnosticsLogger
         if (ex is UnauthorizedAccessException && IsExpectedRetentionDeleteException(ex.StackTrace))
             return true;
 
-        return false;
+        string typeName = ex.GetType().FullName ?? string.Empty;
+        return typeName.Contains("DBusException", StringComparison.Ordinal);
     }
 
     private static bool IsExpectedRetentionDeleteException(string? stackTrace)
     {
-        if (string.IsNullOrWhiteSpace(stackTrace))
-            return false;
-
-        return stackTrace.Contains("VaultSync.Core.Services.BackupService.FallbackDeleteDirectory", StringComparison.Ordinal)
+        return !string.IsNullOrWhiteSpace(stackTrace)
+            && (stackTrace.Contains("VaultSync.Core.Services.BackupService.FallbackDeleteDirectory", StringComparison.Ordinal)
             || stackTrace.Contains("VaultSync.Core.Services.BackupService.TryDeleteBackupFolder", StringComparison.Ordinal)
-            || stackTrace.Contains("VaultSync.UI.ViewModels.AppViewModel.BackupHistoryHandlers", StringComparison.Ordinal);
+            || stackTrace.Contains("VaultSync.UI.ViewModels.AppViewModel.BackupHistoryHandlers", StringComparison.Ordinal));
     }
 
     public static string? GetRecentLog()
@@ -228,7 +261,7 @@ internal static class DiagnosticsLogger
             return null;
 
         var sb = new StringBuilder();
-        foreach (var line in Recent)
+        foreach (string line in Recent)
         {
             sb.AppendLine(line);
         }
@@ -242,7 +275,7 @@ internal static class DiagnosticsLogger
 
         try
         {
-            var content = File.ReadAllText(_heartbeatPath).Trim();
+            string content = File.ReadAllText(_heartbeatPath).Trim();
             if (string.IsNullOrWhiteSpace(content))
                 return;
 
@@ -263,7 +296,7 @@ internal static class DiagnosticsLogger
         {
             try
             {
-                var line = $"pid={Environment.ProcessId} utc={DateTimeOffset.UtcNow:O}";
+                string line = $"pid={Environment.ProcessId} utc={DateTimeOffset.UtcNow:O}";
                 lock (FileGate)
                 {
                     File.WriteAllText(_heartbeatPath!, line);
@@ -309,12 +342,12 @@ internal static class DiagnosticsLogger
 
     private static void FlushPendingWrites()
     {
-        var path = _sessionPath;
+        string? path = _sessionPath;
         if (string.IsNullOrWhiteSpace(path) || PendingWrites.IsEmpty)
             return;
 
         var batch = new StringBuilder();
-        while (PendingWrites.TryDequeue(out var line))
+        while (PendingWrites.TryDequeue(out string? line))
         {
             batch.AppendLine(line);
         }
@@ -363,7 +396,7 @@ internal static class DiagnosticsLogger
         if (files.Count <= keep)
             return;
 
-        foreach (var fi in files.Skip(keep))
+        foreach (FileInfo? fi in files.Skip(keep))
         {
             try
             {
@@ -386,16 +419,16 @@ internal static class DiagnosticsLogger
 
         _ = Task.Run(() =>
         {
-            var shouldSample = false;
+            bool shouldSample = false;
             try
             {
-                var dir = Path.Combine(
+                string dir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "VaultSync",
                     "diagnostics");
                 Directory.CreateDirectory(dir);
-                var output = Path.Combine(dir, $"hangdump-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.dmp");
-                var dotnetDump = ResolveExecutablePath("dotnet-dump");
+                string output = Path.Combine(dir, $"hangdump-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.dmp");
+                string dotnetDump = ResolveExecutablePath("dotnet-dump");
                 if (string.IsNullOrWhiteSpace(dotnetDump))
                 {
                     Record("dotnet-dump not found in PATH; skipping dump collection.");
@@ -427,8 +460,8 @@ internal static class DiagnosticsLogger
                     return;
                 }
                 proc.WaitForExit(20_000);
-                var stderr = proc.StandardError.ReadToEnd().Trim();
-                var stdout = proc.StandardOutput.ReadToEnd().Trim();
+                string stderr = proc.StandardError.ReadToEnd().Trim();
+                string stdout = proc.StandardOutput.ReadToEnd().Trim();
                 if (!string.IsNullOrWhiteSpace(stdout))
                     Record($"dotnet-dump stdout: {stdout}");
                 if (!string.IsNullOrWhiteSpace(stderr))
@@ -461,25 +494,25 @@ internal static class DiagnosticsLogger
         if (Path.IsPathRooted(fileName))
             return File.Exists(fileName) ? fileName : string.Empty;
 
-        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        var isWindows = OperatingSystem.IsWindows();
-        var hasExtension = Path.HasExtension(fileName);
-        var windowsExtensions = isWindows
+        string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        bool isWindows = OperatingSystem.IsWindows();
+        bool hasExtension = Path.HasExtension(fileName);
+        string[] windowsExtensions = isWindows
             ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT;.COM")
                 .Split(';', StringSplitOptions.RemoveEmptyEntries)
-            : Array.Empty<string>();
+            : [];
 
-        foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        foreach (string dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
         {
             try
             {
-                var candidate = Path.Combine(dir, fileName);
+                string candidate = Path.Combine(dir, fileName);
                 if (File.Exists(candidate))
                     return candidate;
 
                 if (!hasExtension && isWindows)
                 {
-                    foreach (var ext in windowsExtensions)
+                    foreach (string ext in windowsExtensions)
                     {
                         candidate = Path.Combine(dir, fileName + ext.ToLowerInvariant());
                         if (File.Exists(candidate))
@@ -500,12 +533,12 @@ internal static class DiagnosticsLogger
     {
         try
         {
-            var dir = Path.Combine(
+            string dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync",
                 "diagnostics");
             Directory.CreateDirectory(dir);
-            var output = Path.Combine(dir, $"sample-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.txt");
+            string output = Path.Combine(dir, $"sample-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.txt");
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = "/usr/bin/sample",
@@ -527,8 +560,8 @@ internal static class DiagnosticsLogger
                 return;
             }
             proc.WaitForExit(10_000);
-            var stderr = proc.StandardError.ReadToEnd().Trim();
-            var stdout = proc.StandardOutput.ReadToEnd().Trim();
+            string stderr = proc.StandardError.ReadToEnd().Trim();
+            string stdout = proc.StandardOutput.ReadToEnd().Trim();
             if (!string.IsNullOrWhiteSpace(stdout))
                 Record($"sample stdout: {stdout}");
             if (!string.IsNullOrWhiteSpace(stderr))
@@ -626,7 +659,7 @@ internal static class DiagnosticsLogger
 
             lock (_gate)
             {
-                foreach (var ch in value)
+                foreach (char ch in value)
                     AppendCore(ch);
             }
         }

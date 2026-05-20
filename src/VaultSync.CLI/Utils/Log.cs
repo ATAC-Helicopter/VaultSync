@@ -12,11 +12,11 @@ namespace VaultSync.CLI.Utils
         {
             try
             {
-                var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                var dir = Path.Combine(home, ".vaultsync", "logs");
+                string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                string dir = Path.Combine(home, ".vaultsync", "logs");
                 Directory.CreateDirectory(dir);
 
-                var stamp = DateTime.UtcNow.ToString("yyyyMMdd");
+                string stamp = DateTime.UtcNow.ToString("yyyyMMdd");
                 _logFile = Path.Combine(dir, $"vaultsync-{stamp}.log");
                 Write("INFO", "=== vaultsync start ===");
             }
@@ -28,7 +28,7 @@ namespace VaultSync.CLI.Utils
             try
             {
                 if (_logFile is null) return;
-                var line = $"{DateTime.UtcNow:O} [{level}] {message}{Environment.NewLine}";
+                string line = $"{DateTime.UtcNow:O} [{level}] {message}{Environment.NewLine}";
                 lock (_gate) File.AppendAllText(_logFile, line);
             }
             catch { /* never throw */ }

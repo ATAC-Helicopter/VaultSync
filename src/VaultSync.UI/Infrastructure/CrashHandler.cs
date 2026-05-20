@@ -10,6 +10,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -45,7 +46,7 @@ internal static class CrashHandler
 
     private static void OnAppDomainUnhandledException(object? sender, UnhandledExceptionEventArgs e)
     {
-        var ex = e.ExceptionObject as Exception
+        Exception ex = e.ExceptionObject as Exception
             ?? new Exception("Unhandled exception (non-Exception object).");
         DiagnosticsLogger.Record($"AppDomain unhandled exception: {ex.GetType().Name} - {ex.Message}");
         HandleException(ex, "AppDomain", e.IsTerminating);
@@ -53,6 +54,12 @@ internal static class CrashHandler
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
+        if (ExpectedDesktopNoise.IsExpectedUnobservedTaskException(e.Exception))
+        {
+            e.SetObserved();
+            return;
+        }
+
         DiagnosticsLogger.Record($"Unobserved task exception: {e.Exception.GetType().Name} - {e.Exception.Message}");
         WriteCrashLog(e.Exception, "UnobservedTaskException", isTerminating: false);
         e.SetObserved();
@@ -67,7 +74,7 @@ internal static class CrashHandler
 
         DiagnosticsLogger.Record($"Crash handler invoked: source={source}, terminating={isTerminating}, error={ex.GetType().Name} - {ex.Message}");
         App.MarkCrashing();
-        var logPath = WriteCrashLog(ex, source, isTerminating);
+        string? logPath = WriteCrashLog(ex, source, isTerminating);
         TryShowCrashDialog(logPath);
     }
 
@@ -79,7 +86,7 @@ internal static class CrashHandler
         }
 
         DiagnosticsLogger.Record($"Soft UI crash handled: {ex.GetType().Name} - {ex.Message}");
-        var logPath = WriteCrashLog(ex, "UI thread", isTerminating: false);
+        string? logPath = WriteCrashLog(ex, "UI thread", isTerminating: false);
         TryShowSoftCrashBanner(logPath);
     }
 
@@ -103,15 +110,15 @@ internal static class CrashHandler
     {
         try
         {
-            var baseDir = Path.Combine(
+            string baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync",
                 "crash");
 
             Directory.CreateDirectory(baseDir);
 
-            var fileName = $"crash-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log";
-            var path = Path.Combine(baseDir, fileName);
+            string fileName = $"crash-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log";
+            string path = Path.Combine(baseDir, fileName);
 
             var sb = new StringBuilder();
             sb.AppendLine("VaultSync crash report");
@@ -131,7 +138,7 @@ internal static class CrashHandler
             {
                 sb.AppendLine($"DiagnosticsLog: {DiagnosticsLogger.SessionLogPath}");
             }
-            var recent = DiagnosticsLogger.GetRecentLog();
+            string? recent = DiagnosticsLogger.GetRecentLog();
             if (!string.IsNullOrWhiteSpace(recent))
             {
                 sb.AppendLine();
@@ -391,7 +398,7 @@ internal static class CrashHandler
     {
         try
         {
-            var clipboard = topLevel?.Clipboard;
+            IClipboard? clipboard = topLevel?.Clipboard;
             if (clipboard is not null)
             {
                 await clipboard.SetTextAsync(text);
@@ -405,7 +412,7 @@ internal static class CrashHandler
 
     private static IBrush? GetBrush(string key)
     {
-        if (Application.Current?.Resources.TryGetValue(key, out var value) == true)
+        if (Application.Current?.Resources.TryGetValue(key, out object? value) is true)
         {
             return value as IBrush;
         }
@@ -418,7 +425,7 @@ internal static class CrashHandler
         try
         {
             var asm = Assembly.GetEntryAssembly();
-            var name = asm?.GetName();
+            AssemblyName? name = asm?.GetName();
             return name?.Version is null
                 ? "unknown"
                 : $"{name.Name} {name.Version}";
@@ -433,7 +440,7 @@ internal static class CrashHandler
     {
         try
         {
-            var folder = Path.GetDirectoryName(logPath);
+            string? folder = Path.GetDirectoryName(logPath);
             if (string.IsNullOrWhiteSpace(folder))
                 return;
 

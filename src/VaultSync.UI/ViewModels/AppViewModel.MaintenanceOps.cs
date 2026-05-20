@@ -23,7 +23,7 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             _maintenanceTimer = new Timer(
-                _ => RunDetached(SafeRunScheduledMaintenanceAsync, nameof(SafeRunScheduledMaintenanceAsync)),
+                _ => AppViewModel.RunDetached(SafeRunScheduledMaintenanceAsync, nameof(SafeRunScheduledMaintenanceAsync)),
                 null,
                 TimeSpan.FromMinutes(1),
                 MaintenanceCheckInterval);
@@ -49,20 +49,20 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                var cfg = AppConfigStore.Load();
-                var maintenance = cfg.Advanced.Maintenance ?? new MaintenanceConfig();
+                AppConfig cfg = AppConfigStore.Load();
+                MaintenanceConfig maintenance = cfg.Advanced.Maintenance ?? new MaintenanceConfig();
                 if (!maintenance.Enabled)
                     return;
 
-                var nowLocal = DateTimeOffset.Now;
-                var window = QuietHoursPolicy.Evaluate(true, maintenance.WindowStart, maintenance.WindowEnd, nowLocal);
+                DateTimeOffset nowLocal = DateTimeOffset.Now;
+                QuietHoursDecision window = QuietHoursPolicy.Evaluate(true, maintenance.WindowStart, maintenance.WindowEnd, nowLocal);
                 if (!window.IsInQuietHours)
                     return;
 
                 if (HasMaintenanceRunToday(maintenance.LastRunUtc, nowLocal))
                     return;
 
-                var outcome = await ExecuteMaintenanceRunAsync(cfg).ConfigureAwait(false);
+                MaintenanceRunOutcome outcome = await ExecuteMaintenanceRunAsync(cfg).ConfigureAwait(false);
                 cfg.Advanced.Maintenance.LastRunUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
                 cfg.Advanced.Maintenance.LastStatus = outcome.Status;
                 AppConfigStore.Save(cfg);
@@ -88,10 +88,10 @@ namespace VaultSync.UI.ViewModels
 
             if (cfg.Advanced.Maintenance.RunConsistencyScan)
             {
-                var report = await Task.Run(() => _backupIndexConsistencyService.Scan()).ConfigureAwait(false);
-                var summarySnapshot = BackupIndexConsistencyService.BuildSummary(report);
-                await Task.Run(() => PersistBackupIndexConsistencySummary(summarySnapshot)).ConfigureAwait(false);
-                var summary = BuildBackupIndexConsistencyStatus(report);
+                BackupIndexConsistencyReport report = await Task.Run(() => _backupIndexConsistencyService.Scan()).ConfigureAwait(false);
+                BackupIndexConsistencySummary summarySnapshot = BackupIndexConsistencyService.BuildSummary(report);
+                await Task.Run(() => AppViewModel.PersistBackupIndexConsistencySummary(summarySnapshot)).ConfigureAwait(false);
+                string summary = BuildBackupIndexConsistencyStatus(report);
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
@@ -104,7 +104,7 @@ namespace VaultSync.UI.ViewModels
                         BackupCount = summarySnapshot.BackupCount,
                         ErrorCount = summarySnapshot.ErrorCount,
                         WarningCount = summarySnapshot.WarningCount,
-                        TopFindingCodes = summarySnapshot.TopFindingCodes.ToList()
+                        TopFindingCodes = [.. summarySnapshot.TopFindingCodes]
                     };
                     BackupIndexConsistencyStatus = summary;
                     OnPropertyChanged(nameof(BackupIndexConsistencyReport));
@@ -116,7 +116,7 @@ namespace VaultSync.UI.ViewModels
 
             if (cfg.Advanced.Maintenance.RunRepairDryRun)
             {
-                var plan = await Task.Run(() =>
+                BackupIndexRepairPlan plan = await Task.Run(() =>
                 {
                     var service = new BackupIndexRepairService(_repo);
                     return service.BuildPlan();
@@ -127,7 +127,7 @@ namespace VaultSync.UI.ViewModels
 
             if (cfg.Advanced.Maintenance.RunMetadataRefresh)
             {
-                var queuedCount = 0;
+                int queuedCount = 0;
 
                 if (!string.IsNullOrWhiteSpace(cfg.ProjectsRoot) &&
                     cfg.Backups.EnableMetadataSync &&
@@ -137,17 +137,17 @@ namespace VaultSync.UI.ViewModels
                     queuedCount++;
                 }
 
-                foreach (var dest in GetActiveDestinations(cfg))
+                foreach (BackupDestination dest in AppViewModel.GetActiveDestinations(cfg))
                 {
                     if (!IsMetadataImportEnabled(cfg, dest))
                         continue;
 
-                    var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+                    NetworkCredentialProfile? profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                         ? null
                         : cfg.Network.Credentials.FirstOrDefault(c =>
                             c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-                    var resolution = await Task.Run(() => _networkMountService.PrepareDestination(dest, profile)).ConfigureAwait(false);
+                    DestinationResolution resolution = await Task.Run(() => _networkMountService.PrepareDestination(dest, profile)).ConfigureAwait(false);
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         continue;
 
@@ -166,7 +166,7 @@ namespace VaultSync.UI.ViewModels
 
         private static bool HasMaintenanceRunToday(string? lastRunUtc, DateTimeOffset nowLocal)
         {
-            if (!DateTimeOffset.TryParse(lastRunUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedUtc))
+            if (!DateTimeOffset.TryParse(lastRunUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset parsedUtc))
                 return false;
 
             return parsedUtc.ToLocalTime().Date == nowLocal.Date;

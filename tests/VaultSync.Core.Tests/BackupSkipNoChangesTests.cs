@@ -28,14 +28,14 @@ public sealed class BackupSkipNoChangesTests : IDisposable
     {
         var repo = new SqliteRepository(_dbPath);
         repo.EnsureSchema();
-        var project = CreateProject(repo);
+        Project project = CreateProject(repo);
         await CreateBaselineSnapshotAsync(repo, project);
 
-        var backupRoot = Path.Combine(_tempDir, "backups");
+        string backupRoot = Path.Combine(_tempDir, "backups");
         Directory.CreateDirectory(backupRoot);
         var service = new BackupService(repo);
 
-        var result = await service.RunBackupAsync(
+        BackupService.BackupRunResult result = await service.RunBackupAsync(
             project,
             backupRoot,
             isAuto: true,
@@ -44,7 +44,7 @@ public sealed class BackupSkipNoChangesTests : IDisposable
 
         Assert.False(result.SkippedForNoChanges);
         Assert.True(result.BackupId > 0);
-        var backup = repo.GetBackupById(result.BackupId);
+        Backup backup = repo.GetBackupById(result.BackupId);
         Assert.NotNull(backup);
         Assert.True(Directory.Exists(Path.Combine(backupRoot, backup!.Path)));
         Assert.NotEmpty(Directory.EnumerateFileSystemEntries(Path.Combine(backupRoot, backup.Path)));
@@ -55,12 +55,12 @@ public sealed class BackupSkipNoChangesTests : IDisposable
     {
         var repo = new SqliteRepository(_dbPath);
         repo.EnsureSchema();
-        var project = CreateProject(repo);
-        var backupRoot = Path.Combine(_tempDir, "backups");
+        Project project = CreateProject(repo);
+        string backupRoot = Path.Combine(_tempDir, "backups");
         Directory.CreateDirectory(backupRoot);
         var service = new BackupService(repo);
 
-        var first = await service.RunBackupAsync(
+        BackupService.BackupRunResult first = await service.RunBackupAsync(
             project,
             backupRoot,
             isAuto: true,
@@ -70,7 +70,7 @@ public sealed class BackupSkipNoChangesTests : IDisposable
         Assert.False(first.SkippedForNoChanges);
         Assert.True(first.BackupId > 0);
 
-        var second = await service.RunBackupAsync(
+        BackupService.BackupRunResult second = await service.RunBackupAsync(
             project,
             backupRoot,
             isAuto: true,
@@ -80,7 +80,7 @@ public sealed class BackupSkipNoChangesTests : IDisposable
         Assert.True(second.SkippedForNoChanges);
         Assert.Equal(0, second.BackupId);
         Assert.Single(repo.GetBackupsForProject(project.Id));
-        var firstBackup = repo.GetBackupById(first.BackupId);
+        Backup firstBackup = repo.GetBackupById(first.BackupId);
         Assert.NotNull(firstBackup);
         Assert.True(Directory.Exists(Path.Combine(backupRoot, firstBackup!.Path)));
     }
@@ -90,23 +90,23 @@ public sealed class BackupSkipNoChangesTests : IDisposable
     {
         var repo = new SqliteRepository(_dbPath);
         repo.EnsureSchema();
-        var projects = new[]
+        Project[] projects = new[]
         {
             CreateProject(repo, "Project One", "one.txt", "one"),
             CreateProject(repo, "Project Two", "two.txt", "two"),
             CreateProject(repo, "Project Three", "three.txt", "three")
         };
 
-        foreach (var project in projects)
+        foreach (Project project in projects)
         {
             await CreateBaselineSnapshotAsync(repo, project);
         }
 
-        var backupRoot = Path.Combine(_tempDir, "backups");
+        string backupRoot = Path.Combine(_tempDir, "backups");
         Directory.CreateDirectory(backupRoot);
         var service = new BackupService(repo);
 
-        var results = await Task.WhenAll(projects.Select(project =>
+        BackupService.BackupRunResult[] results = await Task.WhenAll(projects.Select(project =>
             service.RunBackupAsync(
                 project,
                 backupRoot,
@@ -120,11 +120,11 @@ public sealed class BackupSkipNoChangesTests : IDisposable
             Assert.True(result.BackupId > 0);
         });
 
-        foreach (var result in results)
+        foreach (BackupService.BackupRunResult result in results)
         {
-            var backup = repo.GetBackupById(result.BackupId);
+            Backup backup = repo.GetBackupById(result.BackupId);
             Assert.NotNull(backup);
-            var backupPath = Path.Combine(backupRoot, backup!.Path);
+            string backupPath = Path.Combine(backupRoot, backup!.Path);
             Assert.True(Directory.Exists(backupPath));
             Assert.NotEmpty(Directory.EnumerateFileSystemEntries(backupPath));
         }
@@ -135,11 +135,11 @@ public sealed class BackupSkipNoChangesTests : IDisposable
 
     private Project CreateProject(SqliteRepository repo, string name, string fileName, string contents)
     {
-        var sourceRoot = Path.Combine(_tempDir, name.Replace(' ', '-'));
+        string sourceRoot = Path.Combine(_tempDir, name.Replace(' ', '-'));
         Directory.CreateDirectory(sourceRoot);
         File.WriteAllText(Path.Combine(sourceRoot, fileName), contents, Encoding.UTF8);
 
-        var projectId = repo.AddProject(new Project
+        int projectId = repo.AddProject(new Project
         {
             Name = name,
             RootPath = sourceRoot,

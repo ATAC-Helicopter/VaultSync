@@ -18,7 +18,7 @@ namespace VaultSync.CLI.Config
 
         public static string GetConfigDir()
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             return Path.Combine(home, ".vaultsync");
         }
 
@@ -26,7 +26,7 @@ namespace VaultSync.CLI.Config
 
         public static void Save(AppConfig cfg)
         {
-            var dir = GetConfigDir();
+            string dir = GetConfigDir();
             Directory.CreateDirectory(dir);
             Directory.CreateDirectory(Path.Combine(dir, "logs"));
 
@@ -39,13 +39,13 @@ namespace VaultSync.CLI.Config
         public static AppConfig Load()
         {
             // Load the shared config first.
-            var cfg = AppConfigStore.Load();
+            AppConfig cfg = AppConfigStore.Load();
 
             // If a legacy CLI config exists with a Database value, migrate it into DbPath.
-            var legacy = TryLoadLegacy();
+            LegacyCliConfig? legacy = TryLoadLegacy();
             if (legacy is not null && !string.IsNullOrWhiteSpace(legacy.Database))
             {
-                var expanded = ExpandHome(legacy.Database);
+                string expanded = ExpandHome(legacy.Database);
                 if (string.IsNullOrWhiteSpace(cfg.DbPath))
                 {
                     cfg.DbPath = expanded;
@@ -63,12 +63,12 @@ namespace VaultSync.CLI.Config
                 return ExpandHome(overridePath);
 
             // 2. Shared AppConfig.DbPath (ensures a single DB location for CLI + UI).
-            var cfg = AppConfigStore.Load();
+            AppConfig cfg = AppConfigStore.Load();
             if (!string.IsNullOrWhiteSpace(cfg.DbPath))
                 return ExpandHome(cfg.DbPath);
 
             // 3. Legacy CLI config fallback.
-            var legacy = TryLoadLegacy();
+            LegacyCliConfig? legacy = TryLoadLegacy();
             if (legacy is not null && !string.IsNullOrWhiteSpace(legacy.Database))
                 return ExpandHome(legacy.Database);
 
@@ -78,19 +78,19 @@ namespace VaultSync.CLI.Config
 
         private static string ExpandHome(string path)
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             return path.Replace("~", home);
         }
 
         private static LegacyCliConfig? TryLoadLegacy()
         {
-            var path = GetConfigPath();
+            string path = GetConfigPath();
             if (!File.Exists(path))
                 return null;
 
             try
             {
-                var json = File.ReadAllText(path);
+                string json = File.ReadAllText(path);
                 return JsonSerializer.Deserialize<LegacyCliConfig>(json);
             }
             catch

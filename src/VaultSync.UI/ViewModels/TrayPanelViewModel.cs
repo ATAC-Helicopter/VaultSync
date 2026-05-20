@@ -21,8 +21,8 @@ public sealed class TrayPanelViewModel : ViewModelBase
     private static readonly IBrush UnreachableBrush =
         new ImmutableSolidColorBrush(Color.Parse("#FF6B6B"));
 
-    public ObservableCollection<TrayDestinationItem> Destinations { get; } = new();
-    public ObservableCollection<TrayRecentBackupItem> RecentBackups { get; } = new();
+    public ObservableCollection<TrayDestinationItem> Destinations { get; } = [];
+    public ObservableCollection<TrayRecentBackupItem> RecentBackups { get; } = [];
 
     public string HeaderTitle { get; }
     public string HeaderSubtitle { get; }
@@ -81,7 +81,7 @@ public sealed class TrayPanelViewModel : ViewModelBase
         }
 
         Destinations.Clear();
-        foreach (var item in list)
+        foreach (TrayDestinationItem? item in list)
             Destinations.Add(item);
 
         DestinationsSummary = summary;
@@ -95,7 +95,7 @@ public sealed class TrayPanelViewModel : ViewModelBase
             return;
 
         RecentBackups.Clear();
-        foreach (var item in list)
+        foreach (TrayRecentBackupItem? item in list)
             RecentBackups.Add(item);
 
         OnPropertyChanged(nameof(HasRecentBackups));
@@ -106,10 +106,10 @@ public sealed class TrayPanelViewModel : ViewModelBase
         if (Destinations.Count != incoming.Count)
             return false;
 
-        for (var i = 0; i < Destinations.Count; i++)
+        for (int i = 0; i < Destinations.Count; i++)
         {
-            var existing = Destinations[i];
-            var next = incoming[i];
+            TrayDestinationItem existing = Destinations[i];
+            TrayDestinationItem next = incoming[i];
             if (!AreSameDestinationKey(existing, next))
                 return false;
             existing.UpdateFrom(next);
@@ -123,10 +123,10 @@ public sealed class TrayPanelViewModel : ViewModelBase
         if (RecentBackups.Count != incoming.Count)
             return false;
 
-        for (var i = 0; i < RecentBackups.Count; i++)
+        for (int i = 0; i < RecentBackups.Count; i++)
         {
-            var existing = RecentBackups[i];
-            var next = incoming[i];
+            TrayRecentBackupItem existing = RecentBackups[i];
+            TrayRecentBackupItem next = incoming[i];
             if (!AreSameRecentBackupKey(existing, next))
                 return false;
             existing.UpdateFrom(next);
@@ -147,10 +147,10 @@ public sealed class TrayPanelViewModel : ViewModelBase
     {
         public string Name { get; }
         public string Path { get; }
-        public string StoredBytesText => string.Empty;
-        public bool HasStoredBytesText => false;
-        public string CleanupSuggestionText => string.Empty;
-        public bool HasCleanupSuggestionText => false;
+        public static string StoredBytesText => string.Empty;
+        public static bool HasStoredBytesText => false;
+        public static string CleanupSuggestionText => string.Empty;
+        public static bool HasCleanupSuggestionText => false;
 
         private bool _reachable;
         public bool Reachable
@@ -177,7 +177,7 @@ public sealed class TrayPanelViewModel : ViewModelBase
 
         public string Status => StatusText;
 
-        public bool IsChecking => false;
+        public static bool IsChecking => false;
 
         public IBrush DotBrush => StatusBrush;
 

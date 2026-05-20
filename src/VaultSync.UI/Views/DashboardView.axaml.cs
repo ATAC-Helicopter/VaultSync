@@ -25,8 +25,8 @@ public partial class DashboardView : UserControl
 
     private void ApplyChartTooltipStyle()
     {
-        var tooltipBackground = GetResourceColor("VsCardHighlightColor", Colors.Black);
-        var tooltipText = GetResourceColor("VsTextPrimaryColor", Colors.White);
+        Color tooltipBackground = GetResourceColor("VsCardHighlightColor", Colors.Black);
+        Color tooltipText = GetResourceColor("VsTextPrimaryColor", Colors.White);
 
         StorageDonutChart.TooltipPosition = TooltipPosition.Auto;
         StorageDonutChart.TooltipTextSize = 13;
@@ -36,7 +36,7 @@ public partial class DashboardView : UserControl
 
     private static Color GetResourceColor(string key, Color fallback)
     {
-        if (Application.Current?.TryFindResource(key, out var value) == true && value is Color color)
+        if (Application.Current?.TryFindResource(key, out object? value) == true && value is Color color)
         {
             return color;
         }

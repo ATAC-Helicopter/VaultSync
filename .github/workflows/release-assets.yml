@@ -11,14 +11,24 @@ on:
           - beta
           - stable
       previous_version:
-        description: "Previous version for patch manifests (e.g., 1.6.0 or 1.7.x-beta.N)"
-        required: true
+        description: "Primary previous/base version for patch manifests (optional if the allowlist is provided)"
+        required: false
       previous_versions:
         description: "Optional comma/newline separated exact base-version allowlist for one manifest (defaults to previous_version only)"
         required: false
       target_version:
-        description: "Target version for patch manifests (e.g., 1.7.3-Beta.1 or 1.7.3)"
+        description: "Target version for patch manifests (e.g., 1.7.4-Beta.1 or 1.7.4)"
         required: true
+      include_linux_patches:
+        description: "Build Linux patch assets. Leave off when Linux installer fallback is required for protected installs."
+        required: false
+        type: boolean
+        default: false
+      include_store_upload:
+        description: "Build Microsoft Store Partner Center upload package (.msixupload) from the Store packaging project."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,6 +39,9 @@ jobs:
     outputs:
       patch_base_versions: ${{ steps.validate_inputs.outputs.patch_base_versions }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Validate release inputs
         id: validate_inputs
         shell: bash
@@ -41,40 +54,65 @@ jobs:
           target="${{ inputs.target_version }}"
           branch="${{ github.ref_name }}"
 
-          if [[ -z "$previous" || -z "$target" ]]; then
-            echo "previous_version and target_version are required."
+          trim() {
+            sed 's/\r//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+          }
+
+          normalize_version() {
+            local value
+            value="$(printf '%s' "$1" | trim)"
+            value="${value#v}"
+            value="${value#V}"
+            printf '%s' "${value,,}"
+          }
+
+          target="$(printf '%s' "$target" | trim)"
+          previous="$(printf '%s' "$previous" | trim)"
+          target_key="$(normalize_version "$target")"
+
+          if [[ -z "$target" ]]; then
+            echo "target_version is required."
             exit 1
           fi
 
-          if [[ "$previous" == "$target" ]]; then
-            echo "previous_version and target_version must be different."
+          project_version="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/VaultSync.UI/VaultSync.UI.csproj | head -n 1 | trim)"
+          if [[ -z "$project_version" ]]; then
+            echo "Could not read src/VaultSync.UI/VaultSync.UI.csproj <Version>."
             exit 1
           fi
 
-          mapfile -t requested_versions < <(
+          if [[ "$(normalize_version "$project_version")" != "$target_key" ]]; then
+            echo "target_version '$target' does not match project version '$project_version'."
+            exit 1
+          fi
+
+          declare -A seen_versions=()
+          requested_versions=()
+          while IFS= read -r candidate; do
+            candidate="$(printf '%s' "$candidate" | trim)"
+            [[ -n "$candidate" ]] || continue
+
+            candidate_key="$(normalize_version "$candidate")"
+            if [[ "$candidate_key" == "$target_key" ]]; then
+              echo "::warning::Ignoring base version '$candidate' because it matches target_version '$target'."
+              continue
+            fi
+
+            if [[ -z "${seen_versions[$candidate_key]+x}" ]]; then
+              seen_versions[$candidate_key]=1
+              requested_versions+=("$candidate")
+            fi
+          done < <(
             {
               printf '%s\n' "$previous"
-              printf '%s' "$previous_versions_raw" | tr ',;' '\n'
-            } | sed 's/\r//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | awk 'NF' | awk '!seen[$0]++'
+              printf '%s\n' "$previous_versions_raw" | tr ',;' '\n'
+            }
           )
 
           if [[ ${#requested_versions[@]} -eq 0 ]]; then
-            echo "At least one previous/base version is required."
+            echo "At least one previous/base version different from target_version '$target' is required."
             exit 1
           fi
-
-          for base in "${requested_versions[@]}"; do
-            if [[ "$base" == "$target" ]]; then
-              echo "Base version '$base' must not equal target_version '$target'."
-              exit 1
-            fi
-          done
-
-          {
-            echo "patch_base_versions<<EOF"
-            printf '%s\n' "${requested_versions[@]}"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
 
           if [[ "$channel" == "beta" ]]; then
             if [[ "$branch" != "Dev" ]]; then
@@ -98,11 +136,18 @@ jobs:
             fi
           fi
 
+          {
+            echo "patch_base_versions<<EOF"
+            printf '%s\n' "${requested_versions[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
           cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           ## Release asset validation
           - Channel: \`$channel\`
           - Branch: \`$branch\`
-          - Previous version: \`$previous\`
+          - Project version: \`$project_version\`
+          - Primary previous version: \`${previous:-"(none)"}\`
           - Base allow-list:
           EOF
           for base in "${requested_versions[@]}"; do
@@ -122,13 +167,88 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
+
+      - name: Setup MSBuild
+        if: ${{ inputs.include_store_upload }}
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install Microsoft Store packaging workload
+        if: ${{ inputs.include_store_upload }}
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio/Installer/vswhere.exe"
+          $installer = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio/Installer/vs_installer.exe"
+          if (-not (Test-Path $vswhere)) {
+            throw "Could not find vswhere at $vswhere."
+          }
+          if (-not (Test-Path $installer)) {
+            throw "Could not find Visual Studio Installer at $installer."
+          }
+
+          $installPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $installPath) {
+            throw "Could not resolve a Visual Studio installation path."
+          }
+
+          $args = @(
+            "modify",
+            "--installPath", $installPath,
+            "--add", "Microsoft.VisualStudio.Workload.Universal",
+            "--add", "Microsoft.VisualStudio.Component.Windows10SDK.19041",
+            "--includeRecommended",
+            "--quiet",
+            "--norestart",
+            "--wait"
+          )
+
+          & $installer @args
+          if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3010) {
+            throw "Visual Studio Installer failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Resolve Microsoft Store packaging SDK
+        if: ${{ inputs.include_store_upload }}
+        shell: pwsh
+        run: |
+          $platformRoot = Join-Path ${env:ProgramFiles(x86)} "Windows Kits/10/Platforms/UAP"
+          if (-not (Test-Path $platformRoot)) {
+            throw "Could not find UAP SDK platform root: $platformRoot"
+          }
+
+          $sdks = Get-ChildItem $platformRoot -Directory
+          $sdk = $sdks |
+            Where-Object { $_.Name -eq "10.0.19041.0" } |
+            Select-Object -First 1
+          if ($null -eq $sdk) {
+            $sdk = $sdks |
+            Sort-Object { [version]$_.Name } -Descending |
+            Select-Object -First 1
+          }
+
+          if ($null -eq $sdk) {
+            throw "No installed UAP SDK was found under $platformRoot."
+          }
+
+          $wapprojPath = "packaging/VaultSync.Store/VaultSync.Store.wapproj"
+          [xml]$wapproj = Get-Content $wapprojPath
+          $ns = New-Object System.Xml.XmlNamespaceManager($wapproj.NameTable)
+          $ns.AddNamespace("msb", "http://schemas.microsoft.com/developer/msbuild/2003")
+          $targetPlatformVersion = $wapproj.SelectSingleNode("/msb:Project/msb:PropertyGroup/msb:TargetPlatformVersion", $ns)
+          if ($null -eq $targetPlatformVersion) {
+            throw "Could not find TargetPlatformVersion in $wapprojPath."
+          }
+          $targetPlatformVersion.InnerText = $sdk.Name
+          $wapproj.Save((Resolve-Path $wapprojPath))
+
+          "STORE_TARGET_PLATFORM_VERSION=$($sdk.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Store packaging SDK: ``$($sdk.Name)``"
 
       - name: Publish (win-x64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0-windows10.0.19041.0
+          -f net10.0-windows10.0.19041.0
           -r win-x64
           --self-contained true
 
@@ -153,12 +273,72 @@ jobs:
           }
           $previousArgs = foreach ($baseVersion in $baseVersions) { "--previous"; $baseVersion }
           python scripts/build_patch.py `
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish" `
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish" `
             --out-zip "$patchDir/vaultsync-patch-windows.zip" `
             --out-manifest "$patchDir/vaultsync-patch-windows.json" `
             --platform windows `
             @previousArgs `
             --target "${{ inputs.target_version }}"
+
+      - name: Prepare Microsoft Store manifest version
+        if: ${{ inputs.include_store_upload }}
+        shell: pwsh
+        run: |
+          $target = "${{ inputs.target_version }}"
+          $baseVersion = ($target -split "-", 2)[0]
+          $parts = $baseVersion.Split(".")
+          if ($parts.Count -lt 3) {
+            throw "target_version '$target' must include at least major.minor.patch for Store packaging."
+          }
+
+          $storeVersion = "$($parts[0]).$($parts[1]).$($parts[2]).0"
+          $manifestPath = "packaging/VaultSync.Store/Package.appxmanifest"
+          [xml]$manifest = Get-Content $manifestPath
+          $ns = New-Object System.Xml.XmlNamespaceManager($manifest.NameTable)
+          $ns.AddNamespace("pkg", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
+          $identity = $manifest.SelectSingleNode("/pkg:Package/pkg:Identity", $ns)
+          if ($null -eq $identity) {
+            throw "Could not find Package/Identity in $manifestPath."
+          }
+
+          $identity.Version = $storeVersion
+          $manifest.Save((Resolve-Path $manifestPath))
+          "STORE_PACKAGE_VERSION=$storeVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          Add-Content $env:GITHUB_STEP_SUMMARY "## Microsoft Store package"
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Store manifest version: ``$storeVersion``"
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Store identity: ``FlavioGiacchetti.480851279F98B``"
+
+      - name: Build Microsoft Store upload package
+        if: ${{ inputs.include_store_upload }}
+        shell: pwsh
+        run: |
+          $storeDir = Join-Path $PWD "dist/store"
+          New-Item -ItemType Directory -Force $storeDir | Out-Null
+
+          msbuild packaging/VaultSync.Store/VaultSync.Store.wapproj `
+            /restore `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:RuntimeIdentifier=win-x64 `
+            /p:SelfContained=true `
+            /p:GenerateAppxPackageOnBuild=true `
+            /p:UapAppxPackageBuildMode=StoreUpload `
+            /p:AppxBundle=Never `
+            /p:AppxPackageSigningEnabled=false `
+            /p:AppxPackageDir="$storeDir\\"
+
+          $upload = Get-ChildItem -Path "packaging/VaultSync.Store", "dist/store" -Recurse -Include *.msixupload,*.appxupload |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -First 1
+          if ($null -eq $upload) {
+            throw "Store upload package was not produced."
+          }
+
+          $extension = $upload.Extension
+          $targetPath = Join-Path $storeDir "VaultSync-Store-${{ inputs.target_version }}-x64$extension"
+          Copy-Item $upload.FullName $targetPath -Force
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Upload artifact: ``$targetPath``"
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -168,6 +348,15 @@ jobs:
             dist/windows/VaultSync-Setup-*.exe
             patches/v${{ inputs.target_version }}/vaultsync-patch-windows.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-windows.zip
+
+      - name: Upload Microsoft Store artifact
+        if: ${{ inputs.include_store_upload }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-store-upload
+          path: |
+            dist/store/*.msixupload
+            dist/store/*.appxupload
 
   macos:
     needs: validate
@@ -179,13 +368,13 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Publish (osx-arm64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -r osx-arm64
           --self-contained true
 
@@ -193,14 +382,14 @@ jobs:
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -r osx-x64
           --self-contained true
 
       - name: Build DMGs
         run: |
-          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net8.0/osx-arm64/publish
-          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net8.0/osx-x64/publish
+          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish
+          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish
 
       - name: Build patch assets
         env:
@@ -215,14 +404,14 @@ jobs:
           ${{ needs.validate.outputs.patch_base_versions }}
           EOF
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0/osx-arm64/publish" \
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.json" \
             --platform macos \
             "${previous_args[@]}" \
             --target "${{ inputs.target_version }}"
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0/osx-x64/publish" \
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.json" \
             --platform macos \
@@ -251,13 +440,13 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Publish (linux-x64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -r linux-x64
           --self-contained true
 
@@ -265,16 +454,17 @@ jobs:
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -r linux-arm64
           --self-contained true
 
       - name: Build Linux archives
         run: |
-          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish
-          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish
+          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
 
       - name: Build patch assets
+        if: ${{ inputs.include_linux_patches }}
         env:
           PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
         run: |
@@ -287,14 +477,14 @@ jobs:
           ${{ needs.validate.outputs.patch_base_versions }}
           EOF
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0/linux-x64/publish" \
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.json" \
             --platform linux \
             "${previous_args[@]}" \
             --target "${{ inputs.target_version }}"
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net8.0/linux-arm64/publish" \
+            --base-dir "src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish" \
             --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip" \
             --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json" \
             --platform linux \
@@ -308,6 +498,8 @@ jobs:
           path: |
             dist/linux/VaultSync-*-linux-x64.tar.gz
             dist/linux/VaultSync-*-linux-arm64.tar.gz
+            dist/linux/VaultSync-*-linux-x64.deb
+            dist/linux/VaultSync-*-linux-arm64.deb
             dist/linux/VaultSync-*-linux-x64.AppImage
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip

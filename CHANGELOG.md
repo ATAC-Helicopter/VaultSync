@@ -1,10 +1,80 @@
 ﻿# Changelog
+## [1.7.4] - 20.05.2026
+### Added
+- [VS-1732] Release publish restore now declares Windows, Linux, and macOS RIDs.
+- [VS-1737] Added VS Code Linux debug configs for UI, CLI, and tests.
+- [VS-1738] Linux tarballs now include rootless install/uninstall scripts with launcher, icon, and `vaultsync` command setup.
+- [VS-1739] CLI JSON output now uses a shared indented serializer.
+### Changed
+- [BUG-17119] Startup metadata import now checks reachable backup destinations.
+- [BUG-17119] UI metadata imports now treat source stores as read-only.
+- [BUG-17120] Core tests now isolate config writes from real app settings.
+- [VS-1724] Patch manifest compatibility tests now cover key edge cases.
+- [VS-1739] CLI commands were updated for the current Spectre.Console.Cli override model.
+- [VS-1740] Refreshed the safe dependency set for 1.7.4.
+- [VS-1741] Release-facing docs, examples, and What's New content now target the prepared `1.7.4` release.
+- [VS-1741] The in-app What's New dialog now uses a cleaner release-digest layout with section dividers instead of nested cards.
+- [VS-1742] Shared UI formatting and detached async helpers reduce duplicated view-model code.
+- [VS-1743] Source-code presets now keep repository metadata such as `.github`, `.gitignore`, `.gitattributes`, and `.gitmodules` while still excluding generated build outputs.
+- [VS-1744] Release asset builds can now generate Microsoft Store Partner Center upload packages from the Store packaging project.
+### Fixed
+- [BUG-17116] Notification cleanup now avoids disposed-token races.
+- [BUG-17118] Log console rows now show readable time, source, and message fields.
+- [BUG-17108] In-app logs now capture runtime errors without verbose logging.
+- [BUG-17115] Windows/Linux tray menus now open the richer tray panel reliably.
+- [BUG-17117] Tray panel action labels now wrap in localized layouts.
+- [BUG-17119] Linux metadata imports now remap rooted backup paths to the active destination.
+- [BUG-17122] Linux debug builds no longer silently exit or crash dashboard charts.
+- [BUG-17123] Destination metadata imports now recover SQLite sidecar journals through a temporary copy.
+- [BUG-17124] Destination imports now rebuild missing backup history from timestamped folders.
+- [BUG-17125] Destination reachability probes now run during deferred startup.
+- [BUG-17125] Locked tombstone exports now defer locally for retry instead of being dropped.
+- [BUG-17126] Crash dialog chrome now uses Avalonia 11 `SystemDecorations`.
+- [BUG-17127] Onboarding’s manual test hook no longer causes unreachable-code diagnostics.
+- [BUG-17128] System notification fallback exceptions are now logged.
+- [BUG-17129] Drive health checks now prefer `smartctl` and skip unavailable network-drive SMART data.
+- [BUG-17130] Metadata tombstone exports now avoid WAL locks on Linux-mounted backup destinations.
+- [BUG-18002] Log console diagnostics now display readable, color-coded rows while preserving raw lines.
+- [BUG-18003] Backup safety now blocks source/destination overlap and recursive backup growth. Refs #281.
+- [BUG-18004] Backup delete cards now stay visible and show deletion progress details. Refs #279.
+- [BUG-18005] Manual metadata refresh no longer hangs the UI or maps temporary roots. Refs #280.
+- [BUG-18006] Backups now prune stale database entries when recorded backup folders are missing from reachable destinations. Refs #284.
+- [BUG-18007] Backup probes now share in-flight buffer tuning and dev presets skip nested generated outputs. Refs #285.
+- [BUG-18008] Passive Backups refreshes no longer wake destinations just to update reachability. Refs #286.
+- [BUG-18009] The log console copy button now uses the console window clipboard instead of relying only on the main window.
+- [BUG-18010] Normal app runs no longer show caught first-chance SQLite/WinRT probes in diagnostics unless first-chance diagnostics are explicitly enabled.
+- [BUG-18011] The What's New parser now displays the current release notes slice instead of carrying older release sections into the dialog.
+- [BUG-18012] Imported destination history rebuilt from legacy backup folders now records and repairs real backup sizes instead of showing `0 B`. Refs #298.
+- [BUG-18013] Changing language no longer resets the selected theme or jumps Settings back to its initial scroll position. Refs #297.
+- [BUG-18014] Linux auto backups no longer pause because of device-scoped batteries such as wireless controllers, and auto-backup timer decisions are logged for diagnostics.
+- [BUG-18015] Backup summary cards plus action and filter buttons now constrain long localized labels in windowed layouts instead of overflowing their bounds.
+- [BUG-18016] Auto backups now warm up active destinations and retry preparation after a short cooldown so sleeping drives can wake before backup starts.
+- [BUG-18017] Linux log console now suppresses expected DBus/IBus desktop-integration noise and supports multi-row selection while keeping the readable styled console layout.
+- [BUG-18018] The What's New dialog now opens centered over the main app window instead of drifting to another monitor.
+- [BUG-18019] Linux SMART probe errors such as permission, unsupported-device, or read failures no longer masquerade as failing disks and block backups.
+- [BUG-18020] Linux `.deb` packages now include AppStream metadata, a richer package description, homepage data, and matching desktop/icon IDs for better software-center previews.
+- [BUG-18021] Linux windows now set the app icon explicitly and launcher metadata uses the executable WM class so taskbars can match VaultSync to its icon.
+- [BUG-18022] Linux tray refreshes now reuse the existing native menu object to avoid duplicate tray indicators on AppIndicator hosts.
+- [BUG-18023] Linux packages now install hidden desktop identity fallbacks so taskbars can match the `VaultSync.UI` runtime window to the VaultSync icon.
+- [BUG-18026] Refreshed vulnerable/dependency-alert package versions across core, UI, and tests while staying on the Avalonia 11 line.
+- [BUG-18027] Project roots imported from another OS are now remapped to matching folders under the local Projects root, including Windows-path leaf names and case-only folder differences on Linux.
+- [BUG-18028] Pinned patched SkiaSharp and HarfBuzzSharp runtime packages so dependency graph alerts no longer resolve Avalonia's older transitive graphics stack.
+- [BUG-18029] Linux protected installs such as `/opt/vaultsync` now use the installer fallback instead of attempting a patch update that cannot write to root-owned files, and release asset builds can omit Linux patch assets when an installer-only Linux update is required.
+- [BUG-18030] Linux updater fallback now prefers `.deb` installers on Debian-family systems and marks downloaded AppImages executable before launch.
+- [BUG-18031] Linux startup now keeps Avalonia's compatible DBus protocol dependency instead of overriding it with an incompatible newer package.
+- [BUG-18032] Linux packages now use one AppStream/desktop/window identity to improve software-center previews and avoid duplicate taskbar grouping. Refs #315.
+- [BUG-18033] Project preset changes now persist immediately for registered projects instead of reverting after refresh. Refs #316.
+- [BUG-18034] Projects now label and display latest snapshot size explicitly, and show unavailable sizes instead of misleading `0 MB` values. Refs #317.
+- [BUG-18035] The sidebar collapse button now uses vector geometry instead of a platform font glyph so Linux no longer renders a missing-glyph rectangle. Refs #318.
+- [BUG-18036] Projects list scrolling now uses the ListBox's own virtualized scroll host and sidebar navigation labels align vertically with their icons. Refs #319.
+- [BUG-18037] Projects now keep snapshot presets populated by applying detected recommendations first and a generic fallback preset when no specific preset applies. Refs #320.
+
 ## [1.7.3] - 23.04.2026
 ### Added
 - [VS-17106] The in-app log console now exposes an explicit Auto-scroll toggle and lets you copy the selected log line with a button or the usual platform copy shortcut.
-- [VS-1805] Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`, plus a desktop-friendly `linux-x64` AppImage so direct Linux installs cover the widest practical audience.
+- [VS-1732] Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`, plus a desktop-friendly `linux-x64` AppImage so direct Linux installs cover the widest practical audience.
 ### Changed
-- [VS-1805] Linux update discovery now prefers architecture-specific installers and patch assets (`linux-x64` / `linux-arm64`) before falling back to generic Linux naming.
+- [VS-1732] Linux update discovery now prefers architecture-specific installers and patch assets (`linux-x64` / `linux-arm64`) before falling back to generic Linux naming.
 ### Fixed
 - [BUG-17100] Tray panel screen detection, reopen behavior, and Linux/Wayland positioning are now resilient on Hyprland-class environments. Contributed by @JustH8Me in PR #216.
 - [BUG-17101] Fixed tooltip flickering and focus issues on Linux/Wayland by enabling overlay popups PR #217 (thanks @JustH8Me)

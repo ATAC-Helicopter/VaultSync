@@ -2,6 +2,10 @@ target/**
 out/**
 build/**
 .gradle/**
+**/target/**
+**/out/**
+**/build/**
+**/.gradle/**
 *~ 
 *.iml
 *.class
@@ -16,4 +20,3 @@ build/**
 
 # Git
 .git/
-.github/

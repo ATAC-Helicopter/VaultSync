@@ -41,7 +41,7 @@ namespace VaultSync.Core.Services
             AppConfig config,
             CancellationToken cancellationToken = default)
         {
-            var root = string.IsNullOrWhiteSpace(config.ProjectsRoot)
+            string root = string.IsNullOrWhiteSpace(config.ProjectsRoot)
                 ? GetDefaultRoot()
                 : config.ProjectsRoot;
 
@@ -51,13 +51,13 @@ namespace VaultSync.Core.Services
                     Array.Empty<DiscoveredProject>());
             }
 
-            var projects = Directory
+            System.Collections.ObjectModel.ReadOnlyCollection<DiscoveredProject> projects = Directory
                 .EnumerateDirectories(root)
                 .Select(path =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var name = Path.GetFileName(
+                    string name = Path.GetFileName(
                         path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 
                     // Snapshot info will come from the DB later; keep null for now.
@@ -79,7 +79,7 @@ namespace VaultSync.Core.Services
             var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             return Path.Combine(docs, "Projects");
 #else
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
             return Path.Combine(home, "Projects");
 #endif
         }

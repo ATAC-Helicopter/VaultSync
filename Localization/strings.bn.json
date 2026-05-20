@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync এখনও চলছে",
   "Tray.Tooltip": "VaultSync - স্ন্যাপশট ও ব্যাকআপ",
   "Tray.Open": "VaultSync খুলুন",
+  "Tray.Panel.Open": "ট্রে প্যানেল খুলুন",
   "Tray.Policy.Active": "নীতি: {0}",
   "Tray.Quit": "VaultSync বন্ধ করুন",
   "Tray.Recent.ActionFormat": "   * {0}",
@@ -1173,6 +1174,7 @@
   "WhatsNew.Close": "বুঝেছি",
   "WhatsNew.Fallback": "এই আপডেটে VaultSync-এ বিভিন্ন উন্নতি এবং বাগ ফিক্স রয়েছে।",
   "WhatsNew.Section.General": "হাইলাইটস",
+  "WhatsNew.Subtitle": "আপনি যে পরিবর্তনগুলো ব্যবহার করতে যাচ্ছেন তার সংক্ষিপ্ত সারাংশ।",
   "WhatsNew.Title": "নতুন কী",
   "Backups.Restore.Mode.Label": "রিস্টোর মোড",
   "Backups.Restore.Mode.Direct": "সরাসরি (প্রকল্প পথ ওভাররাইট)",
@@ -1242,5 +1244,6 @@
   "LogConsole.CopySelected": "নির্বাচিত অংশ কপি করুন",
   "LogConsole.CopySelectedFailed": "নির্বাচিত অংশ কপি করা যায়নি",
   "LogConsole.CopySelectedSuccess": "নির্বাচিত অংশ কপি করা হয়েছে",
+  "LogConsole.CopySelectedManySuccess": "{0}টি নির্বাচিত লাইন কপি করা হয়েছে",
   "Update.Store.OpenStore": "স্টোর খুলুন"
 }

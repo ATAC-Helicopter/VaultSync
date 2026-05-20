@@ -18,12 +18,13 @@ using VaultSync.Core.Services;
 
 namespace VaultSync.Core.Services;
 
-public sealed class BackupService
+public sealed class BackupService(
+    SqliteRepository repo,
+    BackupEncryptionSecretService? backupEncryptionSecretService = null)
 {
-    private readonly Dictionary<int, CancellationTokenSource> _cancelMap = new();
-    private readonly SqliteRepository _repo;
-    private readonly BackupEncryptionSecretService _backupEncryptionSecretService;
-    private readonly BackupArchiveCryptoService _backupArchiveCryptoService;
+    private readonly Dictionary<int, CancellationTokenSource> _cancelMap = [];
+    private readonly SqliteRepository _repo = repo;
+    private readonly BackupEncryptionSecretService _backupEncryptionSecretService = backupEncryptionSecretService ?? new BackupEncryptionSecretService();
     private const string InProgressMarkerFileName = ".vaultsync_inprogress";
     private const string CompletedMarkerFileName = ".vaultsync_complete";
     private const string ArchiveResumeCheckpointFileName = ".vaultsync_resume.json";
@@ -65,7 +66,7 @@ public sealed class BackupService
         string message)
     {
         config.Advanced.CheckpointResumeTelemetry ??= new CheckpointResumeTelemetry();
-        var telemetry = config.Advanced.CheckpointResumeTelemetry;
+        CheckpointResumeTelemetry telemetry = config.Advanced.CheckpointResumeTelemetry;
         telemetry.LastUpdatedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
         telemetry.LastStatus = status;
         telemetry.LastProjectName = projectName;
@@ -89,7 +90,7 @@ public sealed class BackupService
     {
         try
         {
-            var cfg = AppConfigStore.Load();
+            AppConfig cfg = AppConfigStore.Load();
             UpdateCheckpointResumeTelemetry(
                 cfg,
                 status,
@@ -142,19 +143,9 @@ public sealed class BackupService
         ".html", ".css", ".scss", ".less"
     };
 
-    public BackupService(
-        SqliteRepository repo,
-        BackupEncryptionSecretService? backupEncryptionSecretService = null,
-        BackupArchiveCryptoService? backupArchiveCryptoService = null)
-    {
-        _repo = repo;
-        _backupEncryptionSecretService = backupEncryptionSecretService ?? new BackupEncryptionSecretService();
-        _backupArchiveCryptoService = backupArchiveCryptoService ?? new BackupArchiveCryptoService();
-    }
-
     public void CancelBackup(int projectId)
     {
-        if (_cancelMap.TryGetValue(projectId, out var cts))
+        if (_cancelMap.TryGetValue(projectId, out CancellationTokenSource? cts))
         {
             RuntimeLog.WriteVerbose($"[BackupService] Cancel requested for projectId={projectId}.");
             try { cts.Cancel(); } catch { }
@@ -178,7 +169,7 @@ public sealed class BackupService
     {
         try
         {
-            var markerPath = Path.Combine(backupFolder, fileName);
+            string markerPath = Path.Combine(backupFolder, fileName);
             File.WriteAllText(markerPath, contents);
         }
         catch (Exception ex)
@@ -191,7 +182,7 @@ public sealed class BackupService
     {
         try
         {
-            var markerPath = Path.Combine(backupFolder, fileName);
+            string markerPath = Path.Combine(backupFolder, fileName);
             if (File.Exists(markerPath))
                 File.Delete(markerPath);
         }
@@ -208,8 +199,8 @@ public sealed class BackupService
     {
         try
         {
-            var path = GetArchiveResumeCheckpointPath(backupFolder);
-            var json = JsonSerializer.Serialize(checkpoint, ResumeCheckpointJsonOptions);
+            string path = GetArchiveResumeCheckpointPath(backupFolder);
+            string json = JsonSerializer.Serialize(checkpoint, ResumeCheckpointJsonOptions);
             File.WriteAllText(path, json, Encoding.UTF8);
         }
         catch (Exception ex)
@@ -222,13 +213,13 @@ public sealed class BackupService
     {
         try
         {
-            var path = GetArchiveResumeCheckpointPath(backupFolder);
+            string path = GetArchiveResumeCheckpointPath(backupFolder);
             if (!File.Exists(path))
             {
                 return null;
             }
 
-            var json = File.ReadAllText(path, Encoding.UTF8);
+            string json = File.ReadAllText(path, Encoding.UTF8);
             return JsonSerializer.Deserialize<ArchiveResumeCheckpoint>(json, ResumeCheckpointJsonOptions);
         }
         catch (Exception ex)
@@ -242,7 +233,7 @@ public sealed class BackupService
     {
         try
         {
-            var path = GetArchiveResumeCheckpointPath(backupFolder);
+            string path = GetArchiveResumeCheckpointPath(backupFolder);
             if (File.Exists(path))
             {
                 File.Delete(path);
@@ -267,10 +258,10 @@ public sealed class BackupService
             return true;
         }
 
-        var remaining = length;
-        var compareBuffer = Math.Max(64 * 1024, bufferSize);
-        var left = new byte[compareBuffer];
-        var right = new byte[compareBuffer];
+        long remaining = length;
+        int compareBuffer = Math.Max(64 * 1024, bufferSize);
+        byte[] left = new byte[compareBuffer];
+        byte[] right = new byte[compareBuffer];
 
         using var src = new FileStream(localArchive, FileMode.Open, FileAccess.Read, FileShare.Read, compareBuffer, FileOptions.SequentialScan);
         using var dst = new FileStream(destinationArchive, FileMode.Open, FileAccess.Read, FileShare.Read, compareBuffer, FileOptions.SequentialScan);
@@ -281,15 +272,15 @@ public sealed class BackupService
         while (remaining > 0)
         {
             ct.ThrowIfCancellationRequested();
-            var toRead = (int)Math.Min(compareBuffer, remaining);
-            var srcRead = src.Read(left, 0, toRead);
-            var dstRead = dst.Read(right, 0, toRead);
+            int toRead = (int)Math.Min(compareBuffer, remaining);
+            int srcRead = src.Read(left, 0, toRead);
+            int dstRead = dst.Read(right, 0, toRead);
             if (srcRead != dstRead || srcRead != toRead)
             {
                 return false;
             }
 
-            for (var i = 0; i < toRead; i++)
+            for (int i = 0; i < toRead; i++)
             {
                 if (left[i] != right[i])
                 {
@@ -306,11 +297,11 @@ public sealed class BackupService
     internal static string BuildArchiveResumeFingerprint(string sourceDir, IEnumerable<string> files)
     {
         using var sha = SHA256.Create();
-        var orderedFiles = files
+        IOrderedEnumerable<string> orderedFiles = files
             .Select(path => Path.GetFullPath(path))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var file in orderedFiles)
+        foreach (string? file in orderedFiles)
         {
             FileInfo info;
             try
@@ -328,7 +319,7 @@ public sealed class BackupService
                 continue;
             }
 
-            var relative = Path.GetRelativePath(sourceDir, file).Replace('\\', '/');
+            string relative = Path.GetRelativePath(sourceDir, file).Replace('\\', '/');
             string line;
             try
             {
@@ -340,12 +331,12 @@ public sealed class BackupService
                 continue;
             }
 
-            var bytes = Encoding.UTF8.GetBytes(line);
+            byte[] bytes = Encoding.UTF8.GetBytes(line);
             sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
         }
 
-        sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-        return Convert.ToHexString(sha.Hash ?? Array.Empty<byte>());
+        sha.TransformFinalBlock([], 0, 0);
+        return Convert.ToHexString(sha.Hash ?? []);
     }
 
     private static bool IsResumableArchiveBackup(string backupDir)
@@ -370,13 +361,13 @@ public sealed class BackupService
 
     private static string? TryFindResumableArchiveBackupFolder(string candidateDestDir, string sourceFingerprint)
     {
-        var projectDir = Path.GetDirectoryName(candidateDestDir);
+        string? projectDir = Path.GetDirectoryName(candidateDestDir);
         if (string.IsNullOrWhiteSpace(projectDir) || !Directory.Exists(projectDir))
         {
             return null;
         }
 
-        var match = SafeEnumerateDirectories(projectDir)
+        string? match = SafeEnumerateDirectories(projectDir)
             .Where(dir => !string.Equals(dir, candidateDestDir, StringComparison.OrdinalIgnoreCase))
             .Select(dir => new { Dir = dir, Checkpoint = TryReadArchiveResumeCheckpoint(dir) })
             .Where(item => item.Checkpoint is not null
@@ -397,10 +388,10 @@ public sealed class BackupService
             return true;
         }
 
-        var remaining = length;
-        var compareBuffer = Math.Max(64 * 1024, bufferSize);
-        var left = new byte[compareBuffer];
-        var right = new byte[compareBuffer];
+        long remaining = length;
+        int compareBuffer = Math.Max(64 * 1024, bufferSize);
+        byte[] left = new byte[compareBuffer];
+        byte[] right = new byte[compareBuffer];
 
         using var src = new FileStream(localArchive, FileMode.Open, FileAccess.Read, FileShare.Read, compareBuffer, FileOptions.SequentialScan);
         using var dst = new FileStream(destinationArchive, FileMode.Open, FileAccess.Read, FileShare.Read, compareBuffer, FileOptions.SequentialScan);
@@ -408,15 +399,15 @@ public sealed class BackupService
         while (remaining > 0)
         {
             ct.ThrowIfCancellationRequested();
-            var toRead = (int)Math.Min(compareBuffer, remaining);
-            var srcRead = src.Read(left, 0, toRead);
-            var dstRead = dst.Read(right, 0, toRead);
+            int toRead = (int)Math.Min(compareBuffer, remaining);
+            int srcRead = src.Read(left, 0, toRead);
+            int dstRead = dst.Read(right, 0, toRead);
             if (srcRead != dstRead || srcRead != toRead)
             {
                 return false;
             }
 
-            for (var i = 0; i < toRead; i++)
+            for (int i = 0; i < toRead; i++)
             {
                 if (left[i] != right[i])
                 {
@@ -435,8 +426,8 @@ public sealed class BackupService
         if (string.IsNullOrWhiteSpace(path))
             return false;
 
-        if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||
+        if (path.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("//", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
         {
@@ -445,7 +436,7 @@ public sealed class BackupService
 
         try
         {
-            var root = Path.GetPathRoot(path);
+            string? root = Path.GetPathRoot(path);
             if (string.IsNullOrWhiteSpace(root))
                 return false;
 
@@ -467,12 +458,12 @@ public sealed class BackupService
     public async Task<BackupPreflightResult> PreflightBackupAsync(
         Project project,
         string backupRoot,
-        CancellationToken ct = default,
         double? throughputMbSec = null,
         bool useArchiveMode = false,
-        TimeSpan? cacheTtl = null)
+        TimeSpan? cacheTtl = null,
+        CancellationToken ct = default)
     {
-        if (project is null) throw new ArgumentNullException(nameof(project));
+        ArgumentNullException.ThrowIfNull(project);
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
         if (string.IsNullOrWhiteSpace(backupRoot))
@@ -486,39 +477,39 @@ public sealed class BackupService
                 "Make sure the path exists and any network share is mounted.");
         }
 
-        var ttl = cacheTtl ?? TimeSpan.FromSeconds(30);
-        var cacheKey = $"{project.Id}|{backupRoot}|{project.Preset}|{useArchiveMode}";
-        if (TryGetCachedPreflight(cacheKey, ttl, out var cached))
+        TimeSpan ttl = cacheTtl ?? TimeSpan.FromSeconds(30);
+        string cacheKey = $"{project.Id}|{backupRoot}|{project.Preset}|{useArchiveMode}";
+        if (TryGetCachedPreflight(cacheKey, ttl, out BackupPreflightResult? cached))
         {
             return cached with { UsedCache = true };
         }
 
-        var stats = await Task.Run(() => GetBackupStats(project, ttl, ct), ct);
-        var space = TryGetDiskSpace(backupRoot);
-        var volumeTotal = space?.totalBytes;
-        var volumeFree = space?.freeBytes;
-        var requiredBytes = stats.totalBytes;
+        (int totalFiles, long totalBytes) = await Task.Run(() => GetBackupStats(project, ttl, ct), ct);
+        (long totalBytes, long freeBytes)? space = TryGetDiskSpace(backupRoot);
+        long? volumeTotal = space?.totalBytes;
+        long? volumeFree = space?.freeBytes;
+        long requiredBytes = totalBytes;
         if (useArchiveMode && requiredBytes > 0)
         {
             requiredBytes = (long)Math.Ceiling(requiredBytes * 1.05d);
         }
-        var hasEnoughSpace = !volumeFree.HasValue || volumeFree.Value >= requiredBytes;
-        var warning = hasEnoughSpace
+        bool hasEnoughSpace = !volumeFree.HasValue || volumeFree.Value >= requiredBytes;
+        string? warning = hasEnoughSpace
             ? null
             : $"Backup may not fit on the target. Required={requiredBytes} bytes, Free={volumeFree ?? 0} bytes.";
 
-        var fallbackThroughput = GetFallbackThroughputMbSec(backupRoot, useArchiveMode);
-        var usedThroughput = throughputMbSec.HasValue && throughputMbSec.Value > 0
+        double fallbackThroughput = GetFallbackThroughputMbSec(backupRoot, useArchiveMode);
+        double usedThroughput = throughputMbSec > 0
             ? throughputMbSec.Value
             : fallbackThroughput;
 
-        double? estimatedSeconds = stats.totalBytes > 0 && usedThroughput > 0
-            ? stats.totalBytes / (usedThroughput * 1024d * 1024d)
+        double? estimatedSeconds = totalBytes > 0 && usedThroughput > 0
+            ? totalBytes / (usedThroughput * 1024d * 1024d)
             : (double?)null;
 
         var result = new BackupPreflightResult(
-            stats.totalBytes,
-            stats.totalFiles,
+            totalBytes,
+            totalFiles,
             volumeTotal,
             volumeFree,
             hasEnoughSpace,
@@ -537,7 +528,7 @@ public sealed class BackupService
         TimeSpan ttl,
         out BackupPreflightResult result)
     {
-        if (PreflightCache.TryGetValue(cacheKey, out var cached))
+        if (PreflightCache.TryGetValue(cacheKey, out (DateTime TimestampUtc, BackupPreflightResult Result) cached))
         {
             if ((DateTime.UtcNow - cached.TimestampUtc) <= ttl)
             {
@@ -555,16 +546,16 @@ public sealed class BackupService
         TimeSpan ttl,
         CancellationToken ct)
     {
-        var snapshot = _repo.GetLatestSnapshot(project.Id);
+        Snapshot? snapshot = _repo.GetLatestSnapshot(project.Id);
         if (snapshot is not null)
         {
-            var fileCount = Convert.ToInt32(snapshot.FileCount);
-            var totalBytes = snapshot.TotalBytes;
+            int fileCount = Convert.ToInt32(snapshot.FileCount);
+            long totalBytes = snapshot.TotalBytes;
             return (fileCount, totalBytes);
         }
 
-        var statsKey = $"{project.RootPath}|{project.Preset}";
-        if (StatsCache.TryGetValue(statsKey, out var cached))
+        string statsKey = $"{project.RootPath}|{project.Preset}";
+        if (StatsCache.TryGetValue(statsKey, out (DateTime TimestampUtc, int TotalFiles, long TotalBytes) cached))
         {
             if ((DateTime.UtcNow - cached.TimestampUtc) <= ttl)
             {
@@ -572,7 +563,7 @@ public sealed class BackupService
             }
         }
 
-        var computed = ComputeBackupStats(project.RootPath, project.Preset, ct);
+        (int totalFiles, long totalBytes) computed = ComputeBackupStats(project.RootPath, project.Preset, ct);
         StatsCache[statsKey] = (DateTime.UtcNow, computed.totalFiles, computed.totalBytes);
         TrimStatsCache();
         return computed;
@@ -583,7 +574,7 @@ public sealed class BackupService
         if (PreflightCache.Count <= PreflightCacheLimit)
             return;
 
-        foreach (var entry in PreflightCache
+        foreach (KeyValuePair<string, (DateTime TimestampUtc, BackupPreflightResult Result)> entry in PreflightCache
                      .OrderBy(kvp => kvp.Value.TimestampUtc)
                      .Take(Math.Max(1, PreflightCache.Count - PreflightCacheLimit)))
         {
@@ -596,7 +587,7 @@ public sealed class BackupService
         if (StatsCache.Count <= StatsCacheLimit)
             return;
 
-        foreach (var entry in StatsCache
+        foreach (KeyValuePair<string, (DateTime TimestampUtc, int TotalFiles, long TotalBytes)> entry in StatsCache
                      .OrderBy(kvp => kvp.Value.TimestampUtc)
                      .Take(Math.Max(1, StatsCache.Count - StatsCacheLimit)))
         {
@@ -606,7 +597,7 @@ public sealed class BackupService
 
     private static double GetFallbackThroughputMbSec(string backupRoot, bool useArchiveMode)
     {
-        var isNetwork = IsNetworkPathOrDrive(backupRoot);
+        bool isNetwork = IsNetworkPathOrDrive(backupRoot);
         if (useArchiveMode)
         {
             return isNetwork ? 18d : 60d;
@@ -615,21 +606,21 @@ public sealed class BackupService
         return isNetwork ? 25d : 80d;
     }
 
-    public int CleanupIncompleteBackups(string backupRoot, IEnumerable<string>? projectFolderNames = null)
+    public static int CleanupIncompleteBackups(string backupRoot, IEnumerable<string>? projectFolderNames = null)
     {
         if (string.IsNullOrWhiteSpace(backupRoot) || !Directory.Exists(backupRoot))
             return 0;
 
-        var removed = 0;
+        int removed = 0;
         var projectDirs = projectFolderNames?.ToList();
         if (projectDirs is { Count: > 0 })
         {
-            foreach (var folder in projectDirs)
+            foreach (string? folder in projectDirs)
             {
                 if (string.IsNullOrWhiteSpace(folder))
                     continue;
 
-                var projectDir = Path.Combine(backupRoot, folder);
+                string projectDir = Path.Combine(backupRoot, folder);
                 if (!Directory.Exists(projectDir))
                     continue;
 
@@ -639,7 +630,7 @@ public sealed class BackupService
             return removed;
         }
 
-        foreach (var projectDir in SafeEnumerateDirectories(backupRoot))
+        foreach (string projectDir in SafeEnumerateDirectories(backupRoot))
         {
             removed += CleanupIncompleteBackupsUnderProject(projectDir);
         }
@@ -647,22 +638,22 @@ public sealed class BackupService
         return removed;
     }
 
-    private int CleanupIncompleteBackupsUnderProject(string projectDir)
+    private static int CleanupIncompleteBackupsUnderProject(string projectDir)
     {
-        var removed = 0;
+        int removed = 0;
         {
-            foreach (var backupDir in SafeEnumerateDirectories(projectDir))
+            foreach (string backupDir in SafeEnumerateDirectories(projectDir))
             {
                 try
                 {
-                    var markerPath = Path.Combine(backupDir, InProgressMarkerFileName);
+                    string markerPath = Path.Combine(backupDir, InProgressMarkerFileName);
                     if (!File.Exists(markerPath))
                         continue;
 
                     if (IsResumableArchiveBackup(backupDir))
                     {
                         RuntimeLog.WriteVerbose($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
-                        var checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
+                        ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
                         PersistCheckpointResumeTelemetry(
                             status: "cleanup-preserved",
                             projectName: Path.GetFileName(projectDir),
@@ -690,7 +681,7 @@ public sealed class BackupService
         return removed;
     }
 
-    private static IEnumerable<string> SafeEnumerateDirectories(string root)
+    private static string[] SafeEnumerateDirectories(string root)
     {
         try
         {
@@ -699,7 +690,7 @@ public sealed class BackupService
         catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
         {
             RuntimeLog.WriteVerbose($"[BackupService] Skipping directory scan for '{root}': {ex.Message}");
-            return Array.Empty<string>();
+            return [];
         }
     }
 
@@ -744,7 +735,6 @@ public sealed class BackupService
         string backupRoot,
         bool isAuto,
         Action<double, string, string>? progressCallback = null,
-        CancellationToken ct = default,
         bool useArchiveMode = false,
         bool fullSnapshotHash = true,
         int? maxSnapshotsToKeep = null,
@@ -762,19 +752,20 @@ public sealed class BackupService
         bool preferParallelArchiveUpload = false,
         bool useScanCache = false,
         bool aggressiveScanCache = false,
-        bool enableCheckpointedRetry = true)
+        bool enableCheckpointedRetry = true,
+        CancellationToken ct = default)
     {
-        if (project is null) throw new ArgumentNullException(nameof(project));
+        ArgumentNullException.ThrowIfNull(project);
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
 
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
 
-        var configSnapshot = AppConfigStore.Load();
-        var encryptionConfig = configSnapshot.Backups.Encryption ?? new BackupEncryptionConfig();
-        var resolvedEncryption = BackupEncryptionPolicyResolver.Resolve(project, encryptionConfig);
-        var encryptionRequested = resolvedEncryption.EncryptionRequested;
+        AppConfig configSnapshot = AppConfigStore.Load();
+        BackupEncryptionConfig encryptionConfig = configSnapshot.Backups.Encryption ?? new BackupEncryptionConfig();
+        BackupEncryptionPolicyResolver.ResolvedPolicy resolvedEncryption = BackupEncryptionPolicyResolver.Resolve(project, encryptionConfig);
+        bool encryptionRequested = resolvedEncryption.EncryptionRequested;
         if (encryptionRequested && !useArchiveMode)
         {
             // Encrypted backups currently require archive artifacts.
@@ -782,21 +773,21 @@ public sealed class BackupService
             RuntimeLog.WriteVerbose($"[BackupService] Encryption enabled; forcing archive mode for project '{project.Name}'.");
         }
 
-        var backupIsEncrypted = false;
-        var backupCryptoDescriptorJson = BackupCryptoDescriptor.PlainMetadataJson;
+        bool backupIsEncrypted = false;
+        string backupCryptoDescriptorJson = BackupCryptoDescriptor.PlainMetadataJson;
 
         // Create (or replace) a CTS for this project and link with caller token.
-        if (_cancelMap.ContainsKey(project.Id))
+        if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? existingCts))
         {
-            try { _cancelMap[project.Id].Cancel(); } catch { }
-            _cancelMap[project.Id].Dispose();
+            try { existingCts.Cancel(); } catch { }
+            existingCts.Dispose();
         }
         var projectCts = new CancellationTokenSource();
         _cancelMap[project.Id] = projectCts;
 
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
-        var linkedToken = linkedCts.Token;
-        using var cancelLog = linkedToken.Register(() =>
+        CancellationToken linkedToken = linkedCts.Token;
+        await using CancellationTokenRegistration cancelLog = linkedToken.Register(() =>
             RuntimeLog.WriteVerbose($"[BackupService] Cancellation observed for project '{project.Name}' (Id={project.Id})."));
 
         linkedToken.ThrowIfCancellationRequested();
@@ -814,20 +805,20 @@ public sealed class BackupService
         }
 
         // Project-specific backup root: <backupRoot>/project-slug/
-        var projectSlug = Slugify(project.Name);
-        var projectBackupRoot = Path.Combine(backupRoot, projectSlug);
+        string projectSlug = Slugify(project.Name);
+        string projectBackupRoot = Path.Combine(backupRoot, projectSlug);
         Directory.CreateDirectory(projectBackupRoot);
 
         // Optional low-disk protection: check free space on the backup target volume
-        if (minimumFreeSpacePercent.HasValue && minimumFreeSpacePercent.Value > 0)
+        if (minimumFreeSpacePercent is > 0)
         {
-            var space = TryGetDiskSpace(projectBackupRoot);
+            (long totalBytes, long freeBytes)? space = TryGetDiskSpace(projectBackupRoot);
             if (space is not null)
             {
-                var (volumeTotalBytes, volumeFreeBytes) = space.Value;
+                (long volumeTotalBytes, long volumeFreeBytes) = space.Value;
                 if (volumeTotalBytes > 0)
                 {
-                    var freePercent = (double)volumeFreeBytes / volumeTotalBytes * 100d;
+                    double freePercent = (double)volumeFreeBytes / volumeTotalBytes * 100d;
                     RuntimeLog.WriteVerbose($"[BackupService] Backup target free space for '{project.Name}': {freePercent:0.0}% remaining (threshold={minimumFreeSpacePercent.Value:0.0}%).");
 
                     if (freePercent < minimumFreeSpacePercent.Value)
@@ -840,13 +831,13 @@ public sealed class BackupService
         }
 
         // Timestamped folder name: 2025-11-16_15-47-30
-        var timestamp = DateTime.UtcNow;
-        var folderName = timestamp.ToString("yyyy-MM-dd_HH-mm-ss");
-        var backupFolder = GetAvailableBackupFolder(projectBackupRoot, folderName);
+        DateTime timestamp = DateTime.UtcNow;
+        string folderName = timestamp.ToString("yyyy-MM-dd_HH-mm-ss");
+        string backupFolder = GetAvailableBackupFolder(projectBackupRoot, folderName);
         Directory.CreateDirectory(backupFolder);
         WriteMarkerFile(backupFolder, InProgressMarkerFileName, $"started:{DateTime.UtcNow:O}");
-        var backupRootUsed = backupRoot;
-        var backupFolderUsed = backupFolder;
+        string backupRootUsed = backupRoot;
+        string backupFolderUsed = backupFolder;
 
         long totalBytes = 0;
 
@@ -869,14 +860,11 @@ public sealed class BackupService
                 hashNow: false,
                 maxSnapshotsToKeep,
                 linkedToken,
-                (percent, currentFile, etaText) =>
-                {
-                    progressCallback?.Invoke(percent, currentFile, etaText);
-                },
+                (percent, currentFile, etaText) => progressCallback?.Invoke(percent, currentFile, etaText),
                 useScanCache,
                 aggressiveScanCache);
 
-            var outcome = snapshotService.LastCreatedOutcome;
+            SnapshotOutcome? outcome = snapshotService.LastCreatedOutcome;
             if (skipIfNoChanges &&
                 !reuseSnapshotId.HasValue &&
                 outcome is { Added: 0, Modified: 0, Deleted: 0 } &&
@@ -884,25 +872,25 @@ public sealed class BackupService
             {
                 // No file changes: remove the empty backup folder and snapshot, then skip.
                 DeletePartialBackup(backupFolderUsed);
-                _repo.DeleteSnapshotsById(project.Name, new[] { snapshotId });
+                _repo.DeleteSnapshotsById(project.Name, [snapshotId]);
                 progressCallback?.Invoke(100, string.Empty, "No changes detected; backup skipped.");
                 return new BackupRunResult(0, true, false);
             }
         }
 
-        var snapshot = _repo.GetSnapshotById(snapshotId);
+        Snapshot? snapshot = _repo.GetSnapshotById(snapshotId);
         if (snapshot is not null)
         {
             totalFilesForProgress = Convert.ToInt32(snapshot.FileCount);
             totalBytes = snapshot.TotalBytes;
         }
 
-        var needFileList = useArchiveMode || (progressCallback is not null && !preferRunnerProgressOnly);
+        bool needFileList = useArchiveMode || (progressCallback is not null && !preferRunnerProgressOnly);
         if (needFileList)
         {
             try
             {
-                filesForProgress = _repo.GetFilesForSnapshot(snapshotId).ToList();
+                filesForProgress = [.. _repo.GetFilesForSnapshot(snapshotId)];
                 if (snapshot is null)
                 {
                     totalFilesForProgress = filesForProgress.Count;
@@ -927,9 +915,9 @@ public sealed class BackupService
         string[]? filesForBackup = null;
         if (filesForProgress is { Count: > 0 })
         {
-            filesForBackup = filesForProgress
+            filesForBackup = [.. filesForProgress
                 .Select(f => Path.Combine(project.RootPath, f.RelPath))
-                .ToArray();
+            ];
         }
 
         RuntimeLog.WriteVerbose($"[BackupService] Starting backup for '{project.Name}' ({project.RootPath}), totalBytes={totalBytes}.");
@@ -956,7 +944,7 @@ public sealed class BackupService
             {
                 progressCallback?.Invoke(0, "Preparing archive backup...", string.Empty);
 
-                var uploadBufferBytes = NormalizeArchiveUploadBufferBytes(archiveUploadBufferBytes);
+                int uploadBufferBytes = NormalizeArchiveUploadBufferBytes(archiveUploadBufferBytes);
                 backupFolderUsed = await RunArchiveBackupAsync(
                     project,
                     backupFolder,
@@ -964,10 +952,10 @@ public sealed class BackupService
                     totalFilesForProgress,
                     filesForBackup,
                     progressCallback,
-                    linkedToken,
                     uploadBufferBytes,
                     preferParallelArchiveUpload,
-                    enableCheckpointedRetry);
+                    enableCheckpointedRetry,
+                    linkedToken);
             }
             else
             {
@@ -980,14 +968,14 @@ public sealed class BackupService
                     totalFilesForProgress,
                     filesForProgress,
                     progressCallback,
-                    linkedToken,
                     useRsyncDelta,
                     useIncrementalBackups,
                     linkDest,
                     TransferPolicy.NormalizeBandwidthLimitMbps(
                         configSnapshot.Backups.EnableBandwidthLimit,
                         configSnapshot.Backups.MaxBandwidthMbps),
-                    preferRunnerProgressOnly);
+                    preferRunnerProgressOnly,
+                    linkedToken);
             }
         }
         catch (Exception ex)
@@ -1041,10 +1029,10 @@ public sealed class BackupService
             {
                 if (Directory.Exists(preferredFinalBackupRoot))
                 {
-                    var destProjectRoot = Path.Combine(preferredFinalBackupRoot, projectSlug);
+                    string destProjectRoot = Path.Combine(preferredFinalBackupRoot, projectSlug);
                     Directory.CreateDirectory(destProjectRoot);
 
-                    var destFolder = Path.Combine(destProjectRoot, Path.GetFileName(backupFolder));
+                    string destFolder = Path.Combine(destProjectRoot, Path.GetFileName(backupFolder));
                     if (Directory.Exists(destFolder))
                         Directory.Delete(destFolder, recursive: true);
 
@@ -1055,7 +1043,7 @@ public sealed class BackupService
                     // Clean up empty temp project root if applicable
                     try
                     {
-                        var tempProjectRoot = Path.GetDirectoryName(backupFolder);
+                        string? tempProjectRoot = Path.GetDirectoryName(backupFolder);
                         if (!string.IsNullOrWhiteSpace(tempProjectRoot) &&
                             Directory.Exists(tempProjectRoot) &&
                             !Directory.EnumerateFileSystemEntries(tempProjectRoot).Any())
@@ -1086,7 +1074,7 @@ public sealed class BackupService
                         "Backup encryption is enabled for this project but no encryption key reference is configured.");
                 }
 
-                var password = _backupEncryptionSecretService.GetSecret(
+                string? password = _backupEncryptionSecretService.GetSecret(
                     resolvedEncryption.EffectiveKeyRef,
                     username: "vaultsync-backup-encryption");
                 if (string.IsNullOrWhiteSpace(password))
@@ -1095,7 +1083,7 @@ public sealed class BackupService
                         $"Backup encryption is enabled but no encryption secret is available for the resolved {resolvedEncryption.KeySource} key.");
                 }
 
-                var encryptionResult = _backupArchiveCryptoService.EncryptArchiveInPlace(
+                BackupArchiveCryptoService.EncryptionResult encryptionResult = BackupArchiveCryptoService.EncryptArchiveInPlace(
                     backupFolderUsed,
                     password,
                     encryptionConfig,
@@ -1117,9 +1105,9 @@ public sealed class BackupService
         }
 
         // Store relative path so if backupRoot moves, paths are still valid.
-        var relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
-        var backupType = isAuto ? "auto" : "manual";
-        var backupMode = !useArchiveMode &&
+        string relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
+        string backupType = isAuto ? "auto" : "manual";
+        string backupMode = !useArchiveMode &&
                          useIncrementalBackups &&
                          !string.IsNullOrWhiteSpace(linkDest)
             ? BackupModes.Incremental
@@ -1127,15 +1115,15 @@ public sealed class BackupService
 
         RuntimeLog.WriteVerbose($"[BackupService] Backup data written for '{project.Name}', creating backup metadata in database...");
 
-        var backupId = 0;
+        int backupId = 0;
 
         if (writeMetadata)
         {
             // Persist metadata in the backups table
-            var metadataRoot = !string.IsNullOrWhiteSpace(destinationPath)
+            string metadataRoot = !string.IsNullOrWhiteSpace(destinationPath)
                 ? destinationPath
                 : backupRootUsed;
-            var metadataAlias = !string.IsNullOrWhiteSpace(destinationAlias)
+            string metadataAlias = !string.IsNullOrWhiteSpace(destinationAlias)
                 ? destinationAlias
                 : string.Empty;
 
@@ -1174,14 +1162,14 @@ public sealed class BackupService
             RuntimeLog.WriteVerbose($"[BackupService] Skipping completion marker on network destination '{backupFolderUsed}'.");
         }
 
-        var completedMessage = backupIsEncrypted
+        string completedMessage = backupIsEncrypted
             ? "Backup completed (encrypted)."
             : useArchiveMode
                 ? "Backup completed (archive)."
                 : "Backup completed.";
         progressCallback?.Invoke(100, string.Empty, completedMessage);
 
-        if (_cancelMap.TryGetValue(project.Id, out var finishedCts))
+        if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? finishedCts))
         {
             finishedCts.Dispose();
             _cancelMap.Remove(project.Id);
@@ -1206,12 +1194,12 @@ public sealed class BackupService
         int totalFiles,
         List<FileEntry>? filesForProgress,
         Action<double, string, string>? progressCallback,
-        CancellationToken ct,
         bool useRsyncDelta,
         bool useIncrementalBackups,
         string? linkDest,
         int? maxBandwidthMbps,
-        bool preferRunnerProgressOnly)
+        bool preferRunnerProgressOnly,
+        CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -1225,7 +1213,7 @@ public sealed class BackupService
         CancellationTokenSource? monitorCts = null;
         Task? monitorTask = null;
         RunnerProgressState? runnerState = null;
-        var useHybridMonitor = progressCallback is not null
+        bool useHybridMonitor = progressCallback is not null
             && totalBytes > 0
             && filesForProgress is not null
             && filesForProgress.Count > 0
@@ -1236,11 +1224,8 @@ public sealed class BackupService
             RuntimeLog.WriteVerbose("[BackupService] Progress monitor enabled (destination scans for progress).");
             monitorCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             runnerState = new RunnerProgressState();
-            monitorTask = MonitorCopyProgressAsync(destDir, filesForProgress!, totalBytes, progressCallback!, monitorCts.Token, runnerState);
-            callbackForRunner = (percent, currentFile, etaText) =>
-            {
-                runnerState.Update(percent, currentFile, etaText);
-            };
+            monitorTask = MonitorCopyProgressAsync(destDir, filesForProgress!, totalBytes, progressCallback!, runnerState, monitorCts.Token);
+            callbackForRunner = (percent, currentFile, etaText) => runnerState.Update(percent, currentFile, etaText);
         }
         else if (progressCallback is null || totalBytes <= 0)
         {
@@ -1249,13 +1234,13 @@ public sealed class BackupService
         }
         else
         {
-            var startTime = DateTime.UtcNow;
-            var lastUiUpdate = startTime;
+            DateTime startTime = DateTime.UtcNow;
+            DateTime lastUiUpdate = startTime;
             var minUiInterval = TimeSpan.FromMilliseconds(100);
 
             callbackForRunner = (percent, currentFile, _) =>
             {
-                var now = DateTime.UtcNow;
+                DateTime now = DateTime.UtcNow;
 
                 // Throttle UI updates a bit to avoid spamming the UI thread when
                 // the native tool reports progress very frequently, especially
@@ -1265,23 +1250,23 @@ public sealed class BackupService
 
                 lastUiUpdate = now;
 
-                var elapsed = now - startTime;
-                var etaText = string.Empty;
+                TimeSpan elapsed = now - startTime;
+                string etaText = string.Empty;
 
                 if (percent > 0 && percent < 100)
                 {
-                    var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                    var doneBytes = totalBytes * (percent / 100.0);
-                    var speedBytesSec = doneBytes / elapsedSeconds;
-                    var speedMbSec = speedBytesSec / (1024 * 1024);
+                    double elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                    double doneBytes = totalBytes * (percent / 100.0);
+                    double speedBytesSec = doneBytes / elapsedSeconds;
+                    double speedMbSec = speedBytesSec / (1024 * 1024);
 
-                    var remainingFraction = (100.0 - percent) / percent;
-                    var remainingSeconds = elapsedSeconds * remainingFraction;
+                    double remainingFraction = (100.0 - percent) / percent;
+                    double remainingSeconds = elapsedSeconds * remainingFraction;
                     var eta = TimeSpan.FromSeconds(remainingSeconds);
 
                     if (totalFiles > 0)
                     {
-                        var approxDone = (int)Math.Round(totalFiles * (percent / 100.0));
+                        int approxDone = (int)Math.Round(totalFiles * (percent / 100.0));
                         etaText = $"Copying ~{approxDone}/{totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
                     }
                     else
@@ -1291,9 +1276,9 @@ public sealed class BackupService
                 }
                 else if (percent >= 100 && elapsed.TotalSeconds > 0)
                 {
-                    var elapsedSeconds = elapsed.TotalSeconds;
-                    var speedBytesSec = totalBytes / elapsedSeconds;
-                    var speedMbSec = speedBytesSec / (1024 * 1024);
+                    double elapsedSeconds = elapsed.TotalSeconds;
+                    double speedBytesSec = totalBytes / elapsedSeconds;
+                    double speedMbSec = speedBytesSec / (1024 * 1024);
 
                     if (totalFiles > 0)
                     {
@@ -1309,8 +1294,8 @@ public sealed class BackupService
             };
         }
 
-        var isNetworkDestination = IsNetworkPath(destDir);
-        var effectiveUseRsyncDelta = useRsyncDelta;
+        bool isNetworkDestination = IsNetworkPath(destDir);
+        bool effectiveUseRsyncDelta = useRsyncDelta;
         if (OperatingSystem.IsWindows() && isNetworkDestination && !useRsyncDelta && !useIncrementalBackups)
         {
             if (TryGetBundledRsyncPath() is not null || IsOnPath("rsync"))
@@ -1325,13 +1310,13 @@ public sealed class BackupService
         {
             if (OperatingSystem.IsWindows())
             {
-                var bundledRsync = TryGetBundledRsyncPath();
+                string? bundledRsync = TryGetBundledRsyncPath();
                 if ((effectiveUseRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath("rsync")))
                 {
                     // rsync-based backup on Windows (when installed)
-                    var source = bundledRsync is null ? "PATH" : "bundled";
-                    var rsyncPath = bundledRsync ?? "rsync";
-                    var rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
+                    string source = bundledRsync is null ? "PATH" : "bundled";
+                    string rsyncPath = bundledRsync ?? "rsync";
+                    int? rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
                     RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
                     RuntimeLog.WriteVerbose($"[BackupService] Using rsync on Windows ({source}).");
                     var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta, rsyncPath: rsyncPath);
@@ -1370,7 +1355,7 @@ public sealed class BackupService
             else
             {
                 // rsync-based backup (fast, incremental on macOS/Linux)
-                var rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
+                int? rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
                 RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
                 var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta);
                 exitCode = await runner.SyncAsync(
@@ -1413,11 +1398,13 @@ public sealed class BackupService
 
         if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
+        {
             return true;
+        }
 
         try
         {
-            var root = Path.GetPathRoot(path);
+            string? root = Path.GetPathRoot(path);
             if (string.IsNullOrWhiteSpace(root))
                 return false;
 
@@ -1435,30 +1422,30 @@ public sealed class BackupService
         List<FileEntry> filesForProgress,
         long totalBytes,
         Action<double, string, string> progressCallback,
-        CancellationToken ct,
-        RunnerProgressState? runnerState)
+        RunnerProgressState? runnerState,
+        CancellationToken ct)
     {
-        var startTime = DateTime.UtcNow;
-        var lastSample = startTime;
+        DateTime startTime = DateTime.UtcNow;
+        DateTime lastSample = startTime;
         long lastBytes = 0;
-        var totalEntries = filesForProgress.Count;
+        int totalEntries = filesForProgress.Count;
         if (totalEntries == 0)
             return;
 
         RuntimeLog.WriteVerbose($"[BackupService] Progress monitor started for '{destDir}' (entries={totalEntries}).");
 
-        var observedSizes = new long[totalEntries];
-        var completed = new bool[totalEntries];
-        var completedFiles = 0;
+        long[] observedSizes = new long[totalEntries];
+        bool[] completed = new bool[totalEntries];
+        int completedFiles = 0;
         long copiedBytes = 0;
 
-        var minInterval = totalEntries > 4000
+        TimeSpan minInterval = totalEntries > 4000
             ? TimeSpan.FromMilliseconds(1000)
             : TimeSpan.FromMilliseconds(500);
         var logInterval = TimeSpan.FromSeconds(5);
-        var lastLog = startTime;
+        DateTime lastLog = startTime;
 
-        var chunkSize = totalEntries switch
+        int chunkSize = totalEntries switch
         {
             > 20000 => 150,
             > 10000 => 250,
@@ -1467,20 +1454,20 @@ public sealed class BackupService
             _ => 900
         };
 
-        var scanIndex = 0;
+        int scanIndex = 0;
 
         while (!ct.IsCancellationRequested)
         {
             ct.ThrowIfCancellationRequested();
 
-            var scanned = 0;
+            int scanned = 0;
             string? lastTouched = null;
 
             while (scanned < chunkSize && totalEntries > 0)
             {
-                var index = scanIndex++ % totalEntries;
-                var entry = filesForProgress[index];
-                var targetPath = Path.Combine(destDir, entry.RelPath);
+                int index = scanIndex++ % totalEntries;
+                FileEntry entry = filesForProgress[index];
+                string targetPath = Path.Combine(destDir, entry.RelPath);
 
                 long size = 0;
                 try
@@ -1508,11 +1495,11 @@ public sealed class BackupService
                     continue;
                 }
 
-                var previousSize = observedSizes[index];
+                long previousSize = observedSizes[index];
                 if (size != previousSize)
                 {
                     observedSizes[index] = size;
-                    var delta = size - previousSize;
+                    long delta = size - previousSize;
                     if (delta > 0)
                         copiedBytes += delta;
                 }
@@ -1527,12 +1514,12 @@ public sealed class BackupService
                 scanned++;
             }
 
-            var now = DateTime.UtcNow;
-            var elapsed = now - lastSample;
+            DateTime now = DateTime.UtcNow;
+            TimeSpan elapsed = now - lastSample;
             if (elapsed.TotalSeconds < 0.1)
                 elapsed = TimeSpan.FromSeconds(0.1);
 
-            var deltaBytes = copiedBytes - lastBytes;
+            long deltaBytes = copiedBytes - lastBytes;
             if (deltaBytes < 0)
                 deltaBytes = 0;
 
@@ -1543,40 +1530,37 @@ public sealed class BackupService
                 ? Math.Min(99.5d, copiedBytes * 100d / totalBytes)
                 : 0d;
 
-            var speedBytesSec = deltaBytes / elapsed.TotalSeconds;
-            var speedMbSec = speedBytesSec / (1024 * 1024);
+            double speedBytesSec = deltaBytes / elapsed.TotalSeconds;
+            double speedMbSec = speedBytesSec / (1024 * 1024);
 
             string etaText;
             if (speedBytesSec > 0 && totalBytes > 0)
             {
-                var remainingBytes = Math.Max(0, totalBytes - copiedBytes);
-                var etaSeconds = remainingBytes / speedBytesSec;
+                long remainingBytes = Math.Max(0, totalBytes - copiedBytes);
+                double etaSeconds = remainingBytes / speedBytesSec;
                 var eta = TimeSpan.FromSeconds(etaSeconds);
                 etaText = $"Copying {completedFiles}/{totalEntries} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
             }
-            else
+            else if (runnerState is not null && runnerState.HasRecentUpdate(TimeSpan.FromSeconds(10)))
             {
-                if (runnerState is not null && runnerState.HasRecentUpdate(TimeSpan.FromSeconds(10)))
+                string? fallback = runnerState.LastEtaText;
+                if (string.IsNullOrWhiteSpace(fallback) && !string.IsNullOrWhiteSpace(runnerState.LastFile))
                 {
-                    var fallback = runnerState.LastEtaText;
-                    if (string.IsNullOrWhiteSpace(fallback) && !string.IsNullOrWhiteSpace(runnerState.LastFile))
-                    {
-                        etaText = "Copying files (robocopy)...";
-                    }
-                    else
-                    {
-                        etaText = string.IsNullOrWhiteSpace(fallback)
-                            ? $"Copying {completedFiles}/{totalEntries} files - Estimating..."
-                            : fallback;
-                    }
+                    etaText = "Copying files (robocopy)...";
                 }
                 else
                 {
-                    etaText = $"Copying {completedFiles}/{totalEntries} files - Waiting for first file...";
+                    etaText = string.IsNullOrWhiteSpace(fallback)
+                        ? $"Copying {completedFiles}/{totalEntries} files - Estimating..."
+                        : fallback;
                 }
             }
+            else
+            {
+                etaText = $"Copying {completedFiles}/{totalEntries} files - Waiting for first file...";
+            }
 
-            var currentFile = string.IsNullOrWhiteSpace(lastTouched) ? string.Empty : lastTouched;
+            string currentFile = string.IsNullOrWhiteSpace(lastTouched) ? string.Empty : lastTouched;
             if (string.IsNullOrWhiteSpace(currentFile) && runnerState is not null)
             {
                 currentFile = runnerState.LastFile ?? string.Empty;
@@ -1584,7 +1568,7 @@ public sealed class BackupService
 
             if (copiedBytes <= 0 && runnerState is not null)
             {
-                var fallbackPercent = runnerState.LastPercent;
+                double fallbackPercent = runnerState.LastPercent;
                 if (fallbackPercent > 0)
                     percent = Math.Min(99.0d, fallbackPercent);
             }
@@ -1616,7 +1600,7 @@ public sealed class BackupService
         if (requestedBytes is null || requestedBytes.Value <= 0)
             return defaultBytes;
 
-        var value = requestedBytes.Value;
+        int value = requestedBytes.Value;
         if (value < minBytes)
             return minBytes;
         if (value > maxBytes)
@@ -1635,12 +1619,12 @@ public sealed class BackupService
         int totalFiles,
         IReadOnlyList<string>? filesForBackup,
         Action<double, string, string>? progressCallback,
-        CancellationToken ct,
         int uploadBufferBytes,
         bool preferParallelUpload,
-        bool enableCheckpointedRetry)
+        bool enableCheckpointedRetry,
+        CancellationToken ct)
     {
-        var sourceDir = project.RootPath;
+        string sourceDir = project.RootPath;
         var srcInfo = new DirectoryInfo(sourceDir);
         if (!srcInfo.Exists)
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
@@ -1651,14 +1635,14 @@ public sealed class BackupService
         var filter = FilterService.FromPresetAndLocal(sourceDir, project.Preset);
 
         // 2. Gather all files that will be archived.
-        var allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
-        var archiveTotalFiles = totalFiles > 0 ? totalFiles : allFiles.Length;
+        string[] allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
+        int archiveTotalFiles = totalFiles > 0 ? totalFiles : allFiles.Length;
 
-        var workingDestDir = destDir;
+        string workingDestDir = destDir;
         ArchiveResumeCheckpoint? resumeCheckpoint = null;
         if (enableCheckpointedRetry && allFiles.Length > 0)
         {
-            var fingerprint = BuildArchiveResumeFingerprint(sourceDir, allFiles);
+            string fingerprint = BuildArchiveResumeFingerprint(sourceDir, allFiles);
             resumeCheckpoint = new ArchiveResumeCheckpoint(
                 Version: 1,
                 Mode: "archive",
@@ -1666,7 +1650,7 @@ public sealed class BackupService
                 ArchiveSizeBytes: 0,
                 LastUpdatedUtc: DateTime.UtcNow);
 
-            var resumableDir = TryFindResumableArchiveBackupFolder(destDir, fingerprint);
+            string? resumableDir = TryFindResumableArchiveBackupFolder(destDir, fingerprint);
             if (!string.IsNullOrWhiteSpace(resumableDir) &&
                 !string.Equals(resumableDir, destDir, StringComparison.OrdinalIgnoreCase))
             {
@@ -1689,11 +1673,11 @@ public sealed class BackupService
 
         // 3. Prepare destination and local temp folder.
         Directory.CreateDirectory(workingDestDir);
-        var finalArchivePath = Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName);
+        string finalArchivePath = Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName);
 
-        var localTempRoot = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
+        string localTempRoot = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(localTempRoot);
-        var localArchive = Path.Combine(localTempRoot, BackupArchiveCryptoService.PlainArchiveFileName);
+        string localArchive = Path.Combine(localTempRoot, BackupArchiveCryptoService.PlainArchiveFileName);
 
         try
         {
@@ -1716,7 +1700,7 @@ public sealed class BackupService
                 progressCallback?.Invoke(100, string.Empty, "Archive empty (0 files).");
                 RemoveArchiveResumeCheckpoint(workingDestDir);
 
-                var emptySize = new FileInfo(finalArchivePath).Length;
+                long emptySize = new FileInfo(finalArchivePath).Length;
                 RuntimeLog.WriteVerbose($"[BackupService] Created empty archive for '{project.Name}', size={emptySize} bytes.");
                 return workingDestDir;
             }
@@ -1725,9 +1709,9 @@ public sealed class BackupService
             // PHASE 1: Compress files into local ZIP
             // --------------------
             long processedBytes = 0;
-            var processedFiles = 0;
-            var startTime = DateTime.UtcNow;
-            var lastUiUpdate = startTime;
+            int processedFiles = 0;
+            DateTime startTime = DateTime.UtcNow;
+            DateTime lastUiUpdate = startTime;
             var minUiInterval = TimeSpan.FromMilliseconds(100);
 
             using (var fs = new FileStream(
@@ -1739,17 +1723,17 @@ public sealed class BackupService
                 FileOptions.SequentialScan))
             using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
             {
-                foreach (var filePath in allFiles)
+                foreach (string? filePath in allFiles)
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    var relative = Path.GetRelativePath(sourceDir, filePath);
-                    var compressionLevel = ResolveArchiveCompressionLevel(filePath);
-                    var entry = zip.CreateEntry(relative, compressionLevel);
+                    string relative = Path.GetRelativePath(sourceDir, filePath);
+                    CompressionLevel compressionLevel = ResolveArchiveCompressionLevel(filePath);
+                    ZipArchiveEntry entry = zip.CreateEntry(relative, compressionLevel);
 
                     try
                     {
-                        using (var entryStream = entry.Open())
+                        using (Stream entryStream = entry.Open())
                         using (var input = new FileStream(
                             filePath,
                             FileMode.Open,
@@ -1758,7 +1742,7 @@ public sealed class BackupService
                             ArchiveFileStreamBufferBytes,
                             FileOptions.SequentialScan))
                         {
-                            var buffer = new byte[ArchiveCopyBufferBytes];
+                            byte[] buffer = new byte[ArchiveCopyBufferBytes];
                             int read;
                             while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
                             {
@@ -1768,27 +1752,27 @@ public sealed class BackupService
                                 if (progressCallback is null)
                                     continue;
 
-                                var compressPercent = (totalBytes > 0)
+                                double compressPercent = (totalBytes > 0)
                                     ? Math.Min(100d, (processedBytes * 100d / totalBytes))
                                     : 0d;
 
-                                var overallPercent = compressPercent * 0.9;
-                                var now = DateTime.UtcNow;
+                                double overallPercent = compressPercent * 0.9;
+                                DateTime now = DateTime.UtcNow;
                                 if (overallPercent < 90d && (now - lastUiUpdate) < minUiInterval)
                                     continue;
 
                                 lastUiUpdate = now;
 
-                                var elapsed = now - startTime;
-                                var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                                var speedBytesSec = processedBytes / elapsedSeconds;
-                                var speedMbSec = speedBytesSec / (1024 * 1024);
+                                TimeSpan elapsed = now - startTime;
+                                double elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                                double speedBytesSec = processedBytes / elapsedSeconds;
+                                double speedMbSec = speedBytesSec / (1024 * 1024);
 
                                 string etaText;
                                 if (overallPercent > 0 && overallPercent < 90)
                                 {
-                                    var remainingFraction = (90d - overallPercent) / overallPercent;
-                                    var remainingSeconds = elapsedSeconds * remainingFraction;
+                                    double remainingFraction = (90d - overallPercent) / overallPercent;
+                                    double remainingSeconds = elapsedSeconds * remainingFraction;
                                     var eta = TimeSpan.FromSeconds(remainingSeconds);
                                     etaText = archiveTotalFiles > 0
                                         ? $"Compressing {processedFiles + 1}/{archiveTotalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}"
@@ -1826,22 +1810,22 @@ public sealed class BackupService
 
                         double overallPercent = compressPercent * 0.9; // 0-90%
 
-                        var now = DateTime.UtcNow;
+                        DateTime now = DateTime.UtcNow;
                         if (overallPercent < 90d && (now - lastUiUpdate) < minUiInterval)
                             continue;
 
                         lastUiUpdate = now;
 
-                        var elapsed = now - startTime;
-                        var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                        var speedBytesSec = processedBytes / elapsedSeconds;
-                        var speedMbSec = speedBytesSec / (1024 * 1024);
+                        TimeSpan elapsed = now - startTime;
+                        double elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                        double speedBytesSec = processedBytes / elapsedSeconds;
+                        double speedMbSec = speedBytesSec / (1024 * 1024);
 
                         string etaText;
                         if (overallPercent > 0 && overallPercent < 90)
                         {
-                            var remainingFraction = (90d - overallPercent) / overallPercent;
-                            var remainingSeconds = elapsedSeconds * remainingFraction;
+                            double remainingFraction = (90d - overallPercent) / overallPercent;
+                            double remainingSeconds = elapsedSeconds * remainingFraction;
                             var eta = TimeSpan.FromSeconds(remainingSeconds);
                             if (archiveTotalFiles > 0)
                             {
@@ -1879,9 +1863,9 @@ public sealed class BackupService
             ct.ThrowIfCancellationRequested();
 
             var zipInfo = new FileInfo(localArchive);
-            var zipSize = zipInfo.Length;
-            var bufferSize = uploadBufferBytes;
-            var stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
+            long zipSize = zipInfo.Length;
+            int bufferSize = uploadBufferBytes;
+            TimeSpan stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
 
             if (resumeCheckpoint is not null)
             {
@@ -1897,14 +1881,14 @@ public sealed class BackupService
             async Task UploadSingleAttemptAsync(long startOffset)
             {
                 long uploaded = 0;
-                var uploadStart = DateTime.UtcNow;
-                var lastLogTime = uploadStart;
+                DateTime uploadStart = DateTime.UtcNow;
+                DateTime lastLogTime = uploadStart;
                 long lastLogBytes = 0;
-                var lastUiUpdate = uploadStart;
+                DateTime lastUiUpdate = uploadStart;
                 long lastUiBytes = startOffset;
-                var buffer = new byte[bufferSize];
-                var lastProgressTicks = uploadStart.Ticks;
-                var stalled = 0;
+                byte[] buffer = new byte[bufferSize];
+                long lastProgressTicks = uploadStart.Ticks;
+                int stalled = 0;
 
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var monitor = Task.Run(async () =>
@@ -1963,20 +1947,20 @@ public sealed class BackupService
 
                         if (progressCallback is not null && zipSize > 0)
                         {
-                            var uploadPercent = Math.Min(100d, (uploaded * 100d / zipSize));
-                            var overallPercent = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
+                            double uploadPercent = Math.Min(100d, (uploaded * 100d / zipSize));
+                            double overallPercent = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
                             if (overallPercent > 100d) overallPercent = 100d;
 
-                            var now = DateTime.UtcNow;
-                            var intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
-                            var intervalBytes = Math.Max(0, uploaded - lastUiBytes);
-                            var speedBytesSec = intervalBytes / intervalSeconds;
-                            var speedMbSec = speedBytesSec / (1024 * 1024);
+                            DateTime now = DateTime.UtcNow;
+                            double intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
+                            long intervalBytes = Math.Max(0, uploaded - lastUiBytes);
+                            double speedBytesSec = intervalBytes / intervalSeconds;
+                            double speedMbSec = speedBytesSec / (1024 * 1024);
                             lastUiUpdate = now;
                             lastUiBytes = uploaded;
 
-                            var uploadedMb = uploaded / (1024d * 1024d);
-                            var totalMb = zipSize / (1024d * 1024d);
+                            double uploadedMb = uploaded / (1024d * 1024d);
+                            double totalMb = zipSize / (1024d * 1024d);
 
                             string etaText;
                             if (uploadPercent >= 100)
@@ -1989,8 +1973,8 @@ public sealed class BackupService
                             }
                             else
                             {
-                                var remainingBytes = Math.Max(0, zipSize - uploaded);
-                                var remainingSeconds = remainingBytes / speedBytesSec;
+                                long remainingBytes = Math.Max(0, zipSize - uploaded);
+                                double remainingSeconds = remainingBytes / speedBytesSec;
                                 var eta = TimeSpan.FromSeconds(remainingSeconds);
                                 etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
                             }
@@ -2000,10 +1984,10 @@ public sealed class BackupService
 
                         if ((DateTime.UtcNow - lastLogTime) >= TimeSpan.FromSeconds(5))
                         {
-                            var now = DateTime.UtcNow;
-                            var intervalSeconds = Math.Max(0.1, (now - lastLogTime).TotalSeconds);
-                            var intervalBytes = uploaded - lastLogBytes;
-                            var intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
+                            DateTime now = DateTime.UtcNow;
+                            double intervalSeconds = Math.Max(0.1, (now - lastLogTime).TotalSeconds);
+                            long intervalBytes = uploaded - lastLogBytes;
+                            double intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
                             RuntimeLog.WriteVerbose($"[BackupService] Archive upload (single) {uploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
                             lastLogTime = now;
                             lastLogBytes = uploaded;
@@ -2022,7 +2006,7 @@ public sealed class BackupService
 
             async Task UploadSingleWithResumeAsync(int maxRetries)
             {
-                var attempt = 0;
+                int attempt = 0;
                 while (true)
                 {
                     attempt++;
@@ -2176,7 +2160,7 @@ public sealed class BackupService
 
     private static CompressionLevel ResolveArchiveCompressionLevel(string filePath)
     {
-        var ext = Path.GetExtension(filePath);
+        string ext = Path.GetExtension(filePath);
         if (string.IsNullOrWhiteSpace(ext))
             return CompressionLevel.Fastest;
 
@@ -2204,30 +2188,30 @@ public sealed class BackupService
         if (zipSize <= 0)
             return;
 
-        var finalDir = Path.GetDirectoryName(finalArchivePath);
+        string? finalDir = Path.GetDirectoryName(finalArchivePath);
         if (string.IsNullOrWhiteSpace(finalDir))
             throw new DirectoryNotFoundException($"Archive destination directory is missing for '{finalArchivePath}'.");
 
         Directory.CreateDirectory(finalDir);
 
-        var parallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
-        var chunkSize = (long)Math.Ceiling(zipSize / (double)parallelism);
+        int parallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
+        long chunkSize = (long)Math.Ceiling(zipSize / (double)parallelism);
         var resumableChunkIndexes = new HashSet<int>();
-        var fileName = Path.GetFileName(finalArchivePath);
-        var uploadStart = DateTime.UtcNow;
+        string fileName = Path.GetFileName(finalArchivePath);
+        DateTime uploadStart = DateTime.UtcNow;
         var minUiInterval = TimeSpan.FromMilliseconds(150);
-        var progressLock = new object();
-        var checkpointLock = new object();
-        var lastUiUpdate = uploadStart;
+        object progressLock = new object();
+        object checkpointLock = new object();
+        DateTime lastUiUpdate = uploadStart;
         long lastUiBytes = 0;
         long uploaded = 0;
-        var lastLogTime = uploadStart;
+        DateTime lastLogTime = uploadStart;
         long lastLogBytes = 0;
-        var logLock = new object();
-        var stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
-        var lastProgressTicks = uploadStart.Ticks;
-        var stalled = 0;
-        var destinationHasExpectedSize = File.Exists(finalArchivePath) && new FileInfo(finalArchivePath).Length == zipSize;
+        object logLock = new object();
+        TimeSpan stallTimeout = ComputeArchiveUploadStallTimeout(bufferSize);
+        long lastProgressTicks = uploadStart.Ticks;
+        int stalled = 0;
+        bool destinationHasExpectedSize = File.Exists(finalArchivePath) && new FileInfo(finalArchivePath).Length == zipSize;
 
         if (enableCheckpointedRetry &&
             resumeCheckpoint is not null &&
@@ -2238,16 +2222,16 @@ public sealed class BackupService
             resumeCheckpoint.Parallelism == parallelism &&
             resumeCheckpoint.CompletedChunkIndexes is { Count: > 0 })
         {
-            foreach (var chunkIndex in resumeCheckpoint.CompletedChunkIndexes
+            foreach (int chunkIndex in resumeCheckpoint.CompletedChunkIndexes
                          .Where(index => index >= 0 && index < parallelism)
                          .Distinct()
-                         .OrderBy(index => index))
+                         .Order())
             {
-                var start = chunkSize * chunkIndex;
+                long start = chunkSize * chunkIndex;
                 if (start >= zipSize)
                     continue;
 
-                var length = Math.Min(chunkSize, zipSize - start);
+                long length = Math.Min(chunkSize, zipSize - start);
                 if (ValidateArchiveRange(localArchive, finalArchivePath, start, length, bufferSize, ct))
                 {
                     resumableChunkIndexes.Add(chunkIndex);
@@ -2301,7 +2285,7 @@ public sealed class BackupService
                     UsesParallelUpload = true,
                     ChunkSizeBytes = chunkSize,
                     Parallelism = parallelism,
-                    CompletedChunkIndexes = completedIndexes.OrderBy(index => index).ToList()
+                    CompletedChunkIndexes = [.. completedIndexes.Order()]
                 });
         }
 
@@ -2337,8 +2321,8 @@ public sealed class BackupService
                 if (cts.IsCancellationRequested)
                     return;
 
-                var snapshotUploaded = Interlocked.Read(ref uploaded);
-                var now = DateTime.UtcNow;
+                long snapshotUploaded = Interlocked.Read(ref uploaded);
+                DateTime now = DateTime.UtcNow;
                 double intervalSeconds;
                 long intervalBytes;
                 lock (progressLock)
@@ -2352,15 +2336,15 @@ public sealed class BackupService
                     lastUiBytes = snapshotUploaded;
                 }
 
-                var speedBytesSec = intervalBytes / intervalSeconds;
-                var speedMbSec = speedBytesSec / (1024 * 1024);
-                var uploadPercent = Math.Min(100d, snapshotUploaded * 100d / zipSize);
-                var overallPercent = 90d + uploadPercent * 0.1;
+                double speedBytesSec = intervalBytes / intervalSeconds;
+                double speedMbSec = speedBytesSec / (1024 * 1024);
+                double uploadPercent = Math.Min(100d, snapshotUploaded * 100d / zipSize);
+                double overallPercent = 90d + uploadPercent * 0.1;
                 if (overallPercent > 100d)
                     overallPercent = 100d;
 
-                var uploadedMb = snapshotUploaded / (1024d * 1024d);
-                var totalMb = zipSize / (1024d * 1024d);
+                double uploadedMb = snapshotUploaded / (1024d * 1024d);
+                double totalMb = zipSize / (1024d * 1024d);
 
                 string etaText;
                 if (uploadPercent >= 100)
@@ -2373,8 +2357,8 @@ public sealed class BackupService
                 }
                 else
                 {
-                    var remainingBytes = Math.Max(0, zipSize - snapshotUploaded);
-                    var remainingSeconds = remainingBytes / speedBytesSec;
+                    long remainingBytes = Math.Max(0, zipSize - snapshotUploaded);
+                    double remainingSeconds = remainingBytes / speedBytesSec;
                     var eta = TimeSpan.FromSeconds(remainingSeconds);
                     etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
                 }
@@ -2385,17 +2369,17 @@ public sealed class BackupService
         var tasks = Enumerable.Range(0, parallelism)
             .Select(index =>
             {
-                var start = chunkSize * index;
+                long start = chunkSize * index;
                 if (start >= zipSize)
                     return Task.CompletedTask;
 
                 if (resumableChunkIndexes.Contains(index))
                     return Task.CompletedTask;
 
-                var length = Math.Min(chunkSize, zipSize - start);
+                long length = Math.Min(chunkSize, zipSize - start);
                 return Task.Run(async () =>
                 {
-                    var buffer = new byte[bufferSize];
+                    byte[] buffer = new byte[bufferSize];
                     using var src = new FileStream(
                         localArchive,
                         FileMode.Open,
@@ -2419,8 +2403,8 @@ public sealed class BackupService
                     {
                         cts.Token.ThrowIfCancellationRequested();
 
-                        var toRead = (int)Math.Min(buffer.Length, remaining);
-                        var read = await src.ReadAsync(buffer.AsMemory(0, toRead), cts.Token);
+                        int toRead = (int)Math.Min(buffer.Length, remaining);
+                        int read = await src.ReadAsync(buffer.AsMemory(0, toRead), cts.Token);
                         if (read == 0)
                             break;
 
@@ -2434,16 +2418,16 @@ public sealed class BackupService
                             continue;
                         }
 
-                        var totalUploaded = Interlocked.Add(ref uploaded, read);
+                        long totalUploaded = Interlocked.Add(ref uploaded, read);
                         Interlocked.Exchange(ref lastProgressTicks, DateTime.UtcNow.Ticks);
-                        var uploadPercent = Math.Min(100d, totalUploaded * 100d / zipSize);
-                        var overallPercent = 90d + uploadPercent * 0.1;
+                        double uploadPercent = Math.Min(100d, totalUploaded * 100d / zipSize);
+                        double overallPercent = 90d + uploadPercent * 0.1;
                         if (overallPercent > 100d)
                             overallPercent = 100d;
 
-                        var now = DateTime.UtcNow;
-                        var shouldUpdate = true;
-                        var intervalSeconds = 0d;
+                        DateTime now = DateTime.UtcNow;
+                        bool shouldUpdate = true;
+                        double intervalSeconds = 0d;
                         long intervalBytes = 0;
                         lock (progressLock)
                         {
@@ -2463,10 +2447,10 @@ public sealed class BackupService
                         if (!shouldUpdate)
                             continue;
 
-                        var speedBytesSec = intervalBytes / intervalSeconds;
-                        var speedMbSec = speedBytesSec / (1024 * 1024);
-                        var uploadedMb = totalUploaded / (1024d * 1024d);
-                        var totalMb = zipSize / (1024d * 1024d);
+                        double speedBytesSec = intervalBytes / intervalSeconds;
+                        double speedMbSec = speedBytesSec / (1024 * 1024);
+                        double uploadedMb = totalUploaded / (1024d * 1024d);
+                        double totalMb = zipSize / (1024d * 1024d);
 
                         string etaText;
                         if (uploadPercent >= 100)
@@ -2479,8 +2463,8 @@ public sealed class BackupService
                         }
                         else
                         {
-                            var remainingBytes = Math.Max(0, zipSize - totalUploaded);
-                            var remainingSeconds = remainingBytes / speedBytesSec;
+                            long remainingBytes = Math.Max(0, zipSize - totalUploaded);
+                            double remainingSeconds = remainingBytes / speedBytesSec;
                             var eta = TimeSpan.FromSeconds(remainingSeconds);
                             etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
                         }
@@ -2497,15 +2481,15 @@ public sealed class BackupService
                         }
                     }
 
-                    var logNow = DateTime.UtcNow;
-                    var snapshotUploaded = Interlocked.Read(ref uploaded);
+                    DateTime logNow = DateTime.UtcNow;
+                    long snapshotUploaded = Interlocked.Read(ref uploaded);
                     lock (logLock)
                     {
                         if ((logNow - lastLogTime) >= TimeSpan.FromSeconds(5))
                         {
-                            var intervalSeconds = Math.Max(0.1, (logNow - lastLogTime).TotalSeconds);
-                            var intervalBytes = snapshotUploaded - lastLogBytes;
-                            var intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
+                            double intervalSeconds = Math.Max(0.1, (logNow - lastLogTime).TotalSeconds);
+                            long intervalBytes = snapshotUploaded - lastLogBytes;
+                            double intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
                             RuntimeLog.WriteVerbose($"[BackupService] Archive upload (parallel) {snapshotUploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
                             lastLogTime = logNow;
                             lastLogBytes = snapshotUploaded;
@@ -2546,14 +2530,14 @@ public sealed class BackupService
         const int minSeconds = 120;
         const int maxSeconds = 1800;
 
-        var seconds = (int)Math.Ceiling(bufferSize / (double)minBytesPerSec * 2d);
+        int seconds = (int)Math.Ceiling(bufferSize / (double)minBytesPerSec * 2d);
         seconds = Math.Clamp(seconds, minSeconds, maxSeconds);
         return TimeSpan.FromSeconds(seconds);
     }
 
     private static async Task EnsureDestinationWriteReadyAsync(string destDir, CancellationToken ct)
     {
-        var probePath = Path.Combine(destDir, ".vaultsync_upload_probe");
+        string probePath = Path.Combine(destDir, ".vaultsync_upload_probe");
         var timeout = TimeSpan.FromSeconds(15);
 
         var task = Task.Run(() =>
@@ -2573,7 +2557,7 @@ public sealed class BackupService
             File.Delete(probePath);
         }, ct);
 
-        var completed = await Task.WhenAny(task, Task.Delay(timeout, ct));
+        Task completed = await Task.WhenAny(task, Task.Delay(timeout, ct));
         if (completed != task)
         {
             throw new TimeoutException($"Destination write probe timed out for '{destDir}'.");
@@ -2597,12 +2581,12 @@ public sealed class BackupService
 
         var filter = FilterService.FromPresetAndLocal(sourceDir, preset);
         long totalBytes = 0;
-        var totalFiles = 0;
+        int totalFiles = 0;
 
         try
         {
-            var allFiles = BuildFilteredFileList(sourceDir, filter, ct);
-            foreach (var filePath in allFiles)
+            string[] allFiles = BuildFilteredFileList(sourceDir, filter, ct);
+            foreach (string filePath in allFiles)
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -2631,7 +2615,7 @@ public sealed class BackupService
     private static string[] BuildFilteredFileList(string sourceDir, FilterService filter, CancellationToken ct)
     {
         var files = new List<string>();
-        foreach (var filePath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+        foreach (string filePath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
         {
             ct.ThrowIfCancellationRequested();
 
@@ -2641,7 +2625,7 @@ public sealed class BackupService
             files.Add(filePath);
         }
 
-        return files.ToArray();
+        return [.. files];
     }
 
     private static void CopyDirectoryRecursive(
@@ -2662,29 +2646,29 @@ public sealed class BackupService
 
         // Get all files up front so we can compute a simple percent and ETA, applying
         // the same vaultsyncignore-style filtering used by SnapshotService.
-        var allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
-        var totalFiles = allFiles.Length;
-        var processedFiles = 0;
-        var startTime = DateTime.UtcNow;
+        string[] allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
+        int totalFiles = allFiles.Length;
+        int processedFiles = 0;
+        DateTime startTime = DateTime.UtcNow;
         long copiedBytes = 0;
 
-        foreach (var filePath in allFiles)
+        foreach (string? filePath in allFiles)
         {
             ct.ThrowIfCancellationRequested();
             if (ct.IsCancellationRequested)
                 throw new OperationCanceledException(ct);
 
             var fileInfo = new FileInfo(filePath);
-            var relative = Path.GetRelativePath(sourceDir, filePath);
-            var targetPath = Path.Combine(destDir, relative);
-            var targetDir = Path.GetDirectoryName(targetPath);
+            string relative = Path.GetRelativePath(sourceDir, filePath);
+            string targetPath = Path.Combine(destDir, relative);
+            string? targetDir = Path.GetDirectoryName(targetPath);
             if (!string.IsNullOrEmpty(targetDir))
                 Directory.CreateDirectory(targetDir);
 
             try
             {
                 const int bufferSize = 1024 * 1024; // 1 MB
-                var buffer = new byte[bufferSize];
+                byte[] buffer = new byte[bufferSize];
 
                 long copiedForThisFile = 0;
 
@@ -2711,23 +2695,23 @@ public sealed class BackupService
                             else
                             {
                                 // Combine completed files with partial progress on the current file.
-                                var filesCompletedPortion = processedFiles * 100d / totalFiles;
-                                var currentFilePortion = (double)copiedForThisFile / Math.Max(1L, fileInfo.Length) * (100d / totalFiles);
+                                double filesCompletedPortion = processedFiles * 100d / totalFiles;
+                                double currentFilePortion = (double)copiedForThisFile / Math.Max(1L, fileInfo.Length) * (100d / totalFiles);
                                 percent = filesCompletedPortion + currentFilePortion;
                                 if (percent > 100d) percent = 100d;
                             }
 
-                            var elapsed = DateTime.UtcNow - startTime;
-                            var elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                            TimeSpan elapsed = DateTime.UtcNow - startTime;
+                            double elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
                             string etaText = string.Empty;
 
                             if (percent > 0d && percent < 100d)
                             {
-                                var remainingFraction = (100d - percent) / percent;
-                                var remainingSeconds = elapsedSeconds * remainingFraction;
+                                double remainingFraction = (100d - percent) / percent;
+                                double remainingSeconds = elapsedSeconds * remainingFraction;
                                 var eta = TimeSpan.FromSeconds(remainingSeconds);
-                                var speedBytesSec = copiedBytes / elapsedSeconds;
-                                var speedMbSec = speedBytesSec / (1024 * 1024);
+                                double speedBytesSec = copiedBytes / elapsedSeconds;
+                                double speedMbSec = speedBytesSec / (1024 * 1024);
                                 etaText = $"Copying {processedFiles + 1}/{totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
                             }
 
@@ -2752,14 +2736,13 @@ public sealed class BackupService
         if (string.IsNullOrWhiteSpace(name))
             return "project";
 
-        var invalid = Path.GetInvalidFileNameChars();
-        var cleanedChars = name
+        char[] invalid = Path.GetInvalidFileNameChars();
+        char[] cleanedChars = [.. name
             .Trim()
             .ToLowerInvariant()
-            .Select(ch => invalid.Contains(ch) ? '-' : ch)
-            .ToArray();
+            .Select(ch => invalid.Contains(ch) ? '-' : ch)];
 
-        var cleaned = new string(cleanedChars);
+        string cleaned = new string(cleanedChars);
 
         // Collapse multiple '-' to a single '-'
         while (cleaned.Contains("--", StringComparison.Ordinal))
@@ -2772,11 +2755,11 @@ public sealed class BackupService
 
     private static string GetAvailableBackupFolder(string projectBackupRoot, string folderName)
     {
-        var candidate = Path.Combine(projectBackupRoot, folderName);
+        string candidate = Path.Combine(projectBackupRoot, folderName);
         if (!Directory.Exists(candidate))
             return candidate;
 
-        for (var i = 2; i < 1000; i++)
+        for (int i = 2; i < 1000; i++)
         {
             candidate = Path.Combine(projectBackupRoot, $"{folderName}-{i}");
             if (!Directory.Exists(candidate))
@@ -2791,7 +2774,7 @@ public sealed class BackupService
         List<Backup> backups;
         try
         {
-            backups = _repo.GetBackupsForProject(projectId).ToList();
+            backups = [.. _repo.GetBackupsForProject(projectId)];
         }
         catch (Exception ex)
         {
@@ -2799,15 +2782,15 @@ public sealed class BackupService
             return false;
         }
 
-        foreach (var backup in backups)
+        foreach (Backup backup in backups)
         {
-            var root = string.IsNullOrWhiteSpace(backup.DestinationPath)
+            string root = string.IsNullOrWhiteSpace(backup.DestinationPath)
                 ? backupRoot
                 : backup.DestinationPath;
             if (!PathsEqual(root, backupRoot))
                 continue;
 
-            var backupPath = Path.IsPathRooted(backup.Path)
+            string backupPath = Path.IsPathRooted(backup.Path)
                 ? backup.Path
                 : Path.Combine(root, backup.Path);
             if (DirectoryHasBackupContent(backupPath))
@@ -2845,7 +2828,7 @@ public sealed class BackupService
             right = right.Trim();
         }
 
-        var comparison = OperatingSystem.IsWindows()
+        StringComparison comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
         return string.Equals(
@@ -2862,16 +2845,15 @@ public sealed class BackupService
             return;
         }
 
-        var maxToKeep = Math.Max(1, maxSnapshotsToKeep.Value);
+        int maxToKeep = Math.Max(1, maxSnapshotsToKeep.Value);
 
         // Load all backups for this project, newest first.
         List<Backup> backups;
         try
         {
-            backups = _repo
+            backups = [.. _repo
                 .GetBackupsForProject(projectId)
-                .OrderByDescending(b => b.CreatedUtc)
-                .ToList();
+                .OrderByDescending(b => b.CreatedUtc)];
         }
         catch (Exception ex)
         {
@@ -2881,7 +2863,7 @@ public sealed class BackupService
 
         // Keep all protected backups; apply the cap only to unprotected ones.
         var unprotected = backups.Where(b => !b.IsProtected).ToList();
-        var deleteQuota = Math.Max(0, unprotected.Count - maxToKeep);
+        int deleteQuota = Math.Max(0, unprotected.Count - maxToKeep);
         // Retention candidates are oldest first.
         var candidates = unprotected
             .OrderBy(b => b.CreatedUtc)
@@ -2889,7 +2871,7 @@ public sealed class BackupService
         var projectSnapshots = _repo.GetAllSnapshots()
             .Where(snapshot => snapshot.ProjectId == projectId)
             .ToDictionary(snapshot => snapshot.Id);
-        var preflight = EvaluateRetentionPreflight(projectId, backups, candidates, projectSnapshots, deleteQuota);
+        BackupRetentionPreflightResult preflight = EvaluateRetentionPreflight(projectId, backups, candidates, projectSnapshots, deleteQuota);
         if (!preflight.CanPrune)
         {
             RuntimeLog.WriteVerbose(
@@ -2897,19 +2879,19 @@ public sealed class BackupService
             return;
         }
 
-        var project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
-        var projectName = project?.Name;
+        Project? project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
+        string? projectName = project?.Name;
         var snapshotRefs = new Dictionary<int, int>();
-        foreach (var backup in backups)
+        foreach (Backup backup in backups)
         {
-            if (snapshotRefs.TryGetValue(backup.SnapshotId, out var count))
+            if (snapshotRefs.TryGetValue(backup.SnapshotId, out int count))
                 snapshotRefs[backup.SnapshotId] = count + 1;
             else
                 snapshotRefs[backup.SnapshotId] = 1;
         }
 
-        var retentionPlan = BuildRetentionDeletionPlan(projectId, backups, candidates, projectSnapshots, deleteQuota);
-        foreach (var skipped in retentionPlan.Where(static decision => !decision.Selected))
+        IReadOnlyList<BackupRetentionCandidateDecision> retentionPlan = BuildRetentionDeletionPlan(projectId, backups, candidates, projectSnapshots, deleteQuota);
+        foreach (BackupRetentionCandidateDecision? skipped in retentionPlan.Where(static decision => !decision.Selected))
         {
             RuntimeLog.WriteVerbose(
                 $"[BackupService] Retention candidate skipped for projectId={projectId}: backupId={skipped.BackupId}; code={skipped.Code}; message={skipped.Message}");
@@ -2920,34 +2902,34 @@ public sealed class BackupService
             .Select(static decision => decision.BackupId)
             .ToHashSet();
         var attempted = new HashSet<int>();
-        var deleted = 0;
+        int deleted = 0;
 
         while (deleted < deleteQuota)
         {
             // Try the next oldest unprotected candidate that has not been attempted yet.
-            var backup = candidates.FirstOrDefault(b => plannedCandidateIds.Contains(b.Id) && !attempted.Contains(b.Id));
+            Backup? backup = candidates.FirstOrDefault(b => plannedCandidateIds.Contains(b.Id) && !attempted.Contains(b.Id));
             if (backup is null)
                 break;
 
             attempted.Add(backup.Id);
 
-            var canDeleteDbRow = true;
-            var diskDeleteSucceeded = true;
+            bool canDeleteDbRow = true;
+            bool diskDeleteSucceeded = true;
 
             try
             {
-                var baseRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
+                string baseRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
                     ? backup.DestinationPath
                     : backupRoot;
-                var relativePath = string.IsNullOrWhiteSpace(backup.Path)
+                string relativePath = string.IsNullOrWhiteSpace(backup.Path)
                     ? string.Empty
                     : backup.Path
                         .Replace('\\', Path.DirectorySeparatorChar)
                         .Replace('/', Path.DirectorySeparatorChar)
                         .TrimStart(Path.DirectorySeparatorChar);
-                var fullPath = string.Empty;
+                string? fullPath = string.Empty;
                 if (!string.IsNullOrWhiteSpace(baseRoot) &&
-                    !TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
+                    !BackupSafetyService.TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
                 {
                     RuntimeLog.WriteVerbose(
                         $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}); code=out-of-root.");
@@ -2957,7 +2939,7 @@ public sealed class BackupService
                 else if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
                 {
                     RuntimeLog.WriteVerbose($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
-                    var deleteResult = TryDeleteBackupFolder(fullPath, backup.Id);
+                    RetentionDeleteAttemptResult deleteResult = TryDeleteBackupFolder(fullPath, backup.Id);
                     diskDeleteSucceeded = deleteResult.Success;
                     if (!diskDeleteSucceeded)
                     {
@@ -2986,13 +2968,13 @@ public sealed class BackupService
             BackupRetentionDeleted?.Invoke(backup);
             _repo.DeleteBackupById(backup.Id);
             if (projectName != null &&
-                snapshotRefs.TryGetValue(backup.SnapshotId, out var remaining) &&
+                snapshotRefs.TryGetValue(backup.SnapshotId, out int remaining) &&
                 remaining <= 1)
             {
                 _repo.DeleteSnapshotsById(projectName, new[] { backup.SnapshotId });
                 snapshotRefs.Remove(backup.SnapshotId);
             }
-            else if (snapshotRefs.TryGetValue(backup.SnapshotId, out var count) && count > 1)
+            else if (snapshotRefs.TryGetValue(backup.SnapshotId, out int count) && count > 1)
             {
                 snapshotRefs[backup.SnapshotId] = count - 1;
             }
@@ -3013,7 +2995,7 @@ public sealed class BackupService
             return new BackupRetentionPreflightResult(true, "ok", "Retention preflight passed.", CountValidRestorePoints(projectId, backups, snapshotsById), deleteQuota);
         }
 
-        var validRestorePoints = CountValidRestorePoints(projectId, backups, snapshotsById);
+        int validRestorePoints = CountValidRestorePoints(projectId, backups, snapshotsById);
         if (validRestorePoints == 0)
         {
             return new BackupRetentionPreflightResult(
@@ -3028,7 +3010,7 @@ public sealed class BackupService
             .Take(deleteQuota)
             .Select(static backup => backup.Id)
             .ToHashSet();
-        var remainingValidRestorePoints = backups
+        int remainingValidRestorePoints = backups
             .Where(backup => !simulatedDeletedIds.Contains(backup.Id))
             .Count(backup => IsMetadataValidRestorePoint(projectId, backup, snapshotsById));
 
@@ -3056,10 +3038,10 @@ public sealed class BackupService
         if (deleteQuota <= 0 || candidates.Count == 0)
             return decisions;
 
-        var remainingValidRestorePoints = CountValidRestorePoints(projectId, backups, snapshotsById);
-        var selected = 0;
+        int remainingValidRestorePoints = CountValidRestorePoints(projectId, backups, snapshotsById);
+        int selected = 0;
 
-        foreach (var candidate in candidates.OrderBy(static backup => backup.CreatedUtc).ThenBy(static backup => backup.Id))
+        foreach (Backup? candidate in candidates.OrderBy(static backup => backup.CreatedUtc).ThenBy(static backup => backup.Id))
         {
             if (selected >= deleteQuota)
             {
@@ -3071,7 +3053,7 @@ public sealed class BackupService
                 continue;
             }
 
-            var isValidRestorePoint = IsMetadataValidRestorePoint(projectId, candidate, snapshotsById);
+            bool isValidRestorePoint = IsMetadataValidRestorePoint(projectId, candidate, snapshotsById);
             if (isValidRestorePoint && remainingValidRestorePoints <= 1)
             {
                 decisions.Add(new BackupRetentionCandidateDecision(
@@ -3111,7 +3093,7 @@ public sealed class BackupService
         if (backup.ProjectId != projectId)
             return false;
 
-        if (!snapshotsById.TryGetValue(backup.SnapshotId, out var snapshot))
+        if (!snapshotsById.TryGetValue(backup.SnapshotId, out Snapshot? snapshot))
             return false;
 
         return snapshot.ProjectId == projectId;
@@ -3161,7 +3143,7 @@ public sealed class BackupService
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
             return;
 
-        var markerFiles = new[]
+        string[] markerFiles = new[]
         {
             Path.Combine(rootPath, InProgressMarkerFileName),
             Path.Combine(rootPath, CompletedMarkerFileName),
@@ -3169,7 +3151,7 @@ public sealed class BackupService
         };
 
         var failedMarkers = new List<string>();
-        foreach (var markerPath in markerFiles)
+        foreach (string? markerPath in markerFiles)
         {
             try
             {
@@ -3206,7 +3188,7 @@ public sealed class BackupService
             // Best effort; continue with children.
         }
 
-        foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
+        foreach (string file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
         {
             try
             {
@@ -3218,7 +3200,7 @@ public sealed class BackupService
             }
         }
 
-        foreach (var dir in Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories))
+        foreach (string dir in Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories))
         {
             try
             {
@@ -3236,11 +3218,11 @@ public sealed class BackupService
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
             return;
 
-        var failedFiles = 0;
-        var failedDirs = 0;
+        int failedFiles = 0;
+        int failedDirs = 0;
         var failedSamples = new List<string>();
 
-        foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
+        foreach (string file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
         {
             try
             {
@@ -3260,7 +3242,7 @@ public sealed class BackupService
             .OrderByDescending(path => path.Length)
             .ToList();
 
-        foreach (var dir in allDirs)
+        foreach (string? dir in allDirs)
         {
             try
             {
@@ -3320,27 +3302,6 @@ public sealed class BackupService
         }
     }
 
-    private static bool TryCombinePathUnderRoot(string root, string relativePath, out string fullPath)
-    {
-        fullPath = string.Empty;
-        try
-        {
-            var normalizedRoot = Path.GetFullPath(root)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                + Path.DirectorySeparatorChar;
-            var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath ?? string.Empty));
-            if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            fullPath = candidate;
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private static (long totalBytes, long freeBytes)? TryGetDiskSpace(string path)
     {
         try
@@ -3348,14 +3309,14 @@ public sealed class BackupService
             if (string.IsNullOrWhiteSpace(path))
                 return null;
 
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
 
             if (OperatingSystem.IsWindows())
             {
                 if (!GetDiskFreeSpaceEx(
                         fullPath,
-                        out var freeBytesAvailable,
-                        out var totalNumberOfBytes,
+                        out ulong freeBytesAvailable,
+                        out ulong totalNumberOfBytes,
                         out _))
                 {
                     return null;
@@ -3372,7 +3333,7 @@ public sealed class BackupService
 
             if (OperatingSystem.IsMacOS())
             {
-                var unixSpace = TryGetUnixDiskSpace(fullPath);
+                (long totalBytes, long freeBytes)? unixSpace = TryGetUnixDiskSpace(fullPath);
                 if (unixSpace is not null)
                     return unixSpace.Value;
             }
@@ -3399,12 +3360,12 @@ public sealed class BackupService
             if (statvfs(path, ref stats) != 0)
                 return null;
 
-            var blockSize = stats.f_frsize != 0 ? stats.f_frsize : stats.f_bsize;
+            ulong blockSize = stats.f_frsize != 0 ? stats.f_frsize : stats.f_bsize;
             if (blockSize == 0)
                 return null;
 
-            var total = (long)stats.f_blocks * (long)blockSize;
-            var free = (long)stats.f_bavail * (long)blockSize;
+            long total = (long)stats.f_blocks * (long)blockSize;
+            long free = (long)stats.f_bavail * (long)blockSize;
             if (total <= 0)
                 return null;
 
@@ -3421,8 +3382,8 @@ public sealed class BackupService
         if (!OperatingSystem.IsMacOS())
             return false;
 
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var mountRoot = Path.Combine(home, "Library", "Application Support", "VaultSync", "mounts");
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string mountRoot = Path.Combine(home, "Library", "Application Support", "VaultSync", "mounts");
         return path.StartsWith(mountRoot, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -3444,22 +3405,22 @@ public sealed class BackupService
                 return false;
 
             proc.WaitForExit(3_000);
-            var output = proc.StandardOutput.ReadToEnd();
+            string output = proc.StandardOutput.ReadToEnd();
             if (string.IsNullOrWhiteSpace(output))
                 return false;
 
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var line in lines)
+            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (string line in lines)
             {
                 if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
                 if (onIndex <= 0)
                     continue;
 
-                var rest = line[(onIndex + 4)..];
-                var mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                string rest = line[(onIndex + 4)..];
+                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
                 if (string.IsNullOrWhiteSpace(mountedAt))
                     continue;
 
@@ -3493,22 +3454,22 @@ public sealed class BackupService
                 return false;
 
             proc.WaitForExit(3_000);
-            var output = proc.StandardOutput.ReadToEnd();
+            string output = proc.StandardOutput.ReadToEnd();
             if (string.IsNullOrWhiteSpace(output))
                 return false;
 
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var line in lines)
+            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (string line in lines)
             {
                 if (!line.Contains(" nfs", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
                 if (onIndex <= 0)
                     continue;
 
-                var rest = line[(onIndex + 4)..];
-                var mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+                string rest = line[(onIndex + 4)..];
+                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
                 if (string.IsNullOrWhiteSpace(mountedAt))
                     continue;
 
@@ -3543,18 +3504,18 @@ public sealed class BackupService
         public ulong f_namemax;
     }
 
-    [DllImport("libc", SetLastError = true)]
+    [DllImport("libc", SetLastError = true, CharSet = CharSet.Ansi)]
     private static extern int statvfs(string path, ref Statvfs buf);
 
     private static bool IsOnPath(string tool)
     {
-        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        var sep = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':';
-        foreach (var dir in path.Split(sep, StringSplitOptions.RemoveEmptyEntries))
+        string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        char sep = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':';
+        foreach (string dir in path.Split(sep, StringSplitOptions.RemoveEmptyEntries))
         {
             try
             {
-                var candidate = Path.Combine(dir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"{tool}.exe" : tool);
+                string candidate = Path.Combine(dir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"{tool}.exe" : tool);
                 if (File.Exists(candidate))
                     return true;
             }
@@ -3567,21 +3528,21 @@ public sealed class BackupService
     {
         try
         {
-            var baseDir = AppContext.BaseDirectory;
+            string baseDir = AppContext.BaseDirectory;
             if (OperatingSystem.IsWindows())
             {
-                var direct = Path.Combine(baseDir, "tools", "rsync", "rsync.exe");
+                string direct = Path.Combine(baseDir, "tools", "rsync", "rsync.exe");
                 if (File.Exists(direct))
                     return direct;
 
-                var bin = Path.Combine(baseDir, "tools", "rsync", "bin", "rsync.exe");
+                string bin = Path.Combine(baseDir, "tools", "rsync", "bin", "rsync.exe");
                 return File.Exists(bin) ? bin : null;
             }
 
             if (OperatingSystem.IsMacOS())
             {
                 var candidates = new List<string>();
-                var arch = RuntimeInformation.OSArchitecture;
+                Architecture arch = RuntimeInformation.OSArchitecture;
                 if (arch == Architecture.Arm64)
                 {
                     candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
@@ -3601,7 +3562,7 @@ public sealed class BackupService
                 candidates.Add(Path.Combine(baseDir, "tools", "rsync", "rsync"));
                 candidates.Add(Path.Combine(baseDir, "tools", "rsync", "bin", "rsync"));
 
-                foreach (var candidate in candidates)
+                foreach (string candidate in candidates)
                 {
                     if (File.Exists(candidate))
                         return candidate;
@@ -3638,7 +3599,8 @@ public sealed class BackupService
         }
     }
 
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [DllImport("kernel32.dll", EntryPoint = "GetDiskFreeSpaceExW", SetLastError = true, CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetDiskFreeSpaceEx(
         string lpDirectoryName,
         out ulong lpFreeBytesAvailable,

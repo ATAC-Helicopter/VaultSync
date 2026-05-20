@@ -3,6 +3,7 @@ using System.IO;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
+using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.ViewModels
@@ -13,8 +14,8 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var cfg = AppConfigStore.GetSnapshot();
-                var projectsRoot = cfg.ProjectsRoot?.Trim();
+                AppConfig cfg = AppConfigStore.GetSnapshot();
+                string? projectsRoot = cfg.ProjectsRoot?.Trim();
                 if (string.IsNullOrWhiteSpace(projectsRoot))
                 {
                     DiagnosticsLogger.Record("Startup project-root reconciliation skipped: ProjectsRoot is empty.");
@@ -27,15 +28,25 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                var repaired = 0;
-                foreach (var project in _repo.GetAllProjects())
+                int repaired = 0;
+                foreach (Project project in _repo.GetAllProjects())
                 {
-                    if (!string.IsNullOrWhiteSpace(project.RootPath))
+                    if (!ProjectRootResolver.TryResolveExistingProjectRoot(
+                            projectsRoot,
+                            project.Name,
+                            project.RootPath,
+                            out string candidate))
+                    {
                         continue;
+                    }
 
-                    var candidate = Path.Combine(projectsRoot, project.Name);
-                    if (!Directory.Exists(candidate))
+                    if (string.Equals(
+                            NormalizePathForComparison(project.RootPath),
+                            NormalizePathForComparison(candidate),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
                         continue;
+                    }
 
                     if (TryUpdateProjectRootPath(project, candidate))
                     {
@@ -69,6 +80,21 @@ namespace VaultSync.UI.ViewModels
                 return _repo.UpdateProjectPath(project.Id, newPath, out _);
 
             return _repo.UpdateProjectPath(project.Name, newPath, out _);
+        }
+
+        private static string NormalizePathForComparison(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return string.Empty;
+
+            try
+            {
+                return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            }
+            catch
+            {
+                return path.Trim().TrimEnd('/', '\\');
+            }
         }
     }
 }

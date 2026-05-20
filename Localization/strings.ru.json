@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync продолжает работать",
   "Tray.Tooltip": "VaultSync — снимки и резервные копии",
   "Tray.Open": "Открыть VaultSync",
+  "Tray.Panel.Open": "Открыть панель трея",
   "Tray.Policy.Active": "Политика: {0}",
   "Tray.Quit": "Выйти из VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",
@@ -1173,6 +1174,7 @@
   "WhatsNew.Close": "Понятно",
   "WhatsNew.Fallback": "Это обновление включает улучшения и исправления в VaultSync.",
   "WhatsNew.Section.General": "Основные изменения",
+  "WhatsNew.Subtitle": "Краткий обзор изменений, которые вы скоро будете использовать.",
   "WhatsNew.Title": "Что нового",
   "Backups.Restore.Mode.Label": "Режим восстановления",
   "Backups.Restore.Mode.Direct": "Прямой (перезаписать путь проекта)",
@@ -1242,5 +1244,6 @@
   "LogConsole.CopySelected": "Копировать выделенное",
   "LogConsole.CopySelectedFailed": "Не удалось скопировать выделенное",
   "LogConsole.CopySelectedSuccess": "Выделенное скопировано",
+  "LogConsole.CopySelectedManySuccess": "Скопировано выбранных строк: {0}",
   "Update.Store.OpenStore": "Открыть магазин"
 }

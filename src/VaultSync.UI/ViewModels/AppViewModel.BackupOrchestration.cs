@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -23,15 +26,15 @@ namespace VaultSync.UI.ViewModels
                 Dispatcher.UIThread.Post(() =>
                 {
                     BackupsViewModel.BackupProgress = 0;
-                    BackupsViewModel.BackupCurrentFile = L("Backups.Status.Preparing", "Preparing backup...");
+                    BackupsViewModel.BackupCurrentFile = AppViewModel.L("Backups.Status.Preparing", "Preparing backup...");
                     BackupsViewModel.BackupEtaText = string.Empty;
-                    BackupsViewModel.BusyMessage = L("Backups.Busy.All", "Backing up all projects...");
+                    BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Busy.All", "Backing up all projects...");
                 });
                 return;
             }
 
-            var avg = progressPerProject.Values.DefaultIfEmpty(0).Average();
-            var now = DateTime.UtcNow;
+            double avg = progressPerProject.Values.DefaultIfEmpty(0).Average();
+            DateTime now = DateTime.UtcNow;
             if (avg < 100 && (now - lastAggregateUiUpdateUtc) < TimeSpan.FromMilliseconds(200))
             {
                 return;
@@ -46,15 +49,15 @@ namespace VaultSync.UI.ViewModels
             }
             else if (avg <= 0.1)
             {
-                label = L("Backups.Status.Preparing", "Preparing backup...");
+                label = AppViewModel.L("Backups.Status.Preparing", "Preparing backup...");
             }
             else if (avg < 100)
             {
-                label = L("Backups.Status.RunningMultiple", "Running backups...");
+                label = AppViewModel.L("Backups.Status.RunningMultiple", "Running backups...");
             }
             else
             {
-                label = L("Backups.Status.AllCompleted", "All backups completed");
+                label = AppViewModel.L("Backups.Status.AllCompleted", "All backups completed");
             }
 
             Dispatcher.UIThread.Post(() =>
@@ -62,22 +65,27 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.BackupProgress = avg;
                 BackupsViewModel.BackupCurrentFile = label;
                 BackupsViewModel.BackupEtaText = etaText;
-                BackupsViewModel.BusyMessage = L("Backups.Busy.All", "Backing up all projects...");
+                BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Busy.All", "Backing up all projects...");
             });
         }
 
-        /// <summary>
-        /// Resolve the effective backup root to use for a project, honoring preferences for external/NAS paths.
-        /// If the preferred NAS path is unavailable, a temporary backup folder is used next to the project.
-        /// </summary>
         private DestinationResolution PrepareDestination(BackupDestination dest, AppConfig cfg)
         {
-            var profile = cfg.Network.Credentials?
+            NetworkCredentialProfile? profile = cfg.Network.Credentials?
                 .FirstOrDefault(c =>
                     string.Equals(c.Name, dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
 
-            var resolution = _networkMountService.PrepareDestination(dest, profile);
+            DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
             RuntimeLog.WriteVerbose($"[Backup] Destination resolved: alias='{dest.Alias ?? dest.Path}', path='{dest.Path}', effective='{resolution.EffectivePath}', success={resolution.IsSuccess}, mountedByUs={resolution.MountedByUs}");
+            UpdateDestinationProbeSummary(dest, new DestinationTestResult(
+                resolution.IsSuccess,
+                resolution.IsSuccess,
+                resolution.EffectivePath,
+                resolution.Message));
+
+            if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                PruneMissingBackupsFromPreparedDestination(dest, resolution.EffectivePath, cfg);
+
             return resolution;
         }
 
@@ -86,10 +94,64 @@ namespace VaultSync.UI.ViewModels
             return Task.Run(() => PrepareDestination(dest, cfg));
         }
 
+        private async Task<DestinationResolution> PrepareDestinationForAutoBackupAsync(BackupDestination dest, AppConfig cfg)
+        {
+            DestinationResolution first = await PrepareDestinationAsync(dest, cfg).ConfigureAwait(false);
+            if (first.IsSuccess)
+                return first;
+
+            string display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias!;
+            DiagnosticsLogger.Record($"[AutoBackup] Destination '{display}' unavailable on first prepare; probing wake path before retry. Message='{first.Message}'");
+
+            DestinationTestResult probe = await Task.Run(() => TryTestDestination(dest, cfg)).ConfigureAwait(false);
+            UpdateDestinationProbeSummary(dest, probe);
+
+            await Task.Delay(AutoBackupDestinationWakeDelay).ConfigureAwait(false);
+
+            DestinationResolution second = await PrepareDestinationAsync(dest, cfg).ConfigureAwait(false);
+            DiagnosticsLogger.Record(
+                $"[AutoBackup] Destination '{display}' prepare retry complete. Success={second.IsSuccess}; Message='{second.Message}'");
+            return second;
+        }
+
+        private async Task WarmAutoBackupDestinationsAsync(AppConfig cfg, IReadOnlyCollection<BackupDestination> destinations)
+        {
+            if (destinations.Count == 0)
+                return;
+
+            bool anyUnreachable = false;
+            foreach (BackupDestination dest in destinations)
+            {
+                string display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias!;
+                try
+                {
+                    DiagnosticsLogger.Record($"[AutoBackup] Warm-up probe start: '{display}'.");
+                    DestinationTestResult result = await Task.Run(() => TryTestDestination(dest, cfg)).ConfigureAwait(false);
+                    UpdateDestinationProbeSummary(dest, result);
+                    if (!result.Reachable)
+                    {
+                        anyUnreachable = true;
+                        DiagnosticsLogger.Record($"[AutoBackup] Warm-up probe did not reach '{display}': {result.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    anyUnreachable = true;
+                    DiagnosticsLogger.Record($"[AutoBackup] Warm-up probe failed for '{display}': {ex.GetType().Name} - {ex.Message}");
+                }
+            }
+
+            if (anyUnreachable)
+            {
+                DiagnosticsLogger.Record($"[AutoBackup] Waiting {AutoBackupDestinationWakeDelay.TotalSeconds:0}s before retrying warmed destinations.");
+                await Task.Delay(AutoBackupDestinationWakeDelay).ConfigureAwait(false);
+            }
+        }
+
         private BackupAllPreparationResult PrepareBackupAll()
         {
-            var cfg = AppConfigStore.GetSnapshot();
-            var destinations = GetAllDestinations(cfg);
+            AppConfig cfg = AppConfigStore.GetSnapshot();
+            System.Collections.Generic.List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
             if (destinations.Count == 0)
             {
                 return BackupAllPreparationResult.Failure("no_destination");
@@ -98,16 +160,10 @@ namespace VaultSync.UI.ViewModels
             return BackupAllPreparationResult.Success(cfg);
         }
 
-        private sealed record BackupAllPreparationResult(
-            bool IsReady,
-            string? FailureCode,
-            AppConfig? Config)
+        private sealed record BackupAllPreparationResult(bool IsReady, string? FailureCode, AppConfig? Config)
         {
-            public static BackupAllPreparationResult Failure(string reason) =>
-                new(false, reason, null);
-
-            public static BackupAllPreparationResult Success(AppConfig cfg) =>
-                new(true, null, cfg);
+            public static BackupAllPreparationResult Failure(string reason) => new(false, reason, null);
+            public static BackupAllPreparationResult Success(AppConfig cfg) => new(true, null, cfg);
         }
 
         private void ResolveBackupRoots(
@@ -116,77 +172,72 @@ namespace VaultSync.UI.ViewModels
             out string effectiveBackupRoot,
             out string? preferredFinalBackupRoot)
         {
+            BackupSafetyService.EnsureSafeBackupRoot(project, configuredBackupRoot);
+
             effectiveBackupRoot = configuredBackupRoot;
             preferredFinalBackupRoot = null;
 
-            if (_settingsViewModel?.PreferExternalDrives == true &&
-                IsNetworkPath(configuredBackupRoot))
+            if (_settingsViewModel?.PreferExternalDrives == true && IsNetworkPath(configuredBackupRoot))
             {
                 if (Directory.Exists(configuredBackupRoot))
                 {
-                    // If the NAS just came back, try to migrate any temp backups into it.
                     TryMigrateTempBackups(project, configuredBackupRoot);
                 }
                 else
                 {
-                    var tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+                    var tempRoot = BackupSafetyService.GetOfflineStagingRoot(project);
                     Directory.CreateDirectory(tempRoot);
+                    BackupSafetyService.EnsureSafeBackupRoot(project, tempRoot);
 
                     effectiveBackupRoot = tempRoot;
                     preferredFinalBackupRoot = configuredBackupRoot;
                     EnsureNasMonitorStarted();
+                    RuntimeLog.WriteVerbose($"[Backup] Network destination unavailable for project '{project.Name}'. Using safe offline staging root '{tempRoot}'.");
                 }
             }
         }
 
         private static void TryMigrateTempBackups(Project project, string targetRoot)
         {
-            var tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
+            TryMigrateTempBackupsFromRoot(BackupSafetyService.GetOfflineStagingRoot(project), targetRoot);
+            TryMigrateTempBackupsFromRoot(BackupSafetyService.GetLegacyProjectTempRoot(project), targetRoot);
+        }
+
+        private static void TryMigrateTempBackupsFromRoot(string tempRoot, string targetRoot)
+        {
             if (!Directory.Exists(tempRoot))
-            {
                 return;
-            }
 
             Directory.CreateDirectory(targetRoot);
 
-            foreach (var dir in Directory.EnumerateDirectories(tempRoot))
+            foreach (string dir in Directory.EnumerateDirectories(tempRoot))
             {
-                var dest = Path.Combine(targetRoot, Path.GetFileName(dir));
+                string dest = Path.Combine(targetRoot, Path.GetFileName(dir));
 
                 try
                 {
-                    if (Directory.Exists(dest))
-                    {
-                        continue;
-                    }
-
-                    Directory.Move(dir, dest);
+                    if (!Directory.Exists(dest))
+                        Directory.Move(dir, dest);
                 }
                 catch
                 {
-                    // Ignore and continue with other folders.
                 }
             }
 
             try
             {
                 if (!Directory.EnumerateFileSystemEntries(tempRoot).Any())
-                {
                     Directory.Delete(tempRoot, recursive: true);
-                }
             }
             catch
             {
-                // Ignore cleanup failures.
             }
         }
 
         private static bool IsNetworkPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
-            {
                 return false;
-            }
 
             return path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
                    path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||

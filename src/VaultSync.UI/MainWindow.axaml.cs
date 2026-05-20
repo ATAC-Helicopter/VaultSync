@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
 using VaultSync.UI.Infrastructure;
@@ -35,6 +36,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        if (OperatingSystem.IsLinux())
+        {
+            Classes.Add("linux-performance");
+        }
 
         // Use the shared AppViewModel created in App.axaml.cs when available;
         // fall back to a new instance (e.g. for design-time preview).
@@ -119,7 +124,7 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveSidebar(bool force = false)
     {
-        var shouldAutoCollapse = Bounds.Width < SidebarAutoCollapseWidth;
+        bool shouldAutoCollapse = Bounds.Width < SidebarAutoCollapseWidth;
         if (!force && shouldAutoCollapse == _sidebarAutoCollapsed)
             return;
 
@@ -160,7 +165,7 @@ public partial class MainWindow : Window
         SidebarDestinations.IsVisible = !collapsed;
         SidebarFooter.IsVisible = !collapsed;
 
-        SidebarToggleGlyph.Text = collapsed ? "\uE70D" : "\uE700";
+        SidebarToggleGlyph.Data = StreamGeometry.Parse(collapsed ? "M4.5 2 L9.5 7 L4.5 12" : "M9.5 2 L4.5 7 L9.5 12");
         SidebarToggleButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Right;
         SidebarToggleButton.Margin = collapsed ? new Thickness(0, 0, 0, 4) : new Thickness(0, 0, 0, 2);
         ToolTip.SetTip(
@@ -172,10 +177,10 @@ public partial class MainWindow : Window
         NavBackupsText.IsVisible = !collapsed;
         NavSettingsText.IsVisible = !collapsed;
 
-        var contentAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Left;
-        var navButtonWidth = collapsed ? 48d : double.NaN;
-        var navButtonHeight = collapsed ? 48d : double.NaN;
-        var navButtonPadding = collapsed ? new Thickness(0) : new Thickness(10, 8);
+        HorizontalAlignment contentAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+        double navButtonWidth = collapsed ? 48d : double.NaN;
+        double navButtonHeight = collapsed ? 48d : double.NaN;
+        Thickness navButtonPadding = collapsed ? new Thickness(0) : new Thickness(10, 8);
         NavDashboardButton.HorizontalContentAlignment = contentAlignment;
         NavProjectsButton.HorizontalContentAlignment = contentAlignment;
         NavBackupsButton.HorizontalContentAlignment = contentAlignment;
@@ -217,7 +222,7 @@ public partial class MainWindow : Window
         // and keep VaultSync running in the background.
         try
         {
-            var config = AppConfigStore.GetSnapshot();
+            AppConfig config = AppConfigStore.GetSnapshot();
             if (config.Behavior?.RunInBackground == true)
             {
                 e.Cancel = true;
@@ -260,7 +265,7 @@ public partial class MainWindow : Window
         object? vm = null;
         try
         {
-            var dashboardProp = _appVm.GetType()
+            PropertyInfo? dashboardProp = _appVm.GetType()
                                       .GetProperty("DashboardViewModel", BindingFlags.Instance | BindingFlags.Public);
             vm = dashboardProp?.GetValue(_appVm);
         }
@@ -284,7 +289,7 @@ public partial class MainWindow : Window
     {
         SetHeader(title, kicker);
 
-        var placeholderText = string.Format(
+        string placeholderText = string.Format(
             Localized("Shell.Placeholder.ComingSoon", "{0} view coming soon..."),
             title);
 
@@ -302,7 +307,7 @@ public partial class MainWindow : Window
 
     private bool TrySetCurrentView(object value)
     {
-        var prop = _appVm.GetType().GetProperty("CurrentView", BindingFlags.Instance | BindingFlags.Public);
+        PropertyInfo? prop = _appVm.GetType().GetProperty("CurrentView", BindingFlags.Instance | BindingFlags.Public);
         if (prop is { CanWrite: true })
         {
             prop.SetValue(_appVm, value);
@@ -315,7 +320,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var p = target.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+            PropertyInfo? p = target.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
             if (p is { CanWrite: true }) p.SetValue(target, value);
         }
         catch
@@ -326,8 +331,8 @@ public partial class MainWindow : Window
 
     private static void NotifyRunningInBackground()
     {
-        var title = Localized("Tray.Notification.BackgroundTitle", "VaultSync is still running");
-        var message = Localized("Tray.Notification.BackgroundMessage", "VaultSync continues monitoring projects in the background.");
+        string title = Localized("Tray.Notification.BackgroundTitle", "VaultSync is still running");
+        string message = Localized("Tray.Notification.BackgroundMessage", "VaultSync continues monitoring projects in the background.");
         GlobalNotificationCenter.Instance.Show(message, NotificationSeverity.Info, title);
         GlobalNotificationCenter.Instance.ShowSystem(message, NotificationSeverity.Info, title);
     }
@@ -340,13 +345,13 @@ public partial class MainWindow : Window
         if (!OperatingSystem.IsMacOS())
             return false;
 
-        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        nint handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (handle == IntPtr.Zero)
             return false;
 
         try
         {
-            var selector = sel_registerName("setCollectionBehavior:");
+            nint selector = sel_registerName("setCollectionBehavior:");
             objc_msgSend(handle, selector, (nint)NSWindowCollectionBehaviorFullScreenNone);
             return true;
         }

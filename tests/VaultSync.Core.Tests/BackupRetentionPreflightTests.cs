@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Dapper;
@@ -28,15 +29,15 @@ public sealed class BackupRetentionPreflightTests : IDisposable
     [Fact]
     public void EnforceRetentionForProject_BlocksPrune_WhenItWouldRemoveLastValidRestorePoint()
     {
-        var repo = CreateRepository();
+        SqliteRepository repo = CreateRepository();
         var service = new BackupService(repo);
-        var projectId = CreateProject(repo, "Retention Project");
-        var otherProjectId = CreateProject(repo, "Other Project");
-        var validSnapshotId = repo.CreateSnapshot(projectId, 10, 1024);
-        var invalidSnapshotId = repo.CreateSnapshot(otherProjectId, 20, 2048);
+        int projectId = CreateProject(repo, "Retention Project");
+        int otherProjectId = CreateProject(repo, "Other Project");
+        int validSnapshotId = repo.CreateSnapshot(projectId, 10, 1024);
+        int invalidSnapshotId = repo.CreateSnapshot(otherProjectId, 20, 2048);
 
-        var validPath = "retention-project/2026-03-12_10-00-00";
-        var invalidPath = "retention-project/2026-03-12_11-00-00";
+        string validPath = "retention-project/2026-03-12_10-00-00";
+        string invalidPath = "retention-project/2026-03-12_11-00-00";
 
         repo.CreateBackupFromMetadata(
             "backup-valid",
@@ -78,14 +79,14 @@ public sealed class BackupRetentionPreflightTests : IDisposable
     [Fact]
     public void EnforceRetentionForProject_AllowsPrune_WhenAnotherValidRestorePointRemains()
     {
-        var repo = CreateRepository();
+        SqliteRepository repo = CreateRepository();
         var service = new BackupService(repo);
-        var projectId = CreateProject(repo, "Retention Project");
-        var snapshotA = repo.CreateSnapshot(projectId, 10, 1024);
-        var snapshotB = repo.CreateSnapshot(projectId, 20, 2048);
+        int projectId = CreateProject(repo, "Retention Project");
+        int snapshotA = repo.CreateSnapshot(projectId, 10, 1024);
+        int snapshotB = repo.CreateSnapshot(projectId, 20, 2048);
 
-        var oldPath = "retention-project/2026-03-12_10-00-00";
-        var newPath = "retention-project/2026-03-12_11-00-00";
+        string oldPath = "retention-project/2026-03-12_10-00-00";
+        string newPath = "retention-project/2026-03-12_11-00-00";
 
         repo.CreateBackupFromMetadata(
             "backup-old",
@@ -126,10 +127,10 @@ public sealed class BackupRetentionPreflightTests : IDisposable
     [Fact]
     public void BuildRetentionDeletionPlan_SkipsLastValidRestorePoint_AndSelectsNextEligibleCandidate()
     {
-        var projectId = 42;
-        var otherProjectId = 7;
-        var validSnapshotId = 100;
-        var invalidSnapshotId = 200;
+        int projectId = 42;
+        int otherProjectId = 7;
+        int validSnapshotId = 100;
+        int invalidSnapshotId = 200;
 
         var validOld = new Backup
         {
@@ -146,13 +147,13 @@ public sealed class BackupRetentionPreflightTests : IDisposable
             CreatedUtc = new DateTime(2026, 3, 1, 11, 0, 0, DateTimeKind.Utc)
         };
 
-        var snapshots = new[]
+        Dictionary<int, Snapshot> snapshots = new[]
         {
             new Snapshot { Id = validSnapshotId, ProjectId = projectId },
             new Snapshot { Id = invalidSnapshotId, ProjectId = otherProjectId }
         }.ToDictionary(x => x.Id);
 
-        var plan = BackupService.BuildRetentionDeletionPlan(
+        System.Collections.Generic.IReadOnlyList<BackupService.BackupRetentionCandidateDecision> plan = BackupService.BuildRetentionDeletionPlan(
             projectId,
             new[] { validOld, invalidNewer },
             new[] { validOld, invalidNewer },
@@ -166,9 +167,9 @@ public sealed class BackupRetentionPreflightTests : IDisposable
     [Fact]
     public void BuildRetentionDeletionPlan_StopsSelectingOnceQuotaIsSatisfied()
     {
-        var projectId = 5;
-        var snapshotId = 10;
-        var backups = new[]
+        int projectId = 5;
+        int snapshotId = 10;
+        Backup[] backups = new[]
         {
             new Backup { Id = 1, ProjectId = projectId, SnapshotId = snapshotId, CreatedUtc = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc) },
             new Backup { Id = 2, ProjectId = projectId, SnapshotId = snapshotId, CreatedUtc = new DateTime(2026, 3, 1, 11, 0, 0, DateTimeKind.Utc) },
@@ -176,7 +177,7 @@ public sealed class BackupRetentionPreflightTests : IDisposable
         };
         var snapshots = new[] { new Snapshot { Id = snapshotId, ProjectId = projectId } }.ToDictionary(x => x.Id);
 
-        var plan = BackupService.BuildRetentionDeletionPlan(projectId, backups, backups, snapshots, deleteQuota: 1);
+        System.Collections.Generic.IReadOnlyList<BackupService.BackupRetentionCandidateDecision> plan = BackupService.BuildRetentionDeletionPlan(projectId, backups, backups, snapshots, deleteQuota: 1);
 
         Assert.Contains(plan, x => x.BackupId == 1 && x.Selected);
         Assert.Contains(plan, x => x.BackupId == 2 && !x.Selected && x.Code == "quota-satisfied");

@@ -20,7 +20,7 @@ public sealed class BackupEncryptionPolicyResolverTests
         };
         var cfg = new BackupEncryptionConfig { Enabled = true, KeyRef = "global-key" };
 
-        var resolved = BackupEncryptionPolicyResolver.Resolve(project, cfg);
+        BackupEncryptionPolicyResolver.ResolvedPolicy resolved = BackupEncryptionPolicyResolver.Resolve(project, cfg);
 
         Assert.False(resolved.EncryptionRequested);
         Assert.Null(resolved.EffectiveKeyRef);
@@ -40,7 +40,7 @@ public sealed class BackupEncryptionPolicyResolverTests
         };
         var cfg = new BackupEncryptionConfig { Enabled = false, KeyRef = "global-key" };
 
-        var resolved = BackupEncryptionPolicyResolver.Resolve(project, cfg);
+        BackupEncryptionPolicyResolver.ResolvedPolicy resolved = BackupEncryptionPolicyResolver.Resolve(project, cfg);
 
         Assert.True(resolved.EncryptionRequested);
         Assert.Equal("project-key", resolved.EffectiveKeyRef);
@@ -59,7 +59,7 @@ public sealed class BackupEncryptionPolicyResolverTests
         };
         var cfg = new BackupEncryptionConfig { Enabled = false, KeyRef = "global-key" };
 
-        var resolved = BackupEncryptionPolicyResolver.Resolve(project, cfg);
+        BackupEncryptionPolicyResolver.ResolvedPolicy resolved = BackupEncryptionPolicyResolver.Resolve(project, cfg);
 
         Assert.True(resolved.EncryptionRequested);
         Assert.Equal("global-key", resolved.EffectiveKeyRef);
@@ -78,7 +78,7 @@ public sealed class BackupEncryptionPolicyResolverTests
         };
         var cfg = new BackupEncryptionConfig { KeyRef = "global-key" };
 
-        var refs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg);
+        System.Collections.Generic.IReadOnlyList<string> refs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg);
 
         Assert.Equal(2, refs.Count);
         Assert.Equal("project-key", refs[0]);
@@ -97,7 +97,7 @@ public sealed class BackupEncryptionPolicyResolverTests
         };
         var cfg = new BackupEncryptionConfig { KeyRef = "same-key" };
 
-        var refs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg);
+        System.Collections.Generic.IReadOnlyList<string> refs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg);
 
         Assert.Single(refs);
         Assert.Equal("same-key", refs[0]);
@@ -114,7 +114,7 @@ public sealed class BackupEncryptionPolicyResolverTests
         };
         var cfg = new BackupEncryptionConfig { KeyRef = "global-key" };
 
-        var refs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg);
+        System.Collections.Generic.IReadOnlyList<string> refs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg);
 
         Assert.Single(refs);
         Assert.Equal("global-key", refs[0]);

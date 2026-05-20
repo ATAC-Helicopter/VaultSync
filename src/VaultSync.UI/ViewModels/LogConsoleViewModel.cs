@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Input.Platform;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 using VaultSync.UI.Notifications;
@@ -11,9 +15,10 @@ using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI.ViewModels
 {
-    public sealed class LogConsoleViewModel : ViewModelBase
+    public sealed class LogConsoleViewModel : ViewModelBase, IDisposable
     {
         private readonly LogConsoleService _service;
+        private Func<string, Task<bool>>? _copyTextAsync;
         private string _statusMessage = string.Empty;
         private bool _autoScrollEnabled = true;
         private LogLine? _selectedLine;
@@ -27,6 +32,19 @@ namespace VaultSync.UI.ViewModels
             ExportCommand = new RelayCommand(async _ => await ExportLogsAsync());
             OpenFolderCommand = new RelayCommand(_ => OpenLogFolder());
             CopySelectedLineCommand = new RelayCommand(async _ => await CopySelectedLineAsync(), _ => SelectedLine is not null);
+        }
+
+        public void SetClipboardProvider(Func<IClipboard?> clipboardProvider)
+        {
+            if (clipboardProvider is null)
+                throw new ArgumentNullException(nameof(clipboardProvider));
+
+            SetCopyTextAsync(text => ClipboardHelper.TryCopyAsync(text, clipboardProvider()));
+        }
+
+        public void SetCopyTextAsync(Func<string, Task<bool>> copyTextAsync)
+        {
+            _copyTextAsync = copyTextAsync ?? throw new ArgumentNullException(nameof(copyTextAsync));
         }
 
         public void SetUiCaptureEnabled(bool enabled)
@@ -71,7 +89,7 @@ namespace VaultSync.UI.ViewModels
 
         private async System.Threading.Tasks.Task ExportLogsAsync()
         {
-            var path = await System.Threading.Tasks.Task.Run(() => _service.ExportBuffer());
+            string? path = await System.Threading.Tasks.Task.Run(() => _service.ExportBuffer());
             if (string.IsNullOrWhiteSpace(path))
             {
                 StatusMessage = L("LogConsole.ExportFailed", "Log export failed.");
@@ -93,7 +111,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                var folder = LogConsoleService.GetLogDirectory();
+                string folder = LogConsoleService.GetLogDirectory();
                 Directory.CreateDirectory(folder);
 
                 if (OperatingSystem.IsWindows())
@@ -140,9 +158,30 @@ namespace VaultSync.UI.ViewModels
             if (SelectedLine is null)
                 return false;
 
-            var copied = await ClipboardHelper.TryCopyAsync(SelectedLine.Display);
+            bool copied = _copyTextAsync is { } copyTextAsync
+                ? await copyTextAsync(SelectedLine.RawDisplay)
+                : await ClipboardHelper.TryCopyAsync(SelectedLine.RawDisplay);
             StatusMessage = copied
                 ? L("LogConsole.CopySelectedSuccess", "Selected line copied.")
+                : L("LogConsole.CopySelectedFailed", "Failed to copy selected line.");
+            return copied;
+        }
+
+        public async System.Threading.Tasks.Task<bool> CopyLinesAsync(IEnumerable<LogLine> lines)
+        {
+            if (lines is null)
+                throw new ArgumentNullException(nameof(lines));
+
+            var selectedLines = lines.Where(line => line is not null).ToList();
+            if (selectedLines.Count == 0)
+                return await CopySelectedLineAsync();
+
+            string text = string.Join(Environment.NewLine, selectedLines.Select(line => line.RawDisplay));
+            bool copied = _copyTextAsync is { } copyTextAsync
+                ? await copyTextAsync(text)
+                : await ClipboardHelper.TryCopyAsync(text);
+            StatusMessage = copied
+                ? Lf("LogConsole.CopySelectedManySuccess", "Copied {0} selected lines.", selectedLines.Count)
                 : L("LogConsole.CopySelectedFailed", "Failed to copy selected line.");
             return copied;
         }
@@ -153,12 +192,17 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(IsSaving));
         }
 
+        public void Dispose()
+        {
+            _service.StateChanged -= OnServiceStateChanged;
+        }
+
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
 
         private static string Lf(string key, string fallback, params object[] args)
         {
-            var text = L(key, fallback);
+            string text = L(key, fallback);
             return args is { Length: > 0 }
                 ? string.Format(text, args)
                 : text;

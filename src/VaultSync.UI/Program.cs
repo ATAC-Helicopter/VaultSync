@@ -30,10 +30,10 @@ internal static class Program
         DiagnosticsLogger.Record($"Process start. PID={Environment.ProcessId}, Args='{string.Join(' ', args)}'.");
         LogParentProcessInfo("startup");
         RegisterPosixSignals();
-        RegisterDiagnosticHooks();
+        RegisterDiagnosticHooks(args);
         DiagnosticsLogger.RecordStartupSnapshot(args, useSoftwareFallback: false);
         CrashHandler.RegisterEarly();
-        if (PatchInstallService.TryParsePatchArgs(args, out var request))
+        if (PatchInstallService.TryParsePatchArgs(args, out PatchApplyRequest? request))
         {
             DiagnosticsLogger.Record("Patch installer mode detected.");
             UpdaterApp.SetPendingRequest(request);
@@ -41,7 +41,7 @@ internal static class Program
             return;
         }
 
-        _instanceMutex = new Mutex(true, "VaultSync.UI.SingleInstance", out var isFirstInstance);
+        _instanceMutex = new Mutex(true, "VaultSync.UI.SingleInstance", out bool isFirstInstance);
         DiagnosticsLogger.Record($"Instance mutex acquired. IsFirst={isFirstInstance}.");
         if (!isFirstInstance)
         {
@@ -86,17 +86,37 @@ internal static class Program
         }
     }
 
-    private static void RegisterDiagnosticHooks()
+    private static void RegisterDiagnosticHooks(string[] args)
     {
         try
         {
-            AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
+            if (IsFirstChanceDiagnosticsEnabled(args))
+            {
+                AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
+                DiagnosticsLogger.Record("First-chance exception diagnostics enabled.");
+            }
+
             TaskScheduler.UnobservedTaskException += OnDiagnosticUnobservedTaskException;
         }
         catch (Exception ex)
         {
             DiagnosticsLogger.Record($"Diagnostic hooks registration failed: {ex.GetType().Name} - {ex.Message}");
         }
+    }
+
+    internal static bool IsFirstChanceDiagnosticsEnabled(string[]? args)
+    {
+        if (args?.Any(arg =>
+                string.Equals(arg, "--diagnostic-first-chance", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(arg, "--diagnostics-first-chance", StringComparison.OrdinalIgnoreCase)) is true)
+        {
+            return true;
+        }
+
+        string? value = Environment.GetEnvironmentVariable("VAULTSYNC_FIRST_CHANCE_DIAGNOSTICS");
+        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void OnFirstChanceException(object? sender, FirstChanceExceptionEventArgs e)
@@ -106,6 +126,12 @@ internal static class Program
 
     private static void OnDiagnosticUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
+        if (ExpectedDesktopNoise.IsExpectedUnobservedTaskException(e.Exception))
+        {
+            e.SetObserved();
+            return;
+        }
+
         DiagnosticsLogger.RecordException("Diagnostic unobserved task exception", e.Exception, includeStack: true);
     }
 
@@ -120,8 +146,8 @@ internal static class Program
             try
             {
                 client.Connect(500);
-                var payload = BuildActivationPayload(args);
-                var bytes = Encoding.UTF8.GetBytes(payload);
+                string payload = BuildActivationPayload(args);
+                byte[] bytes = Encoding.UTF8.GetBytes(payload);
                 client.Write(bytes, 0, bytes.Length);
                 DiagnosticsLogger.Record("Signaled existing instance.");
             }
@@ -152,8 +178,8 @@ internal static class Program
                     PipeOptions.Asynchronous);
 
                 await server.WaitForConnectionAsync(token);
-                var payload = await ReadPipePayloadAsync(server, token);
-                var payloadKind = payload.StartsWith("open-vse|", StringComparison.Ordinal)
+                string payload = await ReadPipePayloadAsync(server, token);
+                string payloadKind = payload.StartsWith("open-vse|", StringComparison.Ordinal)
                     ? "open-vse"
                     : "activate";
                 DiagnosticsLogger.Record($"Received activation signal. PayloadKind='{payloadKind}'.");
@@ -172,10 +198,10 @@ internal static class Program
 
     private static string BuildActivationPayload(string[] args)
     {
-        var encryptedArchivePath = args.FirstOrDefault(IsEncryptedArchiveArg);
+        string? encryptedArchivePath = args.FirstOrDefault(IsEncryptedArchiveArg);
         if (!string.IsNullOrWhiteSpace(encryptedArchivePath))
         {
-            var encodedPath = Convert.ToBase64String(Encoding.UTF8.GetBytes(encryptedArchivePath));
+            string encodedPath = Convert.ToBase64String(Encoding.UTF8.GetBytes(encryptedArchivePath));
             return $"open-vse|{encodedPath}";
         }
 
@@ -184,11 +210,11 @@ internal static class Program
 
     private static async Task<string> ReadPipePayloadAsync(PipeStream server, CancellationToken token)
     {
-        var buffer = new byte[1024];
+        byte[] buffer = new byte[1024];
         using var ms = new MemoryStream();
         while (true)
         {
-            var read = await server.ReadAsync(buffer.AsMemory(0, buffer.Length), token);
+            int read = await server.ReadAsync(buffer.AsMemory(0, buffer.Length), token);
             if (read <= 0)
                 break;
 
@@ -226,7 +252,7 @@ internal static class Program
         {
             PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx =>
             {
-                var info = GetParentProcessInfo();
+                string info = GetParentProcessInfo();
                 DiagnosticsLogger.Record($"POSIX signal: SIGTERM (cancel={ctx.Cancel}). Parent={info}");
                 if (string.Equals(Environment.GetEnvironmentVariable("VAULTSYNC_IGNORE_SIGTERM"), "1", StringComparison.OrdinalIgnoreCase))
                 {
@@ -255,7 +281,7 @@ internal static class Program
 
     private static void LogParentProcessInfo(string stage)
     {
-        var info = GetParentProcessInfo();
+        string info = GetParentProcessInfo();
         DiagnosticsLogger.Record($"Parent process ({stage}): {info}");
     }
 
@@ -266,12 +292,12 @@ internal static class Program
 
         try
         {
-            var pid = Environment.ProcessId;
-            var ppid = RunPs($"-o ppid= -p {pid}").Trim();
+            int pid = Environment.ProcessId;
+            string ppid = RunPs($"-o ppid= -p {pid}").Trim();
             if (string.IsNullOrWhiteSpace(ppid))
                 return "ppid=unknown";
 
-            var comm = RunPs($"-p {ppid} -o comm=").Trim();
+            string comm = RunPs($"-p {ppid} -o comm=").Trim();
             if (string.IsNullOrWhiteSpace(comm))
                 return $"ppid={ppid}";
 
@@ -336,9 +362,36 @@ internal static class Program
             builder = builder.UsePlatformDetect();
         }
 
+        builder = builder
+            .With(new Win32PlatformOptions
+            {
+                OverlayPopups = true
+            })
+            .With(new X11PlatformOptions
+            {
+                OverlayPopups = IsX11OverlayPopupEnabled(),
+                WmClass = "io.github.atachelicopter.vaultsync"
+            });
+
+        DiagnosticsLogger.Record(
+            "Avalonia platform options: " +
+            $"x11OverlayPopups={IsX11OverlayPopupEnabled()}, " +
+            $"sessionType='{Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") ?? string.Empty}', " +
+            $"desktop='{Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? string.Empty}', " +
+            $"waylandDisplay='{Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") ?? string.Empty}', " +
+            $"display='{Environment.GetEnvironmentVariable("DISPLAY") ?? string.Empty}'.");
+
         return builder
             // Avoid spamming stdout/in-app logs with Avalonia internals (e.g., binding trace).
             .LogToTrace(LogEventLevel.Warning);
+    }
+
+    private static bool IsX11OverlayPopupEnabled()
+    {
+        string? value = Environment.GetEnvironmentVariable("VAULTSYNC_X11_OVERLAY_POPUPS");
+        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static AppBuilder BuildUpdaterApp()
@@ -347,14 +400,5 @@ internal static class Program
             .LogToTrace(LogEventLevel.Warning);
 
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .With(new Win32PlatformOptions
-            {
-                OverlayPopups = true // For Windows
-            })
-            .With(new X11PlatformOptions
-            {
-                OverlayPopups = true // For Linux
-            });
+        => BuildAvaloniaApp(useSoftwareFallback: false);
 }

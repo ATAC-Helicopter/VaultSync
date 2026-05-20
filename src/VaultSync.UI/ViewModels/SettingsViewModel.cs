@@ -41,7 +41,7 @@ namespace VaultSync.UI
         private bool _showTrayIcon = true;
         private bool _runInBackground = true;
         private bool _launchOnLogin = false;
-        private List<int> _autoBackupDisabledProjects = new();
+        private List<int> _autoBackupDisabledProjects = [];
 
         private bool _enableAutoBackups = true;
         private int _autoBackupIntervalMinutes = 30;
@@ -128,18 +128,18 @@ namespace VaultSync.UI
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
         private readonly SupportBundleService _supportBundleService = new();
-        private RelayCommand? _addTagColorRuleCommand;
-        private RelayCommand? _removeTagColorRuleCommand;
-        private RelayCommand? _resetTagColorRuleCommand;
-        private RelayCommand? _applyThemePresetCommand;
-        private RelayCommand? _applyThemePaletteSwatchCommand;
-        private RelayCommand? _selectThemeColorSlotCommand;
-        private RelayCommand? _resetCustomThemeCommand;
-        private RelayCommand? _scanBackupIndexRepairPlanCommand;
-        private RelayCommand? _applyBackupIndexRepairPlanCommand;
-        private RelayCommand? _acceptProjectMetadataConflictCommand;
-        private RelayCommand? _keepLocalProjectMetadataConflictCommand;
-        private RelayCommand? _runRetentionSimulationCommand;
+        private readonly RelayCommand? _addTagColorRuleCommand;
+        private readonly RelayCommand? _removeTagColorRuleCommand;
+        private readonly RelayCommand? _resetTagColorRuleCommand;
+        private readonly RelayCommand? _applyThemePresetCommand;
+        private readonly RelayCommand? _applyThemePaletteSwatchCommand;
+        private readonly RelayCommand? _selectThemeColorSlotCommand;
+        private readonly RelayCommand? _resetCustomThemeCommand;
+        private readonly RelayCommand? _scanBackupIndexRepairPlanCommand;
+        private readonly RelayCommand? _applyBackupIndexRepairPlanCommand;
+        private readonly RelayCommand? _acceptProjectMetadataConflictCommand;
+        private readonly RelayCommand? _keepLocalProjectMetadataConflictCommand;
+        private readonly RelayCommand? _runRetentionSimulationCommand;
         private BackupIndexRepairPlan? _currentBackupIndexRepairPlan;
         private string _backupIndexRepairStatus = string.Empty;
         private string _backupIndexRepairSummary = string.Empty;
@@ -152,10 +152,11 @@ namespace VaultSync.UI
         private ThemeColorSlotViewModel? _selectedThemeColorSlot;
         private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
 
-        private bool _isInitialized;
+        private readonly bool _isInitialized;
         private bool _isSaving;
         private bool _savePending;
         private bool _isReloadingFromConfig;
+        private bool _isRefreshingLocalizedOptions;
         private bool? _lastLaunchOnLoginApplied;
 
         public event Action? OpenLogConsoleRequested;
@@ -342,7 +343,7 @@ namespace VaultSync.UI
             {
                 get
                 {
-                    var defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
+                    (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
                     return ProjectTagAppearance.NormalizeHex(Background, defaults.Background);
                 }
             }
@@ -351,7 +352,7 @@ namespace VaultSync.UI
             {
                 get
                 {
-                    var defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
+                    (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
                     return ProjectTagAppearance.NormalizeHex(Foreground, defaults.Foreground);
                 }
             }
@@ -360,7 +361,7 @@ namespace VaultSync.UI
             {
                 get
                 {
-                    var defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
+                    (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(PreviewTag);
                     return ProjectTagAppearance.NormalizeHex(Border, defaults.Border);
                 }
             }
@@ -399,7 +400,7 @@ namespace VaultSync.UI
 
             private static Color ParseColor(string hex)
             {
-                return Color.TryParse(hex, out var color) ? color : Colors.Transparent;
+                return Color.TryParse(hex, out Color color) ? color : Colors.Transparent;
             }
 
             private void ApplyPaletteSwatch(ThemePaletteSwatchViewModel? swatch)
@@ -441,8 +442,8 @@ namespace VaultSync.UI
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        public ObservableCollection<ProjectMetadataConflictItemViewModel> ProjectMetadataConflicts { get; } = new();
-        public ObservableCollection<TagColorRuleViewModel> TagColorRules { get; } = new();
+        public ObservableCollection<ProjectMetadataConflictItemViewModel> ProjectMetadataConflicts { get; } = [];
+        public ObservableCollection<TagColorRuleViewModel> TagColorRules { get; } = [];
 
         private void RefreshLegacyVisibility()
         {
@@ -455,12 +456,20 @@ namespace VaultSync.UI
             _selectedLanguageCode = localizationService.CurrentLanguage;
             _localizationService.LanguageChanged += () =>
             {
-                var normalizedTheme = NormalizeThemeOption(_selectedTheme);
-                var normalizedBaseTheme = NormalizeThemeBaseOption(_customThemeBase);
-                RefreshThemeOptions();
-                RefreshCustomThemeBaseOptions();
-                _selectedTheme = DisplayThemeOption(normalizedTheme);
-                _customThemeBase = DisplayThemeBaseOption(normalizedBaseTheme);
+                string normalizedTheme = NormalizeThemeOption(_selectedTheme);
+                string normalizedBaseTheme = NormalizeThemeBaseOption(_customThemeBase);
+                _isRefreshingLocalizedOptions = true;
+                try
+                {
+                    RefreshThemeOptions();
+                    RefreshCustomThemeBaseOptions();
+                    _selectedTheme = DisplayThemeOption(normalizedTheme);
+                    _customThemeBase = DisplayThemeBaseOption(normalizedBaseTheme);
+                }
+                finally
+                {
+                    _isRefreshingLocalizedOptions = false;
+                }
                 OnPropertyChanged(nameof(SelectedLanguage));
                 OnPropertyChanged(nameof(SelectedTheme));
                 OnPropertyChanged(nameof(CustomThemeBase));
@@ -505,7 +514,7 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(ProjectMetadataConflictStatus));
             };
 
-            ThemeOptions = new ObservableCollection<string>();
+            ThemeOptions = [];
             RefreshThemeOptions();
 
             _selectedTheme = ThemeOptions[0];
@@ -593,7 +602,7 @@ namespace VaultSync.UI
             _isReloadingFromConfig = true;
             try
             {
-                var cfg = AppConfigStore.Load();
+                AppConfig cfg = AppConfigStore.Load();
                 _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
                     ? _localizationService.CurrentLanguage
                     : cfg.Advanced.Language;
@@ -612,7 +621,7 @@ namespace VaultSync.UI
             _enableAutoBackups         = cfg.Backups.EnableAutoBackups;
             _autoBackupIntervalMinutes = ClampInt(cfg.Backups.IntervalMinutes, 1, 10080, 30);
             _maxSnapshotsPerProject    = ClampInt(cfg.Backups.MaxSnapshotsPerProject, 1, 10000, 20);
-            _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? [];
             // Back-compat: older configs may have Destinations populated but no explicit toggle saved yet.
             _useAdvancedDestinations   = cfg.Backups.UseAdvancedDestinations || (cfg.Backups.Destinations?.Count > 0);
             _backupLocationPath        = string.IsNullOrWhiteSpace(cfg.Backups.BackupRoot)
@@ -652,15 +661,15 @@ namespace VaultSync.UI
             _minimumFreeSpacePercent = ClampInt(cfg.Storage.MinFreeSpacePercent, 0, 95, 10);
             RefreshRsyncStatusHint();
 
-            foreach (var cred in CredentialProfiles.ToList())
+            foreach (NetworkCredentialViewModel? cred in CredentialProfiles.ToList())
             {
                 cred.PropertyChanged -= OnNestedPropertyChanged;
             }
             CredentialProfiles.Clear();
-            foreach (var cred in cfg.Network.Credentials ?? new List<NetworkCredentialProfile>())
+            foreach (NetworkCredentialProfile cred in cfg.Network.Credentials ?? [])
             {
-                var keyRef  = _credentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
-                var secret  = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
+                    string keyRef  = _credentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
+                    string? secret  = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
 
                 CredentialProfiles.Add(new NetworkCredentialViewModel
                 {
@@ -673,14 +682,14 @@ namespace VaultSync.UI
                 });
             }
 
-            foreach (var dest in Destinations.ToList())
+            foreach (BackupDestinationViewModel? dest in Destinations.ToList())
             {
                 dest.PropertyChanged -= OnNestedPropertyChanged;
             }
             Destinations.Clear();
-            if (cfg.Backups.Destinations != null && cfg.Backups.Destinations.Count > 0)
+            if (cfg.Backups.Destinations?.Count > 0)
             {
-                foreach (var dest in cfg.Backups.Destinations)
+                foreach (BackupDestination dest in cfg.Backups.Destinations)
                 {
                     var vm = new BackupDestinationViewModel
                     {
@@ -847,7 +856,7 @@ namespace VaultSync.UI
             }
 
             // Keep name + object selection aligned before taking snapshots.
-            foreach (var dest in Destinations)
+            foreach (BackupDestinationViewModel dest in Destinations)
             {
                 if (dest.SelectedCredential is not null)
                 {
@@ -890,10 +899,10 @@ namespace VaultSync.UI
                     Password: c.Password))
                 .ToList();
 
-            var cfg = AppConfigStore.Load();
+            AppConfig cfg = AppConfigStore.Load();
 
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
-            _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? new List<int>();
+            _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? [];
 
             cfg.ProjectsRoot      = ResolveProjectsRootForSave(ProjectsRootPath, cfg.ProjectsRoot);
             cfg.ResumeLastSession = ResumeLastSession;
@@ -909,17 +918,17 @@ namespace VaultSync.UI
             cfg.Backups.IntervalMinutes             = ClampInt(AutoBackupIntervalMinutes, 1, 10080, 30);
             cfg.Backups.MaxSnapshotsPerProject      = ClampInt(MaxSnapshotsPerProject, 1, 10000, 20);
             cfg.Backups.AutoBackupDisabledProjects  = _autoBackupDisabledProjects;
-            var preserveExistingDestinations =
+            bool preserveExistingDestinations =
                 UseAdvancedDestinations &&
                 destinationSnapshot.Count == 0 &&
                 cfg.Backups.Destinations is { Count: > 0 };
-            var fallbackRoot = UseAdvancedDestinations
+            string? fallbackRoot = UseAdvancedDestinations
                 ? (destinationSnapshot.FirstOrDefault(d => d.Active)?.Path ?? destinationSnapshot.FirstOrDefault()?.Path)
                 : BackupLocationPath;
-            var nextBackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
-            var nextDestinations = preserveExistingDestinations
-                ? cfg.Backups.Destinations.ToList()
-                : destinationSnapshot.Select(d => new BackupDestination
+            string? nextBackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
+            List<BackupDestination> nextDestinations = preserveExistingDestinations
+                ? [.. cfg.Backups.Destinations]
+                : [.. destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
                 Path           = d.Path,
@@ -936,8 +945,8 @@ namespace VaultSync.UI
                 EnableCheckpointResume = d.EnableCheckpointResume,
                 SoftQuotaBytes = d.SoftQuotaBytes,
                 QuotaWarningPercent = ClampInt(d.QuotaWarningPercent, 50, 99, 85)
-            }).ToList();
-            var destinationSettingsChanged =
+            })];
+            bool destinationSettingsChanged =
                 cfg.Backups.UseAdvancedDestinations != UseAdvancedDestinations ||
                 !string.Equals(cfg.Backups.BackupRoot ?? string.Empty, nextBackupRoot ?? string.Empty, StringComparison.Ordinal) ||
                 !BackupDestinationsEqual(cfg.Backups.Destinations, nextDestinations);
@@ -978,17 +987,17 @@ namespace VaultSync.UI
             var credentialSave = await Task.Run(() =>
             {
                 var savedCreds = new List<NetworkCredentialProfile>();
-                var hadPlaintextFallback = false;
+                bool hadPlaintextFallback = false;
 
-                foreach (var c in credentialSnapshot)
+                foreach (CredentialSnapshot? c in credentialSnapshot)
                 {
-                    var keyRef = _credentialVault.EnsureKeyRef(c.KeyRef, c.Name);
+                    string keyRef = _credentialVault.EnsureKeyRef(c.KeyRef, c.Name);
 
-                    var secret = !string.IsNullOrWhiteSpace(c.Password)
+                    string? secret = !string.IsNullOrWhiteSpace(c.Password)
                         ? c.Password
                         : _credentialVault.GetSecret(keyRef, c.Username, c.UseKeychain);
 
-                    var persistPlaintext = false;
+                    bool persistPlaintext = false;
 
                     if (!string.IsNullOrWhiteSpace(secret))
                     {
@@ -1049,7 +1058,7 @@ namespace VaultSync.UI
             if (_lastLaunchOnLoginApplied != _launchOnLogin)
             {
                 _lastLaunchOnLoginApplied = _launchOnLogin;
-                var launchOnLogin = _launchOnLogin;
+                bool launchOnLogin = _launchOnLogin;
                 _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(launchOnLogin));
             }
 
@@ -1071,7 +1080,7 @@ namespace VaultSync.UI
         {
             var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var dest in Destinations)
+            foreach (BackupDestinationViewModel dest in Destinations)
             {
                 if (string.IsNullOrWhiteSpace(dest.Path))
                 {
@@ -1122,14 +1131,14 @@ namespace VaultSync.UI
 
         private static bool BackupDestinationsEqual(IReadOnlyList<BackupDestination>? current, IReadOnlyList<BackupDestination> next)
         {
-            current ??= Array.Empty<BackupDestination>();
+            current ??= [];
             if (current.Count != next.Count)
                 return false;
 
-            for (var i = 0; i < current.Count; i++)
+            for (int i = 0; i < current.Count; i++)
             {
-                var left = current[i];
-                var right = next[i];
+                BackupDestination left = current[i];
+                BackupDestination right = next[i];
                 if (!string.Equals(left.Alias ?? string.Empty, right.Alias ?? string.Empty, StringComparison.Ordinal) ||
                     !string.Equals(left.Path ?? string.Empty, right.Path ?? string.Empty, StringComparison.Ordinal) ||
                     !string.Equals(left.CredentialName ?? string.Empty, right.CredentialName ?? string.Empty, StringComparison.Ordinal) ||
@@ -1288,7 +1297,7 @@ namespace VaultSync.UI
                 string.Equals(e.PropertyName, nameof(BackupDestinationViewModel.CredentialName), StringComparison.Ordinal))
             {
                 // Re-sync SelectedCredential when only the name is set (e.g., via binding)
-                var match = CredentialProfiles.FirstOrDefault(c =>
+                NetworkCredentialViewModel? match = CredentialProfiles.FirstOrDefault(c =>
                     c.Name.Equals(dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
                 if (!ReferenceEquals(dest.SelectedCredential, match))
                 {
@@ -1301,7 +1310,7 @@ namespace VaultSync.UI
 
         private void TriggerAutoSave()
         {
-            _ = RunDetachedAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
+            _ = DetachedTask.RunAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
         }
 
         private async Task TriggerAutoSaveAsync()
@@ -1335,14 +1344,14 @@ namespace VaultSync.UI
                 if (_savePending)
                 {
                     _savePending = false;
-                    _ = RunDetachedAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
+                    _ = DetachedTask.RunAsync(TriggerAutoSaveAsync, nameof(TriggerAutoSaveAsync));
                 }
             }
         }
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_isReloadingFromConfig || e.PropertyName is null || !ShouldAutoSaveProperty(e.PropertyName))
+            if (_isReloadingFromConfig || _isRefreshingLocalizedOptions || e.PropertyName is null || !ShouldAutoSaveProperty(e.PropertyName))
                 return;
 
             TriggerAutoSave();
@@ -1381,12 +1390,12 @@ namespace VaultSync.UI
             TagColorRules.Remove(rule);
         }
 
-        private void ResetTagColorRule(TagColorRuleViewModel? rule)
+        private static void ResetTagColorRule(TagColorRuleViewModel? rule)
         {
             if (rule is null)
                 return;
 
-            var defaults = ProjectTagChip.GetDefaultPalette(rule.PreviewTag);
+            (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(rule.PreviewTag);
             rule.Background = defaults.Background;
             rule.Foreground = defaults.Foreground;
             rule.Border = defaults.Border;
@@ -1396,12 +1405,12 @@ namespace VaultSync.UI
         {
             TagColorRules.Clear();
 
-            var rules = cfg.Appearance.TagColors
+            IOrderedEnumerable<KeyValuePair<string, TagColorConfig>> rules = cfg.Appearance.TagColors
                 .OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase);
 
-            foreach (var entry in rules)
+            foreach (KeyValuePair<string, TagColorConfig> entry in rules)
             {
-                var defaults = ProjectTagChip.GetDefaultPalette(entry.Key);
+                (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(entry.Key);
                 TagColorRules.Add(new TagColorRuleViewModel
                 {
                     Tag = entry.Key,
@@ -1416,13 +1425,13 @@ namespace VaultSync.UI
         {
             var rules = new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var rule in TagColorRules)
+            foreach (TagColorRuleViewModel rule in TagColorRules)
             {
-                var tag = (rule.Tag ?? string.Empty).Trim();
+                string tag = (rule.Tag ?? string.Empty).Trim();
                 if (string.IsNullOrWhiteSpace(tag))
                     continue;
 
-                var defaults = ProjectTagChip.GetDefaultPalette(tag);
+                (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(tag);
                 rules[tag] = new TagColorConfig
                 {
                     Background = ProjectTagAppearance.NormalizeHex(rule.Background, defaults.Background),
@@ -1436,11 +1445,11 @@ namespace VaultSync.UI
 
         public void RebindDestinationCredentials()
         {
-            foreach (var dest in Destinations)
+            foreach (BackupDestinationViewModel dest in Destinations)
             {
                 if (!string.IsNullOrWhiteSpace(dest.CredentialName))
                 {
-                    var match = CredentialProfiles.FirstOrDefault(c =>
+                    NetworkCredentialViewModel? match = CredentialProfiles.FirstOrDefault(c =>
                         c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
                     dest.SelectedCredential = match;
                 }
@@ -1460,6 +1469,18 @@ namespace VaultSync.UI
 
         private string NormalizeThemeOption(string theme)
         {
+            int existingIndex = ThemeOptions.IndexOf(theme);
+            if (existingIndex >= 0)
+            {
+                return existingIndex switch
+                {
+                    1 => "Dark",
+                    2 => "Light",
+                    3 => "Custom",
+                    _ => "System"
+                };
+            }
+
             return theme switch
             {
                 var value when string.Equals(value, ThemeOptionDarkLabel, StringComparison.OrdinalIgnoreCase) => "Dark",
@@ -1488,6 +1509,12 @@ namespace VaultSync.UI
 
         private string NormalizeThemeBaseOption(string value)
         {
+            int existingIndex = CustomThemeBaseOptions.IndexOf(value);
+            if (existingIndex >= 0)
+            {
+                return existingIndex == 1 ? "Light" : "Dark";
+            }
+
             return value switch
             {
                 var candidate when string.Equals(candidate, ThemeBaseLightLabel, StringComparison.OrdinalIgnoreCase) => "Light",
@@ -1575,7 +1602,7 @@ namespace VaultSync.UI
             {
                 if (SetField(ref _backupLocationPath, value))
                 {
-                    var (reachable, writable) = ValidateBackupLocation(value, notifyOnSuccess: false);
+                    (bool reachable, bool writable) = ValidateBackupLocation(value, notifyOnSuccess: false);
                     if (_isInitialized)
                     {
                         DestinationTested?.Invoke(new BackupDestination { Alias = "Primary", Path = value, Active = true, PreMounted = true }, reachable, writable, BackupLocationStatus);
@@ -1813,8 +1840,8 @@ namespace VaultSync.UI
             set => SetField(ref _minimumFreeSpacePercent, ClampInt(value, 0, 95, _minimumFreeSpacePercent));
         }
 
-        public ObservableCollection<BackupDestinationViewModel> Destinations { get; } = new();
-        public ObservableCollection<NetworkCredentialViewModel> CredentialProfiles { get; } = new();
+        public ObservableCollection<BackupDestinationViewModel> Destinations { get; } = [];
+        public ObservableCollection<NetworkCredentialViewModel> CredentialProfiles { get; } = [];
         public IEnumerable<string> CredentialNames => CredentialProfiles.Select(c => c.Name);
 
         public string SelectedTheme
@@ -1822,6 +1849,9 @@ namespace VaultSync.UI
             get => _selectedTheme;
             set
             {
+                if (_isRefreshingLocalizedOptions)
+                    return;
+
                 if (SetField(ref _selectedTheme, value))
                 {
                     OnPropertyChanged(nameof(IsCustomThemeSelected));
@@ -1840,7 +1870,7 @@ namespace VaultSync.UI
             get => _customThemeName;
             set
             {
-                var normalized = string.IsNullOrWhiteSpace(value)
+                string normalized = string.IsNullOrWhiteSpace(value)
                     ? L("Settings.Appearance.ThemeNameDefault", "Custom theme")
                     : value.Trim();
                 if (!SetField(ref _customThemeName, normalized))
@@ -1856,7 +1886,10 @@ namespace VaultSync.UI
             get => _customThemeBase;
             set
             {
-                var normalized = DisplayThemeBaseOption(NormalizeThemeBaseOption(value));
+                if (_isRefreshingLocalizedOptions)
+                    return;
+
+                string normalized = DisplayThemeBaseOption(NormalizeThemeBaseOption(value));
                 if (!SetField(ref _customThemeBase, normalized))
                     return;
 
@@ -2090,8 +2123,8 @@ namespace VaultSync.UI
             set => SetField(ref _checkForUpdatesOnStartup, value);
         }
 
-        public bool IsStoreDistribution => DistributionChannelService.Current.IsStore;
-        public bool CanUseSelfUpdate => !IsStoreDistribution;
+        public static bool IsStoreDistribution => DistributionChannelService.Current.IsStore;
+        public static bool CanUseSelfUpdate => !IsStoreDistribution;
 
         public string DistributionChannelLabel => IsStoreDistribution
             ? L("Settings.Advanced.ChannelStore", "Microsoft Store")
@@ -2231,7 +2264,7 @@ namespace VaultSync.UI
             {
                 try
                 {
-                    var cfg = AppConfigStore.Load();
+                    AppConfig cfg = AppConfigStore.Load();
                     cfg.Advanced.Language = _selectedLanguageCode;
                     AppConfigStore.Save(cfg);
                 }
@@ -2273,13 +2306,13 @@ namespace VaultSync.UI
                 return;
             }
 
-            var neverText = L("Settings.Advanced.UpdateStatusNever", "Never checked");
-            var lastTemplate = L("Settings.Advanced.UpdateStatusLast", "Last check: {0}");
-            var errorTemplate = L("Settings.Advanced.UpdateStatusError", "Last error: {0}");
+            string neverText = L("Settings.Advanced.UpdateStatusNever", "Never checked");
+            string lastTemplate = L("Settings.Advanced.UpdateStatusLast", "Last check: {0}");
+            string errorTemplate = L("Settings.Advanced.UpdateStatusError", "Last error: {0}");
 
             if (_lastUpdateCheckAt.HasValue)
             {
-                var formatted = _lastUpdateCheckAt.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+                string formatted = _lastUpdateCheckAt.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
                 UpdateCheckStatusText = string.Format(CultureInfo.CurrentCulture, lastTemplate, formatted);
             }
             else
@@ -2315,12 +2348,12 @@ namespace VaultSync.UI
                 return;
             }
 
-            var selectedTag = string.IsNullOrWhiteSpace(diagnostics.SelectedCandidate?.Tag) ? "-" : diagnostics.SelectedCandidate.Tag;
-            var selectedTarget = string.IsNullOrWhiteSpace(diagnostics.SelectedCandidate?.TargetCommitish) ? "-" : diagnostics.SelectedCandidate.TargetCommitish;
-            var stableTag = string.IsNullOrWhiteSpace(diagnostics.StableCandidate?.Tag) ? "-" : diagnostics.StableCandidate.Tag;
-            var betaTag = string.IsNullOrWhiteSpace(diagnostics.BetaCandidate?.Tag) ? "-" : diagnostics.BetaCandidate.Tag;
+            string selectedTag = string.IsNullOrWhiteSpace(diagnostics.SelectedCandidate?.Tag) ? "-" : diagnostics.SelectedCandidate.Tag;
+            string selectedTarget = string.IsNullOrWhiteSpace(diagnostics.SelectedCandidate?.TargetCommitish) ? "-" : diagnostics.SelectedCandidate.TargetCommitish;
+            string stableTag = string.IsNullOrWhiteSpace(diagnostics.StableCandidate?.Tag) ? "-" : diagnostics.StableCandidate.Tag;
+            string betaTag = string.IsNullOrWhiteSpace(diagnostics.BetaCandidate?.Tag) ? "-" : diagnostics.BetaCandidate.Tag;
 
-            var summary = string.Format(
+            string summary = string.Format(
                 CultureInfo.CurrentCulture,
                 L("Settings.Advanced.UpdateDiagnosticsTemplate", "Decision: {0} | Channel: {1} | Selected: {2} ({3}) | Stable: {4} | Beta: {5}"),
                 diagnostics.Decision,
@@ -2368,7 +2401,7 @@ namespace VaultSync.UI
             }
 
             string completedText;
-            if (DateTimeOffset.TryParse(diagnostics.LastCompletedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var completedUtc))
+            if (DateTimeOffset.TryParse(diagnostics.LastCompletedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset completedUtc))
             {
                 completedText = completedUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
             }
@@ -2377,7 +2410,7 @@ namespace VaultSync.UI
                 completedText = diagnostics.LastCompletedUtc;
             }
 
-            var phaseSummary = string.Join(
+            string phaseSummary = string.Join(
                 Environment.NewLine,
                 diagnostics.Phases
                     .OrderBy(phase => phase.ElapsedMs)
@@ -2406,11 +2439,11 @@ namespace VaultSync.UI
                 return;
             }
 
-            var updatedText = DateTimeOffset.TryParse(diagnostics.LastUpdatedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var updatedUtc)
+            string updatedText = DateTimeOffset.TryParse(diagnostics.LastUpdatedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset updatedUtc)
                 ? updatedUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
                 : diagnostics.LastUpdatedUtc;
 
-            var projectText = string.IsNullOrWhiteSpace(diagnostics.LastProjectName)
+            string projectText = string.IsNullOrWhiteSpace(diagnostics.LastProjectName)
                 ? L("Settings.Advanced.CheckpointResumeUnknownProject", "unknown project")
                 : diagnostics.LastProjectName;
 
@@ -2438,7 +2471,7 @@ namespace VaultSync.UI
                 return;
             }
 
-            var rsyncPath = TryGetBundledRsyncPath() ?? TryFindRsyncOnPath();
+            string? rsyncPath = TryGetBundledRsyncPath() ?? TryFindRsyncOnPath();
             if (string.IsNullOrWhiteSpace(rsyncPath))
             {
                 ShowRsyncStatusHint = true;
@@ -2449,7 +2482,7 @@ namespace VaultSync.UI
                 return;
             }
 
-            var version = TryGetRsyncVersion(rsyncPath);
+            Version? version = TryGetRsyncVersion(rsyncPath);
             if (version is null || version < new Version(3, 1, 0))
             {
                 ShowRsyncStatusHint = true;
@@ -2466,7 +2499,7 @@ namespace VaultSync.UI
 
         private string L(string key, string fallback)
         {
-            var value = _localizationService.GetString(key);
+            string value = _localizationService.GetString(key);
             return string.Equals(value, key, StringComparison.OrdinalIgnoreCase)
                 ? fallback
                 : value;
@@ -2483,7 +2516,7 @@ namespace VaultSync.UI
 
         private static string NormalizeTimeOfDay(string? value, string fallback)
         {
-            if (TryParseTimeOfDay(value, out var parsed))
+            if (TryParseTimeOfDay(value, out TimeSpan parsed))
             {
                 return $"{parsed.Hours:00}:{parsed.Minutes:00}";
             }
@@ -2493,12 +2526,12 @@ namespace VaultSync.UI
 
         private static string? TryFindRsyncOnPath()
         {
-            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            foreach (var dir in path.Split(':', StringSplitOptions.RemoveEmptyEntries))
+            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (string dir in path.Split(':', StringSplitOptions.RemoveEmptyEntries))
             {
                 try
                 {
-                    var candidate = Path.Combine(dir, "rsync");
+                    string candidate = Path.Combine(dir, "rsync");
                     if (File.Exists(candidate))
                         return candidate;
                 }
@@ -2515,8 +2548,8 @@ namespace VaultSync.UI
         {
             try
             {
-                var baseDir = AppContext.BaseDirectory;
-                var arch = RuntimeInformation.OSArchitecture;
+                string baseDir = AppContext.BaseDirectory;
+                Architecture arch = RuntimeInformation.OSArchitecture;
                 var candidates = new List<string>();
                 if (arch == Architecture.Arm64)
                 {
@@ -2537,7 +2570,7 @@ namespace VaultSync.UI
                 candidates.Add(Path.Combine(baseDir, "tools", "rsync", "rsync"));
                 candidates.Add(Path.Combine(baseDir, "tools", "rsync", "bin", "rsync"));
 
-                foreach (var candidate in candidates)
+                foreach (string candidate in candidates)
                 {
                     if (File.Exists(candidate))
                         return candidate;
@@ -2576,7 +2609,7 @@ namespace VaultSync.UI
                     return null;
                 }
 
-                var output = proc.StandardOutput.ReadToEnd();
+                string output = proc.StandardOutput.ReadToEnd();
                 return ParseVersion(output);
             }
             catch
@@ -2590,13 +2623,13 @@ namespace VaultSync.UI
             if (string.IsNullOrWhiteSpace(output))
                 return null;
 
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (lines.Length == 0)
                 return null;
 
-            var tokens = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var versionToken = tokens.FirstOrDefault(t => t.Any(char.IsDigit) && t.Contains('.'));
-            return Version.TryParse(versionToken, out var parsed) ? parsed : null;
+            string[] tokens = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string? versionToken = tokens.FirstOrDefault(t => t.Any(char.IsDigit) && t.Contains('.'));
+            return Version.TryParse(versionToken, out Version? parsed) ? parsed : null;
         }
 
         private static void ConfigureMacLibraryPath(ProcessStartInfo psi, string rsyncPath)
@@ -2604,20 +2637,20 @@ namespace VaultSync.UI
             if (!OperatingSystem.IsMacOS())
                 return;
 
-            var directory = Path.GetDirectoryName(rsyncPath);
+            string? directory = Path.GetDirectoryName(rsyncPath);
             if (string.IsNullOrWhiteSpace(directory))
                 return;
 
-            var libDir = Path.GetFullPath(Path.Combine(directory, "..", "lib"));
+            string libDir = Path.GetFullPath(Path.Combine(directory, "..", "lib"));
             if (!Directory.Exists(libDir))
                 return;
 
-            var existing = psi.Environment.TryGetValue("DYLD_LIBRARY_PATH", out var current)
+            string existing = psi.Environment.TryGetValue("DYLD_LIBRARY_PATH", out string? current)
                 ? current ?? string.Empty
                 : string.Empty;
             psi.Environment["DYLD_LIBRARY_PATH"] = PrependPathEntry(existing, libDir);
 
-            var fallback = psi.Environment.TryGetValue("DYLD_FALLBACK_LIBRARY_PATH", out var fallbackCurrent)
+            string fallback = psi.Environment.TryGetValue("DYLD_FALLBACK_LIBRARY_PATH", out string? fallbackCurrent)
                 ? fallbackCurrent ?? string.Empty
                 : string.Empty;
             psi.Environment["DYLD_FALLBACK_LIBRARY_PATH"] = PrependPathEntry(fallback, libDir);
@@ -2628,7 +2661,7 @@ namespace VaultSync.UI
             if (string.IsNullOrWhiteSpace(existing))
                 return entry;
 
-            var parts = existing.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = existing.Split(':', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Any(p => string.Equals(p, entry, StringComparison.Ordinal)))
                 return existing;
 
@@ -2722,7 +2755,7 @@ namespace VaultSync.UI
                     _backupEncryptionKeyRef,
                     "backup-encryption-global");
 
-                var storageMode = _backupEncryptionSecretService.SaveSecret(
+                EncryptionSecretStorageMode storageMode = _backupEncryptionSecretService.SaveSecret(
                     _backupEncryptionKeyRef,
                     BackupEncryptionSecretUsername,
                     BackupEncryptionPasswordInput,
@@ -2770,29 +2803,29 @@ namespace VaultSync.UI
 
         private void BrowseProjectsRoot()
         {
-            _ = RunDetachedAsync(BrowseProjectsRootAsync, nameof(BrowseProjectsRootAsync));
+            _ = DetachedTask.RunAsync(BrowseProjectsRootAsync, nameof(BrowseProjectsRootAsync));
         }
 
         private async Task BrowseProjectsRootAsync()
         {
-            var storageProvider = GetStorageProvider();
+            IStorageProvider? storageProvider = GetStorageProvider();
             if (storageProvider is null)
                 return;
 
-            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose projects root",
                 AllowMultiple = false
             });
 
-            var folder = folders?.FirstOrDefault();
-            var path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders?.FirstOrDefault();
+            string? path = folder?.Path?.LocalPath;
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
             try
             {
-                var config = await Task.Run(AppConfigStore.Load);
+                AppConfig config = await Task.Run(AppConfigStore.Load);
                 config.ProjectsRoot = path;
                 await AppConfigStore.SaveAsync(config);
             }
@@ -2806,23 +2839,23 @@ namespace VaultSync.UI
 
         private void BrowseBackupLocation()
         {
-            _ = RunDetachedAsync(BrowseBackupLocationAsync, nameof(BrowseBackupLocationAsync));
+            _ = DetachedTask.RunAsync(BrowseBackupLocationAsync, nameof(BrowseBackupLocationAsync));
         }
 
         private async Task BrowseBackupLocationAsync()
         {
-            var storageProvider = GetStorageProvider();
+            IStorageProvider? storageProvider = GetStorageProvider();
             if (storageProvider is null)
                 return;
 
-            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose backup location",
                 AllowMultiple = false
             });
 
-            var folder = folders?.FirstOrDefault();
-            var path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders?.FirstOrDefault();
+            string? path = folder?.Path?.LocalPath;
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
@@ -2832,7 +2865,7 @@ namespace VaultSync.UI
 
         private void BrowseDestination(BackupDestinationViewModel? dest)
         {
-            _ = RunDetachedAsync(() => BrowseDestinationAsync(dest), nameof(BrowseDestinationAsync));
+            _ = DetachedTask.RunAsync(() => BrowseDestinationAsync(dest), nameof(BrowseDestinationAsync));
         }
 
         private async Task BrowseDestinationAsync(BackupDestinationViewModel? dest)
@@ -2840,18 +2873,18 @@ namespace VaultSync.UI
             if (dest is null)
                 return;
 
-            var storageProvider = GetStorageProvider();
+            IStorageProvider? storageProvider = GetStorageProvider();
             if (storageProvider is null)
                 return;
 
-            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose destination folder",
                 AllowMultiple = false
             });
 
-            var folder = folders?.FirstOrDefault();
-            var path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders?.FirstOrDefault();
+            string? path = folder?.Path?.LocalPath;
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
@@ -2867,8 +2900,8 @@ namespace VaultSync.UI
 
         private void ClearLocalCache()
         {
-            var removed = 0;
-            var failed = 0;
+            int removed = 0;
+            int failed = 0;
 
             void TryDeleteDir(string path)
             {
@@ -2902,7 +2935,7 @@ namespace VaultSync.UI
                 }
             }
 
-            var localRoot = Path.Combine(
+            string localRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync");
 
@@ -2911,7 +2944,7 @@ namespace VaultSync.UI
             TryDeleteFile(Path.Combine(localRoot, "avatars.json"));
             TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json"));
 
-            var tempRoot = Path.GetTempPath();
+            string tempRoot = Path.GetTempPath();
             TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import"));
             TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export"));
             TryDeleteDir(Path.Combine(tempRoot, "VaultSync"));
@@ -2940,7 +2973,7 @@ namespace VaultSync.UI
 
         private void TestDestination(BackupDestinationViewModel? dest)
         {
-            _ = RunDetachedAsync(() => TestDestinationAsync(dest), nameof(TestDestinationAsync));
+            _ = DetachedTask.RunAsync(() => TestDestinationAsync(dest), nameof(TestDestinationAsync));
         }
 
         private async Task TestDestinationAsync(BackupDestinationViewModel? dest)
@@ -2948,19 +2981,19 @@ namespace VaultSync.UI
             if (dest is null)
                 return;
 
-            var path = dest.Path;
+            string path = dest.Path;
             if (string.IsNullOrWhiteSpace(path))
             {
-                var emptyText = LocalizationProvider.Service?.GetString("Destinations.Test.EmptyPath") ?? "Destination path is empty.";
+                string emptyText = LocalizationProvider.Service?.GetString("Destinations.Test.EmptyPath") ?? "Destination path is empty.";
                 SaveStatus = emptyText;
                 dest.LastTestStatus   = emptyText;
                 dest.LastTestSeverity = "Error";
                 return;
             }
 
-            var display = dest.DisplayName;
-            var cfg = await Task.Run(AppConfigStore.Load);
-            var profile = string.IsNullOrWhiteSpace(dest.CredentialName)
+            string display = dest.DisplayName;
+            AppConfig cfg = await Task.Run(AppConfigStore.Load);
+            NetworkCredentialProfile? profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                 ? null
                 : cfg.Network.Credentials.FirstOrDefault(c =>
                     c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
@@ -2983,7 +3016,7 @@ namespace VaultSync.UI
 
             var result = await Task.Run(() =>
             {
-                var resolution = _networkMountService.PrepareDestination(destModel, profile);
+                DestinationResolution resolution = _networkMountService.PrepareDestination(destModel, profile);
                 if (!resolution.IsSuccess)
                 {
                     return (resolution, success: false, readable: false, writable: false, message: resolution.Message);
@@ -2991,15 +3024,15 @@ namespace VaultSync.UI
 
                 try
                 {
-                    var effectivePath = resolution.EffectivePath;
+                    string effectivePath = resolution.EffectivePath;
                     Directory.CreateDirectory(effectivePath);
 
-                    var writable = TryWriteProbeFile(effectivePath);
-                    var message = writable
+                    bool writable = TryWriteProbeFile(effectivePath);
+                    string message = writable
                         ? (LocalizationProvider.Service?.GetString("Destinations.Test.Reachable") ?? "Reachable")
                         : (LocalizationProvider.Service?.GetString("Destinations.Test.ReadOnly") ?? "Read-only");
 
-                    return (resolution, success: true, readable: true, writable: writable, message: message);
+                    return (resolution, success: true, readable: true, writable, message);
                 }
                 catch (Exception ex)
                 {
@@ -3021,8 +3054,8 @@ namespace VaultSync.UI
                     result.message);
                 dest.LastTestStatus   = result.message;
                 dest.LastTestSeverity = "Error";
-                var actionLabel = LocalizationProvider.Service?.GetString("Logs.CopySnippet") ?? "Copy log snippet";
-                var actionCommand = CreateCopyLogSnippetCommand($"Destination test failed for '{display}'.");
+                string actionLabel = LocalizationProvider.Service?.GetString("Logs.CopySnippet") ?? "Copy log snippet";
+                ICommand actionCommand = CreateCopyLogSnippetCommand($"Destination test failed for '{display}'.");
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Error,
@@ -3046,7 +3079,7 @@ namespace VaultSync.UI
 
         private static bool TryWriteProbeFile(string effectivePath)
         {
-            var testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
+            string testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");
             try
             {
                 File.WriteAllText(testFile, "ok");
@@ -3071,28 +3104,16 @@ namespace VaultSync.UI
             }
         }
 
-        private ICommand CreateCopyLogSnippetCommand(string contextLabel)
+        private static ICommand CreateCopyLogSnippetCommand(string contextLabel)
         {
             return new RelayCommand(async _ =>
             {
-                var snippet = Services.LogConsoleProvider.Service?.GetRecentSnippet(30, contextLabel);
+                string? snippet = Services.LogConsoleProvider.Service?.GetRecentSnippet(30, contextLabel);
                 if (string.IsNullOrWhiteSpace(snippet))
                     return;
 
                 await ClipboardHelper.TryCopyAsync(snippet);
             });
-        }
-
-        private static async Task RunDetachedAsync(Func<Task> operation, string operationName)
-        {
-            try
-            {
-                await operation().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[SettingsViewModel] Detached operation failed ({operationName}): {ex}");
-            }
         }
 
         private void RaiseRepairCommandStateChanged()
@@ -3137,7 +3158,7 @@ namespace VaultSync.UI
                 return (false, false);
             }
 
-            var canWrite = TryWriteProbeFile(path);
+            bool canWrite = TryWriteProbeFile(path);
             if (!canWrite)
             {
                 BackupLocationStatus = "Not writable";
@@ -3157,7 +3178,7 @@ namespace VaultSync.UI
                 var drive = new DriveInfo(path);
                 if (drive.IsReady && drive.TotalSize > 0)
                 {
-                    var freePercent = (double)drive.AvailableFreeSpace / drive.TotalSize * 100d;
+                    double freePercent = (double)drive.AvailableFreeSpace / drive.TotalSize * 100d;
                     if (freePercent < MinimumFreeSpacePercent)
                     {
                         BackupLocationStatus = $"Low space ({freePercent:0.#}% free)";
@@ -3187,7 +3208,7 @@ namespace VaultSync.UI
             return (true, true);
         }
 
-        private void ForgetAllProjects()
+        private static void ForgetAllProjects()
         {
             _ = Task.Run(() =>
             {
@@ -3195,7 +3216,7 @@ namespace VaultSync.UI
                 {
                     // Dev helper: reset the VaultSync SQLite DB to a "fresh install" state
                     // without touching any real project files or backup folders on disk.
-                    var cfg  = AppConfigStore.Load();
+                    AppConfig cfg  = AppConfigStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
 
                     repo.EnsureSchema();
@@ -3210,7 +3231,7 @@ namespace VaultSync.UI
 
         private static IStorageProvider? GetStorageProvider()
         {
-            var app = Application.Current;
+            Application? app = Application.Current;
             if (app?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 return desktop.MainWindow?.StorageProvider;
@@ -3240,7 +3261,7 @@ namespace VaultSync.UI
             if (valueGb <= 0)
                 return null;
 
-            var bytes = valueGb * 1024d * 1024d * 1024d;
+            double bytes = valueGb * 1024d * 1024d * 1024d;
             if (bytes < 1d)
                 return null;
 
@@ -3304,8 +3325,8 @@ namespace VaultSync.UI
 
             try
             {
-                var root = AppContext.BaseDirectory;
-                var candidatePaths = new[]
+                string root = AppContext.BaseDirectory;
+                string[] candidatePaths = new[]
                 {
                     Path.Combine(root, "docs", "HELP.md"),
                     Path.Combine(root, "docs", "wiki", "FAQ.md"),
@@ -3313,7 +3334,7 @@ namespace VaultSync.UI
                     Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "docs", "wiki", "FAQ.md"))
                 };
 
-                foreach (var path in candidatePaths)
+                foreach (string? path in candidatePaths)
                 {
                     if (!File.Exists(path))
                         continue;
@@ -3325,7 +3346,7 @@ namespace VaultSync.UI
                     }
                 }
 
-                var onlineFallback = "https://github.com/flaviorame/vaultsync/tree/main/docs/wiki";
+                string onlineFallback = "https://github.com/flaviorame/vaultsync/tree/main/docs/wiki";
                 if (TryOpen(onlineFallback))
                 {
                     SaveStatus = L("Settings.Destinations.OpenHelpSuccess", "Help guide opened.");
@@ -3348,7 +3369,7 @@ namespace VaultSync.UI
 
         private void ExportTelemetry()
         {
-            var result = Telemetry.ExportToZip();
+            TelemetryExportResult result = Telemetry.ExportToZip();
             if (!result.Success || string.IsNullOrWhiteSpace(result.ZipPath))
             {
                 SaveStatus = result.Message ?? L("Settings.Advanced.TelemetryExportFailed", "Telemetry export failed.");
@@ -3370,7 +3391,7 @@ namespace VaultSync.UI
 
             try
             {
-                var folder = Path.GetDirectoryName(result.ZipPath);
+                string? folder = Path.GetDirectoryName(result.ZipPath);
                 if (!string.IsNullOrWhiteSpace(folder))
                 {
                     Process.Start(new ProcessStartInfo
@@ -3405,7 +3426,7 @@ namespace VaultSync.UI
 
         private void OpenMicrosoftStoreListing()
         {
-            var target = OperatingSystem.IsWindows()
+            string target = OperatingSystem.IsWindows()
                 ? "ms-windows-store://pdp/?productid=9N9HRX4JCLCP"
                 : "https://apps.microsoft.com/detail/9N9HRX4JCLCP";
 
@@ -3428,8 +3449,8 @@ namespace VaultSync.UI
 
         private void ExportLogConsole()
         {
-            var service = Services.LogConsoleProvider.Service;
-            var path = service?.ExportBuffer();
+            LogConsoleService? service = Services.LogConsoleProvider.Service;
+            string? path = service?.ExportBuffer();
 
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -3453,7 +3474,7 @@ namespace VaultSync.UI
 
         private void ExportSupportBundle()
         {
-            var result = _supportBundleService.Export();
+            SupportBundleExportResult result = SupportBundleService.Export();
             if (!result.Success || string.IsNullOrWhiteSpace(result.ZipPath))
             {
                 SaveStatus = string.IsNullOrWhiteSpace(result.Message)
@@ -3477,7 +3498,7 @@ namespace VaultSync.UI
 
             try
             {
-                var folder = Path.GetDirectoryName(result.ZipPath);
+                string? folder = Path.GetDirectoryName(result.ZipPath);
                 if (!string.IsNullOrWhiteSpace(folder))
                 {
                     Process.Start(new ProcessStartInfo
@@ -3495,12 +3516,12 @@ namespace VaultSync.UI
 
         private void ImportSupportBundle()
         {
-            _ = RunDetachedAsync(ImportSupportBundleAsync, nameof(ImportSupportBundleAsync));
+            _ = DetachedTask.RunAsync(ImportSupportBundleAsync, nameof(ImportSupportBundleAsync));
         }
 
         private void RunRetentionSimulation()
         {
-            _ = RunDetachedAsync(RunRetentionSimulationAsync, nameof(RunRetentionSimulationAsync));
+            _ = DetachedTask.RunAsync(RunRetentionSimulationAsync, nameof(RunRetentionSimulationAsync));
         }
 
         private async Task RunRetentionSimulationAsync()
@@ -3510,15 +3531,15 @@ namespace VaultSync.UI
 
             try
             {
-                var result = await Task.Run(() =>
+                BackupRetentionSimulationResult result = await Task.Run(() =>
                 {
-                    var cfg = AppConfigStore.Load();
+                    AppConfig cfg = AppConfigStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
                     var service = new BackupRetentionSimulationService(repo);
                     return service.Simulate(ClampInt(cfg.Backups.MaxSnapshotsPerProject, 1, 999, 20));
                 }).ConfigureAwait(false);
 
-                var status = result.AffectedProjectCount == 0
+                string status = result.AffectedProjectCount == 0
                     ? L("Settings.Backups.RetentionSimulationClear", "No projects currently exceed the retention cap.")
                     : string.Format(
                         CultureInfo.CurrentCulture,
@@ -3541,7 +3562,7 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                var status = string.Format(
+                string status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Backups.RetentionSimulationFailed", "Retention simulation failed: {0}"),
                     ex.Message);
@@ -3565,7 +3586,7 @@ namespace VaultSync.UI
 
         private void ScanBackupIndexRepairPlan()
         {
-            _ = RunDetachedAsync(ScanBackupIndexRepairPlanAsync, nameof(ScanBackupIndexRepairPlanAsync));
+            _ = DetachedTask.RunAsync(ScanBackupIndexRepairPlanAsync, nameof(ScanBackupIndexRepairPlanAsync));
         }
 
         private string BuildRetentionSimulationSummary(BackupRetentionSimulationResult result)
@@ -3599,12 +3620,12 @@ namespace VaultSync.UI
                     result.MaxSnapshotsPerProject)
             };
 
-            foreach (var project in result.Projects
+            foreach (ProjectRetentionSimulationProjectResult? project in result.Projects
                          .OrderByDescending(item => item.SelectedDeleteBytes)
                          .ThenByDescending(item => item.DeleteQuota)
                          .ThenBy(item => item.ProjectName, StringComparer.CurrentCultureIgnoreCase))
             {
-                var line = string.Format(
+                string line = string.Format(
                     CultureInfo.CurrentCulture,
                     L(
                         "Settings.Backups.RetentionSimulationProjectLine",
@@ -3628,29 +3649,8 @@ namespace VaultSync.UI
             return string.Join(Environment.NewLine, lines);
         }
 
-        private static string FormatByteSize(long bytes)
-        {
-            const double Kb = 1024d;
-            const double Mb = Kb * 1024d;
-            const double Gb = Mb * 1024d;
-
-            if (bytes >= Gb)
-            {
-                return $"{bytes / Gb:0.##} GB";
-            }
-
-            if (bytes >= Mb)
-            {
-                return $"{bytes / Mb:0.##} MB";
-            }
-
-            if (bytes >= Kb)
-            {
-                return $"{bytes / Kb:0.##} KB";
-            }
-
-            return $"{bytes} B";
-        }
+        private static string FormatByteSize(long bytes) =>
+            UiFormat.FormatBytes(bytes);
 
         private async Task ScanBackupIndexRepairPlanAsync()
         {
@@ -3659,15 +3659,15 @@ namespace VaultSync.UI
 
             try
             {
-                var plan = await Task.Run(() =>
+                BackupIndexRepairPlan plan = await Task.Run(() =>
                 {
-                    var cfg = AppConfigStore.Load();
+                    AppConfig cfg = AppConfigStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
                     var service = new BackupIndexRepairService(repo);
                     return service.BuildPlan();
                 }).ConfigureAwait(false);
 
-                var status = plan.HasActions
+                string status = plan.HasActions
                     ? L("Settings.Advanced.BackupRepairPlanReady", "Repair plan ready.")
                     : L("Settings.Advanced.BackupRepairPlanNoActions", "No exact repair actions are currently available.");
 
@@ -3694,7 +3694,7 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                var status = string.Format(
+                string status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.BackupRepairFailed", "Backup repair scan failed: {0}"),
                     ex.Message);
@@ -3719,13 +3719,13 @@ namespace VaultSync.UI
 
         private void ApplyBackupIndexRepairPlan()
         {
-            _ = RunDetachedAsync(ApplyBackupIndexRepairPlanAsync, nameof(ApplyBackupIndexRepairPlanAsync));
+            _ = DetachedTask.RunAsync(ApplyBackupIndexRepairPlanAsync, nameof(ApplyBackupIndexRepairPlanAsync));
         }
 
         private async Task ApplyBackupIndexRepairPlanAsync()
         {
-            var plan = _currentBackupIndexRepairPlan;
-            if (plan is null || !plan.HasActions)
+            BackupIndexRepairPlan? plan = _currentBackupIndexRepairPlan;
+            if (plan?.HasActions != true)
                 return;
 
             await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
@@ -3734,15 +3734,15 @@ namespace VaultSync.UI
 
             try
             {
-                var applied = await Task.Run(() =>
+                int applied = await Task.Run(() =>
                 {
-                    var cfg = AppConfigStore.Load();
+                    AppConfig cfg = AppConfigStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
                     var service = new BackupIndexRepairService(repo);
                     return service.ApplyPlan(plan);
                 }).ConfigureAwait(false);
 
-                var status = string.Format(
+                string status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.BackupRepairApplied", "Applied {0} exact backup-link repair action(s)."),
                     applied);
@@ -3763,7 +3763,7 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                var status = string.Format(
+                string status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.BackupRepairApplyFailed", "Backup repair apply failed: {0}"),
                     ex.Message);
@@ -3788,11 +3788,11 @@ namespace VaultSync.UI
 
         private string BuildBackupIndexRepairSummary(BackupIndexRepairPlan plan)
         {
-            var exactActions = string.Format(
+            string exactActions = string.Format(
                 CultureInfo.CurrentCulture,
                 L("Settings.Advanced.BackupRepairSummaryActions", "{0} exact remap action(s)"),
                 plan.Actions.Count);
-            var blockedIssues = string.Format(
+            string blockedIssues = string.Format(
                 CultureInfo.CurrentCulture,
                 L("Settings.Advanced.BackupRepairSummaryBlocked", "{0} blocked orphan bucket(s)"),
                 plan.BlockedIssues.Count);
@@ -3811,7 +3811,7 @@ namespace VaultSync.UI
                     plan.Actions.Count));
             }
 
-            foreach (var issue in plan.BlockedIssues.OrderBy(static issue => issue.Code, StringComparer.Ordinal))
+            foreach (BackupIndexRepairBlockedIssue? issue in plan.BlockedIssues.OrderBy(static issue => issue.Code, StringComparer.Ordinal))
             {
                 parts.Add(string.Format(
                     CultureInfo.CurrentCulture,
@@ -3832,7 +3832,7 @@ namespace VaultSync.UI
         {
             ProjectMetadataConflicts.Clear();
 
-            foreach (var conflict in (conflicts ?? Enumerable.Empty<ProjectMetadataConflictRecord>())
+            foreach (ProjectMetadataConflictRecord? conflict in (conflicts ?? [])
                          .OrderBy(static item => item.ProjectName, StringComparer.OrdinalIgnoreCase)
                          .ThenBy(static item => item.SourceUpdatedUtc, StringComparer.Ordinal))
             {
@@ -3875,7 +3875,7 @@ namespace VaultSync.UI
             if (string.IsNullOrWhiteSpace(value))
                 return "-";
 
-            return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
+            return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset parsed)
                 ? parsed.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
                 : value;
         }
@@ -3885,7 +3885,7 @@ namespace VaultSync.UI
             if (item is null)
                 return;
 
-            _ = RunDetachedAsync(() => AcceptProjectMetadataConflictAsync(item), nameof(AcceptProjectMetadataConflictAsync));
+            _ = DetachedTask.RunAsync(() => AcceptProjectMetadataConflictAsync(item), nameof(AcceptProjectMetadataConflictAsync));
         }
 
         private async Task AcceptProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
@@ -3897,7 +3897,7 @@ namespace VaultSync.UI
             {
                 await Task.Run(() =>
                 {
-                    var cfg = AppConfigStore.Load();
+                    AppConfig cfg = AppConfigStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
                     repo.UpdateProjectPreferredDestination(item.ProjectId, EmptyToNull(item.ImportedPreferredDestinationId));
                     repo.UpdateProjectRestoreMode(item.ProjectId, EmptyToNull(item.ImportedRestoreMode));
@@ -3909,7 +3909,7 @@ namespace VaultSync.UI
                     AppConfigStore.Save(cfg);
                 }).ConfigureAwait(false);
 
-                var status = string.Format(
+                string status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictAccepted", "Imported metadata applied for {0}."),
                     item.ProjectName);
@@ -3928,7 +3928,7 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                var status = string.Format(
+                string status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictAcceptFailed", "Applying imported metadata failed: {0}"),
                     ex.Message);
@@ -3955,7 +3955,7 @@ namespace VaultSync.UI
             if (item is null)
                 return;
 
-            _ = RunDetachedAsync(() => KeepLocalProjectMetadataConflictAsync(item), nameof(KeepLocalProjectMetadataConflictAsync));
+            _ = DetachedTask.RunAsync(() => KeepLocalProjectMetadataConflictAsync(item), nameof(KeepLocalProjectMetadataConflictAsync));
         }
 
         private async Task KeepLocalProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
@@ -3967,13 +3967,13 @@ namespace VaultSync.UI
             {
                 await Task.Run(() =>
                 {
-                    var cfg = AppConfigStore.Load();
+                    AppConfig cfg = AppConfigStore.Load();
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
                     UpdateMetadataConflictTelemetry(cfg, "keep-local", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
                     AppConfigStore.Save(cfg);
                 }).ConfigureAwait(false);
 
-                var status = string.Format(
+                string status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictKeptLocal", "Local metadata kept for {0}."),
                     item.ProjectName);
@@ -3992,7 +3992,7 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                var status = string.Format(
+                string status = string.Format(
                     CultureInfo.CurrentCulture,
                     L("Settings.Advanced.MetadataConflictKeepLocalFailed", "Keeping local metadata failed: {0}"),
                     ex.Message);
@@ -4016,8 +4016,8 @@ namespace VaultSync.UI
 
         private static void RemoveProjectMetadataConflictRecord(AppConfig cfg, int projectId, string projectExternalId)
         {
-            cfg.Advanced.ProjectMetadataConflicts ??= new List<ProjectMetadataConflictRecord>();
-            var existing = cfg.Advanced.ProjectMetadataConflicts.FirstOrDefault(conflict =>
+            cfg.Advanced.ProjectMetadataConflicts ??= [];
+            ProjectMetadataConflictRecord? existing = cfg.Advanced.ProjectMetadataConflicts.FirstOrDefault(conflict =>
                 conflict.ProjectId == projectId ||
                 (!string.IsNullOrWhiteSpace(projectExternalId) &&
                  string.Equals(conflict.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase)));
@@ -4027,11 +4027,11 @@ namespace VaultSync.UI
             }
         }
 
-        private void PersistMetadataConflictTelemetry(string? lastAction, string? lastResolvedProject, int pendingCount)
+        private static void PersistMetadataConflictTelemetry(string? lastAction, string? lastResolvedProject, int pendingCount)
         {
             try
             {
-                var cfg = AppConfigStore.Load();
+                AppConfig cfg = AppConfigStore.Load();
                 UpdateMetadataConflictTelemetry(cfg, lastAction, lastResolvedProject, pendingCount);
                 AppConfigStore.Save(cfg);
             }
@@ -4058,9 +4058,9 @@ namespace VaultSync.UI
         {
             try
             {
-                var cfg = AppConfigStore.Load();
+                AppConfig cfg = AppConfigStore.Load();
                 cfg.Advanced.BackupRepairTelemetry ??= new BackupRepairTelemetry();
-                var telemetry = cfg.Advanced.BackupRepairTelemetry;
+                BackupRepairTelemetry telemetry = cfg.Advanced.BackupRepairTelemetry;
                 telemetry.LastScanUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
                 telemetry.LastStatus = status ?? string.Empty;
                 telemetry.PlannedActionCount = plan?.Actions.Count ?? 0;
@@ -4069,12 +4069,12 @@ namespace VaultSync.UI
                     .Select(static action => action.Code)
                     .Distinct(StringComparer.Ordinal)
                     .OrderBy(static code => code, StringComparer.Ordinal)
-                    .ToList() ?? new List<string>();
+                    .ToList() ?? [];
                 telemetry.BlockedIssueCodes = plan?.BlockedIssues
                     .Select(static issue => issue.Code)
                     .Distinct(StringComparer.Ordinal)
                     .OrderBy(static code => code, StringComparer.Ordinal)
-                    .ToList() ?? new List<string>();
+                    .ToList() ?? [];
 
                 if (appliedCount.HasValue)
                 {
@@ -4095,40 +4095,40 @@ namespace VaultSync.UI
 
         private async Task ImportSupportBundleAsync()
         {
-            var storageProvider = GetStorageProvider();
+            IStorageProvider? storageProvider = GetStorageProvider();
             if (storageProvider is null)
                 return;
 
-            var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = L("Settings.Advanced.SupportBundleImport", "Import support bundle"),
                 AllowMultiple = false,
-                FileTypeFilter = new List<FilePickerFileType>
-                {
-                    new("Zip archive") { Patterns = new[] { "*.zip" } }
-                }
+                FileTypeFilter =
+                [
+                    new("Zip archive") { Patterns = ["*.zip"] }
+                ]
             });
 
-            var file = files?.FirstOrDefault();
-            var zipPath = file?.TryGetLocalPath();
+            IStorageFile? file = files?.FirstOrDefault();
+            string? zipPath = file?.TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(zipPath) || !File.Exists(zipPath))
                 return;
 
-            var result = await Task.Run(() => TryApplySupportBundleSettings(zipPath));
-            if (!result.success)
+            var (success, message) = await Task.Run(() => TryApplySupportBundleSettings(zipPath));
+            if (!success)
             {
-                SaveStatus = result.message;
+                SaveStatus = message;
                 GlobalNotificationCenter.Instance.Show(
-                    result.message,
+                    message,
                     NotificationSeverity.Warning,
                     L("Settings.Advanced.SupportBundle", "Support bundle"));
                 return;
             }
 
-            SaveStatus = result.message;
+            SaveStatus = message;
             LoadFromConfig();
             GlobalNotificationCenter.Instance.Show(
-                result.message,
+                message,
                 NotificationSeverity.Info,
                 L("Settings.Advanced.SupportBundle", "Support bundle"));
         }
@@ -4137,25 +4137,25 @@ namespace VaultSync.UI
         {
             try
             {
-                using var archive = ZipFile.OpenRead(zipPath);
-                var reportEntry = archive.Entries.FirstOrDefault(e =>
+                using ZipArchive archive = ZipFile.OpenRead(zipPath);
+                ZipArchiveEntry? reportEntry = archive.Entries.FirstOrDefault(e =>
                     string.Equals(e.FullName, "support-report.json", StringComparison.OrdinalIgnoreCase));
                 if (reportEntry is null)
                 {
                     return (false, L("Settings.Advanced.SupportBundleImportMissingReport", "Support bundle is missing support-report.json."));
                 }
 
-                using var stream = reportEntry.Open();
+                using Stream stream = reportEntry.Open();
                 using var reader = new StreamReader(stream);
-                var json = reader.ReadToEnd();
+                string json = reader.ReadToEnd();
                 using var doc = JsonDocument.Parse(json);
 
-                if (!doc.RootElement.TryGetProperty("redactedConfig", out var redactedConfig))
+                if (!doc.RootElement.TryGetProperty("redactedConfig", out JsonElement redactedConfig))
                 {
                     return (false, L("Settings.Advanced.SupportBundleImportMissingConfig", "Support bundle does not contain importable settings."));
                 }
 
-                var cfg = AppConfigStore.Load();
+                AppConfig cfg = AppConfigStore.Load();
                 ApplyImportableSettings(redactedConfig, cfg);
                 AppConfigStore.Save(cfg);
                 return (true, L("Settings.Advanced.SupportBundleImportApplied", "Support bundle settings imported (diagnostics ignored)."));
@@ -4171,7 +4171,7 @@ namespace VaultSync.UI
 
         private static void ApplyImportableSettings(JsonElement redactedConfig, AppConfig cfg)
         {
-            if (redactedConfig.TryGetProperty("backups", out var backups))
+            if (redactedConfig.TryGetProperty("backups", out JsonElement backups))
             {
                 cfg.Backups.EnableAutoBackups = ReadBool(backups, nameof(cfg.Backups.EnableAutoBackups), cfg.Backups.EnableAutoBackups);
                 cfg.Backups.IntervalMinutes = ClampInt(ReadInt(backups, nameof(cfg.Backups.IntervalMinutes), cfg.Backups.IntervalMinutes), 1, 10080, 30);
@@ -4200,7 +4200,7 @@ namespace VaultSync.UI
                 cfg.Backups.VerifyAfterCreate = ReadBool(backups, nameof(cfg.Backups.VerifyAfterCreate), cfg.Backups.VerifyAfterCreate);
                 cfg.Backups.PauseOnBattery = ReadBool(backups, nameof(cfg.Backups.PauseOnBattery), cfg.Backups.PauseOnBattery);
 
-                if (backups.TryGetProperty("encryption", out var enc))
+                if (backups.TryGetProperty("encryption", out JsonElement enc))
                 {
                     cfg.Backups.Encryption.Enabled = ReadBool(enc, nameof(cfg.Backups.Encryption.Enabled), cfg.Backups.Encryption.Enabled);
                     cfg.Backups.Encryption.Algorithm = NormalizeImportedEncryptionAlgorithm(
@@ -4217,14 +4217,14 @@ namespace VaultSync.UI
                 }
             }
 
-            if (redactedConfig.TryGetProperty("storage", out var storage))
+            if (redactedConfig.TryGetProperty("storage", out JsonElement storage))
             {
                 cfg.Storage.PreferExternalDrives = ReadBool(storage, nameof(cfg.Storage.PreferExternalDrives), cfg.Storage.PreferExternalDrives);
                 cfg.Storage.ShowDriveWarnings = ReadBool(storage, nameof(cfg.Storage.ShowDriveWarnings), cfg.Storage.ShowDriveWarnings);
                 cfg.Storage.MinFreeSpacePercent = ClampInt(ReadInt(storage, nameof(cfg.Storage.MinFreeSpacePercent), cfg.Storage.MinFreeSpacePercent), 1, 99, 10);
             }
 
-            if (redactedConfig.TryGetProperty("appearance", out var appearance))
+            if (redactedConfig.TryGetProperty("appearance", out JsonElement appearance))
             {
                 cfg.Appearance.Theme = NormalizeImportedTheme(
                     ReadString(appearance, nameof(cfg.Appearance.Theme), cfg.Appearance.Theme),
@@ -4232,18 +4232,18 @@ namespace VaultSync.UI
                 cfg.Appearance.CompactLayout = ReadBool(appearance, nameof(cfg.Appearance.CompactLayout), cfg.Appearance.CompactLayout);
                 cfg.Appearance.ShowProjectAvatars = ReadBool(appearance, nameof(cfg.Appearance.ShowProjectAvatars), cfg.Appearance.ShowProjectAvatars);
 
-                if (appearance.TryGetProperty(nameof(cfg.Appearance.TagColors), out var tagColors) &&
+                if (appearance.TryGetProperty(nameof(cfg.Appearance.TagColors), out JsonElement tagColors) &&
                     tagColors.ValueKind == JsonValueKind.Object)
                 {
                     var importedTagColors = new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
 
-                    foreach (var property in tagColors.EnumerateObject())
+                    foreach (JsonProperty property in tagColors.EnumerateObject())
                     {
-                        var tag = property.Name?.Trim() ?? string.Empty;
+                        string tag = property.Name?.Trim() ?? string.Empty;
                         if (string.IsNullOrWhiteSpace(tag) || property.Value.ValueKind != JsonValueKind.Object)
                             continue;
 
-                        var defaults = ProjectTagChip.GetDefaultPalette(tag);
+                        (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(tag);
                         importedTagColors[tag] = new TagColorConfig
                         {
                             Background = ProjectTagAppearance.NormalizeHex(
@@ -4261,7 +4261,7 @@ namespace VaultSync.UI
                     cfg.Appearance.TagColors = importedTagColors;
                 }
 
-                if (appearance.TryGetProperty(nameof(cfg.Appearance.CustomTheme), out var customTheme) &&
+                if (appearance.TryGetProperty(nameof(cfg.Appearance.CustomTheme), out JsonElement customTheme) &&
                     customTheme.ValueKind == JsonValueKind.Object)
                 {
                     cfg.Appearance.CustomTheme = new ThemePaletteConfig
@@ -4281,7 +4281,7 @@ namespace VaultSync.UI
                 }
             }
 
-            if (redactedConfig.TryGetProperty("notifications", out var notifications))
+            if (redactedConfig.TryGetProperty("notifications", out JsonElement notifications))
             {
                 cfg.Notifications.OnBackupSuccess = ReadBool(notifications, nameof(cfg.Notifications.OnBackupSuccess), cfg.Notifications.OnBackupSuccess);
                 cfg.Notifications.OnBackupFailure = ReadBool(notifications, nameof(cfg.Notifications.OnBackupFailure), cfg.Notifications.OnBackupFailure);
@@ -4292,7 +4292,7 @@ namespace VaultSync.UI
                 cfg.Notifications.OnlyWhenInactive = ReadBool(notifications, nameof(cfg.Notifications.OnlyWhenInactive), cfg.Notifications.OnlyWhenInactive);
             }
 
-            if (redactedConfig.TryGetProperty("advanced", out var advanced))
+            if (redactedConfig.TryGetProperty("advanced", out JsonElement advanced))
             {
                 cfg.Advanced.VerboseLogging = ReadBool(advanced, nameof(cfg.Advanced.VerboseLogging), cfg.Advanced.VerboseLogging);
                 cfg.Advanced.SaveVerboseLogs = ReadBool(advanced, nameof(cfg.Advanced.SaveVerboseLogs), cfg.Advanced.SaveVerboseLogs);
@@ -4304,7 +4304,7 @@ namespace VaultSync.UI
                     cfg.Advanced.Language);
                 cfg.Advanced.HasSeenOnboarding = ReadBool(advanced, nameof(cfg.Advanced.HasSeenOnboarding), cfg.Advanced.HasSeenOnboarding);
 
-                if (advanced.TryGetProperty(nameof(cfg.Advanced.Maintenance), out var maintenance))
+                if (advanced.TryGetProperty(nameof(cfg.Advanced.Maintenance), out JsonElement maintenance))
                 {
                     cfg.Advanced.Maintenance.Enabled = ReadBool(
                         maintenance,
@@ -4331,7 +4331,7 @@ namespace VaultSync.UI
                 }
             }
 
-            if (redactedConfig.TryGetProperty("behavior", out var behavior))
+            if (redactedConfig.TryGetProperty("behavior", out JsonElement behavior))
             {
                 cfg.Behavior.RunInBackground = ReadBool(behavior, nameof(cfg.Behavior.RunInBackground), cfg.Behavior.RunInBackground);
                 cfg.Behavior.ShowWindowOnTrayActions = ReadBool(behavior, nameof(cfg.Behavior.ShowWindowOnTrayActions), cfg.Behavior.ShowWindowOnTrayActions);
@@ -4346,21 +4346,21 @@ namespace VaultSync.UI
 
         private static bool ReadBool(JsonElement parent, string propertyName, bool fallback)
         {
-            if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            if (!parent.TryGetProperty(propertyName, out JsonElement value) || value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
                 return fallback;
             return value.GetBoolean();
         }
 
         private static int ReadInt(JsonElement parent, string propertyName, int fallback)
         {
-            if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var result))
+            if (!parent.TryGetProperty(propertyName, out JsonElement value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out int result))
                 return fallback;
             return result;
         }
 
         private static string ReadString(JsonElement parent, string propertyName, string fallback)
         {
-            if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.String)
+            if (!parent.TryGetProperty(propertyName, out JsonElement value) || value.ValueKind != JsonValueKind.String)
                 return fallback;
             return value.GetString() ?? fallback;
         }
@@ -4380,7 +4380,7 @@ namespace VaultSync.UI
 
         private static string NormalizeImportedLanguage(string value, string fallback)
         {
-            var normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
+            string normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
             return normalized switch
             {
                 "en" or "it" or "es" or "fr" or "de" or "pt" or "zh" or "hi" or "ar" or "bn" or "ru" => normalized,
@@ -4390,7 +4390,7 @@ namespace VaultSync.UI
 
         private static string NormalizeImportedEncryptionAlgorithm(string value, string fallback)
         {
-            var normalized = (value ?? string.Empty).Trim();
+            string normalized = (value ?? string.Empty).Trim();
             return string.Equals(normalized, "aes-256-cbc-hmac-sha256-v1", StringComparison.OrdinalIgnoreCase)
                 ? "aes-256-cbc-hmac-sha256-v1"
                 : fallback;
@@ -4398,7 +4398,7 @@ namespace VaultSync.UI
 
         private static string NormalizeImportedKdfProfile(string value, string fallback)
         {
-            var normalized = (value ?? string.Empty).Trim();
+            string normalized = (value ?? string.Empty).Trim();
             return string.Equals(normalized, "pbkdf2-sha256-v1", StringComparison.OrdinalIgnoreCase)
                 ? "pbkdf2-sha256-v1"
                 : fallback;
@@ -4406,7 +4406,7 @@ namespace VaultSync.UI
 
         private static string NormalizeImportedKdfParamRef(string value, string fallback)
         {
-            var normalized = (value ?? string.Empty).Trim();
+            string normalized = (value ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(normalized))
                 return fallback;
 
@@ -4414,8 +4414,8 @@ namespace VaultSync.UI
             if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 return fallback;
 
-            var valuePart = normalized[prefix.Length..].Trim();
-            if (!int.TryParse(valuePart, out var iterations))
+            string valuePart = normalized[prefix.Length..].Trim();
+            if (!int.TryParse(valuePart, out int iterations))
                 return fallback;
 
             return $"pbkdf2-iter-{Math.Clamp(iterations, 10_000, 1_000_000)}";
@@ -4617,5 +4617,3 @@ namespace VaultSync.UI
         public bool ShowPassword { get => _showPassword; set => SetField(ref _showPassword, value); }
     }
 }
-
-

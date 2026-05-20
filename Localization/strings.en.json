@@ -404,6 +404,7 @@
   "LogConsole.CopySelected": "Copy selected",
   "LogConsole.CopySelectedFailed": "Failed to copy selected line.",
   "LogConsole.CopySelectedSuccess": "Selected line copied.",
+  "LogConsole.CopySelectedManySuccess": "Copied {0} selected lines.",
   "LogConsole.Description": "Enable verbose logging to capture new entries.",
   "LogConsole.Export": "Export",
   "LogConsole.ExportedTo": "Exported to {0}",
@@ -680,10 +681,13 @@
   "Projects.Stat.EncryptionPolicy": "Encryption policy",
   "Projects.Stat.Increasing": "Increasing size",
   "Projects.Stat.LastSnapshotLabel": "Last snapshot taken",
+  "Projects.Stat.LatestSnapshotSize": "Latest snapshot size",
   "Projects.Stat.ProjectHealth": "Project health",
   "Projects.Stat.ProjectSize": "Project size on disk",
   "Projects.Stat.RecentSnapshots": "Recent snapshots",
   "Projects.Stat.SnapshotPreset": "Snapshot preset",
+  "Projects.SnapshotSize.NoSnapshots": "No snapshots yet",
+  "Projects.SnapshotSize.Unavailable": "Size unavailable",
   "Projects.Stat.SnapshotStorage": "Snapshot storage",
   "Projects.Stat.SnapshotTrend": "Snapshot size trend",
   "Projects.Stat.TimeSinceLast": "Time since last snapshot",
@@ -1141,6 +1145,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync is still running",
   "Tray.Tooltip": "VaultSync - snapshots and backups",
   "Tray.Open": "Open VaultSync",
+  "Tray.Panel.Open": "Open tray panel",
   "Tray.Policy.Active": "Policy: {0}",
   "Tray.Quit": "Quit VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",
@@ -1188,6 +1193,7 @@
   "WhatsNew.Close": "Got it",
   "WhatsNew.Fallback": "This update includes improvements and fixes across VaultSync.",
   "WhatsNew.Section.General": "Highlights",
+  "WhatsNew.Subtitle": "A short release digest for the changes you are about to run.",
   "WhatsNew.Title": "What's new",
   "Backups.Restore.Mode.Label": "Restore mode",
   "Backups.Restore.Mode.Direct": "Direct (overwrite project path)",
@@ -1244,5 +1250,3 @@
   "Backups.Compare.NewerNet": "Î” net {0}",
   "Projects.Tags.Color.Close": "Close color"
 }
-
-

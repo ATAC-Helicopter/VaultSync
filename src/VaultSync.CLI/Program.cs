@@ -6,6 +6,8 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 using VaultSync.CLI.Utils; // for Log.Init()
 
+namespace VaultSync.CLI;
+
 // Keep the app focused on bootstrapping & wiring only.
 // All commands, helpers, and utilities now live in separate files/namespaces.
 public static class Program
@@ -94,7 +96,7 @@ public static class Program
             });
 
             Log.Info($"argv: {string.Join(" ", args.Select(a => a.Contains(' ') ? $"\\\"{a}\\\"" : a))}");
-            var code = await app.RunAsync(args);
+            int code = await app.RunAsync(args);
             Log.Info($"exit: {code}");
             return code;
         }

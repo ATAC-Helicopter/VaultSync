@@ -40,7 +40,7 @@ public sealed class BackupArchiveCryptoService
         BackupCryptoDescriptor Descriptor,
         long EncryptedBytes);
 
-    public EncryptionResult EncryptArchiveInPlace(
+    public static EncryptionResult EncryptArchiveInPlace(
         string backupFolder,
         string password,
         BackupEncryptionConfig config,
@@ -51,31 +51,31 @@ public sealed class BackupArchiveCryptoService
         if (string.IsNullOrWhiteSpace(password))
             throw new ArgumentException("Backup encryption password is required.", nameof(password));
 
-        var plainArchivePath = Path.Combine(backupFolder, PlainArchiveFileName);
+        string plainArchivePath = Path.Combine(backupFolder, PlainArchiveFileName);
         if (!File.Exists(plainArchivePath))
             throw new FileNotFoundException("Archive backup artifact not found.", plainArchivePath);
 
-        var algorithm = ResolveAlgorithm(config.Algorithm);
-        var kdfProfile = ResolveKdfProfile(config.KdfProfile);
-        var iterations = ResolveKdfIterations(config.KdfParamRef);
-        var kdfParamRef = ResolveKdfParamRef(config.KdfParamRef, iterations);
+        string algorithm = ResolveAlgorithm(config.Algorithm);
+        string kdfProfile = ResolveKdfProfile(config.KdfProfile);
+        int iterations = ResolveKdfIterations(config.KdfParamRef);
+        string kdfParamRef = ResolveKdfParamRef(config.KdfParamRef, iterations);
 
-        var metadata = BuildMetadata(algorithm, kdfProfile, kdfParamRef, iterations);
+        BackupArchiveEnvelopeMetadata metadata = BuildMetadata(algorithm, kdfProfile, kdfParamRef, iterations);
         var descriptor = BackupCryptoDescriptor.Encrypted(
             metadata.Algorithm,
             metadata.KdfProfile,
             metadata.KdfParamRef,
             formatVersion: metadata.FormatVersion);
 
-        var encryptedArchivePath = Path.Combine(backupFolder, EncryptedArchiveFileName);
+        string encryptedArchivePath = Path.Combine(backupFolder, EncryptedArchiveFileName);
         WriteEncryptedArchive(plainArchivePath, encryptedArchivePath, password, metadata, ct);
 
-        var metadataPath = Path.Combine(backupFolder, MetadataFileName);
+        string metadataPath = Path.Combine(backupFolder, MetadataFileName);
         File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, JsonOptions), Encoding.UTF8);
 
         File.Delete(plainArchivePath);
 
-        var encryptedBytes = new FileInfo(encryptedArchivePath).Length;
+        long encryptedBytes = new FileInfo(encryptedArchivePath).Length;
         return new EncryptionResult(true, encryptedArchivePath, descriptor, encryptedBytes);
     }
 
@@ -89,11 +89,11 @@ public sealed class BackupArchiveCryptoService
 
         try
         {
-            var metadataPath = Path.Combine(backupFolder, MetadataFileName);
+            string metadataPath = Path.Combine(backupFolder, MetadataFileName);
             if (File.Exists(metadataPath))
             {
-                var json = File.ReadAllText(metadataPath);
-                var metadata = JsonSerializer.Deserialize<BackupArchiveEnvelopeMetadata>(json, JsonOptions);
+                string json = File.ReadAllText(metadataPath);
+                BackupArchiveEnvelopeMetadata? metadata = JsonSerializer.Deserialize<BackupArchiveEnvelopeMetadata>(json, JsonOptions);
                 if (metadata is not null)
                 {
                     descriptor = BackupCryptoDescriptor.Encrypted(
@@ -106,7 +106,7 @@ public sealed class BackupArchiveCryptoService
                 }
             }
 
-            var encryptedArchivePath = Path.Combine(backupFolder, EncryptedArchiveFileName);
+            string encryptedArchivePath = Path.Combine(backupFolder, EncryptedArchiveFileName);
             if (File.Exists(encryptedArchivePath))
             {
                 descriptor = BackupCryptoDescriptor.Encrypted("unknown", "unknown", string.Empty);
@@ -126,11 +126,11 @@ public sealed class BackupArchiveCryptoService
     {
         try
         {
-            var encryptedPath = Path.Combine(backupFolder, EncryptedArchiveFileName);
+            string encryptedPath = Path.Combine(backupFolder, EncryptedArchiveFileName);
             if (File.Exists(encryptedPath))
                 return new FileInfo(encryptedPath).Length;
 
-            var plainPath = Path.Combine(backupFolder, PlainArchiveFileName);
+            string plainPath = Path.Combine(backupFolder, PlainArchiveFileName);
             if (File.Exists(plainPath))
                 return new FileInfo(plainPath).Length;
         }
@@ -142,7 +142,7 @@ public sealed class BackupArchiveCryptoService
         return 0;
     }
 
-    public void DecryptArchiveToPlainZip(
+    public static void DecryptArchiveToPlainZip(
         string backupFolder,
         string password,
         string outputArchivePath,
@@ -155,37 +155,37 @@ public sealed class BackupArchiveCryptoService
         if (string.IsNullOrWhiteSpace(outputArchivePath))
             throw new ArgumentException("Output archive path is required.", nameof(outputArchivePath));
 
-        var encryptedArchivePath = Path.Combine(backupFolder, EncryptedArchiveFileName);
+        string encryptedArchivePath = Path.Combine(backupFolder, EncryptedArchiveFileName);
         if (!File.Exists(encryptedArchivePath))
             throw new FileNotFoundException("Encrypted backup artifact not found.", encryptedArchivePath);
 
-        var header = ReadEncryptedArchiveHeader(encryptedArchivePath);
-        var saltBytes = Convert.FromBase64String(header.Metadata.SaltBase64);
-        var ivBytes = Convert.FromBase64String(header.Metadata.IvBase64);
-        var iterations = Math.Max(10_000, header.Metadata.KdfIterations);
+        EncryptedArchiveHeader header = ReadEncryptedArchiveHeader(encryptedArchivePath);
+        byte[] saltBytes = Convert.FromBase64String(header.Metadata.SaltBase64);
+        byte[] ivBytes = Convert.FromBase64String(header.Metadata.IvBase64);
+        int iterations = Math.Max(10_000, header.Metadata.KdfIterations);
 
-        var keyMaterial = new byte[DerivedKeyLengthBytes];
-        var encryptionKey = new byte[EncryptionKeyLengthBytes];
-        var hmacKey = new byte[HmacKeyLengthBytes];
+        byte[] keyMaterial = new byte[DerivedKeyLengthBytes];
+        byte[] encryptionKey = new byte[EncryptionKeyLengthBytes];
+        byte[] hmacKey = new byte[HmacKeyLengthBytes];
 
-        var outputDirectory = Path.GetDirectoryName(outputArchivePath);
+        string? outputDirectory = Path.GetDirectoryName(outputArchivePath);
         if (!string.IsNullOrWhiteSpace(outputDirectory))
             Directory.CreateDirectory(outputDirectory);
 
-        var tempOutputPath = outputArchivePath + ".tmp";
+        string tempOutputPath = outputArchivePath + ".tmp";
         try
         {
-            using var pbkdf2 = new Rfc2898DeriveBytes(
+            byte[] derived = Rfc2898DeriveBytes.Pbkdf2(
                 password,
                 saltBytes,
                 iterations,
-                HashAlgorithmName.SHA256);
-            var derived = pbkdf2.GetBytes(keyMaterial.Length);
+                HashAlgorithmName.SHA256,
+                keyMaterial.Length);
             Buffer.BlockCopy(derived, 0, keyMaterial, 0, keyMaterial.Length);
             Buffer.BlockCopy(keyMaterial, 0, encryptionKey, 0, encryptionKey.Length);
             Buffer.BlockCopy(keyMaterial, encryptionKey.Length, hmacKey, 0, hmacKey.Length);
 
-            var computedHmac = ComputeFileHmac(
+            byte[] computedHmac = ComputeFileHmac(
                 encryptedArchivePath,
                 hmacKey,
                 ct,
@@ -208,16 +208,16 @@ public sealed class BackupArchiveCryptoService
                 aes.Mode = CipherMode.CBC;
                 aes.Padding = PaddingMode.PKCS7;
 
-                using var decryptor = aes.CreateDecryptor(encryptionKey, ivBytes);
+                using ICryptoTransform decryptor = aes.CreateDecryptor(encryptionKey, ivBytes);
                 using var cryptoStream = new CryptoStream(output, decryptor, CryptoStreamMode.Write, leaveOpen: true);
 
-                var remaining = header.CipherTextBytes;
-                var buffer = new byte[1024 * 1024];
+                long remaining = header.CipherTextBytes;
+                byte[] buffer = new byte[1024 * 1024];
                 while (remaining > 0)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var toRead = (int)Math.Min(buffer.Length, remaining);
-                    var read = input.Read(buffer, 0, toRead);
+                    int toRead = (int)Math.Min(buffer.Length, remaining);
+                    int read = input.Read(buffer, 0, toRead);
                     if (read <= 0)
                         throw new InvalidDataException("Encrypted backup archive is truncated.");
 
@@ -264,8 +264,8 @@ public sealed class BackupArchiveCryptoService
         string kdfParamRef,
         int iterations)
     {
-        var salt = new byte[SaltLengthBytes];
-        var iv = new byte[IvLengthBytes];
+        byte[] salt = new byte[SaltLengthBytes];
+        byte[] iv = new byte[IvLengthBytes];
         RandomNumberGenerator.Fill(salt);
         RandomNumberGenerator.Fill(iv);
 
@@ -291,28 +291,28 @@ public sealed class BackupArchiveCryptoService
         BackupArchiveEnvelopeMetadata metadata,
         CancellationToken ct)
     {
-        var metadataJson = JsonSerializer.Serialize(metadata, JsonOptions);
-        var metadataBytes = Encoding.UTF8.GetBytes(metadataJson);
-        var magicBytes = Encoding.ASCII.GetBytes(EnvelopeMagic);
-        var metadataLengthBytes = new byte[4];
+        string metadataJson = JsonSerializer.Serialize(metadata, JsonOptions);
+        byte[] metadataBytes = Encoding.UTF8.GetBytes(metadataJson);
+        byte[] magicBytes = Encoding.ASCII.GetBytes(EnvelopeMagic);
+        byte[] metadataLengthBytes = new byte[4];
         BinaryPrimitives.WriteInt32LittleEndian(metadataLengthBytes, metadataBytes.Length);
 
-        var saltBytes = Convert.FromBase64String(metadata.SaltBase64);
-        var ivBytes = Convert.FromBase64String(metadata.IvBase64);
-        var iterations = Math.Max(10_000, metadata.KdfIterations);
+        byte[] saltBytes = Convert.FromBase64String(metadata.SaltBase64);
+        byte[] ivBytes = Convert.FromBase64String(metadata.IvBase64);
+        int iterations = Math.Max(10_000, metadata.KdfIterations);
 
-        var keyMaterial = new byte[DerivedKeyLengthBytes];
-        var encryptionKey = new byte[EncryptionKeyLengthBytes];
-        var hmacKey = new byte[HmacKeyLengthBytes];
+        byte[] keyMaterial = new byte[DerivedKeyLengthBytes];
+        byte[] encryptionKey = new byte[EncryptionKeyLengthBytes];
+        byte[] hmacKey = new byte[HmacKeyLengthBytes];
 
         try
         {
-            using var pbkdf2 = new Rfc2898DeriveBytes(
+            byte[] derived = Rfc2898DeriveBytes.Pbkdf2(
                 password,
                 saltBytes,
                 iterations,
-                HashAlgorithmName.SHA256);
-            var derived = pbkdf2.GetBytes(keyMaterial.Length);
+                HashAlgorithmName.SHA256,
+                keyMaterial.Length);
             Buffer.BlockCopy(derived, 0, keyMaterial, 0, keyMaterial.Length);
             Buffer.BlockCopy(keyMaterial, 0, encryptionKey, 0, encryptionKey.Length);
             Buffer.BlockCopy(keyMaterial, encryptionKey.Length, hmacKey, 0, hmacKey.Length);
@@ -324,22 +324,21 @@ public sealed class BackupArchiveCryptoService
                 output.Write(metadataLengthBytes, 0, metadataLengthBytes.Length);
                 output.Write(metadataBytes, 0, metadataBytes.Length);
 
-                using var aes = Aes.Create();
-                if (aes is null)
-                    throw new InvalidOperationException("AES encryption provider is not available.");
+                using var aes = Aes.Create()
+                    ?? throw new InvalidOperationException("AES encryption provider is not available.");
 
                 aes.KeySize = 256;
                 aes.BlockSize = 128;
                 aes.Mode = CipherMode.CBC;
                 aes.Padding = PaddingMode.PKCS7;
 
-                using var encryptor = aes.CreateEncryptor(encryptionKey, ivBytes);
+                using ICryptoTransform encryptor = aes.CreateEncryptor(encryptionKey, ivBytes);
                 using var cryptoStream = new CryptoStream(output, encryptor, CryptoStreamMode.Write, leaveOpen: true);
                 source.CopyTo(cryptoStream);
                 cryptoStream.FlushFinalBlock();
             }
 
-            var hmac = ComputeFileHmac(encryptedArchivePath, hmacKey, ct);
+            byte[] hmac = ComputeFileHmac(encryptedArchivePath, hmacKey, ct);
             using (var output = new FileStream(encryptedArchivePath, FileMode.Append, FileAccess.Write, FileShare.None))
             {
                 output.Write(hmac, 0, hmac.Length);
@@ -359,16 +358,16 @@ public sealed class BackupArchiveCryptoService
     {
         using var hmac = new HMACSHA256(key);
         using var stream = new FileStream(encryptedArchivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var buffer = new byte[1024 * 1024];
-        var remaining = bytesToRead < 0
+        byte[] buffer = new byte[1024 * 1024];
+        long remaining = bytesToRead < 0
             ? stream.Length
             : Math.Min(bytesToRead, stream.Length);
 
         while (remaining > 0)
         {
             ct.ThrowIfCancellationRequested();
-            var requested = (int)Math.Min(buffer.Length, remaining);
-            var read = stream.Read(buffer, 0, requested);
+            int requested = (int)Math.Min(buffer.Length, remaining);
+            int read = stream.Read(buffer, 0, requested);
             if (read <= 0)
             {
                 if (bytesToRead >= 0)
@@ -380,8 +379,8 @@ public sealed class BackupArchiveCryptoService
             remaining -= read;
         }
 
-        hmac.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-        var hash = hmac.Hash ?? Array.Empty<byte>();
+        hmac.TransformFinalBlock([], 0, 0);
+        byte[] hash = hmac.Hash ?? [];
         if (hash.Length != HmacLengthBytes)
             throw new InvalidOperationException("HMAC generation failed for encrypted backup artifact.");
 
@@ -394,19 +393,19 @@ public sealed class BackupArchiveCryptoService
         if (stream.Length < EnvelopeMagic.Length + sizeof(int) + HmacLengthBytes + 1)
             throw new InvalidDataException("Encrypted backup archive is malformed.");
 
-        var magicBytes = ReadExact(stream, EnvelopeMagic.Length);
-        var magic = Encoding.ASCII.GetString(magicBytes);
+        byte[] magicBytes = ReadExact(stream, EnvelopeMagic.Length);
+        string magic = Encoding.ASCII.GetString(magicBytes);
         if (!string.Equals(magic, EnvelopeMagic, StringComparison.Ordinal))
             throw new InvalidDataException("Encrypted backup archive header is invalid.");
 
-        var metadataLengthBytes = ReadExact(stream, sizeof(int));
-        var metadataLength = BinaryPrimitives.ReadInt32LittleEndian(metadataLengthBytes);
+        byte[] metadataLengthBytes = ReadExact(stream, sizeof(int));
+        int metadataLength = BinaryPrimitives.ReadInt32LittleEndian(metadataLengthBytes);
         if (metadataLength <= 0 || metadataLength > 256 * 1024)
             throw new InvalidDataException("Encrypted backup metadata length is invalid.");
 
-        var metadataBytes = ReadExact(stream, metadataLength);
-        var metadataJson = Encoding.UTF8.GetString(metadataBytes);
-        var metadata = JsonSerializer.Deserialize<BackupArchiveEnvelopeMetadata>(metadataJson, JsonOptions)
+        byte[] metadataBytes = ReadExact(stream, metadataLength);
+        string metadataJson = Encoding.UTF8.GetString(metadataBytes);
+        BackupArchiveEnvelopeMetadata metadata = JsonSerializer.Deserialize<BackupArchiveEnvelopeMetadata>(metadataJson, JsonOptions)
             ?? throw new InvalidDataException("Encrypted backup metadata is invalid.");
 
         if (!string.Equals(metadata.Magic, EnvelopeMagic, StringComparison.Ordinal))
@@ -415,23 +414,23 @@ public sealed class BackupArchiveCryptoService
         if (string.IsNullOrWhiteSpace(metadata.SaltBase64) || string.IsNullOrWhiteSpace(metadata.IvBase64))
             throw new InvalidDataException("Encrypted backup metadata is incomplete.");
 
-        var headerBytes = EnvelopeMagic.Length + sizeof(int) + metadataLength;
-        var cipherTextBytes = stream.Length - headerBytes - HmacLengthBytes;
+        int headerBytes = EnvelopeMagic.Length + sizeof(int) + metadataLength;
+        long cipherTextBytes = stream.Length - headerBytes - HmacLengthBytes;
         if (cipherTextBytes <= 0)
             throw new InvalidDataException("Encrypted backup payload is empty.");
 
         stream.Position = stream.Length - HmacLengthBytes;
-        var storedHmac = ReadExact(stream, HmacLengthBytes);
+        byte[] storedHmac = ReadExact(stream, HmacLengthBytes);
         return new EncryptedArchiveHeader(metadata, headerBytes, cipherTextBytes, storedHmac);
     }
 
     private static byte[] ReadExact(Stream stream, int length)
     {
-        var buffer = new byte[length];
-        var offset = 0;
+        byte[] buffer = new byte[length];
+        int offset = 0;
         while (offset < length)
         {
-            var read = stream.Read(buffer, offset, length - offset);
+            int read = stream.Read(buffer, offset, length - offset);
             if (read <= 0)
                 throw new InvalidDataException("Unexpected end of encrypted backup data.");
             offset += read;
@@ -450,7 +449,7 @@ public sealed class BackupArchiveCryptoService
     {
         if (!string.IsNullOrWhiteSpace(configured))
         {
-            var normalized = configured.Trim();
+            string normalized = configured.Trim();
             if (string.Equals(normalized, "aes-256-cbc-hmac-sha256-v1", StringComparison.OrdinalIgnoreCase))
                 return "aes-256-cbc-hmac-sha256-v1";
         }
@@ -462,7 +461,7 @@ public sealed class BackupArchiveCryptoService
     {
         if (!string.IsNullOrWhiteSpace(configured))
         {
-            var normalized = configured.Trim();
+            string normalized = configured.Trim();
             if (normalized.StartsWith("pbkdf2", StringComparison.OrdinalIgnoreCase))
                 return normalized;
         }
@@ -475,13 +474,13 @@ public sealed class BackupArchiveCryptoService
         if (string.IsNullOrWhiteSpace(kdfParamRef))
             return DefaultKdfIterations;
 
-        var marker = "iter-";
-        var idx = kdfParamRef.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        const string marker = "iter-";
+        int idx = kdfParamRef.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
         if (idx < 0)
             return DefaultKdfIterations;
 
-        var valuePart = kdfParamRef[(idx + marker.Length)..].Trim();
-        if (int.TryParse(valuePart, out var parsed))
+        string valuePart = kdfParamRef[(idx + marker.Length)..].Trim();
+        if (int.TryParse(valuePart, out int parsed))
             return Math.Clamp(parsed, 10_000, 1_000_000);
 
         return DefaultKdfIterations;

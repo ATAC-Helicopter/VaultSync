@@ -1128,6 +1128,7 @@
   "Tray.Notification.BackgroundTitle": "VaultSync continua em execução",
   "Tray.Tooltip": "VaultSync - instantâneos e backups",
   "Tray.Open": "Abrir VaultSync",
+  "Tray.Panel.Open": "Abrir painel da bandeja",
   "Tray.Policy.Active": "Política: {0}",
   "Tray.Quit": "Sair do VaultSync",
   "Tray.Recent.ActionFormat": "   * {0}",
@@ -1173,6 +1174,7 @@
   "WhatsNew.Close": "Entendi",
   "WhatsNew.Fallback": "Esta atualização inclui melhorias e correções no VaultSync.",
   "WhatsNew.Section.General": "Destaques",
+  "WhatsNew.Subtitle": "Um breve resumo das mudanças que você está prestes a usar.",
   "WhatsNew.Title": "Novidades",
   "Backups.Restore.Mode.Label": "Modo de restauração",
   "Backups.Restore.Mode.Direct": "Direto (sobrescrever caminho do projeto)",
@@ -1242,5 +1244,6 @@
   "LogConsole.CopySelected": "Copiar selecionado",
   "LogConsole.CopySelectedFailed": "Falha ao copiar a seleção",
   "LogConsole.CopySelectedSuccess": "Seleção copiada",
+  "LogConsole.CopySelectedManySuccess": "{0} linhas selecionadas copiadas",
   "Update.Store.OpenStore": "Abrir loja"
 }

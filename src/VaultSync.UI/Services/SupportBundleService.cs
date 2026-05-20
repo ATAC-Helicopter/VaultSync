@@ -15,16 +15,16 @@ public sealed record SupportBundleExportResult(bool Success, string? ZipPath, st
 
 public sealed class SupportBundleService
 {
-    public SupportBundleExportResult Export()
+    public static SupportBundleExportResult Export()
     {
-        var timestamp = DateTimeOffset.UtcNow;
-        var bundleName = $"vaultsync-support-{timestamp:yyyyMMdd-HHmmss}.zip";
-        var exportRoot = Path.Combine(
+        DateTimeOffset timestamp = DateTimeOffset.UtcNow;
+        string bundleName = $"vaultsync-support-{timestamp:yyyyMMdd-HHmmss}.zip";
+        string exportRoot = Path.Combine(
             GetFolderSafe(Environment.SpecialFolder.MyDocuments),
             "VaultSync",
             "Exports",
             "Support");
-        var stagingRoot = Path.Combine(
+        string stagingRoot = Path.Combine(
             GetFolderSafe(Environment.SpecialFolder.LocalApplicationData),
             "VaultSync",
             "exports",
@@ -35,10 +35,10 @@ public sealed class SupportBundleService
             Directory.CreateDirectory(exportRoot);
             Directory.CreateDirectory(stagingRoot);
 
-            var config = AppConfigStore.GetSnapshot();
-            var report = BuildBundleReport(config, timestamp);
+            AppConfig config = AppConfigStore.GetSnapshot();
+            object report = BuildBundleReport(config, timestamp);
 
-            var reportJson = JsonSerializer.Serialize(report, new JsonSerializerOptions
+            string reportJson = JsonSerializer.Serialize(report, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
@@ -47,7 +47,7 @@ public sealed class SupportBundleService
             TryCopyDiagnostics(stagingRoot);
             TryExportTelemetry(stagingRoot);
 
-            var zipPath = Path.Combine(exportRoot, bundleName);
+            string zipPath = Path.Combine(exportRoot, bundleName);
             if (File.Exists(zipPath))
                 File.Delete(zipPath);
 
@@ -74,8 +74,8 @@ public sealed class SupportBundleService
 
     private static object BuildBundleReport(AppConfig config, DateTimeOffset timestamp)
     {
-        var localMetadata = QueryMetadataSummary(config.DbPath);
-        var destinationMetadata = BuildDestinationMetadataSummary(config.Backups.Destinations);
+        object localMetadata = QueryMetadataSummary(config.DbPath);
+        List<object> destinationMetadata = BuildDestinationMetadataSummary(config.Backups.Destinations);
 
         return new
         {
@@ -276,7 +276,7 @@ public sealed class SupportBundleService
                     config.Advanced.MetadataConflictTelemetry.PendingConflictCount,
                     config.Advanced.MetadataConflictTelemetry.LastResolutionAction,
                     config.Advanced.MetadataConflictTelemetry.LastResolvedProject,
-                    conflicts = (config.Advanced.ProjectMetadataConflicts ?? new List<ProjectMetadataConflictRecord>())
+                    conflicts = (config.Advanced.ProjectMetadataConflicts ?? [])
                         .Select(conflict => new
                         {
                             conflict.ProjectExternalId,
@@ -369,10 +369,10 @@ public sealed class SupportBundleService
             using var c = new SqliteConnection($"Data Source={dbPath}");
             c.Open();
 
-            var projects = QueryCount(c, "projects");
-            var snapshots = QueryCount(c, "snapshots");
-            var backups = QueryCount(c, "backups");
-            var latestBackupUtc = QueryScalar(c, "SELECT MAX(created_utc) FROM backups;");
+            int projects = QueryCount(c, "projects");
+            int snapshots = QueryCount(c, "snapshots");
+            int backups = QueryCount(c, "backups");
+            string latestBackupUtc = QueryScalar(c, "SELECT MAX(created_utc) FROM backups;");
 
             return new
             {
@@ -401,13 +401,13 @@ public sealed class SupportBundleService
     private static List<object> BuildDestinationMetadataSummary(IEnumerable<BackupDestination>? destinations)
     {
         var output = new List<object>();
-        foreach (var destination in destinations ?? Enumerable.Empty<BackupDestination>())
+        foreach (BackupDestination destination in destinations ?? [])
         {
             if (!destination.Active || string.IsNullOrWhiteSpace(destination.Path))
                 continue;
 
-            var root = destination.Path;
-            var dbPath = Path.Combine(root, ".vaultsync", "meta", "vaultsync.meta.db");
+            string root = destination.Path;
+            string dbPath = Path.Combine(root, ".vaultsync", "meta", "vaultsync.meta.db");
             if (!File.Exists(dbPath))
             {
                 output.Add(new
@@ -457,14 +457,14 @@ public sealed class SupportBundleService
 
     private static int QueryCount(SqliteConnection c, string tableName)
     {
-        using var cmd = c.CreateCommand();
+        using SqliteCommand cmd = c.CreateCommand();
         cmd.CommandText = $"SELECT COUNT(1) FROM {tableName};";
         return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
     }
 
     private static string QueryScalar(SqliteConnection c, string sql)
     {
-        using var cmd = c.CreateCommand();
+        using SqliteCommand cmd = c.CreateCommand();
         cmd.CommandText = sql;
         return Convert.ToString(cmd.ExecuteScalar()) ?? string.Empty;
     }
@@ -473,7 +473,7 @@ public sealed class SupportBundleService
     {
         try
         {
-            var diagnosticsRoot = Path.Combine(
+            string diagnosticsRoot = Path.Combine(
                 GetFolderSafe(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync",
                 "diagnostics");
@@ -481,14 +481,14 @@ public sealed class SupportBundleService
             if (!Directory.Exists(diagnosticsRoot))
                 return;
 
-            var outRoot = Path.Combine(stagingRoot, "diagnostics");
+            string outRoot = Path.Combine(stagingRoot, "diagnostics");
             Directory.CreateDirectory(outRoot);
 
             var files = Directory
                 .EnumerateFiles(diagnosticsRoot)
                 .Where(path =>
                 {
-                    var ext = Path.GetExtension(path);
+                    string ext = Path.GetExtension(path);
                     return ext.Equals(".log", StringComparison.OrdinalIgnoreCase)
                         || ext.Equals(".txt", StringComparison.OrdinalIgnoreCase);
                 })
@@ -497,9 +497,9 @@ public sealed class SupportBundleService
                 .Take(12)
                 .ToList();
 
-            foreach (var file in files)
+            foreach (FileInfo? file in files)
             {
-                var target = Path.Combine(outRoot, file.Name);
+                string target = Path.Combine(outRoot, file.Name);
                 File.Copy(file.FullName, target, overwrite: true);
             }
         }
@@ -513,7 +513,7 @@ public sealed class SupportBundleService
     {
         try
         {
-            var telemetryOut = Path.Combine(stagingRoot, "telemetry");
+            string telemetryOut = Path.Combine(stagingRoot, "telemetry");
             Directory.CreateDirectory(telemetryOut);
             Telemetry.ExportToZip(telemetryOut);
         }
@@ -530,11 +530,11 @@ public sealed class SupportBundleService
 
         try
         {
-            var trimmed = path.Trim().TrimEnd('\\', '/');
+            string trimmed = path.Trim().TrimEnd('\\', '/');
             if (string.IsNullOrWhiteSpace(trimmed))
                 return string.Empty;
 
-            var leaf = Path.GetFileName(trimmed);
+            string leaf = Path.GetFileName(trimmed);
             if (string.IsNullOrWhiteSpace(leaf))
                 return "[redacted]";
 
@@ -556,7 +556,7 @@ public sealed class SupportBundleService
 
     private static string GetFolderSafe(Environment.SpecialFolder folder)
     {
-        var path = Environment.GetFolderPath(folder);
+        string path = Environment.GetFolderPath(folder);
         if (!string.IsNullOrWhiteSpace(path))
             return path;
 

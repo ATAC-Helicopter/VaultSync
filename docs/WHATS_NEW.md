@@ -1,12 +1,66 @@
 # What's New
 
+## [1.7.4]
+
+Current `1.7.4-Beta.3` highlights focus on the .NET 10 migration, safer destination cleanup, quieter diagnostics, and release-readiness polish across the 1.7 train.
+
+### Platform and release updates
+- Core, CLI, UI, and tests now target .NET 10.
+- Release workflows and documentation now use the .NET 10 SDK and publish paths.
+- The Windows installer metadata now points at the .NET 10 Windows publish output.
+- CLI packaging now includes the repository README from the correct path.
+- Release examples, issue templates, and release notes now target the prepared `1.7.4` release.
+
+### Backup and destination reliability
+- Backups now prune stale database entries when recorded backup folders are missing from reachable prepared destinations.
+- Offline or unresolved destinations are left untouched, so disconnected drives are not treated as deleted backups.
+- Passive Backups refreshes no longer wake destinations just to update reachability.
+- Backup probes now share in-flight archive buffer tuning work per destination.
+- Backup path-containment checks now share one hardened implementation across delete, restore, tray, and open-folder flows.
+- Imported destination history rebuilt from legacy backup folders now keeps real backup sizes instead of showing `0 B`, and existing imported `0 B` rows are repaired when their folders are still present.
+- Linux auto backups now ignore peripheral batteries when deciding whether to pause on battery power, and timer decisions are easier to diagnose from logs.
+- Auto backups now warm up active destinations before running and retry preparation after a short cooldown, helping sleeping drives wake before the backup attempt.
+
+### Diagnostics and app polish
+- The log console copy button now uses the active console window clipboard.
+- Normal diagnostics no longer show caught SQLite/WinRT first-chance probes unless first-chance diagnostics are explicitly enabled.
+- The in-app What's New dialog now reads only the current release slice and presents it as a cleaner release digest.
+- Repeated UI byte-size formatting and detached async-command wrappers now use shared helpers.
+- Changing language in Settings now preserves the active theme and keeps the page near the same scroll position through the relayout.
+- Backup summary cards plus action and filter buttons now keep long localized labels inside their bounds in windowed layouts.
+- The log console keeps its readable styled rows, supports selecting and copying multiple log entries, and filters expected Linux DBus/IBus desktop noise.
+- The What's New dialog now opens centered over the main app window on multi-monitor desktops.
+- Linux SMART probe errors such as permission or unsupported-device output no longer look like failing disks or block backups.
+- Linux `.deb` packages now carry AppStream metadata, richer details, homepage data, and matching desktop/icon IDs for better software-center previews.
+- Linux windows now set the app icon explicitly and launcher metadata uses the executable WM class so taskbars can show the VaultSync icon.
+- Linux tray refreshes now reuse the existing native menu object to avoid duplicate tray indicators on AppIndicator hosts.
+- Linux packages now include hidden desktop identity fallbacks so taskbars can match the `VaultSync.UI` runtime window to the VaultSync icon.
+- Dependency-alert package versions were refreshed across core, UI, and tests while keeping the app on the Avalonia 11 release line.
+- Project roots imported from another OS now remap to matching local folders under the configured Projects root, including Windows-path leaf names and case-only folder differences on Linux.
+- Patched SkiaSharp and HarfBuzzSharp runtime packages are now pinned explicitly so dependency graph alerts do not resolve Avalonia's older transitive graphics stack.
+- Linux protected installs such as `/opt/vaultsync` now use the installer fallback instead of attempting a patch update that cannot write to root-owned files, and release asset builds can omit Linux patch assets when an installer-only Linux update is required.
+- Linux updater fallback now prefers `.deb` installers on Debian-family systems and marks downloaded AppImages executable before launch.
+- Linux startup now keeps Avalonia's compatible DBus protocol dependency instead of overriding it with an incompatible newer package.
+- Linux packages now use one AppStream, desktop, icon, and window identity to improve software-center previews and avoid duplicate taskbar grouping.
+- Project preset changes now persist immediately for registered projects instead of reverting after refresh.
+- Projects now call out latest snapshot size explicitly and show unavailable size data instead of misleading `0 MB` values.
+- The sidebar collapse control now uses a vector icon so Linux desktops no longer render it as a missing-glyph rectangle.
+- Projects list scrolling now keeps ListBox virtualization active, and sidebar navigation labels align cleanly with their icons.
+- Project snapshot presets now stay populated by applying detected recommendations first and falling back to a generic preset when no specific project type is detected.
+
+### Presets and generated output
+- Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
+- Filter coverage now includes nested `**/bin/**`, `**/Intermediate/**`, `.import`, and render-cache style folders.
+- Source-code presets now keep useful repository metadata such as `.github` workflows and Git config files while still excluding `.git` internals and generated build outputs.
+
 ## [1.7.3]
 
 Current `1.7.3` highlights focus on Linux reliability, release asset coverage, safer startup/config recovery, and the final backup and metadata fixes from the 1.7 stabilization cycle.
 
 ### Linux and release assets
-- Release asset builds now produce Linux `tar.gz` downloads for `x64` and `arm64`.
+- Release asset builds now produce Linux `tar.gz` and `.deb` downloads for `x64` and `arm64`.
 - Release asset builds also produce a desktop-friendly `linux-x64` AppImage for direct Linux installs.
+- Linux `tar.gz` downloads include a rootless `install.sh` that adds VaultSync to the user app menu and creates a `vaultsync` terminal command across distro families.
 - Linux update discovery now prefers architecture-specific installer and patch names before falling back to generic Linux assets.
 
 ### Linux reliability fixes

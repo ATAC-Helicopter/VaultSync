@@ -1,5 +1,7 @@
 bin/**
 pkg/**
+**/bin/**
+**/pkg/**
 *.exe
 *.test
 *.tmp
@@ -13,4 +15,3 @@ pkg/**
 
 # Git
 .git/
-.github/

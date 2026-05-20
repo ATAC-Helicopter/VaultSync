@@ -20,9 +20,9 @@ public sealed class ProjectTagChip
 
     public static ProjectTagChip Create(string value, AppConfig? config = null)
     {
-        var safe = (value ?? string.Empty).Trim();
+        string safe = (value ?? string.Empty).Trim();
         config ??= ProjectTagAppearance.TryLoadConfig();
-        var colors = ProjectTagAppearance.Resolve(safe, config?.Appearance?.TagColors);
+        (string Background, string Foreground, string Border) colors = ProjectTagAppearance.Resolve(safe, config?.Appearance?.TagColors);
         return new ProjectTagChip(safe, colors.Background, colors.Foreground, colors.Border);
     }
 
@@ -41,8 +41,8 @@ public sealed class ProjectTagChip
 
     internal static (string Background, string Foreground, string Border) GetDefaultPalette(string value)
     {
-        var safe = (value ?? string.Empty).Trim();
-        var idx = Math.Abs(StringComparer.OrdinalIgnoreCase.GetHashCode(safe)) % Palette.Length;
+        string safe = (value ?? string.Empty).Trim();
+        int idx = Math.Abs(StringComparer.OrdinalIgnoreCase.GetHashCode(safe)) % Palette.Length;
         return Palette[idx];
     }
 }
@@ -64,7 +64,7 @@ public static class ProjectTagAppearance
     public static IReadOnlyList<ProjectTagChip> CreateChips(string? csv, int? max = null, AppConfig? config = null)
     {
         config ??= TryLoadConfig();
-        var tags = (csv ?? string.Empty)
+        IEnumerable<string> tags = (csv ?? string.Empty)
             .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(tag => tag.Trim())
             .Where(tag => !string.IsNullOrWhiteSpace(tag))
@@ -80,13 +80,13 @@ public static class ProjectTagAppearance
         string value,
         IReadOnlyDictionary<string, TagColorConfig>? configured)
     {
-        var safe = (value ?? string.Empty).Trim();
+        string safe = (value ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(safe))
             return ProjectTagChip.GetDefaultPalette(string.Empty);
 
         if (configured is not null)
         {
-            var match = configured
+            KeyValuePair<string, TagColorConfig> match = configured
                 .FirstOrDefault(entry => string.Equals(entry.Key?.Trim(), safe, StringComparison.OrdinalIgnoreCase));
 
             if (!string.IsNullOrWhiteSpace(match.Key))
@@ -103,8 +103,8 @@ public static class ProjectTagAppearance
 
     public static string NormalizeHex(string? value, string fallback)
     {
-        var raw = (value ?? string.Empty).Trim();
-        if (TryNormalizeHex(raw, out var normalized))
+        string raw = (value ?? string.Empty).Trim();
+        if (TryNormalizeHex(raw, out string? normalized))
             return normalized;
 
         return fallback;
@@ -113,7 +113,7 @@ public static class ProjectTagAppearance
     public static bool TryNormalizeHex(string? value, out string normalized)
     {
         normalized = string.Empty;
-        var raw = (value ?? string.Empty).Trim();
+        string raw = (value ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(raw))
             return false;
 
@@ -137,14 +137,14 @@ public static class ProjectTagAppearance
 
     public static TagColorConfig BuildConfigFromAccent(string accentHex)
     {
-        if (!TryNormalizeHex(accentHex, out var normalized) || !TryParseRgb(normalized, out var red, out var green, out var blue))
+        if (!TryNormalizeHex(accentHex, out string? normalized) || !TryParseRgb(normalized, out byte red, out byte green, out byte blue))
         {
             normalized = "#3A7AFE";
             TryParseRgb(normalized, out red, out green, out blue);
         }
 
-        var foreground = GetReadableForeground(red, green, blue);
-        var border = CreateBorder(red, green, blue);
+        string foreground = GetReadableForeground(red, green, blue);
+        string border = CreateBorder(red, green, blue);
 
         return new TagColorConfig
         {
@@ -160,10 +160,10 @@ public static class ProjectTagAppearance
     public static bool TryParseRgb(string? value, out byte red, out byte green, out byte blue)
     {
         red = green = blue = 0;
-        if (!TryNormalizeHex(value, out var normalized))
+        if (!TryNormalizeHex(value, out string? normalized))
             return false;
 
-        var raw = normalized[1..];
+        string raw = normalized[1..];
         red = byte.Parse(raw[..2], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         green = byte.Parse(raw.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         blue = byte.Parse(raw.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
@@ -172,12 +172,12 @@ public static class ProjectTagAppearance
 
     public static void RgbToHsv(byte red, byte green, byte blue, out double hue, out double saturation, out double value)
     {
-        var r = red / 255d;
-        var g = green / 255d;
-        var b = blue / 255d;
-        var max = Math.Max(r, Math.Max(g, b));
-        var min = Math.Min(r, Math.Min(g, b));
-        var delta = max - min;
+        double r = red / 255d;
+        double g = green / 255d;
+        double b = blue / 255d;
+        double max = Math.Max(r, Math.Max(g, b));
+        double min = Math.Min(r, Math.Min(g, b));
+        double delta = max - min;
 
         hue = 0d;
         if (delta > 0d)
@@ -203,10 +203,10 @@ public static class ProjectTagAppearance
         saturation = Math.Clamp(saturation / 100d, 0d, 1d);
         value = Math.Clamp(value / 100d, 0d, 1d);
 
-        var chroma = value * saturation;
-        var segment = hue / 60d;
-        var x = chroma * (1d - Math.Abs((segment % 2d) - 1d));
-        var m = value - chroma;
+        double chroma = value * saturation;
+        double segment = hue / 60d;
+        double x = chroma * (1d - Math.Abs((segment % 2d) - 1d));
+        double m = value - chroma;
 
         double rPrime;
         double gPrime;
@@ -225,22 +225,22 @@ public static class ProjectTagAppearance
         else
             (rPrime, gPrime, bPrime) = (chroma, 0d, x);
 
-        var red = (byte)Math.Round((rPrime + m) * 255d);
-        var green = (byte)Math.Round((gPrime + m) * 255d);
-        var blue = (byte)Math.Round((bPrime + m) * 255d);
+        byte red = (byte)Math.Round((rPrime + m) * 255d);
+        byte green = (byte)Math.Round((gPrime + m) * 255d);
+        byte blue = (byte)Math.Round((bPrime + m) * 255d);
         return FormatHex(red, green, blue);
     }
 
     private static string GetReadableForeground(byte red, byte green, byte blue)
     {
-        var luminance = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+        double luminance = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
         return luminance >= 148 ? "#11131A" : "#F7F9FF";
     }
 
     private static string CreateBorder(byte red, byte green, byte blue)
     {
-        var luminance = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-        var delta = luminance >= 148 ? -42 : 42;
+        double luminance = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+        int delta = luminance >= 148 ? -42 : 42;
         return FormatHex(Shift(red, delta), Shift(green, delta), Shift(blue, delta));
     }
 

@@ -71,9 +71,9 @@ public static class Telemetry
                 payload = builder.ToPayload()
             };
 
-            var json = JsonSerializer.Serialize(evt, JsonOptions);
-            var path = GetTodayLogPath(DateTime.UtcNow);
-            var dir = Path.GetDirectoryName(path);
+            string json = JsonSerializer.Serialize(evt, JsonOptions);
+            string path = GetTodayLogPath(DateTime.UtcNow);
+            string? dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrWhiteSpace(dir))
             {
                 Directory.CreateDirectory(dir);
@@ -91,9 +91,9 @@ public static class Telemetry
 
     private static string GetTodayLogPath(DateTime utcNow)
     {
-        var baseDir = GetVaultBaseDir();
-        var logsDir = Path.Combine(baseDir, "telemetry");
-        var file = $"{utcNow:yyyy-MM-dd}.ndjson";
+        string baseDir = GetVaultBaseDir();
+        string logsDir = Path.Combine(baseDir, "telemetry");
+        string file = $"{utcNow:yyyy-MM-dd}.ndjson";
         return Path.Combine(logsDir, file);
     }
 
@@ -104,25 +104,25 @@ public static class Telemetry
     {
         try
         {
-            var logsDir = GetTelemetryDirectory();
+            string logsDir = GetTelemetryDirectory();
             if (!Directory.Exists(logsDir))
             {
                 return new TelemetryExportResult(false, null, "No telemetry directory found.");
             }
 
-            var files = Directory.GetFiles(logsDir, "*.ndjson", SearchOption.TopDirectoryOnly);
+            string[] files = Directory.GetFiles(logsDir, "*.ndjson", SearchOption.TopDirectoryOnly);
             if (files.Length == 0)
             {
                 return new TelemetryExportResult(false, null, "No telemetry files to export.");
             }
 
-            var destDir = string.IsNullOrWhiteSpace(targetDirectory)
+            string destDir = string.IsNullOrWhiteSpace(targetDirectory)
                 ? Path.Combine(Path.GetTempPath(), "vaultsync-telemetry-export")
                 : targetDirectory;
             Directory.CreateDirectory(destDir);
 
-            var zipName = $"telemetry_{DateTime.UtcNow:yyyyMMdd_HHmmss}.zip";
-            var zipPath = Path.Combine(destDir, zipName);
+            string zipName = $"telemetry_{DateTime.UtcNow:yyyyMMdd_HHmmss}.zip";
+            string zipPath = Path.Combine(destDir, zipName);
 
             if (File.Exists(zipPath))
             {
@@ -143,7 +143,7 @@ public static class Telemetry
     /// </summary>
     public static string GetTelemetryDirectory()
     {
-        var baseDir = GetVaultBaseDir();
+        string baseDir = GetVaultBaseDir();
         return Path.Combine(baseDir, "telemetry");
     }
 
@@ -155,8 +155,8 @@ public static class Telemetry
     {
         try
         {
-            var baseDir = GetVaultBaseDir();
-            var logsDir = Path.Combine(baseDir, "telemetry");
+            string baseDir = GetVaultBaseDir();
+            string logsDir = Path.Combine(baseDir, "telemetry");
             if (!Directory.Exists(logsDir))
                 return;
 
@@ -165,22 +165,21 @@ public static class Telemetry
                                  .OrderByDescending(f => f.LastWriteTimeUtc)
                                  .ToList();
 
-            var cutoff = DateTime.UtcNow.AddDays(-retentionDays);
-            foreach (var file in files.Where(f => f.LastWriteTimeUtc < cutoff))
+            DateTime cutoff = DateTime.UtcNow.AddDays(-retentionDays);
+            foreach (FileInfo? file in files.Where(f => f.LastWriteTimeUtc < cutoff))
             {
                 try { file.Delete(); } catch { }
             }
 
             // Recompute after date-based prune
-            files = Directory.GetFiles(logsDir, "*.ndjson", SearchOption.TopDirectoryOnly)
+            files = [.. Directory.GetFiles(logsDir, "*.ndjson", SearchOption.TopDirectoryOnly)
                              .Select(path => new FileInfo(path))
-                             .OrderByDescending(f => f.LastWriteTimeUtc)
-                             .ToList();
+                             .OrderByDescending(f => f.LastWriteTimeUtc)];
 
             if (maxTotalBytes > 0)
             {
                 long total = files.Sum(f => f.Length);
-                foreach (var file in files.Where(f => total > maxTotalBytes).OrderBy(f => f.LastWriteTimeUtc))
+                foreach (FileInfo? file in files.Where(f => total > maxTotalBytes).OrderBy(f => f.LastWriteTimeUtc))
                 {
                     try
                     {
@@ -206,20 +205,20 @@ public static class Telemetry
         {
             try
             {
-                var baseDir = GetVaultBaseDir();
-                var path = Path.Combine(baseDir, "telemetry", "installation.id");
-                var dir = Path.GetDirectoryName(path);
+                string baseDir = GetVaultBaseDir();
+                string path = Path.Combine(baseDir, "telemetry", "installation.id");
+                string? dir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrWhiteSpace(dir))
                     Directory.CreateDirectory(dir);
 
                 if (File.Exists(path))
                 {
-                    var existing = File.ReadAllText(path).Trim();
-                    if (Guid.TryParse(existing, out var parsed))
+                    string existing = File.ReadAllText(path).Trim();
+                    if (Guid.TryParse(existing, out Guid parsed))
                         return parsed.ToString();
                 }
 
-                var id = Guid.NewGuid().ToString();
+                string id = Guid.NewGuid().ToString();
                 File.WriteAllText(path, id);
                 return id;
             }
@@ -236,29 +235,29 @@ public static class Telemetry
         {
             try
             {
-                var baseDir = GetVaultBaseDir();
-                var path = Path.Combine(baseDir, "telemetry", "telemetry.salt");
-                var dir = Path.GetDirectoryName(path);
+                string baseDir = GetVaultBaseDir();
+                string path = Path.Combine(baseDir, "telemetry", "telemetry.salt");
+                string? dir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrWhiteSpace(dir))
                     Directory.CreateDirectory(dir);
 
                 if (File.Exists(path))
                 {
-                    var existing = File.ReadAllText(path).Trim();
+                    string existing = File.ReadAllText(path).Trim();
                     if (!string.IsNullOrWhiteSpace(existing))
                         return existing;
                 }
 
-                var bytes = new byte[32];
+                byte[] bytes = new byte[32];
                 RandomNumberGenerator.Fill(bytes);
-                var salt = Convert.ToHexString(bytes).ToLowerInvariant();
+                string salt = Convert.ToHexString(bytes).ToLowerInvariant();
                 File.WriteAllText(path, salt);
                 return salt;
             }
             catch
             {
                 // Fall back to a volatile salt if persistence fails.
-                var bytes = new byte[32];
+                byte[] bytes = new byte[32];
                 RandomNumberGenerator.Fill(bytes);
                 return Convert.ToHexString(bytes).ToLowerInvariant();
             }
@@ -354,7 +353,7 @@ public sealed class TelemetryEventBuilder
     private string Hash(string raw)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_salt));
-        var bytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(raw));
+        byte[] bytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(raw));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }
