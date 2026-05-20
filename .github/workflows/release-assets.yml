@@ -216,13 +216,30 @@ jobs:
             throw "Could not find UAP SDK platform root: $platformRoot"
           }
 
-          $sdk = Get-ChildItem $platformRoot -Directory |
+          $sdks = Get-ChildItem $platformRoot -Directory
+          $sdk = $sdks |
+            Where-Object { $_.Name -eq "10.0.19041.0" } |
+            Select-Object -First 1
+          if ($null -eq $sdk) {
+            $sdk = $sdks |
             Sort-Object { [version]$_.Name } -Descending |
             Select-Object -First 1
+          }
 
           if ($null -eq $sdk) {
             throw "No installed UAP SDK was found under $platformRoot."
           }
+
+          $wapprojPath = "packaging/VaultSync.Store/VaultSync.Store.wapproj"
+          [xml]$wapproj = Get-Content $wapprojPath
+          $ns = New-Object System.Xml.XmlNamespaceManager($wapproj.NameTable)
+          $ns.AddNamespace("msb", "http://schemas.microsoft.com/developer/msbuild/2003")
+          $targetPlatformVersion = $wapproj.SelectSingleNode("/msb:Project/msb:PropertyGroup/msb:TargetPlatformVersion", $ns)
+          if ($null -eq $targetPlatformVersion) {
+            throw "Could not find TargetPlatformVersion in $wapprojPath."
+          }
+          $targetPlatformVersion.InnerText = $sdk.Name
+          $wapproj.Save((Resolve-Path $wapprojPath))
 
           "STORE_TARGET_PLATFORM_VERSION=$($sdk.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Add-Content $env:GITHUB_STEP_SUMMARY "- Store packaging SDK: ``$($sdk.Name)``"
@@ -303,8 +320,6 @@ jobs:
             /restore `
             /p:Configuration=Release `
             /p:Platform=x64 `
-            /p:TargetPlatformVersion=$env:STORE_TARGET_PLATFORM_VERSION `
-            /p:TargetPlatformMinVersion=10.0.19041.0 `
             /p:RuntimeIdentifier=win-x64 `
             /p:SelfContained=true `
             /p:GenerateAppxPackageOnBuild=true `
