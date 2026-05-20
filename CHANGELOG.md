@@ -16,6 +16,7 @@
 - [VS-1741] The in-app What's New dialog now uses a cleaner release-digest layout with section dividers instead of nested cards.
 - [VS-1742] Shared UI formatting and detached async helpers reduce duplicated view-model code.
 - [VS-1743] Source-code presets now keep repository metadata such as `.github`, `.gitignore`, `.gitattributes`, and `.gitmodules` while still excluding generated build outputs.
+- [VS-1744] Release asset builds can now generate Microsoft Store Partner Center upload packages from the Store packaging project.
 ### Fixed
 - [BUG-17116] Notification cleanup now avoids disposed-token races.
 - [BUG-17118] Log console rows now show readable time, source, and message fields.

@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\VaultSync.UI\VaultSync.UI.csproj">
-      <AdditionalProperties>TargetFramework=net10.0-windows10.0.19041.0</AdditionalProperties>
+      <AdditionalProperties>TargetFramework=net10.0-windows10.0.19041.0;RuntimeIdentifier=win-x64;SelfContained=true</AdditionalProperties>
     </ProjectReference>
   </ItemGroup>
 

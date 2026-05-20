@@ -24,6 +24,11 @@ on:
         required: false
         type: boolean
         default: false
+      include_store_upload:
+        description: "Build Microsoft Store Partner Center upload package (.msixupload) from the Store packaging project."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -164,6 +169,10 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Setup MSBuild
+        if: ${{ inputs.include_store_upload }}
+        uses: microsoft/setup-msbuild@v2
+
       - name: Publish (win-x64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
@@ -200,6 +209,66 @@ jobs:
             @previousArgs `
             --target "${{ inputs.target_version }}"
 
+      - name: Prepare Microsoft Store manifest version
+        if: ${{ inputs.include_store_upload }}
+        shell: pwsh
+        run: |
+          $target = "${{ inputs.target_version }}"
+          $baseVersion = ($target -split "-", 2)[0]
+          $parts = $baseVersion.Split(".")
+          if ($parts.Count -lt 3) {
+            throw "target_version '$target' must include at least major.minor.patch for Store packaging."
+          }
+
+          $storeVersion = "$($parts[0]).$($parts[1]).$($parts[2]).0"
+          $manifestPath = "packaging/VaultSync.Store/Package.appxmanifest"
+          [xml]$manifest = Get-Content $manifestPath
+          $ns = New-Object System.Xml.XmlNamespaceManager($manifest.NameTable)
+          $ns.AddNamespace("pkg", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
+          $identity = $manifest.SelectSingleNode("/pkg:Package/pkg:Identity", $ns)
+          if ($null -eq $identity) {
+            throw "Could not find Package/Identity in $manifestPath."
+          }
+
+          $identity.Version = $storeVersion
+          $manifest.Save((Resolve-Path $manifestPath))
+          "STORE_PACKAGE_VERSION=$storeVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          Add-Content $env:GITHUB_STEP_SUMMARY "## Microsoft Store package"
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Store manifest version: ``$storeVersion``"
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Store identity: ``FlavioGiacchetti.480851279F98B``"
+
+      - name: Build Microsoft Store upload package
+        if: ${{ inputs.include_store_upload }}
+        shell: pwsh
+        run: |
+          $storeDir = Join-Path $PWD "dist/store"
+          New-Item -ItemType Directory -Force $storeDir | Out-Null
+
+          msbuild packaging/VaultSync.Store/VaultSync.Store.wapproj `
+            /restore `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:RuntimeIdentifier=win-x64 `
+            /p:SelfContained=true `
+            /p:GenerateAppxPackageOnBuild=true `
+            /p:UapAppxPackageBuildMode=StoreUpload `
+            /p:AppxBundle=Never `
+            /p:AppxPackageSigningEnabled=false `
+            /p:AppxPackageDir="$storeDir\\"
+
+          $upload = Get-ChildItem -Path "packaging/VaultSync.Store", "dist/store" -Recurse -Include *.msixupload,*.appxupload |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -First 1
+          if ($null -eq $upload) {
+            throw "Store upload package was not produced."
+          }
+
+          $extension = $upload.Extension
+          $targetPath = Join-Path $storeDir "VaultSync-Store-${{ inputs.target_version }}-x64$extension"
+          Copy-Item $upload.FullName $targetPath -Force
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Upload artifact: ``$targetPath``"
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -208,6 +277,15 @@ jobs:
             dist/windows/VaultSync-Setup-*.exe
             patches/v${{ inputs.target_version }}/vaultsync-patch-windows.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-windows.zip
+
+      - name: Upload Microsoft Store artifact
+        if: ${{ inputs.include_store_upload }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-store-upload
+          path: |
+            dist/store/*.msixupload
+            dist/store/*.appxupload
 
   macos:
     needs: validate

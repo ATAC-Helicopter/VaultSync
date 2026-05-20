@@ -14,7 +14,7 @@ Current scope:
 - separate Windows packaging layer for Microsoft Store distribution
 - no changes to the Direct installer or GitHub updater path
 - placeholder package assets copied from the current VaultSync branding preview
-- manual Store package workflow at `.github/workflows/store-package.yml`
+- manual Store upload package generation in `.github/workflows/release-assets.yml` with `include_store_upload` enabled
 
 Important notes:
 

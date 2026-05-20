@@ -22,7 +22,7 @@ Current package/build entry points:
 
 - Packaging project: `packaging/VaultSync.Store/VaultSync.Store.wapproj`
 - Manifest: `packaging/VaultSync.Store/Package.appxmanifest`
-- Manual package workflow: `.github/workflows/store-package.yml`
+- Manual package workflow: `.github/workflows/release-assets.yml` with `include_store_upload` enabled
 
 Before submission, the following still need to be completed:
 
@@ -34,7 +34,7 @@ Current implementation status:
 - done: initial Store packaging scaffold with reserved identity values
 - done: runtime `Direct` vs `Store` channel detection
 - done: Store builds disable the GitHub self-updater, show Store-managed update messaging, and offer an `Open Microsoft Store` action
-- done: a dedicated Store package workflow now exists for manual MSIX/AppX upload artifact generation
+- done: the release asset workflow can generate a Partner Center `.msixupload` artifact from the Store packaging project
 - packaged-app validation for local folders, removable drives, restore targets, and UNC/NAS paths
 - remaining: full docs/help/wiki pass for Store-specific update/support guidance
 
