@@ -217,12 +217,11 @@ jobs:
           }
 
           $sdk = Get-ChildItem $platformRoot -Directory |
-            Where-Object { Test-Path (Join-Path $_.FullName "UAP.props") } |
             Sort-Object { [version]$_.Name } -Descending |
             Select-Object -First 1
 
           if ($null -eq $sdk) {
-            throw "No installed UAP SDK with UAP.props was found under $platformRoot."
+            throw "No installed UAP SDK was found under $platformRoot."
           }
 
           "STORE_TARGET_PLATFORM_VERSION=$($sdk.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
