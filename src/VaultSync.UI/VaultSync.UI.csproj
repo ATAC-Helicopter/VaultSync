@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>1.7.4</Version>
+    <Version>1.7.5</Version>
     <Product>VaultSync</Product>
     <Company>Flavio Giacchetti</Company>
     <ApplicationIcon>Assets\vaultsync.ico</ApplicationIcon>
@@ -34,29 +34,28 @@
 
   <!-- Base Avalonia + dependencies -->
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.15" />
-    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.3.15" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.15" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.15" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.15" />
-    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.15">
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Controls.ColorPicker" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.Diagnostics">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
 
-    <PackageReference Include="SkiaSharp" Version="3.119.2" />
-    <PackageReference Include="SkiaSharp.HarfBuzz" Version="3.119.2" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.2" />
-    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.2" />
-    <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.119.2" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
-    <PackageReference Include="HarfBuzzSharp" Version="8.3.1.3" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.3" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.3" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="8.3.1.3" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.3" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.4" />
-    <PackageReference Include="ReactiveUI" Version="23.2.27" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.HarfBuzz" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" />
+    <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
+    <PackageReference Include="HarfBuzzSharp" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.WebAssembly" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
   </ItemGroup>
 
   <!-- Reference to core project -->
@@ -124,8 +123,8 @@
 
   <!-- Windows notifications -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
-    <PackageReference Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
-    <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
+    <PackageReference Include="CommunityToolkit.WinUI.Notifications" />
+    <PackageReference Include="System.Drawing.Common" />
   </ItemGroup>
 
     <ItemGroup>
