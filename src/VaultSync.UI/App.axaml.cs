@@ -32,6 +32,8 @@ namespace VaultSync.UI;
 
 public partial class App : Application
 {
+    private static readonly IAppConfigStore ConfigStore = StaticAppConfigStore.Instance;
+
     // Test hook: enabled while onboarding UX is being validated every startup.
     private static readonly bool ForceOnboardingAtStartupForTesting = false;
     private static readonly string OnboardingSentinelPath =
@@ -200,7 +202,7 @@ public partial class App : Application
                 CreateSystemNotificationService() ?? new StubSystemNotificationService();
             GlobalNotificationCenter.Instance.ShouldShowSystemNotification = _ =>
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = ConfigStore.GetSnapshot();
                 if (!cfg.Notifications.UseOsNotifications)
                     return false;
                 if (!cfg.Notifications.OnBackupSuccess &&
@@ -219,7 +221,7 @@ public partial class App : Application
             };
 
             // Read behavior config and, if enabled, create a tray/menu-bar icon.
-            AppConfig config = AppConfigStore.GetSnapshot();
+            AppConfig config = ConfigStore.GetSnapshot();
             if (config.Behavior?.ShowTrayIcon is true)
             {
                 CreateTrayIcon(desktop);
@@ -257,7 +259,7 @@ public partial class App : Application
         try
         {
             var localizationService = new LocalizationService();
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = ConfigStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(cfg.Advanced.Language))
             {
                 localizationService.SetLanguage(cfg.Advanced.Language);
@@ -424,7 +426,7 @@ public partial class App : Application
         if (AppViewModelInstance is null)
             return;
 
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         string currentVersion = AppViewModelInstance.CurrentVersionDisplay.TrimStart('v');
         if (string.IsNullOrWhiteSpace(currentVersion))
             return;
@@ -456,7 +458,7 @@ public partial class App : Application
         vm.CloseRequested += () =>
         {
             cfg.Advanced.LastWhatsNewVersion = currentVersion;
-            AppConfigStore.Save(cfg);
+            ConfigStore.Save(cfg);
             window.Close();
         };
 
@@ -517,11 +519,11 @@ public partial class App : Application
         if (AppViewModelInstance is null)
             return false;
 
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         bool showForTesting = IsOnboardingAlwaysEnabledForTesting();
         if (!showForTesting)
         {
-            bool isFreshInstall = AppConfigStore.WasConfigMissingOnFirstLoad;
+            bool isFreshInstall = ConfigStore.WasConfigMissingOnFirstLoad;
             bool sentinelExists = File.Exists(OnboardingSentinelPath);
 
             if (!isFreshInstall || sentinelExists || cfg.Advanced.HasSeenOnboarding)
@@ -572,7 +574,7 @@ public partial class App : Application
         if (!cfg.Advanced.HasSeenOnboarding)
         {
             cfg.Advanced.HasSeenOnboarding = true;
-            AppConfigStore.Save(cfg);
+            ConfigStore.Save(cfg);
         }
     }
 
@@ -675,7 +677,7 @@ public partial class App : Application
 
     private void UpdateTrayIconVisibility(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         if (cfg.Behavior?.ShowTrayIcon == true)
         {
             if (_trayIcon is null)
@@ -714,7 +716,7 @@ public partial class App : Application
         IReadOnlyList<AppViewModel.DestinationProbeSummary> destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
                                    ?? [];
 
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         List<BackupDestination> configuredDestinations = GetConfiguredDestinations(cfg);
 
         (string destinationsTitle, string destinationsStatus) =
@@ -776,7 +778,7 @@ public partial class App : Application
 
         IReadOnlyList<AppViewModel.DestinationProbeSummary> destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
                                    ?? [];
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         List<BackupDestination> configuredDestinations = GetConfiguredDestinations(cfg);
         (string destinationsTitle, string destinationsStatus) =
             GetDestinationStatus(destinationSummaries, configuredDestinations);
@@ -1254,7 +1256,7 @@ public partial class App : Application
     {
         try
         {
-            AppConfig cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.GetSnapshot();
+            AppConfig cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? ConfigStore.GetSnapshot();
             string backupRoot = cfg.Backups.BackupLocation ?? string.Empty;
             string driveLabel = FormatDriveLabel(backupRoot);
             if (_cachedDriveHealthIsNetwork)
@@ -1446,7 +1448,7 @@ public partial class App : Application
         if (window is null)
             return;
 
-        AppConfig config = AppConfigStore.GetSnapshot();
+        AppConfig config = ConfigStore.GetSnapshot();
         if (config.Behavior?.ShowWindowOnTrayActions != true)
             return;
 
@@ -1912,7 +1914,7 @@ public partial class App : Application
     {
         try
         {
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = ConfigStore.GetSnapshot();
             int minutes = Math.Clamp(
                 cfg?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes,
                 1,
@@ -1985,17 +1987,17 @@ public partial class App : Application
 
     private static void ApplyThemeFromConfig()
     {
-        AppConfig config = AppConfigStore.GetSnapshot();
+        AppConfig config = ConfigStore.GetSnapshot();
         ThemeManager.ApplyAppearance(config.Appearance);
         ThemeManager.ApplyCompactLayout(config.Appearance.CompactLayout);
     }
 
     public static void ApplyTheme(string themeOption)
     {
-        AppConfig config = AppConfigStore.Load();
+        AppConfig config = ConfigStore.Load();
         config.Appearance.Theme = themeOption;
         ThemeManager.ApplyAppearance(config.Appearance);
-        AppConfigStore.Save(config);
+        ConfigStore.Save(config);
     }
 
     private static string FormatDriveLabel(string? path)
@@ -2044,7 +2046,7 @@ public partial class App : Application
         {
             try
             {
-                AppConfig cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.GetSnapshot();
+                AppConfig cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? ConfigStore.GetSnapshot();
                 string backupRoot = cfg.Backups.BackupRoot ?? string.Empty;
                 string driveLabel = FormatDriveLabel(backupRoot);
 
