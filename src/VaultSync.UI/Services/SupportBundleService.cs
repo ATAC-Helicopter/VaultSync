@@ -15,8 +15,9 @@ public sealed record SupportBundleExportResult(bool Success, string? ZipPath, st
 
 public sealed class SupportBundleService
 {
-    public static SupportBundleExportResult Export()
+    public static SupportBundleExportResult Export(IAppConfigStore? configStore = null)
     {
+        configStore ??= StaticAppConfigStore.Instance;
         DateTimeOffset timestamp = DateTimeOffset.UtcNow;
         string bundleName = $"vaultsync-support-{timestamp:yyyyMMdd-HHmmss}.zip";
         string exportRoot = Path.Combine(
@@ -35,7 +36,7 @@ public sealed class SupportBundleService
             Directory.CreateDirectory(exportRoot);
             Directory.CreateDirectory(stagingRoot);
 
-            AppConfig config = AppConfigStore.GetSnapshot();
+            AppConfig config = configStore.GetSnapshot();
             object report = BuildBundleReport(config, timestamp);
 
             string reportJson = JsonSerializer.Serialize(report, new JsonSerializerOptions

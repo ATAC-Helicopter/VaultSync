@@ -146,6 +146,7 @@ namespace VaultSync.UI.ViewModels
 
         private void StartUpdateCheck(bool ignoreSettings = false)
         {
+            using var timing = RuntimeTiming.Measure(ignoreSettings ? "Update check start forced" : "Update check start");
             if (!CanUseSelfUpdate)
             {
                 DiagnosticsLogger.Record("GitHub update checks disabled for Store distribution.");
@@ -235,13 +236,16 @@ namespace VaultSync.UI.ViewModels
                     await Task.Delay(delay);
                     RecordStartupPhase("deferred-startup-begin");
 
-                    AppConfig cfg = AppConfigStore.GetSnapshot();
+                    AppConfig cfg = _configStore.GetSnapshot();
                     await RunStartupDestinationProbeAsync().ConfigureAwait(false);
                     RecordStartupPhase("destination-probe-complete");
 
                     if (cfg.Backups.EnableMetadataSync)
                     {
-                        TryImportMetadataFromRoot(cfg.ProjectsRoot ?? string.Empty);
+                        using (RuntimeTiming.Measure("Deferred startup metadata root import"))
+                        {
+                            TryImportMetadataFromRoot(cfg.ProjectsRoot ?? string.Empty);
+                        }
                         RecordStartupPhase("metadata-import-queued");
                     }
                     else
@@ -251,7 +255,10 @@ namespace VaultSync.UI.ViewModels
 
                     await RunStartupBackupIndexConsistencyCheckAsync().ConfigureAwait(false);
                     RecordStartupPhase("backup-index-scan-complete");
-                    StartUpdateCheck();
+                    using (RuntimeTiming.Measure("Deferred startup update check dispatch"))
+                    {
+                        StartUpdateCheck();
+                    }
                     RecordStartupPhase("update-check-started");
                     ConfigureUpdateCheckTimer();
                     RecordStartupPhase("update-timer-configured");
@@ -465,6 +472,7 @@ namespace VaultSync.UI.ViewModels
 
         private async Task RunUpdateCheckAsync(CancellationToken cancellationToken)
         {
+            using var timing = RuntimeTiming.Measure("Update check run");
             try
             {
                 DiagnosticsLogger.Record("Update check running.");
@@ -674,9 +682,9 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     cfg.Advanced.SkippedUpdateTag = tag;
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                     Dispatcher.UIThread.Post(() => _config.Advanced.SkippedUpdateTag = tag);
                 }
                 catch (Exception ex)
@@ -738,9 +746,9 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 cfg.Advanced.UpdateDiagnostics = diagnostics ?? new UpdateCheckDiagnostics();
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
                 Dispatcher.UIThread.Post(() => _settingsViewModel.ReloadUpdateDiagnostics());
             }
             catch (Exception ex)

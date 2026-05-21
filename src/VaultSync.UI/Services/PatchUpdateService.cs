@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using VaultSync.Core.Services;
 
 namespace VaultSync.UI.Services
 {
@@ -313,7 +314,7 @@ namespace VaultSync.UI.Services
             using FileStream stream = File.OpenRead(filePath);
             using var sha = SHA256.Create();
             byte[] hash = await sha.ComputeHashAsync(stream, cancellationToken);
-            string actual = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+            string actual = HashService.FormatSha256Lower(hash);
             return string.Equals(actual, expectedSha256.Trim().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase);
         }
 
