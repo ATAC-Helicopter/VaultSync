@@ -344,6 +344,7 @@ namespace VaultSync.Core.Config
         public MaintenanceConfig Maintenance { get; set; } = new();
         public StartupDiagnosticsSummary StartupDiagnostics { get; set; } = new();
         public CheckpointResumeTelemetry CheckpointResumeTelemetry { get; set; } = new();
+        public MetadataImportCacheConfig MetadataImportCache { get; set; } = new();
     }
 
     public sealed class MaintenanceConfig
@@ -465,6 +466,28 @@ namespace VaultSync.Core.Config
         public long LastArchiveSizeBytes { get; set; }
         public string LastSourceFingerprint { get; set; } = string.Empty;
         public string LastMessage { get; set; } = string.Empty;
+    }
+
+    public sealed class MetadataImportCacheConfig
+    {
+        public List<MetadataImportSourceStamp> Sources { get; set; } = [];
+    }
+
+    public sealed class MetadataImportSourceStamp
+    {
+        public string SourceKey { get; set; } = string.Empty;
+        public string SourcePath { get; set; } = string.Empty;
+        public string SourceMachineId { get; set; } = string.Empty;
+        public string StoreUpdatedUtc { get; set; } = string.Empty;
+        public int StoreSchemaVersion { get; set; }
+        public long StoreFileLengthBytes { get; set; }
+        public string StoreFileUpdatedUtc { get; set; } = string.Empty;
+        public string StoreSidecarStamp { get; set; } = string.Empty;
+        public string ImportedUtc { get; set; } = string.Empty;
+        public int ProjectCount { get; set; }
+        public int SnapshotCount { get; set; }
+        public int BackupCount { get; set; }
+        public int TombstoneCount { get; set; }
     }
 
     public sealed class StartupDiagnosticsPhase

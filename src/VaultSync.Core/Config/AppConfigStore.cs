@@ -19,13 +19,25 @@ namespace VaultSync.Core.Config
 
         private static readonly SemaphoreSlim SaveGate = new(1, 1);
         private static readonly object LastKnownGoodGate = new();
-        private static readonly string ConfigDir = ResolveConfigDir();
+        private static readonly object ConfigPathGate = new();
+        private static string? TestConfigDirOverride;
         private static int _firstLoadState; // 0=unknown, 1=missing config, 2=existing config
 
-        private static readonly string ConfigFilePath =
+        private static string ConfigDir
+        {
+            get
+            {
+                lock (ConfigPathGate)
+                {
+                    return TestConfigDirOverride ?? ResolveConfigDir();
+                }
+            }
+        }
+
+        private static string ConfigFilePath =>
             Path.Combine(ConfigDir, "appsettings.json");
 
-        private static readonly string ConfigBackupFilePath =
+        private static string ConfigBackupFilePath =>
             Path.Combine(ConfigDir, "appsettings.bak.json");
 
         private static AppConfig? LastKnownGoodConfig;
@@ -36,6 +48,25 @@ namespace VaultSync.Core.Config
         };
 
         public static bool WasConfigMissingOnFirstLoad => Volatile.Read(ref _firstLoadState) == 1;
+
+        public static IDisposable UseDirectoryForTests(string directory)
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+                throw new ArgumentException("Config directory is required.", nameof(directory));
+
+            string fullPath = Path.GetFullPath(directory);
+            Directory.CreateDirectory(fullPath);
+
+            string? previousOverride;
+            lock (ConfigPathGate)
+            {
+                previousOverride = TestConfigDirOverride;
+                TestConfigDirOverride = fullPath;
+            }
+
+            ResetRuntimeStateForTests();
+            return new TestConfigDirectoryScope(previousOverride);
+        }
 
         public static AppConfig GetSnapshot()
         {
@@ -323,6 +354,34 @@ namespace VaultSync.Core.Config
         {
             string json = JsonSerializer.Serialize(config, JsonOptions);
             return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+        }
+
+        private static void ResetRuntimeStateForTests()
+        {
+            Volatile.Write(ref _firstLoadState, 0);
+            lock (LastKnownGoodGate)
+            {
+                LastKnownGoodConfig = null;
+            }
+        }
+
+        private sealed class TestConfigDirectoryScope(string? previousOverride) : IDisposable
+        {
+            private bool _disposed;
+
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                lock (ConfigPathGate)
+                {
+                    TestConfigDirOverride = previousOverride;
+                }
+
+                ResetRuntimeStateForTests();
+                _disposed = true;
+            }
         }
 
         private static string ResolveConfigDir()
