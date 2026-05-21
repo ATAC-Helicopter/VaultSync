@@ -123,7 +123,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = _configStore.GetSnapshot();
                 List<BackupDestination> destinations = GetActiveDestinations(cfg);
 
                 DateTime now = DateTime.UtcNow;
@@ -436,7 +436,7 @@ namespace VaultSync.UI.ViewModels
             if (!request.Confirmed)
                 return;
 
-            AppConfig cfg = await Task.Run(AppConfigStore.Load);
+            AppConfig cfg = await Task.Run(_configStore.Load);
             var projects = await Task.Run(() => _repo.GetAllProjects().ToList());
 
             Project? scopedProject = null;
@@ -558,7 +558,7 @@ namespace VaultSync.UI.ViewModels
 
         private async Task RefreshMetadataNowAsync()
         {
-            AppConfig cfg = await Task.Run(AppConfigStore.Load);
+            AppConfig cfg = await Task.Run(_configStore.Load);
             if (!cfg.Backups.EnableMetadataSync)
             {
                 Console.WriteLine("[MetadataSync] Refresh skipped: metadata sync disabled.");
@@ -874,7 +874,7 @@ namespace VaultSync.UI.ViewModels
             return cfg.Backups.LegacyArchiveUploadBufferBytes;
         }
 
-        private static void SaveArchiveUploadBufferBytes(AppConfig cfg, BackupDestination dest, int bufferBytes)
+        private void SaveArchiveUploadBufferBytes(AppConfig cfg, BackupDestination dest, int bufferBytes)
         {
             if (bufferBytes <= 0)
                 return;
@@ -892,7 +892,7 @@ namespace VaultSync.UI.ViewModels
                 cfg.Backups.LegacyArchiveUploadBufferBytes = bufferBytes;
             }
 
-            AppConfigStore.Save(cfg);
+            _configStore.Save(cfg);
         }
 
         private readonly record struct ArchiveProbeResult(int BufferBytes, double Mbps, bool TimedOut);
@@ -1028,6 +1028,7 @@ namespace VaultSync.UI.ViewModels
 
         private void TryImportMetadataForDestination(AppConfig cfg, BackupDestination dest, string effectivePath)
         {
+            using var dispatchTiming = RuntimeTiming.Measure("Metadata destination import dispatch");
             if (!IsMetadataImportEnabled(cfg, dest))
                 return;
 
@@ -1050,10 +1051,12 @@ namespace VaultSync.UI.ViewModels
             MetadataSyncOptions options = new MetadataSyncOptions(
                 AllowCreateProjects: true,
                 MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
-                .AsReadOnlySource();
+                .AsReadOnlySource()
+                .WithUnchangedSourceSkip();
             string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
             _ = Task.Run(() =>
             {
+                using var importTiming = RuntimeTiming.Measure("Metadata destination import run");
                 try
                 {
                     Console.WriteLine($"[MetadataSync] Auto import started for '{name}'.");
@@ -1093,6 +1096,7 @@ namespace VaultSync.UI.ViewModels
 
         private void TryImportMetadataFromRoot(string rootPath)
         {
+            using var timing = RuntimeTiming.Measure("Metadata root import run");
             if (string.IsNullOrWhiteSpace(rootPath))
                 return;
 
@@ -1106,7 +1110,8 @@ namespace VaultSync.UI.ViewModels
             MetadataSyncOptions options = new MetadataSyncOptions(
                 AllowCreateProjects: true,
                 MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
-                .AsReadOnlySource();
+                .AsReadOnlySource()
+                .WithUnchangedSourceSkip();
             try
             {
                 Console.WriteLine("[MetadataSync] Auto import started for projects root.");
@@ -1162,7 +1167,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = _configStore.GetSnapshot();
                 int maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
                 if (maxSnapshotsToKeep <= 0)
                     return;
@@ -1262,7 +1267,7 @@ namespace VaultSync.UI.ViewModels
                     return;
 
                 Backup? latestBackup = _repo.GetLatestBackupForProject(projectId);
-                AppConfig cfg = await Task.Run(() => AppConfigStore.GetSnapshot());
+                AppConfig cfg = await Task.Run(() => _configStore.GetSnapshot());
                 List<BackupDestination> destinations = ResolveDestinationsForProject(project, cfg).Destinations;
                 if (destinations.Count == 0)
                 {
@@ -1319,12 +1324,12 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     BackupDestination? destEntry = FindMatchingDestination(cfg, dest);
                     if (destEntry != null && destEntry.ForceMetadataBackfill)
                     {
                         destEntry.ForceMetadataBackfill = false;
-                        AppConfigStore.Save(cfg);
+                        _configStore.Save(cfg);
                     }
 
                     if (_settingsViewModel is null)
@@ -1379,7 +1384,7 @@ namespace VaultSync.UI.ViewModels
                 if (BackupsViewModel.IsBusy)
                     return Task.CompletedTask;
 
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = _configStore.GetSnapshot();
 
                 if (_settingsViewModel?.PreferExternalDrives != true)
                     return Task.CompletedTask;
