@@ -4,20 +4,19 @@ using System.Linq;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class BackupRetentionSimulationServiceTests : IDisposable
 {
-    private readonly string _dbPath;
+    private readonly TempDirectory _tempDir = new();
     private readonly SqliteRepository _repo;
 
     public BackupRetentionSimulationServiceTests()
     {
-        _dbPath = Path.Combine(Path.GetTempPath(), $"vaultsync-retention-sim-{Guid.NewGuid():N}.db");
-        _repo = new SqliteRepository(_dbPath);
-        _repo.EnsureSchema();
+        _repo = TestRepository.Create(Path.Combine(_tempDir.Path, "vaultsync.db"));
     }
 
     [Fact]
@@ -66,12 +65,7 @@ public sealed class BackupRetentionSimulationServiceTests : IDisposable
 
     private Project CreateProject(string name)
     {
-        _repo.AddProject(new Project
-        {
-            Name = name,
-            RootPath = $@"C:\Projects\{name}",
-            Preset = "dotnet"
-        });
+        TestRepository.AddProject(_repo, name, $@"C:\Projects\{name}");
         return _repo.GetAllProjects().Single(project => project.Name == name);
     }
 
@@ -92,14 +86,6 @@ public sealed class BackupRetentionSimulationServiceTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            if (File.Exists(_dbPath))
-                File.Delete(_dbPath);
-        }
-        catch
-        {
-            // ignore
-        }
+        _tempDir.Dispose();
     }
 }

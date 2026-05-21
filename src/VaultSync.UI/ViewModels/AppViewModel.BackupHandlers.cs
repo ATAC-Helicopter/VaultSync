@@ -498,7 +498,7 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 // --- After backup: optional verification / post-hash ---
-                AppConfig cfgAfter = await Task.Run(AppConfigStore.Load);
+                AppConfig cfgAfter = await Task.Run(_configStore.Load);
                 if (metadataRoot is not null)
                 {
                     Backup? latest = metadataBackupId.HasValue
@@ -1117,7 +1117,7 @@ namespace VaultSync.UI.ViewModels
                 await DashboardViewModel.RefreshAsync();
 
                 // --- After all backups: optional verification / post-hash ---
-                AppConfig cfgAfterAll = await Task.Run(AppConfigStore.Load);
+                AppConfig cfgAfterAll = await Task.Run(_configStore.Load);
                 List<BackupDestination> allDestinations = AppViewModel.GetAllDestinations(cfgAfterAll);
                 List<Backup> allLatest = _repo.GetLatestBackupsPerProject();
                 var projectsById = _repo.GetAllProjects()

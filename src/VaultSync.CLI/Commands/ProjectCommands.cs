@@ -156,7 +156,7 @@ namespace VaultSync.CLI.Commands
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, DiscoverProjectsSettings s, CancellationToken ct)
         {
-            AppConfig config = AppConfigStore.Load();
+            AppConfig config = ConfigHelper.Load();
 
             if (!string.IsNullOrWhiteSpace(s.OverrideRoot))
             {
@@ -187,27 +187,14 @@ namespace VaultSync.CLI.Commands
             foreach (DiscoveredProject p in projects)
             {
                 string lastSnapshot = p.LastSnapshotTime?.ToString("u") ?? "-";
-                string size = p.LastSnapshotSizeBytes.HasValue ? FormatSize(p.LastSnapshotSizeBytes.Value) : "-";
+                string size = p.LastSnapshotSizeBytes.HasValue
+                    ? ByteSizeFormat.FormatBytes(p.LastSnapshotSizeBytes.Value, "0.#")
+                    : "-";
                 table.AddRow(p.Name, p.Path, lastSnapshot, size);
             }
 
             AnsiConsole.Write(table);
             return 0;
-        }
-
-        private static string FormatSize(long bytes)
-        {
-            string[] sizes = ["B", "KB", "MB", "GB", "TB"];
-            double len = bytes;
-            int order = 0;
-
-            while (len >= 1024 && order < sizes.Length - 1)
-            {
-                order++;
-                len /= 1024;
-            }
-
-            return $"{len:0.#} {sizes[order]}";
         }
     }
 }

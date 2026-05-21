@@ -9,14 +9,16 @@ public class SnapshotService
 {
     private readonly SqliteRepository _repo;
     private readonly HashService _hash;
+    private readonly IVaultLogger _logger;
 
     private readonly record struct SnapshotFileMetadata(string Full, string Rel, FileEntry Entry);
     public SnapshotOutcome? LastCreatedOutcome { get; private set; }
 
-    public SnapshotService(SqliteRepository repo, HashService hash)
+    public SnapshotService(SqliteRepository repo, HashService hash, IVaultLogger? logger = null)
     {
         _repo = repo;
         _hash = hash;
+        _logger = logger ?? RuntimeVaultLogger.Instance;
     }
 
     public Task<int> CreateSnapshotAsync(Project project, bool fullHash, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
@@ -39,9 +41,9 @@ public class SnapshotService
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
 
-        Console.WriteLine($"[SnapshotService] Starting snapshot for project '{project.Name}'");
-        Console.WriteLine($"[SnapshotService]   RootPath = '{project.RootPath}'");
-        Console.WriteLine($"[SnapshotService]   Preset   = '{project.Preset}'");
+        _logger.Info($"[SnapshotService] Starting snapshot for project '{project.Name}'");
+        _logger.Info($"[SnapshotService]   RootPath = '{project.RootPath}'");
+        _logger.Info($"[SnapshotService]   Preset   = '{project.Preset}'");
 
         // IMPORTANT:
         // Run the entire snapshot pipeline on a background thread so that
@@ -66,7 +68,7 @@ public class SnapshotService
             ct.ThrowIfCancellationRequested();
 
             // Build filter from preset + local overrides
-            var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
+            var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset, logger: _logger);
 
             // Build current file list (with optional scan cache)
             string filterHash = ComputeFilterHash(filter);
@@ -84,7 +86,7 @@ public class SnapshotService
                 out int skippedDirs,
                 ct);
 
-            Console.WriteLine($"[SnapshotService] Scan cache used={useScanCache && cache is not null}, skippedDirs={skippedDirs}, files={currentEntries.Count}.");
+            _logger.Info($"[SnapshotService] Scan cache used={useScanCache && cache is not null}, skippedDirs={skippedDirs}, files={currentEntries.Count}.");
 
             ct.ThrowIfCancellationRequested();
 
@@ -181,7 +183,7 @@ public class SnapshotService
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
+                        _logger.Error($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
                     }
                 }
 
@@ -196,8 +198,8 @@ public class SnapshotService
                 );
                 LastOutcome = LastCreatedOutcome;
 
-                Console.WriteLine($"[SnapshotService] Finished snapshot for '{project.Name}': " +
-                                  $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={snapshotEntries.Count}, totalBytes={snapshotTotalBytes}");
+                _logger.Info($"[SnapshotService] Finished snapshot for '{project.Name}': " +
+                             $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={snapshotEntries.Count}, totalBytes={snapshotTotalBytes}");
 
                 return snapshotId;
             }
@@ -237,7 +239,7 @@ public class SnapshotService
                 ? currMeta
                 : [.. currMeta.Where(m => changedRel.Contains(m.Rel))];
 
-            Console.WriteLine($"[SnapshotService] toHash = {toHash.Count}, fullHash={fullHash}, added={added.Count}, modified={modified.Count}, unchanged={unchanged.Count}, deleted={deleted.Count}");
+            _logger.Info($"[SnapshotService] toHash = {toHash.Count}, fullHash={fullHash}, added={added.Count}, modified={modified.Count}, unchanged={unchanged.Count}, deleted={deleted.Count}");
 
             int totalToHash = toHash.Count;
             long totalHashBytes = toHash.Sum(m => m.Entry.Size);
@@ -342,7 +344,7 @@ public class SnapshotService
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
+                    _logger.Error($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
                 }
             }
 
@@ -358,8 +360,8 @@ public class SnapshotService
             );
             LastOutcome = LastCreatedOutcome;
 
-            Console.WriteLine($"[SnapshotService] Finished snapshot for '{project.Name}': " +
-                              $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={entries.Count}, totalBytes={totalBytes}");
+            _logger.Info($"[SnapshotService] Finished snapshot for '{project.Name}': " +
+                         $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={entries.Count}, totalBytes={totalBytes}");
 
             return snapId;
         }, ct);
@@ -370,7 +372,7 @@ public class SnapshotService
         string joined = string.Join('\n', filter.RawPatterns ?? Array.Empty<string>());
         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(joined);
         byte[] hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash);
+        return HashService.FormatHex(hash);
     }
 
     private static List<FileEntry> BuildCurrentEntries(
@@ -735,7 +737,7 @@ public class SnapshotService
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    Console.WriteLine($"[SnapshotService] Failed to hash '{fullPath}': {ex.Message}");
+                    _logger.Warning($"[SnapshotService] Failed to hash '{fullPath}': {ex.Message}");
                 }
             });
 
@@ -776,7 +778,7 @@ public class SnapshotService
 
         if (toDelete.Count > 0)
         {
-            Console.WriteLine($"[SnapshotService] Retention deleting {toDelete.Count} old snapshots for project '{project.Name}'.");
+            _logger.Info($"[SnapshotService] Retention deleting {toDelete.Count} old snapshots for project '{project.Name}'.");
             _repo.DeleteSnapshotsById(project.Name, toDelete);
         }
     }

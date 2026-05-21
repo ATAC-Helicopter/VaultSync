@@ -46,7 +46,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     Dispatcher.UIThread.Post(() => apply(cfg));
                 }
                 catch (Exception ex)
@@ -76,7 +76,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
                     bool allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
                     vm.ResetDestinationStatuses(destinations, allowToggle);
@@ -185,7 +185,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     if (!cfg.Backups.EnableMetadataSync)
                         return;
 
@@ -319,7 +319,7 @@ namespace VaultSync.UI.ViewModels
 
         private BackupProjectPreparation CreateManualBackupPreparation(int projectId)
         {
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = _configStore.GetSnapshot();
             Project? project = _repo.GetProjectById(projectId);
             ProjectDestinationSelection selection = project is null
                 ? new ProjectDestinationSelection(AppViewModel.GetActiveDestinations(cfg), null, null)
@@ -1068,7 +1068,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     List<int> list = cfg.Backups.AutoBackupDisabledProjects ?? [];
                     if (!enabled)
                     {
@@ -1081,7 +1081,7 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     cfg.Backups.AutoBackupDisabledProjects = list;
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                     DiagnosticsLogger.Record(
                         $"[AutoBackup] Preference changed. ProjectId={projectId}; Enabled={enabled}; DisabledCount={list.Count}.");
 
@@ -1117,7 +1117,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     List<int> list = cfg.Backups.AutoBackupDisabledProjects ?? [];
                     foreach (int projectId in ids)
                     {
@@ -1132,7 +1132,7 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     cfg.Backups.AutoBackupDisabledProjects = list;
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                     DiagnosticsLogger.Record(
                         $"[AutoBackup] Group preference changed. ProjectIds={string.Join(',', ids)}; Enabled={enabled}; DisabledCount={list.Count}.");
 
@@ -1173,10 +1173,10 @@ namespace VaultSync.UI.ViewModels
                     if (string.IsNullOrWhiteSpace(externalId))
                         return;
 
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     if (cfg.Backups.AutoBackupDisabledProjects?.Remove(projectId) is true)
                     {
-                        AppConfigStore.Save(cfg);
+                        _configStore.Save(cfg);
                     }
 
                     foreach (BackupDestination dest in AppViewModel.GetAllDestinations(cfg))
@@ -1325,7 +1325,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     if (!cfg.Backups.UseAdvancedDestinations ||
                         cfg.Backups.Destinations is null ||
                         cfg.Backups.Destinations.Count == 0)
@@ -1344,7 +1344,7 @@ namespace VaultSync.UI.ViewModels
                         return;
 
                     destEntry.Active = isActive;
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
 
                     Dispatcher.UIThread.Post(() =>
                     {

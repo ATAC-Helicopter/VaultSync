@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using VaultSync.Core.Tests.TestSupport;
 using VaultSync.UI.ViewModels;
 using Xunit;
 
@@ -8,18 +9,12 @@ namespace VaultSync.Core.Tests;
 
 public sealed class ProjectPresetSelectionTests : IDisposable
 {
-    private readonly string _tempDir;
-
-    public ProjectPresetSelectionTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"vaultsync-preset-selection-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-    }
+    private readonly TempDirectory _tempDir = new();
 
     [Fact]
     public void RequiredPreset_UsesRecommendationBeforeGenericFallback()
     {
-        var projectRoot = Path.Combine(_tempDir, "UnityGame");
+        var projectRoot = Path.Combine(_tempDir.Path, "UnityGame");
         Directory.CreateDirectory(Path.Combine(projectRoot, "Assets"));
         Directory.CreateDirectory(Path.Combine(projectRoot, "ProjectSettings"));
 
@@ -36,7 +31,7 @@ public sealed class ProjectPresetSelectionTests : IDisposable
     [Fact]
     public void RequiredPreset_UsesGenericWhenNoRecommendationApplies()
     {
-        var projectRoot = Path.Combine(_tempDir, "PlainProject");
+        var projectRoot = Path.Combine(_tempDir.Path, "PlainProject");
         Directory.CreateDirectory(projectRoot);
 
         var vm = new ProjectsViewModel();
@@ -51,14 +46,7 @@ public sealed class ProjectPresetSelectionTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, recursive: true);
-        }
-        catch
-        {
-        }
+        _tempDir.Dispose();
     }
 
     private static string ResolveRequiredPreset(ProjectsViewModel vm, ProjectItemViewModel project)

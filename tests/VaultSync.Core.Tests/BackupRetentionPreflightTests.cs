@@ -7,22 +7,21 @@ using Microsoft.Data.Sqlite;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class BackupRetentionPreflightTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TempDirectory _tempDir = new();
     private readonly string _dbPath;
     private readonly string _backupRoot;
 
     public BackupRetentionPreflightTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"vaultsync-retention-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-        _dbPath = Path.Combine(_tempDir, "vaultsync.db");
-        _backupRoot = Path.Combine(_tempDir, "backups");
+        _dbPath = Path.Combine(_tempDir.Path, "vaultsync.db");
+        _backupRoot = Path.Combine(_tempDir.Path, "backups");
         Directory.CreateDirectory(_backupRoot);
     }
 
@@ -186,30 +185,16 @@ public sealed class BackupRetentionPreflightTests : IDisposable
 
     private SqliteRepository CreateRepository()
     {
-        var repo = new SqliteRepository(_dbPath);
-        repo.EnsureSchema();
-        return repo;
+        return TestRepository.Create(_dbPath);
     }
 
     private int CreateProject(SqliteRepository repo, string name)
     {
-        return repo.AddProject(new Project
-        {
-            Name = name,
-            RootPath = Path.Combine(_tempDir, name.Replace(' ', '_')),
-            Preset = "dotnet"
-        });
+        return TestRepository.AddProject(repo, name, Path.Combine(_tempDir.Path, name.Replace(' ', '_')));
     }
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, true);
-        }
-        catch
-        {
-        }
+        _tempDir.Dispose();
     }
 }

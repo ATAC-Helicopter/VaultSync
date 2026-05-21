@@ -15,12 +15,12 @@ public static class DestinationIdentityService
     {
         ArgumentNullException.ThrowIfNull(destination);
 
-        string normalizedPath = NormalizePath(destination.Path);
+        string normalizedPath = NormalizeDestinationPath(destination.Path);
         string normalizedCredential = (destination.CredentialName ?? string.Empty).Trim().ToLowerInvariant();
         string mountMode = destination.PreMounted ? "premounted" : "managed";
         string payload = $"{normalizedPath}|{normalizedCredential}|{mountMode}";
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
-        return $"dest-{Convert.ToHexString(hash).ToLowerInvariant()[..24]}";
+        return $"dest-{HashService.FormatHexLower(hash)[..24]}";
     }
 
     public static string NormalizePreferredDestinationId(string? preferredDestinationId, IEnumerable<BackupDestination>? destinations)
@@ -63,7 +63,7 @@ public static class DestinationIdentityService
             string.Equals(GetId(dest), normalized, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static string NormalizePath(string? path)
+    public static string NormalizeDestinationPath(string? path)
     {
         string raw = (path ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(raw))
