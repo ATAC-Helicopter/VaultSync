@@ -250,7 +250,7 @@ public static class Telemetry
 
                 byte[] bytes = new byte[32];
                 RandomNumberGenerator.Fill(bytes);
-                string salt = Convert.ToHexString(bytes).ToLowerInvariant();
+                string salt = HashService.FormatHexLower(bytes);
                 File.WriteAllText(path, salt);
                 return salt;
             }
@@ -259,7 +259,7 @@ public static class Telemetry
                 // Fall back to a volatile salt if persistence fails.
                 byte[] bytes = new byte[32];
                 RandomNumberGenerator.Fill(bytes);
-                return Convert.ToHexString(bytes).ToLowerInvariant();
+                return HashService.FormatHexLower(bytes);
             }
         }
     }
@@ -354,6 +354,6 @@ public sealed class TelemetryEventBuilder
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_salt));
         byte[] bytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(raw));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        return HashService.FormatHexLower(bytes);
     }
 }

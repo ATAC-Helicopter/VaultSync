@@ -5,9 +5,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Namotion.Reflection" Version="3.5.1" />
-    <PackageReference Include="Spectre.Console" Version="0.55.2" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Spectre.Console.Cli" />
   </ItemGroup>
 
   <PropertyGroup>
