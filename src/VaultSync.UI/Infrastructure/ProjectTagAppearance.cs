@@ -18,10 +18,10 @@ public sealed class ProjectTagChip
         ("#2E414D", "#D8F0FF", "#4B7083"),
     };
 
-    public static ProjectTagChip Create(string value, AppConfig? config = null)
+    public static ProjectTagChip Create(string value, AppConfig? config = null, IAppConfigStore? configStore = null)
     {
         string safe = (value ?? string.Empty).Trim();
-        config ??= ProjectTagAppearance.TryLoadConfig();
+        config ??= ProjectTagAppearance.TryLoadConfig(configStore);
         (string Background, string Foreground, string Border) colors = ProjectTagAppearance.Resolve(safe, config?.Appearance?.TagColors);
         return new ProjectTagChip(safe, colors.Background, colors.Foreground, colors.Border);
     }
@@ -49,11 +49,11 @@ public sealed class ProjectTagChip
 
 public static class ProjectTagAppearance
 {
-    public static AppConfig? TryLoadConfig()
+    public static AppConfig? TryLoadConfig(IAppConfigStore? configStore = null)
     {
         try
         {
-            return AppConfigStore.GetSnapshot();
+            return (configStore ?? StaticAppConfigStore.Instance).GetSnapshot();
         }
         catch
         {
@@ -61,9 +61,13 @@ public static class ProjectTagAppearance
         }
     }
 
-    public static IReadOnlyList<ProjectTagChip> CreateChips(string? csv, int? max = null, AppConfig? config = null)
+    public static IReadOnlyList<ProjectTagChip> CreateChips(
+        string? csv,
+        int? max = null,
+        AppConfig? config = null,
+        IAppConfigStore? configStore = null)
     {
-        config ??= TryLoadConfig();
+        config ??= TryLoadConfig(configStore);
         IEnumerable<string> tags = (csv ?? string.Empty)
             .Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(tag => tag.Trim())
@@ -73,7 +77,7 @@ public static class ProjectTagAppearance
         if (max.HasValue)
             tags = tags.Take(max.Value);
 
-        return tags.Select(tag => ProjectTagChip.Create(tag, config)).ToArray();
+        return tags.Select(tag => ProjectTagChip.Create(tag, config, configStore)).ToArray();
     }
 
     public static (string Background, string Foreground, string Border) Resolve(

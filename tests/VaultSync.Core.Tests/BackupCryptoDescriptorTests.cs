@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
@@ -96,29 +97,5 @@ public sealed class BackupCryptoDescriptorTests
         Assert.Equal("aes-256-gcm", root.GetProperty("algorithm").GetString());
         Assert.Equal("pbkdf2-sha256-v1", root.GetProperty("kdfProfile").GetString());
         Assert.Equal("preset-2026-01", root.GetProperty("kdfParamRef").GetString());
-    }
-
-    private sealed class TempDirectory : IDisposable
-    {
-        public TempDirectory()
-        {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"vaultsync-test-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(Path);
-        }
-
-        public string Path { get; }
-
-        public void Dispose()
-        {
-            try
-            {
-                if (Directory.Exists(Path))
-                    Directory.Delete(Path, recursive: true);
-            }
-            catch
-            {
-                // Ignore cleanup failures in tests.
-            }
-        }
     }
 }

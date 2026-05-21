@@ -14,7 +14,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = _configStore.GetSnapshot();
                 string? projectsRoot = cfg.ProjectsRoot?.Trim();
                 if (string.IsNullOrWhiteSpace(projectsRoot))
                 {

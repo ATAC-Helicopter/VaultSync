@@ -50,7 +50,7 @@ namespace VaultSync.UI.ViewModels
 
             var deleteContext = await Task.Run(() =>
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = _configStore.GetSnapshot();
                 List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
                 BackupDestination? matchedDestination = FindDestinationForBackup(backup, destinations, backupRoot);
                 bool hasCredentialProfile = HasCredentialProfile(cfg, matchedDestination);
@@ -349,7 +349,7 @@ namespace VaultSync.UI.ViewModels
 
         private async Task<bool> ConfirmDeleteBackupAsync(string projectName, DateTime timestamp)
         {
-            AppConfig cfg = await Task.Run(AppConfigStore.Load);
+            AppConfig cfg = await Task.Run(_configStore.Load);
             if (!cfg.Behavior.ConfirmDeleteBackup)
                 return true;
 
@@ -465,7 +465,7 @@ namespace VaultSync.UI.ViewModels
                 if (confirmed && dontShowAgain.IsChecked == true)
                 {
                     cfg.Behavior.ConfirmDeleteBackup = false;
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                     if (_settingsViewModel is not null)
                     {
                         _settingsViewModel.ConfirmDeleteBackups = false;
@@ -1187,7 +1187,7 @@ namespace VaultSync.UI.ViewModels
             if (backup is null)
                 return DeleteBackupPreparation.Failure;
 
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = _configStore.GetSnapshot();
             List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
             string? backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
@@ -1265,7 +1265,7 @@ namespace VaultSync.UI.ViewModels
                 return RestoreBackupPreparation.Failure;
             }
 
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = _configStore.GetSnapshot();
             List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
             string? backupRoot = ResolveDestinationRootForBackup(backup, destinations, cfg.Backups.BackupRoot);
             if (string.IsNullOrWhiteSpace(backupRoot))
@@ -1347,7 +1347,7 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
                 return [];
 
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = _configStore.GetSnapshot();
             IReadOnlyList<string> keyRefs = BackupEncryptionPolicyResolver.ResolveRestoreKeyRefs(project, cfg.Backups.Encryption);
             if (keyRefs.Count == 0)
                 return [];
@@ -1393,7 +1393,7 @@ namespace VaultSync.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(project.RootPath) && Directory.Exists(project.RootPath))
                 return project.RootPath;
 
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = _configStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(cfg.ProjectsRoot))
             {
                 string projectsRoot = Path.Combine(cfg.ProjectsRoot, project.Name);
@@ -1417,7 +1417,7 @@ namespace VaultSync.UI.ViewModels
 
         private AutoBackupPreparation PrepareAutoBackupRun()
         {
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = _configStore.GetSnapshot();
             if (!cfg.Backups.EnableAutoBackups)
                 return AutoBackupPreparation.Failure("disabled");
 

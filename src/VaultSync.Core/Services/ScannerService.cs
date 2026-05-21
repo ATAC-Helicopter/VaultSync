@@ -10,8 +10,13 @@ namespace VaultSync.Core.Services;
 public class ScannerService
 {
     private readonly FilterService _filter;
+    private readonly IVaultLogger _logger;
 
-    public ScannerService(FilterService filter) => _filter = filter;
+    public ScannerService(FilterService filter, IVaultLogger? logger = null)
+    {
+        _filter = filter;
+        _logger = logger ?? RuntimeVaultLogger.Instance;
+    }
 
     /// <summary>
     /// Synchronous scan. Use this only from background threads (e.g. CLI, services).
@@ -61,12 +66,12 @@ public class ScannerService
                 catch (IOException ex)
                 {
                     // Skip unreadable files but log for diagnostics.
-                    Console.WriteLine($"[ScannerService] IO error while scanning '{path}': {ex.Message}");
+                    _logger.Warning($"[ScannerService] IO error while scanning '{path}': {ex.Message}");
                 }
                 catch (UnauthorizedAccessException ex)
                 {
                     // Skip restricted files but log for diagnostics.
-                    Console.WriteLine($"[ScannerService] Access denied while scanning '{path}': {ex.Message}");
+                    _logger.Warning($"[ScannerService] Access denied while scanning '{path}': {ex.Message}");
                 }
             }
 
@@ -97,7 +102,7 @@ public class ScannerService
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
             {
-                Console.WriteLine($"[ScannerService] Skipping directory '{current}': {ex.Message}");
+                _logger.Warning($"[ScannerService] Skipping directory '{current}': {ex.Message}");
                 continue;
             }
 
@@ -114,7 +119,7 @@ public class ScannerService
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
             {
-                Console.WriteLine($"[ScannerService] Skipping subdirectory scan for '{current}': {ex.Message}");
+                _logger.Warning($"[ScannerService] Skipping subdirectory scan for '{current}': {ex.Message}");
                 continue;
             }
 

@@ -1,18 +1,19 @@
 using System;
 using System.IO;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class ProjectRootResolverTests : IDisposable
 {
-    private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-root-resolver-{Guid.NewGuid():N}");
+    private readonly TempDirectory _tempRoot = new();
 
     [Fact]
     public void TryResolveExistingProjectRoot_UsesLeafFromWindowsPathWhenProjectNameDiffers()
     {
-        string projectsRoot = Directory.CreateDirectory(Path.Combine(_tempRoot, "Projects")).FullName;
+        string projectsRoot = Directory.CreateDirectory(Path.Combine(_tempRoot.Path, "Projects")).FullName;
         string projectRoot = Directory.CreateDirectory(Path.Combine(projectsRoot, "real-folder")).FullName;
 
         bool resolved = ProjectRootResolver.TryResolveExistingProjectRoot(
@@ -28,7 +29,7 @@ public sealed class ProjectRootResolverTests : IDisposable
     [Fact]
     public void TryResolveExistingProjectRoot_MatchesProjectFolderIgnoringCase()
     {
-        string projectsRoot = Directory.CreateDirectory(Path.Combine(_tempRoot, "Projects")).FullName;
+        string projectsRoot = Directory.CreateDirectory(Path.Combine(_tempRoot.Path, "Projects")).FullName;
         string projectRoot = Directory.CreateDirectory(Path.Combine(projectsRoot, "Blueprints")).FullName;
 
         bool resolved = ProjectRootResolver.TryResolveExistingProjectRoot(
@@ -43,7 +44,6 @@ public sealed class ProjectRootResolverTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
+        _tempRoot.Dispose();
     }
 }

@@ -15,7 +15,7 @@ public sealed class NetworkMountService
     public DestinationResolution PrepareDestination(BackupDestination dest, NetworkCredentialProfile? profile)
     {
         string alias = DisplayName(dest);
-        Console.WriteLine($"[NetworkMount] PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
+        Log($"PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
 
         string normalizedPath = NormalizePath(dest.Path, out string? normalizeError);
         if (!string.IsNullOrWhiteSpace(normalizeError))
@@ -25,7 +25,7 @@ public sealed class NetworkMountService
 
         if (dest.PreMounted)
         {
-            Console.WriteLine($"[NetworkMount] Using pre-mounted path for '{alias}'.");
+            Log($"Using pre-mounted path for '{alias}'.");
             return Directory.Exists(normalizedPath)
                 ? CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using pre-mounted path '{normalizedPath}'")
                 : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
@@ -37,19 +37,19 @@ public sealed class NetworkMountService
             try
             {
                 Directory.CreateDirectory(normalizedPath);
-                Console.WriteLine($"[NetworkMount] Using local path '{normalizedPath}'.");
+                Log($"Using local path '{normalizedPath}'.");
                 return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using local path '{normalizedPath}'");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[NetworkMount] Local path '{normalizedPath}' failed: {ex.Message}");
+                Log($"Local path '{normalizedPath}' failed: {ex.Message}");
                 return DestinationResolution.CreateFailure(dest, $"Cannot use destination '{alias}': {ex.Message}");
             }
         }
 
         if (!dest.AutoMount)
         {
-            Console.WriteLine($"[NetworkMount] Auto-mount disabled for '{alias}'.");
+            Log($"Auto-mount disabled for '{alias}'.");
             if (OperatingSystem.IsMacOS() &&
                 normalizedPath.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
             {
@@ -62,7 +62,7 @@ public sealed class NetworkMountService
                 : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is unreachable and auto-mount is disabled.");
         }
 
-        Console.WriteLine($"[NetworkMount] Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
+        Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
         string? password = profile is null
             ? null
             : _vault.GetSecret(profile.KeyRef, profile.Username, profile.UseKeychain, profile.Password);
@@ -92,7 +92,7 @@ public sealed class NetworkMountService
         if (!resolution.MountedByUs || !resolution.Destination.AutoUnmount)
             return;
 
-        Console.WriteLine($"[NetworkMount] Auto-unmounting '{DisplayName(resolution.Destination)}' ({resolution.EffectivePath}).");
+        Log($"Auto-unmounting '{DisplayName(resolution.Destination)}' ({resolution.EffectivePath}).");
         if (OperatingSystem.IsWindows())
         {
             DisconnectWindows(resolution);
@@ -129,7 +129,7 @@ public sealed class NetworkMountService
         try
         {
             NetUseResult firstAttempt = TryNetUseConnect(normalizedPath, username, password);
-            Console.WriteLine($"[NetworkMount] net use connect attempt exit={firstAttempt.ExitCode}.");
+            Log($"net use connect attempt exit={firstAttempt.ExitCode}.");
             if (firstAttempt.ExitCode == 0)
                 return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: true, $"Mounted {DisplayName(dest)}");
 
@@ -145,7 +145,7 @@ public sealed class NetworkMountService
                 }
 
                 NetUseResult secondAttempt = TryNetUseConnect(normalizedPath, username, password);
-                Console.WriteLine($"[NetworkMount] net use retry exit={secondAttempt.ExitCode}.");
+                Log($"net use retry exit={secondAttempt.ExitCode}.");
                 if (secondAttempt.ExitCode == 0)
                     return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: true, $"Mounted {DisplayName(dest)}");
 
@@ -307,14 +307,14 @@ public sealed class NetworkMountService
         if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out string? existingMount))
         {
             mountPoint = existingMount;
-            Console.WriteLine($"[NetworkMount] Share already mounted for '{DisplayName(dest)}' at '{mountPoint}'.");
+            Log($"Share already mounted for '{DisplayName(dest)}' at '{mountPoint}'.");
             if (!IsSmbfsMountPoint(mountPoint, out string? mountLine))
             {
                 return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
             }
             if (!string.IsNullOrWhiteSpace(mountLine))
             {
-                Console.WriteLine($"[NetworkMount] SMB mount detected: {mountLine}");
+                Log($"SMB mount detected: {mountLine}");
             }
             string effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
             return CreateSuccessWithKeepAlive(dest, effectivePath, mounted: false, $"Mounted {DisplayName(dest)}");
@@ -360,18 +360,18 @@ public sealed class NetworkMountService
             {
                 string stderr = proc.StandardError.ReadToEnd();
                 string sanitized = SanitizeMountError(stderr, password, share, shareDisplay);
-                Console.WriteLine($"[NetworkMount] mount_smbfs failed for '{DisplayName(dest)}': {sanitized.Trim()}");
+                Log($"mount_smbfs failed for '{DisplayName(dest)}': {sanitized.Trim()}");
                 if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out string? existingMountAfterFail))
                 {
                     mountPoint = existingMountAfterFail;
-                    Console.WriteLine($"[NetworkMount] Share already mounted for '{DisplayName(dest)}' at '{mountPoint}'.");
+                    Log($"Share already mounted for '{DisplayName(dest)}' at '{mountPoint}'.");
                     if (!IsSmbfsMountPoint(mountPoint, out string? mountLine))
                     {
                         return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
                     }
                     if (!string.IsNullOrWhiteSpace(mountLine))
                     {
-                        Console.WriteLine($"[NetworkMount] SMB mount detected: {mountLine}");
+                        Log($"SMB mount detected: {mountLine}");
                     }
                     string effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
                     return CreateSuccessWithKeepAlive(dest, effectivePath, mounted: false, $"Mounted {DisplayName(dest)}");
@@ -380,14 +380,14 @@ public sealed class NetworkMountService
                 return DestinationResolution.CreateFailure(dest, $"Mount failed for {DisplayName(dest)}: {sanitized}".Trim());
             }
 
-            Console.WriteLine($"[NetworkMount] Mounted '{DisplayName(dest)}' at '{mountPoint}'.");
+            Log($"Mounted '{DisplayName(dest)}' at '{mountPoint}'.");
             if (!IsSmbfsMountPoint(mountPoint, out string? mountInfo))
             {
                 return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
             }
             if (!string.IsNullOrWhiteSpace(mountInfo))
             {
-                Console.WriteLine($"[NetworkMount] SMB mount detected: {mountInfo}");
+                Log($"SMB mount detected: {mountInfo}");
             }
             string finalPath = AppendShareSubPath(mountPoint, shareSubPath);
             return CreateSuccessWithKeepAlive(dest, finalPath, mounted: true, $"Mounted {DisplayName(dest)}");
@@ -446,7 +446,7 @@ public sealed class NetworkMountService
         {
             if (!string.IsNullOrWhiteSpace(mountLine))
             {
-                Console.WriteLine($"[NetworkMount] NFS mount detected: {mountLine}");
+                Log($"NFS mount detected: {mountLine}");
             }
             string effectivePath = mountPoint;
             if (TryGetNfsMountSource(mountLine, out string? mountedSource))
@@ -493,18 +493,18 @@ public sealed class NetworkMountService
                 if (proc.ExitCode != 0)
                 {
                     string stderr = proc.StandardError.ReadToEnd();
-                    Console.WriteLine($"[NetworkMount] mount_nfs failed for '{DisplayName(dest)}': {stderr.Trim()}");
+                    Log($"mount_nfs failed for '{DisplayName(dest)}': {stderr.Trim()}");
                     continue;
                 }
 
-                Console.WriteLine($"[NetworkMount] Mounted '{DisplayName(dest)}' at '{mountPoint}'.");
+                Log($"Mounted '{DisplayName(dest)}' at '{mountPoint}'.");
                 if (!IsNfsMountPoint(mountPoint, out string? mountInfo))
                 {
                     return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an NFS mount.");
                 }
                 if (!string.IsNullOrWhiteSpace(mountInfo))
                 {
-                    Console.WriteLine($"[NetworkMount] NFS mount detected: {mountInfo}");
+                    Log($"NFS mount detected: {mountInfo}");
                 }
 
                 string effectivePath = mountPoint;
@@ -993,6 +993,11 @@ public sealed class NetworkMountService
         return "Destination";
     }
 
+    private static void Log(string message)
+    {
+        RuntimeVaultLogger.Instance.Info($"[NetworkMount] {message}");
+    }
+
     private static string Slugify(string input)
     {
         var sb = new StringBuilder();
@@ -1104,7 +1109,7 @@ public sealed class NetworkMountService
             Timers.GetOrAdd(path, key =>
             {
                 var timer = new Timer(_ => KeepAliveTick(key), null, TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(2));
-                Console.WriteLine($"[NetworkMount] SMB keep-alive enabled for '{key}'.");
+                Log($"SMB keep-alive enabled for '{key}'.");
                 return timer;
             });
         }
@@ -1131,7 +1136,7 @@ public sealed class NetworkMountService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[NetworkMount] SMB keep-alive failed for '{path}': {ex.Message}");
+                Log($"SMB keep-alive failed for '{path}': {ex.Message}");
             }
         }
     }

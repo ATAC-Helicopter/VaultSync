@@ -51,9 +51,9 @@ namespace VaultSync.UI.ViewModels
                     Phases = [.. phases]
                 };
 
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 cfg.Advanced.StartupDiagnostics = summary;
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
 
                 _config.Advanced.StartupDiagnostics = new StartupDiagnosticsSummary
                 {

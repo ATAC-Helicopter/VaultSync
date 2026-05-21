@@ -11,6 +11,8 @@ namespace VaultSync.CLI.Config
     /// </summary>
     static class ConfigHelper
     {
+        private static readonly IAppConfigStore ConfigStore = StaticAppConfigStore.Instance;
+
         private sealed class LegacyCliConfig
         {
             public string Database { get; set; } = string.Empty;
@@ -31,15 +33,15 @@ namespace VaultSync.CLI.Config
             Directory.CreateDirectory(Path.Combine(dir, "logs"));
 
             if (string.IsNullOrWhiteSpace(cfg.DbPath))
-                cfg.DbPath = AppConfigStore.GetDefaultDbPath();
+                cfg.DbPath = GetDefaultDbPath();
 
-            AppConfigStore.Save(cfg);
+            ConfigStore.Save(cfg);
         }
 
         public static AppConfig Load()
         {
             // Load the shared config first.
-            AppConfig cfg = AppConfigStore.Load();
+            AppConfig cfg = ConfigStore.Load();
 
             // If a legacy CLI config exists with a Database value, migrate it into DbPath.
             LegacyCliConfig? legacy = TryLoadLegacy();
@@ -49,7 +51,7 @@ namespace VaultSync.CLI.Config
                 if (string.IsNullOrWhiteSpace(cfg.DbPath))
                 {
                     cfg.DbPath = expanded;
-                    AppConfigStore.Save(cfg);
+                    ConfigStore.Save(cfg);
                 }
             }
 
@@ -63,7 +65,7 @@ namespace VaultSync.CLI.Config
                 return ExpandHome(overridePath);
 
             // 2. Shared AppConfig.DbPath (ensures a single DB location for CLI + UI).
-            AppConfig cfg = AppConfigStore.Load();
+            AppConfig cfg = ConfigStore.Load();
             if (!string.IsNullOrWhiteSpace(cfg.DbPath))
                 return ExpandHome(cfg.DbPath);
 
@@ -73,8 +75,10 @@ namespace VaultSync.CLI.Config
                 return ExpandHome(legacy.Database);
 
             // 4. Safe default from shared store.
-            return AppConfigStore.GetDefaultDbPath();
+            return GetDefaultDbPath();
         }
+
+        public static string GetDefaultDbPath() => ConfigStore.GetDefaultDbPath();
 
         private static string ExpandHome(string path)
         {

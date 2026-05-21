@@ -49,7 +49,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 MaintenanceConfig maintenance = cfg.Advanced.Maintenance ?? new MaintenanceConfig();
                 if (!maintenance.Enabled)
                     return;
@@ -65,7 +65,7 @@ namespace VaultSync.UI.ViewModels
                 MaintenanceRunOutcome outcome = await ExecuteMaintenanceRunAsync(cfg).ConfigureAwait(false);
                 cfg.Advanced.Maintenance.LastRunUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
                 cfg.Advanced.Maintenance.LastStatus = outcome.Status;
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
@@ -90,7 +90,7 @@ namespace VaultSync.UI.ViewModels
             {
                 BackupIndexConsistencyReport report = await Task.Run(() => _backupIndexConsistencyService.Scan()).ConfigureAwait(false);
                 BackupIndexConsistencySummary summarySnapshot = BackupIndexConsistencyService.BuildSummary(report);
-                await Task.Run(() => AppViewModel.PersistBackupIndexConsistencySummary(summarySnapshot)).ConfigureAwait(false);
+                await Task.Run(() => PersistBackupIndexConsistencySummary(summarySnapshot)).ConfigureAwait(false);
                 string summary = BuildBackupIndexConsistencyStatus(report);
 
                 await Dispatcher.UIThread.InvokeAsync(() =>

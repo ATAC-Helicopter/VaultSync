@@ -48,11 +48,11 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
-        private static void PersistBackupIndexConsistencySummary(BackupIndexConsistencySummary summary)
+        private void PersistBackupIndexConsistencySummary(BackupIndexConsistencySummary summary)
         {
             try
             {
-                AppConfig config = AppConfigStore.Load();
+                AppConfig config = _configStore.Load();
                 config.Advanced.BackupIndexLastScan = new BackupIndexScanSummary
                 {
                     CheckedUtc = summary.CheckedUtc,
@@ -63,7 +63,7 @@ namespace VaultSync.UI.ViewModels
                     WarningCount = summary.WarningCount,
                     TopFindingCodes = [.. summary.TopFindingCodes]
                 };
-                AppConfigStore.Save(config);
+                _configStore.Save(config);
             }
             catch (Exception ex)
             {

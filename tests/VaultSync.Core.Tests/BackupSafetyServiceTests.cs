@@ -3,24 +3,19 @@ using System.IO;
 using System.Linq;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class BackupSafetyServiceTests : IDisposable
 {
-    private readonly string _tempDir;
-
-    public BackupSafetyServiceTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"vaultsync-safety-tests-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-    }
+    private readonly TempDirectory _tempDir = new();
 
     [Fact]
     public void EnsureSafeBackupRoot_BlocksBackupRootInsideProjectRoot()
     {
-        var projectRoot = Path.Combine(_tempDir, "project");
+        var projectRoot = Path.Combine(_tempDir.Path, "project");
         var backupRoot = Path.Combine(projectRoot, ".vaultsync-temp-backups");
         Directory.CreateDirectory(projectRoot);
 
@@ -33,7 +28,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [Fact]
     public void EnsureSafeBackupRoot_BlocksProjectRootInsideBackupRoot()
     {
-        var backupRoot = Path.Combine(_tempDir, "backups");
+        var backupRoot = Path.Combine(_tempDir.Path, "backups");
         var projectRoot = Path.Combine(backupRoot, "project");
         Directory.CreateDirectory(projectRoot);
 
@@ -46,7 +41,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [Fact]
     public void EnsureSafeBackupRoot_BlocksSameDirectory()
     {
-        var projectRoot = Path.Combine(_tempDir, "project");
+        var projectRoot = Path.Combine(_tempDir.Path, "project");
         Directory.CreateDirectory(projectRoot);
 
         Assert.Throws<InvalidOperationException>(() =>
@@ -56,8 +51,8 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [Fact]
     public void EnsureSafeBackupRoot_AllowsSiblingBackupRoot()
     {
-        var projectRoot = Path.Combine(_tempDir, "project");
-        var backupRoot = Path.Combine(_tempDir, "backups");
+        var projectRoot = Path.Combine(_tempDir.Path, "project");
+        var backupRoot = Path.Combine(_tempDir.Path, "backups");
         Directory.CreateDirectory(projectRoot);
         Directory.CreateDirectory(backupRoot);
 
@@ -67,9 +62,13 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [Fact]
     public void GetOfflineStagingRoot_IsOutsideProjectRoot()
     {
-        var projectRoot = Path.Combine(_tempDir, "project");
+        var projectRoot = Path.Combine(_tempDir.Path, "project");
         Directory.CreateDirectory(projectRoot);
-        var project = new Project { Id = 42, Name = "Project", RootPath = projectRoot, Preset = string.Empty };
+        var project = new ProjectBuilder()
+            .WithId(42)
+            .WithName("Project")
+            .WithRootPath(projectRoot)
+            .Build();
 
         var stagingRoot = BackupSafetyService.GetOfflineStagingRoot(project);
 
@@ -80,7 +79,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [Fact]
     public void TryCombinePathUnderRoot_AllowsNestedRelativePath()
     {
-        var backupRoot = Path.Combine(_tempDir, "backups");
+        var backupRoot = Path.Combine(_tempDir.Path, "backups");
         Directory.CreateDirectory(backupRoot);
 
         bool combined = BackupSafetyService.TryCombinePathUnderRoot(
@@ -98,7 +97,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [InlineData("Project/../../outside")]
     public void TryCombinePathUnderRoot_BlocksTraversal(string relativePath)
     {
-        var backupRoot = Path.Combine(_tempDir, "backups");
+        var backupRoot = Path.Combine(_tempDir.Path, "backups");
         Directory.CreateDirectory(backupRoot);
 
         bool combined = BackupSafetyService.TryCombinePathUnderRoot(backupRoot, relativePath, out _);
@@ -109,9 +108,9 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [Fact]
     public void TryCombinePathUnderRoot_BlocksAbsolutePath()
     {
-        var backupRoot = Path.Combine(_tempDir, "backups");
+        var backupRoot = Path.Combine(_tempDir.Path, "backups");
         Directory.CreateDirectory(backupRoot);
-        string absolutePath = Path.Combine(_tempDir, "outside");
+        string absolutePath = Path.Combine(_tempDir.Path, "outside");
 
         bool combined = BackupSafetyService.TryCombinePathUnderRoot(backupRoot, absolutePath, out _);
 
@@ -121,7 +120,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [Fact]
     public void FilterService_AlwaysExcludesVaultSyncBackupArtifacts()
     {
-        var projectRoot = Path.Combine(_tempDir, "project");
+        var projectRoot = Path.Combine(_tempDir.Path, "project");
         var tempBackupDir = Path.Combine(projectRoot, ".vaultsync-temp-backups", "Project", "2026-05-11_10-00-00");
         var backupsDir = Path.Combine(projectRoot, "Backups", "Project", "2026-05-11_09-00-00");
         Directory.CreateDirectory(tempBackupDir);
@@ -142,7 +141,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [Fact]
     public void FilterService_DoubleStarDirectoryPatternExcludesNestedBuildOutput()
     {
-        var projectRoot = Path.Combine(_tempDir, "project");
+        var projectRoot = Path.Combine(_tempDir.Path, "project");
         var nestedBin = Path.Combine(projectRoot, "src", "App", "bin", "Debug");
         Directory.CreateDirectory(nestedBin);
         File.WriteAllText(Path.Combine(projectRoot, "Program.cs"), "keep");
@@ -162,7 +161,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [InlineData("**/RenderCache/**", "episodes/scene/RenderCache/frame.tmp")]
     public void FilterService_NestedGeneratedOutputPatternsExcludeExpectedFiles(string pattern, string generatedPath)
     {
-        var projectRoot = Path.Combine(_tempDir, Guid.NewGuid().ToString("N"));
+        var projectRoot = Path.Combine(_tempDir.Path, Guid.NewGuid().ToString("N"));
         string generatedFile = Path.Combine(projectRoot, generatedPath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(generatedFile)!);
         File.WriteAllText(Path.Combine(projectRoot, "source.txt"), "keep");
@@ -185,7 +184,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [InlineData("unreal", "Intermediate/Build/cache.bin")]
     public void BuiltInSourcePresets_ExcludeGeneratedOutputsButKeepRepoMetadata(string preset, string generatedPath)
     {
-        var projectRoot = Path.Combine(_tempDir, Guid.NewGuid().ToString("N"));
+        var projectRoot = Path.Combine(_tempDir.Path, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(projectRoot);
 
         WriteProjectFile(projectRoot, "src/source.txt", "keep");
@@ -233,13 +232,6 @@ public sealed class BackupSafetyServiceTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, recursive: true);
-        }
-        catch
-        {
-        }
+        _tempDir.Dispose();
     }
 }

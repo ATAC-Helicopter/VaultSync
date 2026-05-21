@@ -163,9 +163,9 @@ namespace VaultSync.UI.ViewModels
                 {
                     try
                     {
-                        AppConfig cfg = AppConfigStore.Load();
+                        AppConfig cfg = _configStore.Load();
                         cfg.LastView = viewToSave;
-                        AppConfigStore.Save(cfg);
+                        _configStore.Save(cfg);
                         Dispatcher.UIThread.Post(() => _config.LastView = viewToSave);
                     }
                     catch (Exception ex)
@@ -270,7 +270,7 @@ namespace VaultSync.UI.ViewModels
         {
             _ = Task.Run(() =>
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = _configStore.GetSnapshot();
                 string last = string.IsNullOrWhiteSpace(cfg.LastView)
                     ? "Dashboard"
                     : cfg.LastView;

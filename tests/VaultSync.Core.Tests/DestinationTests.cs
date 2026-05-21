@@ -1,8 +1,8 @@
 using System;
-using System.IO;
 using System.Reflection;
 using VaultSync.Core.Config;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
@@ -46,30 +46,6 @@ public sealed class NetworkMountServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("unreachable", result.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private sealed class TempDirectory : IDisposable
-    {
-        public TempDirectory()
-        {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"vaultsync-test-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(Path);
-        }
-
-        public string Path { get; }
-
-        public void Dispose()
-        {
-            try
-            {
-                if (Directory.Exists(Path))
-                    Directory.Delete(Path, recursive: true);
-            }
-            catch
-            {
-                // Ignore cleanup failures in tests.
-            }
-        }
     }
 }
 
