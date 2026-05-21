@@ -55,6 +55,7 @@ namespace VaultSync.UI.ViewModels
         private static readonly IBrush FreshnessStaleBrush = new ImmutableSolidColorBrush(Color.Parse("#F56A5A"));
         private static readonly IBrush FreshnessUnknownBrush = new ImmutableSolidColorBrush(Color.Parse("#7F8FA8"));
         private static readonly ConcurrentDictionary<string, ImmutableSolidColorBrush> AccentBrushCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly IAppConfigStore _configStore;
         // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
         protected static bool SetProperty<T>(ref T storage, T value)
@@ -944,7 +945,13 @@ namespace VaultSync.UI.ViewModels
             !string.Equals(SelectedSnapshotA.Id, SelectedSnapshotB.Id, StringComparison.Ordinal);
 
         public BackupsViewModel()
+            : this(StaticAppConfigStore.Instance)
         {
+        }
+
+        internal BackupsViewModel(IAppConfigStore configStore)
+        {
+            _configStore = configStore;
             _activeBackupFlushTimer.Tick += (_, _) => FlushPendingActiveBackupUpdates();
 
             // All-project backup
@@ -993,7 +1000,7 @@ namespace VaultSync.UI.ViewModels
             RefreshEncryptionPolicyOptions();
             RefreshRestoreModeOptions();
             RefreshVerificationPolicyOptions();
-            RefreshDestinationOptionsInternal(AppConfigStore.GetSnapshot());
+            RefreshDestinationOptionsInternal(_configStore.GetSnapshot());
             RefreshProjectSortOptions();
         }
 
@@ -1436,17 +1443,18 @@ namespace VaultSync.UI.ViewModels
             BackupDiskDriveLabel = driveLabel;
             BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, L("Backups.Health.NotAvailable", "not available"));
 
-            OnPropertyChanged(nameof(SnapshotsSummaryLine));
-            OnPropertyChanged(nameof(TotalSnapshotsSecondaryLine));
-            OnPropertyChanged(nameof(SnapshotActivitySummary));
-            OnPropertyChanged(nameof(LastBackupDisplay));
-            OnPropertyChanged(nameof(LastBackupSecondaryLine));
-            OnPropertyChanged(nameof(TotalStoredLocalLine));
-            OnPropertyChanged(nameof(TotalStoredImportedLine));
-            OnPropertyChanged(nameof(HistoryFilterProjectLabel));
-            OnPropertyChanged(nameof(BackupHealthSummaryLine));
-            OnPropertyChanged(nameof(BackupDiskDriveLabel));
-            OnPropertyChanged(nameof(BackupDiskHealthText));
+            OnPropertiesChanged(
+                nameof(SnapshotsSummaryLine),
+                nameof(TotalSnapshotsSecondaryLine),
+                nameof(SnapshotActivitySummary),
+                nameof(LastBackupDisplay),
+                nameof(LastBackupSecondaryLine),
+                nameof(TotalStoredLocalLine),
+                nameof(TotalStoredImportedLine),
+                nameof(HistoryFilterProjectLabel),
+                nameof(BackupHealthSummaryLine),
+                nameof(BackupDiskDriveLabel),
+                nameof(BackupDiskHealthText));
             TopStorageConsumers.Clear();
             OnPropertyChanged(nameof(HasTopStorageConsumers));
             RefreshProjectSortOptions();
@@ -2262,7 +2270,7 @@ namespace VaultSync.UI.ViewModels
             {
                 try
                 {
-                    AppConfig config = AppConfigStore.GetSnapshot();
+                    AppConfig config = _configStore.GetSnapshot();
                     (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string _, DashboardViewModel.BackupDiskUsageStatus status) =
                         DashboardViewModel.ComputeBackupDiskUsageDetailed(config);
                     string driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
@@ -2736,31 +2744,32 @@ namespace VaultSync.UI.ViewModels
             RebuildSnapshotActivity(now);
 
             // Notify UI that summary properties changed
-            OnPropertyChanged(nameof(TotalSnapshots));
-            OnPropertyChanged(nameof(SnapshotsThisWeek));
-            OnPropertyChanged(nameof(SnapshotsToday));
-            OnPropertyChanged(nameof(SnapshotsYesterday));
-            OnPropertyChanged(nameof(AutoSnapshotsThisWeek));
-            OnPropertyChanged(nameof(ManualSnapshotsThisWeek));
-            OnPropertyChanged(nameof(ImportedSnapshotsThisWeek));
-            OnPropertyChanged(nameof(SnapshotsSummaryLine));
-            OnPropertyChanged(nameof(TotalSnapshotsSecondaryLine));
-            OnPropertyChanged(nameof(SnapshotActivitySummary));
-            OnPropertyChanged(nameof(LastBackupDisplay));
-            OnPropertyChanged(nameof(LastBackupRelative));
-            OnPropertyChanged(nameof(LastBackupSecondaryLine));
-            OnPropertyChanged(nameof(LastBackupSizeValueFormatted));
-            OnPropertyChanged(nameof(LastBackupProjectName));
-            OnPropertyChanged(nameof(LastBackupTypeDisplay));
-            OnPropertyChanged(nameof(LastBackupDestinationDisplay));
-            OnPropertyChanged(nameof(LastBackupSecurityDisplay));
-            OnPropertyChanged(nameof(LastBackupFreshnessPercent));
-            OnPropertyChanged(nameof(LastBackupFreshnessLabel));
-            OnPropertyChanged(nameof(LastBackupFreshnessTooltip));
-            OnPropertyChanged(nameof(LastBackupFreshnessBrush));
-            OnPropertyChanged(nameof(TotalBackupSizeFormatted));
-            OnPropertyChanged(nameof(LocalSnapshotsCount));
-            OnPropertyChanged(nameof(TotalStoredLocalLine));
+            OnPropertiesChanged(
+                nameof(TotalSnapshots),
+                nameof(SnapshotsThisWeek),
+                nameof(SnapshotsToday),
+                nameof(SnapshotsYesterday),
+                nameof(AutoSnapshotsThisWeek),
+                nameof(ManualSnapshotsThisWeek),
+                nameof(ImportedSnapshotsThisWeek),
+                nameof(SnapshotsSummaryLine),
+                nameof(TotalSnapshotsSecondaryLine),
+                nameof(SnapshotActivitySummary),
+                nameof(LastBackupDisplay),
+                nameof(LastBackupRelative),
+                nameof(LastBackupSecondaryLine),
+                nameof(LastBackupSizeValueFormatted),
+                nameof(LastBackupProjectName),
+                nameof(LastBackupTypeDisplay),
+                nameof(LastBackupDestinationDisplay),
+                nameof(LastBackupSecurityDisplay),
+                nameof(LastBackupFreshnessPercent),
+                nameof(LastBackupFreshnessLabel),
+                nameof(LastBackupFreshnessTooltip),
+                nameof(LastBackupFreshnessBrush),
+                nameof(TotalBackupSizeFormatted),
+                nameof(LocalSnapshotsCount),
+                nameof(TotalStoredLocalLine));
             OnPropertyChanged(nameof(TotalStoredLocalValueFormatted));
             OnPropertyChanged(nameof(TotalStoredImportedLine));
             OnPropertyChanged(nameof(TotalStoredImportedValueFormatted));
@@ -3161,7 +3170,7 @@ namespace VaultSync.UI.ViewModels
             if (projects is null) throw new ArgumentNullException(nameof(projects));
             if (backups  is null) throw new ArgumentNullException(nameof(backups));
 
-            AppConfig config = AppConfigStore.GetSnapshot();
+            AppConfig config = _configStore.GetSnapshot();
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
             RefreshEncryptionPolicyOptions();
@@ -3507,7 +3516,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private static Dictionary<int, Snapshot> LoadSnapshotLookup(AppConfig config, IReadOnlyList<Backup> backups)
+        private Dictionary<int, Snapshot> LoadSnapshotLookup(AppConfig config, IReadOnlyList<Backup> backups)
         {
             var snapshotIds = backups
                 .Select(backup => backup.SnapshotId)
@@ -3522,7 +3531,7 @@ namespace VaultSync.UI.ViewModels
             {
                 string dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
                     ? config.DbPath
-                    : AppConfigStore.GetDefaultDbPath();
+                    : _configStore.GetDefaultDbPath();
                 var repo = new SqliteRepository(dbPath);
                 return repo.GetSnapshotsByIds(snapshotIds)
                     .ToDictionary(snapshot => snapshot.Id);
@@ -3612,7 +3621,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = _configStore.GetSnapshot();
                 HashSet<int> disabled = cfg.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? [];
                 UpdateAutoBackupFlags(disabled);
                 _lastAutoBackupSignature = ComputeAutoBackupSignature(disabled);
@@ -3749,7 +3758,7 @@ namespace VaultSync.UI.ViewModels
 
             _ = Task.Run(() =>
             {
-                AppConfig config = AppConfigStore.GetSnapshot();
+                AppConfig config = _configStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
                 {
                     UpdateProjectDestinationDisplay(item, config);
@@ -3765,7 +3774,7 @@ namespace VaultSync.UI.ViewModels
 
             _ = Task.Run(() =>
             {
-                AppConfig config = AppConfigStore.GetSnapshot();
+                AppConfig config = _configStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
                 {
                     UpdateProjectEncryptionDisplay(item, config);
@@ -3864,10 +3873,8 @@ namespace VaultSync.UI.ViewModels
             public string ChangedBytes { get; }
         }
 
-        public class BackupSnapshotItem : INotifyPropertyChanged
+        public class BackupSnapshotItem : ViewModelBase
         {
-            public event PropertyChangedEventHandler? PropertyChanged;
-
         public string Id { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
         public long SizeBytes { get; set; }
@@ -3925,8 +3932,8 @@ namespace VaultSync.UI.ViewModels
                 if (_isProtected != value)
                 {
                     _isProtected = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsProtected)));
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RetentionOutcomeLabel)));
+                    OnPropertyChanged(nameof(IsProtected));
+                    OnPropertyChanged(nameof(RetentionOutcomeLabel));
                 }
             }
         }
@@ -4006,22 +4013,8 @@ namespace VaultSync.UI.ViewModels
         public override string ToString() => Label;
     }
 
-    public class ProjectBackupItem : INotifyPropertyChanged
+    public class ProjectBackupItem : ViewModelBase
     {
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        private bool SetField<T>(ref T field, T value, string propertyName)
-        {
-            if (EqualityComparer<T>.Default.Equals(field, value))
-                return false;
-            field = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-            return true;
-        }
-
-        private void OnPropertyChanged(string propertyName) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string ExternalId { get; set; } = string.Empty;
@@ -5059,33 +5052,4 @@ namespace VaultSync.UI.ViewModels
         public IBrush StateBrush { get; }
     }
 
-    /// <summary>
-    /// Minimal ICommand implementation so we don't depend on any toolkit.
-    /// </summary>
-    internal sealed class ActionCommand : ICommand
-    {
-        private readonly Action<object?> _execute;
-        private readonly Func<object?, bool>? _canExecute;
-
-        public ActionCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
-        {
-            _execute    = execute  ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
-
-        public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
-        public void Execute(object? parameter)    => _execute(parameter);
-
-        public event EventHandler? CanExecuteChanged;
-        public void RaiseCanExecuteChanged()
-        {
-            if (Dispatcher.UIThread.CheckAccess())
-            {
-                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-                return;
-            }
-
-            Dispatcher.UIThread.Post(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
-        }
-    }
 }

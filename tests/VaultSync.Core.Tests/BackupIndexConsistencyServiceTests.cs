@@ -3,37 +3,30 @@ using System.IO;
 using System.Linq;
 using Dapper;
 using Microsoft.Data.Sqlite;
-using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class BackupIndexConsistencyServiceTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TempDirectory _tempDir = new();
     private readonly string _dbPath;
 
     public BackupIndexConsistencyServiceTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"vaultsync-consistency-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-        _dbPath = Path.Combine(_tempDir, "vaultsync.db");
+        _dbPath = Path.Combine(_tempDir.Path, "vaultsync.db");
     }
 
     [Fact]
     public void Scan_WithHealthyIndex_ReturnsNoFindings()
     {
         SqliteRepository repo = CreateRepository();
-        int projectId = repo.AddProject(new Project
-        {
-            Name = "Project One",
-            RootPath = Path.Combine(_tempDir, "ProjectOne"),
-            Preset = "dotnet"
-        });
+        int projectId = TestRepository.AddProject(repo, "Project One", Path.Combine(_tempDir.Path, "ProjectOne"));
         int snapshotId = repo.CreateSnapshot(projectId, 10, 2048);
-        repo.CreateBackup(projectId, snapshotId, "manual", 1024, "project-one/backup", _tempDir, "Primary");
+        repo.CreateBackup(projectId, snapshotId, "manual", 1024, "project-one/backup", _tempDir.Path, "Primary");
 
         var service = new BackupIndexConsistencyService(repo);
         BackupIndexConsistencyReport report = service.Scan();
@@ -49,18 +42,8 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
     public void Scan_DetectsDuplicateExternalIds_AndProjectMismatch()
     {
         SqliteRepository repo = CreateRepository();
-        int projectOneId = repo.AddProject(new Project
-        {
-            Name = "Project One",
-            RootPath = Path.Combine(_tempDir, "ProjectOne"),
-            Preset = "dotnet"
-        });
-        int projectTwoId = repo.AddProject(new Project
-        {
-            Name = "Project Two",
-            RootPath = Path.Combine(_tempDir, "ProjectTwo"),
-            Preset = "dotnet"
-        });
+        int projectOneId = TestRepository.AddProject(repo, "Project One", Path.Combine(_tempDir.Path, "ProjectOne"));
+        int projectTwoId = TestRepository.AddProject(repo, "Project Two", Path.Combine(_tempDir.Path, "ProjectTwo"));
         int snapshotId = repo.CreateSnapshot(projectOneId, 20, 4096);
         int secondSnapshotId = repo.CreateSnapshot(projectTwoId, 30, 8192);
         int backupId = repo.CreateBackupFromMetadata(
@@ -71,7 +54,7 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
             "manual",
             2048,
             "project-two/backup",
-            _tempDir,
+            _tempDir.Path,
             "Primary",
             isProtected: false,
             isImported: false);
@@ -88,7 +71,7 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
                     projectId = projectTwoId,
                     snapshotId,
                     createdUtc = DateTime.UtcNow.ToString("u"),
-                    dest = _tempDir
+                    dest = _tempDir.Path
                 });
         }
 
@@ -106,14 +89,9 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
     public void Scan_DetectsMissingExternalIds()
     {
         SqliteRepository repo = CreateRepository();
-        int projectId = repo.AddProject(new Project
-        {
-            Name = "Project No External",
-            RootPath = Path.Combine(_tempDir, "ProjectNoExternal"),
-            Preset = "dotnet"
-        });
+        int projectId = TestRepository.AddProject(repo, "Project No External", Path.Combine(_tempDir.Path, "ProjectNoExternal"));
         int snapshotId = repo.CreateSnapshot(projectId, 5, 512);
-        int backupId = repo.CreateBackup(projectId, snapshotId, "manual", 64, "project-no-external/backup", _tempDir, "Primary");
+        int backupId = repo.CreateBackup(projectId, snapshotId, "manual", 64, "project-no-external/backup", _tempDir.Path, "Primary");
 
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         connection.Open();
@@ -133,18 +111,8 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
     public void Scan_SortsSamplesDeterministically_AndBuildsStableSummary()
     {
         SqliteRepository repo = CreateRepository();
-        int projectB = repo.AddProject(new Project
-        {
-            Name = "Zulu",
-            RootPath = Path.Combine(_tempDir, "Zulu"),
-            Preset = "dotnet"
-        });
-        int projectA = repo.AddProject(new Project
-        {
-            Name = "Alpha",
-            RootPath = Path.Combine(_tempDir, "Alpha"),
-            Preset = "dotnet"
-        });
+        int projectB = TestRepository.AddProject(repo, "Zulu", Path.Combine(_tempDir.Path, "Zulu"));
+        int projectA = TestRepository.AddProject(repo, "Alpha", Path.Combine(_tempDir.Path, "Alpha"));
 
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         connection.Open();
@@ -163,20 +131,11 @@ public sealed class BackupIndexConsistencyServiceTests : IDisposable
 
     private SqliteRepository CreateRepository()
     {
-        var repo = new SqliteRepository(_dbPath);
-        repo.EnsureSchema();
-        return repo;
+        return TestRepository.Create(_dbPath);
     }
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, true);
-        }
-        catch
-        {
-        }
+        _tempDir.Dispose();
     }
 }

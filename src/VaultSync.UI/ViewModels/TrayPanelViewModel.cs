@@ -160,8 +160,7 @@ public sealed class TrayPanelViewModel : ViewModelBase
             {
                 if (SetField(ref _reachable, value))
                 {
-                    OnPropertyChanged(nameof(StatusText));
-                    OnPropertyChanged(nameof(StatusBrush));
+                    OnPropertiesChanged(nameof(StatusText), nameof(StatusBrush));
                 }
             }
         }

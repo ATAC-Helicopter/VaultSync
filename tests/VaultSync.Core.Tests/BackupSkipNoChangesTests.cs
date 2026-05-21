@@ -7,31 +7,29 @@ using System.Threading.Tasks;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class BackupSkipNoChangesTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TempDirectory _tempDir = new();
     private readonly string _dbPath;
 
     public BackupSkipNoChangesTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"vaultsync-skip-tests-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-        _dbPath = Path.Combine(_tempDir, "vaultsync.db");
+        _dbPath = Path.Combine(_tempDir.Path, "vaultsync.db");
     }
 
     [Fact]
     public async Task RunBackupAsync_DoesNotSkipNoChanges_WhenNoUsableBackupExists()
     {
-        var repo = new SqliteRepository(_dbPath);
-        repo.EnsureSchema();
+        SqliteRepository repo = TestRepository.Create(_dbPath);
         Project project = CreateProject(repo);
         await CreateBaselineSnapshotAsync(repo, project);
 
-        string backupRoot = Path.Combine(_tempDir, "backups");
+        string backupRoot = Path.Combine(_tempDir.Path, "backups");
         Directory.CreateDirectory(backupRoot);
         var service = new BackupService(repo);
 
@@ -53,10 +51,9 @@ public sealed class BackupSkipNoChangesTests : IDisposable
     [Fact]
     public async Task RunBackupAsync_SkipsNoChanges_WhenUsableBackupAlreadyExists()
     {
-        var repo = new SqliteRepository(_dbPath);
-        repo.EnsureSchema();
+        SqliteRepository repo = TestRepository.Create(_dbPath);
         Project project = CreateProject(repo);
-        string backupRoot = Path.Combine(_tempDir, "backups");
+        string backupRoot = Path.Combine(_tempDir.Path, "backups");
         Directory.CreateDirectory(backupRoot);
         var service = new BackupService(repo);
 
@@ -88,8 +85,7 @@ public sealed class BackupSkipNoChangesTests : IDisposable
     [Fact]
     public async Task RunBackupAsync_BackupAllStyleParallelRun_CreatesUsableBackupsForAllProjects()
     {
-        var repo = new SqliteRepository(_dbPath);
-        repo.EnsureSchema();
+        SqliteRepository repo = TestRepository.Create(_dbPath);
         Project[] projects = new[]
         {
             CreateProject(repo, "Project One", "one.txt", "one"),
@@ -102,7 +98,7 @@ public sealed class BackupSkipNoChangesTests : IDisposable
             await CreateBaselineSnapshotAsync(repo, project);
         }
 
-        string backupRoot = Path.Combine(_tempDir, "backups");
+        string backupRoot = Path.Combine(_tempDir.Path, "backups");
         Directory.CreateDirectory(backupRoot);
         var service = new BackupService(repo);
 
@@ -135,16 +131,11 @@ public sealed class BackupSkipNoChangesTests : IDisposable
 
     private Project CreateProject(SqliteRepository repo, string name, string fileName, string contents)
     {
-        string sourceRoot = Path.Combine(_tempDir, name.Replace(' ', '-'));
+        string sourceRoot = Path.Combine(_tempDir.Path, name.Replace(' ', '-'));
         Directory.CreateDirectory(sourceRoot);
         File.WriteAllText(Path.Combine(sourceRoot, fileName), contents, Encoding.UTF8);
 
-        int projectId = repo.AddProject(new Project
-        {
-            Name = name,
-            RootPath = sourceRoot,
-            Preset = string.Empty
-        });
+        int projectId = TestRepository.AddProject(repo, name, sourceRoot, preset: string.Empty);
 
         return repo.GetProjectById(projectId)!;
     }
@@ -162,13 +153,6 @@ public sealed class BackupSkipNoChangesTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, recursive: true);
-        }
-        catch
-        {
-        }
+        _tempDir.Dispose();
     }
 }

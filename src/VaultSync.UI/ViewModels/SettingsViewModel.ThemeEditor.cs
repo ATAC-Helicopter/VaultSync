@@ -8,12 +8,13 @@ using System.Windows.Input;
 using Avalonia.Media;
 using VaultSync.Core.Config;
 using VaultSync.UI.Services;
+using VaultSync.UI.ViewModels;
 
 namespace VaultSync.UI
 {
     public sealed partial class SettingsViewModel
     {
-        public sealed class ThemeColorSlotViewModel : INotifyPropertyChanged
+        public sealed class ThemeColorSlotViewModel : ViewModelBase
         {
             private string _hex;
             private bool _isSelected;
@@ -26,8 +27,6 @@ namespace VaultSync.UI
                 _hex = hex;
                 _swatchBrush = new SolidColorBrush(Color.Parse(_hex));
             }
-
-            public event PropertyChangedEventHandler? PropertyChanged;
 
             public string Id { get; }
             public string Label { get; }
@@ -43,9 +42,9 @@ namespace VaultSync.UI
 
                     _hex = normalized;
                     _swatchBrush = new SolidColorBrush(Color.Parse(_hex));
-                    RaiseProperty(nameof(Hex));
-                    RaiseProperty(nameof(SwatchColor));
-                    RaiseProperty(nameof(SwatchBrush));
+                    OnPropertyChanged(nameof(Hex));
+                    OnPropertyChanged(nameof(SwatchColor));
+                    OnPropertyChanged(nameof(SwatchBrush));
                 }
             }
 
@@ -58,7 +57,7 @@ namespace VaultSync.UI
                         return;
 
                     _isSelected = value;
-                    RaiseProperty(nameof(IsSelected));
+                    OnPropertyChanged(nameof(IsSelected));
                 }
             }
 
@@ -79,10 +78,6 @@ namespace VaultSync.UI
                     : fallback;
             }
 
-            private void RaiseProperty(string propertyName)
-            {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-            }
         }
 
         public sealed class ThemePresetOptionViewModel
@@ -93,7 +88,7 @@ namespace VaultSync.UI
             public required ThemePaletteConfig Palette { get; init; }
         }
 
-        public sealed class ThemePaletteSwatchViewModel : INotifyPropertyChanged
+        public sealed class ThemePaletteSwatchViewModel : ViewModelBase
         {
             private bool _isSelected;
 
@@ -105,7 +100,6 @@ namespace VaultSync.UI
                 OutlineBrush = CreateOutlineBrush(SwatchColor);
             }
 
-            public event PropertyChangedEventHandler? PropertyChanged;
             public string Hex { get; }
             public Color SwatchColor { get; }
             public IBrush SwatchBrush { get; }
@@ -120,7 +114,7 @@ namespace VaultSync.UI
                         return;
 
                     _isSelected = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+                    OnPropertyChanged(nameof(IsSelected));
                 }
             }
 

@@ -6,20 +6,19 @@ using Microsoft.Data.Sqlite;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class BackupIndexRepairServiceTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TempDirectory _tempDir = new();
     private readonly string _dbPath;
 
     public BackupIndexRepairServiceTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"vaultsync-repair-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-        _dbPath = Path.Combine(_tempDir, "vaultsync.db");
+        _dbPath = Path.Combine(_tempDir.Path, "vaultsync.db");
     }
 
     [Fact]
@@ -37,7 +36,7 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
             "manual",
             1024,
             "alpha/backup",
-            _tempDir,
+            _tempDir.Path,
             "Primary",
             isProtected: false,
             isImported: false);
@@ -67,7 +66,7 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
             "manual",
             1024,
             "alpha/backup",
-            _tempDir,
+            _tempDir.Path,
             "Primary",
             isProtected: false,
             isImported: false);
@@ -95,7 +94,7 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
             "manual",
             1024,
             "alpha/backup",
-            _tempDir,
+            _tempDir.Path,
             "Primary",
             isProtected: false,
             isImported: false);
@@ -120,30 +119,16 @@ public sealed class BackupIndexRepairServiceTests : IDisposable
 
     private SqliteRepository CreateRepository()
     {
-        var repo = new SqliteRepository(_dbPath);
-        repo.EnsureSchema();
-        return repo;
+        return TestRepository.Create(_dbPath);
     }
 
     private int CreateProject(SqliteRepository repo, string name)
     {
-        return repo.AddProject(new Project
-        {
-            Name = name,
-            RootPath = Path.Combine(_tempDir, name),
-            Preset = "dotnet"
-        });
+        return TestRepository.AddProject(repo, name, Path.Combine(_tempDir.Path, name));
     }
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, true);
-        }
-        catch
-        {
-        }
+        _tempDir.Dispose();
     }
 }

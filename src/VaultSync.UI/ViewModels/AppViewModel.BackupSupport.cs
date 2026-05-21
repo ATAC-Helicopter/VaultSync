@@ -75,7 +75,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     try
                     {
-                        AppConfig cfg = AppConfigStore.Load();
+                        AppConfig cfg = _configStore.Load();
                         double existing = useArchiveMode
                             ? cfg.Backups.LastBackupThroughputArchiveMbSec
                             : cfg.Backups.LastBackupThroughputCopyMbSec;
@@ -90,7 +90,7 @@ namespace VaultSync.UI.ViewModels
                             cfg.Backups.LastBackupThroughputCopyMbSec = rounded;
                         }
                         cfg.Backups.LastBackupThroughputMbSec = rounded;
-                        AppConfigStore.Save(cfg);
+                        _configStore.Save(cfg);
 
                         Dispatcher.UIThread.Post(() =>
                         {

@@ -22,7 +22,7 @@ namespace VaultSync.CLI.Commands
     {
         protected override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken ct)
         {
-            AppConfig config = AppConfigStore.Load();
+            AppConfig config = ConfigHelper.Load();
             List<BackupDestination> destinations = BuildActiveDestinations(config);
             if (destinations.Count == 0)
             {

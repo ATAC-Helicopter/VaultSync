@@ -27,11 +27,12 @@ using VaultSync.Core.Services;
 using VaultSync.Core.Models;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
+using VaultSync.UI.ViewModels;
 using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI
 {
-    public sealed partial class SettingsViewModel : INotifyPropertyChanged
+    public sealed partial class SettingsViewModel : ViewModelBase
     {
         // ---------------- Core backing fields ----------------
 
@@ -124,6 +125,7 @@ namespace VaultSync.UI
         private string _rsyncStatusHint = string.Empty;
         private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
+        private readonly IAppConfigStore _configStore;
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
@@ -210,7 +212,7 @@ namespace VaultSync.UI
             public required string ImportedTags { get; init; }
         }
 
-        public sealed class TagColorRuleViewModel : INotifyPropertyChanged
+        public sealed class TagColorRuleViewModel : ViewModelBase
         {
             private enum ColorSlot
             {
@@ -247,7 +249,6 @@ namespace VaultSync.UI
                     p => p is ThemePaletteSwatchViewModel);
             }
 
-            public event PropertyChangedEventHandler? PropertyChanged;
             public IReadOnlyList<ThemePaletteSwatchViewModel> PaletteSwatches { get; }
             public ICommand ApplyPaletteSwatchCommand { get; }
 
@@ -413,35 +414,31 @@ namespace VaultSync.UI
 
             private void RaiseSelection()
             {
-                RaiseProperty(nameof(IsEditingBackground));
-                RaiseProperty(nameof(IsEditingForeground));
-                RaiseProperty(nameof(IsEditingBorder));
-                RaiseProperty(nameof(ActiveColor));
-                RaiseProperty(nameof(ActiveColorHex));
-            }
-
-            private void RaiseProperty(string propertyName)
-            {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+                OnPropertiesChanged(
+                    nameof(IsEditingBackground),
+                    nameof(IsEditingForeground),
+                    nameof(IsEditingBorder),
+                    nameof(ActiveColor),
+                    nameof(ActiveColorHex));
             }
 
             private void RaiseAll()
             {
-                RaiseProperty(nameof(Tag));
-                RaiseProperty(nameof(Background));
-                RaiseProperty(nameof(Foreground));
-                RaiseProperty(nameof(Border));
-                RaiseProperty(nameof(PreviewTag));
-                RaiseProperty(nameof(PreviewBackground));
-                RaiseProperty(nameof(PreviewForeground));
-                RaiseProperty(nameof(PreviewBorder));
-                RaiseProperty(nameof(ActiveColor));
-                RaiseProperty(nameof(ActiveColorHex));
+                OnPropertiesChanged(
+                    nameof(Tag),
+                    nameof(Background),
+                    nameof(Foreground),
+                    nameof(Border),
+                    nameof(PreviewTag),
+                    nameof(PreviewBackground),
+                    nameof(PreviewForeground),
+                    nameof(PreviewBorder),
+                    nameof(ActiveColor),
+                    nameof(ActiveColorHex));
                 RaiseSelection();
             }
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
         public ObservableCollection<ProjectMetadataConflictItemViewModel> ProjectMetadataConflicts { get; } = [];
         public ObservableCollection<TagColorRuleViewModel> TagColorRules { get; } = [];
 
@@ -450,9 +447,10 @@ namespace VaultSync.UI
             ShowLegacyBackupLocation = !UseAdvancedDestinations;
         }
 
-        public SettingsViewModel(LocalizationService localizationService)
+        public SettingsViewModel(LocalizationService localizationService, IAppConfigStore? configStore = null)
         {
             _localizationService = localizationService;
+            _configStore = configStore ?? StaticAppConfigStore.Instance;
             _selectedLanguageCode = localizationService.CurrentLanguage;
             _localizationService.LanguageChanged += () =>
             {
@@ -582,19 +580,6 @@ namespace VaultSync.UI
             _isInitialized = true;
         }
 
-        // ---------------- INPC helpers ----------------
-
-        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-        private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
-        {
-            if (Equals(field, value)) return false;
-            field = value;
-            OnPropertyChanged(propertyName);
-            return true;
-        }
-
         // ---------------- Load + Save ----------------
 
         private void LoadFromConfig()
@@ -602,7 +587,7 @@ namespace VaultSync.UI
             _isReloadingFromConfig = true;
             try
             {
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
                     ? _localizationService.CurrentLanguage
                     : cfg.Advanced.Language;
@@ -899,7 +884,7 @@ namespace VaultSync.UI
                     Password: c.Password))
                 .ToList();
 
-            AppConfig cfg = AppConfigStore.Load();
+            AppConfig cfg = _configStore.Load();
 
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? [];
@@ -1062,7 +1047,7 @@ namespace VaultSync.UI
                 _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(launchOnLogin));
             }
 
-            await AppConfigStore.SaveAsync(cfg);
+            await _configStore.SaveAsync(cfg);
             if (destinationSettingsChanged)
             {
                 DestinationSettingsSaved?.Invoke();
@@ -2264,9 +2249,9 @@ namespace VaultSync.UI
             {
                 try
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     cfg.Advanced.Language = _selectedLanguageCode;
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                 }
                 catch
                 {
@@ -2284,17 +2269,17 @@ namespace VaultSync.UI
 
         public void ReloadUpdateDiagnostics()
         {
-            RefreshUpdateDiagnostics(AppConfigStore.GetSnapshot().Advanced.UpdateDiagnostics);
+            RefreshUpdateDiagnostics(_configStore.GetSnapshot().Advanced.UpdateDiagnostics);
         }
 
         public void ReloadStartupDiagnostics()
         {
-            RefreshStartupDiagnostics(AppConfigStore.GetSnapshot().Advanced.StartupDiagnostics);
+            RefreshStartupDiagnostics(_configStore.GetSnapshot().Advanced.StartupDiagnostics);
         }
 
         public void ReloadCheckpointResumeDiagnostics()
         {
-            RefreshCheckpointResumeDiagnostics(AppConfigStore.GetSnapshot().Advanced.CheckpointResumeTelemetry);
+            RefreshCheckpointResumeDiagnostics(_configStore.GetSnapshot().Advanced.CheckpointResumeTelemetry);
         }
 
         private void RefreshUpdateCheckStatus()
@@ -2825,9 +2810,9 @@ namespace VaultSync.UI
 
             try
             {
-                AppConfig config = await Task.Run(AppConfigStore.Load);
+                AppConfig config = await Task.Run(_configStore.Load);
                 config.ProjectsRoot = path;
-                await AppConfigStore.SaveAsync(config);
+                await _configStore.SaveAsync(config);
             }
             catch
             {
@@ -2894,7 +2879,7 @@ namespace VaultSync.UI
 
         private void ResetToDefaults()
         {
-            AppConfigStore.Save(new AppConfig());
+            _configStore.Save(new AppConfig());
             LoadFromConfig();
         }
 
@@ -2992,7 +2977,7 @@ namespace VaultSync.UI
             }
 
             string display = dest.DisplayName;
-            AppConfig cfg = await Task.Run(AppConfigStore.Load);
+            AppConfig cfg = await Task.Run(_configStore.Load);
             NetworkCredentialProfile? profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                 ? null
                 : cfg.Network.Credentials.FirstOrDefault(c =>
@@ -3208,7 +3193,7 @@ namespace VaultSync.UI
             return (true, true);
         }
 
-        private static void ForgetAllProjects()
+        private void ForgetAllProjects()
         {
             _ = Task.Run(() =>
             {
@@ -3216,7 +3201,7 @@ namespace VaultSync.UI
                 {
                     // Dev helper: reset the VaultSync SQLite DB to a "fresh install" state
                     // without touching any real project files or backup folders on disk.
-                    AppConfig cfg  = AppConfigStore.Load();
+                    AppConfig cfg  = _configStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
 
                     repo.EnsureSchema();
@@ -3533,7 +3518,7 @@ namespace VaultSync.UI
             {
                 BackupRetentionSimulationResult result = await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
                     var service = new BackupRetentionSimulationService(repo);
                     return service.Simulate(ClampInt(cfg.Backups.MaxSnapshotsPerProject, 1, 999, 20));
@@ -3661,7 +3646,7 @@ namespace VaultSync.UI
             {
                 BackupIndexRepairPlan plan = await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
                     var service = new BackupIndexRepairService(repo);
                     return service.BuildPlan();
@@ -3736,7 +3721,7 @@ namespace VaultSync.UI
             {
                 int applied = await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
                     var service = new BackupIndexRepairService(repo);
                     return service.ApplyPlan(plan);
@@ -3897,7 +3882,7 @@ namespace VaultSync.UI
             {
                 await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
                     repo.UpdateProjectPreferredDestination(item.ProjectId, EmptyToNull(item.ImportedPreferredDestinationId));
                     repo.UpdateProjectRestoreMode(item.ProjectId, EmptyToNull(item.ImportedRestoreMode));
@@ -3906,7 +3891,7 @@ namespace VaultSync.UI
 
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
                     UpdateMetadataConflictTelemetry(cfg, "accept-imported", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                 }).ConfigureAwait(false);
 
                 string status = string.Format(
@@ -3967,10 +3952,10 @@ namespace VaultSync.UI
             {
                 await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
                     UpdateMetadataConflictTelemetry(cfg, "keep-local", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                 }).ConfigureAwait(false);
 
                 string status = string.Format(
@@ -4027,13 +4012,13 @@ namespace VaultSync.UI
             }
         }
 
-        private static void PersistMetadataConflictTelemetry(string? lastAction, string? lastResolvedProject, int pendingCount)
+        private void PersistMetadataConflictTelemetry(string? lastAction, string? lastResolvedProject, int pendingCount)
         {
             try
             {
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 UpdateMetadataConflictTelemetry(cfg, lastAction, lastResolvedProject, pendingCount);
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
             }
             catch (Exception ex)
             {
@@ -4054,11 +4039,11 @@ namespace VaultSync.UI
                 cfg.Advanced.MetadataConflictTelemetry.LastResolvedProject = lastResolvedProject;
         }
 
-        private static void PersistBackupRepairTelemetry(BackupIndexRepairPlan? plan, int? appliedCount, string status)
+        private void PersistBackupRepairTelemetry(BackupIndexRepairPlan? plan, int? appliedCount, string status)
         {
             try
             {
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 cfg.Advanced.BackupRepairTelemetry ??= new BackupRepairTelemetry();
                 BackupRepairTelemetry telemetry = cfg.Advanced.BackupRepairTelemetry;
                 telemetry.LastScanUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
@@ -4082,7 +4067,7 @@ namespace VaultSync.UI
                     telemetry.LastAppliedCount = appliedCount.Value;
                 }
 
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
             }
             catch (Exception ex)
             {
@@ -4155,9 +4140,9 @@ namespace VaultSync.UI
                     return (false, L("Settings.Advanced.SupportBundleImportMissingConfig", "Support bundle does not contain importable settings."));
                 }
 
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 ApplyImportableSettings(redactedConfig, cfg);
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
                 return (true, L("Settings.Advanced.SupportBundleImportApplied", "Support bundle settings imported (diagnostics ignored)."));
             }
             catch (Exception ex)

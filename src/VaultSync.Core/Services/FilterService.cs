@@ -35,30 +35,35 @@ public class FilterService
         _compiledPatterns = _patterns.Select(CompilePattern).ToList();
     }
 
-    public static FilterService FromPresetAndLocal(string projectRoot, string presetName, string? presetsDir = null)
+    public static FilterService FromPresetAndLocal(
+        string projectRoot,
+        string presetName,
+        string? presetsDir = null,
+        IVaultLogger? logger = null)
     {
+        logger ??= RuntimeVaultLogger.Instance;
         var patterns = new List<string>();
 
         // Resolve presets directory by priority
         presetsDir = ResolvePresetsDir(presetsDir);
 
-        Console.WriteLine($"[FilterService] Using presetsDir='{presetsDir}', preset='{presetName}'");
+        logger.Info($"[FilterService] Using presetsDir='{presetsDir}', preset='{presetName}'");
 
         // Load preset file if present
         if (!string.IsNullOrWhiteSpace(presetName))
         {
             string? presetFile = ResolvePresetFile(presetsDir, presetName);
-            Console.WriteLine($"[FilterService] Looking for preset file '{presetFile ?? "(not found)"}'");
+            logger.Info($"[FilterService] Looking for preset file '{presetFile ?? "(not found)"}'");
 
             if (!string.IsNullOrWhiteSpace(presetFile) && File.Exists(presetFile))
             {
                 IReadOnlyList<string> presetLines = ReadLinesCached(presetFile);
-                Console.WriteLine($"[FilterService] Loaded {presetLines.Count} rules from preset file.");
+                logger.Info($"[FilterService] Loaded {presetLines.Count} rules from preset file.");
                 patterns.AddRange(presetLines);
             }
             else
             {
-                Console.WriteLine("[FilterService] Preset file NOT FOUND.");
+                logger.Info("[FilterService] Preset file NOT FOUND.");
             }
         }
 
@@ -67,11 +72,11 @@ public class FilterService
         if (File.Exists(localIgnore))
         {
             IReadOnlyList<string> localLines = ReadLinesCached(localIgnore);
-            Console.WriteLine($"[FilterService] Loaded {localLines.Count} rules from local .vaultsyncignore.");
+            logger.Info($"[FilterService] Loaded {localLines.Count} rules from local .vaultsyncignore.");
             patterns.AddRange(localLines);
         }
 
-        Console.WriteLine($"[FilterService] Total rules in combined filter: {patterns.Count} user/preset + {BackupSafetyService.ReservedIgnorePatterns.Count} reserved safety rules");
+        logger.Info($"[FilterService] Total rules in combined filter: {patterns.Count} user/preset + {BackupSafetyService.ReservedIgnorePatterns.Count} reserved safety rules");
 
         return new FilterService(patterns);
     }

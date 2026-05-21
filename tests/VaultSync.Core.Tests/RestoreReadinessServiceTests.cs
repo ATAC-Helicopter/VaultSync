@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
@@ -16,7 +17,7 @@ public sealed class RestoreReadinessServiceTests
         var config = new AppConfig();
         Project[] projects =
         [
-            new Project { Id = 1, Name = "VaultSync", RootPath = "C:\\Repo", Preset = "default" }
+            new ProjectBuilder().Build()
         ];
 
         RestoreReadinessSummary summary = service.BuildSummary(
@@ -33,7 +34,7 @@ public sealed class RestoreReadinessServiceTests
     [Fact]
     public void BuildSummary_MarksProjectReady_WhenRecentBackupAndReachableDestination()
     {
-        var destination = new BackupDestination { Path = "C:\\Backups", Alias = "Primary", Active = true };
+        var destination = new BackupDestinationBuilder().Build();
         var config = new AppConfig
         {
             Backups = new BackupsConfig
@@ -43,27 +44,15 @@ public sealed class RestoreReadinessServiceTests
             }
         };
 
-        var project = new Project
-        {
-            Id = 1,
-            Name = "VaultSync",
-            RootPath = "C:\\Repo",
-            Preset = "default",
-            PreferredDestinationId = DestinationIdentityService.GetId(destination),
-            VerificationPolicy = ProjectVerificationPolicy.Always
-        };
+        var project = new ProjectBuilder()
+            .WithPreferredDestinationId(DestinationIdentityService.GetId(destination))
+            .WithVerificationPolicy(ProjectVerificationPolicy.Always)
+            .Build();
 
-        var backup = new Backup
-        {
-            Id = 10,
-            ProjectId = 1,
-            SnapshotId = 11,
-            ExternalId = "b1",
-            CreatedUtc = DateTime.UtcNow.AddHours(-2),
-            Type = "auto",
-            Path = "vaultsync\\2026-03-13_12-00-00",
-            DestinationPath = destination.Path
-        };
+        var backup = new BackupBuilder()
+            .CreatedUtc(DateTime.UtcNow.AddHours(-2))
+            .AtDestination(destination.Path)
+            .Build();
 
         RestoreReadinessSummary summary = new RestoreReadinessService().BuildSummary(
             [project],
@@ -79,7 +68,10 @@ public sealed class RestoreReadinessServiceTests
     [Fact]
     public void BuildSummary_MarksProjectRisk_WhenBackupIsStale_AndDestinationUnreachable()
     {
-        var destination = new BackupDestination { Path = "\\\\nas\\backups", Alias = "NAS", Active = true };
+        var destination = new BackupDestinationBuilder()
+            .WithPath("\\\\nas\\backups")
+            .WithAlias("NAS")
+            .Build();
         var config = new AppConfig
         {
             Backups = new BackupsConfig
@@ -89,27 +81,16 @@ public sealed class RestoreReadinessServiceTests
             }
         };
 
-        var project = new Project
-        {
-            Id = 1,
-            Name = "VaultSync",
-            RootPath = "C:\\Repo",
-            Preset = "default",
-            PreferredDestinationId = DestinationIdentityService.GetId(destination),
-            VerificationPolicy = ProjectVerificationPolicy.Manual
-        };
+        var project = new ProjectBuilder()
+            .WithPreferredDestinationId(DestinationIdentityService.GetId(destination))
+            .WithVerificationPolicy(ProjectVerificationPolicy.Manual)
+            .Build();
 
-        var backup = new Backup
-        {
-            Id = 10,
-            ProjectId = 1,
-            SnapshotId = 11,
-            ExternalId = "b1",
-            CreatedUtc = DateTime.UtcNow.AddDays(-5),
-            Type = "manual",
-            Path = "vaultsync\\2026-03-08_12-00-00",
-            DestinationPath = destination.Path
-        };
+        var backup = new BackupBuilder()
+            .CreatedUtc(DateTime.UtcNow.AddDays(-5))
+            .Manual()
+            .AtDestination(destination.Path)
+            .Build();
 
         RestoreReadinessSummary summary = new RestoreReadinessService().BuildSummary(
             [project],
