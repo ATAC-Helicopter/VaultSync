@@ -6,7 +6,7 @@ This document defines the current release packaging flow.
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The prepared stable release target is `1.7.4`; prerelease builds for the active patch train use `1.7.4-Beta.N` until the stable release is cut.
+- The prepared stable release target is `1.7.5`; prerelease builds for the active patch train use `1.7.5-Beta.N` until the stable release is cut.
 
 ## 1) Windows Installer
 1. Publish:
@@ -33,8 +33,8 @@ This document defines the current release packaging flow.
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.7.4 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.7.4 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.7.5 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.7.5 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
@@ -57,13 +57,13 @@ Stable example:
 - branch: `Stable`
 - release channel: `stable`
 - `previous_version = 1.7.3`
-- `target_version = 1.7.4`
+- `target_version = 1.7.5`
 
 Current beta example:
 - branch: `Dev`
 - release channel: `beta`
-- `previous_version = 1.7.4-Beta.2`
-- `target_version = 1.7.4-Beta.3`
+- `previous_version = 1.7.5-Beta.1`
+- `target_version = 1.7.5-Beta.2`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
 
 Example multi-base input:

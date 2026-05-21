@@ -1,4 +1,21 @@
 ﻿# Changelog
+## [1.7.5] - Unreleased
+### Changed
+- [VS-1745] Centralized NuGet package versions in `Directory.Packages.props` and removed unused package references.
+- [VS-1746] Routed app configuration access through a shared `IAppConfigStore` adapter so core, CLI, and UI code no longer depend directly on static config calls.
+- [VS-1747] Added shared runtime logging and hash-formatting helpers to reduce duplicated service plumbing.
+- [VS-1748] Standardized repeated view-model property updates on existing shared base helpers.
+- [VS-1749] Consolidated core test fixtures for temporary directories, config isolation, and repository/project setup.
+- [VS-1750] Reused destination path normalization across identity and quota planning code.
+- [VS-1751] Added a shared dependent-property notification helper for UI view models.
+- [VS-1752] Added verbose-only runtime timing scopes around startup background work, deferred metadata imports, update checks, and Dashboard refresh phases.
+- [VS-1753] Extracted Dashboard recent-activity projection so refreshes reuse a project lookup instead of scanning projects per activity row.
+- [VS-1754] Added reusable test builders for projects, backups, and backup destinations.
+- [VS-1755] Centralized byte and signed-byte formatting for UI and CLI callers.
+- [VS-1756] Consolidated repeated Dashboard, Backups, Projects, and Settings dependent-property notifications.
+- [VS-1757] Routed NetworkMount diagnostics through one local logging helper instead of repeating log prefixes inline.
+- [VS-1758] Added a durable unchanged-source cache for background metadata auto-imports and phase timings for metadata import internals.
+
 ## [1.7.4] - 20.05.2026
 ### Added
 - [VS-1732] Release publish restore now declares Windows, Linux, and macOS RIDs.
