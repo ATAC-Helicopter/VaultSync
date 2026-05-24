@@ -69,4 +69,44 @@ public sealed class AppConfigStoreTests
         Assert.Equal(4, source.BackupCount);
         Assert.Equal(1, source.TombstoneCount);
     }
+
+    [Fact]
+    public void Save_PreservesMetadataImportCacheWhenPendingConfigHasNoCacheEntries()
+    {
+        using var scope = new TestAppConfigScope();
+        string projectsRoot = Path.Combine(scope.ConfigDirectory, "Projects");
+        string dbPath = Path.Combine(scope.ConfigDirectory, "vaultsync.db");
+        var config = new AppConfig
+        {
+            ProjectsRoot = projectsRoot,
+            DbPath = dbPath
+        };
+        config.Advanced.MetadataImportCache.Sources.Add(new MetadataImportSourceStamp
+        {
+            SourceKey = "destination:primary",
+            SourcePath = "/backups/.vaultsync/meta",
+            SourceMachineId = "desktop-01",
+            StoreUpdatedUtc = "2026-05-21T08:30:00Z",
+            StoreSchemaVersion = 1,
+            StoreFileLengthBytes = 4096,
+            StoreFileUpdatedUtc = "2026-05-21T08:31:00Z",
+            StoreSidecarStamp = "none",
+            ImportedUtc = "2026-05-21T08:35:00Z",
+            ProjectCount = 2,
+            SnapshotCount = 3,
+            BackupCount = 4,
+            TombstoneCount = 1
+        });
+        AppConfigStore.Save(config);
+
+        AppConfigStore.Save(new AppConfig
+        {
+            ProjectsRoot = projectsRoot,
+            DbPath = dbPath
+        });
+
+        MetadataImportSourceStamp source = Assert.Single(AppConfigStore.Load().Advanced.MetadataImportCache.Sources);
+        Assert.Equal("destination:primary", source.SourceKey);
+        Assert.Equal(4, source.BackupCount);
+    }
 }
