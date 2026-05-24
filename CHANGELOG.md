@@ -15,6 +15,7 @@
 - [VS-1756] Consolidated repeated Dashboard, Backups, Projects, and Settings dependent-property notifications.
 - [VS-1757] Routed NetworkMount diagnostics through one local logging helper instead of repeating log prefixes inline.
 - [VS-1758] Added a durable unchanged-source cache for background metadata auto-imports and phase timings for metadata import internals.
+- [VS-1759] Hardened the metadata unchanged-source cache so skipped background imports still re-run when local repository coverage is incomplete.
 
 ## [1.7.4] - 20.05.2026
 ### Added

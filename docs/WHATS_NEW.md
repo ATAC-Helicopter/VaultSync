@@ -14,6 +14,7 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - Dashboard refresh work now has verbose timing around data load, dispatcher wait, and individual rebuild phases.
 - Recent activity projection reuses a project lookup instead of scanning projects per activity row.
 - Background metadata auto-imports remember successful unchanged sources and can skip repeated imports when the remote store files have not changed.
+- The unchanged-source cache now checks local repository coverage before skipping, so recreated databases or newly reachable backup folders still reconcile.
 - Metadata import internals now report phase timings for temp-copy, row reads, backup apply, legacy folder scan, and restore flag updates.
 
 ### Cleanup
