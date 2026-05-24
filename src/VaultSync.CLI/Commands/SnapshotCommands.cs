@@ -53,7 +53,7 @@ namespace VaultSync.CLI.Commands
                 AnsiConsole.MarkupLine($"[green]Snapshot {snapId} created[/] in {took.TotalSeconds:F1}s");
                 if (outcome is not null)
                 {
-                    AnsiConsole.MarkupLine($"[grey]Added[/]: {outcome.Added}, [grey]Modified[/]: {outcome.Modified}, [grey]Deleted[/]: {outcome.Deleted}, [grey]Unchanged[/]: {outcome.Unchanged}, [grey]Total files[/]: {outcome.TotalFiles}, [grey]Bytes[/]: {outcome.TotalBytes}");
+                    AnsiConsole.MarkupLine($"[grey]Added[/]: {outcome.Added}, [grey]Modified[/]: {outcome.Modified}, [grey]Deleted[/]: {outcome.Deleted}, [grey]Unchanged[/]: {outcome.Unchanged}, [grey]Total files[/]: {outcome.TotalFiles}, [grey]Bytes[/]: {ByteSizeFormat.FormatBytes(outcome.TotalBytes, "0.#")}");
                 }
             }
 
@@ -105,7 +105,7 @@ namespace VaultSync.CLI.Commands
             table.AddColumn(new TableColumn("Bytes").RightAligned());
 
             foreach (Core.Models.Snapshot? srow in list)
-                table.AddRow(srow.Id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), srow.TotalBytes.ToString("N0"));
+                table.AddRow(srow.Id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), ByteSizeFormat.FormatBytes(srow.TotalBytes, "0.#"));
 
             AnsiConsole.MarkupLine($"History for [bold]{Markup.Escape(proj.Name)}[/] - {list.Count} snapshot(s)");
             AnsiConsole.Write(table);
@@ -305,7 +305,7 @@ namespace VaultSync.CLI.Commands
                     foreach (int id in planned)
                     {
                         Core.Models.Snapshot srow = byId[id];
-                        tbl.AddRow(id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), srow.TotalBytes.ToString("N0"));
+                        tbl.AddRow(id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), ByteSizeFormat.FormatBytes(srow.TotalBytes, "0.#"));
                     }
                     AnsiConsole.Write(tbl);
                     if (s.DryRun) AnsiConsole.MarkupLine("[yellow]Dry run[/]: no changes written.");
