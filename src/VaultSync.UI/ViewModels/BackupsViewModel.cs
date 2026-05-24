@@ -2770,35 +2770,36 @@ namespace VaultSync.UI.ViewModels
                 nameof(TotalBackupSizeFormatted),
                 nameof(LocalSnapshotsCount),
                 nameof(TotalStoredLocalLine));
-            OnPropertyChanged(nameof(TotalStoredLocalValueFormatted));
-            OnPropertyChanged(nameof(TotalStoredImportedLine));
-            OnPropertyChanged(nameof(TotalStoredImportedValueFormatted));
-            OnPropertyChanged(nameof(ImportedSnapshotsCount));
-            OnPropertyChanged(nameof(ThisWeekAutoPercent));
-            OnPropertyChanged(nameof(ThisWeekManualPercent));
-            OnPropertyChanged(nameof(ThisWeekImportedPercent));
-            OnPropertyChanged(nameof(StorageLocalPercent));
-            OnPropertyChanged(nameof(StorageImportedPercent));
-            OnPropertyChanged(nameof(HasTopStorageConsumers));
-            OnPropertyChanged(nameof(HealthHealthyProjects));
-            OnPropertyChanged(nameof(HealthAgingProjects));
-            OnPropertyChanged(nameof(HealthStaleProjects));
-            OnPropertyChanged(nameof(HealthNoBackupProjects));
-            OnPropertyChanged(nameof(HealthHealthyPercent));
-            OnPropertyChanged(nameof(HealthAgingPercent));
-            OnPropertyChanged(nameof(HealthStalePercent));
-            OnPropertyChanged(nameof(HealthNoBackupPercent));
-            OnPropertyChanged(nameof(BackupHealthSummaryLine));
-            OnPropertyChanged(nameof(RestoreReadinessReadyProjects));
-            OnPropertyChanged(nameof(RestoreReadinessAttentionProjects));
-            OnPropertyChanged(nameof(RestoreReadinessRiskProjects));
-            OnPropertyChanged(nameof(RestoreReadinessUnavailableProjects));
-            OnPropertyChanged(nameof(RestoreReadinessReadyPercent));
-            OnPropertyChanged(nameof(RestoreReadinessAttentionPercent));
-            OnPropertyChanged(nameof(RestoreReadinessRiskPercent));
-            OnPropertyChanged(nameof(RestoreReadinessUnavailablePercent));
-            OnPropertyChanged(nameof(RestoreReadinessHeadline));
-            OnPropertyChanged(nameof(RestoreReadinessDetail));
+            OnPropertiesChanged(
+                nameof(TotalStoredLocalValueFormatted),
+                nameof(TotalStoredImportedLine),
+                nameof(TotalStoredImportedValueFormatted),
+                nameof(ImportedSnapshotsCount),
+                nameof(ThisWeekAutoPercent),
+                nameof(ThisWeekManualPercent),
+                nameof(ThisWeekImportedPercent),
+                nameof(StorageLocalPercent),
+                nameof(StorageImportedPercent),
+                nameof(HasTopStorageConsumers),
+                nameof(HealthHealthyProjects),
+                nameof(HealthAgingProjects),
+                nameof(HealthStaleProjects),
+                nameof(HealthNoBackupProjects),
+                nameof(HealthHealthyPercent),
+                nameof(HealthAgingPercent),
+                nameof(HealthStalePercent),
+                nameof(HealthNoBackupPercent),
+                nameof(BackupHealthSummaryLine),
+                nameof(RestoreReadinessReadyProjects),
+                nameof(RestoreReadinessAttentionProjects),
+                nameof(RestoreReadinessRiskProjects),
+                nameof(RestoreReadinessUnavailableProjects),
+                nameof(RestoreReadinessReadyPercent),
+                nameof(RestoreReadinessAttentionPercent),
+                nameof(RestoreReadinessRiskPercent),
+                nameof(RestoreReadinessUnavailablePercent),
+                nameof(RestoreReadinessHeadline),
+                nameof(RestoreReadinessDetail));
         }
 
         public void UpdateSummaryLayout(double width)
@@ -4843,17 +4844,18 @@ namespace VaultSync.UI.ViewModels
 
         private void NotifyProgressPresentationChanged()
         {
-            OnPropertyChanged(nameof(DisplayProgress));
-            OnPropertyChanged(nameof(HasProgress));
-            OnPropertyChanged(nameof(IsIndeterminate));
-            OnPropertyChanged(nameof(ProgressLabel));
-            OnPropertyChanged(nameof(ShowPercent));
-            OnPropertyChanged(nameof(ShowEta));
-            OnPropertyChanged(nameof(StageLabel));
-            OnPropertyChanged(nameof(StageDisplay));
-            OnPropertyChanged(nameof(StageBrush));
-            OnPropertyChanged(nameof(EtaDisplay));
-            OnPropertyChanged(nameof(HasEtaDisplay));
+            OnPropertiesChanged(
+                nameof(DisplayProgress),
+                nameof(HasProgress),
+                nameof(IsIndeterminate),
+                nameof(ProgressLabel),
+                nameof(ShowPercent),
+                nameof(ShowEta),
+                nameof(StageLabel),
+                nameof(StageDisplay),
+                nameof(StageBrush),
+                nameof(EtaDisplay),
+                nameof(HasEtaDisplay));
         }
 
         private void UpdateDisplayProgress()
