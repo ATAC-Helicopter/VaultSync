@@ -8,6 +8,11 @@ public static class ByteSizeFormat
     public static string FormatBytes(long bytes, string numberFormat = "0.##")
     {
         double size = bytes;
+        return FormatBytes(size, numberFormat);
+    }
+
+    private static string FormatBytes(double size, string numberFormat)
+    {
         string unit = "B";
 
         if (Math.Abs(size) >= 1024d)
@@ -39,7 +44,10 @@ public static class ByteSizeFormat
 
     public static string FormatSignedBytes(long bytes, string numberFormat = "0.##")
     {
-        string absolute = FormatBytes(Math.Abs(bytes), numberFormat);
+        double absoluteBytes = bytes == long.MinValue
+            ? (double)long.MaxValue + 1d
+            : Math.Abs(bytes);
+        string absolute = FormatBytes(absoluteBytes, numberFormat);
         if (bytes > 0)
             return $"+{absolute}";
         if (bytes < 0)

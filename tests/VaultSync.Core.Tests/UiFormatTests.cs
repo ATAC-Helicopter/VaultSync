@@ -28,6 +28,15 @@ public sealed class UiFormatTests
     }
 
     [Fact]
+    public void FormatSignedBytes_HandlesLongMinValue()
+    {
+        string formatted = UiFormat.FormatSignedBytes(long.MinValue);
+
+        Assert.StartsWith("-", formatted);
+        Assert.EndsWith(" TB", formatted);
+    }
+
+    [Fact]
     public void ExistingSnapshotFormatters_PreservePrecision()
     {
         string expected = WithDecimalSeparator("1{0}5 KB");
@@ -46,6 +55,20 @@ public sealed class UiFormatTests
         };
 
         Assert.Equal("Size unavailable", project.LatestSnapshotSizeDisplay);
+    }
+
+    [Theory]
+    [InlineData(0, "0 B")]
+    [InlineData(1536, "1{0}5 KB")]
+    [InlineData(1048576, "1 MB")]
+    public void ProjectSizeDisplay_UsesSharedBinaryFormatter(long bytes, string expected)
+    {
+        var project = new ProjectItemViewModel
+        {
+            SizeBytes = bytes
+        };
+
+        Assert.Equal(WithDecimalSeparator(expected), project.SizeDisplay);
     }
 
     private static string WithDecimalSeparator(string value) =>

@@ -102,7 +102,7 @@ namespace VaultSync.CLI.Commands
                             AnsiConsole.MarkupLine(
                                 $"[green]Snapshot {snapId}[/] " +
                                 $"Added: {outcome.Added}, Modified: {outcome.Modified}, Deleted: {outcome.Deleted}, " +
-                                $"Unchanged: {outcome.Unchanged}, Bytes: {outcome.TotalBytes}");
+                                $"Unchanged: {outcome.Unchanged}, Bytes: {ByteSizeFormat.FormatBytes(outcome.TotalBytes, "0.#")}");
                         }
                         else
                         {

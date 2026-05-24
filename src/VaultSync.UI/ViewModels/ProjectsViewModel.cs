@@ -1241,10 +1241,11 @@ public class ProjectsViewModel : ViewModelBase
             }
         }
 
-        OnPropertyChanged(nameof(HasProjects));
-        OnPropertyChanged(nameof(ShowProjectsEmptyState));
-        OnPropertyChanged(nameof(HasSelectedProject));
-        OnPropertyChanged(nameof(ShowSelectedProjectEmptyState));
+        OnPropertiesChanged(
+            nameof(HasProjects),
+            nameof(ShowProjectsEmptyState),
+            nameof(HasSelectedProject),
+            nameof(ShowSelectedProjectEmptyState));
     }
 
     private void LoadGroupOptions()
@@ -1526,17 +1527,19 @@ public class ProjectsViewModel : ViewModelBase
                 _projectTagColorRed = red;
                 _projectTagColorGreen = green;
                 _projectTagColorBlue = blue;
-                OnPropertyChanged(nameof(ProjectTagColorRed));
-                OnPropertyChanged(nameof(ProjectTagColorGreen));
-                OnPropertyChanged(nameof(ProjectTagColorBlue));
+                OnPropertiesChanged(
+                    nameof(ProjectTagColorRed),
+                    nameof(ProjectTagColorGreen),
+                    nameof(ProjectTagColorBlue));
 
                 ProjectTagAppearance.RgbToHsv(red, green, blue, out var hue, out var saturation, out var value);
                 _projectTagColorHue = hue;
                 _projectTagColorSaturation = saturation;
                 _projectTagColorValue = value;
-                OnPropertyChanged(nameof(ProjectTagColorHue));
-                OnPropertyChanged(nameof(ProjectTagColorSaturation));
-                OnPropertyChanged(nameof(ProjectTagColorValue));
+                OnPropertiesChanged(
+                    nameof(ProjectTagColorHue),
+                    nameof(ProjectTagColorSaturation),
+                    nameof(ProjectTagColorValue));
             }
         }
         finally
@@ -1561,17 +1564,19 @@ public class ProjectsViewModel : ViewModelBase
             _projectTagColorRed = red;
             _projectTagColorGreen = green;
             _projectTagColorBlue = blue;
-            OnPropertyChanged(nameof(ProjectTagColorRed));
-            OnPropertyChanged(nameof(ProjectTagColorGreen));
-            OnPropertyChanged(nameof(ProjectTagColorBlue));
+            OnPropertiesChanged(
+                nameof(ProjectTagColorRed),
+                nameof(ProjectTagColorGreen),
+                nameof(ProjectTagColorBlue));
 
             ProjectTagAppearance.RgbToHsv(red, green, blue, out var hue, out var saturation, out var value);
             _projectTagColorHue = hue;
             _projectTagColorSaturation = saturation;
             _projectTagColorValue = value;
-            OnPropertyChanged(nameof(ProjectTagColorHue));
-            OnPropertyChanged(nameof(ProjectTagColorSaturation));
-            OnPropertyChanged(nameof(ProjectTagColorValue));
+            OnPropertiesChanged(
+                nameof(ProjectTagColorHue),
+                nameof(ProjectTagColorSaturation),
+                nameof(ProjectTagColorValue));
         }
         finally
         {
@@ -1626,9 +1631,10 @@ public class ProjectsViewModel : ViewModelBase
 
     private void RefreshProjectTagColorPreview()
     {
-        OnPropertyChanged(nameof(ProjectTagColorPreviewBackground));
-        OnPropertyChanged(nameof(ProjectTagColorPreviewForeground));
-        OnPropertyChanged(nameof(ProjectTagColorPreviewBorder));
+        OnPropertiesChanged(
+            nameof(ProjectTagColorPreviewBackground),
+            nameof(ProjectTagColorPreviewForeground),
+            nameof(ProjectTagColorPreviewBorder));
     }
 
     private void ApplyProjectTagColorSwatch(string? hex)
@@ -3979,9 +3985,7 @@ public class ProjectItemViewModel : ViewModelBase
     {
         get
         {
-            double gb = SizeBytes / (1024d * 1024d * 1024d);
-            if (gb < 0.01) return $"{SizeBytes / (1024d * 1024d):0.#} MB";
-            return $"{gb:0.0} GB";
+            return UiFormat.FormatBytes(SizeBytes, "0.#");
         }
     }
 
