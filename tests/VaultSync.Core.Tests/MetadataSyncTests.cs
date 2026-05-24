@@ -123,6 +123,116 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_UnchangedReadOnlySource_DoesNotSkipWhenLocalRepositoryIsEmpty()
+    {
+        string metaRoot = CreateTempDir();
+        string firstDbPath = Path.Combine(CreateTempDir(), "vaultsync-first.db");
+        string secondDbPath = Path.Combine(CreateTempDir(), "vaultsync-second.db");
+        using var configScope = new TestAppConfigScope();
+        AppConfigStore.Save(new AppConfig
+        {
+            ProjectsRoot = CreateTempDir(),
+            DbPath = firstDbPath
+        });
+
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "machine-cache");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-cache",
+            Name = "Cache Project",
+            Preset = "dotnet",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        MetadataSyncOptions options = new MetadataSyncOptions(true, false)
+            .AsReadOnlySource()
+            .WithUnchangedSourceSkip();
+        var firstService = new MetadataSyncService(CreateRepository(firstDbPath));
+        MetadataSyncResult first = firstService.ImportFromStore(metaRoot, options);
+        Assert.Equal(MetadataSyncStatus.Success, first.Status);
+        Assert.Equal(1, first.ImportedProjects);
+
+        SqliteRepository secondRepo = CreateRepository(secondDbPath);
+        var secondService = new MetadataSyncService(secondRepo);
+        MetadataSyncResult second = secondService.ImportFromStore(metaRoot, options);
+
+        Assert.Equal(MetadataSyncStatus.Success, second.Status);
+        Assert.Equal(1, second.ImportedProjects);
+        Assert.NotNull(secondRepo.GetProjectByName("Cache Project"));
+    }
+
+    [Fact]
+    public void ImportFromStore_UnchangedReadOnlySource_RechecksMissingBackupPathWhenFolderAppears()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string projectsRoot = CreateTempDir();
+        string backupPathRel = Path.Combine("cache-project", "2026-05-22_09-00-00");
+        using var configScope = new TestAppConfigScope();
+        AppConfigStore.Save(new AppConfig
+        {
+            ProjectsRoot = projectsRoot,
+            DbPath = dbPath
+        });
+
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "machine-cache");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-cache",
+            Name = "Cache Project",
+            Preset = "dotnet",
+            RootPathHint = Path.Combine(projectsRoot, "Cache Project"),
+            CreatedUtc = DateTime.UtcNow.AddDays(-2),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "snap-cache",
+            ProjectExternalId = "proj-cache",
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            FileCount = 1,
+            TotalBytes = 128
+        });
+        store.UpsertBackup(new MetaBackup
+        {
+            ExternalId = "backup-cache",
+            ProjectExternalId = "proj-cache",
+            SnapshotExternalId = "snap-cache",
+            CreatedUtc = DateTime.UtcNow,
+            Type = "manual",
+            TotalBytes = 128,
+            PathRel = backupPathRel,
+            DestinationAlias = "Primary",
+            IsProtected = false,
+            IsEncrypted = false,
+            KdfParamsJson = "{}"
+        });
+
+        SqliteRepository repo = CreateRepository(dbPath);
+        var service = new MetadataSyncService(repo);
+        MetadataSyncOptions options = new MetadataSyncOptions(true, false)
+            .AsReadOnlySource()
+            .WithUnchangedSourceSkip();
+        MetadataSyncResult first = service.ImportFromStore(metaRoot, options);
+        Assert.Equal(MetadataSyncStatus.Success, first.Status);
+        Assert.Equal(0, first.ImportedBackups);
+
+        Directory.CreateDirectory(Path.Combine(metaRoot, backupPathRel));
+        File.WriteAllBytes(Path.Combine(metaRoot, backupPathRel, "data.bin"), new byte[128]);
+        MetadataSyncResult second = service.ImportFromStore(metaRoot, options);
+
+        Assert.Equal(MetadataSyncStatus.Success, second.Status);
+        Assert.Equal(1, second.ImportedBackups);
+        Assert.NotNull(repo.GetBackupByExternalId("backup-cache"));
+    }
+
+    [Fact]
     public void ImportFromStore_RebuildsHistoryFromDestinationFoldersWhenMetadataHasNoBackups()
     {
         string metaRoot = CreateTempDir();

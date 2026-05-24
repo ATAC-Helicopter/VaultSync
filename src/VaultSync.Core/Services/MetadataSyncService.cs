@@ -638,7 +638,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
                    cached.StoreSchemaVersion == current.StoreSchemaVersion &&
                    cached.StoreFileLengthBytes == current.StoreFileLengthBytes &&
                    string.Equals(cached.StoreFileUpdatedUtc, current.StoreFileUpdatedUtc, StringComparison.Ordinal) &&
-                   string.Equals(cached.StoreSidecarStamp, current.StoreSidecarStamp, StringComparison.Ordinal);
+                   string.Equals(cached.StoreSidecarStamp, current.StoreSidecarStamp, StringComparison.Ordinal) &&
+                   LocalRepositoryHasImportCoverage(cached);
         }
         catch (Exception ex)
         {
@@ -754,6 +755,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
                 string.Equals(cached.StoreSidecarStamp, BuildStoreSidecarStamp(sourceDatabasePath), StringComparison.Ordinal);
             if (!unchanged)
                 return false;
+            if (!LocalRepositoryHasImportCoverage(cached))
+                return false;
 
             Console.WriteLine($"[MetadataSync] Auto import skipped for unchanged store files '{rootPath}'.");
             result = new MetadataSyncResult(MetadataSyncStatus.Success, 0, 0, 0, 0, "Metadata source unchanged.");
@@ -762,6 +765,21 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         catch (Exception ex)
         {
             RuntimeLog.WriteVerbose($"[MetadataSync] Import file-stamp cache check failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    private bool LocalRepositoryHasImportCoverage(MetadataImportSourceStamp cached)
+    {
+        try
+        {
+            return _repo.GetAllProjects().Count() >= cached.ProjectCount &&
+                   _repo.GetAllSnapshots().Count() >= cached.SnapshotCount &&
+                   _repo.GetAllBackups().Count >= cached.BackupCount;
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Import cache local coverage check failed: {ex.Message}");
             return false;
         }
     }

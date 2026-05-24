@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Text.Json;
@@ -304,6 +306,12 @@ namespace VaultSync.Core.Config
 
         private static void PreserveDurableConfigValues(AppConfig config)
         {
+            PreserveProjectsRoot(config);
+            PreserveMetadataImportCache(config);
+        }
+
+        private static void PreserveProjectsRoot(AppConfig config)
+        {
             if (!string.IsNullOrWhiteSpace(config.ProjectsRoot))
                 return;
 
@@ -315,6 +323,49 @@ namespace VaultSync.Core.Config
 
             config.ProjectsRoot = persisted.ProjectsRoot.Trim();
             RuntimeLog.WriteVerbose("[Config] Save preserved existing ProjectsRoot because the pending save had an empty value.");
+        }
+
+        private static void PreserveMetadataImportCache(AppConfig config)
+        {
+            config.Advanced ??= new AdvancedConfig();
+            config.Advanced.MetadataImportCache ??= new MetadataImportCacheConfig();
+            if (config.Advanced.MetadataImportCache.Sources.Count > 0)
+                return;
+
+            AppConfig? persisted = TryLoadPersistedConfigForPreservation(ConfigFilePath)
+                            ?? TryLoadPersistedConfigForPreservation(ConfigBackupFilePath)
+                            ?? GetLastKnownGoodClone();
+            List<MetadataImportSourceStamp>? persistedSources = persisted?
+                .Advanced?
+                .MetadataImportCache?
+                .Sources;
+            if (persistedSources is not { Count: > 0 })
+                return;
+
+            config.Advanced.MetadataImportCache.Sources = CloneMetadataImportSources(persistedSources);
+            RuntimeLog.WriteVerbose("[Config] Save preserved metadata import cache because the pending save had no cache entries.");
+        }
+
+        private static List<MetadataImportSourceStamp> CloneMetadataImportSources(IEnumerable<MetadataImportSourceStamp> sources)
+        {
+            return sources
+                .Select(source => new MetadataImportSourceStamp
+                {
+                    SourceKey = source.SourceKey,
+                    SourcePath = source.SourcePath,
+                    SourceMachineId = source.SourceMachineId,
+                    StoreUpdatedUtc = source.StoreUpdatedUtc,
+                    StoreSchemaVersion = source.StoreSchemaVersion,
+                    StoreFileLengthBytes = source.StoreFileLengthBytes,
+                    StoreFileUpdatedUtc = source.StoreFileUpdatedUtc,
+                    StoreSidecarStamp = source.StoreSidecarStamp,
+                    ImportedUtc = source.ImportedUtc,
+                    ProjectCount = source.ProjectCount,
+                    SnapshotCount = source.SnapshotCount,
+                    BackupCount = source.BackupCount,
+                    TombstoneCount = source.TombstoneCount
+                })
+                .ToList();
         }
 
         private static AppConfig? TryLoadPersistedConfigForPreservation(string path)
