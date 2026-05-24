@@ -6,7 +6,7 @@ This document defines the current release packaging flow.
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The prepared stable release target is `1.7.5`; prerelease builds for the active patch train use `1.7.5-Beta.N` until the stable release is cut.
+- The prepared stable release target is `1.7.5`, currently planned for 2026-06-01; prerelease builds for the active patch train use `1.7.5-Beta.N` until the stable release is cut.
 
 ## 1) Windows Installer
 1. Publish:
