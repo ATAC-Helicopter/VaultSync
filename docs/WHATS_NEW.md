@@ -26,6 +26,11 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - Windows notification failures and manual storage-health rechecks now stay quieter and keep UI updates on the UI thread.
 - Config fallback now records when VaultSync recovers from a broken primary config through the backup or last-known-good snapshot.
 
+### Linux updates and shutdown
+- Protected Linux installs still fall back to installer updates when patching cannot safely write to the app folder, but Debian-family systems now hand the downloaded `.deb` directly to the OS elevation prompt instead of leaving users in the graphical app manager.
+- Linux shutdown and logout requests now bypass the tray background-close behavior, so VaultSync does not hide to tray and interrupt power-off.
+- Linux shutdown signals are now recorded in diagnostics to make future desktop-session issues easier to confirm.
+
 ### Cleanup
 - Destination path normalization and NetworkMount diagnostics now reuse common helpers.
 - The 1.7.5 changelog records the cleanup work as versioned release notes.

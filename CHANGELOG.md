@@ -28,6 +28,8 @@
 - [BUG-18038] Windows notification failures no longer assign an invalid empty toast tag and repeated OS-toast failures are suppressed after the first diagnostic entry.
 - [BUG-18039] Manual storage-health rechecks now marshal notification and tray updates back to the UI thread after background drive probing.
 - [BUG-18040] Config load fallback now records primary, backup, and last-known-good recovery diagnostics instead of silently falling back to defaults.
+- [BUG-18041] Linux `.deb` installer fallback now uses the OS elevation prompt to run the package install directly before falling back to opening the downloaded file.
+- [BUG-18042] Linux OS shutdown and logout requests now bypass run-in-background close interception so VaultSync no longer hides to tray and blocks power-off.
 
 ## [1.7.4] - 20.05.2026
 ### Added
