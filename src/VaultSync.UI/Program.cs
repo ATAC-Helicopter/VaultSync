@@ -245,7 +245,7 @@ internal static class Program
 
     private static void RegisterPosixSignals()
     {
-        if (!OperatingSystem.IsMacOS())
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux())
             return;
 
         try
@@ -254,6 +254,7 @@ internal static class Program
             {
                 string info = GetParentProcessInfo();
                 DiagnosticsLogger.Record($"POSIX signal: SIGTERM (cancel={ctx.Cancel}). Parent={info}");
+                App.MarkShuttingDown();
                 if (string.Equals(Environment.GetEnvironmentVariable("VAULTSYNC_IGNORE_SIGTERM"), "1", StringComparison.OrdinalIgnoreCase))
                 {
                     ctx.Cancel = true;
@@ -263,6 +264,7 @@ internal static class Program
             PosixSignalRegistration.Create(PosixSignal.SIGINT, ctx =>
             {
                 DiagnosticsLogger.Record($"POSIX signal: SIGINT (cancel={ctx.Cancel}).");
+                App.MarkShuttingDown();
             });
             PosixSignalRegistration.Create(PosixSignal.SIGQUIT, ctx =>
             {
@@ -271,6 +273,7 @@ internal static class Program
             PosixSignalRegistration.Create(PosixSignal.SIGHUP, ctx =>
             {
                 DiagnosticsLogger.Record($"POSIX signal: SIGHUP (cancel={ctx.Cancel}).");
+                App.MarkShuttingDown();
             });
         }
         catch (Exception ex)
