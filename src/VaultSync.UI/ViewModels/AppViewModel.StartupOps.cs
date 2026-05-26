@@ -16,9 +16,10 @@ namespace VaultSync.UI.ViewModels
         {
         }
 
-        internal AppViewModel(IAppConfigStore configStore)
+        internal AppViewModel(IAppConfigStore configStore, IRepositoryFactory? repositoryFactory = null)
         {
             _configStore = configStore;
+            _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
             _currentVersionString = GetCurrentVersionString();
             RecordStartupPhase("version-resolved");
 
@@ -40,7 +41,7 @@ namespace VaultSync.UI.ViewModels
             _localizationService.LanguageChanged += OnLanguageChanged;
             RecordStartupPhase("localization-initialized");
 
-            _repo = new SqliteRepository(_config.DbPath ?? string.Empty);
+            _repo = _repositoryFactory.Create(_config);
 
             _backupService = new BackupService(_repo, configStore: _configStore);
             _backupService.BackupRetentionDeleted += OnBackupRetentionDeleted;
@@ -59,7 +60,7 @@ namespace VaultSync.UI.ViewModels
 
             // 2) Section viewmodels
             _dashboardViewModel = null;
-            _projectsViewModel = new ProjectsViewModel(_configStore);
+            _projectsViewModel = new ProjectsViewModel(_configStore, _repositoryFactory);
             _projectsViewModel.EditProjectEncryptionRequested += OnProjectEncryptionRequestedFromProjects;
             _projectsViewModel.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
             _projectsViewModel.ProjectSettingsMetadataChanged += OnProjectSettingsMetadataChanged;
@@ -67,7 +68,7 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel.AutoBackupGroupPreferenceChanged += OnAutoBackupGroupPreferenceChanged;
             _projectsViewModel.ProjectRemovedFromDatabase += OnProjectRemovedFromDatabase;
             _backupsViewModel = null;
-            _settingsViewModel = new SettingsViewModel(_localizationService, _configStore);
+            _settingsViewModel = new SettingsViewModel(_localizationService, _configStore, _repositoryFactory);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.DestinationSettingsSaved += OnDestinationSettingsSaved;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
@@ -234,7 +235,7 @@ namespace VaultSync.UI.ViewModels
 
         private BackupsViewModel CreateBackupsViewModel()
         {
-            var vm = new BackupsViewModel(_configStore);
+            var vm = new BackupsViewModel(_configStore, _repositoryFactory);
             vm.BackupProjectRequested += OnBackupProjectRequested;
             vm.CreateBackupForAllProjectsRequested += OnCreateBackupForAllProjectsRequested;
             vm.DeleteBackupRequested += OnDeleteBackupRequested;

@@ -531,7 +531,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         {
             if (Interlocked.Exchange(ref _configRefreshInFlight, 1) == 0)
             {
-                _ = Task.Run(() =>
+                DetachedTask.Run(() =>
                 {
                     try
                     {
@@ -546,7 +546,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                     {
                         Interlocked.Exchange(ref _configRefreshInFlight, 0);
                     }
-                });
+                }, nameof(GetConfig));
             }
 
             return _cachedConfig;

@@ -21,20 +21,7 @@ namespace VaultSync.UI.ViewModels
     {
         private static void RunDetached(Func<Task> operation, string operationName)
         {
-            _ = RunDetachedCoreAsync(operation, operationName);
-        }
-
-        private static async Task RunDetachedCoreAsync(Func<Task> operation, string operationName)
-        {
-            try
-            {
-                await operation().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                DiagnosticsLogger.Record(
-                    $"Detached operation failed ({operationName}): {ex.GetType().Name} - {ex.Message}");
-            }
+            DetachedTask.Run(operation, operationName);
         }
 
         private string BuildBackupProgressLabel(string? etaText, string? currentFile, double percent)
