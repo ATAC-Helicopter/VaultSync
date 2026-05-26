@@ -11,6 +11,7 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - UI repository creation and selected background fire-and-forget work now go through shared helpers for easier testing and diagnostics.
 - View models reuse common property-notification helpers, reducing repeated UI plumbing.
 - Projects and Settings helper view models now live in focused files, making the main view-model files easier to scan.
+- Metadata tombstone export paths and Backups option-selection helpers now share common plumbing instead of repeating the same write/update blocks.
 - Core tests use shared temporary directory, config, repository, and builder fixtures.
 
 ### Performance and diagnostics

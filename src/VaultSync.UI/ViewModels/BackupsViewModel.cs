@@ -4125,11 +4125,7 @@ namespace VaultSync.UI.ViewModels
 
         public void SetPreferredDestinationOption(DestinationOption? option)
         {
-            if (ReferenceEquals(_preferredDestinationOption, option))
-                return;
-
-            _preferredDestinationOption = option;
-            OnPropertyChanged(nameof(PreferredDestinationOption));
+            SetOptionSilently(ref _preferredDestinationOption, option, nameof(PreferredDestinationOption));
         }
 
         private string _encryptionPolicy = ProjectEncryptionPolicy.Inherit;
@@ -4167,11 +4163,7 @@ namespace VaultSync.UI.ViewModels
 
         public void SetEncryptionPolicyOption(EncryptionPolicyOption? option)
         {
-            if (ReferenceEquals(_encryptionPolicyOption, option))
-                return;
-
-            _encryptionPolicyOption = option;
-            OnPropertyChanged(nameof(EncryptionPolicyOption));
+            SetOptionSilently(ref _encryptionPolicyOption, option, nameof(EncryptionPolicyOption));
         }
 
         private string _restoreMode = ProjectRestoreMode.Direct;
@@ -4200,11 +4192,7 @@ namespace VaultSync.UI.ViewModels
 
         public void SetRestoreModeOption(RestoreModeOption? option)
         {
-            if (ReferenceEquals(_restoreModeOption, option))
-                return;
-
-            _restoreModeOption = option;
-            OnPropertyChanged(nameof(RestoreModeOption));
+            SetOptionSilently(ref _restoreModeOption, option, nameof(RestoreModeOption));
         }
 
         private string _verificationPolicy = ProjectVerificationPolicy.Always;
@@ -4233,11 +4221,17 @@ namespace VaultSync.UI.ViewModels
 
         public void SetVerificationPolicyOption(VerificationPolicyOption? option)
         {
-            if (ReferenceEquals(_verificationPolicyOption, option))
+            SetOptionSilently(ref _verificationPolicyOption, option, nameof(VerificationPolicyOption));
+        }
+
+        private void SetOptionSilently<T>(ref T? field, T? option, string propertyName)
+            where T : class
+        {
+            if (ReferenceEquals(field, option))
                 return;
 
-            _verificationPolicyOption = option;
-            OnPropertyChanged(nameof(VerificationPolicyOption));
+            field = option;
+            OnPropertyChanged(propertyName);
         }
 
         private string _effectiveEncryptionDisplay = string.Empty;
