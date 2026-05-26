@@ -47,6 +47,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private readonly ProjectDiscoveryService _discovery = new();
     private readonly IAppConfigStore _configStore;
+    private readonly IRepositoryFactory _repositoryFactory;
     private IReadOnlyList<DiscoveredProject> _cachedDiscovery = [];
     private string? _cachedDiscoveryRoot;
     private DateTime _cachedDiscoveryUtc;
@@ -551,13 +552,14 @@ public class ProjectsViewModel : ViewModelBase
     }
 
     public ProjectsViewModel()
-        : this(StaticAppConfigStore.Instance)
+        : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
     {
     }
 
-    internal ProjectsViewModel(IAppConfigStore configStore)
+    internal ProjectsViewModel(IAppConfigStore configStore, IRepositoryFactory? repositoryFactory = null)
     {
         _configStore = configStore;
+        _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
         RefreshCommand = new RelayCommand(_ => Refresh());
         _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
         _removeProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
@@ -820,11 +822,7 @@ public class ProjectsViewModel : ViewModelBase
         Dictionary<int, Backup>? latestBackupsByProject = null;
         try
         {
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            repo = new SqliteRepository(dbPath);
+            repo = CreateRepository(config);
             registeredProjects = [.. repo.GetAllProjects()];
             projectsByName = registeredProjects
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
@@ -1808,12 +1806,7 @@ public class ProjectsViewModel : ViewModelBase
 
         await Task.Run(() =>
         {
-            var config = _configStore.GetSnapshot();
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            var repo = new SqliteRepository(dbPath);
+            var repo = CreateRepository(_configStore.GetSnapshot());
             var projectsById = repo.GetAllProjects().ToDictionary(p => p.Id);
             foreach (var projectId in ids)
             {
@@ -1874,9 +1867,6 @@ public class ProjectsViewModel : ViewModelBase
         try
         {
             var config = await Task.Run(_configStore.GetSnapshot).ConfigureAwait(false);
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
             var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
             var fullHash = config.Backups.UseFullSnapshotHash;
             var enableScanCache = config.Backups.EnableScanCache;
@@ -1893,7 +1883,7 @@ public class ProjectsViewModel : ViewModelBase
             if (targets.Count == 0)
                 return;
 
-            var repo = new SqliteRepository(dbPath);
+            var repo = CreateRepository(config);
             var existingByName = repo.GetAllProjects()
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
@@ -2312,11 +2302,7 @@ public class ProjectsViewModel : ViewModelBase
             try
             {
                 var config = _configStore.GetSnapshot();
-                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                    ? config.DbPath
-                    : GetDefaultDbPath();
-
-                var repo = new SqliteRepository(dbPath);
+                var repo = CreateRepository(config);
                 var existing = repo.GetProjectByName(removedProjectName);
                 if (existing is null)
                 {
@@ -2377,18 +2363,13 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            // 1. Resolve DB path from shared AppConfig (with a sensible default).
             var config = await Task.Run(_configStore.GetSnapshot);
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
             var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
             var fullHash = config.Backups.UseFullSnapshotHash;
             var enableScanCache = config.Backups.EnableScanCache;
             var aggressiveScanCache = config.Backups.AggressiveScanCache;
 
-            // 2. Open repository (schema already initialized at app startup).
-            var repo = new SqliteRepository(dbPath);
+            var repo = CreateRepository(config);
 
             // 3. Check if project is already registered.
             var existing = repo.GetProjectByName(SelectedProject.Name);
@@ -2669,11 +2650,7 @@ public class ProjectsViewModel : ViewModelBase
         try
         {
             var config = _configStore.GetSnapshot();
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            var repo = new SqliteRepository(dbPath);
+            var repo = CreateRepository(config);
             var existing = repo.GetProjectByName(projectName);
             return new ProjectRegistrationSnapshot(
                 existing is null,
@@ -2758,11 +2735,7 @@ public class ProjectsViewModel : ViewModelBase
         try
         {
             var config = _configStore.GetSnapshot();
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            var repo = new SqliteRepository(dbPath);
+            var repo = CreateRepository(config);
             var project = repo.GetProjectByName(vm.Name);
             if (project is null)
                 return;
@@ -2826,11 +2799,7 @@ public class ProjectsViewModel : ViewModelBase
                 try
                 {
                     var config = _configStore.GetSnapshot();
-                    var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                        ? config.DbPath
-                        : GetDefaultDbPath();
-
-                    var repo = new SqliteRepository(dbPath);
+                    var repo = CreateRepository(config);
                     var snapshots = await repo.GetSnapshotsForProjectAsync(projectName);
                     return snapshots.ConvertAll(CreateProjectSnapshotViewModel);
                 }
@@ -3499,9 +3468,9 @@ public class ProjectsViewModel : ViewModelBase
 
     private sealed record PresetRecommendation(string PresetId, string Reason);
 
-    private string GetDefaultDbPath()
+    private SqliteRepository CreateRepository(AppConfig? config = null)
     {
-        return _configStore.GetDefaultDbPath();
+        return _repositoryFactory.Create(config);
     }
 
     public void SetAvatarForSelectedProject(string avatarPath)
@@ -4095,199 +4064,4 @@ public class ProjectItemViewModel : ViewModelBase
             TagChips.Add(ProjectTagChip.Create(tag, config));
     }
 
-}
-
-public sealed class DestinationOption(string id, string label)
-{
-    public string Id { get; } = id ?? string.Empty;
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is DestinationOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class ProjectGroupOption(string id, string label)
-{
-    public const string AllId = "all";
-    public string Id { get; } = string.IsNullOrWhiteSpace(id) ? AllId : id.Trim();
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is ProjectGroupOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class EncryptionPolicyOption(string id, string label)
-{
-    public string Id { get; } = ProjectEncryptionPolicy.Normalize(id);
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is EncryptionPolicyOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class RestoreModeOption(string id, string label)
-{
-    public string Id { get; } = ProjectRestoreMode.Normalize(id);
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is RestoreModeOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class VerificationPolicyOption(string id, string label)
-{
-    public string Id { get; } = ProjectVerificationPolicy.Normalize(id);
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is VerificationPolicyOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class ProjectSnapshotViewModel(
-    DateTime timestamp,
-    long sizeBytes,
-    int diffAdded = 0,
-    int diffModified = 0,
-    int diffDeleted = 0,
-    long diffNetBytes = 0,
-    IReadOnlyList<SnapshotDiffPathStat>? topChangedPaths = null)
-{
-    public DateTime Timestamp { get; } = timestamp;
-    public long SizeBytes { get; } = sizeBytes;
-    public int DiffAdded { get; } = Math.Max(0, diffAdded);
-    public int DiffModified { get; } = Math.Max(0, diffModified);
-    public int DiffDeleted { get; } = Math.Max(0, diffDeleted);
-    public long DiffNetBytes { get; } = diffNetBytes;
-    public IReadOnlyList<SnapshotDiffPathStat> TopChangedPaths { get; } = topChangedPaths ?? [];
-
-    // Mini-chart data
-    public double RelativeSize { get; set; }
-
-    /// <summary>
-    /// 24-80px bar height, based on RelativeSize.
-    /// </summary>
-    public double RelativeBarHeight => 24 + RelativeSize * 56;
-
-    public double RelativeBarHeightCapped => Math.Max(16, RelativeBarHeight);
-
-    /// <summary>
-    /// Color used for the bar: neutral, up (red), down (green).
-    /// </summary>
-    public string TrendColor { get; set; } = "#2F3650";
-
-    public bool ShowDayLabel { get; set; }
-
-    public string DayLabel { get; set; } = string.Empty;
-
-    public string DateDisplay => Timestamp.ToString("dd/MM/yyyy - HH:mm", CultureInfo.CurrentCulture);
-
-    public string SizeDisplay => FormatSize(SizeBytes);
-
-    public string DiffSummaryDisplay
-    {
-        get
-        {
-            var hasChanges = (DiffAdded > 0) || (DiffModified > 0) || (DiffDeleted > 0);
-            if (!hasChanges && DiffNetBytes == 0)
-                return L("Projects.DiffSummary.NoChanges", "No file changes detected or diff data is unavailable for this snapshot");
-
-            return Lf(
-                "Projects.DiffSummary.Compact",
-                "+{0} / ~{1} / -{2}  Δ {3}",
-                DiffAdded,
-                DiffModified,
-                DiffDeleted,
-                FormatSignedSize(DiffNetBytes));
-        }
-    }
-
-    public bool HasDiffTopPaths => TopChangedPaths.Count > 0;
-
-    public string DiffTopPathsDisplay
-    {
-        get
-        {
-            if (TopChangedPaths.Count == 0)
-                return L("Projects.DiffSummary.TopPaths.None", "Top paths: none");
-
-            var preview = string.Join(
-                ", ",
-                TopChangedPaths
-                    .Where(path => !string.IsNullOrWhiteSpace(path.Path))
-                    .Take(2)
-                    .Select(path => $"{path.Path} ({path.Changes})"));
-
-            return string.IsNullOrWhiteSpace(preview)
-                ? L("Projects.DiffSummary.TopPaths.None", "Top paths: none")
-                : Lf("Projects.DiffSummary.TopPaths.Compact", "Top paths: {0}", preview);
-        }
-    }
-
-    // Used by tooltip: date + size in one string
-    public string TooltipText => $"{DateDisplay}\n{SizeDisplay}";
-
-    public static string FormatSize(long bytes) =>
-        UiFormat.FormatBytes(bytes, "0.0");
-
-    private static string FormatSignedSize(long value)
-        => UiFormat.FormatSignedBytes(value, "0.0");
-
-    private static string L(string key, string fallback) =>
-        LocalizationProvider.Service?.GetString(key) ?? fallback;
-
-    private static string Lf(string key, string fallback, params object[] args)
-    {
-        var fmt = L(key, fallback);
-        return string.Format(CultureInfo.CurrentCulture, fmt, args);
-    }
 }

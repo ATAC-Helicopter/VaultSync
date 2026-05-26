@@ -56,6 +56,7 @@ namespace VaultSync.UI.ViewModels
         private static readonly IBrush FreshnessUnknownBrush = new ImmutableSolidColorBrush(Color.Parse("#7F8FA8"));
         private static readonly ConcurrentDictionary<string, ImmutableSolidColorBrush> AccentBrushCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly IAppConfigStore _configStore;
+        private readonly IRepositoryFactory _repositoryFactory;
         // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
         protected static bool SetProperty<T>(ref T storage, T value)
@@ -945,13 +946,14 @@ namespace VaultSync.UI.ViewModels
             !string.Equals(SelectedSnapshotA.Id, SelectedSnapshotB.Id, StringComparison.Ordinal);
 
         public BackupsViewModel()
-            : this(StaticAppConfigStore.Instance)
+            : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
         {
         }
 
-        internal BackupsViewModel(IAppConfigStore configStore)
+        internal BackupsViewModel(IAppConfigStore configStore, IRepositoryFactory? repositoryFactory = null)
         {
             _configStore = configStore;
+            _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
             _activeBackupFlushTimer.Tick += (_, _) => FlushPendingActiveBackupUpdates();
 
             // All-project backup
@@ -3530,10 +3532,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                string dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                    ? config.DbPath
-                    : _configStore.GetDefaultDbPath();
-                var repo = new SqliteRepository(dbPath);
+                var repo = _repositoryFactory.Create(config);
                 return repo.GetSnapshotsByIds(snapshotIds)
                     .ToDictionary(snapshot => snapshot.Id);
             }
@@ -3757,7 +3756,7 @@ namespace VaultSync.UI.ViewModels
             if (!int.TryParse(item.Id, out int projectId) || projectId <= 0)
                 return;
 
-            _ = Task.Run(() =>
+            DetachedTask.Run(() =>
             {
                 AppConfig config = _configStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
@@ -3765,7 +3764,7 @@ namespace VaultSync.UI.ViewModels
                     UpdateProjectDestinationDisplay(item, config);
                     PreferredDestinationChanged?.Invoke(projectId, item.PreferredDestinationId ?? string.Empty);
                 });
-            });
+            }, nameof(OnPreferredDestinationChanged));
         }
 
         private void OnProjectEncryptionPolicyChanged(ProjectBackupItem item)
@@ -3773,7 +3772,7 @@ namespace VaultSync.UI.ViewModels
             if (!int.TryParse(item.Id, out int projectId) || projectId <= 0)
                 return;
 
-            _ = Task.Run(() =>
+            DetachedTask.Run(() =>
             {
                 AppConfig config = _configStore.GetSnapshot();
                 Dispatcher.UIThread.Post(() =>
@@ -3781,7 +3780,7 @@ namespace VaultSync.UI.ViewModels
                     UpdateProjectEncryptionDisplay(item, config);
                     ProjectEncryptionPolicyChanged?.Invoke(projectId, item.EncryptionPolicy);
                 });
-            });
+            }, nameof(OnProjectEncryptionPolicyChanged));
         }
 
         private void OnProjectRestoreModeChanged(ProjectBackupItem item)

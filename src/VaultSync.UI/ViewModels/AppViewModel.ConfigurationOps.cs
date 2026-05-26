@@ -42,7 +42,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            _ = Task.Run(() =>
+            DetachedTask.Run(() =>
             {
                 try
                 {
@@ -61,7 +61,7 @@ namespace VaultSync.UI.ViewModels
                         QueueConfigReload(apply, context);
                     }
                 }
-            });
+            }, $"{nameof(QueueConfigReload)}:{context}");
         }
 
         private void QueueDestinationOverviewRefresh(BackupsViewModel? vm)
