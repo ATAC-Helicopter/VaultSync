@@ -166,6 +166,78 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_UnchangedReadOnlySource_DoesNotSkipWhenLocalRepositoryHasUnrelatedCountCoverage()
+    {
+        string metaRoot = CreateTempDir();
+        string firstDbPath = Path.Combine(CreateTempDir(), "vaultsync-first.db");
+        string secondDbPath = Path.Combine(CreateTempDir(), "vaultsync-second.db");
+        using var configScope = new TestAppConfigScope();
+        AppConfigStore.Save(new AppConfig
+        {
+            ProjectsRoot = CreateTempDir(),
+            DbPath = firstDbPath
+        });
+
+        string backupPathRel = Path.Combine("cache-project", "2026-05-22_09-00-00");
+        Directory.CreateDirectory(Path.Combine(metaRoot, backupPathRel));
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "machine-cache");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-cache",
+            Name = "Cache Project",
+            Preset = "dotnet",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "snap-cache",
+            ProjectExternalId = "proj-cache",
+            CreatedUtc = DateTime.UtcNow,
+            FileCount = 1,
+            TotalBytes = 128
+        });
+        store.UpsertBackup(new MetaBackup
+        {
+            ExternalId = "backup-cache",
+            ProjectExternalId = "proj-cache",
+            SnapshotExternalId = "snap-cache",
+            CreatedUtc = DateTime.UtcNow,
+            Type = "manual",
+            TotalBytes = 128,
+            PathRel = backupPathRel,
+            DestinationAlias = "Primary",
+            IsProtected = false,
+            IsEncrypted = false,
+            KdfParamsJson = "{}"
+        });
+
+        MetadataSyncOptions options = new MetadataSyncOptions(true, false)
+            .AsReadOnlySource()
+            .WithUnchangedSourceSkip();
+        var firstService = new MetadataSyncService(CreateRepository(firstDbPath));
+        MetadataSyncResult first = firstService.ImportFromStore(metaRoot, options);
+        Assert.Equal(MetadataSyncStatus.Success, first.Status);
+        Assert.Equal(1, first.ImportedProjects);
+        Assert.Equal(1, first.ImportedSnapshots);
+        Assert.Equal(1, first.ImportedBackups);
+
+        SqliteRepository secondRepo = CreateRepository(secondDbPath);
+        SeedUnrelatedImportedHistory(secondRepo, CreateTempDir());
+        var secondService = new MetadataSyncService(secondRepo);
+        MetadataSyncResult second = secondService.ImportFromStore(metaRoot, options);
+
+        Assert.Equal(MetadataSyncStatus.Success, second.Status);
+        Assert.NotEqual("Metadata source unchanged.", second.Message);
+        Assert.NotNull(secondRepo.GetProjectByExternalId("proj-cache"));
+        Assert.NotNull(secondRepo.GetSnapshotByExternalId("snap-cache"));
+        Assert.NotNull(secondRepo.GetBackupByExternalId("backup-cache"));
+    }
+
+    [Fact]
     public void ImportFromStore_UnchangedReadOnlySource_RechecksMissingBackupPathWhenFolderAppears()
     {
         string metaRoot = CreateTempDir();
@@ -1767,6 +1839,36 @@ public sealed class MetadataSyncTests : IDisposable
             WriterAppVersion = "1.0.0",
             WriterMachineId = machineId
         });
+    }
+
+    private static void SeedUnrelatedImportedHistory(SqliteRepository repo, string rootPath)
+    {
+        int projectId = repo.AddProject(new Project
+        {
+            ExternalId = "proj-unrelated",
+            Name = "Unrelated Project",
+            RootPath = Path.Combine(rootPath, "Unrelated Project"),
+            Preset = "generic",
+            CreatedUtc = DateTime.UtcNow
+        });
+        int snapshotId = repo.CreateSnapshotFromMetadata(
+            "snap-unrelated",
+            projectId,
+            DateTime.UtcNow,
+            fileCount: 1,
+            totalBytes: 64);
+        repo.CreateBackupFromMetadata(
+            "backup-unrelated",
+            projectId,
+            snapshotId,
+            DateTime.UtcNow,
+            "manual",
+            64,
+            Path.Combine("unrelated-project", "2026-05-22_10-00-00"),
+            rootPath,
+            "Unrelated",
+            isProtected: false,
+            isImported: true);
     }
 
     private string CreateTempDir()

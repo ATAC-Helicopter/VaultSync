@@ -23,4 +23,6 @@ public sealed class StaticAppConfigStore : IAppConfigStore
         AppConfigStore.SaveAsync(config, ct);
 
     public string GetDefaultDbPath() => AppConfigStore.GetDefaultDbPath();
+
+    public string ResolveDbPath(AppConfig? config = null) => AppConfigStore.ResolveDbPath(config);
 }

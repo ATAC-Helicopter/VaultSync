@@ -16,4 +16,6 @@ public interface IAppConfigStore
     Task SaveAsync(AppConfig config, CancellationToken ct = default);
 
     string GetDefaultDbPath();
+
+    string ResolveDbPath(AppConfig? config = null);
 }
