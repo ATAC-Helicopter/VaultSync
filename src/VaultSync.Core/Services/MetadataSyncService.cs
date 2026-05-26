@@ -608,13 +608,17 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         if (opts.SkipUnchangedReadOnlySource &&
             !opts.ExportMissingTombstonesOnImport &&
+            missingBackupExternalIds.Count == 0 &&
             TryGetMetadataSourceStamp(rootPath, sourceDatabasePath, metaInfo, out MetadataImportSourceStamp completedStamp))
         {
+            List<string> importedProjectExternalIds = GetLiveExternalIds(metaProjects, tombstonedProjectIds, project => project.ExternalId);
+            List<string> importedSnapshotExternalIds = GetLiveExternalIds(metaSnapshots, tombstonedSnapshotIds, snapshot => snapshot.ExternalId);
+            List<string> importedBackupExternalIds = GetLiveExternalIds(metaBackups, tombstonedBackupIds, backup => backup.ExternalId);
             SaveSuccessfulImportStamp(
                 completedStamp,
-                metaProjects.Count(),
-                metaSnapshots.Count(),
-                metaBackups.Count(),
+                importedProjectExternalIds,
+                importedSnapshotExternalIds,
+                importedBackupExternalIds,
                 metaTombstones.Count());
         }
         Console.WriteLine($"[MetadataSync] Import complete from '{rootPath}': projects={importedProjects}, snapshots={importedSnapshots}, backups={importedBackups}, tombstones={appliedTombstones}.");
@@ -650,9 +654,9 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
 
     private void SaveSuccessfulImportStamp(
         MetadataImportSourceStamp stamp,
-        int projectCount,
-        int snapshotCount,
-        int backupCount,
+        IReadOnlyCollection<string> projectExternalIds,
+        IReadOnlyCollection<string> snapshotExternalIds,
+        IReadOnlyCollection<string> backupExternalIds,
         int tombstoneCount)
     {
         try
@@ -661,9 +665,12 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             List<MetadataImportSourceStamp> sources = config.Advanced.MetadataImportCache.Sources;
             sources.RemoveAll(source => string.Equals(source.SourceKey, stamp.SourceKey, StringComparison.OrdinalIgnoreCase));
             stamp.ImportedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
-            stamp.ProjectCount = projectCount;
-            stamp.SnapshotCount = snapshotCount;
-            stamp.BackupCount = backupCount;
+            stamp.ProjectExternalIds = [.. projectExternalIds];
+            stamp.SnapshotExternalIds = [.. snapshotExternalIds];
+            stamp.BackupExternalIds = [.. backupExternalIds];
+            stamp.ProjectCount = stamp.ProjectExternalIds.Count;
+            stamp.SnapshotCount = stamp.SnapshotExternalIds.Count;
+            stamp.BackupCount = stamp.BackupExternalIds.Count;
             stamp.TombstoneCount = tombstoneCount;
             sources.Insert(0, stamp);
             if (sources.Count > 32)
@@ -773,15 +780,55 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     {
         try
         {
-            return _repo.GetAllProjects().Count() >= cached.ProjectCount &&
-                   _repo.GetAllSnapshots().Count() >= cached.SnapshotCount &&
-                   _repo.GetAllBackups().Count >= cached.BackupCount;
+            if (!HasCachedExternalIds(cached))
+                return false;
+
+            IReadOnlyDictionary<string, int> projectExternalIds = _repo.GetProjectExternalIdMap();
+            IReadOnlyDictionary<string, int> snapshotExternalIds = _repo.GetSnapshotExternalIdMap();
+            IReadOnlyDictionary<string, int> backupExternalIds = _repo.GetBackupExternalIdMap();
+            return ContainsAll(projectExternalIds, cached.ProjectExternalIds) &&
+                   ContainsAll(snapshotExternalIds, cached.SnapshotExternalIds) &&
+                   ContainsAll(backupExternalIds, cached.BackupExternalIds);
         }
         catch (Exception ex)
         {
             RuntimeLog.WriteVerbose($"[MetadataSync] Import cache local coverage check failed: {ex.Message}");
             return false;
         }
+    }
+
+    private static bool HasCachedExternalIds(MetadataImportSourceStamp cached)
+    {
+        return cached.ProjectExternalIds.Count >= cached.ProjectCount &&
+               cached.SnapshotExternalIds.Count >= cached.SnapshotCount &&
+               cached.BackupExternalIds.Count >= cached.BackupCount;
+    }
+
+    private static bool ContainsAll(IReadOnlyDictionary<string, int> localExternalIds, IEnumerable<string> cachedExternalIds)
+    {
+        foreach (string externalId in cachedExternalIds)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                continue;
+
+            if (!localExternalIds.ContainsKey(externalId))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static List<string> GetLiveExternalIds<T>(
+        IEnumerable<T> rows,
+        ISet<string> tombstonedExternalIds,
+        Func<T, string> getExternalId)
+    {
+        return rows
+            .Select(getExternalId)
+            .Where(id => !string.IsNullOrWhiteSpace(id) && !tombstonedExternalIds.Contains(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static string BuildStoreSidecarStamp(string sourceDatabasePath)

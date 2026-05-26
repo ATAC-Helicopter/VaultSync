@@ -105,7 +105,7 @@ namespace VaultSync.Core.Config
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[AppConfigStore] Failed to persist default DbPath: {ex.Message}");
+                        RecordConfigDiagnostic("Failed to persist default DbPath", ex);
                     }
                 }
 
@@ -113,9 +113,10 @@ namespace VaultSync.Core.Config
                 RuntimeLog.UpdateFromConfig(cfg);
                 return cfg;
             }
-            catch
+            catch (Exception ex)
             {
                 // On any error, fall back to defaults instead of crashing the app.
+                RecordConfigDiagnostic("Load failed; using fallback config", ex);
                 AppConfig fallback = GetLastKnownGoodClone() ?? new AppConfig();
 
                 // Ensure fallback also receives a default DbPath
@@ -155,6 +156,14 @@ namespace VaultSync.Core.Config
         public static string GetDefaultDbPath()
         {
             return Path.Combine(GetDefaultDataDir(), "vaultsync.db");
+        }
+
+        public static string ResolveDbPath(AppConfig? config = null)
+        {
+            AppConfig cfg = config ?? GetSnapshot();
+            return string.IsNullOrWhiteSpace(cfg.DbPath)
+                ? GetDefaultDbPath()
+                : cfg.DbPath;
         }
 
         private static void WriteConfigWithRetry(string json)
@@ -279,29 +288,48 @@ namespace VaultSync.Core.Config
                 string json = ReadConfigWithRetry(ConfigFilePath);
                 return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
             }
-            catch
+            catch (Exception primaryEx)
             {
+                RecordConfigDiagnostic("Primary config load failed", primaryEx);
                 if (File.Exists(ConfigBackupFilePath))
                 {
                     try
                     {
                         string backupJson = ReadConfigWithRetry(ConfigBackupFilePath);
-                        return JsonSerializer.Deserialize<AppConfig>(backupJson, JsonOptions) ?? new AppConfig();
+                        AppConfig config = JsonSerializer.Deserialize<AppConfig>(backupJson, JsonOptions) ?? new AppConfig();
+                        RecordConfigDiagnostic("Loaded backup config after primary config failure");
+                        return config;
                     }
-                    catch
+                    catch (Exception backupEx)
                     {
+                        RecordConfigDiagnostic("Backup config load failed", backupEx);
                         AppConfig? cached = GetLastKnownGoodClone();
                         if (cached is not null)
+                        {
+                            RecordConfigDiagnostic("Using last-known-good config after backup config failure");
                             return cached;
+                        }
                     }
                 }
 
                 AppConfig? fallback = GetLastKnownGoodClone();
                 if (fallback is not null)
+                {
+                    RecordConfigDiagnostic("Using last-known-good config after primary config failure");
                     return fallback;
+                }
 
                 throw;
             }
+        }
+
+        private static void RecordConfigDiagnostic(string message, Exception? ex = null)
+        {
+            string detail = ex is null
+                ? message
+                : $"{message}: {ex.GetType().Name} - {ex.Message}";
+
+            Console.WriteLine($"[AppConfigStore] {detail}");
         }
 
         private static void PreserveDurableConfigValues(AppConfig config)
@@ -363,7 +391,10 @@ namespace VaultSync.Core.Config
                     ProjectCount = source.ProjectCount,
                     SnapshotCount = source.SnapshotCount,
                     BackupCount = source.BackupCount,
-                    TombstoneCount = source.TombstoneCount
+                    TombstoneCount = source.TombstoneCount,
+                    ProjectExternalIds = [.. source.ProjectExternalIds],
+                    SnapshotExternalIds = [.. source.SnapshotExternalIds],
+                    BackupExternalIds = [.. source.BackupExternalIds]
                 })
                 .ToList();
         }

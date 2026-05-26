@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using VaultSync.UI.Infrastructure;
 
 #if WINDOWS
@@ -10,6 +11,10 @@ namespace VaultSync.UI.Notifications
 {
     public sealed class WindowsSystemNotificationService : ISystemNotificationService
     {
+#if WINDOWS
+        private static int s_failureCount;
+#endif
+
         public void ShowSystemNotification(NotificationRequest request)
         {
             string title = string.IsNullOrWhiteSpace(request.Title)
@@ -35,11 +40,13 @@ namespace VaultSync.UI.Notifications
                 ToastContent toastContent = builder.GetToastContent();
                 var toast = new ToastNotification(toastContent.GetXml())
                 {
-                    Group = "VaultSync",
-                    Tag = string.IsNullOrWhiteSpace(request.GroupKey)
-                        ? null
-                        : SanitizeTag(request.GroupKey)
+                    Group = "VaultSync"
                 };
+
+                if (!string.IsNullOrWhiteSpace(request.GroupKey))
+                {
+                    toast.Tag = SanitizeTag(request.GroupKey);
+                }
 
                 // Use the compat notifier so unpackaged Win32 builds can still raise toasts.
                 ToastNotifierCompat notifier = ToastNotificationManagerCompat.CreateToastNotifier();
@@ -47,7 +54,17 @@ namespace VaultSync.UI.Notifications
             }
             catch (Exception ex)
             {
-                DiagnosticsLogger.RecordException("Windows notification failed", ex, includeStack: false);
+                int failureCount = Interlocked.Increment(ref s_failureCount);
+                if (failureCount == 1)
+                {
+                    DiagnosticsLogger.RecordException("Windows notification failed", ex, includeStack: false);
+                    return;
+                }
+
+                if (failureCount == 2)
+                {
+                    DiagnosticsLogger.Record("Windows notification failures suppressed for this session after the first failure.");
+                }
             }
 #else
             // Non-Windows targets fall back to logging only
