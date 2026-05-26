@@ -2042,28 +2042,25 @@ public partial class App : Application
 
     private static async Task RecheckDriveHealthAsync(IClassicDesktopStyleApplicationLifetime? desktop)
     {
-        await Task.Run(() =>
+        try
         {
-            try
+            var result = await Task.Run(() =>
             {
-                AppConfig cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? ConfigStore.GetSnapshot();
+                AppConfig cfg = AppViewModelInstance?.GetConfigSnapshot() ?? ConfigStore.GetSnapshot();
                 string backupRoot = cfg.Backups.BackupRoot ?? string.Empty;
                 string driveLabel = FormatDriveLabel(backupRoot);
 
                 if (string.IsNullOrWhiteSpace(backupRoot))
                 {
-                    GlobalNotificationCenter.Instance.Show(
-                        L("Tray.Health.NoPathDetail", "Backup path not set. Set a backup location to check drive health."),
-                        NotificationSeverity.Warning,
-                        L("Tray.Health.Title", "Storage health"));
-                    return;
+                    return new DriveHealthNotificationResult(
+                        Message: L("Tray.Health.NoPathDetail", "Backup path not set. Set a backup location to check drive health."),
+                        Severity: NotificationSeverity.Warning,
+                        HealthStatus: _cachedDriveHealthStatus,
+                        IsNetwork: _cachedDriveHealthIsNetwork,
+                        RefreshTray: false);
                 }
 
                 DriveHealthResult health = new DriveHealthService().CheckPath(backupRoot);
-                _cachedDriveHealthLabel  = DescribeHealth(health, driveLabel);
-                _cachedDriveHealthStatus = health.Status;
-                _cachedDriveHealthIsNetwork = IsNetworkHealthResult(health);
-
                 NotificationSeverity severity = health.Status switch
                 {
                     DriveHealthStatus.Failing => NotificationSeverity.Error,
@@ -2071,19 +2068,46 @@ public partial class App : Application
                     _ => NotificationSeverity.Info
                 };
 
-                GlobalNotificationCenter.Instance.Show(_cachedDriveHealthLabel, severity, L("Tray.Health.Title", "Storage health"));
+                return new DriveHealthNotificationResult(
+                    Message: DescribeHealth(health, driveLabel),
+                    Severity: severity,
+                    HealthStatus: health.Status,
+                    IsNetwork: IsNetworkHealthResult(health),
+                    RefreshTray: true);
+            }).ConfigureAwait(false);
 
-                _instance?.RefreshTrayMenu();
-            }
-            catch
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _cachedDriveHealthLabel = result.Message;
+                _cachedDriveHealthStatus = result.HealthStatus;
+                _cachedDriveHealthIsNetwork = result.IsNetwork;
+
+                GlobalNotificationCenter.Instance.Show(result.Message, result.Severity, L("Tray.Health.Title", "Storage health"));
+
+                if (result.RefreshTray)
+                {
+                    _instance?.RefreshTrayMenu();
+                }
+            });
+        }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 GlobalNotificationCenter.Instance.Show(
                     L("Tray.Health.Error", "Unable to check drive health."),
                     NotificationSeverity.Warning,
                     L("Tray.Health.Title", "Storage health"));
-            }
-        });
+            });
+        }
     }
+
+    private sealed record DriveHealthNotificationResult(
+        string Message,
+        NotificationSeverity Severity,
+        DriveHealthStatus HealthStatus,
+        bool IsNetwork,
+        bool RefreshTray);
 
     private static bool IsNetworkHealthResult(DriveHealthResult health)
     {

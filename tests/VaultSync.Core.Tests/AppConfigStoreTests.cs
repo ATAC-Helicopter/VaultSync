@@ -109,4 +109,37 @@ public sealed class AppConfigStoreTests
         Assert.Equal("destination:primary", source.SourceKey);
         Assert.Equal(4, source.BackupCount);
     }
+
+    [Fact]
+    public void Load_UsesBackupConfigWhenPrimaryConfigIsCorrupt()
+    {
+        using var scope = new TestAppConfigScope();
+        string projectsRoot = Path.Combine(scope.ConfigDirectory, "Projects");
+        string dbPath = Path.Combine(scope.ConfigDirectory, "vaultsync.db");
+
+        File.WriteAllText(Path.Combine(scope.ConfigDirectory, "appsettings.json"), "{not valid json");
+        File.WriteAllText(
+            Path.Combine(scope.ConfigDirectory, "appsettings.bak.json"),
+            $$"""
+            {
+              "ProjectsRoot": "{{projectsRoot.Replace("\\", "\\\\")}}",
+              "DbPath": "{{dbPath.Replace("\\", "\\\\")}}"
+            }
+            """);
+
+        AppConfig reloaded = AppConfigStore.Load();
+
+        Assert.Equal(projectsRoot, reloaded.ProjectsRoot);
+        Assert.Equal(dbPath, reloaded.DbPath);
+    }
+
+    [Fact]
+    public void ResolveDbPath_UsesConfiguredPathOrDefaultFallback()
+    {
+        using var scope = new TestAppConfigScope();
+        string configuredPath = Path.Combine(scope.ConfigDirectory, "configured.db");
+
+        Assert.Equal(configuredPath, AppConfigStore.ResolveDbPath(new AppConfig { DbPath = configuredPath }));
+        Assert.Equal(AppConfigStore.GetDefaultDbPath(), AppConfigStore.ResolveDbPath(new AppConfig { DbPath = " " }));
+    }
 }

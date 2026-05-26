@@ -488,6 +488,9 @@ namespace VaultSync.Core.Config
         public int SnapshotCount { get; set; }
         public int BackupCount { get; set; }
         public int TombstoneCount { get; set; }
+        public List<string> ProjectExternalIds { get; set; } = [];
+        public List<string> SnapshotExternalIds { get; set; } = [];
+        public List<string> BackupExternalIds { get; set; } = [];
     }
 
     public sealed class StartupDiagnosticsPhase
