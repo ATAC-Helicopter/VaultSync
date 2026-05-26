@@ -7,7 +7,10 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 ### Architecture and maintainability
 - Package versions now live in one central props file instead of being repeated across projects.
 - Configuration access, runtime logging, hash formatting, byte-size formatting, and common test setup now use shared helpers.
+- UI repository lookups now use the shared config-store database path resolver instead of repeating fallback logic.
+- UI repository creation and selected background fire-and-forget work now go through shared helpers for easier testing and diagnostics.
 - View models reuse common property-notification helpers, reducing repeated UI plumbing.
+- Projects and Settings helper view models now live in focused files, making the main view-model files easier to scan.
 - Core tests use shared temporary directory, config, repository, and builder fixtures.
 
 ### Performance and diagnostics
@@ -15,25 +18,38 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - Recent activity projection reuses a project lookup instead of scanning projects per activity row.
 - Background metadata auto-imports remember successful unchanged sources and can skip repeated imports when the remote store files have not changed.
 - The unchanged-source cache now checks local repository coverage before skipping, so recreated databases or newly reachable backup folders still reconcile.
+- The unchanged-source cache now verifies source external IDs instead of trusting local row counts, so unrelated history cannot hide missing imported metadata.
 - Metadata import internals now report phase timings for temp-copy, row reads, backup apply, legacy folder scan, and restore flag updates.
+- Main SQLite repository connections now use escaped connection-string construction, busy timeouts, and less lock-prone connection handling.
+- SQLite schema startup code is split into clearer setup phases and avoids reopening the database for each column migration.
+- Windows notification failures and manual storage-health rechecks now stay quieter and keep UI updates on the UI thread.
+- Config fallback now records when VaultSync recovers from a broken primary config through the backup or last-known-good snapshot.
 
 ### Cleanup
 - Destination path normalization and NetworkMount diagnostics now reuse common helpers.
 - The 1.7.5 changelog records the cleanup work as versioned release notes.
-- Linux protected installs such as `/opt/vaultsync` now use the installer fallback instead of attempting a patch update that cannot write to root-owned files, and release asset builds can omit Linux patch assets when an installer-only Linux update is required.
-- Linux updater fallback now prefers `.deb` installers on Debian-family systems and marks downloaded AppImages executable before launch.
-- Linux startup now keeps Avalonia's compatible DBus protocol dependency instead of overriding it with an incompatible newer package.
-- Linux packages now use one AppStream, desktop, icon, and window identity to improve software-center previews and avoid duplicate taskbar grouping.
-- Project preset changes now persist immediately for registered projects instead of reverting after refresh.
-- Projects now call out latest snapshot size explicitly and show unavailable size data instead of misleading `0 MB` values.
-- The sidebar collapse control now uses a vector icon so Linux desktops no longer render it as a missing-glyph rectangle.
-- Projects list scrolling now keeps ListBox virtualization active, and sidebar navigation labels align cleanly with their icons.
-- Project snapshot presets now stay populated by applying detected recommendations first and falling back to a generic preset when no specific project type is detected.
 
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
 - Filter coverage now includes nested `**/bin/**`, `**/Intermediate/**`, `.import`, and render-cache style folders.
 - Source-code presets now keep useful repository metadata such as `.github` workflows and Git config files while still excluding `.git` internals and generated build outputs.
+
+## [1.7.4]
+
+Current `1.7.4` highlights focus on Linux packaging/update polish, project reliability fixes, and small UI corrections.
+
+### Linux and release assets
+- Linux protected installs such as `/opt/vaultsync` now use the installer fallback instead of attempting a patch update that cannot write to root-owned files, and release asset builds can omit Linux patch assets when an installer-only Linux update is required.
+- Linux updater fallback now prefers `.deb` installers on Debian-family systems and marks downloaded AppImages executable before launch.
+- Linux startup now keeps Avalonia's compatible DBus protocol dependency instead of overriding it with an incompatible newer package.
+- Linux packages now use one AppStream, desktop, icon, and window identity to improve software-center previews and avoid duplicate taskbar grouping.
+
+### Project and UI fixes
+- Project preset changes now persist immediately for registered projects instead of reverting after refresh.
+- Projects now call out latest snapshot size explicitly and show unavailable size data instead of misleading `0 MB` values.
+- The sidebar collapse control now uses a vector icon so Linux desktops no longer render it as a missing-glyph rectangle.
+- Projects list scrolling now keeps ListBox virtualization active, and sidebar navigation labels align cleanly with their icons.
+- Project snapshot presets now stay populated by applying detected recommendations first and falling back to a generic preset when no specific project type is detected.
 
 ## [1.7.3]
 
