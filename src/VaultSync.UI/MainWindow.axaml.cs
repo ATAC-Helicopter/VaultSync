@@ -221,9 +221,17 @@ public partial class MainWindow : Window
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
     {
-        DiagnosticsLogger.Record($"MainWindow closing. IsShuttingDown={App.IsShuttingDown}, IsCrashing={App.IsCrashing}.");
+        DiagnosticsLogger.Record($"MainWindow closing. Reason={e.CloseReason}, IsShuttingDown={App.IsShuttingDown}, IsCrashing={App.IsCrashing}.");
         if (App.IsShuttingDown)
             return;
+
+        if (e.CloseReason is WindowCloseReason.OSShutdown or WindowCloseReason.ApplicationShutdown)
+        {
+            App.MarkShuttingDown();
+            DiagnosticsLogger.Record("MainWindow close allowed for OS/application shutdown.");
+            return;
+        }
+
         // Respect the RunInBackground behavior flag from AppConfig.
         // When enabled, pressing the close button should hide the window
         // and keep VaultSync running in the background.

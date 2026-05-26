@@ -1239,6 +1239,12 @@ public partial class App : Application
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
             };
 
+            desktop.ShutdownRequested += (_, e) =>
+            {
+                DiagnosticsLogger.Record($"Desktop shutdown requested. Cancel={e.Cancel}, IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                MarkShuttingDown();
+            };
+
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
