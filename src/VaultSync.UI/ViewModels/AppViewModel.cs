@@ -99,6 +99,7 @@ namespace VaultSync.UI.ViewModels
         private BackupsViewModel? _backupsViewModel;
         private readonly SettingsViewModel _settingsViewModel;
         private readonly IAppConfigStore _configStore;
+        private readonly IRepositoryFactory _repositoryFactory;
         private AppConfig _config;
         private IBackupWidgetService? _backupWidgetService;
 
@@ -600,7 +601,7 @@ namespace VaultSync.UI.ViewModels
         public bool IsBackupsViewActive => CurrentViewName == "Backups";
         public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
-        public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(_configStore);
+        public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(_configStore, _repositoryFactory);
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
         public ICommand SkipUpdateCommand => _skipUpdateCommand;

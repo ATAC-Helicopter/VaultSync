@@ -415,15 +415,17 @@ namespace VaultSync.UI.ViewModels
         private string? _repoDbPath;
         private IReadOnlyList<(Project project, long bytes)> _lastStorageSlices = [];
         private readonly IAppConfigStore _configStore;
+        private readonly IRepositoryFactory _repositoryFactory;
 
         public DashboardViewModel()
-            : this(StaticAppConfigStore.Instance)
+            : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
         {
         }
 
-        internal DashboardViewModel(IAppConfigStore configStore)
+        internal DashboardViewModel(IAppConfigStore configStore, IRepositoryFactory? repositoryFactory = null)
         {
             _configStore = configStore;
+            _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
             RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
             NewSnapshotCommand = new RelayCommand(_ => { /* wired later from dashboard actions */ });
             ToggleRestoreReadinessIssuesCommand = new RelayCommand(_ => ShowRestoreReadinessIssues = !ShowRestoreReadinessIssues, _ => HasRestoreReadinessIssues);
@@ -497,13 +499,11 @@ namespace VaultSync.UI.ViewModels
                     AppConfig cfg = _configStore.GetSnapshot();
                     (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string riskReason, BackupDiskUsageStatus status) diskUsage = ComputeBackupDiskUsageDetailed(cfg);
 
-                    string dbPath = !string.IsNullOrWhiteSpace(cfg.DbPath)
-                        ? cfg.DbPath
-                        : GetDefaultDbPath();
+                    string dbPath = _repositoryFactory.ResolveDbPath(cfg);
 
                     if (_repo is null || !string.Equals(_repoDbPath, dbPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        _repo = new SqliteRepository(dbPath);
+                        _repo = _repositoryFactory.Create(cfg);
                         _repoDbPath = dbPath;
                     }
                     SqliteRepository repo = _repo;
@@ -2221,11 +2221,6 @@ namespace VaultSync.UI.ViewModels
 
         private static string FormatBytes(long bytes) =>
             bytes <= 0 ? "0 B" : UiFormat.FormatBytes(bytes, "0.#");
-
-        private string GetDefaultDbPath()
-        {
-            return _configStore.GetDefaultDbPath();
-        }
 
         // Bindables
         public record LegendItem(string Label, string Tooltip, IBrush Brush);
