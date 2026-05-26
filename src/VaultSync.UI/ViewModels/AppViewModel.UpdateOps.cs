@@ -459,6 +459,9 @@ namespace VaultSync.UI.ViewModels
 
         private static bool PatchInstallRequiresInstallerFallback(string installDir)
         {
+            if (IsEnvFlagEnabled("VAULTSYNC_FORCE_INSTALLER_FALLBACK"))
+                return true;
+
             return !OperatingSystem.IsWindows() && !CanWriteInstallDir(installDir);
         }
 
@@ -920,6 +923,13 @@ namespace VaultSync.UI.ViewModels
 
         private static bool TryLaunchInstaller(string installerPath)
         {
+            if (OperatingSystem.IsLinux() &&
+                installerPath.EndsWith(".deb", StringComparison.OrdinalIgnoreCase) &&
+                TryLaunchDebianPackageInstall(installerPath))
+            {
+                return true;
+            }
+
             try
             {
                 var psi = new ProcessStartInfo
@@ -934,6 +944,101 @@ namespace VaultSync.UI.ViewModels
             {
                 return false;
             }
+        }
+
+        private static bool TryLaunchDebianPackageInstall(string packagePath)
+        {
+            try
+            {
+                if (IsEnvFlagEnabled("VAULTSYNC_DEB_INSTALL_DRY_RUN"))
+                {
+                    DiagnosticsLogger.Record($"Debian package auto-install dry run: {packagePath}");
+                    return true;
+                }
+
+                string? pkexec = FindExecutable("pkexec");
+                string? aptGet = FindExecutable("apt-get");
+                if (string.IsNullOrWhiteSpace(pkexec) || string.IsNullOrWhiteSpace(aptGet))
+                {
+                    DiagnosticsLogger.Record("Debian package auto-install unavailable: pkexec or apt-get not found.");
+                    return false;
+                }
+
+                var psi = new ProcessStartInfo
+                {
+                    FileName = pkexec,
+                    UseShellExecute = false
+                };
+
+                psi.ArgumentList.Add(aptGet);
+                psi.ArgumentList.Add("install");
+                psi.ArgumentList.Add("-y");
+                psi.ArgumentList.Add(packagePath);
+
+                Process? process = Process.Start(psi);
+                if (process is null)
+                {
+                    DiagnosticsLogger.Record("Debian package auto-install failed: pkexec did not start.");
+                    return false;
+                }
+
+                DiagnosticsLogger.Record($"Debian package auto-install launched via pkexec: {packagePath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Debian package auto-install launch failed: {ex.GetType().Name} - {ex.Message}");
+                return false;
+            }
+        }
+
+        private static string? FindExecutable(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            string[] candidates =
+            [
+                Path.Combine("/usr/bin", name),
+                Path.Combine("/bin", name),
+                Path.Combine("/usr/local/bin", name),
+                Path.Combine("/sbin", name),
+                Path.Combine("/usr/sbin", name)
+            ];
+
+            foreach (string candidate in candidates)
+            {
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+
+            string? path = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+
+            foreach (string entry in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                try
+                {
+                    string candidate = Path.Combine(entry, name);
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch
+                {
+                    // Ignore malformed PATH entries.
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsEnvFlagEnabled(string name)
+        {
+            string? value = Environment.GetEnvironmentVariable(name);
+            return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void EnsureInstallerLaunchPermissions(string installerPath)
