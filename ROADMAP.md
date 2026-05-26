@@ -883,6 +883,9 @@
 - [x] `VS-1766` `P2` Split UI helper view models out of oversized files. _(Done; tracked by #338)_
   - Scope: move Projects option/snapshot helper models and Settings destination/credential models into focused files, plus share export-folder opening.
   - Acceptance: helper classes keep binding-compatible names/namespaces; Projects and Settings main files shrink without workflow changes.
+- [x] `VS-1767` `P2` Consolidate tombstone export and Backups option helper plumbing. _(Done; tracked by #340)_
+  - Scope: share metadata tombstone meta-info stamping, tombstone row creation, and Backups silent option setter logic.
+  - Acceptance: tombstone exporters keep existing writer metadata and lock-retry behavior; Backups option selections keep current transient-null handling.
 
 ### Proposed delivery phases
 1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`

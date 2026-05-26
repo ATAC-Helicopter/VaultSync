@@ -1834,118 +1834,22 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
 
     private static void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
-        if (missingExternalIds.Count == 0)
-            return;
-
-        var store = new MetadataStore(rootPath);
-        try
-        {
-            store.EnsureSchema();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Missing backup tombstone export failed: store init error at '{rootPath}': {ex.Message}");
-            return;
-        }
-
-        DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = "unknown",
-                WriterMachineId = Environment.MachineName
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterMachineId = Environment.MachineName;
-        }
-
-        try
-        {
-            store.UpsertMetaInfo(metaInfo);
-            foreach (string externalId in missingExternalIds)
-            {
-                if (string.IsNullOrWhiteSpace(externalId))
-                    continue;
-
-                store.AddTombstone(new MetaTombstone
-                {
-                    EntityType = "backup",
-                    EntityId = externalId,
-                    DeletedUtc = now,
-                    OriginMachineId = Environment.MachineName
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Missing backup tombstone export failed writing store '{rootPath}': {ex.Message}");
-        }
+        TryExportTombstones(
+            rootPath,
+            "backup",
+            missingExternalIds,
+            Environment.MachineName,
+            "Missing backup tombstone export");
     }
 
     private static void TryExportMissingSnapshotTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
-        if (missingExternalIds.Count == 0)
-            return;
-
-        var store = new MetadataStore(rootPath);
-        try
-        {
-            store.EnsureSchema();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Missing snapshot tombstone export failed: store init error at '{rootPath}': {ex.Message}");
-            return;
-        }
-
-        DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = "unknown",
-                WriterMachineId = Environment.MachineName
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterMachineId = Environment.MachineName;
-        }
-
-        try
-        {
-            store.UpsertMetaInfo(metaInfo);
-            foreach (string externalId in missingExternalIds)
-            {
-                if (string.IsNullOrWhiteSpace(externalId))
-                    continue;
-
-                store.AddTombstone(new MetaTombstone
-                {
-                    EntityType = "snapshot",
-                    EntityId = externalId,
-                    DeletedUtc = now,
-                    OriginMachineId = Environment.MachineName
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Missing snapshot tombstone export failed writing store '{rootPath}': {ex.Message}");
-        }
+        TryExportTombstones(
+            rootPath,
+            "snapshot",
+            missingExternalIds,
+            Environment.MachineName,
+            "Missing snapshot tombstone export");
     }
 
     public static void TryExportProjectTombstone(string rootPath, string projectExternalId, string? originMachineId = null)
@@ -1953,6 +1857,26 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(projectExternalId))
             return;
 
+        string machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
+        TryExportTombstones(
+            rootPath,
+            "project",
+            [projectExternalId],
+            machineId,
+            "Project tombstone export");
+    }
+
+    private static void TryExportTombstones(
+        string rootPath,
+        string entityType,
+        IReadOnlyCollection<string> externalIds,
+        string machineId,
+        string logLabel,
+        string appVersion = "unknown")
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || externalIds.Count == 0)
+            return;
+
         var store = new MetadataStore(rootPath);
         try
         {
@@ -1960,44 +1884,76 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] Project tombstone export failed: store init error at '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] {logLabel} failed: store init error at '{rootPath}': {ex.Message}");
             return;
         }
 
         DateTime now = DateTime.UtcNow;
-        string machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = "unknown",
-                WriterMachineId = machineId
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterMachineId = machineId;
-        }
+        MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+            store,
+            now,
+            appVersion,
+            machineId,
+            updateExistingAppVersion: false);
 
         try
         {
             store.UpsertMetaInfo(metaInfo);
-            store.AddTombstone(new MetaTombstone
-            {
-                EntityType = "project",
-                EntityId = projectExternalId,
-                DeletedUtc = now,
-                OriginMachineId = machineId
-            });
+            AddTombstones(store, externalIds, entityType, now, machineId);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] Project tombstone export failed writing store '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] {logLabel} failed writing store '{rootPath}': {ex.Message}");
+        }
+    }
+
+    private static MetaInfo BuildUpdatedTombstoneMetaInfo(
+        MetadataStore store,
+        DateTime now,
+        string appVersion,
+        string machineId,
+        bool updateExistingAppVersion)
+    {
+        MetaInfo? metaInfo = store.GetMetaInfo();
+        if (metaInfo == null)
+        {
+            return new MetaInfo
+            {
+                SchemaVersion = MetadataStore.CurrentSchemaVersion,
+                CreatedUtc = now,
+                LastWriteUtc = now,
+                WriterAppVersion = appVersion,
+                WriterMachineId = machineId
+            };
+        }
+
+        metaInfo.LastWriteUtc = now;
+        metaInfo.WriterMachineId = machineId;
+        if (updateExistingAppVersion)
+            metaInfo.WriterAppVersion = appVersion;
+
+        return metaInfo;
+    }
+
+    private static void AddTombstones(
+        MetadataStore store,
+        IEnumerable<string> externalIds,
+        string entityType,
+        DateTime deletedUtc,
+        string originMachineId)
+    {
+        foreach (string externalId in externalIds)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                continue;
+
+            store.AddTombstone(new MetaTombstone
+            {
+                EntityType = entityType,
+                EntityId = externalId,
+                DeletedUtc = deletedUtc,
+                OriginMachineId = originMachineId
+            });
         }
     }
 
@@ -2449,33 +2405,15 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             store.EnsureSchema();
 
             DateTime now = DateTime.UtcNow;
-            MetaInfo? metaInfo = store.GetMetaInfo();
-            if (metaInfo == null)
-            {
-                metaInfo = new MetaInfo
-                {
-                    SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                    CreatedUtc = now,
-                    LastWriteUtc = now,
-                    WriterAppVersion = appVersion,
-                    WriterMachineId = machineId
-                };
-            }
-            else
-            {
-                metaInfo.LastWriteUtc = now;
-                metaInfo.WriterAppVersion = appVersion;
-                metaInfo.WriterMachineId = machineId;
-            }
+            MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+                store,
+                now,
+                appVersion,
+                machineId,
+                updateExistingAppVersion: true);
 
             store.UpsertMetaInfo(metaInfo);
-            store.AddTombstone(new MetaTombstone
-            {
-                EntityType = "backup",
-                EntityId = backupExternalId,
-                DeletedUtc = now,
-                OriginMachineId = machineId
-            });
+            AddTombstones(store, [backupExternalId], "backup", now, machineId);
 
             Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{rootPath}'.");
         }
@@ -2509,35 +2447,17 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
 
         DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = appVersion,
-                WriterMachineId = machineId
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterAppVersion = appVersion;
-            metaInfo.WriterMachineId = machineId;
-        }
+        MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+            store,
+            now,
+            appVersion,
+            machineId,
+            updateExistingAppVersion: true);
 
         try
         {
             store.UpsertMetaInfo(metaInfo);
-            store.AddTombstone(new MetaTombstone
-            {
-                EntityType = "backup",
-                EntityId = backupExternalId,
-                DeletedUtc = now,
-                OriginMachineId = machineId
-            });
+            AddTombstones(store, [backupExternalId], "backup", now, machineId);
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
