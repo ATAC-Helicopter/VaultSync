@@ -16,6 +16,17 @@
 - [VS-1757] Routed NetworkMount diagnostics through one local logging helper instead of repeating log prefixes inline.
 - [VS-1758] Added a durable unchanged-source cache for background metadata auto-imports and phase timings for metadata import internals.
 - [VS-1759] Hardened the metadata unchanged-source cache so skipped background imports still re-run when local repository coverage is incomplete.
+- [VS-1760] Hardened main SQLite repository connections with escaped connection-string construction, disabled stale connection pooling, busy timeouts, and one-time WAL negotiation to reduce lock contention.
+- [VS-1761] Split SQLite schema setup into schema, migration, index, and path-normalization helpers while reusing one connection for column migrations.
+- [VS-1762] Metadata unchanged-source cache coverage now tracks source external IDs so unrelated local rows cannot mask recreated or incomplete repositories.
+- [VS-1763] Release-facing Windows, Store, issue-template, and patch-base metadata now target `1.7.5`.
+- [VS-1764] UI repository callers now resolve database path fallback through the shared config-store helper.
+- [VS-1765] UI repository creation and selected fire-and-forget work now use shared factory and detached-task helpers.
+- [VS-1766] Projects and Settings helper view models now live in focused files, with shared export-folder opening.
+### Fixed
+- [BUG-18038] Windows notification failures no longer assign an invalid empty toast tag and repeated OS-toast failures are suppressed after the first diagnostic entry.
+- [BUG-18039] Manual storage-health rechecks now marshal notification and tray updates back to the UI thread after background drive probing.
+- [BUG-18040] Config load fallback now records primary, backup, and last-known-good recovery diagnostics instead of silently falling back to defaults.
 
 ## [1.7.4] - 20.05.2026
 ### Added

@@ -852,6 +852,38 @@
   3. updater/serviceability diagnostics,
   4. operator-facing doctor workflows.
 
+### 1.7.5 patch backlog
+- [x] `VS-1760` `P1` Harden SQLite repository connection handling. _(Done; tracked by #331)_
+  - Scope: escape SQLite connection-string paths, disable stale pooling, set busy timeouts, and negotiate WAL once to reduce lock contention.
+  - Acceptance: repository paths with special characters open reliably; stale pooled SQLite handles do not keep locks alive after app/test churn; concurrent repository work retries through busy timeout instead of failing immediately.
+- [x] `VS-1761` `P2` Split SQLite schema setup into focused helpers. _(Done; tracked by #331)_
+  - Scope: separate schema creation, migrations, index creation, and path normalization while reusing one connection for column migrations.
+  - Acceptance: startup schema setup remains idempotent; migration code is easier to audit without changing persisted schema behavior; path normalization still runs after schema setup.
+- [x] `BUG-18038` `P1` Suppress repeated Windows toast failures and invalid empty tags. _(Done; tracked by #332)_
+  - Scope: avoid assigning invalid empty toast tags and log repeated OS-toast failures only once per failure flow.
+  - Acceptance: Windows notification failures do not throw due to empty toast tags; repeated toast failures do not flood diagnostics.
+- [x] `BUG-18039` `P1` Marshal manual drive-health updates back to the UI thread. _(Done; tracked by #332)_
+  - Scope: ensure manual storage-health rechecks update notifications and tray state through the Avalonia UI thread after background probing.
+  - Acceptance: manual drive-health rechecks no longer produce thread-affinity crashes; tray and notification state update correctly after background health probes.
+- [x] `BUG-18040` `P1` Record config fallback recovery diagnostics. _(Done; tracked by #333)_
+  - Scope: capture primary, backup, and last-known-good config load diagnostics when falling back from damaged or unavailable config files.
+  - Acceptance: fallback source is visible in diagnostics/support context; fallback to defaults is distinguishable from backup or last-known-good recovery.
+- [x] `VS-1762` `P1` Extend metadata unchanged-source cache coverage with source external IDs. _(Done; tracked by #334)_
+  - Scope: track source external IDs so background metadata imports are not skipped when unrelated local rows mask recreated or incomplete repositories.
+  - Acceptance: unchanged-source cache skips only when local repository coverage is complete for the source identity; recreated/imported repositories with different external IDs are rechecked.
+- [x] `VS-1763` `P2` Refresh 1.7.5 release manifest and docs metadata. _(Done; tracked by #335)_
+  - Scope: align release-facing Windows, Store, issue-template, patch-base, and docs metadata to `1.7.5`.
+  - Acceptance: release manifests and package metadata target `1.7.5`; issue templates, release docs, and patch-base references do not point at stale versions.
+- [x] `VS-1764` `P2` Centralize DB path fallback resolution for UI repository callers. _(Done; tracked by #336)_
+  - Scope: expose shared config-store DB path resolution and route UI repository creation through it.
+  - Acceptance: startup, dashboard, backups, projects, and settings flows stop duplicating `DbPath` fallback logic; blank paths still resolve to the default VaultSync database.
+- [x] `VS-1765` `P2` Centralize UI repository creation and detached task scheduling. _(Done; tracked by #337)_
+  - Scope: add a UI repository factory and extend the shared detached-task helper for scheduled background operations.
+  - Acceptance: UI view models no longer construct repositories from resolved DB paths directly; converted detached operations log failures through one helper.
+- [x] `VS-1766` `P2` Split UI helper view models out of oversized files. _(Done; tracked by #338)_
+  - Scope: move Projects option/snapshot helper models and Settings destination/credential models into focused files, plus share export-folder opening.
+  - Acceptance: helper classes keep binding-compatible names/namespaces; Projects and Settings main files shrink without workflow changes.
+
 ### Proposed delivery phases
 1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`
    - Goal: know whether indexes are trustworthy before auto-repair or retention decisions run.

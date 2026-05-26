@@ -56,7 +56,7 @@ For `VS-1724` multi-base patch support:
 Stable example:
 - branch: `Stable`
 - release channel: `stable`
-- `previous_version = 1.7.3`
+- `previous_version = 1.7.4`
 - `target_version = 1.7.5`
 
 Current beta example:
