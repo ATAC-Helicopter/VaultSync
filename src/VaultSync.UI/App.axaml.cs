@@ -63,6 +63,8 @@ public partial class App : Application
     private string? _trayMenuSignature;
     private DateTime _lastTrayMenuOpenUtc = DateTime.MinValue;
     private DateTime _trayMenuSuppressUntilUtc = DateTime.MinValue;
+    private DateTime _lastTrayIconDestroyedUtc = DateTime.MinValue;
+    private int _trayIconCreateQueued;
     private const string DefaultFontFallback =
         "Inter, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, " +
         "Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, " +
@@ -193,7 +195,7 @@ public partial class App : Application
             {
                 if (e.PropertyName == nameof(SettingsViewModel.ShowTrayIcon))
                 {
-                    UpdateTrayIconVisibility(desktop);
+                    UpdateTrayIconVisibility(desktop, AppViewModelInstance.SettingsViewModel.ShowTrayIcon);
                 }
             };
 
@@ -386,6 +388,13 @@ public partial class App : Application
         if (_trayIcon != null)
             return;
 
+        if (OperatingSystem.IsLinux() &&
+            DateTime.UtcNow - _lastTrayIconDestroyedUtc < TimeSpan.FromMilliseconds(750))
+        {
+            QueueTrayIconCreate(desktop);
+            return;
+        }
+
         // Use a dedicated embedded tray icon resource.
         // Make sure Assets/vaultsync-tray.png exists and is marked as AvaloniaResource in the csproj.
         var uri = new Uri("avares://VaultSync.UI/Assets/vaultsync-tray.png");
@@ -419,6 +428,36 @@ public partial class App : Application
             _trayIcon.Clicked += (_, _) => _trayPanelService?.Toggle();
         }
         _trayIcon.IsVisible = true;
+    }
+
+    private void QueueTrayIconCreate(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        if (Interlocked.Exchange(ref _trayIconCreateQueued, 1) == 1)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(750).ConfigureAwait(false);
+                Dispatcher.UIThread.Post(() =>
+                {
+                    Interlocked.Exchange(ref _trayIconCreateQueued, 0);
+                    if (_trayIcon is not null || IsShuttingDown)
+                        return;
+
+                    bool showTrayIcon = AppViewModelInstance?.SettingsViewModel.ShowTrayIcon
+                                        ?? ConfigStore.GetSnapshot().Behavior?.ShowTrayIcon
+                                        ?? true;
+                    if (showTrayIcon)
+                        CreateTrayIcon(desktop);
+                });
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _trayIconCreateQueued, 0);
+            }
+        });
     }
 
     private static void TryShowWhatsNew(IClassicDesktopStyleApplicationLifetime desktop)
@@ -666,6 +705,8 @@ public partial class App : Application
         if (_trayIcon is null)
             return;
 
+        _lastTrayIconDestroyedUtc = DateTime.UtcNow;
+        _trayIcon.Menu = null;
         _trayIcon.IsVisible = false;
         _trayPanelService?.Hide();
         _trayPanelService?.Dispose();
@@ -675,10 +716,10 @@ public partial class App : Application
         _trayMenu = null;
     }
 
-    private void UpdateTrayIconVisibility(IClassicDesktopStyleApplicationLifetime desktop)
+    private void UpdateTrayIconVisibility(IClassicDesktopStyleApplicationLifetime desktop, bool? showTrayIcon = null)
     {
-        AppConfig cfg = ConfigStore.GetSnapshot();
-        if (cfg.Behavior?.ShowTrayIcon == true)
+        bool shouldShow = showTrayIcon ?? ConfigStore.GetSnapshot().Behavior?.ShowTrayIcon == true;
+        if (shouldShow)
         {
             if (_trayIcon is null)
             {
@@ -1235,6 +1276,7 @@ public partial class App : Application
             desktop.Exit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"Desktop exit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                _instance?.DestroyTrayIcon();
                 CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
             };
@@ -1243,6 +1285,7 @@ public partial class App : Application
             {
                 DiagnosticsLogger.Record($"Desktop shutdown requested. Cancel={e.Cancel}, IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
                 MarkShuttingDown();
+                _instance?.DestroyTrayIcon();
             };
 
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>

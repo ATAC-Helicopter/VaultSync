@@ -30,6 +30,8 @@
 - [BUG-18040] Config load fallback now records primary, backup, and last-known-good recovery diagnostics instead of silently falling back to defaults.
 - [BUG-18041] Linux `.deb` installer fallback now uses the OS elevation prompt to run the package install directly before falling back to opening the downloaded file.
 - [BUG-18042] Linux OS shutdown and logout requests now bypass run-in-background close interception so VaultSync no longer hides to tray and blocks power-off.
+- [BUG-18043] Linux tray icon teardown now clears the native menu, waits briefly before recreating AppIndicator icons, and follows the live tray setting to avoid duplicate tray indicators.
+- [BUG-18044] Cross-machine imported backup history no longer drives local snapshot diff baselines or project storage deltas, preventing large misleading size swings between OSes.
 
 ## [1.7.4] - 20.05.2026
 ### Added

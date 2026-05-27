@@ -101,6 +101,78 @@ public sealed class SnapshotDiffSummaryTests : IDisposable
     }
 
     [Fact]
+    public async Task SnapshotService_CreateSnapshot_IgnoresImportedSnapshotWhenChoosingLocalDiffBaseline()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string projectRoot = CreateTempDir();
+        string backupRoot = CreateTempDir();
+
+        File.WriteAllText(Path.Combine(projectRoot, "data.bin"), "1234567890");
+
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(
+            repo,
+            "Cross Machine Diff Project",
+            projectRoot,
+            preset: string.Empty,
+            createdUtc: DateTime.UtcNow);
+        Project project = repo.GetProjectById(projectId);
+        Assert.NotNull(project);
+
+        var service = new SnapshotService(repo, new HashService());
+        int localSnapshotId = await service.CreateSnapshotAsync(
+            project!,
+            fullHash: false,
+            hashNow: false,
+            maxSnapshotsToKeep: null,
+            ct: CancellationToken.None);
+        _ = repo.CreateBackup(
+            projectId,
+            localSnapshotId,
+            "manual",
+            10,
+            "Cross Machine Diff Project/local",
+            backupRoot,
+            "Local");
+
+        int importedSnapshotId = repo.CreateSnapshotFromMetadata(
+            "imported-cross-machine-snapshot",
+            projectId,
+            DateTime.UtcNow.AddDays(1),
+            1,
+            14L * 1024L * 1024L * 1024L,
+            new SnapshotDiffSummary(Added: 1, Modified: 0, Deleted: 0, NetSizeBytes: 14L * 1024L * 1024L * 1024L, TopChangedPaths: []));
+        _ = repo.CreateBackupFromMetadata(
+            "imported-cross-machine-backup",
+            projectId,
+            importedSnapshotId,
+            DateTime.UtcNow.AddDays(1),
+            "manual",
+            14L * 1024L * 1024L * 1024L,
+            "Cross Machine Diff Project/imported",
+            backupRoot,
+            "Imported",
+            isProtected: false,
+            isImported: true,
+            originMachineName: "other-machine");
+
+        File.AppendAllText(Path.Combine(projectRoot, "data.bin"), "12345");
+
+        int nextLocalSnapshotId = await service.CreateSnapshotAsync(
+            project!,
+            fullHash: false,
+            hashNow: false,
+            maxSnapshotsToKeep: null,
+            ct: CancellationToken.None);
+
+        Snapshot nextLocalSnapshot = repo.GetSnapshotById(nextLocalSnapshotId)!;
+        Assert.NotNull(nextLocalSnapshot);
+        Assert.Equal(5, nextLocalSnapshot.DiffNetBytes);
+        Assert.Equal(1, nextLocalSnapshot.DiffModified);
+        Assert.Equal(nextLocalSnapshotId, repo.GetLatestLocalSnapshotForProject(projectId)?.Id);
+    }
+
+    [Fact]
     public void MetadataSync_ImportFromStore_PreservesSnapshotDiffSummary()
     {
         string metaRoot = CreateTempDir();

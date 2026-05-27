@@ -58,8 +58,9 @@ public class SnapshotService
         {
             ct.ThrowIfCancellationRequested();
 
-            // Load previous snapshot (if any) to enable incremental behavior
-            Snapshot? prev = _repo.GetLatestSnapshot(project.Id);
+            // Load the latest local snapshot as the baseline. Imported snapshots can come
+            // from another machine/OS and should not drive local diff math.
+            Snapshot? prev = _repo.GetLatestLocalSnapshotForProject(project.Id);
             long previousTotalBytes = prev?.TotalBytes ?? 0L;
             Dictionary<string, FileEntry> prevFiles = prev != null
                 ? _repo.GetFilesForSnapshot(prev.Id).ToDictionary(f => f.RelPath, StringComparer.OrdinalIgnoreCase)

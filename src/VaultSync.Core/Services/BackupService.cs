@@ -550,7 +550,7 @@ public sealed class BackupService(
         TimeSpan ttl,
         CancellationToken ct)
     {
-        Snapshot? snapshot = _repo.GetLatestSnapshot(project.Id);
+        Snapshot? snapshot = _repo.GetLatestLocalSnapshotForProject(project.Id);
         if (snapshot is not null)
         {
             int fileCount = Convert.ToInt32(snapshot.FileCount);

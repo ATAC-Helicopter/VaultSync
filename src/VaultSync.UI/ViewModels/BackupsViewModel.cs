@@ -3056,6 +3056,35 @@ namespace VaultSync.UI.ViewModels
                 summary.UnavailableCount);
         }
 
+        private static bool IsComparableBackupDelta(Backup latest, Backup candidate)
+        {
+            if (latest.IsImported != candidate.IsImported)
+                return false;
+
+            if (!StringComparer.OrdinalIgnoreCase.Equals(
+                    NormalizeDeltaScope(latest.OriginMachineName),
+                    NormalizeDeltaScope(candidate.OriginMachineName)))
+            {
+                return false;
+            }
+
+            if (!StringComparer.OrdinalIgnoreCase.Equals(
+                    NormalizeDeltaScope(latest.DestinationPath),
+                    NormalizeDeltaScope(candidate.DestinationPath)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static string NormalizeDeltaScope(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? string.Empty
+                : value.Trim();
+        }
+
         // ---------- Weekly activity mini-chart ----------
 
         private void RebuildSnapshotActivity(DateTime now)
@@ -3235,12 +3264,16 @@ namespace VaultSync.UI.ViewModels
                 var ordered = group
                     .OrderByDescending(b => b.CreatedUtc)
                     .ThenByDescending(b => b.Id)
-                    .Take(2)
                     .ToList();
 
-                if (ordered.Count >= 2)
+                Backup? latest = ordered.FirstOrDefault();
+                Backup? previous = latest is null
+                    ? null
+                    : ordered.Skip(1).FirstOrDefault(candidate => IsComparableBackupDelta(latest, candidate));
+
+                if (latest is not null && previous is not null)
                 {
-                    projectDeltaById[group.Key] = ordered[0].TotalBytes - ordered[1].TotalBytes;
+                    projectDeltaById[group.Key] = latest.TotalBytes - previous.TotalBytes;
                 }
                 else
                 {

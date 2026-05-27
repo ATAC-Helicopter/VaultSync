@@ -30,6 +30,12 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - Protected Linux installs still fall back to installer updates when patching cannot safely write to the app folder, but Debian-family systems now hand the downloaded `.deb` directly to the OS elevation prompt instead of leaving users in the graphical app manager.
 - Linux shutdown and logout requests now bypass the tray background-close behavior, so VaultSync does not hide to tray and interrupt power-off.
 - Linux shutdown signals are now recorded in diagnostics to make future desktop-session issues easier to confirm.
+- Linux tray icon teardown now clears the native menu and delays immediate AppIndicator recreation, reducing duplicate tray indicators after rapid toggles, shutdown, or update relaunches.
+
+### Cross-machine backup history
+- Imported backup history from another machine no longer becomes the baseline for new local snapshot diffs.
+- Project backup deltas now compare only matching local/imported, origin-machine, and destination scopes, so alternating Windows/Linux metadata no longer appears as huge add/remove swings.
+- Backup size metadata is now documented as logical source size represented by the snapshot, not guaranteed physical storage consumed on disk.
 
 ### Cleanup
 - Destination path normalization and NetworkMount diagnostics now reuse common helpers.
