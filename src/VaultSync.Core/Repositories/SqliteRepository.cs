@@ -768,6 +768,37 @@ DELETE FROM sqlite_sequence;";
             return GetLatestSnapshotForProject(projectId);
         }
 
+        public Snapshot? GetLatestLocalSnapshotForProject(int projectId)
+        {
+            using SqliteConnection c = Open();
+            return c.QueryFirstOrDefault<Snapshot>(
+                """
+                SELECT
+                  s.id,
+                  s.external_id as ExternalId,
+                  s.project_id  AS ProjectId,
+                  s.created_utc AS CreatedUtc,
+                  s.file_count  AS FileCount,
+                  s.total_bytes AS TotalBytes,
+                  s.diff_added AS DiffAdded,
+                  s.diff_modified AS DiffModified,
+                  s.diff_deleted AS DiffDeleted,
+                  s.diff_net_bytes AS DiffNetBytes,
+                  s.diff_top_paths_json AS DiffTopPathsJson
+                FROM snapshots s
+                WHERE s.project_id = @pid
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM backups b
+                    WHERE b.snapshot_id = s.id
+                      AND b.is_imported != 0
+                  )
+                ORDER BY s.created_utc DESC, s.id DESC
+                LIMIT 1;
+                """,
+                new { pid = projectId });
+        }
+
         public Snapshot? GetLatestSnapshotForProject(int projectId)
         {
             using SqliteConnection c = Open();

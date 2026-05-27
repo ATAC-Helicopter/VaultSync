@@ -19,7 +19,7 @@ public record Backup
     public string BackupMode { get; init; } = BackupModes.Full;
 
     /// <summary>
-    /// Size of the backup archive on disk (folder or zip), in bytes.
+    /// Logical source size represented by the snapshot, in bytes.
     /// </summary>
     public long TotalBytes  { get; init; }
 
