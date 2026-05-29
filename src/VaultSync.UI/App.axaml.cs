@@ -702,18 +702,62 @@ public partial class App : Application
 
     private void DestroyTrayIcon()
     {
-        if (_trayIcon is null)
+        TrayIcon? trayIcon = _trayIcon;
+        if (trayIcon is null)
             return;
 
         _lastTrayIconDestroyedUtc = DateTime.UtcNow;
-        _trayIcon.Menu = null;
-        _trayIcon.IsVisible = false;
-        _trayPanelService?.Hide();
-        _trayPanelService?.Dispose();
-        _trayPanelService = null;
-        _trayIcon.Dispose();
         _trayIcon = null;
         _trayMenu = null;
+
+        try
+        {
+            _trayPanelService?.Hide();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray panel hide during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+        }
+
+        try
+        {
+            _trayPanelService?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray panel dispose during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+        }
+        _trayPanelService = null;
+
+        try
+        {
+            trayIcon.IsVisible = false;
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray icon hide during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+        }
+
+        if (!OperatingSystem.IsMacOS())
+        {
+            try
+            {
+                trayIcon.Menu = null;
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Tray menu detach during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        try
+        {
+            trayIcon.Dispose();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray icon dispose during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
     private void UpdateTrayIconVisibility(IClassicDesktopStyleApplicationLifetime desktop, bool? showTrayIcon = null)
@@ -1399,6 +1443,11 @@ public partial class App : Application
         {
             try
             {
+                if (_trayIcon is null || IsShuttingDown)
+                {
+                    return;
+                }
+
                 if (_trayMenuSignature == signature && _trayMenu is not null)
                 {
                     return;
@@ -1442,7 +1491,7 @@ public partial class App : Application
             finally
             {
                 Interlocked.Exchange(ref _trayMenuRefreshInFlight, 0);
-                if (Interlocked.Exchange(ref _trayMenuRefreshQueued, 0) == 1)
+                if (!IsShuttingDown && Interlocked.Exchange(ref _trayMenuRefreshQueued, 0) == 1)
                 {
                     _ = Task.Run(async () =>
                     {

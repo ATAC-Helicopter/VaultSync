@@ -17,6 +17,9 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - Settings reload notifications and backup archive test setup now use named helpers instead of repeated inline plumbing.
 - Release templates, Store validation docs, and metadata/snapshot test temp directories now have clearer stable-release cleanup.
 - Core tests use shared temporary directory, config, repository, and builder fixtures.
+- Small, primary, and banner action buttons now share the same alignment rules across shell, widget, Backups, Projects, and Settings surfaces.
+- The build now reports unused exception-variable warnings again after the 1.7.5 cleanup pass removed the low-risk unused catch variables.
+- Credential profile cards in Settings now keep password visibility controls inside the card instead of clipping them at the edge.
 
 ### Performance and diagnostics
 - Dashboard refresh work now has verbose timing around data load, dispatcher wait, and individual rebuild phases.
@@ -29,6 +32,7 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - SQLite schema startup code is split into clearer setup phases and avoids reopening the database for each column migration.
 - Windows notification failures and manual storage-health rechecks now stay quieter and keep UI updates on the UI thread.
 - Config fallback now records when VaultSync recovers from a broken primary config through the backup or last-known-good snapshot.
+- macOS tray Quit now closes VaultSync cleanly without the native menu teardown crash seen when quitting from the status-bar menu.
 
 ### Linux updates and shutdown
 - Protected Linux installs still fall back to installer updates when patching cannot safely write to the app folder, but Debian-family systems now hand the downloaded `.deb` directly to the OS elevation prompt instead of leaving users in the graphical app manager.

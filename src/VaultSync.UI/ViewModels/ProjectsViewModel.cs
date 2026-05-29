@@ -2283,7 +2283,7 @@ public class ProjectsViewModel : ViewModelBase
                 });
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ShowNotification(Lf("Projects.Notification.OpenFolderFailed", "Failed to open folder for '{0}'.", SelectedProject?.Name ?? string.Empty), NotificationSeverity.Error);
         }
@@ -2471,7 +2471,7 @@ public class ProjectsViewModel : ViewModelBase
                 NotifySnapshotOutcome(msg, success: true);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             var msg = L("Projects.Notification.SnapshotFailure", "Snapshot failed. Check logs for details.");
             ShowNotification(msg, NotificationSeverity.Error);
@@ -2993,7 +2993,7 @@ public class ProjectsViewModel : ViewModelBase
                 UpdateProjectPresetDisplay(project);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
 
             // Fallback to a minimal hard-coded set so the UI stays usable.

@@ -2072,7 +2072,7 @@ public sealed class BackupService(
                         await UploadSingleAttemptAsync(existingLength);
                         return;
                     }
-                    catch (TimeoutException ex) when (attempt <= maxRetries)
+                    catch (TimeoutException) when (attempt <= maxRetries)
                     {
                         RuntimeLog.WriteVerbose($"[BackupService] Single archive upload stalled (attempt {attempt}/{maxRetries}). Retrying from {existingLength} bytes.");
                         await Task.Delay(TimeSpan.FromSeconds(2), ct);

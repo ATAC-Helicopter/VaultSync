@@ -898,6 +898,22 @@
 - [x] `VS-1771` `P2` Tighten release templates and remaining test temp fixtures. _(Done; tracked by #348)_
   - Scope: clarify PR/update templates, Store validation wording, and remaining MetadataSync/SnapshotDiff temp-directory fixture handling for the stable 1.7.5 build.
   - Acceptance: release-facing templates point at stable validation, Store docs distinguish workflow support from remaining artifact validation, and focused fixture tests pass.
+- [x] `VS-1772` `P2` Standardize action button styles and alignment. _(Done 2026-05-29; tracked by #349; labels: `roadmap`, `kind:vs`, `release:1.7.5`, `priority:p2`, `area:ui`, `Improvement`, `status:done`)_
+  - Scope: move shared small/primary action button styles to app-level Avalonia styles and route shell update/crash banner buttons through shared action classes.
+  - Acceptance: Backups, tray widget, shell, Projects, and Settings action buttons keep existing behavior while centering wrapped labels consistently.
+  - Validation: Release build passed with 0 warnings; core tests passed 200/200; macOS UI launch exposed the tray menu.
+- [x] `VS-1773` `P2` Remove unused exception warning suppression. _(Done 2026-05-29; tracked by #350; labels: `roadmap`, `kind:vs`, `release:1.7.5`, `priority:p2`, `area:core`, `Improvement`, `status:done`)_
+  - Scope: remove the global `CS0168` suppression and clean up unused catch variables without changing catch behavior.
+  - Acceptance: unused exception variables are visible to future builds, while logged exceptions remain named and diagnostics behavior is unchanged.
+  - Validation: Release build passed with 0 warnings; core tests passed 200/200.
+- [x] `BUG-18045` `P1` Fix macOS tray Quit native menu crash. _(Done 2026-05-29; tracked by #351; labels: `bug`, `Crash`, `release:1.7.5`, `priority:p1`, `area:ui`, `status:done`)_
+  - Scope: make tray icon teardown idempotent, avoid macOS native menu detachment during shutdown, and stop queued tray refreshes once shutdown starts.
+  - Acceptance: quitting from the macOS tray `Quit VaultSync` item exits cleanly without Avalonia's "menu being updated does not match" exception.
+  - Validation: Accessibility automation opened the VaultSync status menu, clicked `Quit VaultSync`, and the `dotnet run` process exited with code 0.
+- [x] `BUG-18046` `P1` Fix credential profile card clipping. _(Done 2026-05-29; tracked by #352; labels: `bug`, `release:1.7.5`, `priority:p1`, `area:ui`, `status:done`)_
+  - Scope: replace the oversized password visibility toggle in Settings credential cards with a compact checkbox and stabilize label/action columns.
+  - Acceptance: Name, username, password, remove, and show-password controls fit inside the credential card without bottom/right clipping.
+  - Validation: Release build passed with 0 warnings; core tests passed 200/200; macOS app launched successfully after the layout fix.
 
 ### Proposed delivery phases
 1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`

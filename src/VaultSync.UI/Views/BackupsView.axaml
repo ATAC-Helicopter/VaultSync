@@ -219,24 +219,6 @@
       <Setter Property="CornerRadius" Value="16" />
     </Style>
 
-    <!-- Small buttons -->
-    <Style Selector="Button.small-button">
-      <Setter Property="Background" Value="{DynamicResource Surface2}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Padding" Value="{DynamicResource SmallButtonPadding}" />
-      <Setter Property="FontSize" Value="11" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="MinWidth" Value="0" />
-    </Style>
-    <Style Selector="Button.small-button:pointerover">
-      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
-    </Style>
-    <Style Selector="Button.small-button:pressed">
-      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
-    </Style>
-
     <!-- Per-project primary action -->
 
   </UserControl.Styles>

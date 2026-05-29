@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- Silence common warning noise until code is cleaned up -->
-    <NoWarn>$(NoWarn);CS0168;CS8601;CS8602;CS8604;CS8625</NoWarn>
+    <NoWarn>$(NoWarn);CS8601;CS8602;CS8604;CS8625</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -28,6 +28,8 @@
 - [VS-1769] GitHub issue and pull request templates now use structured forms for bugs, crashes, beta feedback, backup/restore problems, updates, and feature requests.
 - [VS-1770] Settings reload notifications and backup archive test setup now reuse focused helper methods.
 - [VS-1771] Release templates, Store validation docs, and remaining metadata/snapshot temp-directory test fixtures were tightened for the stable build.
+- [VS-1772] Shared action button styles now cover small and primary buttons so shell, widget, Backups, Projects, and Settings controls align consistently.
+- [VS-1773] Unused exception-variable warnings are no longer globally suppressed after cleaning up low-risk catch blocks.
 ### Fixed
 - [BUG-18038] Windows notification failures no longer assign an invalid empty toast tag and repeated OS-toast failures are suppressed after the first diagnostic entry.
 - [BUG-18039] Manual storage-health rechecks now marshal notification and tray updates back to the UI thread after background drive probing.
@@ -36,6 +38,8 @@
 - [BUG-18042] Linux OS shutdown and logout requests now bypass run-in-background close interception so VaultSync no longer hides to tray and blocks power-off.
 - [BUG-18043] Linux tray icon teardown now clears the native menu, waits briefly before recreating AppIndicator icons, and follows the live tray setting to avoid duplicate tray indicators.
 - [BUG-18044] Cross-machine imported backup history no longer drives local snapshot diff baselines or project storage deltas, preventing large misleading size swings between OSes.
+- [BUG-18045] macOS tray-menu Quit now tears down the native tray icon without throwing Avalonia's menu-mismatch exception.
+- [BUG-18046] Settings credential profile cards no longer clip the password visibility control in windowed layouts.
 
 ## [1.7.4] - 20.05.2026
 ### Added

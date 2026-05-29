@@ -241,31 +241,26 @@
             <StackPanel Grid.Column="1" Spacing="6" HorizontalAlignment="Right">
               <Button Command="{CompiledBinding InstallPatchCommand}"
                       Content="{CompiledBinding InstallButtonText}"
+                      Classes="action-primary"
                       MinWidth="130"
                       HorizontalAlignment="Right"
-                      Background="{DynamicResource AccentBrush}"
-                      Foreground="{DynamicResource TextOnPillBrush}"
-                      BorderBrush="{DynamicResource AccentBrush}"
                       IsVisible="{CompiledBinding ShowPatchButton}" />
               <Button Command="{CompiledBinding OpenReleasePageCommand}"
                       Content="{CompiledBinding ReleaseActionText}"
+                      Classes="action-ghost"
                       MinWidth="130"
                       HorizontalAlignment="Right"
                       IsEnabled="{CompiledBinding IsReleaseActionEnabled}"
-                      Background="{DynamicResource Surface1}"
-                      BorderBrush="{DynamicResource BorderSoft}"
                       IsVisible="{CompiledBinding ShowInstallerFallback}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
               <Button Command="{CompiledBinding SkipUpdateCommand}"
                       Content="{infra:LocalizedString Key=Update.SkipVersion}"
-                      IsEnabled="{CompiledBinding CanSkipUpdate}"
-                      Background="{DynamicResource Surface1}"
-                      BorderBrush="{DynamicResource BorderSoft}" />
+                      Classes="action-ghost"
+                      IsEnabled="{CompiledBinding CanSkipUpdate}" />
               <Button Command="{CompiledBinding DismissUpdateBannerCommand}"
                       Content="{infra:LocalizedString Key=Update.CloseBanner}"
-                      Background="{DynamicResource Surface1}"
-                      BorderBrush="{DynamicResource BorderSoft}" />
+                      Classes="action-ghost" />
             </StackPanel>
           </Grid>
         </Border>
@@ -285,13 +280,11 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
               <Button Command="{CompiledBinding CopySoftCrashLogCommand}"
                       Content="{CompiledBinding SoftCrashCopyLabel}"
-                      Background="{DynamicResource Surface1}"
-                      BorderBrush="{DynamicResource BorderSoft}"
+                      Classes="action-ghost"
                       IsVisible="{CompiledBinding CanCopySoftCrashLog}" />
               <Button Command="{CompiledBinding DismissSoftCrashBannerCommand}"
                       Content="{CompiledBinding SoftCrashDismissLabel}"
-                      Background="{DynamicResource Surface1}"
-                      BorderBrush="{DynamicResource BorderSoft}" />
+                      Classes="action-ghost" />
             </StackPanel>
           </Grid>
         </Border>

@@ -1415,7 +1415,7 @@ namespace VaultSync.UI.ViewModels
                     StopNasMonitor();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
             finally

@@ -142,6 +142,7 @@
       <Setter Property="MinWidth" Value="0" />
       <Setter Property="MinHeight" Value="34" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
     <Style Selector="Button.preset-editor-action:pointerover">
@@ -159,6 +160,8 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="MinWidth" Value="0" />
       <Setter Property="MinHeight" Value="34" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </UserControl.Styles>
 
