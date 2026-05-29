@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.IO;
-using System.IO.Compression;
 using VaultSync.Core.Config;
 using VaultSync.Core.Services;
 using VaultSync.Core.Tests.TestSupport;
@@ -15,7 +14,10 @@ public sealed class BackupKeyRotationServiceTests
     public void RotateEncryptedBackup_ReencryptsWithNewPassword_AndInvalidatesOldPassword()
     {
         using var root = new TempDirectory();
-        string backupFolder = CreateEncryptedBackupFolder(root.Path, "old-password");
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(
+            root.Path,
+            "old-password",
+            "vaultsync key rotation test");
 
         BackupKeyRotationService.RotationResult result = BackupKeyRotationService.RotateEncryptedBackup(
             backupFolder,
@@ -40,7 +42,10 @@ public sealed class BackupKeyRotationServiceTests
     public void RotateEncryptedBackup_WithWrongOldPassword_LeavesOriginalArchiveIntact()
     {
         using var root = new TempDirectory();
-        string backupFolder = CreateEncryptedBackupFolder(root.Path, "old-password");
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(
+            root.Path,
+            "old-password",
+            "vaultsync key rotation test");
         string archivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
         byte[] before = File.ReadAllBytes(archivePath);
 
@@ -58,26 +63,5 @@ public sealed class BackupKeyRotationServiceTests
         string restoredWithOld = Path.Combine(backupFolder, "restored-old.zip");
         BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, "old-password", restoredWithOld);
         Assert.True(File.Exists(restoredWithOld));
-    }
-
-    private static string CreateEncryptedBackupFolder(string root, string password)
-    {
-        string backupFolder = Path.Combine(root, "project", "2026-02-09_00-00-00");
-        Directory.CreateDirectory(backupFolder);
-
-        string sourceFile = Path.Combine(backupFolder, "sample.txt");
-        File.WriteAllText(sourceFile, "vaultsync key rotation test");
-
-        string archivePath = Path.Combine(backupFolder, BackupArchiveCryptoService.PlainArchiveFileName);
-        using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
-        {
-            archive.CreateEntryFromFile(sourceFile, "sample.txt");
-        }
-        File.Delete(sourceFile);
-
-        var crypto = new BackupArchiveCryptoService();
-        BackupArchiveCryptoService.EncryptArchiveInPlace(backupFolder, password, new BackupEncryptionConfig { Enabled = true });
-
-        return backupFolder;
     }
 }
