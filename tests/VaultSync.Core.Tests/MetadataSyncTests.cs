@@ -17,7 +17,7 @@ namespace VaultSync.Core.Tests;
 
 public sealed class MetadataSyncTests : IDisposable
 {
-    private readonly List<string> _tempDirs = [];
+    private readonly List<TempDirectory> _tempDirs = [];
 
     [Fact]
     public void ImportFromStore_ImportsBackupWhenPathExists_AndMarksRestore()
@@ -673,13 +673,13 @@ public sealed class MetadataSyncTests : IDisposable
         var metaRoot = CreateTempDir();
         var dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
         var localProjectsRoot = CreateTempDir();
-        var tempImportRoot = Path.Combine(
+        var tempImportRoot = new TempDirectory(Path.Combine(
             Path.GetTempPath(),
             "vaultsync-meta-import",
-            Guid.NewGuid().ToString("N"));
-        var tempRootHint = Path.Combine(tempImportRoot, "Temp Root Project");
-        Directory.CreateDirectory(tempRootHint);
+            Guid.NewGuid().ToString("N")));
         _tempDirs.Add(tempImportRoot);
+        var tempRootHint = Path.Combine(tempImportRoot.Path, "Temp Root Project");
+        Directory.CreateDirectory(tempRootHint);
 
         var store = CreateStore(metaRoot);
         store.UpsertProject(new MetaProject
@@ -1813,8 +1813,8 @@ public sealed class MetadataSyncTests : IDisposable
         MetadataSyncService.ProjectColorResolver = null;
         MetadataSyncService.ProjectColorApplier = null;
 
-        foreach (string path in _tempDirs.OrderByDescending(p => p.Length))
-            TryDeleteDir(path);
+        foreach (TempDirectory directory in _tempDirs.OrderByDescending(directory => directory.Path.Length))
+            directory.Dispose();
     }
 
     private static MetadataStore CreateStore(string rootPath)
@@ -1873,26 +1873,9 @@ public sealed class MetadataSyncTests : IDisposable
 
     private string CreateTempDir()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"vaultsync-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path);
-        _tempDirs.Add(path);
-        return path;
-    }
-
-    private static void TryDeleteDir(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return;
-
-        try
-        {
-            if (Directory.Exists(path))
-                Directory.Delete(path, recursive: true);
-        }
-        catch
-        {
-            // Ignore cleanup failures in tests.
-        }
+        var directory = new TempDirectory();
+        _tempDirs.Add(directory);
+        return directory.Path;
     }
 
     private static void CreateLegacyStoreWithoutEncryptionColumns(string rootPath, string projectRoot, string backupPathRel)

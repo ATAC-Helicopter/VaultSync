@@ -15,6 +15,7 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - Metadata tombstone export paths and Backups option-selection helpers now share common plumbing instead of repeating the same write/update blocks.
 - GitHub issue templates now collect clearer bug, crash, beta, backup/restore, update/install, and feature request details.
 - Settings reload notifications and backup archive test setup now use named helpers instead of repeated inline plumbing.
+- Release templates, Store validation docs, and metadata/snapshot test temp directories now have clearer stable-release cleanup.
 - Core tests use shared temporary directory, config, repository, and builder fixtures.
 
 ### Performance and diagnostics

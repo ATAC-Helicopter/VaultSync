@@ -895,6 +895,9 @@
 - [x] `VS-1770` `P2` Consolidate Settings notifications and backup archive test fixtures. _(Done; tracked by #347)_
   - Scope: group repeated Settings reload/localization property notifications behind named helpers and share backup archive/encryption setup across crypto/key-rotation tests.
   - Acceptance: Settings bindings still receive the same notifications; archive crypto tests keep their coverage while using one fixture factory; UI build and core tests remain clean.
+- [x] `VS-1771` `P2` Tighten release templates and remaining test temp fixtures. _(Done; tracked by #348)_
+  - Scope: clarify PR/update templates, Store validation wording, and remaining MetadataSync/SnapshotDiff temp-directory fixture handling for the stable 1.7.5 build.
+  - Acceptance: release-facing templates point at stable validation, Store docs distinguish workflow support from remaining artifact validation, and focused fixture tests pass.
 
 ### Proposed delivery phases
 1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`

@@ -9,8 +9,13 @@ public sealed class TempDirectory : IDisposable
     private const int MaxDeleteAttempts = 3;
 
     public TempDirectory()
+        : this(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"vaultsync-test-{Guid.NewGuid():N}"))
     {
-        Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"vaultsync-test-{Guid.NewGuid():N}");
+    }
+
+    public TempDirectory(string path)
+    {
+        Path = path;
         Directory.CreateDirectory(Path);
     }
 

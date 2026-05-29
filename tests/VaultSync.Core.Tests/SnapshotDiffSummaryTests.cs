@@ -14,7 +14,7 @@ namespace VaultSync.Core.Tests;
 
 public sealed class SnapshotDiffSummaryTests : IDisposable
 {
-    private readonly List<TempDirectory> _tempDirs = [];
+    private readonly TempDirectory _tempRoot = new();
 
     [Fact]
     public void Repository_CreateSnapshot_PersistsDiffSummaryFields()
@@ -243,16 +243,13 @@ public sealed class SnapshotDiffSummaryTests : IDisposable
 
     public void Dispose()
     {
-        foreach (TempDirectory directory in _tempDirs.OrderByDescending(directory => directory.Path.Length))
-        {
-            directory.Dispose();
-        }
+        _tempRoot.Dispose();
     }
 
     private string CreateTempDir()
     {
-        var directory = new TempDirectory();
-        _tempDirs.Add(directory);
-        return directory.Path;
+        string path = Path.Combine(_tempRoot.Path, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
     }
 }
