@@ -1,5 +1,5 @@
 ## Summary
-- 
+-
 
 ## Linked Issues
 Closes #
@@ -15,4 +15,4 @@ Closes #
 - [ ] `ROADMAP.md` updated or not needed
 
 ## Risk
-- 
+-
