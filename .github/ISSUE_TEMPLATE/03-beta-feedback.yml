@@ -1,0 +1,71 @@
+name: Beta feedback
+description: Share feedback from a beta build before the stable release.
+title: "[Beta]: "
+labels:
+  - beta
+  - release:1.7.5
+assignees:
+  - ATAC-Helicopter
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for beta validation notes, regressions, rough edges, and upgrade feedback. Use the crash template for hard crashes.
+  - type: input
+    id: version
+    attributes:
+      label: Beta version
+      placeholder: "1.7.5-Beta.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: path
+    attributes:
+      label: How did you install or update?
+      options:
+        - In-app update
+        - Installer download
+        - Portable/manual copy
+        - Microsoft Store package
+        - Linux package/AppImage/tar.gz
+        - Source/dev build
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - macOS
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: What did you test?
+      options:
+        - label: Fresh install
+        - label: Update from 1.7.4 stable
+        - label: Update from 1.7.4 beta
+        - label: Existing projects loaded correctly
+        - label: Backup completed
+        - label: Restore completed
+        - label: Metadata import/reconciliation completed
+        - label: Tray/startup behavior
+        - label: Uninstall/reinstall
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback
+      description: What felt good, broken, confusing, slower, or improved?
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics or screenshots
+      description: Attach logs/screenshots when the feedback is about errors, speed, UI, or update behavior.

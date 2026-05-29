@@ -1,0 +1,82 @@
+name: Crash report
+description: Report a crash, hard exit, or startup failure.
+title: "[Crash]: "
+labels:
+  - Crash
+  - bug
+  - release:1.7.5
+assignees:
+  - ATAC-Helicopter
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Crash reports are most useful with diagnostics. If VaultSync still opens, export a support bundle from Settings > Advanced.
+  - type: input
+    id: version
+    attributes:
+      label: VaultSync version
+      placeholder: "1.7.5-Beta.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: crash_time
+    attributes:
+      label: When did it crash?
+      options:
+        - Startup
+        - During backup
+        - During restore
+        - During metadata import
+        - During update/install
+        - Closing or shutdown
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      options:
+        - Every time
+        - Sometimes
+        - Happened once
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - macOS
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: activity
+    attributes:
+      label: What were you doing?
+      description: Describe the action immediately before the crash.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: If it is reproducible, list the steps. If not, say what you remember.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Crash logs
+      description: Attach support bundle, recent diagnostics, crash dialog text, or Windows Event Viewer details.
+      placeholder: "Paste the relevant crash/error text here."
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context

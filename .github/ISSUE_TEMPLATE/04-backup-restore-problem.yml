@@ -1,0 +1,74 @@
+name: Backup or restore problem
+description: Report failed, missing, incorrect, or confusing backup/restore behavior.
+title: "[Backup/Restore]: "
+labels:
+  - bug
+  - area:core
+  - release:1.7.5
+assignees:
+  - ATAC-Helicopter
+body:
+  - type: input
+    id: version
+    attributes:
+      label: VaultSync version
+      placeholder: "1.7.5-Beta.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: problem_type
+    attributes:
+      label: Problem type
+      options:
+        - Backup failed
+        - Restore failed
+        - Backup missing from history
+        - Imported backup history looks wrong
+        - Size/delta looks wrong
+        - Encryption/password problem
+        - Destination unavailable or locked
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: destination
+    attributes:
+      label: Backup destination
+      options:
+        - Local folder
+        - External drive
+        - Network share
+        - Cloud-synced folder
+        - Multiple destinations
+        - Not sure
+    validations:
+      required: true
+  - type: checkboxes
+    id: context
+    attributes:
+      label: Context
+      options:
+        - label: Encrypted backups
+        - label: Imported backup history
+        - label: Cross-machine backup history
+        - label: Large project over 10 GB
+        - label: Network or removable destination
+        - label: First backup for this project
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+      description: Include project type, approximate size, destination type, and visible error messages.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Logs and diagnostics
+      description: Attach support bundle, backup diagnostics, or relevant console output.
+    validations:
+      required: true
