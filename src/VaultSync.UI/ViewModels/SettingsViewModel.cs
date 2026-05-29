@@ -448,6 +448,85 @@ namespace VaultSync.UI
             ShowLegacyBackupLocation = !UseAdvancedDestinations;
         }
 
+        private void NotifyLocalizedSettingsTextChanged()
+        {
+            OnPropertiesChanged(
+                nameof(EnrollProjectEncryptionPasswordLabel),
+                nameof(EncryptionOpenTimeoutLabel),
+                nameof(EncryptionOpenTimeoutDescription),
+                nameof(LockEncryptedOpenNowLabel),
+                nameof(BandwidthLimitLabel),
+                nameof(BandwidthLimitDescription),
+                nameof(BandwidthLimitValueLabel),
+                nameof(BandwidthLimitValueDescription),
+                nameof(QuietHoursLabel),
+                nameof(QuietHoursDescription),
+                nameof(QuietHoursStartLabel),
+                nameof(QuietHoursEndLabel),
+                nameof(QuietHoursWindowLabel),
+                nameof(QuietHoursWindowPreview),
+                nameof(MaintenanceWindowLabel),
+                nameof(MaintenanceWindowDescription),
+                nameof(MaintenanceWindowStartLabel),
+                nameof(MaintenanceWindowEndLabel),
+                nameof(MaintenanceWindowPreviewLabel),
+                nameof(MaintenanceWindowPreview),
+                nameof(MaintenanceWindowConsistencyLabel),
+                nameof(MaintenanceWindowConsistencyDescription),
+                nameof(MaintenanceWindowRepairLabel),
+                nameof(MaintenanceWindowRepairDescription),
+                nameof(MaintenanceWindowMetadataLabel),
+                nameof(MaintenanceWindowMetadataDescription));
+        }
+
+        private void NotifyLoadedSettingsChanged()
+        {
+            OnPropertiesChanged(
+                nameof(ProjectsRootPath),
+                nameof(ResumeLastSession),
+                nameof(ShowWindowOnTrayActions),
+                nameof(ShowTrayIcon),
+                nameof(RunInBackground),
+                nameof(ShowTrayBackupWidget),
+                nameof(LaunchOnLogin),
+                nameof(ConfirmDeleteBackups),
+                nameof(EnableAutoBackups),
+                nameof(AutoBackupIntervalMinutes),
+                nameof(MaxSnapshotsPerProject),
+                nameof(BackupLocationPath),
+                nameof(UseAdvancedDestinations),
+                nameof(UseBackupCompression),
+                nameof(UseRsyncDelta),
+                nameof(UseIncrementalBackups),
+                nameof(VerifyBackupsAfterCreate),
+                nameof(PauseBackupsOnBattery),
+                nameof(PreferExternalDrives),
+                nameof(ShowDriveHealthWarnings),
+                nameof(MinimumFreeSpacePercent),
+                nameof(SelectedTheme),
+                nameof(UseCompactLayout),
+                nameof(ShowProjectAvatars),
+                nameof(NotifyOnBackupSuccess),
+                nameof(NotifyOnBackupFailure),
+                nameof(NotifyOnLowDiskSpace),
+                nameof(NotifyOnSnapshotSuccess),
+                nameof(NotifyOnSnapshotFailure),
+                nameof(UseOsNotifications),
+                nameof(NotifyOnlyWhenInactive),
+                nameof(EnableVerboseLogging),
+                nameof(SaveVerboseLogs),
+                nameof(CheckForUpdatesOnStartup),
+                nameof(UpdateCheckIntervalMinutes),
+                nameof(BetaChannelEnabled),
+                nameof(EnableMaintenanceWindow),
+                nameof(MaintenanceWindowStart),
+                nameof(MaintenanceWindowEnd),
+                nameof(MaintenanceRunConsistencyScan),
+                nameof(MaintenanceRunRepairDryRun),
+                nameof(MaintenanceRunMetadataRefresh),
+                nameof(SaveStatus));
+        }
+
         public SettingsViewModel(LocalizationService localizationService, IAppConfigStore? configStore = null, IRepositoryFactory? repositoryFactory = null)
         {
             _localizationService = localizationService;
@@ -475,32 +554,7 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(CustomThemeBase));
                 RefreshUpdateCheckStatus();
                 RefreshRsyncStatusHint();
-                OnPropertyChanged(nameof(EnrollProjectEncryptionPasswordLabel));
-                OnPropertyChanged(nameof(EncryptionOpenTimeoutLabel));
-                OnPropertyChanged(nameof(EncryptionOpenTimeoutDescription));
-                OnPropertyChanged(nameof(LockEncryptedOpenNowLabel));
-                OnPropertyChanged(nameof(BandwidthLimitLabel));
-                OnPropertyChanged(nameof(BandwidthLimitDescription));
-                OnPropertyChanged(nameof(BandwidthLimitValueLabel));
-                OnPropertyChanged(nameof(BandwidthLimitValueDescription));
-                OnPropertyChanged(nameof(QuietHoursLabel));
-                OnPropertyChanged(nameof(QuietHoursDescription));
-                OnPropertyChanged(nameof(QuietHoursStartLabel));
-                OnPropertyChanged(nameof(QuietHoursEndLabel));
-                OnPropertyChanged(nameof(QuietHoursWindowLabel));
-                OnPropertyChanged(nameof(QuietHoursWindowPreview));
-                OnPropertyChanged(nameof(MaintenanceWindowLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowDescription));
-                OnPropertyChanged(nameof(MaintenanceWindowStartLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowEndLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowPreviewLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowPreview));
-                OnPropertyChanged(nameof(MaintenanceWindowConsistencyLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowConsistencyDescription));
-                OnPropertyChanged(nameof(MaintenanceWindowRepairLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowRepairDescription));
-                OnPropertyChanged(nameof(MaintenanceWindowMetadataLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
+                NotifyLocalizedSettingsTextChanged();
                 ProjectMetadataConflictStatus = ProjectMetadataConflicts.Count == 0
                     ? L("Settings.Advanced.MetadataConflictsNone", "No pending cross-machine metadata conflicts.")
                     : string.Format(
@@ -779,49 +833,7 @@ namespace VaultSync.UI
 
                 // Explicit notifications are more reliable here than a blanket null refresh,
                 // especially when the cached Settings view is reloaded after startup.
-                OnPropertyChanged(nameof(ProjectsRootPath));
-                OnPropertyChanged(nameof(ResumeLastSession));
-                OnPropertyChanged(nameof(ShowWindowOnTrayActions));
-                OnPropertyChanged(nameof(ShowTrayIcon));
-                OnPropertyChanged(nameof(RunInBackground));
-                OnPropertyChanged(nameof(ShowTrayBackupWidget));
-                OnPropertyChanged(nameof(LaunchOnLogin));
-                OnPropertyChanged(nameof(ConfirmDeleteBackups));
-                OnPropertyChanged(nameof(EnableAutoBackups));
-                OnPropertyChanged(nameof(AutoBackupIntervalMinutes));
-                OnPropertyChanged(nameof(MaxSnapshotsPerProject));
-                OnPropertyChanged(nameof(BackupLocationPath));
-                OnPropertyChanged(nameof(UseAdvancedDestinations));
-                OnPropertyChanged(nameof(UseBackupCompression));
-                OnPropertyChanged(nameof(UseRsyncDelta));
-                OnPropertyChanged(nameof(UseIncrementalBackups));
-                OnPropertyChanged(nameof(VerifyBackupsAfterCreate));
-                OnPropertyChanged(nameof(PauseBackupsOnBattery));
-                OnPropertyChanged(nameof(PreferExternalDrives));
-                OnPropertyChanged(nameof(ShowDriveHealthWarnings));
-                OnPropertyChanged(nameof(MinimumFreeSpacePercent));
-                OnPropertyChanged(nameof(SelectedTheme));
-                OnPropertyChanged(nameof(UseCompactLayout));
-                OnPropertyChanged(nameof(ShowProjectAvatars));
-                OnPropertyChanged(nameof(NotifyOnBackupSuccess));
-                OnPropertyChanged(nameof(NotifyOnBackupFailure));
-                OnPropertyChanged(nameof(NotifyOnLowDiskSpace));
-                OnPropertyChanged(nameof(NotifyOnSnapshotSuccess));
-                OnPropertyChanged(nameof(NotifyOnSnapshotFailure));
-                OnPropertyChanged(nameof(UseOsNotifications));
-                OnPropertyChanged(nameof(NotifyOnlyWhenInactive));
-                OnPropertyChanged(nameof(EnableVerboseLogging));
-                OnPropertyChanged(nameof(SaveVerboseLogs));
-                OnPropertyChanged(nameof(CheckForUpdatesOnStartup));
-                OnPropertyChanged(nameof(UpdateCheckIntervalMinutes));
-                OnPropertyChanged(nameof(BetaChannelEnabled));
-                OnPropertyChanged(nameof(EnableMaintenanceWindow));
-                OnPropertyChanged(nameof(MaintenanceWindowStart));
-                OnPropertyChanged(nameof(MaintenanceWindowEnd));
-                OnPropertyChanged(nameof(MaintenanceRunConsistencyScan));
-                OnPropertyChanged(nameof(MaintenanceRunRepairDryRun));
-                OnPropertyChanged(nameof(MaintenanceRunMetadataRefresh));
-                OnPropertyChanged(nameof(SaveStatus));
+                NotifyLoadedSettingsChanged();
             }
             finally
             {

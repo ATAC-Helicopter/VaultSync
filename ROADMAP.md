@@ -892,6 +892,9 @@
 - [x] `VS-1769` `P2` Rework GitHub issue and PR templates. _(Done; tracked by #346)_
   - Scope: replace free-form Markdown issue templates with structured forms for bugs, crashes, beta feedback, backup/restore problems, update/install problems, and feature requests, plus add a lightweight pull request checklist.
   - Acceptance: users are guided to include version, OS, install/update path, diagnostics, and impact; blank issues route to security/docs links; PRs call out linked issues, validation, release notes, and risk.
+- [x] `VS-1770` `P2` Consolidate Settings notifications and backup archive test fixtures. _(Done; tracked by #347)_
+  - Scope: group repeated Settings reload/localization property notifications behind named helpers and share backup archive/encryption setup across crypto/key-rotation tests.
+  - Acceptance: Settings bindings still receive the same notifications; archive crypto tests keep their coverage while using one fixture factory; UI build and core tests remain clean.
 
 ### Proposed delivery phases
 1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`

@@ -26,6 +26,7 @@
 - [VS-1767] Metadata tombstone exports and Backups option setters now reuse focused helper plumbing.
 - [VS-1768] Backups helper view models now live in a focused models file to shrink the main Backups view model.
 - [VS-1769] GitHub issue and pull request templates now use structured forms for bugs, crashes, beta feedback, backup/restore problems, updates, and feature requests.
+- [VS-1770] Settings reload notifications and backup archive test setup now reuse focused helper methods.
 ### Fixed
 - [BUG-18038] Windows notification failures no longer assign an invalid empty toast tag and repeated OS-toast failures are suppressed after the first diagnostic entry.
 - [BUG-18039] Manual storage-health rechecks now marshal notification and tray updates back to the UI thread after background drive probing.
