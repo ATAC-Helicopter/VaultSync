@@ -82,11 +82,11 @@ Older or unlisted installs must fall back to the full installer.
 ## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.7.5 -ReleaseTrack 1.7.x
   ```
 - Run the release gate again after GitHub Actions uploads assets:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -Phase PostPublish
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.7.5 -ReleaseTrack 1.7.x -Phase PostPublish
   ```
 - `CHANGELOG.md` updated
 - `docs/WHATS_NEW.md` updated
