@@ -889,6 +889,9 @@
 - [x] `VS-1768` `P2` Split Backups helper view models into a focused file. _(Done; tracked by #345)_
   - Scope: move Backups helper model/view-model classes out of the oversized main Backups view model while preserving binding-compatible names and namespaces.
   - Acceptance: the main Backups view model is easier to scan; helper classes retain existing behavior; solution build remains clean.
+- [x] `VS-1769` `P2` Rework GitHub issue and PR templates. _(Done; tracked by #346)_
+  - Scope: replace free-form Markdown issue templates with structured forms for bugs, crashes, beta feedback, backup/restore problems, update/install problems, and feature requests, plus add a lightweight pull request checklist.
+  - Acceptance: users are guided to include version, OS, install/update path, diagnostics, and impact; blank issues route to security/docs links; PRs call out linked issues, validation, release notes, and risk.
 
 ### Proposed delivery phases
 1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`

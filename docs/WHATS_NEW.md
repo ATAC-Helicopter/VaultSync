@@ -13,6 +13,7 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - Projects and Settings helper view models now live in focused files, making the main view-model files easier to scan.
 - Backups helper view models now live in a focused companion file, further shrinking the main Backups view model.
 - Metadata tombstone export paths and Backups option-selection helpers now share common plumbing instead of repeating the same write/update blocks.
+- GitHub issue templates now collect clearer bug, crash, beta, backup/restore, update/install, and feature request details.
 - Core tests use shared temporary directory, config, repository, and builder fixtures.
 
 ### Performance and diagnostics

@@ -1,0 +1,110 @@
+name: Bug report
+description: Report something that is not working as expected.
+title: "[Bug]: "
+labels:
+  - bug
+  - release:1.7.5
+assignees:
+  - ATAC-Helicopter
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve VaultSync. Please avoid sharing private project files, passwords, tokens, or full logs that contain secrets.
+  - type: input
+    id: version
+    attributes:
+      label: VaultSync version
+      description: Use the version shown in Settings, the installer name, or the About dialog.
+      placeholder: "1.7.5-Beta.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - macOS
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: install_type
+    attributes:
+      label: Install type
+      options:
+        - Installer
+        - Portable
+        - Microsoft Store
+        - AppImage
+        - tar.gz
+        - Source/dev build
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you were trying to do.
+      placeholder: "VaultSync..."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Give exact steps when possible.
+      placeholder: |
+        1. Open...
+        2. Click...
+        3. Run...
+        4. See...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: "I expected..."
+    validations:
+      required: true
+  - type: checkboxes
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - label: Startup or app launch
+        - label: Projects
+        - label: Snapshots
+        - label: Backup
+        - label: Restore
+        - label: Encryption/passwords
+        - label: Updates/installers
+        - label: Dashboard/UI
+        - label: CLI
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Logs and diagnostics
+      description: Attach a support bundle from Settings > Advanced if possible, or paste the relevant diagnostic lines.
+      placeholder: "Paste the relevant error lines here."
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - label: Blocks app startup
+        - label: Blocks backups
+        - label: Blocks restore
+        - label: Might risk data loss
+        - label: UI-only issue
+        - label: Workaround exists
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Screenshots, recordings, or extra details are welcome.
