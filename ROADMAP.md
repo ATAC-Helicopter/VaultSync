@@ -852,6 +852,87 @@
   3. updater/serviceability diagnostics,
   4. operator-facing doctor workflows.
 
+### 1.7.5 patch backlog
+- [x] `VS-1745`/`VS-1746`/`VS-1747` `P2` Centralize package, config, and logging plumbing. _(Done 2026-05-29; tracked by #323)_
+  - Scope: centralize package versions, route app configuration through `IAppConfigStore`, and share runtime logging/hash-formatting helpers.
+  - Acceptance: project package references stay versionless where centrally managed; core, CLI, and UI config access uses the shared adapter; duplicated service logging/hash helpers are removed.
+- [x] `VS-1748`/`VS-1751`/`VS-1755`/`VS-1756` `P2` Consolidate UI formatting and view-model reuse. _(Done 2026-05-29; tracked by #324)_
+  - Scope: reuse shared view-model notification helpers and centralize byte/signed-byte formatting across UI and CLI callers.
+  - Acceptance: Dashboard, Backups, Projects, and Settings dependent-property updates keep existing binding behavior while using shared helpers; formatting output remains stable.
+- [x] `VS-1749`/`VS-1754` `P2` Standardize core test fixtures and builders. _(Done 2026-05-29; tracked by #325)_
+  - Scope: consolidate temporary-directory, config-isolation, repository, project, backup, and destination setup into reusable test helpers.
+  - Acceptance: core tests keep coverage while reducing duplicated setup; fixture cleanup remains deterministic.
+- [x] `VS-1752`/`VS-1753`/`VS-1758` `P2` Improve dashboard and metadata import performance diagnostics. _(Done 2026-05-29; tracked by #326)_
+  - Scope: add verbose timing scopes for startup/background work, reuse project lookups for recent activity, and cache unchanged metadata import sources.
+  - Acceptance: normal runs stay quiet; verbose diagnostics expose slow phases; dashboard and metadata import refreshes avoid repeated broad scans.
+- [x] `VS-1750`/`VS-1757` `P2` Reuse destination normalization and NetworkMount diagnostics. _(Done 2026-05-29; tracked by #327)_
+  - Scope: share destination path normalization and route NetworkMount diagnostics through one local logging helper.
+  - Acceptance: identity/quota planning uses consistent normalized paths; NetworkMount log prefixes remain stable without duplicated inline formatting.
+- [x] `VS-1759` `P2` Harden metadata unchanged-source cache coverage checks. _(Done 2026-05-29; tracked by #330)_
+  - Scope: ensure skipped background metadata imports rerun when local repository coverage is incomplete.
+  - Acceptance: unchanged-source cache cannot hide missing local repository rows; metadata imports remain skipped only when coverage is complete.
+- [x] `VS-1760` `P1` Harden SQLite repository connection handling. _(Done 2026-05-29; tracked by #331)_
+  - Scope: escape SQLite connection-string paths, disable stale pooling, set busy timeouts, and negotiate WAL once to reduce lock contention.
+  - Acceptance: repository paths with special characters open reliably; stale pooled SQLite handles do not keep locks alive after app/test churn; concurrent repository work retries through busy timeout instead of failing immediately.
+- [x] `VS-1761` `P2` Split SQLite schema setup into focused helpers. _(Done 2026-05-29; tracked by #331)_
+  - Scope: separate schema creation, migrations, index creation, and path normalization while reusing one connection for column migrations.
+  - Acceptance: startup schema setup remains idempotent; migration code is easier to audit without changing persisted schema behavior; path normalization still runs after schema setup.
+- [x] `BUG-18038` `P1` Suppress repeated Windows toast failures and invalid empty tags. _(Done 2026-05-29; tracked by #332)_
+  - Scope: avoid assigning invalid empty toast tags and log repeated OS-toast failures only once per failure flow.
+  - Acceptance: Windows notification failures do not throw due to empty toast tags; repeated toast failures do not flood diagnostics.
+- [x] `BUG-18039` `P1` Marshal manual drive-health updates back to the UI thread. _(Done 2026-05-29; tracked by #332)_
+  - Scope: ensure manual storage-health rechecks update notifications and tray state through the Avalonia UI thread after background probing.
+  - Acceptance: manual drive-health rechecks no longer produce thread-affinity crashes; tray and notification state update correctly after background health probes.
+- [x] `BUG-18040` `P1` Record config fallback recovery diagnostics. _(Done 2026-05-29; tracked by #333)_
+  - Scope: capture primary, backup, and last-known-good config load diagnostics when falling back from damaged or unavailable config files.
+  - Acceptance: fallback source is visible in diagnostics/support context; fallback to defaults is distinguishable from backup or last-known-good recovery.
+- [x] `VS-1762` `P1` Extend metadata unchanged-source cache coverage with source external IDs. _(Done 2026-05-29; tracked by #334)_
+  - Scope: track source external IDs so background metadata imports are not skipped when unrelated local rows mask recreated or incomplete repositories.
+  - Acceptance: unchanged-source cache skips only when local repository coverage is complete for the source identity; recreated/imported repositories with different external IDs are rechecked.
+- [x] `VS-1763` `P2` Refresh 1.7.5 release manifest and docs metadata. _(Done 2026-05-29; tracked by #335)_
+  - Scope: align release-facing Windows, Store, issue-template, patch-base, and docs metadata to `1.7.5`.
+  - Acceptance: release manifests and package metadata target `1.7.5`; issue templates, release docs, and patch-base references do not point at stale versions.
+- [x] `VS-1764` `P2` Centralize DB path fallback resolution for UI repository callers. _(Done 2026-05-29; tracked by #336)_
+  - Scope: expose shared config-store DB path resolution and route UI repository creation through it.
+  - Acceptance: startup, dashboard, backups, projects, and settings flows stop duplicating `DbPath` fallback logic; blank paths still resolve to the default VaultSync database.
+- [x] `VS-1765` `P2` Centralize UI repository creation and detached task scheduling. _(Done 2026-05-29; tracked by #337)_
+  - Scope: add a UI repository factory and extend the shared detached-task helper for scheduled background operations.
+  - Acceptance: UI view models no longer construct repositories from resolved DB paths directly; converted detached operations log failures through one helper.
+- [x] `VS-1766` `P2` Split UI helper view models out of oversized files. _(Done 2026-05-29; tracked by #338)_
+  - Scope: move Projects option/snapshot helper models and Settings destination/credential models into focused files, plus share export-folder opening.
+  - Acceptance: helper classes keep binding-compatible names/namespaces; Projects and Settings main files shrink without workflow changes.
+- [x] `VS-1767` `P2` Consolidate tombstone export and Backups option helper plumbing. _(Done 2026-05-29; tracked by #340)_
+  - Scope: share metadata tombstone meta-info stamping, tombstone row creation, and Backups silent option setter logic.
+  - Acceptance: tombstone exporters keep existing writer metadata and lock-retry behavior; Backups option selections keep current transient-null handling.
+- [x] `VS-1768` `P2` Split Backups helper view models into a focused file. _(Done 2026-05-29; tracked by #345)_
+  - Scope: move Backups helper model/view-model classes out of the oversized main Backups view model while preserving binding-compatible names and namespaces.
+  - Acceptance: the main Backups view model is easier to scan; helper classes retain existing behavior; solution build remains clean.
+- [x] `VS-1769` `P2` Rework GitHub issue and PR templates. _(Done 2026-05-29; tracked by #346)_
+  - Scope: replace free-form Markdown issue templates with structured forms for bugs, crashes, beta feedback, backup/restore problems, update/install problems, and feature requests, plus add a lightweight pull request checklist.
+  - Acceptance: users are guided to include version, OS, install/update path, diagnostics, and impact; blank issues route to security/docs links; PRs call out linked issues, validation, release notes, and risk.
+- [x] `VS-1770` `P2` Consolidate Settings notifications and backup archive test fixtures. _(Done 2026-05-29; tracked by #347)_
+  - Scope: group repeated Settings reload/localization property notifications behind named helpers and share backup archive/encryption setup across crypto/key-rotation tests.
+  - Acceptance: Settings bindings still receive the same notifications; archive crypto tests keep their coverage while using one fixture factory; UI build and core tests remain clean.
+- [x] `VS-1771` `P2` Tighten release templates and remaining test temp fixtures. _(Done 2026-05-29; tracked by #348)_
+  - Scope: clarify PR/update templates, Store validation wording, and remaining MetadataSync/SnapshotDiff temp-directory fixture handling for the stable 1.7.5 build.
+  - Acceptance: release-facing templates point at stable validation, Store docs distinguish workflow support from remaining artifact validation, and focused fixture tests pass.
+- [x] `VS-1772` `P2` Standardize action button styles and alignment. _(Done 2026-05-29; tracked by #349; labels: `roadmap`, `kind:vs`, `release:1.7.5`, `priority:p2`, `area:ui`, `Improvement`, `status:done`)_
+  - Scope: move shared small/primary action button styles to app-level Avalonia styles and route shell update/crash banner buttons through shared action classes.
+  - Acceptance: Backups, tray widget, shell, Projects, and Settings action buttons keep existing behavior while centering wrapped labels consistently.
+  - Validation: Release build passed with 0 warnings; core tests passed 200/200; macOS UI launch exposed the tray menu.
+- [x] `VS-1773` `P2` Remove unused exception warning suppression. _(Done 2026-05-29; tracked by #350; labels: `roadmap`, `kind:vs`, `release:1.7.5`, `priority:p2`, `area:core`, `Improvement`, `status:done`)_
+  - Scope: remove the global `CS0168` suppression and clean up unused catch variables without changing catch behavior.
+  - Acceptance: unused exception variables are visible to future builds, while logged exceptions remain named and diagnostics behavior is unchanged.
+  - Validation: Release build passed with 0 warnings; core tests passed 200/200.
+- [x] `BUG-18045` `P1` Fix macOS tray Quit native menu crash. _(Done 2026-05-29; tracked by #351; labels: `bug`, `Crash`, `release:1.7.5`, `priority:p1`, `area:ui`, `status:done`)_
+  - Scope: make tray icon teardown idempotent, avoid macOS native menu detachment during shutdown, and stop queued tray refreshes once shutdown starts.
+  - Acceptance: quitting from the macOS tray `Quit VaultSync` item exits cleanly without Avalonia's "menu being updated does not match" exception.
+  - Validation: Accessibility automation opened the VaultSync status menu, clicked `Quit VaultSync`, and the `dotnet run` process exited with code 0.
+- [x] `BUG-18046` `P1` Fix credential profile card clipping. _(Done 2026-05-29; tracked by #352; labels: `bug`, `release:1.7.5`, `priority:p1`, `area:ui`, `status:done`)_
+  - Scope: replace the oversized password visibility toggle in Settings credential cards with a compact checkbox and stabilize label/action columns.
+  - Acceptance: Name, username, password, remove, and show-password controls fit inside the credential card without bottom/right clipping.
+  - Validation: Release build passed with 0 warnings; core tests passed 200/200; macOS app launched successfully after the layout fix.
+
 ### Proposed delivery phases
 1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`
    - Goal: know whether indexes are trustworthy before auto-repair or retention decisions run.

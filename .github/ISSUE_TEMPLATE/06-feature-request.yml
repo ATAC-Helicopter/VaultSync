@@ -1,0 +1,57 @@
+name: Feature request
+description: Suggest a workflow improvement or new capability.
+title: "[Feature]: "
+labels:
+  - enhancement
+assignees:
+  - ATAC-Helicopter
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and where does VaultSync fall short?
+      placeholder: "I need to..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe how you imagine this working.
+    validations:
+      required: true
+  - type: checkboxes
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - label: Projects
+        - label: Snapshots
+        - label: Backups
+        - label: Restore
+        - label: Encryption
+        - label: Updates/installers
+        - label: Dashboard/UI
+        - label: CLI
+        - label: Presets
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority from your point of view
+      options:
+        - Nice to have
+        - Would significantly improve my workflow
+        - Critical for adoption
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or workarounds
+      description: Is there a current feature that almost solves this?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, rough mockups, examples, or comparisons are welcome.

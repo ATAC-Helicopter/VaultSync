@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -11,75 +12,126 @@ namespace VaultSync.Core.Repositories
 {
     public class SqliteRepository(string dbPath)
     {
+        private static readonly ConcurrentDictionary<string, byte> JournalModeConfigured = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _dbPath = dbPath;
 
-    private SqliteConnection Open()
-    {
-            string? dir = Path.GetDirectoryName(_dbPath);
-        if (!string.IsNullOrWhiteSpace(dir))
+        private SqliteConnection Open()
         {
-            Directory.CreateDirectory(dir);
+            string? dir = Path.GetDirectoryName(_dbPath);
+            if (!string.IsNullOrWhiteSpace(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            var builder = new SqliteConnectionStringBuilder
+            {
+                DataSource = _dbPath,
+                Mode = SqliteOpenMode.ReadWriteCreate,
+                Pooling = false,
+                DefaultTimeout = 10
+            };
+
+            var conn = new SqliteConnection(builder.ConnectionString);
+            conn.Open();
+            ConfigureConnection(conn, _dbPath);
+            return conn;
         }
-        var conn = new SqliteConnection($"Data Source={_dbPath};Pooling=True");
-        conn.Open();
-        conn.Execute("PRAGMA foreign_keys = ON;");
-        return conn;
-    }
-public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnumerable<int> snapshotIds)
-{
-    if (string.IsNullOrWhiteSpace(projectName))
-        throw new ArgumentException("Project name is required", nameof(projectName));
-    ArgumentNullException.ThrowIfNull(snapshotIds);
+
+        private static void ConfigureConnection(SqliteConnection connection, string dbPath)
+        {
+            connection.Execute("PRAGMA foreign_keys = ON;");
+            connection.Execute("PRAGMA busy_timeout = 10000;");
+            connection.Execute("PRAGMA synchronous = NORMAL;");
+
+            string journalModeKey = NormalizeDbPathKey(dbPath);
+            if (!JournalModeConfigured.TryAdd(journalModeKey, 0))
+                return;
+
+            try
+            {
+                _ = connection.ExecuteScalar<string>("PRAGMA journal_mode = WAL;");
+            }
+            catch (SqliteException)
+            {
+                // Some mounted or locked destinations cannot switch journal mode; busy_timeout still applies.
+            }
+            catch (IOException)
+            {
+                // Best-effort connection tuning must not block repository use.
+            }
+        }
+
+        private static string NormalizeDbPathKey(string dbPath)
+        {
+            try
+            {
+                return Path.GetFullPath(dbPath);
+            }
+            catch
+            {
+                return dbPath;
+            }
+        }
+
+        public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnumerable<int> snapshotIds)
+        {
+            if (string.IsNullOrWhiteSpace(projectName))
+                throw new ArgumentException("Project name is required", nameof(projectName));
+
+            ArgumentNullException.ThrowIfNull(snapshotIds);
 
             int[] ids = [.. snapshotIds.Distinct()];
-    if (ids.Length == 0)
-        return (0, 0);
+            if (ids.Length == 0)
+                return (0, 0);
 
-    using SqliteConnection conn = Open();                 // <-- uses your existing helper in this class
-    using SqliteTransaction tx   = conn.BeginTransaction();
+            using SqliteConnection conn = Open();
+            using SqliteTransaction tx = conn.BeginTransaction();
 
-            // Resolve project id
             int pid = conn.ExecuteScalar<int?>(
-        "SELECT id FROM projects WHERE name = @name;",
-        new { name = projectName }, tx)
-        ?? throw new InvalidOperationException($"Project '{projectName}' not found");
+                "SELECT id FROM projects WHERE name = @name;",
+                new { name = projectName },
+                tx)
+                ?? throw new InvalidOperationException($"Project '{projectName}' not found");
 
-            // Keep only snapshot ids that belong to this project
             int[] validIds = [.. conn.Query<int>(
-        @"SELECT id FROM snapshots 
-          WHERE project_id = @pid AND id IN @ids 
-          ORDER BY id;",
-        new { pid, ids }, tx)];
+                """
+                SELECT id FROM snapshots
+                WHERE project_id = @pid AND id IN @ids
+                ORDER BY id;
+                """,
+                new { pid, ids },
+                tx)];
 
-    if (validIds.Length == 0)
-    {
-        tx.Commit();
-        return (0, 0);
-    }
+            if (validIds.Length == 0)
+            {
+                tx.Commit();
+                return (0, 0);
+            }
 
-            // Count files that will be removed via FK cascade
             int filesDeleted = conn.ExecuteScalar<int>(
-        "SELECT COUNT(*) FROM files WHERE snapshot_id IN @ids;",
-        new { ids = validIds }, tx);
+                "SELECT COUNT(*) FROM files WHERE snapshot_id IN @ids;",
+                new { ids = validIds },
+                tx);
 
-    // Delete snapshots (files go away due to ON DELETE CASCADE)
-    conn.Execute("DELETE FROM snapshots WHERE id IN @ids;", new { ids = validIds }, tx);
+            conn.Execute("DELETE FROM snapshots WHERE id IN @ids;", new { ids = validIds }, tx);
 
-    tx.Commit();
-    return (validIds.Length, filesDeleted);
-}
+            tx.Commit();
+            return (validIds.Length, filesDeleted);
+        }
 
- public void EnsureSchema()
-{
-    using SqliteConnection c = Open();
+        public void EnsureSchema()
+        {
+            using SqliteConnection c = Open();
 
-    // Ensure pragmas explicitly (keep also in Open(); harmless to repeat)
-    c.Execute("PRAGMA foreign_keys = ON;");
-    // journal_mode returns a value; read it to avoid driver complaints
-    _ = c.ExecuteScalar<string>("PRAGMA journal_mode = WAL;");
+            CreateBaseSchema(c);
+            ApplyMigrations(c);
+            CreateIndexes(c);
+            NormalizeBackupPathSeparators(c);
+        }
 
-    // Schema objects
-    c.Execute("""
+        private static void CreateBaseSchema(SqliteConnection connection)
+        {
+            connection.Execute("""
         -- Projects
         CREATE TABLE IF NOT EXISTS projects(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,34 +197,38 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
     """);
+        }
 
-    // Migrations: add missing columns
-    EnsureColumnExists("backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("backups", "is_imported", "ALTER TABLE backups ADD COLUMN is_imported INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
-    EnsureColumnExists("backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
-    EnsureColumnExists("backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
-    EnsureColumnExists("backups", "is_encrypted", "ALTER TABLE backups ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("backups", "crypto_descriptor_json", "ALTER TABLE backups ADD COLUMN crypto_descriptor_json TEXT NOT NULL DEFAULT '{}';");
-    EnsureColumnExists("backups", "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
-    EnsureColumnExists("projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
-    EnsureColumnExists("projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
-    EnsureColumnExists("projects", "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
-    EnsureColumnExists("projects", "encryption_key_ref", "ALTER TABLE projects ADD COLUMN encryption_key_ref TEXT;");
-    EnsureColumnExists("projects", "restore_mode", "ALTER TABLE projects ADD COLUMN restore_mode TEXT NOT NULL DEFAULT 'direct';");
-    EnsureColumnExists("projects", "verification_policy", "ALTER TABLE projects ADD COLUMN verification_policy TEXT NOT NULL DEFAULT 'always';");
-    EnsureColumnExists("projects", "tags", "ALTER TABLE projects ADD COLUMN tags TEXT NOT NULL DEFAULT '';");
-    EnsureColumnExists("snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
-    EnsureColumnExists("snapshots", "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("snapshots", "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("snapshots", "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("snapshots", "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
-    EnsureColumnExists("snapshots", "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
-    EnsureColumnExists("backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+        private static void ApplyMigrations(SqliteConnection connection)
+        {
+            EnsureColumnExists(connection, "backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, "backups", "is_imported", "ALTER TABLE backups ADD COLUMN is_imported INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, "backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, "backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, "backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, "backups", "is_encrypted", "ALTER TABLE backups ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, "backups", "crypto_descriptor_json", "ALTER TABLE backups ADD COLUMN crypto_descriptor_json TEXT NOT NULL DEFAULT '{}';");
+            EnsureColumnExists(connection, "backups", "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
+            EnsureColumnExists(connection, "projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, "projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, "projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
+            EnsureColumnExists(connection, "projects", "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
+            EnsureColumnExists(connection, "projects", "encryption_key_ref", "ALTER TABLE projects ADD COLUMN encryption_key_ref TEXT;");
+            EnsureColumnExists(connection, "projects", "restore_mode", "ALTER TABLE projects ADD COLUMN restore_mode TEXT NOT NULL DEFAULT 'direct';");
+            EnsureColumnExists(connection, "projects", "verification_policy", "ALTER TABLE projects ADD COLUMN verification_policy TEXT NOT NULL DEFAULT 'always';");
+            EnsureColumnExists(connection, "projects", "tags", "ALTER TABLE projects ADD COLUMN tags TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, "snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, "snapshots", "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, "snapshots", "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, "snapshots", "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, "snapshots", "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, "snapshots", "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
+            EnsureColumnExists(connection, "backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+        }
 
-    // Indexes (idempotent)
-    c.Execute("""
+        private static void CreateIndexes(SqliteConnection connection)
+        {
+            connection.Execute("""
         CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
         CREATE INDEX IF NOT EXISTS idx_projects_external ON projects(external_id);
 
@@ -193,43 +249,40 @@ public (int Snapshots, int Files) DeleteSnapshotsById(string projectName, IEnume
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
           ON files(snapshot_id, rel_path);
     """);
+        }
 
-    // Normalize stored backup paths to the current OS separators for retention cleanup.
-    NormalizeBackupPathSeparators(c);
-}
+        private sealed class BackupPathRow
+        {
+            public long Id { get; init; }
+            public string Path { get; init; } = string.Empty;
+        }
 
-private sealed class BackupPathRow
-{
-    public long Id { get; init; }
-    public string Path { get; init; } = string.Empty;
-}
-
-private static void NormalizeBackupPathSeparators(SqliteConnection connection)
-{
-    var rows = connection.Query<BackupPathRow>(
-        "SELECT id, path FROM backups WHERE path LIKE '%\\\\%' OR path LIKE '%/%';").ToList();
-    if (rows.Count == 0)
-        return;
+        private static void NormalizeBackupPathSeparators(SqliteConnection connection)
+        {
+            var rows = connection.Query<BackupPathRow>(
+                "SELECT id, path FROM backups WHERE path LIKE '%\\\\%' OR path LIKE '%/%';").ToList();
+            if (rows.Count == 0)
+                return;
 
             char separator = Path.DirectorySeparatorChar;
-    foreach (BackupPathRow? row in rows)
-    {
-        if (string.IsNullOrWhiteSpace(row.Path))
-            continue;
+            foreach (BackupPathRow? row in rows)
+            {
+                if (string.IsNullOrWhiteSpace(row.Path))
+                    continue;
 
                 string normalized = row.Path
-            .Replace('\\', separator)
-            .Replace('/', separator)
-            .TrimStart(separator);
+                    .Replace('\\', separator)
+                    .Replace('/', separator)
+                    .TrimStart(separator);
 
-        if (string.Equals(normalized, row.Path, StringComparison.Ordinal))
-            continue;
+                if (string.Equals(normalized, row.Path, StringComparison.Ordinal))
+                    continue;
 
-        connection.Execute(
-            "UPDATE backups SET path = @path WHERE id = @id;",
-            new { path = normalized, id = row.Id });
-    }
-}
+                connection.Execute(
+                    "UPDATE backups SET path = @path WHERE id = @id;",
+                    new { path = normalized, id = row.Id });
+            }
+        }
 
         /// <summary>
         /// Development helper: clears all data from the database tables without
@@ -713,6 +766,37 @@ DELETE FROM sqlite_sequence;";
         public Snapshot? GetLatestSnapshot(int projectId)
         {
             return GetLatestSnapshotForProject(projectId);
+        }
+
+        public Snapshot? GetLatestLocalSnapshotForProject(int projectId)
+        {
+            using SqliteConnection c = Open();
+            return c.QueryFirstOrDefault<Snapshot>(
+                """
+                SELECT
+                  s.id,
+                  s.external_id as ExternalId,
+                  s.project_id  AS ProjectId,
+                  s.created_utc AS CreatedUtc,
+                  s.file_count  AS FileCount,
+                  s.total_bytes AS TotalBytes,
+                  s.diff_added AS DiffAdded,
+                  s.diff_modified AS DiffModified,
+                  s.diff_deleted AS DiffDeleted,
+                  s.diff_net_bytes AS DiffNetBytes,
+                  s.diff_top_paths_json AS DiffTopPathsJson
+                FROM snapshots s
+                WHERE s.project_id = @pid
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM backups b
+                    WHERE b.snapshot_id = s.id
+                      AND b.is_imported != 0
+                  )
+                ORDER BY s.created_utc DESC, s.id DESC
+                LIMIT 1;
+                """,
+                new { pid = projectId });
         }
 
         public Snapshot? GetLatestSnapshotForProject(int projectId)
@@ -1780,27 +1864,26 @@ DELETE FROM sqlite_sequence;";
             return result;
         }
 
-    private void EnsureColumnExists(string table, string column, string alterSql)
-    {
-        try
+        private static void EnsureColumnExists(SqliteConnection connection, string table, string column, string alterSql)
         {
-            using SqliteConnection c = Open();
-            var cols = c.Query($"PRAGMA table_info({table});")
-                        .Select(row => (string)row.name)
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            if (!cols.Contains(column))
+            try
             {
-                c.Execute(alterSql);
+                var cols = connection.Query($"PRAGMA table_info({table});")
+                    .Select(row => (string)row.name)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                if (!cols.Contains(column))
+                {
+                    connection.Execute(alterSql);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SqliteRepository] Failed to ensure column {column} on {table}: {ex.Message}");
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[SqliteRepository] Failed to ensure column {column} on {table}: {ex.Message}");
-        }
-    }
 
-    private static string NewExternalId() => Guid.NewGuid().ToString("N");
+        private static string NewExternalId() => Guid.NewGuid().ToString("N");
 
         public (int autoCount, int manualCount) GetBackupTypeCounts()
         {

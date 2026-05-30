@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Reflection;
+using VaultSync.Core.Services;
 
 namespace VaultSync.UI.Services
 {
@@ -437,14 +438,14 @@ namespace VaultSync.UI.Services
             using FileStream stream = File.OpenRead(path);
             using var sha = SHA256.Create();
             byte[] bytes = sha.ComputeHash(stream);
-            return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
+            return HashService.FormatSha256Lower(bytes);
         }
 
         private static string ComputeSha256(byte[] payload)
         {
             using var sha = SHA256.Create();
             byte[] bytes = sha.ComputeHash(payload);
-            return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
+            return HashService.FormatSha256Lower(bytes);
         }
 
         private static void VerifyArchivePreflight(string archivePath, PatchManifest manifest)

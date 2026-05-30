@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -163,9 +164,9 @@ namespace VaultSync.UI.ViewModels
                 {
                     try
                     {
-                        AppConfig cfg = AppConfigStore.Load();
+                        AppConfig cfg = _configStore.Load();
                         cfg.LastView = viewToSave;
-                        AppConfigStore.Save(cfg);
+                        _configStore.Save(cfg);
                         Dispatcher.UIThread.Post(() => _config.LastView = viewToSave);
                     }
                     catch (Exception ex)
@@ -268,14 +269,14 @@ namespace VaultSync.UI.ViewModels
 
         private void ApplyLastSessionView()
         {
-            _ = Task.Run(() =>
+            DetachedTask.Run(() =>
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = _configStore.GetSnapshot();
                 string last = string.IsNullOrWhiteSpace(cfg.LastView)
                     ? "Dashboard"
                     : cfg.LastView;
                 Dispatcher.UIThread.Post(() => SetCurrentView(last, remember: false));
-            });
+            }, nameof(ApplyLastSessionView));
         }
     }
 }

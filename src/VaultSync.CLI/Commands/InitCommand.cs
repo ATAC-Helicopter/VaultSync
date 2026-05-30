@@ -21,10 +21,10 @@ namespace VaultSync.CLI.Commands
         {
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string targetDb = string.IsNullOrWhiteSpace(s.Db)
-                ? AppConfigStore.GetDefaultDbPath()
+                ? ConfigHelper.GetDefaultDbPath()
                 : s.Db.Replace("~", home);
 
-            AppConfig cfg = AppConfigStore.Load();
+            AppConfig cfg = ConfigHelper.Load();
             cfg.DbPath = targetDb;
             ConfigHelper.Save(cfg);
 

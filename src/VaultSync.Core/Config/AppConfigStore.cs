@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Text.Json;
@@ -19,13 +21,25 @@ namespace VaultSync.Core.Config
 
         private static readonly SemaphoreSlim SaveGate = new(1, 1);
         private static readonly object LastKnownGoodGate = new();
-        private static readonly string ConfigDir = ResolveConfigDir();
+        private static readonly object ConfigPathGate = new();
+        private static string? TestConfigDirOverride;
         private static int _firstLoadState; // 0=unknown, 1=missing config, 2=existing config
 
-        private static readonly string ConfigFilePath =
+        private static string ConfigDir
+        {
+            get
+            {
+                lock (ConfigPathGate)
+                {
+                    return TestConfigDirOverride ?? ResolveConfigDir();
+                }
+            }
+        }
+
+        private static string ConfigFilePath =>
             Path.Combine(ConfigDir, "appsettings.json");
 
-        private static readonly string ConfigBackupFilePath =
+        private static string ConfigBackupFilePath =>
             Path.Combine(ConfigDir, "appsettings.bak.json");
 
         private static AppConfig? LastKnownGoodConfig;
@@ -36,6 +50,25 @@ namespace VaultSync.Core.Config
         };
 
         public static bool WasConfigMissingOnFirstLoad => Volatile.Read(ref _firstLoadState) == 1;
+
+        public static IDisposable UseDirectoryForTests(string directory)
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+                throw new ArgumentException("Config directory is required.", nameof(directory));
+
+            string fullPath = Path.GetFullPath(directory);
+            Directory.CreateDirectory(fullPath);
+
+            string? previousOverride;
+            lock (ConfigPathGate)
+            {
+                previousOverride = TestConfigDirOverride;
+                TestConfigDirOverride = fullPath;
+            }
+
+            ResetRuntimeStateForTests();
+            return new TestConfigDirectoryScope(previousOverride);
+        }
 
         public static AppConfig GetSnapshot()
         {
@@ -72,7 +105,7 @@ namespace VaultSync.Core.Config
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[AppConfigStore] Failed to persist default DbPath: {ex.Message}");
+                        RecordConfigDiagnostic("Failed to persist default DbPath", ex);
                     }
                 }
 
@@ -80,9 +113,10 @@ namespace VaultSync.Core.Config
                 RuntimeLog.UpdateFromConfig(cfg);
                 return cfg;
             }
-            catch
+            catch (Exception ex)
             {
                 // On any error, fall back to defaults instead of crashing the app.
+                RecordConfigDiagnostic("Load failed; using fallback config", ex);
                 AppConfig fallback = GetLastKnownGoodClone() ?? new AppConfig();
 
                 // Ensure fallback also receives a default DbPath
@@ -122,6 +156,14 @@ namespace VaultSync.Core.Config
         public static string GetDefaultDbPath()
         {
             return Path.Combine(GetDefaultDataDir(), "vaultsync.db");
+        }
+
+        public static string ResolveDbPath(AppConfig? config = null)
+        {
+            AppConfig cfg = config ?? GetSnapshot();
+            return string.IsNullOrWhiteSpace(cfg.DbPath)
+                ? GetDefaultDbPath()
+                : cfg.DbPath;
         }
 
         private static void WriteConfigWithRetry(string json)
@@ -246,32 +288,57 @@ namespace VaultSync.Core.Config
                 string json = ReadConfigWithRetry(ConfigFilePath);
                 return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
             }
-            catch
+            catch (Exception primaryEx)
             {
+                RecordConfigDiagnostic("Primary config load failed", primaryEx);
                 if (File.Exists(ConfigBackupFilePath))
                 {
                     try
                     {
                         string backupJson = ReadConfigWithRetry(ConfigBackupFilePath);
-                        return JsonSerializer.Deserialize<AppConfig>(backupJson, JsonOptions) ?? new AppConfig();
+                        AppConfig config = JsonSerializer.Deserialize<AppConfig>(backupJson, JsonOptions) ?? new AppConfig();
+                        RecordConfigDiagnostic("Loaded backup config after primary config failure");
+                        return config;
                     }
-                    catch
+                    catch (Exception backupEx)
                     {
+                        RecordConfigDiagnostic("Backup config load failed", backupEx);
                         AppConfig? cached = GetLastKnownGoodClone();
                         if (cached is not null)
+                        {
+                            RecordConfigDiagnostic("Using last-known-good config after backup config failure");
                             return cached;
+                        }
                     }
                 }
 
                 AppConfig? fallback = GetLastKnownGoodClone();
                 if (fallback is not null)
+                {
+                    RecordConfigDiagnostic("Using last-known-good config after primary config failure");
                     return fallback;
+                }
 
                 throw;
             }
         }
 
+        private static void RecordConfigDiagnostic(string message, Exception? ex = null)
+        {
+            string detail = ex is null
+                ? message
+                : $"{message}: {ex.GetType().Name} - {ex.Message}";
+
+            Console.WriteLine($"[AppConfigStore] {detail}");
+        }
+
         private static void PreserveDurableConfigValues(AppConfig config)
+        {
+            PreserveProjectsRoot(config);
+            PreserveMetadataImportCache(config);
+        }
+
+        private static void PreserveProjectsRoot(AppConfig config)
         {
             if (!string.IsNullOrWhiteSpace(config.ProjectsRoot))
                 return;
@@ -284,6 +351,52 @@ namespace VaultSync.Core.Config
 
             config.ProjectsRoot = persisted.ProjectsRoot.Trim();
             RuntimeLog.WriteVerbose("[Config] Save preserved existing ProjectsRoot because the pending save had an empty value.");
+        }
+
+        private static void PreserveMetadataImportCache(AppConfig config)
+        {
+            config.Advanced ??= new AdvancedConfig();
+            config.Advanced.MetadataImportCache ??= new MetadataImportCacheConfig();
+            if (config.Advanced.MetadataImportCache.Sources.Count > 0)
+                return;
+
+            AppConfig? persisted = TryLoadPersistedConfigForPreservation(ConfigFilePath)
+                            ?? TryLoadPersistedConfigForPreservation(ConfigBackupFilePath)
+                            ?? GetLastKnownGoodClone();
+            List<MetadataImportSourceStamp>? persistedSources = persisted?
+                .Advanced?
+                .MetadataImportCache?
+                .Sources;
+            if (persistedSources is not { Count: > 0 })
+                return;
+
+            config.Advanced.MetadataImportCache.Sources = CloneMetadataImportSources(persistedSources);
+            RuntimeLog.WriteVerbose("[Config] Save preserved metadata import cache because the pending save had no cache entries.");
+        }
+
+        private static List<MetadataImportSourceStamp> CloneMetadataImportSources(IEnumerable<MetadataImportSourceStamp> sources)
+        {
+            return sources
+                .Select(source => new MetadataImportSourceStamp
+                {
+                    SourceKey = source.SourceKey,
+                    SourcePath = source.SourcePath,
+                    SourceMachineId = source.SourceMachineId,
+                    StoreUpdatedUtc = source.StoreUpdatedUtc,
+                    StoreSchemaVersion = source.StoreSchemaVersion,
+                    StoreFileLengthBytes = source.StoreFileLengthBytes,
+                    StoreFileUpdatedUtc = source.StoreFileUpdatedUtc,
+                    StoreSidecarStamp = source.StoreSidecarStamp,
+                    ImportedUtc = source.ImportedUtc,
+                    ProjectCount = source.ProjectCount,
+                    SnapshotCount = source.SnapshotCount,
+                    BackupCount = source.BackupCount,
+                    TombstoneCount = source.TombstoneCount,
+                    ProjectExternalIds = [.. source.ProjectExternalIds],
+                    SnapshotExternalIds = [.. source.SnapshotExternalIds],
+                    BackupExternalIds = [.. source.BackupExternalIds]
+                })
+                .ToList();
         }
 
         private static AppConfig? TryLoadPersistedConfigForPreservation(string path)
@@ -323,6 +436,34 @@ namespace VaultSync.Core.Config
         {
             string json = JsonSerializer.Serialize(config, JsonOptions);
             return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+        }
+
+        private static void ResetRuntimeStateForTests()
+        {
+            Volatile.Write(ref _firstLoadState, 0);
+            lock (LastKnownGoodGate)
+            {
+                LastKnownGoodConfig = null;
+            }
+        }
+
+        private sealed class TestConfigDirectoryScope(string? previousOverride) : IDisposable
+        {
+            private bool _disposed;
+
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                lock (ConfigPathGate)
+                {
+                    TestConfigDirOverride = previousOverride;
+                }
+
+                ResetRuntimeStateForTests();
+                _disposed = true;
+            }
         }
 
         private static string ResolveConfigDir()

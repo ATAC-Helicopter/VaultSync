@@ -4,28 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using VaultSync.Core.Config;
-using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class BackupCheckpointResumeTests : IDisposable
 {
-    private readonly string _tempDir;
-    private readonly string _dbPath;
-
-    public BackupCheckpointResumeTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"vaultsync-checkpoint-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-        _dbPath = Path.Combine(_tempDir, "vaultsync.db");
-    }
+    private readonly TempDirectory _tempDir = new();
 
     [Fact]
     public void BuildArchiveResumeFingerprint_IsStableAcrossFileOrder()
     {
-        string sourceDir = Path.Combine(_tempDir, "source");
+        string sourceDir = Path.Combine(_tempDir.Path, "source");
         Directory.CreateDirectory(sourceDir);
 
         string a = Path.Combine(sourceDir, "a.txt");
@@ -43,8 +35,8 @@ public sealed class BackupCheckpointResumeTests : IDisposable
     [Fact]
     public void ValidateArchiveResumePrefix_ReturnsTrueOnlyForMatchingPrefix()
     {
-        string local = Path.Combine(_tempDir, "local.zip");
-        string dest = Path.Combine(_tempDir, "dest.zip");
+        string local = Path.Combine(_tempDir.Path, "local.zip");
+        string dest = Path.Combine(_tempDir.Path, "dest.zip");
         File.WriteAllBytes(local, Enumerable.Range(0, 64).Select(i => (byte)i).ToArray());
         File.WriteAllBytes(dest, Enumerable.Range(0, 32).Select(i => (byte)i).ToArray());
 
@@ -57,7 +49,7 @@ public sealed class BackupCheckpointResumeTests : IDisposable
     [Fact]
     public void CleanupIncompleteBackups_PreservesCheckpointedArchiveFolders()
     {
-        string backupRoot = Path.Combine(_tempDir, "backups");
+        string backupRoot = Path.Combine(_tempDir.Path, "backups");
         string projectDir = Path.Combine(backupRoot, "project");
         string resumableDir = Path.Combine(projectDir, "2026-03-13_10-00-00");
         string staleDir = Path.Combine(projectDir, "2026-03-13_09-00-00");
@@ -81,9 +73,6 @@ public sealed class BackupCheckpointResumeTests : IDisposable
 
         File.WriteAllText(Path.Combine(staleDir, ".vaultsync_inprogress"), "started");
         File.WriteAllText(Path.Combine(staleDir, "orphan.txt"), "stale");
-
-        var repo = new SqliteRepository(_dbPath);
-        var service = new BackupService(repo);
 
         int removed = BackupService.CleanupIncompleteBackups(backupRoot);
 
@@ -118,15 +107,6 @@ public sealed class BackupCheckpointResumeTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, recursive: true);
-            }
-        }
-        catch
-        {
-        }
+        _tempDir.Dispose();
     }
 }

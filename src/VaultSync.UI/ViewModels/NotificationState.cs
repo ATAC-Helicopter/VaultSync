@@ -101,8 +101,7 @@ namespace VaultSync.UI.ViewModels.Notifications
             {
                 if (SetField(ref _repeatCount, value))
                 {
-                    OnPropertyChanged(nameof(HasRepeatCount));
-                    OnPropertyChanged(nameof(RepeatCountLabel));
+                    OnPropertiesChanged(nameof(HasRepeatCount), nameof(RepeatCountLabel));
                 }
             }
         }

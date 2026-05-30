@@ -12,12 +12,19 @@ namespace VaultSync.UI.ViewModels
     public partial class AppViewModel
     {
         public AppViewModel()
+            : this(StaticAppConfigStore.Instance)
         {
+        }
+
+        internal AppViewModel(IAppConfigStore configStore, IRepositoryFactory? repositoryFactory = null)
+        {
+            _configStore = configStore;
+            _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
             _currentVersionString = GetCurrentVersionString();
             RecordStartupPhase("version-resolved");
 
             // 1) Config + DB + services
-            _config = AppConfigStore.Load();
+            _config = _configStore.Load();
             RecordStartupPhase("config-loaded");
             if (string.IsNullOrWhiteSpace(_config.Advanced.Language))
             {
@@ -34,11 +41,11 @@ namespace VaultSync.UI.ViewModels
             _localizationService.LanguageChanged += OnLanguageChanged;
             RecordStartupPhase("localization-initialized");
 
-            _repo = new SqliteRepository(_config.DbPath ?? string.Empty);
+            _repo = _repositoryFactory.Create(_config);
 
-            _backupService = new BackupService(_repo);
+            _backupService = new BackupService(_repo, configStore: _configStore);
             _backupService.BackupRetentionDeleted += OnBackupRetentionDeleted;
-            _metadataSyncService = new MetadataSyncService(_repo);
+            _metadataSyncService = new MetadataSyncService(_repo, _configStore);
             MetadataSyncService.ProjectColorResolver = project =>
                 AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
             MetadataSyncService.ProjectColorApplier = (externalId, color) =>
@@ -53,7 +60,7 @@ namespace VaultSync.UI.ViewModels
 
             // 2) Section viewmodels
             _dashboardViewModel = null;
-            _projectsViewModel = new ProjectsViewModel();
+            _projectsViewModel = new ProjectsViewModel(_configStore, _repositoryFactory);
             _projectsViewModel.EditProjectEncryptionRequested += OnProjectEncryptionRequestedFromProjects;
             _projectsViewModel.ProjectEncryptionPolicyChanged += OnProjectEncryptionPolicyChanged;
             _projectsViewModel.ProjectSettingsMetadataChanged += OnProjectSettingsMetadataChanged;
@@ -61,7 +68,7 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel.AutoBackupGroupPreferenceChanged += OnAutoBackupGroupPreferenceChanged;
             _projectsViewModel.ProjectRemovedFromDatabase += OnProjectRemovedFromDatabase;
             _backupsViewModel = null;
-            _settingsViewModel = new SettingsViewModel(_localizationService);
+            _settingsViewModel = new SettingsViewModel(_localizationService, _configStore, _repositoryFactory);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.DestinationSettingsSaved += OnDestinationSettingsSaved;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
@@ -147,7 +154,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                await AppConfigStore.SaveAsync(_config).ConfigureAwait(false);
+                await _configStore.SaveAsync(_config).ConfigureAwait(false);
                 DiagnosticsLogger.Record($"Startup config persisted ({reason}).");
             }
             catch (Exception ex)
@@ -158,11 +165,13 @@ namespace VaultSync.UI.ViewModels
 
         private async Task RunStartupBackgroundWorkAsync()
         {
+            using var startupTiming = RuntimeTiming.Measure("Startup background work");
             DiagnosticsLogger.Record("Startup background work begin.");
 
             try
             {
                 RecordStartupPhase("db-schema-begin");
+                using var schemaTiming = RuntimeTiming.Measure("Startup background work db schema ensure");
                 await Task.Run(() => _repo.EnsureSchema()).ConfigureAwait(false);
                 RecordStartupPhase("db-schema-complete");
             }
@@ -226,7 +235,7 @@ namespace VaultSync.UI.ViewModels
 
         private BackupsViewModel CreateBackupsViewModel()
         {
-            var vm = new BackupsViewModel();
+            var vm = new BackupsViewModel(_configStore, _repositoryFactory);
             vm.BackupProjectRequested += OnBackupProjectRequested;
             vm.CreateBackupForAllProjectsRequested += OnCreateBackupForAllProjectsRequested;
             vm.DeleteBackupRequested += OnDeleteBackupRequested;

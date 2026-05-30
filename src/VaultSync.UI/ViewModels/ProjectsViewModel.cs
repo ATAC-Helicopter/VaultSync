@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -47,6 +46,8 @@ public class ProjectsViewModel : ViewModelBase
         string EncryptionKeyRef);
 
     private readonly ProjectDiscoveryService _discovery = new();
+    private readonly IAppConfigStore _configStore;
+    private readonly IRepositoryFactory _repositoryFactory;
     private IReadOnlyList<DiscoveredProject> _cachedDiscovery = [];
     private string? _cachedDiscoveryRoot;
     private DateTime _cachedDiscoveryUtc;
@@ -148,7 +149,7 @@ public class ProjectsViewModel : ViewModelBase
         get => _selectedProject;
         set
         {
-            if (SetProperty(ref _selectedProject, value))
+            if (SetField(ref _selectedProject, value))
             {
                 if (value is not null && !string.IsNullOrWhiteSpace(value.Name))
                     _lastSelectedProjectName = value.Name;
@@ -186,14 +187,14 @@ public class ProjectsViewModel : ViewModelBase
     public string SnapshotActionLabel
     {
         get => _snapshotActionLabel;
-        set => SetProperty(ref _snapshotActionLabel, value);
+        set => SetField(ref _snapshotActionLabel, value);
     }
 
     private bool _isLoading;
     public bool IsLoading
     {
         get => _isLoading;
-        set => SetProperty(ref _isLoading, value);
+        set => SetField(ref _isLoading, value);
     }
 
     // Reusable notification state for the Projects view.
@@ -245,7 +246,7 @@ public class ProjectsViewModel : ViewModelBase
         get => _groupTagInput;
         set
         {
-            if (!SetProperty(ref _groupTagInput, value ?? string.Empty))
+            if (!SetField(ref _groupTagInput, value ?? string.Empty))
                 return;
 
             ConsumeGroupTagInputDelimiters();
@@ -260,7 +261,7 @@ public class ProjectsViewModel : ViewModelBase
         get => _projectTagInput;
         set
         {
-            if (!SetProperty(ref _projectTagInput, value ?? string.Empty))
+            if (!SetField(ref _projectTagInput, value ?? string.Empty))
                 return;
 
             ConsumeProjectTagInputDelimiters();
@@ -286,7 +287,7 @@ public class ProjectsViewModel : ViewModelBase
         get => _isProjectTagColorEditorOpen;
         set
         {
-            if (!SetProperty(ref _isProjectTagColorEditorOpen, value))
+            if (!SetField(ref _isProjectTagColorEditorOpen, value))
                 return;
 
             OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
@@ -332,7 +333,7 @@ public class ProjectsViewModel : ViewModelBase
         set
         {
             var normalized = ProjectTagAppearance.NormalizeHex(value, _projectTagColorHex);
-            if (!SetProperty(ref _projectTagColorHex, normalized))
+            if (!SetField(ref _projectTagColorHex, normalized))
                 return;
 
             if (Color.TryParse(normalized, out var parsed))
@@ -352,7 +353,7 @@ public class ProjectsViewModel : ViewModelBase
         set
         {
             var clamped = Math.Clamp(value, 0d, 255d);
-            if (!SetProperty(ref _projectTagColorRed, clamped))
+            if (!SetField(ref _projectTagColorRed, clamped))
                 return;
             SyncHexFromRgb();
         }
@@ -364,7 +365,7 @@ public class ProjectsViewModel : ViewModelBase
         set
         {
             var clamped = Math.Clamp(value, 0d, 255d);
-            if (!SetProperty(ref _projectTagColorGreen, clamped))
+            if (!SetField(ref _projectTagColorGreen, clamped))
                 return;
             SyncHexFromRgb();
         }
@@ -376,7 +377,7 @@ public class ProjectsViewModel : ViewModelBase
         set
         {
             var clamped = Math.Clamp(value, 0d, 255d);
-            if (!SetProperty(ref _projectTagColorBlue, clamped))
+            if (!SetField(ref _projectTagColorBlue, clamped))
                 return;
             SyncHexFromRgb();
         }
@@ -388,7 +389,7 @@ public class ProjectsViewModel : ViewModelBase
         set
         {
             var normalized = Math.Clamp(value, 0d, 360d);
-            if (!SetProperty(ref _projectTagColorHue, normalized))
+            if (!SetField(ref _projectTagColorHue, normalized))
                 return;
             SyncHexFromHsv();
         }
@@ -400,7 +401,7 @@ public class ProjectsViewModel : ViewModelBase
         set
         {
             var normalized = Math.Clamp(value, 0d, 100d);
-            if (!SetProperty(ref _projectTagColorSaturation, normalized))
+            if (!SetField(ref _projectTagColorSaturation, normalized))
                 return;
             SyncHexFromHsv();
         }
@@ -412,7 +413,7 @@ public class ProjectsViewModel : ViewModelBase
         set
         {
             var normalized = Math.Clamp(value, 0d, 100d);
-            if (!SetProperty(ref _projectTagColorValue, normalized))
+            if (!SetField(ref _projectTagColorValue, normalized))
                 return;
             SyncHexFromHsv();
         }
@@ -428,35 +429,35 @@ public class ProjectsViewModel : ViewModelBase
     public string PresetEditorContent
     {
         get => _presetEditorContent;
-        set => SetProperty(ref _presetEditorContent, value ?? string.Empty);
+        set => SetField(ref _presetEditorContent, value ?? string.Empty);
     }
 
     private string _presetEditorStatus = string.Empty;
     public string PresetEditorStatus
     {
         get => _presetEditorStatus;
-        set => SetProperty(ref _presetEditorStatus, value ?? string.Empty);
+        set => SetField(ref _presetEditorStatus, value ?? string.Empty);
     }
 
     private string _presetEditorPath = string.Empty;
     public string PresetEditorPath
     {
         get => _presetEditorPath;
-        set => SetProperty(ref _presetEditorPath, value ?? string.Empty);
+        set => SetField(ref _presetEditorPath, value ?? string.Empty);
     }
 
     private string _presetEditorPathDisplay = string.Empty;
     public string PresetEditorPathDisplay
     {
         get => _presetEditorPathDisplay;
-        set => SetProperty(ref _presetEditorPathDisplay, value ?? string.Empty);
+        set => SetField(ref _presetEditorPathDisplay, value ?? string.Empty);
     }
 
     private bool _hasPresetEditorTarget;
     public bool HasPresetEditorTarget
     {
         get => _hasPresetEditorTarget;
-        set => SetProperty(ref _hasPresetEditorTarget, value);
+        set => SetField(ref _hasPresetEditorTarget, value);
     }
 
     private bool _isPresetEditorVisible;
@@ -465,7 +466,7 @@ public class ProjectsViewModel : ViewModelBase
         get => _isPresetEditorVisible;
         set
         {
-            if (!SetProperty(ref _isPresetEditorVisible, value))
+            if (!SetField(ref _isPresetEditorVisible, value))
                 return;
 
             OnPropertyChanged(nameof(PresetEditorToggleLabel));
@@ -481,14 +482,14 @@ public class ProjectsViewModel : ViewModelBase
     public string PresetEditorCloneId
     {
         get => _presetEditorCloneId;
-        set => SetProperty(ref _presetEditorCloneId, value ?? string.Empty);
+        set => SetField(ref _presetEditorCloneId, value ?? string.Empty);
     }
 
     private string _presetEditorImportPath = string.Empty;
     public string PresetEditorImportPath
     {
         get => _presetEditorImportPath;
-        set => SetProperty(ref _presetEditorImportPath, value ?? string.Empty);
+        set => SetField(ref _presetEditorImportPath, value ?? string.Empty);
     }
     public string SearchText
     {
@@ -537,7 +538,7 @@ public class ProjectsViewModel : ViewModelBase
         get => _selectedGroup;
         set
         {
-            if (SetProperty(ref _selectedGroup, value))
+            if (SetField(ref _selectedGroup, value))
             {
                 ApplyFilterAndSort();
                 _snapshotGroupCommand.RaiseCanExecuteChanged();
@@ -551,7 +552,14 @@ public class ProjectsViewModel : ViewModelBase
     }
 
     public ProjectsViewModel()
+        : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
     {
+    }
+
+    internal ProjectsViewModel(IAppConfigStore configStore, IRepositoryFactory? repositoryFactory = null)
+    {
+        _configStore = configStore;
+        _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
         RefreshCommand = new RelayCommand(_ => Refresh());
         _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
         _removeProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
@@ -675,9 +683,9 @@ public class ProjectsViewModel : ViewModelBase
         Notification.Show(message, severity);
     }
 
-    private static void NotifySnapshotOutcome(string message, bool success)
+    private void NotifySnapshotOutcome(string message, bool success)
     {
-        var cfg = AppConfigStore.GetSnapshot();
+        var cfg = _configStore.GetSnapshot();
 
         var wants = success
             ? cfg.Notifications.OnSnapshotSuccess
@@ -719,7 +727,7 @@ public class ProjectsViewModel : ViewModelBase
         {
             IsLoading = true;
 
-            var config = await Task.Run(AppConfigStore.GetSnapshot);
+            var config = await Task.Run(_configStore.GetSnapshot);
             RefreshGroupAutoBackupStateFromConfig(config);
             ShowProjectAvatars = config.Appearance.ShowProjectAvatars;
             OnPropertyChanged(nameof(ShowProjectAvatars));
@@ -814,11 +822,7 @@ public class ProjectsViewModel : ViewModelBase
         Dictionary<int, Backup>? latestBackupsByProject = null;
         try
         {
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            repo = new SqliteRepository(dbPath);
+            repo = CreateRepository(config);
             registeredProjects = [.. repo.GetAllProjects()];
             projectsByName = registeredProjects
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
@@ -1235,10 +1239,11 @@ public class ProjectsViewModel : ViewModelBase
             }
         }
 
-        OnPropertyChanged(nameof(HasProjects));
-        OnPropertyChanged(nameof(ShowProjectsEmptyState));
-        OnPropertyChanged(nameof(HasSelectedProject));
-        OnPropertyChanged(nameof(ShowSelectedProjectEmptyState));
+        OnPropertiesChanged(
+            nameof(HasProjects),
+            nameof(ShowProjectsEmptyState),
+            nameof(HasSelectedProject),
+            nameof(ShowSelectedProjectEmptyState));
     }
 
     private void LoadGroupOptions()
@@ -1457,10 +1462,10 @@ public class ProjectsViewModel : ViewModelBase
         if (!CanEditProjectTagColor || string.IsNullOrWhiteSpace(tag))
             return;
 
-        var cfg = AppConfigStore.Load();
+        var cfg = _configStore.Load();
         cfg.Appearance.TagColors ??= new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
         cfg.Appearance.TagColors[tag] = ProjectTagAppearance.BuildConfigFromAccent(ProjectTagColorHex);
-        AppConfigStore.Save(cfg);
+        _configStore.Save(cfg);
         RefreshProjectTagAppearance(cfg);
         ShowNotification(Lf("Projects.Tags.ColorApplied", "Saved custom color for tag '{0}'.", tag));
     }
@@ -1474,17 +1479,17 @@ public class ProjectsViewModel : ViewModelBase
         var (background, _, _) = ProjectTagChip.GetDefaultPalette(tag);
         ProjectTagColorHex = background;
 
-        var cfg = AppConfigStore.Load();
+        var cfg = _configStore.Load();
         cfg.Appearance.TagColors ??= new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
         cfg.Appearance.TagColors.Remove(tag);
-        AppConfigStore.Save(cfg);
+        _configStore.Save(cfg);
         RefreshProjectTagAppearance(cfg);
         ShowNotification(Lf("Projects.Tags.ColorReset", "Reset tag '{0}' to the default palette.", tag));
     }
 
     private void RefreshProjectTagAppearance(AppConfig? config = null)
     {
-        config ??= AppConfigStore.GetSnapshot();
+        config ??= _configStore.GetSnapshot();
         RefreshSelectedProjectTags();
         RefreshReusableProjectTags();
         foreach (var project in _allProjects)
@@ -1502,7 +1507,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void SyncProjectTagColorDraft(string tag)
     {
-        var cfg = AppConfigStore.GetSnapshot();
+        var cfg = _configStore.GetSnapshot();
         var accent = ProjectTagAppearance.Resolve(tag, cfg.Appearance.TagColors).Background;
 
         _projectTagColorSyncing = true;
@@ -1520,17 +1525,19 @@ public class ProjectsViewModel : ViewModelBase
                 _projectTagColorRed = red;
                 _projectTagColorGreen = green;
                 _projectTagColorBlue = blue;
-                OnPropertyChanged(nameof(ProjectTagColorRed));
-                OnPropertyChanged(nameof(ProjectTagColorGreen));
-                OnPropertyChanged(nameof(ProjectTagColorBlue));
+                OnPropertiesChanged(
+                    nameof(ProjectTagColorRed),
+                    nameof(ProjectTagColorGreen),
+                    nameof(ProjectTagColorBlue));
 
                 ProjectTagAppearance.RgbToHsv(red, green, blue, out var hue, out var saturation, out var value);
                 _projectTagColorHue = hue;
                 _projectTagColorSaturation = saturation;
                 _projectTagColorValue = value;
-                OnPropertyChanged(nameof(ProjectTagColorHue));
-                OnPropertyChanged(nameof(ProjectTagColorSaturation));
-                OnPropertyChanged(nameof(ProjectTagColorValue));
+                OnPropertiesChanged(
+                    nameof(ProjectTagColorHue),
+                    nameof(ProjectTagColorSaturation),
+                    nameof(ProjectTagColorValue));
             }
         }
         finally
@@ -1555,17 +1562,19 @@ public class ProjectsViewModel : ViewModelBase
             _projectTagColorRed = red;
             _projectTagColorGreen = green;
             _projectTagColorBlue = blue;
-            OnPropertyChanged(nameof(ProjectTagColorRed));
-            OnPropertyChanged(nameof(ProjectTagColorGreen));
-            OnPropertyChanged(nameof(ProjectTagColorBlue));
+            OnPropertiesChanged(
+                nameof(ProjectTagColorRed),
+                nameof(ProjectTagColorGreen),
+                nameof(ProjectTagColorBlue));
 
             ProjectTagAppearance.RgbToHsv(red, green, blue, out var hue, out var saturation, out var value);
             _projectTagColorHue = hue;
             _projectTagColorSaturation = saturation;
             _projectTagColorValue = value;
-            OnPropertyChanged(nameof(ProjectTagColorHue));
-            OnPropertyChanged(nameof(ProjectTagColorSaturation));
-            OnPropertyChanged(nameof(ProjectTagColorValue));
+            OnPropertiesChanged(
+                nameof(ProjectTagColorHue),
+                nameof(ProjectTagColorSaturation),
+                nameof(ProjectTagColorValue));
         }
         finally
         {
@@ -1620,9 +1629,10 @@ public class ProjectsViewModel : ViewModelBase
 
     private void RefreshProjectTagColorPreview()
     {
-        OnPropertyChanged(nameof(ProjectTagColorPreviewBackground));
-        OnPropertyChanged(nameof(ProjectTagColorPreviewForeground));
-        OnPropertyChanged(nameof(ProjectTagColorPreviewBorder));
+        OnPropertiesChanged(
+            nameof(ProjectTagColorPreviewBackground),
+            nameof(ProjectTagColorPreviewForeground),
+            nameof(ProjectTagColorPreviewBorder));
     }
 
     private void ApplyProjectTagColorSwatch(string? hex)
@@ -1769,7 +1779,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void RefreshGroupAutoBackupStateFromConfig(AppConfig? config = null)
     {
-        config ??= AppConfigStore.GetSnapshot();
+        config ??= _configStore.GetSnapshot();
         _autoBackupDisabledProjectIds = [.. config.Backups.AutoBackupDisabledProjects ?? []];
         _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
         _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
@@ -1796,12 +1806,7 @@ public class ProjectsViewModel : ViewModelBase
 
         await Task.Run(() =>
         {
-            var config = AppConfigStore.GetSnapshot();
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            var repo = new SqliteRepository(dbPath);
+            var repo = CreateRepository(_configStore.GetSnapshot());
             var projectsById = repo.GetAllProjects().ToDictionary(p => p.Id);
             foreach (var projectId in ids)
             {
@@ -1861,10 +1866,7 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            var config = await Task.Run(AppConfigStore.GetSnapshot).ConfigureAwait(false);
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
+            var config = await Task.Run(_configStore.GetSnapshot).ConfigureAwait(false);
             var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
             var fullHash = config.Backups.UseFullSnapshotHash;
             var enableScanCache = config.Backups.EnableScanCache;
@@ -1881,7 +1883,7 @@ public class ProjectsViewModel : ViewModelBase
             if (targets.Count == 0)
                 return;
 
-            var repo = new SqliteRepository(dbPath);
+            var repo = CreateRepository(config);
             var existingByName = repo.GetAllProjects()
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
@@ -1969,13 +1971,13 @@ public class ProjectsViewModel : ViewModelBase
 
         await Task.Run(() =>
         {
-            var cfg = AppConfigStore.Load();
+            var cfg = _configStore.Load();
             var disabled = cfg.Backups.AutoBackupDisabledProjects ?? [];
             disabled = enabled
                 ? [.. disabled.Except(ids).Distinct()]
                 : [.. disabled.Concat(ids).Distinct()];
             cfg.Backups.AutoBackupDisabledProjects = disabled;
-            AppConfigStore.Save(cfg);
+            _configStore.Save(cfg);
         }).ConfigureAwait(false);
 
         await Dispatcher.UIThread.InvokeAsync(() =>
@@ -2281,7 +2283,7 @@ public class ProjectsViewModel : ViewModelBase
                 });
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ShowNotification(Lf("Projects.Notification.OpenFolderFailed", "Failed to open folder for '{0}'.", SelectedProject?.Name ?? string.Empty), NotificationSeverity.Error);
         }
@@ -2299,12 +2301,8 @@ public class ProjectsViewModel : ViewModelBase
         {
             try
             {
-                var config = AppConfigStore.GetSnapshot();
-                var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                    ? config.DbPath
-                    : GetDefaultDbPath();
-
-                var repo = new SqliteRepository(dbPath);
+                var config = _configStore.GetSnapshot();
+                var repo = CreateRepository(config);
                 var existing = repo.GetProjectByName(removedProjectName);
                 if (existing is null)
                 {
@@ -2365,18 +2363,13 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            // 1. Resolve DB path from shared AppConfig (with a sensible default).
-            var config = await Task.Run(AppConfigStore.GetSnapshot);
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
+            var config = await Task.Run(_configStore.GetSnapshot);
             var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
             var fullHash = config.Backups.UseFullSnapshotHash;
             var enableScanCache = config.Backups.EnableScanCache;
             var aggressiveScanCache = config.Backups.AggressiveScanCache;
 
-            // 2. Open repository (schema already initialized at app startup).
-            var repo = new SqliteRepository(dbPath);
+            var repo = CreateRepository(config);
 
             // 3. Check if project is already registered.
             var existing = repo.GetProjectByName(SelectedProject.Name);
@@ -2478,7 +2471,7 @@ public class ProjectsViewModel : ViewModelBase
                 NotifySnapshotOutcome(msg, success: true);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             var msg = L("Projects.Notification.SnapshotFailure", "Snapshot failed. Check logs for details.");
             ShowNotification(msg, NotificationSeverity.Error);
@@ -2519,13 +2512,13 @@ public class ProjectsViewModel : ViewModelBase
         return set;
     }
 
-    private static void HideProjectPathInConfig(string? projectPath)
+    private void HideProjectPathInConfig(string? projectPath)
     {
         var normalized = NormalizeProjectPath(projectPath);
         if (string.IsNullOrWhiteSpace(normalized))
             return;
 
-        var cfg = AppConfigStore.Load();
+        var cfg = _configStore.Load();
         cfg.Behavior.HiddenProjectPaths ??= [];
         var exists = cfg.Behavior.HiddenProjectPaths
             .Any(path => string.Equals(NormalizeProjectPath(path), normalized, StringComparison.OrdinalIgnoreCase));
@@ -2533,23 +2526,23 @@ public class ProjectsViewModel : ViewModelBase
             return;
 
         cfg.Behavior.HiddenProjectPaths.Add(normalized);
-        AppConfigStore.Save(cfg);
+        _configStore.Save(cfg);
     }
 
-    private static void UnhideProjectPathInConfig(string? projectPath)
+    private void UnhideProjectPathInConfig(string? projectPath)
     {
         var normalized = NormalizeProjectPath(projectPath);
         if (string.IsNullOrWhiteSpace(normalized))
             return;
 
-        var cfg = AppConfigStore.Load();
+        var cfg = _configStore.Load();
         cfg.Behavior.HiddenProjectPaths ??= [];
         var originalCount = cfg.Behavior.HiddenProjectPaths.Count;
         cfg.Behavior.HiddenProjectPaths = [.. cfg.Behavior.HiddenProjectPaths.Where(path => !string.Equals(NormalizeProjectPath(path), normalized, StringComparison.OrdinalIgnoreCase))];
         if (cfg.Behavior.HiddenProjectPaths.Count == originalCount)
             return;
 
-        AppConfigStore.Save(cfg);
+        _configStore.Save(cfg);
     }
 
     private void RemoveProjectFromCurrentList(string? projectPath)
@@ -2652,16 +2645,12 @@ public class ProjectsViewModel : ViewModelBase
         }
     }
 
-    private static ProjectRegistrationSnapshot LoadProjectRegistrationSnapshot(string projectName)
+    private ProjectRegistrationSnapshot LoadProjectRegistrationSnapshot(string projectName)
     {
         try
         {
-            var config = AppConfigStore.GetSnapshot();
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            var repo = new SqliteRepository(dbPath);
+            var config = _configStore.GetSnapshot();
+            var repo = CreateRepository(config);
             var existing = repo.GetProjectByName(projectName);
             return new ProjectRegistrationSnapshot(
                 existing is null,
@@ -2712,7 +2701,7 @@ public class ProjectsViewModel : ViewModelBase
             SelectedProject.PreferredDestinationId = snapshot.PreferredDestinationId;
             SelectedProject.EncryptionPolicy = snapshot.EncryptionPolicy;
             SelectedProject.EncryptionKeyRef = snapshot.EncryptionKeyRef;
-            var cfg = AppConfigStore.GetSnapshot();
+            var cfg = _configStore.GetSnapshot();
             UpdateProjectDestinationDisplay(SelectedProject, cfg);
             UpdateProjectEncryptionDisplay(SelectedProject, cfg);
             UpdateProjectPresetDisplay(SelectedProject);
@@ -2745,12 +2734,8 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            var config = AppConfigStore.GetSnapshot();
-            var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                ? config.DbPath
-                : GetDefaultDbPath();
-
-            var repo = new SqliteRepository(dbPath);
+            var config = _configStore.GetSnapshot();
+            var repo = CreateRepository(config);
             var project = repo.GetProjectByName(vm.Name);
             if (project is null)
                 return;
@@ -2813,12 +2798,8 @@ public class ProjectsViewModel : ViewModelBase
             {
                 try
                 {
-                    var config = AppConfigStore.GetSnapshot();
-                    var dbPath = !string.IsNullOrWhiteSpace(config.DbPath)
-                        ? config.DbPath
-                        : GetDefaultDbPath();
-
-                    var repo = new SqliteRepository(dbPath);
+                    var config = _configStore.GetSnapshot();
+                    var repo = CreateRepository(config);
                     var snapshots = await repo.GetSnapshotsForProjectAsync(projectName);
                     return snapshots.ConvertAll(CreateProjectSnapshotViewModel);
                 }
@@ -2916,7 +2897,7 @@ public class ProjectsViewModel : ViewModelBase
             ? L("Snapshots.Action.Default", "Snapshot now")
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
-        var config = AppConfigStore.GetSnapshot();
+        var config = _configStore.GetSnapshot();
         LoadGroupOptions();
         OnPropertyChanged(nameof(ProjectTagColorToggleLabel));
         RefreshEncryptionPolicyOptions();
@@ -3012,7 +2993,7 @@ public class ProjectsViewModel : ViewModelBase
                 UpdateProjectPresetDisplay(project);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
 
             // Fallback to a minimal hard-coded set so the UI stays usable.
@@ -3487,22 +3468,9 @@ public class ProjectsViewModel : ViewModelBase
 
     private sealed record PresetRecommendation(string PresetId, string Reason);
 
-    private static string GetDefaultDbPath()
+    private SqliteRepository CreateRepository(AppConfig? config = null)
     {
-        // Fallback DB location when AppConfig.DbPath is not set.
-        // Later this will be fully unified with the CLI DB resolution logic.
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var dir = Path.Combine(appData, "VaultSync");
-        Directory.CreateDirectory(dir);
-        return Path.Combine(dir, "vaultsync.db");
-    }
-
-    private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
-    {
-        if (Equals(storage, value)) return false;
-        storage = value;
-        OnPropertyChanged(propertyName);
-        return true;
+        return _repositoryFactory.Create(config);
     }
 
     public void SetAvatarForSelectedProject(string avatarPath)
@@ -3549,28 +3517,28 @@ public class ProjectItemViewModel : ViewModelBase
     public string Name
     {
         get => _name;
-        set => SetProperty(ref _name, value);
+        set => SetField(ref _name, value);
     }
 
     private string _path = string.Empty;
     public string Path
     {
         get => _path;
-        set => SetProperty(ref _path, value);
+        set => SetField(ref _path, value);
     }
 
     private string _externalId = string.Empty;
     public string ExternalId
     {
         get => _externalId;
-        set => SetProperty(ref _externalId, value ?? string.Empty);
+        set => SetField(ref _externalId, value ?? string.Empty);
     }
 
     private int _projectId;
     public int ProjectId
     {
         get => _projectId;
-        set => SetProperty(ref _projectId, value);
+        set => SetField(ref _projectId, value);
     }
 
     private ProjectHealthStatus _health;
@@ -3579,7 +3547,7 @@ public class ProjectItemViewModel : ViewModelBase
         get => _health;
         set
         {
-            if (SetProperty(ref _health, value))
+            if (SetField(ref _health, value))
             {
                 OnPropertyChanged(nameof(HealthBackground));
                 OnPropertyChanged(nameof(HealthForeground));
@@ -3591,7 +3559,7 @@ public class ProjectItemViewModel : ViewModelBase
     public string HealthTag
     {
         get => _healthTag;
-        set => SetProperty(ref _healthTag, value);
+        set => SetField(ref _healthTag, value);
     }
 
     private DateTime _lastSnapshot;
@@ -3600,7 +3568,7 @@ public class ProjectItemViewModel : ViewModelBase
         get => _lastSnapshot;
         set
         {
-            if (SetProperty(ref _lastSnapshot, value))
+            if (SetField(ref _lastSnapshot, value))
             {
                 OnPropertyChanged(nameof(LastSnapshotSummary));
                 OnPropertyChanged(nameof(LastSnapshotShort));
@@ -3616,7 +3584,7 @@ public class ProjectItemViewModel : ViewModelBase
         get => _sizeBytes;
         set
         {
-            if (SetProperty(ref _sizeBytes, value))
+            if (SetField(ref _sizeBytes, value))
             {
                 OnPropertyChanged(nameof(SizeDisplay));
                 OnPropertyChanged(nameof(LatestSnapshotSizeDisplay));
@@ -3628,21 +3596,21 @@ public class ProjectItemViewModel : ViewModelBase
     public string Preset
     {
         get => _preset;
-        set => SetProperty(ref _preset, value);
+        set => SetField(ref _preset, value);
     }
 
     private string _presetDescription = string.Empty;
     public string PresetDescription
     {
         get => _presetDescription;
-        set => SetProperty(ref _presetDescription, value ?? string.Empty);
+        set => SetField(ref _presetDescription, value ?? string.Empty);
     }
 
     private string _presetExample = string.Empty;
     public string PresetExample
     {
         get => _presetExample;
-        set => SetProperty(ref _presetExample, value ?? string.Empty);
+        set => SetField(ref _presetExample, value ?? string.Empty);
     }
 
     private string _tagsCsv = string.Empty;
@@ -3651,7 +3619,7 @@ public class ProjectItemViewModel : ViewModelBase
         get => _tagsCsv;
         set
         {
-            if (!SetProperty(ref _tagsCsv, value ?? string.Empty))
+            if (!SetField(ref _tagsCsv, value ?? string.Empty))
                 return;
 
             RebuildTagChips();
@@ -3686,21 +3654,21 @@ public class ProjectItemViewModel : ViewModelBase
     public string RecommendedPreset
     {
         get => _recommendedPreset;
-        set => SetProperty(ref _recommendedPreset, value ?? string.Empty);
+        set => SetField(ref _recommendedPreset, value ?? string.Empty);
     }
 
     private string _recommendedPresetReason = string.Empty;
     public string RecommendedPresetReason
     {
         get => _recommendedPresetReason;
-        set => SetProperty(ref _recommendedPresetReason, value ?? string.Empty);
+        set => SetField(ref _recommendedPresetReason, value ?? string.Empty);
     }
 
     private string _preferredDestinationId = string.Empty;
     public string PreferredDestinationId
     {
         get => _preferredDestinationId;
-        set => SetProperty(ref _preferredDestinationId, value ?? string.Empty);
+        set => SetField(ref _preferredDestinationId, value ?? string.Empty);
     }
 
     private DestinationOption? _preferredDestinationOption;
@@ -3714,7 +3682,7 @@ public class ProjectItemViewModel : ViewModelBase
             if (value is null)
                 return;
 
-            if (SetProperty(ref _preferredDestinationOption, value))
+            if (SetField(ref _preferredDestinationOption, value))
                 PreferredDestinationId = value.Id;
         }
     }
@@ -3723,7 +3691,7 @@ public class ProjectItemViewModel : ViewModelBase
     public string PreferredDestinationDisplay
     {
         get => _preferredDestinationDisplay;
-        set => SetProperty(ref _preferredDestinationDisplay, value ?? string.Empty);
+        set => SetField(ref _preferredDestinationDisplay, value ?? string.Empty);
     }
 
     public void SetPreferredDestinationOption(DestinationOption? option)
@@ -3739,14 +3707,14 @@ public class ProjectItemViewModel : ViewModelBase
     public string EncryptionPolicy
     {
         get => _encryptionPolicy;
-        set => SetProperty(ref _encryptionPolicy, ProjectEncryptionPolicy.Normalize(value));
+        set => SetField(ref _encryptionPolicy, ProjectEncryptionPolicy.Normalize(value));
     }
 
     private string _encryptionKeyRef = string.Empty;
     public string EncryptionKeyRef
     {
         get => _encryptionKeyRef;
-        set => SetProperty(ref _encryptionKeyRef, value ?? string.Empty);
+        set => SetField(ref _encryptionKeyRef, value ?? string.Empty);
     }
 
     private EncryptionPolicyOption? _encryptionPolicyOption;
@@ -3755,7 +3723,7 @@ public class ProjectItemViewModel : ViewModelBase
         get => _encryptionPolicyOption;
         set
         {
-            if (SetProperty(ref _encryptionPolicyOption, value))
+            if (SetField(ref _encryptionPolicyOption, value))
             {
                 // Ignore transient null selection events fired while option sources refresh.
                 // Real "inherit" selection is represented by a non-null option with Id="inherit".
@@ -3771,42 +3739,42 @@ public class ProjectItemViewModel : ViewModelBase
     public string EffectiveEncryptionDisplay
     {
         get => _effectiveEncryptionDisplay;
-        set => SetProperty(ref _effectiveEncryptionDisplay, value ?? string.Empty);
+        set => SetField(ref _effectiveEncryptionDisplay, value ?? string.Empty);
     }
 
     private bool _hasEncryptionSecret;
     public bool HasEncryptionSecret
     {
         get => _hasEncryptionSecret;
-        set => SetProperty(ref _hasEncryptionSecret, value);
+        set => SetField(ref _hasEncryptionSecret, value);
     }
 
     private string _encryptionSecretStatus = string.Empty;
     public string EncryptionSecretStatus
     {
         get => _encryptionSecretStatus;
-        set => SetProperty(ref _encryptionSecretStatus, value ?? string.Empty);
+        set => SetField(ref _encryptionSecretStatus, value ?? string.Empty);
     }
 
     private string _encryptionBadgeText = string.Empty;
     public string EncryptionBadgeText
     {
         get => _encryptionBadgeText;
-        set => SetProperty(ref _encryptionBadgeText, value ?? string.Empty);
+        set => SetField(ref _encryptionBadgeText, value ?? string.Empty);
     }
 
     private string _encryptionBadgeBackground = "#2F3650";
     public string EncryptionBadgeBackground
     {
         get => _encryptionBadgeBackground;
-        set => SetProperty(ref _encryptionBadgeBackground, value ?? "#2F3650");
+        set => SetField(ref _encryptionBadgeBackground, value ?? "#2F3650");
     }
 
     private string _encryptionBadgeForeground = "#C7D2FE";
     public string EncryptionBadgeForeground
     {
         get => _encryptionBadgeForeground;
-        set => SetProperty(ref _encryptionBadgeForeground, value ?? "#C7D2FE");
+        set => SetField(ref _encryptionBadgeForeground, value ?? "#C7D2FE");
     }
 
     public void SetEncryptionPolicyOption(EncryptionPolicyOption? option)
@@ -3822,7 +3790,7 @@ public class ProjectItemViewModel : ViewModelBase
     public bool IsRegistered
     {
         get => _isRegistered;
-        set => SetProperty(ref _isRegistered, value);
+        set => SetField(ref _isRegistered, value);
     }
 
     public bool SnapshotHistoryLoaded { get; set; }
@@ -3932,10 +3900,11 @@ public class ProjectItemViewModel : ViewModelBase
         }
 
         // Notify that aggregate snapshot stats have changed.
-        OnPropertyChanged(nameof(SnapshotCount));
-        OnPropertyChanged(nameof(TotalSnapshotSizeDisplay));
-        OnPropertyChanged(nameof(AverageSnapshotSizeDisplay));
-        OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
+        OnPropertiesChanged(
+            nameof(SnapshotCount),
+            nameof(TotalSnapshotSizeDisplay),
+            nameof(AverageSnapshotSizeDisplay),
+            nameof(DaysSinceLastSnapshotDisplay));
     }
 
     // ---- Convenience / formatted properties ----
@@ -3974,19 +3943,18 @@ public class ProjectItemViewModel : ViewModelBase
 
     public void NotifySnapshotTextChanged()
     {
-        OnPropertyChanged(nameof(LastSnapshotSummary));
-        OnPropertyChanged(nameof(LastSnapshotShort));
-        OnPropertyChanged(nameof(LatestSnapshotSizeDisplay));
-        OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
+        OnPropertiesChanged(
+            nameof(LastSnapshotSummary),
+            nameof(LastSnapshotShort),
+            nameof(LatestSnapshotSizeDisplay),
+            nameof(DaysSinceLastSnapshotDisplay));
     }
 
     public string SizeDisplay
     {
         get
         {
-            double gb = SizeBytes / (1024d * 1024d * 1024d);
-            if (gb < 0.01) return $"{SizeBytes / (1024d * 1024d):0.#} MB";
-            return $"{gb:0.0} GB";
+            return UiFormat.FormatBytes(SizeBytes, "0.#");
         }
     }
 
@@ -4096,206 +4064,4 @@ public class ProjectItemViewModel : ViewModelBase
             TagChips.Add(ProjectTagChip.Create(tag, config));
     }
 
-    private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
-    {
-        if (Equals(storage, value)) return false;
-        storage = value;
-        OnPropertyChanged(propertyName);
-        return true;
-    }
-}
-
-public sealed class DestinationOption(string id, string label)
-{
-    public string Id { get; } = id ?? string.Empty;
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is DestinationOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class ProjectGroupOption(string id, string label)
-{
-    public const string AllId = "all";
-    public string Id { get; } = string.IsNullOrWhiteSpace(id) ? AllId : id.Trim();
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is ProjectGroupOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class EncryptionPolicyOption(string id, string label)
-{
-    public string Id { get; } = ProjectEncryptionPolicy.Normalize(id);
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is EncryptionPolicyOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class RestoreModeOption(string id, string label)
-{
-    public string Id { get; } = ProjectRestoreMode.Normalize(id);
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is RestoreModeOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class VerificationPolicyOption(string id, string label)
-{
-    public string Id { get; } = ProjectVerificationPolicy.Normalize(id);
-    public string Label { get; } = label ?? string.Empty;
-
-    public override string ToString() => Label;
-
-    public override bool Equals(object? obj)
-    {
-        return obj is VerificationPolicyOption other &&
-               string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        return StringComparer.OrdinalIgnoreCase.GetHashCode(Id);
-    }
-}
-
-public sealed class ProjectSnapshotViewModel(
-    DateTime timestamp,
-    long sizeBytes,
-    int diffAdded = 0,
-    int diffModified = 0,
-    int diffDeleted = 0,
-    long diffNetBytes = 0,
-    IReadOnlyList<SnapshotDiffPathStat>? topChangedPaths = null)
-{
-    public DateTime Timestamp { get; } = timestamp;
-    public long SizeBytes { get; } = sizeBytes;
-    public int DiffAdded { get; } = Math.Max(0, diffAdded);
-    public int DiffModified { get; } = Math.Max(0, diffModified);
-    public int DiffDeleted { get; } = Math.Max(0, diffDeleted);
-    public long DiffNetBytes { get; } = diffNetBytes;
-    public IReadOnlyList<SnapshotDiffPathStat> TopChangedPaths { get; } = topChangedPaths ?? [];
-
-    // Mini-chart data
-    public double RelativeSize { get; set; }
-
-    /// <summary>
-    /// 24-80px bar height, based on RelativeSize.
-    /// </summary>
-    public double RelativeBarHeight => 24 + RelativeSize * 56;
-
-    public double RelativeBarHeightCapped => Math.Max(16, RelativeBarHeight);
-
-    /// <summary>
-    /// Color used for the bar: neutral, up (red), down (green).
-    /// </summary>
-    public string TrendColor { get; set; } = "#2F3650";
-
-    public bool ShowDayLabel { get; set; }
-
-    public string DayLabel { get; set; } = string.Empty;
-
-    public string DateDisplay => Timestamp.ToString("dd/MM/yyyy - HH:mm", CultureInfo.CurrentCulture);
-
-    public string SizeDisplay => FormatSize(SizeBytes);
-
-    public string DiffSummaryDisplay
-    {
-        get
-        {
-            var hasChanges = (DiffAdded > 0) || (DiffModified > 0) || (DiffDeleted > 0);
-            if (!hasChanges && DiffNetBytes == 0)
-                return L("Projects.DiffSummary.NoChanges", "No file changes detected or diff data is unavailable for this snapshot");
-
-            return Lf(
-                "Projects.DiffSummary.Compact",
-                "+{0} / ~{1} / -{2}  Δ {3}",
-                DiffAdded,
-                DiffModified,
-                DiffDeleted,
-                FormatSignedSize(DiffNetBytes));
-        }
-    }
-
-    public bool HasDiffTopPaths => TopChangedPaths.Count > 0;
-
-    public string DiffTopPathsDisplay
-    {
-        get
-        {
-            if (TopChangedPaths.Count == 0)
-                return L("Projects.DiffSummary.TopPaths.None", "Top paths: none");
-
-            var preview = string.Join(
-                ", ",
-                TopChangedPaths
-                    .Where(path => !string.IsNullOrWhiteSpace(path.Path))
-                    .Take(2)
-                    .Select(path => $"{path.Path} ({path.Changes})"));
-
-            return string.IsNullOrWhiteSpace(preview)
-                ? L("Projects.DiffSummary.TopPaths.None", "Top paths: none")
-                : Lf("Projects.DiffSummary.TopPaths.Compact", "Top paths: {0}", preview);
-        }
-    }
-
-    // Used by tooltip: date + size in one string
-    public string TooltipText => $"{DateDisplay}\n{SizeDisplay}";
-
-    public static string FormatSize(long bytes) =>
-        UiFormat.FormatBytes(bytes, "0.0");
-
-    private static string FormatSignedSize(long value)
-        => UiFormat.FormatSignedBytes(value, "0.0");
-
-    private static string L(string key, string fallback) =>
-        LocalizationProvider.Service?.GetString(key) ?? fallback;
-
-    private static string Lf(string key, string fallback, params object[] args)
-    {
-        var fmt = L(key, fallback);
-        return string.Format(CultureInfo.CurrentCulture, fmt, args);
-    }
 }

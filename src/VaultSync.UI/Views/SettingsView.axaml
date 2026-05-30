@@ -47,9 +47,17 @@
       <Setter Property="CornerRadius" Value="10" />
       <Setter Property="Padding" Value="12,6" />
       <Setter Property="MinWidth" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.settings-ghost:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
+    </Style>
+    <Style Selector="Button.settings-ghost TextBlock">
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+      <Setter Property="MaxLines" Value="2" />
     </Style>
 
     <Style Selector="Button.theme-preset-card">
@@ -1162,13 +1170,14 @@
                       <ItemsControl ItemsSource="{Binding CredentialProfiles}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                          <Border Padding="8"
+                          <Border Padding="12"
                                   Margin="0,4,0,0"
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
-                              <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.NameLabel}" VerticalAlignment="Center"/>
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+                              <Grid Grid.Row="0" ColumnDefinitions="140,*" ColumnSpacing="12">
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.NameLabel}"
+                                           VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1"
                                          HorizontalAlignment="Stretch"
                                          Text="{Binding Name, Mode=TwoWay}"
@@ -1179,8 +1188,9 @@
                                         Content="{infra:LocalizedString Key=Settings.Credentials.UseKeychain}"
                                         IsChecked="{Binding UseKeychain, Mode=TwoWay}" />
 
-                              <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.UsernameLabel}" VerticalAlignment="Center"/>
+                              <Grid Grid.Row="2" ColumnDefinitions="140,*,Auto" ColumnSpacing="12">
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.UsernameLabel}"
+                                           VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1"
                                          HorizontalAlignment="Stretch"
                                          Text="{Binding Username, Mode=TwoWay}"
@@ -1195,19 +1205,20 @@
                                 </Button>
                               </Grid>
 
-                              <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.PasswordLabel}" VerticalAlignment="Center"/>
-                                <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                              <Grid Grid.Row="3" ColumnDefinitions="140,*,Auto" ColumnSpacing="12">
+                                <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.PasswordLabel}"
+                                           VerticalAlignment="Center"/>
+                                <Grid Grid.Column="1">
                                   <TextBox Grid.Column="0"
                                            HorizontalAlignment="Stretch"
                                            Text="{Binding Password, Mode=TwoWay}"
                                            Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Password}"
                                              PasswordChar="{Binding ShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=*}" />
-                                  <ToggleSwitch Grid.Column="1"
-                                                VerticalAlignment="Center"
-                                                IsChecked="{Binding ShowPassword, Mode=TwoWay}"
-                                                Content="{infra:LocalizedString Key=Settings.Credentials.ShowPassword}" />
                                 </Grid>
+                                <CheckBox Grid.Column="2"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding ShowPassword, Mode=TwoWay}"
+                                          Content="{infra:LocalizedString Key=Settings.Credentials.ShowPassword}" />
                               </Grid>
                             </Grid>
                           </Border>

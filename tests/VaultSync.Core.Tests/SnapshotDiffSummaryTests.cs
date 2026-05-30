@@ -7,27 +7,27 @@ using System.Threading.Tasks;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class SnapshotDiffSummaryTests : IDisposable
 {
-    private readonly List<string> _tempDirs = [];
+    private readonly TempDirectory _tempRoot = new();
 
     [Fact]
     public void Repository_CreateSnapshot_PersistsDiffSummaryFields()
     {
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
         string root = CreateTempDir();
-        SqliteRepository repo = CreateRepository(dbPath);
-        int projectId = repo.AddProject(new Project
-        {
-            Name = "Diff Repo Project",
-            RootPath = root,
-            Preset = string.Empty,
-            CreatedUtc = DateTime.UtcNow
-        });
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(
+            repo,
+            "Diff Repo Project",
+            root,
+            preset: string.Empty,
+            createdUtc: DateTime.UtcNow);
 
         var summary = new SnapshotDiffSummary(
             Added: 3,
@@ -66,14 +66,13 @@ public sealed class SnapshotDiffSummaryTests : IDisposable
         File.WriteAllText(Path.Combine(projectRoot, "src", "a.txt"), "0123456789");
         File.WriteAllText(Path.Combine(projectRoot, "docs", "readme.md"), "01234567890123456789");
 
-        SqliteRepository repo = CreateRepository(dbPath);
-        int projectId = repo.AddProject(new Project
-        {
-            Name = "Diff Service Project",
-            RootPath = projectRoot,
-            Preset = string.Empty,
-            CreatedUtc = DateTime.UtcNow
-        });
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(
+            repo,
+            "Diff Service Project",
+            projectRoot,
+            preset: string.Empty,
+            createdUtc: DateTime.UtcNow);
         Project project = repo.GetProjectById(projectId);
         Assert.NotNull(project);
 
@@ -99,6 +98,78 @@ public sealed class SnapshotDiffSummaryTests : IDisposable
         Assert.NotEmpty(topPaths);
         Assert.Equal("src", topPaths[0].Path);
         Assert.Equal(2, topPaths[0].Changes);
+    }
+
+    [Fact]
+    public async Task SnapshotService_CreateSnapshot_IgnoresImportedSnapshotWhenChoosingLocalDiffBaseline()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string projectRoot = CreateTempDir();
+        string backupRoot = CreateTempDir();
+
+        File.WriteAllText(Path.Combine(projectRoot, "data.bin"), "1234567890");
+
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(
+            repo,
+            "Cross Machine Diff Project",
+            projectRoot,
+            preset: string.Empty,
+            createdUtc: DateTime.UtcNow);
+        Project project = repo.GetProjectById(projectId);
+        Assert.NotNull(project);
+
+        var service = new SnapshotService(repo, new HashService());
+        int localSnapshotId = await service.CreateSnapshotAsync(
+            project!,
+            fullHash: false,
+            hashNow: false,
+            maxSnapshotsToKeep: null,
+            ct: CancellationToken.None);
+        _ = repo.CreateBackup(
+            projectId,
+            localSnapshotId,
+            "manual",
+            10,
+            "Cross Machine Diff Project/local",
+            backupRoot,
+            "Local");
+
+        int importedSnapshotId = repo.CreateSnapshotFromMetadata(
+            "imported-cross-machine-snapshot",
+            projectId,
+            DateTime.UtcNow.AddDays(1),
+            1,
+            14L * 1024L * 1024L * 1024L,
+            new SnapshotDiffSummary(Added: 1, Modified: 0, Deleted: 0, NetSizeBytes: 14L * 1024L * 1024L * 1024L, TopChangedPaths: []));
+        _ = repo.CreateBackupFromMetadata(
+            "imported-cross-machine-backup",
+            projectId,
+            importedSnapshotId,
+            DateTime.UtcNow.AddDays(1),
+            "manual",
+            14L * 1024L * 1024L * 1024L,
+            "Cross Machine Diff Project/imported",
+            backupRoot,
+            "Imported",
+            isProtected: false,
+            isImported: true,
+            originMachineName: "other-machine");
+
+        File.AppendAllText(Path.Combine(projectRoot, "data.bin"), "12345");
+
+        int nextLocalSnapshotId = await service.CreateSnapshotAsync(
+            project!,
+            fullHash: false,
+            hashNow: false,
+            maxSnapshotsToKeep: null,
+            ct: CancellationToken.None);
+
+        Snapshot nextLocalSnapshot = repo.GetSnapshotById(nextLocalSnapshotId)!;
+        Assert.NotNull(nextLocalSnapshot);
+        Assert.Equal(5, nextLocalSnapshot.DiffNetBytes);
+        Assert.Equal(1, nextLocalSnapshot.DiffModified);
+        Assert.Equal(nextLocalSnapshotId, repo.GetLatestLocalSnapshotForProject(projectId)?.Id);
     }
 
     [Fact]
@@ -152,7 +223,7 @@ public sealed class SnapshotDiffSummaryTests : IDisposable
             KdfParamsJson = "{}"
         });
 
-        SqliteRepository repo = CreateRepository(dbPath);
+        SqliteRepository repo = TestRepository.Create(dbPath);
         var sync = new MetadataSyncService(repo);
         MetadataSyncResult result = sync.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
 
@@ -172,32 +243,13 @@ public sealed class SnapshotDiffSummaryTests : IDisposable
 
     public void Dispose()
     {
-        foreach (string path in _tempDirs.OrderByDescending(p => p.Length))
-        {
-            try
-            {
-                if (Directory.Exists(path))
-                    Directory.Delete(path, recursive: true);
-            }
-            catch
-            {
-                // Ignore cleanup failures in tests.
-            }
-        }
-    }
-
-    private static SqliteRepository CreateRepository(string dbPath)
-    {
-        var repo = new SqliteRepository(dbPath);
-        repo.EnsureSchema();
-        return repo;
+        _tempRoot.Dispose();
     }
 
     private string CreateTempDir()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"vaultsync-test-{Guid.NewGuid():N}");
+        string path = Path.Combine(_tempRoot.Path, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
-        _tempDirs.Add(path);
         return path;
     }
 }

@@ -16,9 +16,10 @@ using Microsoft.Data.Sqlite;
 
 namespace VaultSync.Core.Services;
 
-public sealed class MetadataSyncService(SqliteRepository repo)
+public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? configStore = null)
 {
     private readonly SqliteRepository _repo = repo;
+    private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly SemaphoreSlim MetadataIoGate = new(1, 1);
@@ -33,10 +34,14 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 
     public async Task<MetadataSyncResult> ImportFromStoreAsync(string rootPath, MetadataSyncOptions? options = null, CancellationToken ct = default)
     {
+        using var totalTiming = RuntimeTiming.Measure("Metadata import total");
         await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
+            using (RuntimeTiming.Measure("Metadata import network wait"))
+            {
+                await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
+            }
             MetadataSyncOptions opts = options ?? MetadataSyncOptions.Default;
 
             if (string.IsNullOrWhiteSpace(rootPath))
@@ -49,7 +54,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
             if (!File.Exists(store.DatabasePath))
             {
                 Console.WriteLine($"[MetadataSync] Import skipped: store not found at '{store.DatabasePath}'.");
-                MetadataSyncResult legacyResult = ImportBackupFoldersFromDestination(rootPath, opts, AppConfigStore.Load());
+                MetadataSyncResult legacyResult = ImportBackupFoldersFromDestination(rootPath, opts, _configStore.Load());
                 if (legacyResult.Status == MetadataSyncStatus.Success &&
                     (legacyResult.ImportedProjects > 0 ||
                      legacyResult.ImportedSnapshots > 0 ||
@@ -62,12 +67,23 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                 return MetadataSyncResult.Failure(MetadataSyncStatus.NoStore, "Metadata store not found.");
             }
 
-            if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out string? walTempRoot))
+            if (TrySkipUnchangedSourceFromFileStamp(rootPath, store.DatabasePath, opts, out MetadataSyncResult? unchangedResult))
+                return unchangedResult!;
+
+            string? walTempRoot = null;
+            bool copiedWalStore = false;
+            if (ShouldUseTempCopy(store.DatabasePath))
+            {
+                using var copyTiming = RuntimeTiming.Measure("Metadata import temp copy");
+                copiedWalStore = TryCopyStoreForRead(store.DatabasePath, out walTempRoot);
+            }
+
+            if (copiedWalStore && !string.IsNullOrWhiteSpace(walTempRoot))
             {
                 Console.WriteLine($"[MetadataSync] Import using temp copy (SQLite sidecar detected): '{walTempRoot}'.");
                 try
                 {
-                    return ImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot, allowReadRecovery: true), opts);
+                    return ImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot, allowReadRecovery: true), opts, store.DatabasePath);
                 }
                 finally
                 {
@@ -77,7 +93,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 
             try
             {
-                return ImportFromStoreInternal(rootPath, store, opts);
+                return ImportFromStoreInternal(rootPath, store, opts, store.DatabasePath);
             }
             catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
             {
@@ -88,7 +104,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                 Console.WriteLine($"[MetadataSync] Import retrying from temp copy: '{tempRoot}'.");
                 try
                 {
-                    return ImportFromStoreInternal(rootPath, new MetadataStore(tempRoot, allowReadRecovery: true), opts);
+                    return ImportFromStoreInternal(rootPath, new MetadataStore(tempRoot, allowReadRecovery: true), opts, store.DatabasePath);
                 }
                 finally
                 {
@@ -177,11 +193,17 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         }
     }
 
-    private MetadataSyncResult ImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
+    private MetadataSyncResult ImportFromStoreInternal(
+        string rootPath,
+        MetadataStore store,
+        MetadataSyncOptions opts,
+        string sourceDatabasePath)
     {
+        using var totalTiming = RuntimeTiming.Measure("Metadata import apply");
         MetaInfo? metaInfo;
         try
         {
+            using var timing = RuntimeTiming.Measure("Metadata import read meta info");
             metaInfo = store.GetMetaInfo();
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
@@ -198,6 +220,15 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                 $"Metadata schema {metaInfo.SchemaVersion} is newer than supported {MetadataStore.CurrentSchemaVersion}.");
         }
 
+        if (opts.SkipUnchangedReadOnlySource &&
+            !opts.ExportMissingTombstonesOnImport &&
+            TryGetMetadataSourceStamp(rootPath, sourceDatabasePath, metaInfo, out MetadataImportSourceStamp sourceStamp) &&
+            HasSuccessfulUnchangedImport(sourceStamp))
+        {
+            Console.WriteLine($"[MetadataSync] Auto import skipped for unchanged store '{rootPath}'.");
+            return new MetadataSyncResult(MetadataSyncStatus.Success, 0, 0, 0, 0, "Metadata source unchanged.");
+        }
+
         int importedProjects = 0;
         int importedSnapshots = 0;
         int importedBackups = 0;
@@ -206,8 +237,13 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var snapshotMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        AppConfig config = AppConfigStore.Load();
-        var localProjects = _repo.GetAllProjects().ToList();
+        AppConfig config;
+        List<Project> localProjects;
+        using (RuntimeTiming.Measure("Metadata import load local state"))
+        {
+            config = _configStore.Load();
+            localProjects = _repo.GetAllProjects().ToList();
+        }
         List<ProjectMetadataConflictRecord> pendingConflicts = config.Advanced.ProjectMetadataConflicts ??= [];
         bool metadataConflictChanged = false;
 
@@ -224,6 +260,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 
         try
         {
+            using var timing = RuntimeTiming.Measure("Metadata import read store rows");
             metaProjects = [.. store.ListProjects()];
             metaSnapshots = [.. store.ListSnapshots()];
             metaBackups = [.. store.ListBackups()];
@@ -422,50 +459,53 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         var missingBackupExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<int, DateTime> localLatestByProjectBeforeBackupImport = _repo.GetLatestBackupUtcByProject();
 
-        foreach (MetaBackup metaBackup in metaBackups)
+        using (RuntimeTiming.Measure("Metadata import apply backups"))
         {
-            if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
-                continue;
-
-            if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
-                continue;
-
-            if (!TryResolveBackupPath(rootPath, metaBackup.PathRel, out string? normalizedPathRel))
+            foreach (MetaBackup metaBackup in metaBackups)
             {
-                missingBackupExternalIds.Add(metaBackup.ExternalId);
-                tombstonedBackupIds.Add(metaBackup.ExternalId);
-                continue;
+                if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
+                    continue;
+
+                if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
+                    continue;
+
+                if (!TryResolveBackupPath(rootPath, metaBackup.PathRel, out string? normalizedPathRel))
+                {
+                    missingBackupExternalIds.Add(metaBackup.ExternalId);
+                    tombstonedBackupIds.Add(metaBackup.ExternalId);
+                    continue;
+                }
+
+                if (!projectMap.TryGetValue(metaBackup.ProjectExternalId, out int projectId))
+                    continue;
+
+                if (!snapshotMap.TryGetValue(metaBackup.SnapshotExternalId, out int snapshotId))
+                {
+                    continue;
+                }
+
+                if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
+                    continue;
+
+                _repo.CreateBackupFromMetadata(
+                    metaBackup.ExternalId,
+                    projectId,
+                    snapshotId,
+                    metaBackup.CreatedUtc,
+                    metaBackup.Type,
+                    metaBackup.TotalBytes,
+                    normalizedPathRel,
+                    rootPath,
+                    metaBackup.DestinationAlias,
+                    metaBackup.IsProtected,
+                    isImported: true,
+                    backupMode: metaBackup.BackupMode,
+                    originMachineName: metaBackup.OriginMachineName,
+                    isEncrypted: metaBackup.IsEncrypted,
+                    cryptoDescriptorJson: metaBackup.KdfParamsJson);
+                importedBackups++;
+                affectedProjectIds.Add(projectId);
             }
-
-            if (!projectMap.TryGetValue(metaBackup.ProjectExternalId, out int projectId))
-                continue;
-
-            if (!snapshotMap.TryGetValue(metaBackup.SnapshotExternalId, out int snapshotId))
-            {
-                continue;
-            }
-
-            if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
-                continue;
-
-            _repo.CreateBackupFromMetadata(
-                metaBackup.ExternalId,
-                projectId,
-                snapshotId,
-                metaBackup.CreatedUtc,
-                metaBackup.Type,
-                metaBackup.TotalBytes,
-                normalizedPathRel,
-                rootPath,
-                metaBackup.DestinationAlias,
-                metaBackup.IsProtected,
-                isImported: true,
-                backupMode: metaBackup.BackupMode,
-                originMachineName: metaBackup.OriginMachineName,
-                isEncrypted: metaBackup.IsEncrypted,
-                cryptoDescriptorJson: metaBackup.KdfParamsJson);
-            importedBackups++;
-            affectedProjectIds.Add(projectId);
         }
 
         foreach (MetaTombstone tombstone in metaTombstones)
@@ -529,7 +569,11 @@ public sealed class MetadataSyncService(SqliteRepository repo)
             }
         }
 
-        MetadataSyncResult filesystemResult = ImportBackupFoldersFromDestination(rootPath, opts, config);
+        MetadataSyncResult filesystemResult;
+        using (RuntimeTiming.Measure("Metadata import legacy folder scan"))
+        {
+            filesystemResult = ImportBackupFoldersFromDestination(rootPath, opts, config);
+        }
         importedProjects += filesystemResult.ImportedProjects;
         importedSnapshots += filesystemResult.ImportedSnapshots;
         importedBackups += filesystemResult.ImportedBackups;
@@ -540,7 +584,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 
         if (metadataConflictChanged)
         {
-            AppConfigStore.Save(config);
+            _configStore.Save(config);
         }
 
         var result = new MetadataSyncResult(
@@ -557,10 +601,251 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         {
             IEnumerable<MetaBackup> liveBackups = metaBackups
                 .Where(b => !string.IsNullOrWhiteSpace(b.ExternalId) && !tombstonedBackupIds.Contains(b.ExternalId));
-            UpdateNeedsRestoreFlags(projectMap, liveBackups, localLatestByProjectBeforeBackupImport);
+            using (RuntimeTiming.Measure("Metadata import restore flags"))
+            {
+                UpdateNeedsRestoreFlags(projectMap, liveBackups, localLatestByProjectBeforeBackupImport);
+            }
+        }
+        if (opts.SkipUnchangedReadOnlySource &&
+            !opts.ExportMissingTombstonesOnImport &&
+            missingBackupExternalIds.Count == 0 &&
+            TryGetMetadataSourceStamp(rootPath, sourceDatabasePath, metaInfo, out MetadataImportSourceStamp completedStamp))
+        {
+            List<string> importedProjectExternalIds = GetLiveExternalIds(metaProjects, tombstonedProjectIds, project => project.ExternalId);
+            List<string> importedSnapshotExternalIds = GetLiveExternalIds(metaSnapshots, tombstonedSnapshotIds, snapshot => snapshot.ExternalId);
+            List<string> importedBackupExternalIds = GetLiveExternalIds(metaBackups, tombstonedBackupIds, backup => backup.ExternalId);
+            SaveSuccessfulImportStamp(
+                completedStamp,
+                importedProjectExternalIds,
+                importedSnapshotExternalIds,
+                importedBackupExternalIds,
+                metaTombstones.Count());
         }
         Console.WriteLine($"[MetadataSync] Import complete from '{rootPath}': projects={importedProjects}, snapshots={importedSnapshots}, backups={importedBackups}, tombstones={appliedTombstones}.");
         return result;
+    }
+
+    private bool HasSuccessfulUnchangedImport(MetadataImportSourceStamp current)
+    {
+        try
+        {
+            MetadataImportSourceStamp? cached = _configStore.Load()
+                .Advanced
+                .MetadataImportCache
+                .Sources
+                .FirstOrDefault(source => string.Equals(source.SourceKey, current.SourceKey, StringComparison.OrdinalIgnoreCase));
+
+            return cached != null &&
+                   !string.IsNullOrWhiteSpace(cached.ImportedUtc) &&
+                   string.Equals(cached.SourceMachineId, current.SourceMachineId, StringComparison.Ordinal) &&
+                   string.Equals(cached.StoreUpdatedUtc, current.StoreUpdatedUtc, StringComparison.Ordinal) &&
+                   cached.StoreSchemaVersion == current.StoreSchemaVersion &&
+                   cached.StoreFileLengthBytes == current.StoreFileLengthBytes &&
+                   string.Equals(cached.StoreFileUpdatedUtc, current.StoreFileUpdatedUtc, StringComparison.Ordinal) &&
+                   string.Equals(cached.StoreSidecarStamp, current.StoreSidecarStamp, StringComparison.Ordinal) &&
+                   LocalRepositoryHasImportCoverage(cached);
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Import cache check failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    private void SaveSuccessfulImportStamp(
+        MetadataImportSourceStamp stamp,
+        IReadOnlyCollection<string> projectExternalIds,
+        IReadOnlyCollection<string> snapshotExternalIds,
+        IReadOnlyCollection<string> backupExternalIds,
+        int tombstoneCount)
+    {
+        try
+        {
+            AppConfig config = _configStore.Load();
+            List<MetadataImportSourceStamp> sources = config.Advanced.MetadataImportCache.Sources;
+            sources.RemoveAll(source => string.Equals(source.SourceKey, stamp.SourceKey, StringComparison.OrdinalIgnoreCase));
+            stamp.ImportedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+            stamp.ProjectExternalIds = [.. projectExternalIds];
+            stamp.SnapshotExternalIds = [.. snapshotExternalIds];
+            stamp.BackupExternalIds = [.. backupExternalIds];
+            stamp.ProjectCount = stamp.ProjectExternalIds.Count;
+            stamp.SnapshotCount = stamp.SnapshotExternalIds.Count;
+            stamp.BackupCount = stamp.BackupExternalIds.Count;
+            stamp.TombstoneCount = tombstoneCount;
+            sources.Insert(0, stamp);
+            if (sources.Count > 32)
+            {
+                sources.RemoveRange(32, sources.Count - 32);
+            }
+
+            _configStore.Save(config);
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Import cache save failed: {ex.Message}");
+        }
+    }
+
+    private static bool TryGetMetadataSourceStamp(
+        string rootPath,
+        string sourceDatabasePath,
+        MetaInfo? metaInfo,
+        out MetadataImportSourceStamp stamp)
+    {
+        stamp = new MetadataImportSourceStamp();
+        if (metaInfo == null || string.IsNullOrWhiteSpace(sourceDatabasePath))
+            return false;
+
+        try
+        {
+            var db = new FileInfo(sourceDatabasePath);
+            if (!db.Exists)
+                return false;
+
+            string normalizedRoot = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string sourceKey = BuildMetadataSourceKey(normalizedRoot);
+            stamp = new MetadataImportSourceStamp
+            {
+                SourceKey = sourceKey,
+                SourcePath = normalizedRoot,
+                SourceMachineId = metaInfo.WriterMachineId ?? string.Empty,
+                StoreUpdatedUtc = metaInfo.LastWriteUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+                StoreSchemaVersion = metaInfo.SchemaVersion,
+                StoreFileLengthBytes = db.Length,
+                StoreFileUpdatedUtc = db.LastWriteTimeUtc.ToString("O", CultureInfo.InvariantCulture),
+                StoreSidecarStamp = BuildStoreSidecarStamp(sourceDatabasePath)
+            };
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string BuildMetadataSourceKey(string normalizedRoot)
+    {
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedRoot.Replace('\\', '/')));
+        return "metadata:" + HashService.FormatHexLower(hash);
+    }
+
+    private bool TrySkipUnchangedSourceFromFileStamp(
+        string rootPath,
+        string sourceDatabasePath,
+        MetadataSyncOptions opts,
+        out MetadataSyncResult? result)
+    {
+        result = null;
+        if (!opts.SkipUnchangedReadOnlySource || opts.ExportMissingTombstonesOnImport)
+            return false;
+
+        try
+        {
+            var db = new FileInfo(sourceDatabasePath);
+            if (!db.Exists)
+                return false;
+
+            string normalizedRoot = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string sourceKey = BuildMetadataSourceKey(normalizedRoot);
+            MetadataImportSourceStamp? cached = _configStore.Load()
+                .Advanced
+                .MetadataImportCache
+                .Sources
+                .FirstOrDefault(source => string.Equals(source.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase));
+
+            if (cached == null || string.IsNullOrWhiteSpace(cached.ImportedUtc))
+                return false;
+
+            bool unchanged =
+                cached.StoreFileLengthBytes == db.Length &&
+                string.Equals(cached.StoreFileUpdatedUtc, db.LastWriteTimeUtc.ToString("O", CultureInfo.InvariantCulture), StringComparison.Ordinal) &&
+                string.Equals(cached.StoreSidecarStamp, BuildStoreSidecarStamp(sourceDatabasePath), StringComparison.Ordinal);
+            if (!unchanged)
+                return false;
+            if (!LocalRepositoryHasImportCoverage(cached))
+                return false;
+
+            Console.WriteLine($"[MetadataSync] Auto import skipped for unchanged store files '{rootPath}'.");
+            result = new MetadataSyncResult(MetadataSyncStatus.Success, 0, 0, 0, 0, "Metadata source unchanged.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Import file-stamp cache check failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    private bool LocalRepositoryHasImportCoverage(MetadataImportSourceStamp cached)
+    {
+        try
+        {
+            if (!HasCachedExternalIds(cached))
+                return false;
+
+            IReadOnlyDictionary<string, int> projectExternalIds = _repo.GetProjectExternalIdMap();
+            IReadOnlyDictionary<string, int> snapshotExternalIds = _repo.GetSnapshotExternalIdMap();
+            IReadOnlyDictionary<string, int> backupExternalIds = _repo.GetBackupExternalIdMap();
+            return ContainsAll(projectExternalIds, cached.ProjectExternalIds) &&
+                   ContainsAll(snapshotExternalIds, cached.SnapshotExternalIds) &&
+                   ContainsAll(backupExternalIds, cached.BackupExternalIds);
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Import cache local coverage check failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static bool HasCachedExternalIds(MetadataImportSourceStamp cached)
+    {
+        return cached.ProjectExternalIds.Count >= cached.ProjectCount &&
+               cached.SnapshotExternalIds.Count >= cached.SnapshotCount &&
+               cached.BackupExternalIds.Count >= cached.BackupCount;
+    }
+
+    private static bool ContainsAll(IReadOnlyDictionary<string, int> localExternalIds, IEnumerable<string> cachedExternalIds)
+    {
+        foreach (string externalId in cachedExternalIds)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                continue;
+
+            if (!localExternalIds.ContainsKey(externalId))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static List<string> GetLiveExternalIds<T>(
+        IEnumerable<T> rows,
+        ISet<string> tombstonedExternalIds,
+        Func<T, string> getExternalId)
+    {
+        return rows
+            .Select(getExternalId)
+            .Where(id => !string.IsNullOrWhiteSpace(id) && !tombstonedExternalIds.Contains(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string BuildStoreSidecarStamp(string sourceDatabasePath)
+    {
+        var parts = new List<string>();
+        foreach (string suffix in new[] { "-wal", "-shm", "-journal" })
+        {
+            var file = new FileInfo(sourceDatabasePath + suffix);
+            if (!file.Exists)
+                continue;
+
+            parts.Add(string.Create(
+                CultureInfo.InvariantCulture,
+                $"{suffix}:{file.Length}:{file.LastWriteTimeUtc.Ticks}"));
+        }
+
+        return parts.Count == 0 ? "none" : string.Join("|", parts);
     }
 
     private void UpdateNeedsRestoreFlags(
@@ -1222,7 +1507,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         _ = rootPath;
         string normalized = $"{prefix}|{NormalizeStablePath(relativePath)}";
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
-        return $"{prefix}-{Convert.ToHexString(hash)[..32].ToLowerInvariant()}";
+        return $"{prefix}-{HashService.FormatHexLower(hash)[..32]}";
     }
 
     private static string NormalizeStablePath(string value)
@@ -1549,118 +1834,22 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 
     private static void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
-        if (missingExternalIds.Count == 0)
-            return;
-
-        var store = new MetadataStore(rootPath);
-        try
-        {
-            store.EnsureSchema();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Missing backup tombstone export failed: store init error at '{rootPath}': {ex.Message}");
-            return;
-        }
-
-        DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = "unknown",
-                WriterMachineId = Environment.MachineName
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterMachineId = Environment.MachineName;
-        }
-
-        try
-        {
-            store.UpsertMetaInfo(metaInfo);
-            foreach (string externalId in missingExternalIds)
-            {
-                if (string.IsNullOrWhiteSpace(externalId))
-                    continue;
-
-                store.AddTombstone(new MetaTombstone
-                {
-                    EntityType = "backup",
-                    EntityId = externalId,
-                    DeletedUtc = now,
-                    OriginMachineId = Environment.MachineName
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Missing backup tombstone export failed writing store '{rootPath}': {ex.Message}");
-        }
+        TryExportTombstones(
+            rootPath,
+            "backup",
+            missingExternalIds,
+            Environment.MachineName,
+            "Missing backup tombstone export");
     }
 
     private static void TryExportMissingSnapshotTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
-        if (missingExternalIds.Count == 0)
-            return;
-
-        var store = new MetadataStore(rootPath);
-        try
-        {
-            store.EnsureSchema();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Missing snapshot tombstone export failed: store init error at '{rootPath}': {ex.Message}");
-            return;
-        }
-
-        DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = "unknown",
-                WriterMachineId = Environment.MachineName
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterMachineId = Environment.MachineName;
-        }
-
-        try
-        {
-            store.UpsertMetaInfo(metaInfo);
-            foreach (string externalId in missingExternalIds)
-            {
-                if (string.IsNullOrWhiteSpace(externalId))
-                    continue;
-
-                store.AddTombstone(new MetaTombstone
-                {
-                    EntityType = "snapshot",
-                    EntityId = externalId,
-                    DeletedUtc = now,
-                    OriginMachineId = Environment.MachineName
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MetadataSync] Missing snapshot tombstone export failed writing store '{rootPath}': {ex.Message}");
-        }
+        TryExportTombstones(
+            rootPath,
+            "snapshot",
+            missingExternalIds,
+            Environment.MachineName,
+            "Missing snapshot tombstone export");
     }
 
     public static void TryExportProjectTombstone(string rootPath, string projectExternalId, string? originMachineId = null)
@@ -1668,6 +1857,26 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(projectExternalId))
             return;
 
+        string machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
+        TryExportTombstones(
+            rootPath,
+            "project",
+            [projectExternalId],
+            machineId,
+            "Project tombstone export");
+    }
+
+    private static void TryExportTombstones(
+        string rootPath,
+        string entityType,
+        IReadOnlyCollection<string> externalIds,
+        string machineId,
+        string logLabel,
+        string appVersion = "unknown")
+    {
+        if (string.IsNullOrWhiteSpace(rootPath) || externalIds.Count == 0)
+            return;
+
         var store = new MetadataStore(rootPath);
         try
         {
@@ -1675,44 +1884,76 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] Project tombstone export failed: store init error at '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] {logLabel} failed: store init error at '{rootPath}': {ex.Message}");
             return;
         }
 
         DateTime now = DateTime.UtcNow;
-        string machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = "unknown",
-                WriterMachineId = machineId
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterMachineId = machineId;
-        }
+        MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+            store,
+            now,
+            appVersion,
+            machineId,
+            updateExistingAppVersion: false);
 
         try
         {
             store.UpsertMetaInfo(metaInfo);
-            store.AddTombstone(new MetaTombstone
-            {
-                EntityType = "project",
-                EntityId = projectExternalId,
-                DeletedUtc = now,
-                OriginMachineId = machineId
-            });
+            AddTombstones(store, externalIds, entityType, now, machineId);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] Project tombstone export failed writing store '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] {logLabel} failed writing store '{rootPath}': {ex.Message}");
+        }
+    }
+
+    private static MetaInfo BuildUpdatedTombstoneMetaInfo(
+        MetadataStore store,
+        DateTime now,
+        string appVersion,
+        string machineId,
+        bool updateExistingAppVersion)
+    {
+        MetaInfo? metaInfo = store.GetMetaInfo();
+        if (metaInfo == null)
+        {
+            return new MetaInfo
+            {
+                SchemaVersion = MetadataStore.CurrentSchemaVersion,
+                CreatedUtc = now,
+                LastWriteUtc = now,
+                WriterAppVersion = appVersion,
+                WriterMachineId = machineId
+            };
+        }
+
+        metaInfo.LastWriteUtc = now;
+        metaInfo.WriterMachineId = machineId;
+        if (updateExistingAppVersion)
+            metaInfo.WriterAppVersion = appVersion;
+
+        return metaInfo;
+    }
+
+    private static void AddTombstones(
+        MetadataStore store,
+        IEnumerable<string> externalIds,
+        string entityType,
+        DateTime deletedUtc,
+        string originMachineId)
+    {
+        foreach (string externalId in externalIds)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                continue;
+
+            store.AddTombstone(new MetaTombstone
+            {
+                EntityType = entityType,
+                EntityId = externalId,
+                DeletedUtc = deletedUtc,
+                OriginMachineId = originMachineId
+            });
         }
     }
 
@@ -2164,33 +2405,15 @@ public sealed class MetadataSyncService(SqliteRepository repo)
             store.EnsureSchema();
 
             DateTime now = DateTime.UtcNow;
-            MetaInfo? metaInfo = store.GetMetaInfo();
-            if (metaInfo == null)
-            {
-                metaInfo = new MetaInfo
-                {
-                    SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                    CreatedUtc = now,
-                    LastWriteUtc = now,
-                    WriterAppVersion = appVersion,
-                    WriterMachineId = machineId
-                };
-            }
-            else
-            {
-                metaInfo.LastWriteUtc = now;
-                metaInfo.WriterAppVersion = appVersion;
-                metaInfo.WriterMachineId = machineId;
-            }
+            MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+                store,
+                now,
+                appVersion,
+                machineId,
+                updateExistingAppVersion: true);
 
             store.UpsertMetaInfo(metaInfo);
-            store.AddTombstone(new MetaTombstone
-            {
-                EntityType = "backup",
-                EntityId = backupExternalId,
-                DeletedUtc = now,
-                OriginMachineId = machineId
-            });
+            AddTombstones(store, [backupExternalId], "backup", now, machineId);
 
             Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{rootPath}'.");
         }
@@ -2224,35 +2447,17 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         }
 
         DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = appVersion,
-                WriterMachineId = machineId
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterAppVersion = appVersion;
-            metaInfo.WriterMachineId = machineId;
-        }
+        MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+            store,
+            now,
+            appVersion,
+            machineId,
+            updateExistingAppVersion: true);
 
         try
         {
             store.UpsertMetaInfo(metaInfo);
-            store.AddTombstone(new MetaTombstone
-            {
-                EntityType = "backup",
-                EntityId = backupExternalId,
-                DeletedUtc = now,
-                OriginMachineId = machineId
-            });
+            AddTombstones(store, [backupExternalId], "backup", now, machineId);
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -2271,9 +2476,8 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 
     private static string GetDeferredExportRoot(string rootPath)
     {
-        string hash = Convert.ToHexString(
-            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(rootPath)));
-        return Path.Combine(Path.GetTempPath(), "vaultsync-meta-export", hash.ToLowerInvariant());
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(rootPath));
+        return Path.Combine(Path.GetTempPath(), "vaultsync-meta-export", HashService.FormatHexLower(hash));
     }
 
     private static async Task WaitForNetworkReadyAsync(string rootPath, CancellationToken ct)
@@ -2527,7 +2731,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 
     private static string NewExternalId() => Guid.NewGuid().ToString("N");
 
-    private static string BuildProjectSettingsJson(Project project)
+    private string BuildProjectSettingsJson(Project project)
     {
         try
         {
@@ -2547,7 +2751,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
                 : project.PreferredDestinationId;
             settings["restoreMode"] = ProjectRestoreMode.Normalize(project.RestoreMode);
             settings["verificationPolicy"] = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
-            List<int> disabledProjects = AppConfigStore.GetSnapshot().Backups.AutoBackupDisabledProjects ?? [];
+            List<int> disabledProjects = _configStore.GetSnapshot().Backups.AutoBackupDisabledProjects ?? [];
             settings["autoBackupEnabled"] = !disabledProjects.Contains(project.Id);
             settings["tags"] = string.IsNullOrWhiteSpace(project.Tags)
                 ? string.Empty
@@ -2577,7 +2781,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         bool HasAutoBackupEnabled,
         bool HasTags);
 
-    private static ParsedProjectSettings ParseProjectSettings(string? settingsJson)
+    private ParsedProjectSettings ParseProjectSettings(string? settingsJson)
     {
         if (string.IsNullOrWhiteSpace(settingsJson))
         {
@@ -2639,7 +2843,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
             {
                 preferredDestinationId = NormalizePreferredDestinationId(
                     destinationProp.GetString(),
-                    AppConfigStore.Load().Backups.Destinations);
+                    _configStore.Load().Backups.Destinations);
                 hasPreferredDestinationId = true;
             }
 
@@ -2745,7 +2949,7 @@ public sealed class MetadataSyncService(SqliteRepository repo)
         string nextVerificationPolicy = parsedSettings.HasVerificationPolicy
             ? ProjectVerificationPolicy.Normalize(parsedSettings.VerificationPolicy)
             : currentVerificationPolicy;
-        List<BackupDestination> destinations = AppConfigStore.Load().Backups.Destinations;
+        List<BackupDestination> destinations = _configStore.Load().Backups.Destinations;
         string currentPreferredDestinationId = NormalizePreferredDestinationId(current.PreferredDestinationId, destinations);
         string nextPreferredDestinationId = parsedSettings.HasPreferredDestinationId
             ? NormalizePreferredDestinationId(parsedSettings.PreferredDestinationId, destinations)
@@ -2956,10 +3160,12 @@ public sealed class MetadataSyncService(SqliteRepository repo)
 public sealed record MetadataSyncOptions(
     bool AllowCreateProjects,
     bool MarkNeedsRestoreOnImport,
-    bool ExportMissingTombstonesOnImport = true)
+    bool ExportMissingTombstonesOnImport = true,
+    bool SkipUnchangedReadOnlySource = false)
 {
     public static MetadataSyncOptions Default => new(true, true);
     public MetadataSyncOptions AsReadOnlySource() => this with { ExportMissingTombstonesOnImport = false };
+    public MetadataSyncOptions WithUnchangedSourceSkip() => this with { SkipUnchangedReadOnlySource = true };
 }
 
 public sealed record MetadataSyncResult(

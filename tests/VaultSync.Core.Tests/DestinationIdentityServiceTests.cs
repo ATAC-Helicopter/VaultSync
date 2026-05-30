@@ -1,6 +1,7 @@
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
@@ -10,21 +11,17 @@ public sealed class DestinationIdentityServiceTests
     [Fact]
     public void GetId_IsStableAcrossAliasChanges()
     {
-        var first = new BackupDestination
-        {
-            Path = @"\\nas\share\vaultsync",
-            Alias = "Home NAS",
-            CredentialName = "vault",
-            PreMounted = false
-        };
+        var first = new BackupDestinationBuilder()
+            .WithPath(@"\\nas\share\vaultsync")
+            .WithAlias("Home NAS")
+            .WithCredentialName("vault")
+            .Build();
 
-        var second = new BackupDestination
-        {
-            Path = @"\\nas\share\vaultsync",
-            Alias = "Renamed NAS",
-            CredentialName = "vault",
-            PreMounted = false
-        };
+        var second = new BackupDestinationBuilder()
+            .WithPath(@"\\nas\share\vaultsync")
+            .WithAlias("Renamed NAS")
+            .WithCredentialName("vault")
+            .Build();
 
         Assert.Equal(DestinationIdentityService.GetId(first), DestinationIdentityService.GetId(second));
     }
@@ -32,12 +29,10 @@ public sealed class DestinationIdentityServiceTests
     [Fact]
     public void NormalizePreferredDestinationId_MapsLegacyAliasToStableId()
     {
-        var destination = new BackupDestination
-        {
-            Path = @"D:\VaultSyncBackups",
-            Alias = "USB",
-            CredentialName = string.Empty
-        };
+        var destination = new BackupDestinationBuilder()
+            .WithPath(@"D:\VaultSyncBackups")
+            .WithAlias("USB")
+            .Build();
 
         string normalized = DestinationIdentityService.NormalizePreferredDestinationId("USB", new[] { destination });
 
@@ -47,11 +42,10 @@ public sealed class DestinationIdentityServiceTests
     [Fact]
     public void NormalizePreferredDestinationId_MapsLegacyPathToStableId()
     {
-        var destination = new BackupDestination
-        {
-            Path = @"D:\VaultSyncBackups",
-            Alias = "USB"
-        };
+        var destination = new BackupDestinationBuilder()
+            .WithPath(@"D:\VaultSyncBackups")
+            .WithAlias("USB")
+            .Build();
 
         string normalized = DestinationIdentityService.NormalizePreferredDestinationId(@"D:\VaultSyncBackups", new[] { destination });
 

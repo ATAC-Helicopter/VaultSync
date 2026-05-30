@@ -531,11 +531,11 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         {
             if (Interlocked.Exchange(ref _configRefreshInFlight, 1) == 0)
             {
-                _ = Task.Run(() =>
+                DetachedTask.Run(() =>
                 {
                     try
                     {
-                        AppConfig cfg = AppConfigStore.GetSnapshot();
+                        AppConfig cfg = _app.GetConfigSnapshot();
                         Dispatcher.UIThread.Post(() =>
                         {
                             _cachedConfig = cfg;
@@ -546,13 +546,13 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                     {
                         Interlocked.Exchange(ref _configRefreshInFlight, 0);
                     }
-                });
+                }, nameof(GetConfig));
             }
 
             return _cachedConfig;
         }
 
-        AppConfig fresh = AppConfigStore.GetSnapshot();
+        AppConfig fresh = _app.GetConfigSnapshot();
         _cachedConfig = fresh;
         _lastConfigAt = now;
         return fresh;

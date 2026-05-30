@@ -217,6 +217,8 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="MinHeight" Value="34" />
             <Setter Property="MinWidth" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.action-ghost:pointerover">
             <Setter Property="Background" Value="{DynamicResource Surface2}" />
@@ -224,14 +226,15 @@
         <Style Selector="Button.action-ghost:pressed">
             <Setter Property="Background" Value="{DynamicResource Surface2}" />
         </Style>
-        <Style Selector="Button.action-ghost TextBlock, Button.action-primary TextBlock, Button.action-danger TextBlock, Button.small-button TextBlock">
+        <Style Selector="Button.action-ghost TextBlock, Button.action-primary TextBlock, Button.action-danger TextBlock, Button.small-button TextBlock, Button.primary-button TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             <Setter Property="MaxLines" Value="2" />
             <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <Style Selector="Button.action-primary">
+        <Style Selector="Button.action-primary, Button.primary-button">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -242,12 +245,14 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="MinHeight" Value="34" />
             <Setter Property="MinWidth" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-        <Style Selector="Button.action-primary:pointerover">
+        <Style Selector="Button.action-primary:pointerover, Button.primary-button:pointerover">
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
-        <Style Selector="Button.action-primary:pressed">
+        <Style Selector="Button.action-primary:pressed, Button.primary-button:pressed">
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
         </Style>
         <Style Selector="Button.action-danger">
@@ -262,6 +267,26 @@
         </Style>
         <Style Selector="Button.action-danger:pressed">
             <Setter Property="Background" Value="#28FF6A6A" />
+        </Style>
+
+        <Style Selector="Button.small-button">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="{DynamicResource SmallButtonPadding}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.small-button:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+        </Style>
+        <Style Selector="Button.small-button:pressed">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
         </Style>
 
         <!-- Shared pills/tags -->

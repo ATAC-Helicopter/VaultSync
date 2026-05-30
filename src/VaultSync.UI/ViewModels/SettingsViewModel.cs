@@ -27,11 +27,12 @@ using VaultSync.Core.Services;
 using VaultSync.Core.Models;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
+using VaultSync.UI.ViewModels;
 using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI
 {
-    public sealed partial class SettingsViewModel : INotifyPropertyChanged
+    public sealed partial class SettingsViewModel : ViewModelBase
     {
         // ---------------- Core backing fields ----------------
 
@@ -124,6 +125,8 @@ namespace VaultSync.UI
         private string _rsyncStatusHint = string.Empty;
         private bool _showRsyncStatusHint;
         private string _selectedLanguageCode = "en";
+        private readonly IAppConfigStore _configStore;
+        private readonly IRepositoryFactory _repositoryFactory;
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
@@ -210,7 +213,7 @@ namespace VaultSync.UI
             public required string ImportedTags { get; init; }
         }
 
-        public sealed class TagColorRuleViewModel : INotifyPropertyChanged
+        public sealed class TagColorRuleViewModel : ViewModelBase
         {
             private enum ColorSlot
             {
@@ -247,7 +250,6 @@ namespace VaultSync.UI
                     p => p is ThemePaletteSwatchViewModel);
             }
 
-            public event PropertyChangedEventHandler? PropertyChanged;
             public IReadOnlyList<ThemePaletteSwatchViewModel> PaletteSwatches { get; }
             public ICommand ApplyPaletteSwatchCommand { get; }
 
@@ -413,35 +415,31 @@ namespace VaultSync.UI
 
             private void RaiseSelection()
             {
-                RaiseProperty(nameof(IsEditingBackground));
-                RaiseProperty(nameof(IsEditingForeground));
-                RaiseProperty(nameof(IsEditingBorder));
-                RaiseProperty(nameof(ActiveColor));
-                RaiseProperty(nameof(ActiveColorHex));
-            }
-
-            private void RaiseProperty(string propertyName)
-            {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+                OnPropertiesChanged(
+                    nameof(IsEditingBackground),
+                    nameof(IsEditingForeground),
+                    nameof(IsEditingBorder),
+                    nameof(ActiveColor),
+                    nameof(ActiveColorHex));
             }
 
             private void RaiseAll()
             {
-                RaiseProperty(nameof(Tag));
-                RaiseProperty(nameof(Background));
-                RaiseProperty(nameof(Foreground));
-                RaiseProperty(nameof(Border));
-                RaiseProperty(nameof(PreviewTag));
-                RaiseProperty(nameof(PreviewBackground));
-                RaiseProperty(nameof(PreviewForeground));
-                RaiseProperty(nameof(PreviewBorder));
-                RaiseProperty(nameof(ActiveColor));
-                RaiseProperty(nameof(ActiveColorHex));
+                OnPropertiesChanged(
+                    nameof(Tag),
+                    nameof(Background),
+                    nameof(Foreground),
+                    nameof(Border),
+                    nameof(PreviewTag),
+                    nameof(PreviewBackground),
+                    nameof(PreviewForeground),
+                    nameof(PreviewBorder),
+                    nameof(ActiveColor),
+                    nameof(ActiveColorHex));
                 RaiseSelection();
             }
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
         public ObservableCollection<ProjectMetadataConflictItemViewModel> ProjectMetadataConflicts { get; } = [];
         public ObservableCollection<TagColorRuleViewModel> TagColorRules { get; } = [];
 
@@ -450,9 +448,90 @@ namespace VaultSync.UI
             ShowLegacyBackupLocation = !UseAdvancedDestinations;
         }
 
-        public SettingsViewModel(LocalizationService localizationService)
+        private void NotifyLocalizedSettingsTextChanged()
+        {
+            OnPropertiesChanged(
+                nameof(EnrollProjectEncryptionPasswordLabel),
+                nameof(EncryptionOpenTimeoutLabel),
+                nameof(EncryptionOpenTimeoutDescription),
+                nameof(LockEncryptedOpenNowLabel),
+                nameof(BandwidthLimitLabel),
+                nameof(BandwidthLimitDescription),
+                nameof(BandwidthLimitValueLabel),
+                nameof(BandwidthLimitValueDescription),
+                nameof(QuietHoursLabel),
+                nameof(QuietHoursDescription),
+                nameof(QuietHoursStartLabel),
+                nameof(QuietHoursEndLabel),
+                nameof(QuietHoursWindowLabel),
+                nameof(QuietHoursWindowPreview),
+                nameof(MaintenanceWindowLabel),
+                nameof(MaintenanceWindowDescription),
+                nameof(MaintenanceWindowStartLabel),
+                nameof(MaintenanceWindowEndLabel),
+                nameof(MaintenanceWindowPreviewLabel),
+                nameof(MaintenanceWindowPreview),
+                nameof(MaintenanceWindowConsistencyLabel),
+                nameof(MaintenanceWindowConsistencyDescription),
+                nameof(MaintenanceWindowRepairLabel),
+                nameof(MaintenanceWindowRepairDescription),
+                nameof(MaintenanceWindowMetadataLabel),
+                nameof(MaintenanceWindowMetadataDescription));
+        }
+
+        private void NotifyLoadedSettingsChanged()
+        {
+            OnPropertiesChanged(
+                nameof(ProjectsRootPath),
+                nameof(ResumeLastSession),
+                nameof(ShowWindowOnTrayActions),
+                nameof(ShowTrayIcon),
+                nameof(RunInBackground),
+                nameof(ShowTrayBackupWidget),
+                nameof(LaunchOnLogin),
+                nameof(ConfirmDeleteBackups),
+                nameof(EnableAutoBackups),
+                nameof(AutoBackupIntervalMinutes),
+                nameof(MaxSnapshotsPerProject),
+                nameof(BackupLocationPath),
+                nameof(UseAdvancedDestinations),
+                nameof(UseBackupCompression),
+                nameof(UseRsyncDelta),
+                nameof(UseIncrementalBackups),
+                nameof(VerifyBackupsAfterCreate),
+                nameof(PauseBackupsOnBattery),
+                nameof(PreferExternalDrives),
+                nameof(ShowDriveHealthWarnings),
+                nameof(MinimumFreeSpacePercent),
+                nameof(SelectedTheme),
+                nameof(UseCompactLayout),
+                nameof(ShowProjectAvatars),
+                nameof(NotifyOnBackupSuccess),
+                nameof(NotifyOnBackupFailure),
+                nameof(NotifyOnLowDiskSpace),
+                nameof(NotifyOnSnapshotSuccess),
+                nameof(NotifyOnSnapshotFailure),
+                nameof(UseOsNotifications),
+                nameof(NotifyOnlyWhenInactive),
+                nameof(EnableVerboseLogging),
+                nameof(SaveVerboseLogs),
+                nameof(CheckForUpdatesOnStartup),
+                nameof(UpdateCheckIntervalMinutes),
+                nameof(BetaChannelEnabled),
+                nameof(EnableMaintenanceWindow),
+                nameof(MaintenanceWindowStart),
+                nameof(MaintenanceWindowEnd),
+                nameof(MaintenanceRunConsistencyScan),
+                nameof(MaintenanceRunRepairDryRun),
+                nameof(MaintenanceRunMetadataRefresh),
+                nameof(SaveStatus));
+        }
+
+        public SettingsViewModel(LocalizationService localizationService, IAppConfigStore? configStore = null, IRepositoryFactory? repositoryFactory = null)
         {
             _localizationService = localizationService;
+            _configStore = configStore ?? StaticAppConfigStore.Instance;
+            _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
             _selectedLanguageCode = localizationService.CurrentLanguage;
             _localizationService.LanguageChanged += () =>
             {
@@ -475,32 +554,7 @@ namespace VaultSync.UI
                 OnPropertyChanged(nameof(CustomThemeBase));
                 RefreshUpdateCheckStatus();
                 RefreshRsyncStatusHint();
-                OnPropertyChanged(nameof(EnrollProjectEncryptionPasswordLabel));
-                OnPropertyChanged(nameof(EncryptionOpenTimeoutLabel));
-                OnPropertyChanged(nameof(EncryptionOpenTimeoutDescription));
-                OnPropertyChanged(nameof(LockEncryptedOpenNowLabel));
-                OnPropertyChanged(nameof(BandwidthLimitLabel));
-                OnPropertyChanged(nameof(BandwidthLimitDescription));
-                OnPropertyChanged(nameof(BandwidthLimitValueLabel));
-                OnPropertyChanged(nameof(BandwidthLimitValueDescription));
-                OnPropertyChanged(nameof(QuietHoursLabel));
-                OnPropertyChanged(nameof(QuietHoursDescription));
-                OnPropertyChanged(nameof(QuietHoursStartLabel));
-                OnPropertyChanged(nameof(QuietHoursEndLabel));
-                OnPropertyChanged(nameof(QuietHoursWindowLabel));
-                OnPropertyChanged(nameof(QuietHoursWindowPreview));
-                OnPropertyChanged(nameof(MaintenanceWindowLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowDescription));
-                OnPropertyChanged(nameof(MaintenanceWindowStartLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowEndLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowPreviewLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowPreview));
-                OnPropertyChanged(nameof(MaintenanceWindowConsistencyLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowConsistencyDescription));
-                OnPropertyChanged(nameof(MaintenanceWindowRepairLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowRepairDescription));
-                OnPropertyChanged(nameof(MaintenanceWindowMetadataLabel));
-                OnPropertyChanged(nameof(MaintenanceWindowMetadataDescription));
+                NotifyLocalizedSettingsTextChanged();
                 ProjectMetadataConflictStatus = ProjectMetadataConflicts.Count == 0
                     ? L("Settings.Advanced.MetadataConflictsNone", "No pending cross-machine metadata conflicts.")
                     : string.Format(
@@ -582,19 +636,6 @@ namespace VaultSync.UI
             _isInitialized = true;
         }
 
-        // ---------------- INPC helpers ----------------
-
-        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-        private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
-        {
-            if (Equals(field, value)) return false;
-            field = value;
-            OnPropertyChanged(propertyName);
-            return true;
-        }
-
         // ---------------- Load + Save ----------------
 
         private void LoadFromConfig()
@@ -602,7 +643,7 @@ namespace VaultSync.UI
             _isReloadingFromConfig = true;
             try
             {
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 _selectedLanguageCode = string.IsNullOrWhiteSpace(cfg.Advanced.Language)
                     ? _localizationService.CurrentLanguage
                     : cfg.Advanced.Language;
@@ -792,49 +833,7 @@ namespace VaultSync.UI
 
                 // Explicit notifications are more reliable here than a blanket null refresh,
                 // especially when the cached Settings view is reloaded after startup.
-                OnPropertyChanged(nameof(ProjectsRootPath));
-                OnPropertyChanged(nameof(ResumeLastSession));
-                OnPropertyChanged(nameof(ShowWindowOnTrayActions));
-                OnPropertyChanged(nameof(ShowTrayIcon));
-                OnPropertyChanged(nameof(RunInBackground));
-                OnPropertyChanged(nameof(ShowTrayBackupWidget));
-                OnPropertyChanged(nameof(LaunchOnLogin));
-                OnPropertyChanged(nameof(ConfirmDeleteBackups));
-                OnPropertyChanged(nameof(EnableAutoBackups));
-                OnPropertyChanged(nameof(AutoBackupIntervalMinutes));
-                OnPropertyChanged(nameof(MaxSnapshotsPerProject));
-                OnPropertyChanged(nameof(BackupLocationPath));
-                OnPropertyChanged(nameof(UseAdvancedDestinations));
-                OnPropertyChanged(nameof(UseBackupCompression));
-                OnPropertyChanged(nameof(UseRsyncDelta));
-                OnPropertyChanged(nameof(UseIncrementalBackups));
-                OnPropertyChanged(nameof(VerifyBackupsAfterCreate));
-                OnPropertyChanged(nameof(PauseBackupsOnBattery));
-                OnPropertyChanged(nameof(PreferExternalDrives));
-                OnPropertyChanged(nameof(ShowDriveHealthWarnings));
-                OnPropertyChanged(nameof(MinimumFreeSpacePercent));
-                OnPropertyChanged(nameof(SelectedTheme));
-                OnPropertyChanged(nameof(UseCompactLayout));
-                OnPropertyChanged(nameof(ShowProjectAvatars));
-                OnPropertyChanged(nameof(NotifyOnBackupSuccess));
-                OnPropertyChanged(nameof(NotifyOnBackupFailure));
-                OnPropertyChanged(nameof(NotifyOnLowDiskSpace));
-                OnPropertyChanged(nameof(NotifyOnSnapshotSuccess));
-                OnPropertyChanged(nameof(NotifyOnSnapshotFailure));
-                OnPropertyChanged(nameof(UseOsNotifications));
-                OnPropertyChanged(nameof(NotifyOnlyWhenInactive));
-                OnPropertyChanged(nameof(EnableVerboseLogging));
-                OnPropertyChanged(nameof(SaveVerboseLogs));
-                OnPropertyChanged(nameof(CheckForUpdatesOnStartup));
-                OnPropertyChanged(nameof(UpdateCheckIntervalMinutes));
-                OnPropertyChanged(nameof(BetaChannelEnabled));
-                OnPropertyChanged(nameof(EnableMaintenanceWindow));
-                OnPropertyChanged(nameof(MaintenanceWindowStart));
-                OnPropertyChanged(nameof(MaintenanceWindowEnd));
-                OnPropertyChanged(nameof(MaintenanceRunConsistencyScan));
-                OnPropertyChanged(nameof(MaintenanceRunRepairDryRun));
-                OnPropertyChanged(nameof(MaintenanceRunMetadataRefresh));
-                OnPropertyChanged(nameof(SaveStatus));
+                NotifyLoadedSettingsChanged();
             }
             finally
             {
@@ -899,7 +898,7 @@ namespace VaultSync.UI
                     Password: c.Password))
                 .ToList();
 
-            AppConfig cfg = AppConfigStore.Load();
+            AppConfig cfg = _configStore.Load();
 
             // Reload latest disabled list to avoid clobbering project-level auto-backup toggles.
             _autoBackupDisabledProjects = cfg.Backups.AutoBackupDisabledProjects ?? [];
@@ -1062,7 +1061,7 @@ namespace VaultSync.UI
                 _ = Task.Run(() => AutoStartService.SetLaunchOnLogin(launchOnLogin));
             }
 
-            await AppConfigStore.SaveAsync(cfg);
+            await _configStore.SaveAsync(cfg);
             if (destinationSettingsChanged)
             {
                 DestinationSettingsSaved?.Invoke();
@@ -2260,19 +2259,12 @@ namespace VaultSync.UI
 
         private void PersistLanguage()
         {
-            _ = Task.Run(() =>
+            DetachedTask.Run(() =>
             {
-                try
-                {
-                    AppConfig cfg = AppConfigStore.Load();
-                    cfg.Advanced.Language = _selectedLanguageCode;
-                    AppConfigStore.Save(cfg);
-                }
-                catch
-                {
-                    // Best effort; avoid crashing when persisting language.
-                }
-            });
+                AppConfig cfg = _configStore.Load();
+                cfg.Advanced.Language = _selectedLanguageCode;
+                _configStore.Save(cfg);
+            }, nameof(PersistLanguage));
         }
 
         public void UpdateUpdateCheckStatus(DateTimeOffset? lastCheck, string? errorMessage)
@@ -2284,17 +2276,17 @@ namespace VaultSync.UI
 
         public void ReloadUpdateDiagnostics()
         {
-            RefreshUpdateDiagnostics(AppConfigStore.GetSnapshot().Advanced.UpdateDiagnostics);
+            RefreshUpdateDiagnostics(_configStore.GetSnapshot().Advanced.UpdateDiagnostics);
         }
 
         public void ReloadStartupDiagnostics()
         {
-            RefreshStartupDiagnostics(AppConfigStore.GetSnapshot().Advanced.StartupDiagnostics);
+            RefreshStartupDiagnostics(_configStore.GetSnapshot().Advanced.StartupDiagnostics);
         }
 
         public void ReloadCheckpointResumeDiagnostics()
         {
-            RefreshCheckpointResumeDiagnostics(AppConfigStore.GetSnapshot().Advanced.CheckpointResumeTelemetry);
+            RefreshCheckpointResumeDiagnostics(_configStore.GetSnapshot().Advanced.CheckpointResumeTelemetry);
         }
 
         private void RefreshUpdateCheckStatus()
@@ -2825,9 +2817,9 @@ namespace VaultSync.UI
 
             try
             {
-                AppConfig config = await Task.Run(AppConfigStore.Load);
+                AppConfig config = await Task.Run(_configStore.Load);
                 config.ProjectsRoot = path;
-                await AppConfigStore.SaveAsync(config);
+                await _configStore.SaveAsync(config);
             }
             catch
             {
@@ -2894,7 +2886,7 @@ namespace VaultSync.UI
 
         private void ResetToDefaults()
         {
-            AppConfigStore.Save(new AppConfig());
+            _configStore.Save(new AppConfig());
             LoadFromConfig();
         }
 
@@ -2992,7 +2984,7 @@ namespace VaultSync.UI
             }
 
             string display = dest.DisplayName;
-            AppConfig cfg = await Task.Run(AppConfigStore.Load);
+            AppConfig cfg = await Task.Run(_configStore.Load);
             NetworkCredentialProfile? profile = string.IsNullOrWhiteSpace(dest.CredentialName)
                 ? null
                 : cfg.Network.Credentials.FirstOrDefault(c =>
@@ -3208,7 +3200,7 @@ namespace VaultSync.UI
             return (true, true);
         }
 
-        private static void ForgetAllProjects()
+        private void ForgetAllProjects()
         {
             _ = Task.Run(() =>
             {
@@ -3216,8 +3208,8 @@ namespace VaultSync.UI
                 {
                     // Dev helper: reset the VaultSync SQLite DB to a "fresh install" state
                     // without touching any real project files or backup folders on disk.
-                    AppConfig cfg  = AppConfigStore.Load();
-                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    AppConfig cfg  = _configStore.Load();
+                    var repo = _repositoryFactory.Create(cfg);
 
                     repo.EnsureSchema();
                     repo.ResetAllData();
@@ -3389,22 +3381,7 @@ namespace VaultSync.UI
                 NotificationSeverity.Info,
                 L("Settings.Advanced.TelemetryExportTitle", "Telemetry export"));
 
-            try
-            {
-                string? folder = Path.GetDirectoryName(result.ZipPath);
-                if (!string.IsNullOrWhiteSpace(folder))
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = folder,
-                        UseShellExecute = true
-                    });
-                }
-            }
-            catch
-            {
-                // best-effort
-            }
+            TryOpenContainingFolder(result.ZipPath);
         }
 
         private void OpenLogConsole()
@@ -3496,9 +3473,14 @@ namespace VaultSync.UI
                 NotificationSeverity.Info,
                 L("Settings.Advanced.SupportBundle", "Support bundle"));
 
+            TryOpenContainingFolder(result.ZipPath);
+        }
+
+        private static void TryOpenContainingFolder(string? artifactPath)
+        {
             try
             {
-                string? folder = Path.GetDirectoryName(result.ZipPath);
+                string? folder = Path.GetDirectoryName(artifactPath);
                 if (!string.IsNullOrWhiteSpace(folder))
                 {
                     Process.Start(new ProcessStartInfo
@@ -3533,8 +3515,8 @@ namespace VaultSync.UI
             {
                 BackupRetentionSimulationResult result = await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
-                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    AppConfig cfg = _configStore.Load();
+                    var repo = _repositoryFactory.Create(cfg);
                     var service = new BackupRetentionSimulationService(repo);
                     return service.Simulate(ClampInt(cfg.Backups.MaxSnapshotsPerProject, 1, 999, 20));
                 }).ConfigureAwait(false);
@@ -3661,8 +3643,8 @@ namespace VaultSync.UI
             {
                 BackupIndexRepairPlan plan = await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
-                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    AppConfig cfg = _configStore.Load();
+                    var repo = _repositoryFactory.Create(cfg);
                     var service = new BackupIndexRepairService(repo);
                     return service.BuildPlan();
                 }).ConfigureAwait(false);
@@ -3736,8 +3718,8 @@ namespace VaultSync.UI
             {
                 int applied = await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
-                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    AppConfig cfg = _configStore.Load();
+                    var repo = _repositoryFactory.Create(cfg);
                     var service = new BackupIndexRepairService(repo);
                     return service.ApplyPlan(plan);
                 }).ConfigureAwait(false);
@@ -3897,8 +3879,8 @@ namespace VaultSync.UI
             {
                 await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
-                    var repo = new SqliteRepository(cfg.DbPath ?? string.Empty);
+                    AppConfig cfg = _configStore.Load();
+                    var repo = _repositoryFactory.Create(cfg);
                     repo.UpdateProjectPreferredDestination(item.ProjectId, EmptyToNull(item.ImportedPreferredDestinationId));
                     repo.UpdateProjectRestoreMode(item.ProjectId, EmptyToNull(item.ImportedRestoreMode));
                     repo.UpdateProjectVerificationPolicy(item.ProjectId, EmptyToNull(item.ImportedVerificationPolicy));
@@ -3906,7 +3888,7 @@ namespace VaultSync.UI
 
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
                     UpdateMetadataConflictTelemetry(cfg, "accept-imported", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                 }).ConfigureAwait(false);
 
                 string status = string.Format(
@@ -3967,10 +3949,10 @@ namespace VaultSync.UI
             {
                 await Task.Run(() =>
                 {
-                    AppConfig cfg = AppConfigStore.Load();
+                    AppConfig cfg = _configStore.Load();
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
                     UpdateMetadataConflictTelemetry(cfg, "keep-local", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
-                    AppConfigStore.Save(cfg);
+                    _configStore.Save(cfg);
                 }).ConfigureAwait(false);
 
                 string status = string.Format(
@@ -4027,13 +4009,13 @@ namespace VaultSync.UI
             }
         }
 
-        private static void PersistMetadataConflictTelemetry(string? lastAction, string? lastResolvedProject, int pendingCount)
+        private void PersistMetadataConflictTelemetry(string? lastAction, string? lastResolvedProject, int pendingCount)
         {
             try
             {
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 UpdateMetadataConflictTelemetry(cfg, lastAction, lastResolvedProject, pendingCount);
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
             }
             catch (Exception ex)
             {
@@ -4054,11 +4036,11 @@ namespace VaultSync.UI
                 cfg.Advanced.MetadataConflictTelemetry.LastResolvedProject = lastResolvedProject;
         }
 
-        private static void PersistBackupRepairTelemetry(BackupIndexRepairPlan? plan, int? appliedCount, string status)
+        private void PersistBackupRepairTelemetry(BackupIndexRepairPlan? plan, int? appliedCount, string status)
         {
             try
             {
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 cfg.Advanced.BackupRepairTelemetry ??= new BackupRepairTelemetry();
                 BackupRepairTelemetry telemetry = cfg.Advanced.BackupRepairTelemetry;
                 telemetry.LastScanUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
@@ -4082,7 +4064,7 @@ namespace VaultSync.UI
                     telemetry.LastAppliedCount = appliedCount.Value;
                 }
 
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
             }
             catch (Exception ex)
             {
@@ -4155,9 +4137,9 @@ namespace VaultSync.UI
                     return (false, L("Settings.Advanced.SupportBundleImportMissingConfig", "Support bundle does not contain importable settings."));
                 }
 
-                AppConfig cfg = AppConfigStore.Load();
+                AppConfig cfg = _configStore.Load();
                 ApplyImportableSettings(redactedConfig, cfg);
-                AppConfigStore.Save(cfg);
+                _configStore.Save(cfg);
                 return (true, L("Settings.Advanced.SupportBundleImportApplied", "Support bundle settings imported (diagnostics ignored)."));
             }
             catch (Exception ex)
@@ -4423,197 +4405,4 @@ namespace VaultSync.UI
 
     }
 
-    public class BackupDestinationViewModel : VaultSync.UI.ViewModels.ViewModelBase
-    {
-        private string _alias = string.Empty;
-        public string Alias
-        {
-            get => _alias;
-            set
-            {
-                if (SetField(ref _alias, value))
-                {
-                    OnPropertyChanged(nameof(DisplayName));
-                }
-            }
-        }
-
-        private string _path = string.Empty;
-        public string Path
-        {
-            get => _path;
-            set
-            {
-                if (SetField(ref _path, value))
-                {
-                    OnPropertyChanged(nameof(DisplayName));
-                }
-            }
-        }
-
-        private NetworkCredentialViewModel? _selectedCredential;
-        public NetworkCredentialViewModel? SelectedCredential
-        {
-            get => _selectedCredential;
-            set
-            {
-                if (SetField(ref _selectedCredential, value))
-                {
-                    CredentialName = value?.Name ?? string.Empty;
-                    OnPropertyChanged(nameof(NeedsCredentialWarning));
-                }
-            }
-        }
-
-        private string _credentialName = string.Empty;
-        public string CredentialName
-        {
-            get => _credentialName;
-            set
-            {
-                if (SetField(ref _credentialName, value))
-                {
-                    // Keep SelectedCredential in sync when only the name changes
-                    if (SelectedCredential is null || !string.Equals(SelectedCredential.Name, value, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Selection will be resolved via SettingsViewModel handler
-                    }
-                }
-            }
-        }
-
-        // Used by the Settings UI ComboBox. When the Settings page is unloaded,
-        // Avalonia may temporarily clear SelectedItem and push a null/empty value
-        // back into the binding; ignore that so the destination keeps its selection.
-        public string SelectedCredentialName
-        {
-            get => CredentialName ?? string.Empty;
-            set
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                    return;
-
-                CredentialName = value;
-            }
-        }
-
-        private bool _active = true;
-        public bool Active { get => _active; set => SetField(ref _active, value); }
-
-        private bool _autoMount;
-        public bool AutoMount
-        {
-            get => _autoMount;
-            set
-            {
-                if (SetField(ref _autoMount, value))
-                {
-                    OnPropertyChanged(nameof(NeedsCredentialWarning));
-                }
-            }
-        }
-
-        private bool _autoUnmount;
-        public bool AutoUnmount { get => _autoUnmount; set => SetField(ref _autoUnmount, value); }
-
-        private bool _preMounted = true;
-        public bool PreMounted
-        {
-            get => _preMounted;
-            set
-            {
-                if (SetField(ref _preMounted, value))
-                {
-                    OnPropertyChanged(nameof(NeedsCredentialWarning));
-                }
-            }
-        }
-
-        public bool NeedsCredentialWarning =>
-            AutoMount && !PreMounted && SelectedCredential is null;
-
-        private bool _enableMetadataSync = true;
-        public bool EnableMetadataSync { get => _enableMetadataSync; set => SetField(ref _enableMetadataSync, value); }
-
-        private bool _autoImportMetadata = true;
-        public bool AutoImportMetadata { get => _autoImportMetadata; set => SetField(ref _autoImportMetadata, value); }
-
-        private bool _forceMetadataBackfill;
-        public bool ForceMetadataBackfill { get => _forceMetadataBackfill; set => SetField(ref _forceMetadataBackfill, value); }
-
-        private int _retryMaxAttempts = 1;
-        public int RetryMaxAttempts
-        {
-            get => _retryMaxAttempts;
-            set => SetField(ref _retryMaxAttempts, Math.Clamp(value, 1, 10));
-        }
-
-        private int _retryBackoffSeconds = 10;
-        public int RetryBackoffSeconds
-        {
-            get => _retryBackoffSeconds;
-            set => SetField(ref _retryBackoffSeconds, Math.Clamp(value, 1, 300));
-        }
-
-        private bool _enableCheckpointResume = true;
-        public bool EnableCheckpointResume
-        {
-            get => _enableCheckpointResume;
-            set => SetField(ref _enableCheckpointResume, value);
-        }
-
-        private double _softQuotaGb;
-        public double SoftQuotaGb
-        {
-            get => _softQuotaGb;
-            set => SetField(ref _softQuotaGb, Math.Clamp(value, 0d, 1024d * 1024d));
-        }
-
-        private int _quotaWarningPercent = 85;
-        public int QuotaWarningPercent
-        {
-            get => _quotaWarningPercent;
-            set => SetField(ref _quotaWarningPercent, Math.Clamp(value, 50, 99));
-        }
-
-        private string _lastTestStatus = string.Empty;
-        public string LastTestStatus
-        {
-            get => _lastTestStatus;
-            set => SetField(ref _lastTestStatus, value);
-        }
-
-        private string _lastTestSeverity = "Info";
-        public string LastTestSeverity
-        {
-            get => _lastTestSeverity;
-            set => SetField(ref _lastTestSeverity, value);
-        }
-
-        public string DisplayName => string.IsNullOrWhiteSpace(Alias) ? Path : Alias;
-    }
-
-    public class NetworkCredentialViewModel : VaultSync.UI.ViewModels.ViewModelBase
-    {
-        private string _name = string.Empty;
-        public string Name { get => _name; set => SetField(ref _name, value); }
-
-        private string _username = string.Empty;
-        public string Username { get => _username; set => SetField(ref _username, value); }
-
-        private string _domain = string.Empty;
-        public string Domain { get => _domain; set => SetField(ref _domain, value); }
-
-        private string _keyRef = string.Empty;
-        public string KeyRef { get => _keyRef; set => SetField(ref _keyRef, value); }
-
-        private bool _useKeychain = true;
-        public bool UseKeychain { get => _useKeychain; set => SetField(ref _useKeychain, value); }
-
-        private string _password = string.Empty;
-        public string Password { get => _password; set => SetField(ref _password, value); }
-
-        private bool _showPassword = false;
-        public bool ShowPassword { get => _showPassword; set => SetField(ref _showPassword, value); }
-    }
 }

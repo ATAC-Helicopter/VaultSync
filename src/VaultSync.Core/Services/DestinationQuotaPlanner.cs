@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -22,9 +21,12 @@ public sealed class DestinationQuotaPlanner
         foreach (BackupDestination destination in destinations)
         {
             string destinationId = DestinationIdentityService.GetId(destination);
-            string normalizedPath = NormalizePath(destination.Path);
+            string normalizedPath = DestinationIdentityService.NormalizeDestinationPath(destination.Path);
             var matchingBackups = backupList
-                .Where(backup => string.Equals(NormalizePath(backup.DestinationPath), normalizedPath, StringComparison.OrdinalIgnoreCase))
+                .Where(backup => string.Equals(
+                    DestinationIdentityService.NormalizeDestinationPath(backup.DestinationPath),
+                    normalizedPath,
+                    StringComparison.OrdinalIgnoreCase))
                 .OrderBy(backup => backup.CreatedUtc)
                 .ThenByDescending(backup => backup.TotalBytes)
                 .ThenBy(backup => backup.Id)
@@ -93,26 +95,6 @@ public sealed class DestinationQuotaPlanner
 
     private static long? NormalizeQuotaBytes(long? value) =>
         value.HasValue && value.Value > 0 ? value.Value : null;
-
-    private static string NormalizePath(string? path)
-    {
-        string raw = (path ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(raw))
-            return string.Empty;
-
-        string slashNormalized = raw.Replace('/', '\\');
-        try
-        {
-            if (slashNormalized.StartsWith(@"\\", StringComparison.Ordinal))
-                return slashNormalized.TrimEnd('\\').ToLowerInvariant();
-
-            return Path.GetFullPath(slashNormalized).TrimEnd('\\').ToLowerInvariant();
-        }
-        catch
-        {
-            return slashNormalized.TrimEnd('\\').ToLowerInvariant();
-        }
-    }
 }
 
 public sealed record DestinationQuotaPlan(

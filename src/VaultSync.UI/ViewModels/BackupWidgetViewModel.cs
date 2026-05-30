@@ -58,8 +58,7 @@ namespace VaultSync.UI.ViewModels
 
         private void OnActiveBackupsChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            OnPropertyChanged(nameof(StatusText));
-            OnPropertyChanged(nameof(HasActiveBackups));
+            OnPropertiesChanged(nameof(StatusText), nameof(HasActiveBackups));
         }
     }
 }

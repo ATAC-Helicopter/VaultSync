@@ -150,7 +150,7 @@ namespace VaultSync.UI.ViewModels
 
         private BackupAllPreparationResult PrepareBackupAll()
         {
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = _configStore.GetSnapshot();
             System.Collections.Generic.List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
             if (destinations.Count == 0)
             {

@@ -10,6 +10,8 @@ namespace VaultSync.UI;
 
 public sealed partial class UpdaterApp : Application
 {
+    private static readonly IAppConfigStore ConfigStore = StaticAppConfigStore.Instance;
+
     public static PatchApplyRequest? PendingRequest { get; private set; }
 
     public static void SetPendingRequest(PatchApplyRequest request)
@@ -57,7 +59,7 @@ public sealed partial class UpdaterApp : Application
 
         try
         {
-            AppConfig config = AppConfigStore.GetSnapshot();
+            AppConfig config = ConfigStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(config.Advanced.Language))
             {
                 localizationService.SetLanguage(config.Advanced.Language);
@@ -71,7 +73,7 @@ public sealed partial class UpdaterApp : Application
 
     private static void ApplyThemeFromConfig()
     {
-        AppConfig config = AppConfigStore.GetSnapshot();
+        AppConfig config = ConfigStore.GetSnapshot();
         ThemeManager.ApplyAppearance(config.Appearance);
     }
 }

@@ -20,11 +20,13 @@ namespace VaultSync.Core.Services;
 
 public sealed class BackupService(
     SqliteRepository repo,
-    BackupEncryptionSecretService? backupEncryptionSecretService = null)
+    BackupEncryptionSecretService? backupEncryptionSecretService = null,
+    IAppConfigStore? configStore = null)
 {
     private readonly Dictionary<int, CancellationTokenSource> _cancelMap = [];
     private readonly SqliteRepository _repo = repo;
     private readonly BackupEncryptionSecretService _backupEncryptionSecretService = backupEncryptionSecretService ?? new BackupEncryptionSecretService();
+    private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
     private const string InProgressMarkerFileName = ".vaultsync_inprogress";
     private const string CompletedMarkerFileName = ".vaultsync_complete";
     private const string ArchiveResumeCheckpointFileName = ".vaultsync_resume.json";
@@ -86,11 +88,13 @@ public sealed class BackupService(
         long resumeOffsetBytes,
         long archiveSizeBytes,
         string sourceFingerprint,
-        string message)
+        string message,
+        IAppConfigStore? configStore = null)
     {
         try
         {
-            AppConfig cfg = AppConfigStore.Load();
+            IAppConfigStore store = configStore ?? StaticAppConfigStore.Instance;
+            AppConfig cfg = store.Load();
             UpdateCheckpointResumeTelemetry(
                 cfg,
                 status,
@@ -101,7 +105,7 @@ public sealed class BackupService(
                 archiveSizeBytes,
                 sourceFingerprint,
                 message);
-            AppConfigStore.Save(cfg);
+            store.Save(cfg);
         }
         catch (Exception ex)
         {
@@ -336,7 +340,7 @@ public sealed class BackupService(
         }
 
         sha.TransformFinalBlock([], 0, 0);
-        return Convert.ToHexString(sha.Hash ?? []);
+        return HashService.FormatHex(sha.Hash ?? []);
     }
 
     private static bool IsResumableArchiveBackup(string backupDir)
@@ -546,7 +550,7 @@ public sealed class BackupService(
         TimeSpan ttl,
         CancellationToken ct)
     {
-        Snapshot? snapshot = _repo.GetLatestSnapshot(project.Id);
+        Snapshot? snapshot = _repo.GetLatestLocalSnapshotForProject(project.Id);
         if (snapshot is not null)
         {
             int fileCount = Convert.ToInt32(snapshot.FileCount);
@@ -606,7 +610,10 @@ public sealed class BackupService(
         return isNetwork ? 25d : 80d;
     }
 
-    public static int CleanupIncompleteBackups(string backupRoot, IEnumerable<string>? projectFolderNames = null)
+    public static int CleanupIncompleteBackups(
+        string backupRoot,
+        IEnumerable<string>? projectFolderNames = null,
+        IAppConfigStore? configStore = null)
     {
         if (string.IsNullOrWhiteSpace(backupRoot) || !Directory.Exists(backupRoot))
             return 0;
@@ -624,7 +631,7 @@ public sealed class BackupService(
                 if (!Directory.Exists(projectDir))
                     continue;
 
-                removed += CleanupIncompleteBackupsUnderProject(projectDir);
+                removed += CleanupIncompleteBackupsUnderProject(projectDir, configStore);
             }
 
             return removed;
@@ -632,13 +639,13 @@ public sealed class BackupService(
 
         foreach (string projectDir in SafeEnumerateDirectories(backupRoot))
         {
-            removed += CleanupIncompleteBackupsUnderProject(projectDir);
+            removed += CleanupIncompleteBackupsUnderProject(projectDir, configStore);
         }
 
         return removed;
     }
 
-    private static int CleanupIncompleteBackupsUnderProject(string projectDir)
+    private static int CleanupIncompleteBackupsUnderProject(string projectDir, IAppConfigStore? configStore)
     {
         int removed = 0;
         {
@@ -664,7 +671,8 @@ public sealed class BackupService(
                                 : 0,
                             archiveSizeBytes: checkpoint?.ArchiveSizeBytes ?? 0,
                             sourceFingerprint: checkpoint?.SourceFingerprint ?? string.Empty,
-                            message: "Preserved interrupted archive backup because checkpoint resume metadata is valid.");
+                            message: "Preserved interrupted archive backup because checkpoint resume metadata is valid.",
+                            configStore: configStore);
                         continue;
                     }
 
@@ -762,7 +770,7 @@ public sealed class BackupService(
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
 
-        AppConfig configSnapshot = AppConfigStore.Load();
+        AppConfig configSnapshot = _configStore.Load();
         BackupEncryptionConfig encryptionConfig = configSnapshot.Backups.Encryption ?? new BackupEncryptionConfig();
         BackupEncryptionPolicyResolver.ResolvedPolicy resolvedEncryption = BackupEncryptionPolicyResolver.Resolve(project, encryptionConfig);
         bool encryptionRequested = resolvedEncryption.EncryptionRequested;
@@ -955,6 +963,7 @@ public sealed class BackupService(
                     uploadBufferBytes,
                     preferParallelArchiveUpload,
                     enableCheckpointedRetry,
+                    _configStore,
                     linkedToken);
             }
             else
@@ -1622,6 +1631,7 @@ public sealed class BackupService(
         int uploadBufferBytes,
         bool preferParallelUpload,
         bool enableCheckpointedRetry,
+        IAppConfigStore configStore,
         CancellationToken ct)
     {
         string sourceDir = project.RootPath;
@@ -1667,7 +1677,8 @@ public sealed class BackupService(
                         : 0,
                     archiveSizeBytes: 0,
                     sourceFingerprint: fingerprint,
-                    message: "Found interrupted archive backup with matching fingerprint and will attempt resume.");
+                    message: "Found interrupted archive backup with matching fingerprint and will attempt resume.",
+                    configStore: configStore);
             }
         }
 
@@ -2037,7 +2048,8 @@ public sealed class BackupService(
                                 resumeOffsetBytes: existingLength,
                                 archiveSizeBytes: zipSize,
                                 sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                                message: "Discarded partial archive because the existing destination prefix no longer matched the rebuilt local archive.");
+                                message: "Discarded partial archive because the existing destination prefix no longer matched the rebuilt local archive.",
+                                configStore: configStore);
                             using var truncate = new FileStream(finalArchivePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
                             truncate.SetLength(0);
                             existingLength = 0;
@@ -2053,13 +2065,14 @@ public sealed class BackupService(
                                 resumeOffsetBytes: existingLength,
                                 archiveSizeBytes: zipSize,
                                 sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                                message: "Resuming archive upload from a validated existing prefix.");
+                                message: "Resuming archive upload from a validated existing prefix.",
+                                configStore: configStore);
                         }
 
                         await UploadSingleAttemptAsync(existingLength);
                         return;
                     }
-                    catch (TimeoutException ex) when (attempt <= maxRetries)
+                    catch (TimeoutException) when (attempt <= maxRetries)
                     {
                         RuntimeLog.WriteVerbose($"[BackupService] Single archive upload stalled (attempt {attempt}/{maxRetries}). Retrying from {existingLength} bytes.");
                         await Task.Delay(TimeSpan.FromSeconds(2), ct);
@@ -2084,6 +2097,7 @@ public sealed class BackupService(
                         project.Name,
                         enableCheckpointedRetry,
                         resumeCheckpoint,
+                        configStore,
                         ct);
                 }
                 catch (TimeoutException ex)
@@ -2107,7 +2121,8 @@ public sealed class BackupService(
                 resumeOffsetBytes: zipSize,
                 archiveSizeBytes: zipSize,
                 sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                message: "Archive upload completed and checkpoint metadata was cleared.");
+                message: "Archive upload completed and checkpoint metadata was cleared.",
+                configStore: configStore);
             RuntimeLog.WriteVerbose($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalZipSize={zipSize} bytes");
             return workingDestDir;
         }
@@ -2124,7 +2139,8 @@ public sealed class BackupService(
                     resumeOffsetBytes: new FileInfo(finalArchivePath).Length,
                     archiveSizeBytes: resumeCheckpoint?.ArchiveSizeBytes ?? 0,
                     sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                    message: "Preserved interrupted archive upload for a future checkpointed retry.");
+                    message: "Preserved interrupted archive upload for a future checkpointed retry.",
+                    configStore: configStore);
             }
             else
             {
@@ -2137,7 +2153,8 @@ public sealed class BackupService(
                     resumeOffsetBytes: File.Exists(finalArchivePath) ? new FileInfo(finalArchivePath).Length : 0,
                     archiveSizeBytes: resumeCheckpoint?.ArchiveSizeBytes ?? 0,
                     sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                    message: "Discarded incomplete archive upload because checkpointed retry was not active or no resumable archive was present.");
+                    message: "Discarded incomplete archive upload because checkpointed retry was not active or no resumable archive was present.",
+                    configStore: configStore);
                 DeletePartialBackup(workingDestDir);
             }
 
@@ -2183,6 +2200,7 @@ public sealed class BackupService(
         string projectName,
         bool enableCheckpointedRetry,
         ArchiveResumeCheckpoint? resumeCheckpoint,
+        IAppConfigStore configStore,
         CancellationToken ct)
     {
         if (zipSize <= 0)
@@ -2267,7 +2285,8 @@ public sealed class BackupService(
                 resumeOffsetBytes: uploaded,
                 archiveSizeBytes: zipSize,
                 sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                message: $"Resuming parallel archive upload with {resumableChunkIndexes.Count} validated chunks already present.");
+                message: $"Resuming parallel archive upload with {resumableChunkIndexes.Count} validated chunks already present.",
+                configStore: configStore);
         }
 
         void PersistParallelCheckpoint(HashSet<int> completedIndexes)

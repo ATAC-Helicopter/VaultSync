@@ -20,6 +20,7 @@ namespace VaultSync.UI;
 public partial class MainWindow : Window
 {
     private readonly AppViewModel _appVm;
+    private readonly IAppConfigStore _configStore;
     private bool _fullscreenSuppressed;
     private bool _macFullscreenDisabled;
     private bool _ignoreNextPointerPress;
@@ -34,7 +35,13 @@ public partial class MainWindow : Window
     public static bool IsForeground { get; private set; }
 
     public MainWindow()
+        : this(StaticAppConfigStore.Instance)
     {
+    }
+
+    internal MainWindow(IAppConfigStore configStore)
+    {
+        _configStore = configStore;
         InitializeComponent();
         if (OperatingSystem.IsLinux())
         {
@@ -214,15 +221,23 @@ public partial class MainWindow : Window
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
     {
-        DiagnosticsLogger.Record($"MainWindow closing. IsShuttingDown={App.IsShuttingDown}, IsCrashing={App.IsCrashing}.");
+        DiagnosticsLogger.Record($"MainWindow closing. Reason={e.CloseReason}, IsShuttingDown={App.IsShuttingDown}, IsCrashing={App.IsCrashing}.");
         if (App.IsShuttingDown)
             return;
+
+        if (e.CloseReason is WindowCloseReason.OSShutdown or WindowCloseReason.ApplicationShutdown)
+        {
+            App.MarkShuttingDown();
+            DiagnosticsLogger.Record("MainWindow close allowed for OS/application shutdown.");
+            return;
+        }
+
         // Respect the RunInBackground behavior flag from AppConfig.
         // When enabled, pressing the close button should hide the window
         // and keep VaultSync running in the background.
         try
         {
-            AppConfig config = AppConfigStore.GetSnapshot();
+            AppConfig config = _configStore.GetSnapshot();
             if (config.Behavior?.RunInBackground == true)
             {
                 e.Cancel = true;

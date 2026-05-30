@@ -32,6 +32,8 @@ namespace VaultSync.UI;
 
 public partial class App : Application
 {
+    private static readonly IAppConfigStore ConfigStore = StaticAppConfigStore.Instance;
+
     // Test hook: enabled while onboarding UX is being validated every startup.
     private static readonly bool ForceOnboardingAtStartupForTesting = false;
     private static readonly string OnboardingSentinelPath =
@@ -61,6 +63,8 @@ public partial class App : Application
     private string? _trayMenuSignature;
     private DateTime _lastTrayMenuOpenUtc = DateTime.MinValue;
     private DateTime _trayMenuSuppressUntilUtc = DateTime.MinValue;
+    private DateTime _lastTrayIconDestroyedUtc = DateTime.MinValue;
+    private int _trayIconCreateQueued;
     private const string DefaultFontFallback =
         "Inter, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, " +
         "Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, " +
@@ -191,7 +195,7 @@ public partial class App : Application
             {
                 if (e.PropertyName == nameof(SettingsViewModel.ShowTrayIcon))
                 {
-                    UpdateTrayIconVisibility(desktop);
+                    UpdateTrayIconVisibility(desktop, AppViewModelInstance.SettingsViewModel.ShowTrayIcon);
                 }
             };
 
@@ -200,7 +204,7 @@ public partial class App : Application
                 CreateSystemNotificationService() ?? new StubSystemNotificationService();
             GlobalNotificationCenter.Instance.ShouldShowSystemNotification = _ =>
             {
-                AppConfig cfg = AppConfigStore.GetSnapshot();
+                AppConfig cfg = ConfigStore.GetSnapshot();
                 if (!cfg.Notifications.UseOsNotifications)
                     return false;
                 if (!cfg.Notifications.OnBackupSuccess &&
@@ -219,7 +223,7 @@ public partial class App : Application
             };
 
             // Read behavior config and, if enabled, create a tray/menu-bar icon.
-            AppConfig config = AppConfigStore.GetSnapshot();
+            AppConfig config = ConfigStore.GetSnapshot();
             if (config.Behavior?.ShowTrayIcon is true)
             {
                 CreateTrayIcon(desktop);
@@ -257,7 +261,7 @@ public partial class App : Application
         try
         {
             var localizationService = new LocalizationService();
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = ConfigStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(cfg.Advanced.Language))
             {
                 localizationService.SetLanguage(cfg.Advanced.Language);
@@ -384,6 +388,13 @@ public partial class App : Application
         if (_trayIcon != null)
             return;
 
+        if (OperatingSystem.IsLinux() &&
+            DateTime.UtcNow - _lastTrayIconDestroyedUtc < TimeSpan.FromMilliseconds(750))
+        {
+            QueueTrayIconCreate(desktop);
+            return;
+        }
+
         // Use a dedicated embedded tray icon resource.
         // Make sure Assets/vaultsync-tray.png exists and is marked as AvaloniaResource in the csproj.
         var uri = new Uri("avares://VaultSync.UI/Assets/vaultsync-tray.png");
@@ -419,12 +430,42 @@ public partial class App : Application
         _trayIcon.IsVisible = true;
     }
 
+    private void QueueTrayIconCreate(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        if (Interlocked.Exchange(ref _trayIconCreateQueued, 1) == 1)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(750).ConfigureAwait(false);
+                Dispatcher.UIThread.Post(() =>
+                {
+                    Interlocked.Exchange(ref _trayIconCreateQueued, 0);
+                    if (_trayIcon is not null || IsShuttingDown)
+                        return;
+
+                    bool showTrayIcon = AppViewModelInstance?.SettingsViewModel.ShowTrayIcon
+                                        ?? ConfigStore.GetSnapshot().Behavior?.ShowTrayIcon
+                                        ?? true;
+                    if (showTrayIcon)
+                        CreateTrayIcon(desktop);
+                });
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _trayIconCreateQueued, 0);
+            }
+        });
+    }
+
     private static void TryShowWhatsNew(IClassicDesktopStyleApplicationLifetime desktop)
     {
         if (AppViewModelInstance is null)
             return;
 
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         string currentVersion = AppViewModelInstance.CurrentVersionDisplay.TrimStart('v');
         if (string.IsNullOrWhiteSpace(currentVersion))
             return;
@@ -456,7 +497,7 @@ public partial class App : Application
         vm.CloseRequested += () =>
         {
             cfg.Advanced.LastWhatsNewVersion = currentVersion;
-            AppConfigStore.Save(cfg);
+            ConfigStore.Save(cfg);
             window.Close();
         };
 
@@ -517,11 +558,11 @@ public partial class App : Application
         if (AppViewModelInstance is null)
             return false;
 
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         bool showForTesting = IsOnboardingAlwaysEnabledForTesting();
         if (!showForTesting)
         {
-            bool isFreshInstall = AppConfigStore.WasConfigMissingOnFirstLoad;
+            bool isFreshInstall = ConfigStore.WasConfigMissingOnFirstLoad;
             bool sentinelExists = File.Exists(OnboardingSentinelPath);
 
             if (!isFreshInstall || sentinelExists || cfg.Advanced.HasSeenOnboarding)
@@ -572,7 +613,7 @@ public partial class App : Application
         if (!cfg.Advanced.HasSeenOnboarding)
         {
             cfg.Advanced.HasSeenOnboarding = true;
-            AppConfigStore.Save(cfg);
+            ConfigStore.Save(cfg);
         }
     }
 
@@ -661,22 +702,68 @@ public partial class App : Application
 
     private void DestroyTrayIcon()
     {
-        if (_trayIcon is null)
+        TrayIcon? trayIcon = _trayIcon;
+        if (trayIcon is null)
             return;
 
-        _trayIcon.IsVisible = false;
-        _trayPanelService?.Hide();
-        _trayPanelService?.Dispose();
-        _trayPanelService = null;
-        _trayIcon.Dispose();
+        _lastTrayIconDestroyedUtc = DateTime.UtcNow;
         _trayIcon = null;
         _trayMenu = null;
+
+        try
+        {
+            _trayPanelService?.Hide();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray panel hide during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+        }
+
+        try
+        {
+            _trayPanelService?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray panel dispose during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+        }
+        _trayPanelService = null;
+
+        try
+        {
+            trayIcon.IsVisible = false;
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray icon hide during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+        }
+
+        if (!OperatingSystem.IsMacOS())
+        {
+            try
+            {
+                trayIcon.Menu = null;
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Tray menu detach during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        try
+        {
+            trayIcon.Dispose();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray icon dispose during shutdown failed: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
-    private void UpdateTrayIconVisibility(IClassicDesktopStyleApplicationLifetime desktop)
+    private void UpdateTrayIconVisibility(IClassicDesktopStyleApplicationLifetime desktop, bool? showTrayIcon = null)
     {
-        AppConfig cfg = AppConfigStore.GetSnapshot();
-        if (cfg.Behavior?.ShowTrayIcon == true)
+        bool shouldShow = showTrayIcon ?? ConfigStore.GetSnapshot().Behavior?.ShowTrayIcon == true;
+        if (shouldShow)
         {
             if (_trayIcon is null)
             {
@@ -714,7 +801,7 @@ public partial class App : Application
         IReadOnlyList<AppViewModel.DestinationProbeSummary> destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
                                    ?? [];
 
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         List<BackupDestination> configuredDestinations = GetConfiguredDestinations(cfg);
 
         (string destinationsTitle, string destinationsStatus) =
@@ -776,7 +863,7 @@ public partial class App : Application
 
         IReadOnlyList<AppViewModel.DestinationProbeSummary> destinationSummaries = AppViewModelInstance?.GetDestinationProbeSummaries()
                                    ?? [];
-        AppConfig cfg = AppConfigStore.GetSnapshot();
+        AppConfig cfg = ConfigStore.GetSnapshot();
         List<BackupDestination> configuredDestinations = GetConfiguredDestinations(cfg);
         (string destinationsTitle, string destinationsStatus) =
             GetDestinationStatus(destinationSummaries, configuredDestinations);
@@ -1233,8 +1320,16 @@ public partial class App : Application
             desktop.Exit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"Desktop exit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                _instance?.DestroyTrayIcon();
                 CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
+            };
+
+            desktop.ShutdownRequested += (_, e) =>
+            {
+                DiagnosticsLogger.Record($"Desktop shutdown requested. Cancel={e.Cancel}, IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                MarkShuttingDown();
+                _instance?.DestroyTrayIcon();
             };
 
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
@@ -1254,7 +1349,7 @@ public partial class App : Application
     {
         try
         {
-            AppConfig cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.GetSnapshot();
+            AppConfig cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? ConfigStore.GetSnapshot();
             string backupRoot = cfg.Backups.BackupLocation ?? string.Empty;
             string driveLabel = FormatDriveLabel(backupRoot);
             if (_cachedDriveHealthIsNetwork)
@@ -1348,6 +1443,11 @@ public partial class App : Application
         {
             try
             {
+                if (_trayIcon is null || IsShuttingDown)
+                {
+                    return;
+                }
+
                 if (_trayMenuSignature == signature && _trayMenu is not null)
                 {
                     return;
@@ -1391,7 +1491,7 @@ public partial class App : Application
             finally
             {
                 Interlocked.Exchange(ref _trayMenuRefreshInFlight, 0);
-                if (Interlocked.Exchange(ref _trayMenuRefreshQueued, 0) == 1)
+                if (!IsShuttingDown && Interlocked.Exchange(ref _trayMenuRefreshQueued, 0) == 1)
                 {
                     _ = Task.Run(async () =>
                     {
@@ -1446,7 +1546,7 @@ public partial class App : Application
         if (window is null)
             return;
 
-        AppConfig config = AppConfigStore.GetSnapshot();
+        AppConfig config = ConfigStore.GetSnapshot();
         if (config.Behavior?.ShowWindowOnTrayActions != true)
             return;
 
@@ -1912,7 +2012,7 @@ public partial class App : Application
     {
         try
         {
-            AppConfig cfg = AppConfigStore.GetSnapshot();
+            AppConfig cfg = ConfigStore.GetSnapshot();
             int minutes = Math.Clamp(
                 cfg?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes,
                 1,
@@ -1985,17 +2085,17 @@ public partial class App : Application
 
     private static void ApplyThemeFromConfig()
     {
-        AppConfig config = AppConfigStore.GetSnapshot();
+        AppConfig config = ConfigStore.GetSnapshot();
         ThemeManager.ApplyAppearance(config.Appearance);
         ThemeManager.ApplyCompactLayout(config.Appearance.CompactLayout);
     }
 
     public static void ApplyTheme(string themeOption)
     {
-        AppConfig config = AppConfigStore.Load();
+        AppConfig config = ConfigStore.Load();
         config.Appearance.Theme = themeOption;
         ThemeManager.ApplyAppearance(config.Appearance);
-        AppConfigStore.Save(config);
+        ConfigStore.Save(config);
     }
 
     private static string FormatDriveLabel(string? path)
@@ -2040,28 +2140,25 @@ public partial class App : Application
 
     private static async Task RecheckDriveHealthAsync(IClassicDesktopStyleApplicationLifetime? desktop)
     {
-        await Task.Run(() =>
+        try
         {
-            try
+            var result = await Task.Run(() =>
             {
-                AppConfig cfg        = AppViewModelInstance?.GetConfigSnapshot() ?? AppConfigStore.GetSnapshot();
+                AppConfig cfg = AppViewModelInstance?.GetConfigSnapshot() ?? ConfigStore.GetSnapshot();
                 string backupRoot = cfg.Backups.BackupRoot ?? string.Empty;
                 string driveLabel = FormatDriveLabel(backupRoot);
 
                 if (string.IsNullOrWhiteSpace(backupRoot))
                 {
-                    GlobalNotificationCenter.Instance.Show(
-                        L("Tray.Health.NoPathDetail", "Backup path not set. Set a backup location to check drive health."),
-                        NotificationSeverity.Warning,
-                        L("Tray.Health.Title", "Storage health"));
-                    return;
+                    return new DriveHealthNotificationResult(
+                        Message: L("Tray.Health.NoPathDetail", "Backup path not set. Set a backup location to check drive health."),
+                        Severity: NotificationSeverity.Warning,
+                        HealthStatus: _cachedDriveHealthStatus,
+                        IsNetwork: _cachedDriveHealthIsNetwork,
+                        RefreshTray: false);
                 }
 
                 DriveHealthResult health = new DriveHealthService().CheckPath(backupRoot);
-                _cachedDriveHealthLabel  = DescribeHealth(health, driveLabel);
-                _cachedDriveHealthStatus = health.Status;
-                _cachedDriveHealthIsNetwork = IsNetworkHealthResult(health);
-
                 NotificationSeverity severity = health.Status switch
                 {
                     DriveHealthStatus.Failing => NotificationSeverity.Error,
@@ -2069,19 +2166,46 @@ public partial class App : Application
                     _ => NotificationSeverity.Info
                 };
 
-                GlobalNotificationCenter.Instance.Show(_cachedDriveHealthLabel, severity, L("Tray.Health.Title", "Storage health"));
+                return new DriveHealthNotificationResult(
+                    Message: DescribeHealth(health, driveLabel),
+                    Severity: severity,
+                    HealthStatus: health.Status,
+                    IsNetwork: IsNetworkHealthResult(health),
+                    RefreshTray: true);
+            }).ConfigureAwait(false);
 
-                _instance?.RefreshTrayMenu();
-            }
-            catch
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _cachedDriveHealthLabel = result.Message;
+                _cachedDriveHealthStatus = result.HealthStatus;
+                _cachedDriveHealthIsNetwork = result.IsNetwork;
+
+                GlobalNotificationCenter.Instance.Show(result.Message, result.Severity, L("Tray.Health.Title", "Storage health"));
+
+                if (result.RefreshTray)
+                {
+                    _instance?.RefreshTrayMenu();
+                }
+            });
+        }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 GlobalNotificationCenter.Instance.Show(
                     L("Tray.Health.Error", "Unable to check drive health."),
                     NotificationSeverity.Warning,
                     L("Tray.Health.Title", "Storage health"));
-            }
-        });
+            });
+        }
     }
+
+    private sealed record DriveHealthNotificationResult(
+        string Message,
+        NotificationSeverity Severity,
+        DriveHealthStatus HealthStatus,
+        bool IsNetwork,
+        bool RefreshTray);
 
     private static bool IsNetworkHealthResult(DriveHealthResult health)
     {

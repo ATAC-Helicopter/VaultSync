@@ -1,4 +1,46 @@
 ﻿# Changelog
+## [1.7.5] - Unreleased
+### Changed
+- [VS-1745] Centralized NuGet package versions in `Directory.Packages.props` and removed unused package references.
+- [VS-1746] Routed app configuration access through a shared `IAppConfigStore` adapter so core, CLI, and UI code no longer depend directly on static config calls.
+- [VS-1747] Added shared runtime logging and hash-formatting helpers to reduce duplicated service plumbing.
+- [VS-1748] Standardized repeated view-model property updates on existing shared base helpers.
+- [VS-1749] Consolidated core test fixtures for temporary directories, config isolation, and repository/project setup.
+- [VS-1750] Reused destination path normalization across identity and quota planning code.
+- [VS-1751] Added a shared dependent-property notification helper for UI view models.
+- [VS-1752] Added verbose-only runtime timing scopes around startup background work, deferred metadata imports, update checks, and Dashboard refresh phases.
+- [VS-1753] Extracted Dashboard recent-activity projection so refreshes reuse a project lookup instead of scanning projects per activity row.
+- [VS-1754] Added reusable test builders for projects, backups, and backup destinations.
+- [VS-1755] Centralized byte and signed-byte formatting for UI and CLI callers.
+- [VS-1756] Consolidated repeated Dashboard, Backups, Projects, and Settings dependent-property notifications.
+- [VS-1757] Routed NetworkMount diagnostics through one local logging helper instead of repeating log prefixes inline.
+- [VS-1758] Added a durable unchanged-source cache for background metadata auto-imports and phase timings for metadata import internals.
+- [VS-1759] Hardened the metadata unchanged-source cache so skipped background imports still re-run when local repository coverage is incomplete.
+- [VS-1760] Hardened main SQLite repository connections with escaped connection-string construction, disabled stale connection pooling, busy timeouts, and one-time WAL negotiation to reduce lock contention.
+- [VS-1761] Split SQLite schema setup into schema, migration, index, and path-normalization helpers while reusing one connection for column migrations.
+- [VS-1762] Metadata unchanged-source cache coverage now tracks source external IDs so unrelated local rows cannot mask recreated or incomplete repositories.
+- [VS-1763] Release-facing Windows, Store, issue-template, and patch-base metadata now target `1.7.5`.
+- [VS-1764] UI repository callers now resolve database path fallback through the shared config-store helper.
+- [VS-1765] UI repository creation and selected fire-and-forget work now use shared factory and detached-task helpers.
+- [VS-1766] Projects and Settings helper view models now live in focused files, with shared export-folder opening.
+- [VS-1767] Metadata tombstone exports and Backups option setters now reuse focused helper plumbing.
+- [VS-1768] Backups helper view models now live in a focused models file to shrink the main Backups view model.
+- [VS-1769] GitHub issue and pull request templates now use structured forms for bugs, crashes, beta feedback, backup/restore problems, updates, and feature requests.
+- [VS-1770] Settings reload notifications and backup archive test setup now reuse focused helper methods.
+- [VS-1771] Release templates, Store validation docs, and remaining metadata/snapshot temp-directory test fixtures were tightened for the stable build.
+- [VS-1772] Shared action button styles now cover small and primary buttons so shell, widget, Backups, Projects, and Settings controls align consistently.
+- [VS-1773] Unused exception-variable warnings are no longer globally suppressed after cleaning up low-risk catch blocks.
+### Fixed
+- [BUG-18038] Windows notification failures no longer assign an invalid empty toast tag and repeated OS-toast failures are suppressed after the first diagnostic entry.
+- [BUG-18039] Manual storage-health rechecks now marshal notification and tray updates back to the UI thread after background drive probing.
+- [BUG-18040] Config load fallback now records primary, backup, and last-known-good recovery diagnostics instead of silently falling back to defaults.
+- [BUG-18041] Linux `.deb` installer fallback now uses the OS elevation prompt to run the package install directly before falling back to opening the downloaded file.
+- [BUG-18042] Linux OS shutdown and logout requests now bypass run-in-background close interception so VaultSync no longer hides to tray and blocks power-off.
+- [BUG-18043] Linux tray icon teardown now clears the native menu, waits briefly before recreating AppIndicator icons, and follows the live tray setting to avoid duplicate tray indicators.
+- [BUG-18044] Cross-machine imported backup history no longer drives local snapshot diff baselines or project storage deltas, preventing large misleading size swings between OSes.
+- [BUG-18045] macOS tray-menu Quit now tears down the native tray icon without throwing Avalonia's menu-mismatch exception.
+- [BUG-18046] Settings credential profile cards no longer clip the password visibility control in windowed layouts.
+
 ## [1.7.4] - 20.05.2026
 ### Added
 - [VS-1732] Release publish restore now declares Windows, Linux, and macOS RIDs.
