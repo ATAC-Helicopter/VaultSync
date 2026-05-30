@@ -1,11 +1,11 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-05-29T07:01:23Z`
+Captured at: `2026-05-30T06:29:33Z`
 
 - Releases: **41**
 - Assets: **290**
-- Total asset downloads: **1044**
-- Change since previous snapshot: **+23**
+- Total asset downloads: **1045**
+- Change since previous snapshot: **+1**
 
 ## Highlights
 
@@ -20,7 +20,7 @@ Captured at: `2026-05-29T07:01:23Z`
 | vaultsync-patch-windows.json | `v1.3.5` | 67 | 0 |
 | vaultsync-patch-windows.json | `v1.3.4` | 39 | 0 |
 | vaultsync-patch-windows.json | `v1.4.0` | 35 | 0 |
-| VaultSync-1.7.0-macos-apple-silicon.dmg | `v1.7.0` | 28 | +22 |
+| VaultSync-1.7.0-macos-apple-silicon.dmg | `v1.7.0` | 28 | 0 |
 | vaultsync-patch-macos-apple-silicon.zip | `v1.7.4-Beta.3` | 12 | 0 |
 | VaultSync-Setup-1.2.1.exe | `v1.2.1` | 12 | 0 |
 | VaultSync-Setup-1.1.0.exe | `v1.1.0` | 10 | 0 |
@@ -254,13 +254,13 @@ Captured at: `2026-05-29T07:01:23Z`
 - Tag: `v1.7.0`
 - Published: `2026-03-20T20:56:57Z`
 - Total downloads: **55**
-- Delta: **+23**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| VaultSync-1.7.0-macos-apple-silicon.dmg | 28 | +22 | 56593563 |
+| VaultSync-1.7.0-macos-apple-silicon.dmg | 28 | 0 | 56593563 |
 | VaultSync-Setup-1.7.0.exe | 8 | 0 | 68434811 |
-| VaultSync-1.7.0-macos-intel.dmg | 4 | +1 | 57968820 |
+| VaultSync-1.7.0-macos-intel.dmg | 4 | 0 | 57968820 |
 | vaultsync-patch-macos-apple-silicon.zip | 4 | 0 | 50296093 |
 | vaultsync-patch-macos-intel.zip | 4 | 0 | 51964761 |
 | vaultsync-patch-windows.zip | 4 | 0 | 94814657 |
@@ -323,13 +323,13 @@ Captured at: `2026-05-29T07:01:23Z`
 
 - Tag: `v1.5.0`
 - Published: `2026-02-19T21:46:30Z`
-- Total downloads: **38**
-- Delta: **0**
+- Total downloads: **39**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
+| VaultSync-1.5.0-macos-apple-silicon.dmg | 6 | +1 | 54935044 |
 | VaultSync-Setup-1.5.0.exe | 6 | 0 | 67048508 |
-| VaultSync-1.5.0-macos-apple-silicon.dmg | 5 | 0 | 54935044 |
 | VaultSync-1.5.0-macos-intel.dmg | 5 | 0 | 56240663 |
 | vaultsync-patch-windows.json | 5 | 0 | 110366 |
 | vaultsync-patch-windows.zip | 5 | 0 | 93284927 |
