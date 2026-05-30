@@ -5,6 +5,7 @@ param(
     [int]$ProjectNumber = 7,
     [ValidateSet("PrePublish", "PostPublish")]
     [string]$Phase = "PrePublish",
+    [switch]$SkipGitHubChecks,
     [switch]$Json
 )
 
@@ -168,6 +169,12 @@ Add-CheckResult -Results $results -Code "docs-release-checklist" -Condition ($re
     -FailMessage "Release guide is missing release gate and/or asset-upload checklist coverage." `
     -Data @{ path = "docs/RELEASING.md" }
 
+if ($SkipGitHubChecks) {
+    $results.Add((New-Result -Code "github-checks-skipped" -Status "warn" -Message "GitHub release and project checks were skipped for PR-local validation." -Data @{
+        reason = "Use the full gate without -SkipGitHubChecks before final publish."
+        phase = $Phase
+    }))
+} else {
 $releaseTag = "v$TargetVersion"
 $release = $null
 try {
@@ -269,6 +276,7 @@ Add-CheckResult -Results $results -Code "project-release-complete" -Condition ($
             }
         })
     }
+}
 
 $fails = @($results | Where-Object { $_.status -eq "fail" })
 $warnings = @($results | Where-Object { $_.status -eq "warn" })
