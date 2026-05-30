@@ -1,0 +1,191 @@
+name: PR Quality Gates
+
+on:
+  pull_request:
+    branches: [ "Dev", "Stable" ]
+  push:
+    branches: [ "Dev", "Stable" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      release_changed: ${{ steps.detect.outputs.release_changed }}
+      scripts_changed: ${{ steps.detect.outputs.scripts_changed }}
+      store_changed: ${{ steps.detect.outputs.store_changed }}
+      templates_changed: ${{ steps.detect.outputs.templates_changed }}
+      workflows_changed: ${{ steps.detect.outputs.workflows_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed areas
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+            if [[ "$base" =~ ^0+$ ]]; then
+              base="$(git rev-parse "$head^")"
+            fi
+          else
+            base="$(git rev-parse HEAD^)"
+            head="$(git rev-parse HEAD)"
+          fi
+
+          git fetch --no-tags --depth=1 origin "$base" "$head" || true
+          changed="$(git diff --name-only "$base" "$head")"
+          printf '%s\n' "$changed" > changed-files.txt
+
+          has_change() {
+            local pattern="$1"
+            grep -Eq "$pattern" changed-files.txt
+          }
+
+          set_flag() {
+            local name="$1"
+            local value="$2"
+            echo "$name=$value" >> "$GITHUB_OUTPUT"
+            echo "- $name: \`$value\`" >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          echo "## Changed area detection" >> "$GITHUB_STEP_SUMMARY"
+          set_flag workflows_changed "$(has_change '^(\.github/workflows/|\.github/dependabot\.yml$)' && echo true || echo false)"
+          set_flag templates_changed "$(has_change '^(\.github/ISSUE_TEMPLATE/|\.github/PULL_REQUEST_TEMPLATE\.md$)' && echo true || echo false)"
+          set_flag scripts_changed "$(has_change '^(scripts/|tests/scripts/)' && echo true || echo false)"
+          set_flag release_changed "$(has_change '^(CHANGELOG\.md|ROADMAP\.md|docs/WHATS_NEW\.md|docs/RELEASING\.md|docs/MICROSOFT_STORE|installer/|packaging/|src/VaultSync\.UI/VaultSync\.UI\.csproj|\.github/workflows/release-assets\.yml|scripts/release_readiness_gate\.ps1)' && echo true || echo false)"
+          set_flag store_changed "$(has_change '^(packaging/VaultSync\.Store/|docs/MICROSOFT_STORE|src/VaultSync\.UI/VaultSync\.UI\.csproj)' && echo true || echo false)"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Files" >> "$GITHUB_STEP_SUMMARY"
+          sed 's/^/- `/' changed-files.txt | sed 's/$/`/' >> "$GITHUB_STEP_SUMMARY"
+
+  yaml-lint:
+    name: YAML and template lint
+    needs: changes
+    if: needs.changes.outputs.workflows_changed == 'true' || needs.changes.outputs.templates_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint GitHub YAML files
+        run: |
+          npx --yes yaml-lint \
+            .github/workflows/*.yml \
+            .github/ISSUE_TEMPLATE/*.yml \
+            .github/dependabot.yml
+
+  script-tests:
+    name: Script tests
+    needs: changes
+    if: needs.changes.outputs.scripts_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run script tests
+        run: python -m unittest discover -s tests/scripts -p 'test_*.py'
+
+  release-metadata:
+    name: Release metadata preflight
+    needs: changes
+    if: needs.changes.outputs.release_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run local release gate
+        shell: pwsh
+        run: ./scripts/release_readiness_gate.ps1 -Phase PrePublish -SkipGitHubChecks
+
+  store-metadata:
+    name: Microsoft Store metadata preflight
+    needs: changes
+    if: needs.changes.outputs.store_changed == 'true'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Validate Store manifest metadata
+        shell: pwsh
+        run: |
+          $projectPath = "src/VaultSync.UI/VaultSync.UI.csproj"
+          [xml]$project = Get-Content $projectPath
+          $projectVersion = $project.Project.PropertyGroup.Version | Select-Object -First 1
+          if (-not $projectVersion) {
+            throw "Could not read <Version> from $projectPath."
+          }
+
+          $baseVersion = ($projectVersion -split "-", 2)[0]
+          $expectedStoreVersion = "$baseVersion.0"
+
+          $manifestPath = "packaging/VaultSync.Store/Package.appxmanifest"
+          [xml]$manifest = Get-Content $manifestPath
+          $ns = New-Object System.Xml.XmlNamespaceManager($manifest.NameTable)
+          $ns.AddNamespace("pkg", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
+          $identity = $manifest.SelectSingleNode("/pkg:Package/pkg:Identity", $ns)
+          if ($null -eq $identity) {
+            throw "Could not find Package/Identity in $manifestPath."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($identity.Name)) {
+            throw "Store manifest identity name is blank."
+          }
+          if ([string]::IsNullOrWhiteSpace($identity.Publisher)) {
+            throw "Store manifest publisher is blank."
+          }
+          if ($identity.Version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+            throw "Store manifest version '$($identity.Version)' is not a four-part package version."
+          }
+          if ($identity.Version -ne $expectedStoreVersion) {
+            throw "Store manifest version '$($identity.Version)' does not match expected '$expectedStoreVersion' from project version '$projectVersion'."
+          }
+
+          Add-Content $env:GITHUB_STEP_SUMMARY "## Microsoft Store metadata"
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Project version: ``$projectVersion``"
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Store package version: ``$($identity.Version)``"
+          Add-Content $env:GITHUB_STEP_SUMMARY "- Store identity: ``$($identity.Name)``"
+
+      - name: Restore Store packaging project
+        run: >
+          msbuild packaging/VaultSync.Store/VaultSync.Store.wapproj
+          /t:Restore
+          /p:Configuration=Release
+          /p:Platform=x64
+          /p:RuntimeIdentifier=win-x64
+          /p:SelfContained=true
+          /p:GenerateAppxPackageOnBuild=false
