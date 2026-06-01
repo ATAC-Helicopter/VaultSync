@@ -1,5 +1,14 @@
 ﻿# Changelog
-## [1.7.5] - Unreleased
+## [1.8.0] - Unreleased
+### Added
+- [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
+- [VS-1804] Added a simple History timeline using real backup and snapshot activity from the local repository.
+- [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
+### Fixed
+- [BUG-18045] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
+- [BUG-18046] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
+
+## [1.7.5] - 31.05.2026
 ### Changed
 - [VS-1745] Centralized NuGet package versions in `Directory.Packages.props` and removed unused package references.
 - [VS-1746] Routed app configuration access through a shared `IAppConfigStore` adapter so core, CLI, and UI code no longer depend directly on static config calls.

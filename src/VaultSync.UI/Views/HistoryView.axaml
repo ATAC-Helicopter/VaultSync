@@ -1,0 +1,168 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    x:Class="VaultSync.UI.Views.HistoryView"
+    x:DataType="vm:HistoryViewModel"
+    Background="{DynamicResource VS.WindowBackground}">
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="{DynamicResource PagePadding}">
+    <Grid RowDefinitions="Auto,Auto,*"
+          RowSpacing="{DynamicResource PageRowSpacing}">
+      <Border Grid.Row="0"
+              Classes="card"
+              Padding="20"
+              Background="{DynamicResource Surface2}">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Project history"
+                       FontSize="24"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{CompiledBinding Summary}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       MaxLines="2" />
+            <WrapPanel ItemSpacing="8" LineSpacing="8">
+              <Border Classes="stat-pill sm info">
+                <TextBlock Text="Timeline v1" FontSize="10" FontWeight="SemiBold" />
+              </Border>
+              <Border Classes="stat-pill sm">
+                <TextBlock Text="{CompiledBinding LatestEventLabel}" FontSize="10" FontWeight="SemiBold" />
+              </Border>
+            </WrapPanel>
+          </StackPanel>
+          <Button Grid.Column="1"
+                  Classes="small-pill"
+                  Content="Refresh"
+                  Command="{CompiledBinding RefreshCommand}"
+                  VerticalAlignment="Top" />
+        </Grid>
+      </Border>
+
+      <WrapPanel Grid.Row="1"
+                 ItemSpacing="12"
+                 LineSpacing="12">
+        <Border Classes="card" Width="220" Padding="16" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Projects" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding ProjectCount}" FontSize="28" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Width="220" Padding="16" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Recent backups" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding BackupCount}" FontSize="28" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Width="220" Padding="16" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Snapshot-only events" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding SnapshotOnlyCount}" FontSize="28" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Width="260" Padding="16" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Latest event" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding LatestEventLabel}"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Border>
+      </WrapPanel>
+
+      <Grid Grid.Row="2">
+        <Border Classes="card"
+                Padding="18"
+                Background="{DynamicResource Surface2}"
+                IsVisible="{CompiledBinding !HasTimelineItems}">
+          <TextBlock Text="{CompiledBinding EmptyState}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+        </Border>
+
+        <ItemsControl ItemsSource="{CompiledBinding TimelineItems}"
+                      IsVisible="{CompiledBinding HasTimelineItems}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="card"
+                      Padding="0"
+                      Margin="0,0,0,10"
+                      Background="{DynamicResource Surface2}">
+                <Grid ColumnDefinitions="74,*"
+                      MinHeight="104">
+                  <Grid Background="{DynamicResource ItemBg}">
+                    <Border Width="2"
+                            HorizontalAlignment="Center"
+                            Background="{DynamicResource DividerBrush}" />
+                    <Border Width="2"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            Height="42"
+                            Background="{DynamicResource AccentBrush}" />
+                    <Border Width="18"
+                            Height="18"
+                            CornerRadius="9"
+                            Background="{DynamicResource Surface2}"
+                            BorderBrush="{DynamicResource AccentBrush}"
+                            BorderThickness="3"
+                            VerticalAlignment="Top"
+                            HorizontalAlignment="Center"
+                            Margin="0,20,0,0" />
+                    <Border Width="32"
+                            Height="2"
+                            Background="{DynamicResource AccentBrush}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Margin="0,28,0,0" />
+                    <TextBlock Text="{Binding Lane}"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Bottom"
+                               Margin="0,0,0,14" />
+                  </Grid>
+                  <Grid Grid.Column="1"
+                        RowDefinitions="Auto,Auto,Auto"
+                        RowSpacing="6"
+                        Margin="16,14,16,14">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12">
+                      <TextBlock Text="{Binding Title}"
+                                 FontSize="16"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <Border Grid.Column="1"
+                              Classes="stat-pill sm"
+                              Background="{DynamicResource ItemBg}"
+                              BorderBrush="{DynamicResource BorderSoft}">
+                        <TextBlock Text="{Binding Kind}" FontSize="10" FontWeight="SemiBold" />
+                      </Border>
+                    </Grid>
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding Detail}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" />
+                    <WrapPanel Grid.Row="2"
+                               ItemSpacing="8"
+                               LineSpacing="6">
+                      <Border Classes="stat-pill sm">
+                        <TextBlock Text="{Binding ProjectName}" FontSize="10" FontWeight="SemiBold" />
+                      </Border>
+                      <TextBlock Text="{Binding TimeLabel}"
+                                 Classes="metric-hint"
+                                 VerticalAlignment="Center" />
+                    </WrapPanel>
+                  </Grid>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

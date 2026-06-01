@@ -706,12 +706,41 @@ public partial class App : Application
             return;
 
         _lastTrayIconDestroyedUtc = DateTime.UtcNow;
-        _trayIcon.Menu = null;
-        _trayIcon.IsVisible = false;
+        try
+        {
+            _trayIcon.IsVisible = false;
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray icon hide during shutdown failed: {ex.Message}");
+        }
+
         _trayPanelService?.Hide();
         _trayPanelService?.Dispose();
         _trayPanelService = null;
-        _trayIcon.Dispose();
+
+        try
+        {
+            _trayIcon.Menu = null;
+        }
+        catch (ArgumentException ex)
+        {
+            DiagnosticsLogger.Record($"Tray menu detach during shutdown skipped: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray menu detach during shutdown failed: {ex.Message}");
+        }
+
+        try
+        {
+            _trayIcon.Dispose();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Tray icon dispose during shutdown failed: {ex.Message}");
+        }
+
         _trayIcon = null;
         _trayMenu = null;
     }

@@ -84,6 +84,10 @@ namespace VaultSync.UI.ViewModels
 
         public ICommand NavigateBackups { get; }
 
+        public ICommand NavigateHistory { get; }
+
+        public ICommand NavigateRecovery { get; }
+
         public ICommand NavigateSettings { get; }
 
         private void SetCurrentView(string viewKey, bool remember = true)
@@ -136,6 +140,22 @@ namespace VaultSync.UI.ViewModels
                     CurrentView = _settingsViewModel;
                     HeaderTitle = AppViewModel.L("Nav.Settings", "Settings");
                     HeaderKicker = AppViewModel.L("Main.HeaderSettings", "Preferences");
+                    break;
+                case "History":
+                    BackupsViewModel.IsActiveView = false;
+                    CurrentViewName = "History";
+                    CurrentView = HistoryViewModel;
+                    HeaderTitle = AppViewModel.L("Nav.History", "History");
+                    HeaderKicker = AppViewModel.L("Main.HeaderHistory", "Project timeline");
+                    _ = HistoryViewModel.RefreshAsync();
+                    break;
+                case "Recovery":
+                    BackupsViewModel.IsActiveView = false;
+                    CurrentViewName = "Recovery";
+                    CurrentView = RecoveryViewModel;
+                    HeaderTitle = AppViewModel.L("Nav.Recovery", "Recovery");
+                    HeaderKicker = AppViewModel.L("Main.HeaderRecovery", "Readiness & coverage");
+                    _ = RecoveryViewModel.RefreshAsync();
                     break;
                 default:
                     BackupsViewModel.IsActiveView = false;

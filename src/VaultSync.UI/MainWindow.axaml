@@ -191,6 +191,36 @@
             </StackPanel>
           </Button>
 
+          <Button x:Name="NavHistoryButton" Classes="nav" Command="{CompiledBinding NavigateHistory}" ToolTip.Tip="{infra:LocalizedString Key=Nav.History}">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Border x:Name="NavHistoryIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <shapes:Path Data="M4 4.5H15.5C16.3284 4.5 17 5.17157 17 6V15.5C17 16.3284 16.3284 17 15.5 17H4C3.17157 17 2.5 16.3284 2.5 15.5V6C2.5 5.17157 3.17157 4.5 4 4.5ZM5.5 8H14M5.5 11H12M5.5 14H9"
+                               Stroke="{DynamicResource TextPrimaryBrush}"
+                               StrokeThickness="1.6"
+                               StrokeLineCap="Round"
+                               Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavHistoryText" Text="{infra:LocalizedString Key=Nav.History}" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
+          <Button x:Name="NavRecoveryButton" Classes="nav" Command="{CompiledBinding NavigateRecovery}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Recovery}">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Border x:Name="NavRecoveryIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <shapes:Path Data="M10 2.5L16.5 5.25V10C16.5 13.5 13.8 16.2 10 17.5C6.2 16.2 3.5 13.5 3.5 10V5.25L10 2.5ZM7 10.25L9.2 12.4L13.2 8"
+                               Stroke="{DynamicResource TextPrimaryBrush}"
+                               StrokeThickness="1.6"
+                               StrokeLineCap="Round"
+                               Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavRecoveryText" Text="{infra:LocalizedString Key=Nav.Recovery}" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
           <Button x:Name="NavSettingsButton" Classes="nav" Command="{CompiledBinding NavigateSettings}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Settings}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavSettingsIconBadge" Classes="nav-icon-badge">
@@ -308,6 +338,12 @@
         </Panel>
         <Panel IsVisible="{Binding IsBackupsViewActive}">
           <views:BackupsView DataContext="{Binding BackupsViewModel}" />
+        </Panel>
+        <Panel IsVisible="{Binding IsHistoryActive}">
+          <views:HistoryView DataContext="{Binding HistoryViewModel}" />
+        </Panel>
+        <Panel IsVisible="{Binding IsRecoveryActive}">
+          <views:RecoveryView DataContext="{Binding RecoveryViewModel}" />
         </Panel>
         <Panel IsVisible="{Binding IsSettingsActive}">
           <ui:SettingsView DataContext="{Binding SettingsViewModel}" />
