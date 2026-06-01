@@ -34,6 +34,23 @@ public sealed class NetworkMountService
         bool isNetwork = IsNetworkPath(normalizedPath);
         if (!isNetwork)
         {
+            if (IsMacVolumesPath(normalizedPath))
+            {
+                if (IsAccessibleDirectory(normalizedPath, out string? accessError))
+                {
+                    Log($"Using macOS mounted volume path '{normalizedPath}'.");
+                    return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using mounted volume path '{normalizedPath}'");
+                }
+
+                string detail = string.IsNullOrWhiteSpace(accessError)
+                    ? "The mounted volume path is not accessible."
+                    : accessError;
+                Log($"Mounted volume path '{normalizedPath}' failed: {detail}");
+                return DestinationResolution.CreateFailure(
+                    dest,
+                    $"Cannot use destination '{alias}': {detail} Use a reachable /Volumes mount point, or configure the destination as smb://host/share for auto-mount.");
+            }
+
             try
             {
                 Directory.CreateDirectory(normalizedPath);
@@ -766,6 +783,42 @@ public sealed class NetworkMountService
                path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||
                path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
                path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMacVolumesPath(string path)
+    {
+        if (!OperatingSystem.IsMacOS() || string.IsNullOrWhiteSpace(path))
+            return false;
+
+        string normalized = path.Replace('\\', '/').TrimEnd('/');
+        return normalized.Equals("/Volumes", StringComparison.Ordinal) ||
+               normalized.StartsWith("/Volumes/", StringComparison.Ordinal);
+    }
+
+    private static bool IsAccessibleDirectory(string path, out string? error)
+    {
+        error = null;
+        try
+        {
+            if (!Directory.Exists(path))
+            {
+                error = "The directory does not exist.";
+                return false;
+            }
+
+            _ = Directory.EnumerateFileSystemEntries(path).Take(1).ToList();
+            return true;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+        catch (IOException ex)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 
     private static bool TryParseShare(string raw, out string host, out string share)

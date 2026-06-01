@@ -1,0 +1,173 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    x:Class="VaultSync.UI.Views.RecoveryView"
+    x:DataType="vm:RecoveryViewModel"
+    Background="{DynamicResource VS.WindowBackground}">
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="{DynamicResource PagePadding}">
+    <Grid RowDefinitions="Auto,Auto,Auto,*"
+          RowSpacing="{DynamicResource PageRowSpacing}">
+      <Border Grid.Row="0"
+              Classes="card"
+              Padding="20"
+              Background="{DynamicResource Surface2}">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Recovery readiness"
+                       FontSize="24"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{CompiledBinding Headline}"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{CompiledBinding Detail}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1"
+                  Classes="small-pill"
+                  Content="Refresh"
+                  Command="{CompiledBinding RefreshCommand}"
+                  VerticalAlignment="Top" />
+        </Grid>
+      </Border>
+
+      <WrapPanel Grid.Row="1"
+                 ItemSpacing="12"
+                 LineSpacing="12">
+        <Border Classes="card" Width="190" Padding="16" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Ready" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding ReadyCount}" FontSize="28" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Width="190" Padding="16" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Attention" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding AttentionCount}" FontSize="28" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Width="190" Padding="16" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Risk" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding RiskCount}" FontSize="28" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Width="190" Padding="16" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Unavailable" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding UnavailableCount}" FontSize="28" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+      </WrapPanel>
+
+      <Grid Grid.Row="2"
+            ColumnDefinitions="*,*"
+            ColumnSpacing="14">
+        <Border Classes="card"
+                Padding="18"
+                Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="12">
+            <TextBlock Text="Recovery coverage" Classes="section-title" />
+            <TextBlock Text="{CompiledBinding CoverageSummary}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap" />
+            <UniformGrid Columns="4">
+              <StackPanel Spacing="2">
+                <TextBlock Text="24h" Classes="kicker" />
+                <TextBlock Text="{CompiledBinding Coverage24Hours}" FontSize="24" FontWeight="SemiBold" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="7d" Classes="kicker" />
+                <TextBlock Text="{CompiledBinding Coverage7Days}" FontSize="24" FontWeight="SemiBold" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="30d" Classes="kicker" />
+                <TextBlock Text="{CompiledBinding Coverage30Days}" FontSize="24" FontWeight="SemiBold" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="90d" Classes="kicker" />
+                <TextBlock Text="{CompiledBinding Coverage90Days}" FontSize="24" FontWeight="SemiBold" />
+              </StackPanel>
+            </UniformGrid>
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1"
+                Classes="card"
+                Padding="18"
+                Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Recommended next action" Classes="section-title" />
+            <TextBlock Text="{CompiledBinding TopRecommendation}"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Grid Grid.Row="3">
+        <Border Classes="card"
+                Padding="18"
+                Background="{DynamicResource Surface2}"
+                IsVisible="{CompiledBinding !HasProjects}">
+          <TextBlock Text="No tracked projects yet. Add a project and create a backup to measure recovery readiness."
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+        </Border>
+
+        <ItemsControl ItemsSource="{CompiledBinding Projects}"
+                      IsVisible="{CompiledBinding HasProjects}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="card"
+                      Padding="16"
+                      Margin="0,0,0,10"
+                      Background="{DynamicResource Surface2}">
+                <Grid ColumnDefinitions="Auto,*"
+                      ColumnSpacing="14">
+                  <Border Width="10"
+                          Height="10"
+                          CornerRadius="5"
+                          Background="{Binding Accent}"
+                          Margin="0,5,0,0" />
+                  <Grid Grid.Column="1"
+                        RowDefinitions="Auto,Auto"
+                        RowSpacing="6">
+                    <Grid ColumnDefinitions="*,Auto,Auto"
+                          ColumnSpacing="10">
+                      <TextBlock Text="{Binding ProjectName}"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding ScoreLabel}"
+                                 FontWeight="SemiBold" />
+                      <Border Grid.Column="2"
+                              Classes="stat-pill sm"
+                              Background="{Binding Accent}"
+                              BorderBrush="{Binding Accent}">
+                        <TextBlock Text="{Binding Label}"
+                                   FontSize="10"
+                                   Foreground="White"
+                                   FontWeight="SemiBold" />
+                      </Border>
+                    </Grid>
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding Reason}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" />
+                  </Grid>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

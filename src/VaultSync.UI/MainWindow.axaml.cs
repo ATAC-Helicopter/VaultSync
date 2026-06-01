@@ -182,6 +182,8 @@ public partial class MainWindow : Window
         NavDashboardText.IsVisible = !collapsed;
         NavProjectsText.IsVisible = !collapsed;
         NavBackupsText.IsVisible = !collapsed;
+        NavHistoryText.IsVisible = !collapsed;
+        NavRecoveryText.IsVisible = !collapsed;
         NavSettingsText.IsVisible = !collapsed;
 
         HorizontalAlignment contentAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Left;
@@ -191,31 +193,45 @@ public partial class MainWindow : Window
         NavDashboardButton.HorizontalContentAlignment = contentAlignment;
         NavProjectsButton.HorizontalContentAlignment = contentAlignment;
         NavBackupsButton.HorizontalContentAlignment = contentAlignment;
+        NavHistoryButton.HorizontalContentAlignment = contentAlignment;
+        NavRecoveryButton.HorizontalContentAlignment = contentAlignment;
         NavSettingsButton.HorizontalContentAlignment = contentAlignment;
         NavDashboardButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavProjectsButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavBackupsButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        NavHistoryButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        NavRecoveryButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavSettingsButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavDashboardButton.Width = navButtonWidth;
         NavProjectsButton.Width = navButtonWidth;
         NavBackupsButton.Width = navButtonWidth;
+        NavHistoryButton.Width = navButtonWidth;
+        NavRecoveryButton.Width = navButtonWidth;
         NavSettingsButton.Width = navButtonWidth;
         NavDashboardButton.Height = navButtonHeight;
         NavProjectsButton.Height = navButtonHeight;
         NavBackupsButton.Height = navButtonHeight;
+        NavHistoryButton.Height = navButtonHeight;
+        NavRecoveryButton.Height = navButtonHeight;
         NavSettingsButton.Height = navButtonHeight;
         NavDashboardButton.Padding = navButtonPadding;
         NavProjectsButton.Padding = navButtonPadding;
         NavBackupsButton.Padding = navButtonPadding;
+        NavHistoryButton.Padding = navButtonPadding;
+        NavRecoveryButton.Padding = navButtonPadding;
         NavSettingsButton.Padding = navButtonPadding;
 
         NavDashboardButton.Classes.Set("compact", collapsed);
         NavProjectsButton.Classes.Set("compact", collapsed);
         NavBackupsButton.Classes.Set("compact", collapsed);
+        NavHistoryButton.Classes.Set("compact", collapsed);
+        NavRecoveryButton.Classes.Set("compact", collapsed);
         NavSettingsButton.Classes.Set("compact", collapsed);
         NavDashboardIconBadge.Classes.Set("compact", collapsed);
         NavProjectsIconBadge.Classes.Set("compact", collapsed);
         NavBackupsIconBadge.Classes.Set("compact", collapsed);
+        NavHistoryIconBadge.Classes.Set("compact", collapsed);
+        NavRecoveryIconBadge.Classes.Set("compact", collapsed);
         NavSettingsIconBadge.Classes.Set("compact", collapsed);
     }
 

@@ -117,6 +117,16 @@ namespace VaultSync.UI.ViewModels
                 HeaderTitle  = L("Nav.Backups", "Backups");
                 HeaderKicker = L("Main.HeaderBackups", "Snapshots & history");
             }
+            else if (CurrentView == _historyViewModel)
+            {
+                HeaderTitle  = L("Nav.History", "History");
+                HeaderKicker = L("Main.HeaderHistory", "Project timeline");
+            }
+            else if (CurrentView == _recoveryViewModel)
+            {
+                HeaderTitle  = L("Nav.Recovery", "Recovery");
+                HeaderKicker = L("Main.HeaderRecovery", "Readiness & coverage");
+            }
             else if (CurrentView == _settingsViewModel)
             {
                 HeaderTitle  = L("Nav.Settings", "Settings");
