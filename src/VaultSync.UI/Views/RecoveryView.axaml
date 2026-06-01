@@ -2,6 +2,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     x:Class="VaultSync.UI.Views.RecoveryView"
     x:DataType="vm:RecoveryViewModel"
     Background="{DynamicResource VS.WindowBackground}">
@@ -17,7 +18,7 @@
               Background="{DynamicResource Surface2}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
           <StackPanel Spacing="8">
-            <TextBlock Text="Recovery readiness"
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Title}"
                        FontSize="24"
                        FontWeight="SemiBold" />
             <TextBlock Text="{CompiledBinding Headline}"
@@ -30,7 +31,7 @@
           </StackPanel>
           <Button Grid.Column="1"
                   Classes="small-pill"
-                  Content="Refresh"
+                  Content="{infra:LocalizedString Key=Common.Refresh}"
                   Command="{CompiledBinding RefreshCommand}"
                   VerticalAlignment="Top" />
         </Grid>
@@ -41,25 +42,25 @@
                  LineSpacing="12">
         <Border Classes="card" Width="190" Padding="16" Background="{DynamicResource Surface2}">
           <StackPanel Spacing="4">
-            <TextBlock Text="Ready" Classes="kicker" />
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Kpi.Ready}" Classes="kicker" />
             <TextBlock Text="{CompiledBinding ReadyCount}" FontSize="28" FontWeight="SemiBold" />
           </StackPanel>
         </Border>
         <Border Classes="card" Width="190" Padding="16" Background="{DynamicResource Surface2}">
           <StackPanel Spacing="4">
-            <TextBlock Text="Attention" Classes="kicker" />
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Kpi.Attention}" Classes="kicker" />
             <TextBlock Text="{CompiledBinding AttentionCount}" FontSize="28" FontWeight="SemiBold" />
           </StackPanel>
         </Border>
         <Border Classes="card" Width="190" Padding="16" Background="{DynamicResource Surface2}">
           <StackPanel Spacing="4">
-            <TextBlock Text="Risk" Classes="kicker" />
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Kpi.Risk}" Classes="kicker" />
             <TextBlock Text="{CompiledBinding RiskCount}" FontSize="28" FontWeight="SemiBold" />
           </StackPanel>
         </Border>
         <Border Classes="card" Width="190" Padding="16" Background="{DynamicResource Surface2}">
           <StackPanel Spacing="4">
-            <TextBlock Text="Unavailable" Classes="kicker" />
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Kpi.Unavailable}" Classes="kicker" />
             <TextBlock Text="{CompiledBinding UnavailableCount}" FontSize="28" FontWeight="SemiBold" />
           </StackPanel>
         </Border>
@@ -72,7 +73,7 @@
                 Padding="18"
                 Background="{DynamicResource Surface2}">
           <StackPanel Spacing="12">
-            <TextBlock Text="Recovery coverage" Classes="section-title" />
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Coverage.Title}" Classes="section-title" />
             <TextBlock Text="{CompiledBinding CoverageSummary}"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap" />
@@ -102,7 +103,7 @@
                 Padding="18"
                 Background="{DynamicResource Surface2}">
           <StackPanel Spacing="8">
-            <TextBlock Text="Recommended next action" Classes="section-title" />
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Recommendation.Title}" Classes="section-title" />
             <TextBlock Text="{CompiledBinding TopRecommendation}"
                        FontSize="16"
                        FontWeight="SemiBold"
@@ -116,7 +117,7 @@
                 Padding="18"
                 Background="{DynamicResource Surface2}"
                 IsVisible="{CompiledBinding !HasProjects}">
-          <TextBlock Text="No tracked projects yet. Add a project and create a backup to measure recovery readiness."
+          <TextBlock Text="{infra:LocalizedString Key=Recovery.Empty}"
                      Foreground="{DynamicResource TextSecondaryBrush}"
                      TextWrapping="Wrap" />
         </Border>

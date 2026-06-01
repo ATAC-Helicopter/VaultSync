@@ -4,6 +4,8 @@
 - [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
 - [VS-1804] Added a simple History timeline using real backup and snapshot activity from the local repository.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
+### Changed
+- [VS-1812] Linked the repo roadmap to the 1.8 planning timeline and moved History/Recovery teaser copy behind localization keys.
 ### Fixed
 - [BUG-18045] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
 - [BUG-18046] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.

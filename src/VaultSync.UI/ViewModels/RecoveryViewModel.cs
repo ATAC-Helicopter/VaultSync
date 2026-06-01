@@ -33,8 +33,14 @@ public sealed class RecoveryViewModel : ViewModelBase
     private int _coverage7Days;
     private int _coverage30Days;
     private int _coverage90Days;
-    private string _coverageSummary = "Recovery coverage will appear after backups are available.";
-    private string _topRecommendation = "Create backups for tracked projects to start measuring recovery coverage.";
+    private string _coverageSummary = L("Recovery.Coverage.Empty", "Recovery coverage will appear after backups are available.");
+    private string _topRecommendation = L("Recovery.Recommendation.Start", "Create backups for tracked projects to start measuring recovery coverage.");
+
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    private static string LF(string key, string fallback, params object[] args) =>
+        string.Format(System.Globalization.CultureInfo.CurrentCulture, L(key, fallback), args);
 
     public RecoveryViewModel()
         : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
@@ -173,8 +179,13 @@ public sealed class RecoveryViewModel : ViewModelBase
         int within90Days = latestBackups.Count(backup => now - backup.CreatedUtc <= TimeSpan.FromDays(90));
 
         string coverageSummary = projects.Count == 0
-            ? "No tracked projects yet."
-            : $"{within24Hours}/{projects.Count} project(s) have a backup from the last 24 hours; {within7Days}/{projects.Count} are covered within 7 days.";
+            ? L("Recovery.NoProjects", "No tracked projects yet.")
+            : LF(
+                "Recovery.Coverage.Summary",
+                "{0}/{1} project(s) have a backup from the last 24 hours; {2}/{1} are covered within 7 days.",
+                within24Hours,
+                projects.Count,
+                within7Days);
 
         ProjectRestoreReadiness? firstIssue = summary.Projects
             .Where(project => project.State != RestoreReadinessState.Ready)
@@ -182,8 +193,8 @@ public sealed class RecoveryViewModel : ViewModelBase
             .FirstOrDefault();
 
         string topRecommendation = firstIssue is null
-            ? "All tracked projects with backups are currently restore-ready."
-            : $"{firstIssue.ProjectName}: {firstIssue.Reason}";
+            ? L("Recovery.Recommendation.AllReady", "All tracked projects with backups are currently restore-ready.")
+            : LF("Recovery.Recommendation.ProjectReason", "{0}: {1}", firstIssue.ProjectName, firstIssue.Reason);
 
         return new RecoveryData(
             summary,

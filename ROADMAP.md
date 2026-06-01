@@ -28,7 +28,7 @@
   - `- [ ] \`VS-xxxx\` Title`
   - Optional details/acceptance criteria stay as indented bullets below the ticket.
 - Use release sections as routing signals:
-  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## Future backlog`, `## 1.9.x`
+  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## 1.8.x`, `## Future backlog`, `## 1.9.x`
 - For new work, always include:
   - ID (`VS-xxxx`)
   - Priority marker (`P0/P1/P2`) at the start of the ticket line when relevant.
@@ -1772,6 +1772,26 @@
     - accepting Refresh History changes does not freeze the app shell
     - imported root hints under VaultSync temp folders fall back to the configured Projects Root
     - temp root mapping behavior has regression coverage
+
+## 1.8.x
+### Release intent
+- `1.8` should introduce Project History and Recovery Intelligence without turning VaultSync into a Git replacement.
+- Full planning source: `docs/VaultSync 1.8 Timeline.md`.
+- Project board: GitHub Project 7 (`@VaultSync Roadmap`), release field `1.8.x`.
+
+### 1.8 execution tickets
+- [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Tracked by #296)_
+- [ ] `VS-1802` `P0` Build 1.8 metadata foundation for history and recovery. _(Tracked by #354)_
+- [x] `VS-1803` `P1` Add 1.8 shell navigation for History and Recovery. _(Done in commit `ec43950`, tracked by #355)_
+- [ ] `VS-1804` `P1` Implement History v1 project timeline. _(Tracked by #356)_
+- [ ] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(Tracked by #357)_
+- [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(Tracked by #358)_
+- [ ] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Tracked by #359)_
+- [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(Tracked by #360)_
+- [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Tracked by #361)_
+- [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Tracked by #362)_
+- [ ] `VS-1811` `P2` Add project groups and group health. _(Tracked by #363)_
+- [ ] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Tracked by #364)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
