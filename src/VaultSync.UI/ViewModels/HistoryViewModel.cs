@@ -23,12 +23,18 @@ public sealed class HistoryViewModel : ViewModelBase
     private readonly IRepositoryFactory _repositoryFactory;
     private int _refreshInFlight;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
-    private string _summary = "Loading project history...";
-    private string _emptyState = "No history yet. Create a backup to start building a project timeline.";
+    private string _summary = L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
+    private string _emptyState = L("History.Empty", "No history yet. Create a backup to start building a project timeline.");
     private int _projectCount;
     private int _backupCount;
     private int _snapshotOnlyCount;
-    private string _latestEventLabel = "No recent history";
+    private string _latestEventLabel = L("History.Event.NoRecent", "No recent history");
+
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    private static string LF(string key, string fallback, params object[] args) =>
+        string.Format(CultureInfo.CurrentCulture, L(key, fallback), args);
 
     public HistoryViewModel()
         : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
@@ -120,27 +126,27 @@ public sealed class HistoryViewModel : ViewModelBase
             {
                 string projectName = projectsById.TryGetValue(backup.projectId, out Project? project)
                     ? project.Name
-                    : $"Project #{backup.projectId}";
+                    : LF("History.Event.ProjectFallback", "Project #{0}", backup.projectId);
                 string type = string.IsNullOrWhiteSpace(backup.type) ? "backup" : backup.type;
                 return new HistoryTimelineItemViewModel(
                     "Backup",
                     projectName,
                     backup.createdUtc,
-                    $"{projectName} {type} backup",
-                    "Snapshot captured and available for restore.",
+                    LF("History.Event.BackupTitle", "{0} {1} backup", projectName, type),
+                    L("History.Event.BackupDetail", "Snapshot captured and available for restore."),
                     type.Equals("manual", StringComparison.OrdinalIgnoreCase) ? "Manual" : "Auto");
             })
             .Concat(snapshotOnly.Select(snapshot =>
             {
                 string projectName = projectsById.TryGetValue(snapshot.projectId, out Project? project)
                     ? project.Name
-                    : $"Project #{snapshot.projectId}";
+                    : LF("History.Event.ProjectFallback", "Project #{0}", snapshot.projectId);
                 return new HistoryTimelineItemViewModel(
                     "Snapshot",
                     projectName,
                     snapshot.createdUtc,
-                    $"{projectName} snapshot",
-                    "Snapshot metadata exists without a linked backup record.",
+                    LF("History.Event.SnapshotTitle", "{0} snapshot", projectName),
+                    L("History.Event.MetadataDetail", "Snapshot metadata exists without a linked backup record."),
                     "Metadata");
             }))
             .OrderByDescending(item => item.CreatedUtc)
@@ -156,9 +162,9 @@ public sealed class HistoryViewModel : ViewModelBase
         BackupCount = data.BackupCount;
         SnapshotOnlyCount = data.SnapshotOnlyCount;
         Summary = data.Items.Count == 0
-            ? "Project history will appear here as backups and snapshots are created."
-            : $"Showing {data.Items.Count.ToString(CultureInfo.InvariantCulture)} recent history events across {data.ProjectCount.ToString(CultureInfo.InvariantCulture)} project(s).";
-        LatestEventLabel = data.Items.FirstOrDefault()?.TimeLabel ?? "No recent history";
+            ? L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.")
+            : LF("History.Summary.Events", "Showing {0} recent history events across {1} project(s).", data.Items.Count, data.ProjectCount);
+        LatestEventLabel = data.Items.FirstOrDefault()?.TimeLabel ?? L("History.Event.NoRecent", "No recent history");
 
         TimelineItems.Clear();
         foreach (HistoryTimelineItemViewModel item in data.Items)
