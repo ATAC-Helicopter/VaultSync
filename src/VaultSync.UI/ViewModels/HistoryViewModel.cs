@@ -28,7 +28,10 @@ public sealed class HistoryViewModel : ViewModelBase
     private int _projectCount;
     private int _backupCount;
     private int _snapshotOnlyCount;
+    private int _totalEventCount;
     private string _latestEventLabel = L("History.Event.NoRecent", "No recent history");
+    private string _latestEventTitle = L("History.Event.NoRecent", "No recent history");
+    private string _latestEventDetail = L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -82,11 +85,33 @@ public sealed class HistoryViewModel : ViewModelBase
         private set => SetField(ref _snapshotOnlyCount, value);
     }
 
+    public int TotalEventCount
+    {
+        get => _totalEventCount;
+        private set => SetField(ref _totalEventCount, value);
+    }
+
     public string LatestEventLabel
     {
         get => _latestEventLabel;
         private set => SetField(ref _latestEventLabel, value);
     }
+
+    public string LatestEventTitle
+    {
+        get => _latestEventTitle;
+        private set => SetField(ref _latestEventTitle, value);
+    }
+
+    public string LatestEventDetail
+    {
+        get => _latestEventDetail;
+        private set => SetField(ref _latestEventDetail, value);
+    }
+
+    public string BackupSignalLabel => LF("History.Signal.Backup", "{0} backup event(s)", BackupCount);
+    public string MetadataSignalLabel => LF("History.Signal.Metadata", "{0} metadata-only event(s)", SnapshotOnlyCount);
+    public string ProjectSignalLabel => LF("History.Signal.Projects", "{0} tracked project(s)", ProjectCount);
 
     public bool HasTimelineItems => TimelineItems.Count > 0;
 
@@ -161,16 +186,23 @@ public sealed class HistoryViewModel : ViewModelBase
         ProjectCount = data.ProjectCount;
         BackupCount = data.BackupCount;
         SnapshotOnlyCount = data.SnapshotOnlyCount;
+        TotalEventCount = data.Items.Count;
         Summary = data.Items.Count == 0
             ? L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.")
             : LF("History.Summary.Events", "Showing {0} recent history events across {1} project(s).", data.Items.Count, data.ProjectCount);
-        LatestEventLabel = data.Items.FirstOrDefault()?.TimeLabel ?? L("History.Event.NoRecent", "No recent history");
+        HistoryTimelineItemViewModel? latest = data.Items.FirstOrDefault();
+        LatestEventLabel = latest?.TimeLabel ?? L("History.Event.NoRecent", "No recent history");
+        LatestEventTitle = latest?.Title ?? L("History.Event.NoRecent", "No recent history");
+        LatestEventDetail = latest?.Detail ?? L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
 
         TimelineItems.Clear();
         foreach (HistoryTimelineItemViewModel item in data.Items)
             TimelineItems.Add(item);
 
         OnPropertyChanged(nameof(HasTimelineItems));
+        OnPropertyChanged(nameof(BackupSignalLabel));
+        OnPropertyChanged(nameof(MetadataSignalLabel));
+        OnPropertyChanged(nameof(ProjectSignalLabel));
     }
 
     private sealed record HistoryTimelineData(
@@ -182,6 +214,12 @@ public sealed class HistoryViewModel : ViewModelBase
 
 public sealed class HistoryTimelineItemViewModel
 {
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
+
+    private static string LF(string key, string fallback, params object[] args) =>
+        string.Format(CultureInfo.CurrentCulture, L(key, fallback), args);
+
     public HistoryTimelineItemViewModel(
         string kind,
         string projectName,
@@ -205,4 +243,21 @@ public sealed class HistoryTimelineItemViewModel
     public string Detail { get; }
     public string Lane { get; }
     public string TimeLabel => CreatedUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm", CultureInfo.CurrentCulture);
+    public string RelativeLabel
+    {
+        get
+        {
+            TimeSpan age = DateTime.UtcNow - CreatedUtc.ToUniversalTime();
+            if (age < TimeSpan.FromMinutes(1))
+                return L("History.Relative.Now", "Just now");
+            if (age < TimeSpan.FromHours(1))
+                return LF("History.Relative.Minutes", "{0}m ago", Math.Max(1, (int)age.TotalMinutes));
+            if (age < TimeSpan.FromDays(1))
+                return LF("History.Relative.Hours", "{0}h ago", Math.Max(1, (int)age.TotalHours));
+            return LF("History.Relative.Days", "{0}d ago", Math.Max(1, (int)age.TotalDays));
+        }
+    }
+
+    public string Accent => Kind.Equals("Backup", StringComparison.OrdinalIgnoreCase) ? "#4F8DFF" : "#8B7CFF";
+    public string GraphCode => Kind.Equals("Backup", StringComparison.OrdinalIgnoreCase) ? "BKP" : "SNP";
 }

@@ -5,6 +5,8 @@
 - [VS-1804] Added a simple History timeline using real backup and snapshot activity from the local repository.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
 ### Changed
+- [VS-1804] Redesigned the History teaser as a graph-led project timeline backed by real backup and snapshot data.
+- [VS-1807] Redesigned Recovery as a readiness command center with score, coverage, and prioritized project rows.
 - [VS-1812] Linked the repo roadmap to the 1.8 planning timeline and moved History/Recovery teaser copy behind localization keys.
 ### Fixed
 - [BUG-18045] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
