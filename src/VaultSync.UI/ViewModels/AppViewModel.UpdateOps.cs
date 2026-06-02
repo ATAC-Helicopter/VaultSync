@@ -472,7 +472,10 @@ namespace VaultSync.UI.ViewModels
             if (IsEnvFlagEnabled("VAULTSYNC_FORCE_INSTALLER_FALLBACK"))
                 return true;
 
-            return !OperatingSystem.IsWindows() && !CanWriteInstallDir(installDir);
+            if (OperatingSystem.IsWindows() || CanWriteInstallDir(installDir))
+                return false;
+
+            return !PatchInstallService.CanLaunchProtectedPatchInstall(installDir);
         }
 
         private void NotifyPatchAvailabilityChanged()

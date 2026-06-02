@@ -1289,6 +1289,7 @@
   "Updater.Status.Failed": "Update failed. Check the log and try again.",
   "Updater.Status.Preparing": "Preparing update...",
   "Updater.Status.Success": "Update installed. Launching VaultSync...",
+  "Updater.Status.SuccessNoRestart": "Update installed. Start VaultSync again when you're ready.",
   "Updater.Title": "Updating VaultSync",
   "WhatsNew.Close": "Got it",
   "WhatsNew.Fallback": "This update includes improvements and fixes across VaultSync.",

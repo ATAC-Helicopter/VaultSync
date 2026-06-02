@@ -58,6 +58,13 @@ namespace VaultSync.UI.Services
         private const string RestartArg = "--restart";
         private const string WaitPidArg = "--waitpid=";
 
+        private enum PatchElevationKind
+        {
+            None,
+            WindowsRunAs,
+            LinuxPkexec
+        }
+
         public static bool TryHandlePatchArgs(string[] args)
         {
             if (!TryParsePatchArgs(args, out PatchApplyRequest? request, out _))
@@ -170,33 +177,42 @@ namespace VaultSync.UI.Services
                 string manifestJson = JsonSerializer.Serialize(plan.Manifest);
                 File.WriteAllText(manifestPath, manifestJson, Encoding.UTF8);
                 string requestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.apply-request.json");
+                PatchElevationKind elevationKind = GetElevationKind(installDir);
                 var request = new PatchApplyRequest(
                     archivePath,
                     manifestPath,
                     installDir,
-                    restart: true,
+                    restart: elevationKind != PatchElevationKind.LinuxPkexec,
                     waitPid: Process.GetCurrentProcess().Id);
                 byte[] requestBytes = JsonSerializer.SerializeToUtf8Bytes(request);
                 File.WriteAllBytes(requestPath, requestBytes);
                 string requestHash = ComputeSha256(requestBytes);
 
-                bool needsElevation = NeedsElevation(installDir);
-
-                // When elevation is needed (Program Files installs), we must use the shell + arguments string.
+                // Windows elevation uses ShellExecute; Linux elevation runs the copied helper through pkexec.
                 var psi = new ProcessStartInfo
                 {
-                    FileName = helperExe,
+                    FileName = elevationKind == PatchElevationKind.LinuxPkexec
+                        ? FindExecutable("pkexec") ?? "pkexec"
+                        : helperExe,
                     WorkingDirectory = helperDir,
-                    UseShellExecute = needsElevation,
-                    Verb = needsElevation ? "runas" : string.Empty
+                    UseShellExecute = elevationKind == PatchElevationKind.WindowsRunAs,
+                    Verb = elevationKind == PatchElevationKind.WindowsRunAs ? "runas" : string.Empty
                 };
 
-                if (needsElevation)
+                if (elevationKind == PatchElevationKind.WindowsRunAs)
                 {
                     psi.Arguments = string.Join(" ",
                         Quote(ApplyRequestArg),
                         Quote(requestPath),
                         Quote(RequestHashArg + requestHash));
+                }
+                else if (elevationKind == PatchElevationKind.LinuxPkexec)
+                {
+                    EnsureUnixExecutable(helperExe);
+                    psi.ArgumentList.Add(helperExe);
+                    psi.ArgumentList.Add(ApplyRequestArg);
+                    psi.ArgumentList.Add(requestPath);
+                    psi.ArgumentList.Add(RequestHashArg + requestHash);
                 }
                 else
                 {
@@ -220,6 +236,17 @@ namespace VaultSync.UI.Services
                 error = ex.Message;
                 return false;
             }
+        }
+
+        public static bool CanLaunchProtectedPatchInstall(string installDir)
+        {
+            if (string.IsNullOrWhiteSpace(installDir))
+                return false;
+
+            if (CanWriteInstallDir(installDir))
+                return true;
+
+            return GetElevationKind(installDir) != PatchElevationKind.None;
         }
 
         private static string PrepareHelperDirectory(string installDir)
@@ -513,24 +540,105 @@ namespace VaultSync.UI.Services
             }
         }
 
-        private static bool NeedsElevation(string installDir)
+        private static PatchElevationKind GetElevationKind(string installDir)
         {
+            if (CanWriteInstallDir(installDir))
+                return PatchElevationKind.None;
+
+            if (OperatingSystem.IsLinux())
+                return string.IsNullOrWhiteSpace(FindExecutable("pkexec"))
+                    ? PatchElevationKind.None
+                    : PatchElevationKind.LinuxPkexec;
+
             if (!OperatingSystem.IsWindows())
-                return false;
-
-            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            bool underProgramFiles = (!string.IsNullOrWhiteSpace(programFiles) &&
-                                     installDir.StartsWith(programFiles, StringComparison.OrdinalIgnoreCase)) ||
-                                    (!string.IsNullOrWhiteSpace(programFilesX86) &&
-                                     installDir.StartsWith(programFilesX86, StringComparison.OrdinalIgnoreCase));
-
-            if (!underProgramFiles)
-                return false;
+                return PatchElevationKind.None;
 
             using var identity = WindowsIdentity.GetCurrent();
             var principal = new WindowsPrincipal(identity);
-            return !principal.IsInRole(WindowsBuiltInRole.Administrator);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator)
+                ? PatchElevationKind.None
+                : PatchElevationKind.WindowsRunAs;
+        }
+
+        private static bool CanWriteInstallDir(string installDir)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(installDir))
+                    return false;
+
+                Directory.CreateDirectory(installDir);
+                string testPath = Path.Combine(installDir, $".vaultsync-write-test-{Guid.NewGuid():N}");
+                using (new FileStream(testPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                }
+                File.Delete(testPath);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string? FindExecutable(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            string[] candidates =
+            [
+                Path.Combine("/usr/bin", name),
+                Path.Combine("/bin", name),
+                Path.Combine("/usr/local/bin", name),
+                Path.Combine("/sbin", name),
+                Path.Combine("/usr/sbin", name)
+            ];
+
+            foreach (string candidate in candidates)
+            {
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+
+            string? path = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+
+            foreach (string entry in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                try
+                {
+                    string candidate = Path.Combine(entry, name);
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch
+                {
+                    // Ignore malformed PATH entries.
+                }
+            }
+
+            return null;
+        }
+
+        private static void EnsureUnixExecutable(string filePath)
+        {
+            if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+                return;
+
+            try
+            {
+                File.SetUnixFileMode(
+                    filePath,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+            }
+            catch
+            {
+                // Best effort; Process.Start will report a launch failure if execution is still blocked.
+            }
         }
 
         private static string Quote(string value)
