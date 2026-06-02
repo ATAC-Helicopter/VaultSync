@@ -14,6 +14,7 @@
 ### Fixed
 - [BUG-18045] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
 - [BUG-18046] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
+- [BUG-18047] Linux patch updates can now elevate through `pkexec` for protected installs instead of hiding behind the `.deb` installer fallback.
 
 ## [1.7.5] - 31.05.2026
 ### Changed

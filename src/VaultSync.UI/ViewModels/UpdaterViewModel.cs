@@ -85,7 +85,9 @@ public sealed class UpdaterViewModel : ViewModelBase
         if (result.Success)
         {
             AppendLog(L("Updater.Log.Success", "Update applied successfully."));
-            Status = L("Updater.Status.Success", "Update installed. Launching VaultSync...");
+            Status = _request.Restart
+                ? L("Updater.Status.Success", "Update installed. Launching VaultSync...")
+                : L("Updater.Status.SuccessNoRestart", "Update installed. Start VaultSync again when you're ready.");
             IsBusy = false;
             CanClose = true;
             await Task.Delay(1500);
