@@ -9,6 +9,7 @@
 - [VS-1804] Changed History into a continuous graph-style lane view for metadata, backup, and restore events.
 - [VS-1804] Redesigned the History teaser into a clearer activity timeline with plain-language insights.
 - [VS-1807] Redesigned Recovery into a simpler readiness overview with score, coverage, and priority-ordered projects.
+- [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`.
 - [VS-1812] Linked the repo roadmap to the 1.8 planning timeline and moved History/Recovery teaser copy behind localization keys.
 ### Fixed
 - [BUG-18045] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
