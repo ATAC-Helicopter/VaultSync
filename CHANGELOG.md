@@ -6,7 +6,7 @@
 - [VS-1804] Added a simple History timeline using real backup and snapshot activity from the local repository.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
 ### Changed
-- [VS-1804] Changed History toward a Fork-style lane timeline for metadata, backup, and restore events.
+- [VS-1804] Changed History into a continuous graph-style lane view for metadata, backup, and restore events.
 - [VS-1804] Redesigned the History teaser into a clearer activity timeline with plain-language insights.
 - [VS-1807] Redesigned Recovery into a simpler readiness overview with score, coverage, and priority-ordered projects.
 - [VS-1812] Linked the repo roadmap to the 1.8 planning timeline and moved History/Recovery teaser copy behind localization keys.
