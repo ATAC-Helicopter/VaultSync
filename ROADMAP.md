@@ -1782,8 +1782,10 @@
 ### 1.8 execution tickets
 - [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Tracked by #296)_
 - [ ] `VS-1802` `P0` Build 1.8 metadata foundation for history and recovery. _(Tracked by #354)_
+  - Current status: snapshot history metadata and restore event tables are in place with repository tests.
 - [x] `VS-1803` `P1` Add 1.8 shell navigation for History and Recovery. _(Done in commit `ec43950`, tracked by #355)_
 - [ ] `VS-1804` `P1` Implement History v1 project timeline. _(Tracked by #356)_
+  - Current status: History now renders a simplified Fork-style lane timeline for metadata, backup, and restore events.
 - [ ] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(Tracked by #357)_
 - [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(Tracked by #358)_
 - [ ] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Tracked by #359)_

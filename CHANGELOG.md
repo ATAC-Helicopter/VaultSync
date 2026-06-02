@@ -1,10 +1,12 @@
 ﻿# Changelog
 ## [1.8.0] - Unreleased
 ### Added
+- [VS-1802] Added 1.8 history metadata tables for snapshot labels, notes, tags, protected, known-good, and restore events.
 - [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
 - [VS-1804] Added a simple History timeline using real backup and snapshot activity from the local repository.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
 ### Changed
+- [VS-1804] Changed History toward a Fork-style lane timeline for metadata, backup, and restore events.
 - [VS-1804] Redesigned the History teaser into a clearer activity timeline with plain-language insights.
 - [VS-1807] Redesigned Recovery into a simpler readiness overview with score, coverage, and priority-ordered projects.
 - [VS-1812] Linked the repo roadmap to the 1.8 planning timeline and moved History/Recovery teaser copy behind localization keys.

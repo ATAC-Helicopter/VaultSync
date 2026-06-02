@@ -196,6 +196,35 @@ namespace VaultSync.Core.Repositories
           FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
+
+        -- 1.8 history metadata: user-facing labels for important snapshots.
+        CREATE TABLE IF NOT EXISTS snapshot_history_metadata(
+          snapshot_id INTEGER PRIMARY KEY,
+          label TEXT NOT NULL DEFAULT '',
+          note TEXT NOT NULL DEFAULT '',
+          tags TEXT NOT NULL DEFAULT '',
+          is_protected INTEGER NOT NULL DEFAULT 0,
+          is_known_good INTEGER NOT NULL DEFAULT 0,
+          created_utc TEXT NOT NULL,
+          updated_utc TEXT NOT NULL,
+          FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
+        );
+
+        -- 1.8 restore events: restore operations become first-class history nodes.
+        CREATE TABLE IF NOT EXISTS restore_history_events(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL,
+          backup_id INTEGER NOT NULL,
+          snapshot_id INTEGER NOT NULL,
+          created_utc TEXT NOT NULL,
+          restore_mode TEXT NOT NULL DEFAULT 'direct',
+          target_path TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL DEFAULT 'completed',
+          note TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+          FOREIGN KEY(backup_id) REFERENCES backups(id) ON DELETE CASCADE,
+          FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
+        );
     """);
         }
 
@@ -244,6 +273,16 @@ namespace VaultSync.Core.Repositories
         CREATE INDEX IF NOT EXISTS idx_backups_created
           ON backups(created_utc DESC);
         CREATE INDEX IF NOT EXISTS idx_backups_external ON backups(external_id);
+
+        CREATE INDEX IF NOT EXISTS idx_snapshot_history_known_good
+          ON snapshot_history_metadata(is_known_good);
+        CREATE INDEX IF NOT EXISTS idx_snapshot_history_protected
+          ON snapshot_history_metadata(is_protected);
+
+        CREATE INDEX IF NOT EXISTS idx_restore_history_project_created
+          ON restore_history_events(project_id, created_utc DESC);
+        CREATE INDEX IF NOT EXISTS idx_restore_history_snapshot
+          ON restore_history_events(snapshot_id);
 
         -- Avoid duplicate file rows per snapshot (same logical path)
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
@@ -761,6 +800,138 @@ DELETE FROM sqlite_sequence;";
             c.Execute(
                 "UPDATE snapshots SET total_bytes = @totalBytes WHERE id = @id;",
                 new { totalBytes = Math.Max(0, totalBytes), id = snapshotId });
+        }
+
+        public SnapshotHistoryMetadata? GetSnapshotHistoryMetadata(int snapshotId)
+        {
+            using SqliteConnection c = Open();
+            return c.QueryFirstOrDefault<SnapshotHistoryMetadata>(
+                """
+                SELECT
+                  snapshot_id as SnapshotId,
+                  label as Label,
+                  note as Note,
+                  tags as Tags,
+                  is_protected as IsProtected,
+                  is_known_good as IsKnownGood,
+                  created_utc as CreatedUtc,
+                  updated_utc as UpdatedUtc
+                FROM snapshot_history_metadata
+                WHERE snapshot_id = @snapshotId
+                LIMIT 1;
+                """,
+                new { snapshotId });
+        }
+
+        public IReadOnlyDictionary<int, SnapshotHistoryMetadata> GetSnapshotHistoryMetadataBySnapshotIds(IEnumerable<int> snapshotIds)
+        {
+            ArgumentNullException.ThrowIfNull(snapshotIds);
+
+            int[] ids = [.. snapshotIds.Where(id => id > 0).Distinct()];
+            if (ids.Length == 0)
+                return new Dictionary<int, SnapshotHistoryMetadata>();
+
+            using SqliteConnection c = Open();
+            IEnumerable<SnapshotHistoryMetadata> rows = c.Query<SnapshotHistoryMetadata>(
+                """
+                SELECT
+                  snapshot_id as SnapshotId,
+                  label as Label,
+                  note as Note,
+                  tags as Tags,
+                  is_protected as IsProtected,
+                  is_known_good as IsKnownGood,
+                  created_utc as CreatedUtc,
+                  updated_utc as UpdatedUtc
+                FROM snapshot_history_metadata
+                WHERE snapshot_id IN @ids;
+                """,
+                new { ids });
+
+            return rows.ToDictionary(row => row.SnapshotId);
+        }
+
+        public void UpsertSnapshotHistoryMetadata(SnapshotHistoryMetadata metadata)
+        {
+            if (metadata.SnapshotId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(metadata), "Snapshot id must be positive.");
+
+            using SqliteConnection c = Open();
+            using SqliteTransaction tx = c.BeginTransaction();
+
+            int? projectId = c.QueryFirstOrDefault<int?>(
+                "SELECT project_id FROM snapshots WHERE id = @snapshotId;",
+                new { snapshotId = metadata.SnapshotId },
+                tx);
+            if (!projectId.HasValue)
+                throw new InvalidOperationException($"Snapshot {metadata.SnapshotId} does not exist.");
+
+            string now = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+            if (metadata.IsKnownGood)
+            {
+                c.Execute(
+                    """
+                    UPDATE snapshot_history_metadata
+                    SET is_known_good = 0,
+                        updated_utc = @now
+                    WHERE snapshot_id IN (
+                        SELECT id FROM snapshots WHERE project_id = @projectId
+                    );
+                    """,
+                    new { now, projectId = projectId.Value },
+                    tx);
+            }
+
+            c.Execute(
+                """
+                INSERT INTO snapshot_history_metadata(
+                  snapshot_id,
+                  label,
+                  note,
+                  tags,
+                  is_protected,
+                  is_known_good,
+                  created_utc,
+                  updated_utc)
+                VALUES(
+                  @SnapshotId,
+                  @Label,
+                  @Note,
+                  @Tags,
+                  @IsProtected,
+                  @IsKnownGood,
+                  @CreatedUtc,
+                  @UpdatedUtc)
+                ON CONFLICT(snapshot_id) DO UPDATE SET
+                  label = excluded.label,
+                  note = excluded.note,
+                  tags = excluded.tags,
+                  is_protected = excluded.is_protected,
+                  is_known_good = excluded.is_known_good,
+                  updated_utc = excluded.updated_utc;
+                """,
+                new
+                {
+                    metadata.SnapshotId,
+                    Label = metadata.Label ?? string.Empty,
+                    Note = metadata.Note ?? string.Empty,
+                    Tags = metadata.Tags ?? string.Empty,
+                    IsProtected = metadata.IsProtected ? 1 : 0,
+                    IsKnownGood = metadata.IsKnownGood ? 1 : 0,
+                    CreatedUtc = (metadata.CreatedUtc == default ? DateTime.UtcNow : metadata.CreatedUtc)
+                        .ToUniversalTime()
+                        .ToString("u", CultureInfo.InvariantCulture),
+                    UpdatedUtc = now
+                },
+                tx);
+
+            tx.Commit();
+        }
+
+        public void DeleteSnapshotHistoryMetadata(int snapshotId)
+        {
+            using SqliteConnection c = Open();
+            c.Execute("DELETE FROM snapshot_history_metadata WHERE snapshot_id = @snapshotId;", new { snapshotId });
         }
 
         public Snapshot? GetLatestSnapshot(int projectId)
@@ -1720,6 +1891,77 @@ DELETE FROM sqlite_sequence;";
             }
 
             return result;
+        }
+
+        public int AddRestoreHistoryEvent(RestoreHistoryEvent historyEvent)
+        {
+            if (historyEvent.ProjectId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(historyEvent), "Project id must be positive.");
+            if (historyEvent.BackupId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(historyEvent), "Backup id must be positive.");
+            if (historyEvent.SnapshotId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(historyEvent), "Snapshot id must be positive.");
+
+            using SqliteConnection c = Open();
+            string created = (historyEvent.CreatedUtc == default ? DateTime.UtcNow : historyEvent.CreatedUtc)
+                .ToUniversalTime()
+                .ToString("u", CultureInfo.InvariantCulture);
+
+            return c.ExecuteScalar<int>(
+                """
+                INSERT INTO restore_history_events(
+                  project_id,
+                  backup_id,
+                  snapshot_id,
+                  created_utc,
+                  restore_mode,
+                  target_path,
+                  status,
+                  note)
+                VALUES(
+                  @ProjectId,
+                  @BackupId,
+                  @SnapshotId,
+                  @CreatedUtc,
+                  @RestoreMode,
+                  @TargetPath,
+                  @Status,
+                  @Note);
+                SELECT last_insert_rowid();
+                """,
+                new
+                {
+                    historyEvent.ProjectId,
+                    historyEvent.BackupId,
+                    historyEvent.SnapshotId,
+                    CreatedUtc = created,
+                    RestoreMode = ProjectRestoreMode.Normalize(historyEvent.RestoreMode),
+                    TargetPath = historyEvent.TargetPath ?? string.Empty,
+                    Status = RestoreHistoryEventStatus.Normalize(historyEvent.Status),
+                    Note = historyEvent.Note ?? string.Empty
+                });
+        }
+
+        public IReadOnlyList<RestoreHistoryEvent> GetRecentRestoreHistoryEvents(int limit)
+        {
+            using SqliteConnection c = Open();
+            return [.. c.Query<RestoreHistoryEvent>(
+                """
+                SELECT
+                  id as Id,
+                  project_id as ProjectId,
+                  backup_id as BackupId,
+                  snapshot_id as SnapshotId,
+                  created_utc as CreatedUtc,
+                  restore_mode as RestoreMode,
+                  target_path as TargetPath,
+                  status as Status,
+                  note as Note
+                FROM restore_history_events
+                ORDER BY created_utc DESC, id DESC
+                LIMIT @limit;
+                """,
+                new { limit = Math.Max(0, limit) })];
         }
 
         private sealed class BackupCountRow
