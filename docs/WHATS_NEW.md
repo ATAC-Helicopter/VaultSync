@@ -1,5 +1,23 @@
 # What's New
 
+## [1.8.0]
+
+Current `1.8.0` development builds introduce the first Project History and Recovery Intelligence surfaces.
+
+### Project History
+- History now has a dedicated navigation entry and reads real backup, snapshot, restore, and metadata activity.
+- The History page is moving toward a graph-style lane view for metadata, backup, and restore events instead of a dashboard layout.
+- Snapshot history metadata now has a durable foundation for labels, notes, tags, protected markers, and known-good markers.
+- Successful restores are recorded as history events so future views can show restore activity alongside backup activity.
+
+### Recovery
+- Recovery now has a dedicated navigation entry and shows readiness, coverage, and project priority data from the local repository.
+- Recovery rows are ordered by attention needed so the weakest restore baseline is visible first.
+
+### Foundation
+- The 1.8 roadmap is now tracked in the repository and mirrored into GitHub Project 7.
+- The 1.8 branch and development metadata now target `1.8.0`.
+
 ## [1.7.5]
 
 Current `1.7.5` highlights focus on making the codebase more reusable and maintainable while tightening metadata-import performance diagnostics.
