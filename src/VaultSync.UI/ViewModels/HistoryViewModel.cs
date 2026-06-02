@@ -32,6 +32,7 @@ public sealed class HistoryViewModel : ViewModelBase
     private string _latestEventLabel = L("History.Event.NoRecent", "No recent history");
     private string _latestEventTitle = L("History.Event.NoRecent", "No recent history");
     private string _latestEventDetail = L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
+    private string _insight = L("History.Insight.Empty", "Create a backup to start building a readable project history.");
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -107,6 +108,12 @@ public sealed class HistoryViewModel : ViewModelBase
     {
         get => _latestEventDetail;
         private set => SetField(ref _latestEventDetail, value);
+    }
+
+    public string Insight
+    {
+        get => _insight;
+        private set => SetField(ref _insight, value);
     }
 
     public string BackupSignalLabel => LF("History.Signal.Backup", "{0} backup event(s)", BackupCount);
@@ -194,6 +201,7 @@ public sealed class HistoryViewModel : ViewModelBase
         LatestEventLabel = latest?.TimeLabel ?? L("History.Event.NoRecent", "No recent history");
         LatestEventTitle = latest?.Title ?? L("History.Event.NoRecent", "No recent history");
         LatestEventDetail = latest?.Detail ?? L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
+        Insight = BuildInsight(data);
 
         TimelineItems.Clear();
         foreach (HistoryTimelineItemViewModel item in data.Items)
@@ -203,6 +211,31 @@ public sealed class HistoryViewModel : ViewModelBase
         OnPropertyChanged(nameof(BackupSignalLabel));
         OnPropertyChanged(nameof(MetadataSignalLabel));
         OnPropertyChanged(nameof(ProjectSignalLabel));
+    }
+
+    private static string BuildInsight(HistoryTimelineData data)
+    {
+        if (data.Items.Count == 0)
+            return L("History.Insight.Empty", "Create a backup to start building a readable project history.");
+
+        if (data.SnapshotOnlyCount > data.BackupCount)
+        {
+            return LF(
+                "History.Insight.MetadataHeavy",
+                "{0} snapshot-only event(s) are visible. The next 1.8 foundation will make these easier to tag, explain, and protect.",
+                data.SnapshotOnlyCount);
+        }
+
+        if (data.BackupCount > 0)
+        {
+            return LF(
+                "History.Insight.BackupsReady",
+                "{0} recent backup event(s) are available for review across {1} project(s).",
+                data.BackupCount,
+                data.ProjectCount);
+        }
+
+        return L("History.Insight.Readable", "Your recent project activity is ready to review.");
     }
 
     private sealed record HistoryTimelineData(

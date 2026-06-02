@@ -8,13 +8,13 @@
     Background="{DynamicResource VS.WindowBackground}">
 
   <UserControl.Styles>
-    <Style Selector="Border.history-panel">
+    <Style Selector="Border.history-card">
       <Setter Property="Background" Value="{DynamicResource Surface1}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
     </Style>
-    <Style Selector="Border.history-module">
+    <Style Selector="Border.history-soft">
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
@@ -38,11 +38,11 @@
                 HorizontalScrollBarVisibility="Disabled"
                 Padding="{DynamicResource PagePadding}">
     <Grid RowDefinitions="Auto,Auto,*"
-          RowSpacing="18">
+          RowSpacing="16">
       <Grid Grid.Row="0"
             ColumnDefinitions="*,Auto"
-            ColumnSpacing="18">
-        <StackPanel Spacing="8">
+            ColumnSpacing="16">
+        <StackPanel Spacing="7">
           <TextBlock Text="{infra:LocalizedString Key=History.Title}"
                      FontSize="26"
                      FontWeight="SemiBold" />
@@ -59,47 +59,11 @@
       </Grid>
 
       <Grid Grid.Row="1"
-            ColumnDefinitions="2*,*,*"
+            ColumnDefinitions="*,*,*"
             ColumnSpacing="12">
-        <Border Classes="history-panel"
-                Padding="18">
-          <Grid ColumnDefinitions="Auto,*"
-                ColumnSpacing="16">
-            <Grid Width="72"
-                  Height="72">
-              <Ellipse Fill="{DynamicResource AccentSoftBrush}" />
-              <Ellipse Width="44"
-                       Height="44"
-                       Fill="{DynamicResource AccentBrush}"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-              <TextBlock Text="{CompiledBinding TotalEventCount}"
-                         Foreground="White"
-                         FontWeight="SemiBold"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center" />
-            </Grid>
-            <StackPanel Grid.Column="1"
-                        Spacing="8">
-              <TextBlock Text="{infra:LocalizedString Key=History.TimelineV1}"
-                         Classes="history-label" />
-              <TextBlock Text="{CompiledBinding LatestEventTitle}"
-                         FontSize="20"
-                         FontWeight="SemiBold"
-                         TextWrapping="Wrap"
-                         MaxLines="2" />
-              <TextBlock Text="{CompiledBinding LatestEventDetail}"
-                         Foreground="{DynamicResource TextSecondaryBrush}"
-                         TextWrapping="Wrap"
-                         MaxLines="2" />
-            </StackPanel>
-          </Grid>
-        </Border>
-
-        <Border Grid.Column="1"
-                Classes="history-panel"
+        <Border Classes="history-card"
                 Padding="16">
-          <StackPanel Spacing="10">
+          <StackPanel Spacing="6">
             <TextBlock Text="{infra:LocalizedString Key=History.Kpi.Projects}"
                        Classes="history-label" />
             <TextBlock Text="{CompiledBinding ProjectCount}"
@@ -107,14 +71,31 @@
                        FontWeight="SemiBold" />
             <TextBlock Text="{CompiledBinding ProjectSignalLabel}"
                        Foreground="{DynamicResource TextSecondaryBrush}"
-                       TextWrapping="Wrap" />
+                       TextWrapping="Wrap"
+                       MaxLines="2" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1"
+                Classes="history-card"
+                Padding="16">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=History.Kpi.RecentBackups}"
+                       Classes="history-label" />
+            <TextBlock Text="{CompiledBinding BackupCount}"
+                       FontSize="30"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{CompiledBinding BackupSignalLabel}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       MaxLines="2" />
           </StackPanel>
         </Border>
 
         <Border Grid.Column="2"
-                Classes="history-panel"
+                Classes="history-card"
                 Padding="16">
-          <StackPanel Spacing="10">
+          <StackPanel Spacing="6">
             <TextBlock Text="{infra:LocalizedString Key=History.Kpi.LatestEvent}"
                        Classes="history-label" />
             <TextBlock Text="{CompiledBinding LatestEventLabel}"
@@ -122,26 +103,18 @@
                        FontWeight="SemiBold"
                        TextWrapping="Wrap"
                        MaxLines="2" />
-            <WrapPanel ItemSpacing="8" LineSpacing="8">
-              <Border Classes="history-pill">
-                <TextBlock Text="{CompiledBinding BackupSignalLabel}"
-                           FontSize="10"
-                           FontWeight="SemiBold" />
-              </Border>
-              <Border Classes="history-pill">
-                <TextBlock Text="{CompiledBinding MetadataSignalLabel}"
-                           FontSize="10"
-                           FontWeight="SemiBold" />
-              </Border>
-            </WrapPanel>
+            <TextBlock Text="{CompiledBinding LatestEventTitle}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       MaxLines="2" />
           </StackPanel>
         </Border>
       </Grid>
 
       <Grid Grid.Row="2"
-            ColumnDefinitions="*,320"
+            ColumnDefinitions="*,340"
             ColumnSpacing="16">
-        <Border Classes="history-panel"
+        <Border Classes="history-card"
                 Padding="0">
           <Grid RowDefinitions="Auto,*">
             <Grid Grid.Row="0"
@@ -149,10 +122,10 @@
                   ColumnSpacing="12"
                   Margin="18,16,18,12">
               <StackPanel Spacing="4">
-                <TextBlock Text="{infra:LocalizedString Key=History.Section.EventGraph}"
+                <TextBlock Text="{infra:LocalizedString Key=History.Section.RecentActivity}"
                            FontSize="16"
                            FontWeight="SemiBold" />
-                <TextBlock Text="{infra:LocalizedString Key=History.Section.EventGraph.Detail}"
+                <TextBlock Text="{infra:LocalizedString Key=History.Section.RecentActivity.Detail}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" />
               </StackPanel>
@@ -166,7 +139,7 @@
             </Grid>
 
             <Border Grid.Row="1"
-                    Classes="history-module"
+                    Classes="history-soft"
                     Margin="18,0,18,18"
                     Padding="18"
                     IsVisible="{CompiledBinding !HasTimelineItems}">
@@ -178,60 +151,35 @@
             <ItemsControl Grid.Row="1"
                           ItemsSource="{CompiledBinding TimelineItems}"
                           IsVisible="{CompiledBinding HasTimelineItems}"
-                          Margin="0,0,0,10">
+                          Margin="18,0,18,18">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Grid ColumnDefinitions="96,*"
-                        MinHeight="112"
-                        Margin="0,0,0,2">
-                    <Grid>
-                      <Border Width="2"
-                              HorizontalAlignment="Center"
-                              Background="{DynamicResource DividerBrush}" />
-                      <Border Width="2"
-                              Height="48"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Top"
-                              Background="{Binding Accent}" />
-                      <Border Width="34"
-                              Height="34"
-                              CornerRadius="17"
-                              Background="{DynamicResource Surface1}"
-                              BorderBrush="{Binding Accent}"
-                              BorderThickness="2"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Top"
-                              Margin="0,24,0,0">
-                        <TextBlock Text="{Binding GraphCode}"
-                                   FontSize="9"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center" />
-                      </Border>
-                      <Border Width="32"
-                              Height="2"
-                              Background="{Binding Accent}"
-                              HorizontalAlignment="Right"
-                              VerticalAlignment="Top"
-                              Margin="0,40,0,0" />
-                      <TextBlock Text="{Binding Lane}"
-                                 Classes="history-label"
+                  <Border Classes="history-soft"
+                          Padding="14"
+                          Margin="0,0,0,10">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="12">
+                      <Grid Width="24"
+                            MinHeight="56">
+                        <Border Width="2"
+                                Background="{DynamicResource DividerBrush}"
+                                HorizontalAlignment="Center" />
+                        <Ellipse Width="12"
+                                 Height="12"
+                                 Fill="{Binding Accent}"
                                  HorizontalAlignment="Center"
-                                 VerticalAlignment="Bottom"
-                                 Margin="0,0,0,16" />
-                    </Grid>
+                                 VerticalAlignment="Top"
+                                 Margin="0,4,0,0" />
+                      </Grid>
 
-                    <Border Grid.Column="1"
-                            Classes="history-module"
-                            Margin="0,8,18,8"
-                            Padding="16">
-                      <Grid RowDefinitions="Auto,Auto,Auto"
-                            RowSpacing="8">
+                      <Grid Grid.Column="1"
+                            RowDefinitions="Auto,Auto,Auto"
+                            RowSpacing="7">
                         <Grid ColumnDefinitions="*,Auto"
                               ColumnSpacing="10">
-                          <StackPanel Spacing="3">
+                          <StackPanel Spacing="2">
                             <TextBlock Text="{Binding Title}"
-                                       FontSize="16"
+                                       FontSize="15"
                                        FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding ProjectName}"
@@ -241,12 +189,11 @@
                           <StackPanel Grid.Column="1"
                                       Spacing="4"
                                       HorizontalAlignment="Right">
-                            <Border Classes="history-pill">
-                              <TextBlock Text="{Binding Kind}"
-                                         FontSize="10"
-                                         FontWeight="SemiBold" />
-                            </Border>
                             <TextBlock Text="{Binding RelativeLabel}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Right" />
+                            <TextBlock Text="{Binding Kind}"
                                        Classes="history-label"
                                        HorizontalAlignment="Right" />
                           </StackPanel>
@@ -255,28 +202,24 @@
                         <TextBlock Grid.Row="1"
                                    Text="{Binding Detail}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap" />
+                                   TextWrapping="Wrap"
+                                   MaxLines="2" />
 
-                        <Grid Grid.Row="2"
-                              ColumnDefinitions="*,Auto"
-                              ColumnSpacing="12">
-                          <Border Height="6"
-                                  CornerRadius="3"
-                                  Background="{DynamicResource Surface1}"
-                                  VerticalAlignment="Center">
-                            <Border Width="120"
-                                    CornerRadius="3"
-                                    Background="{Binding Accent}"
-                                    HorizontalAlignment="Left" />
+                        <WrapPanel Grid.Row="2"
+                                   ItemSpacing="8"
+                                   LineSpacing="6">
+                          <Border Classes="history-pill">
+                            <TextBlock Text="{Binding Lane}"
+                                       FontSize="10"
+                                       FontWeight="SemiBold" />
                           </Border>
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding TimeLabel}"
+                          <TextBlock Text="{Binding TimeLabel}"
                                      Classes="history-label"
                                      VerticalAlignment="Center" />
-                        </Grid>
+                        </WrapPanel>
                       </Grid>
-                    </Border>
-                  </Grid>
+                    </Grid>
+                  </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -285,50 +228,25 @@
 
         <StackPanel Grid.Column="1"
                     Spacing="12">
-          <Border Classes="history-panel"
-                  Padding="16">
-            <StackPanel Spacing="12">
-              <TextBlock Text="{infra:LocalizedString Key=History.Panel.Focus}"
+          <Border Classes="history-card"
+                  Padding="18">
+            <StackPanel Spacing="10">
+              <TextBlock Text="{infra:LocalizedString Key=History.Panel.Insight}"
                          FontSize="16"
                          FontWeight="SemiBold" />
-              <TextBlock Text="{infra:LocalizedString Key=History.Panel.Focus.Detail}"
+              <TextBlock Text="{CompiledBinding Insight}"
                          Foreground="{DynamicResource TextSecondaryBrush}"
                          TextWrapping="Wrap" />
-              <Separator Background="{DynamicResource DividerBrush}" />
-              <Grid RowDefinitions="Auto,Auto,Auto"
-                    RowSpacing="10">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="{infra:LocalizedString Key=History.Kpi.RecentBackups}"
-                             Classes="history-label" />
-                  <TextBlock Grid.Column="1"
-                             Text="{CompiledBinding BackupCount}"
-                             FontWeight="SemiBold" />
-                </Grid>
-                <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
-                  <TextBlock Text="{infra:LocalizedString Key=History.Kpi.SnapshotOnlyEvents}"
-                             Classes="history-label" />
-                  <TextBlock Grid.Column="1"
-                             Text="{CompiledBinding SnapshotOnlyCount}"
-                             FontWeight="SemiBold" />
-                </Grid>
-                <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
-                  <TextBlock Text="{infra:LocalizedString Key=History.Panel.TotalEvents}"
-                             Classes="history-label" />
-                  <TextBlock Grid.Column="1"
-                             Text="{CompiledBinding TotalEventCount}"
-                             FontWeight="SemiBold" />
-                </Grid>
-              </Grid>
             </StackPanel>
           </Border>
 
-          <Border Classes="history-panel"
-                  Padding="16">
+          <Border Classes="history-card"
+                  Padding="18">
             <StackPanel Spacing="10">
-              <TextBlock Text="{infra:LocalizedString Key=History.Panel.Next}"
+              <TextBlock Text="{infra:LocalizedString Key=History.Panel.WhatNext}"
                          FontSize="16"
                          FontWeight="SemiBold" />
-              <TextBlock Text="{infra:LocalizedString Key=History.Panel.Next.Detail}"
+              <TextBlock Text="{infra:LocalizedString Key=History.Panel.WhatNext.Detail}"
                          Foreground="{DynamicResource TextSecondaryBrush}"
                          TextWrapping="Wrap" />
               <WrapPanel ItemSpacing="8" LineSpacing="8">

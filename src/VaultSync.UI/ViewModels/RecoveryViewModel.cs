@@ -37,6 +37,7 @@ public sealed class RecoveryViewModel : ViewModelBase
     private string _topRecommendation = L("Recovery.Recommendation.Start", "Create backups for tracked projects to start measuring recovery coverage.");
     private int _readinessPercent;
     private string _readinessBand = L("Recovery.Band.NotMeasured", "Not measured");
+    private string _insight = L("Recovery.Insight.Empty", "Add a project and create a backup to measure recovery readiness.");
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -152,6 +153,12 @@ public sealed class RecoveryViewModel : ViewModelBase
         private set => SetField(ref _readinessBand, value);
     }
 
+    public string Insight
+    {
+        get => _insight;
+        private set => SetField(ref _insight, value);
+    }
+
     public int Coverage24Percent => Percent(Coverage24Hours, ProjectCount);
     public int Coverage7Percent => Percent(Coverage7Days, ProjectCount);
     public int Coverage30Percent => Percent(Coverage30Days, ProjectCount);
@@ -254,9 +261,12 @@ public sealed class RecoveryViewModel : ViewModelBase
         Coverage90Days = data.Coverage90Days;
         CoverageSummary = data.CoverageSummary;
         TopRecommendation = data.TopRecommendation;
+        Insight = BuildInsight(summary);
 
         Projects.Clear();
-        foreach (ProjectRestoreReadiness project in summary.Projects.OrderBy(project => project.ProjectName, StringComparer.OrdinalIgnoreCase))
+        foreach (ProjectRestoreReadiness project in summary.Projects
+                     .OrderBy(project => project.Score)
+                     .ThenBy(project => project.ProjectName, StringComparer.OrdinalIgnoreCase))
             Projects.Add(new RecoveryProjectViewModel(project));
 
         OnPropertyChanged(nameof(HasProjects));
@@ -270,6 +280,38 @@ public sealed class RecoveryViewModel : ViewModelBase
 
     private static int Percent(int value, int total) =>
         total <= 0 ? 0 : (int)Math.Round(value * 100.0 / total);
+
+    private static string BuildInsight(RestoreReadinessSummary summary)
+    {
+        if (summary.ProjectCount == 0)
+            return L("Recovery.Insight.Empty", "Add a project and create a backup to measure recovery readiness.");
+
+        if (summary.UnavailableCount > 0)
+        {
+            return LF(
+                "Recovery.Insight.Unavailable",
+                "{0} project(s) cannot be considered restore-ready yet. Start with the first project in the list.",
+                summary.UnavailableCount);
+        }
+
+        if (summary.RiskCount > 0)
+        {
+            return LF(
+                "Recovery.Insight.Risk",
+                "{0} project(s) are recoverable but need attention before this is release-ready.",
+                summary.RiskCount);
+        }
+
+        if (summary.AttentionCount > 0)
+        {
+            return LF(
+                "Recovery.Insight.Attention",
+                "{0} project(s) should be reviewed, but the main recovery baseline exists.",
+                summary.AttentionCount);
+        }
+
+        return L("Recovery.Insight.Ready", "All measured projects have a healthy recovery baseline.");
+    }
 
     private sealed record RecoveryData(
         RestoreReadinessSummary Summary,
