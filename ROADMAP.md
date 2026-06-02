@@ -1747,19 +1747,24 @@
 
 ### 1.8 execution tickets
 - [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Tracked by #296)_
-- [ ] `VS-1802` `P0` Build 1.8 metadata foundation for history and recovery. _(Tracked by #354)_
-  - Current status: snapshot history metadata and restore event tables are in place with repository tests.
-- [x] `VS-1803` `P1` Add 1.8 shell navigation for History and Recovery. _(Done in commit `ec43950`, tracked by #355)_
-- [ ] `VS-1804` `P1` Implement History v1 project timeline. _(Tracked by #356)_
-  - Current status: History now renders a simplified Fork-style lane timeline for metadata, backup, and restore events.
-- [ ] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(Tracked by #357)_
-- [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(Tracked by #358)_
-- [ ] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Tracked by #359)_
+- [x] `VS-1802` `P0` Build 1.8 metadata foundation for history and recovery. _(Done in commit `1dcec31`, tracked by #354)_
+  - Done: snapshot history metadata and restore event tables are in place with idempotent schema coverage and repository tests.
+- [x] `VS-1803` `P1` Add 1.8 shell navigation for History and Recovery. _(Done in commit `72b77b2`, tracked by #355)_
+- [x] `VS-1804` `P1` Implement History v1 project timeline. _(Done in commit `d608986`, tracked by #356)_
+  - Done: History renders a simplified lane timeline for metadata, backup, and restore events from live repository data.
+- [ ] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(In progress, tracked by #357)_
+  - In progress: core metadata persistence exists for labels, notes, tags, protected snapshots, and known-good markers.
+  - Remaining: user-facing edit/actions flow for tagging, notes, protected markers, and known-good selection.
+- [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(In progress, tracked by #358)_
+  - In progress: Dashboard shows restore-readiness counts, headline/detail, and a review drawer for projects needing attention.
+  - Remaining: final 1.8 dashboard refresh for recovery coverage, recent milestones, and workflow links.
+- [x] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Done in PR #365, tracked by #359)_
+  - Done: Recovery page shows readiness score/band, coverage windows, project priority ordering, and actionable recommendations.
 - [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(Tracked by #360)_
 - [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Tracked by #361)_
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Tracked by #363)_
-- [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commit `e2f0a1a`, tracked by #364)_
+- [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
