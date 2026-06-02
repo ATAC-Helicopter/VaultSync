@@ -1310,6 +1310,8 @@ namespace VaultSync.UI.ViewModels
                 true,
                 backupFullPath,
                 projectRoot,
+                backup.Id,
+                backup.SnapshotId,
                 project.Id,
                 project.Name,
                 restoreMode,
@@ -1322,6 +1324,8 @@ namespace VaultSync.UI.ViewModels
             bool IsReady,
             string BackupFullPath,
             string ProjectRoot,
+            int BackupId,
+            int SnapshotId,
             int ProjectId,
             string ProjectName,
             string RestoreMode,
@@ -1333,6 +1337,8 @@ namespace VaultSync.UI.ViewModels
                 false,
                 string.Empty,
                 string.Empty,
+                0,
+                0,
                 0,
                 string.Empty,
                 ProjectRestoreMode.Direct,
@@ -2591,6 +2597,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     Project? restoredProject = _repo.GetProjectByName(preparation.ProjectName);
                     bool isDirectRestore = !string.Equals(selectedRestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase);
+                    RecordRestoreHistoryEvent(preparation, selectedRestoreMode, projectRoot);
                     if (isDirectRestore && restoredProject != null && restoredProject.NeedsRestore)
                     {
                         _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
@@ -2632,6 +2639,27 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.RemoveActiveBackup(restoreCardId);
                 BackupsViewModel.IsBusy      = false;
                 BackupsViewModel.BusyMessage = string.Empty;
+            }
+        }
+
+        private void RecordRestoreHistoryEvent(RestoreBackupPreparation preparation, string restoreMode, string targetPath)
+        {
+            try
+            {
+                _repo.AddRestoreHistoryEvent(new RestoreHistoryEvent
+                {
+                    ProjectId = preparation.ProjectId,
+                    BackupId = preparation.BackupId,
+                    SnapshotId = preparation.SnapshotId,
+                    RestoreMode = restoreMode,
+                    TargetPath = targetPath,
+                    Status = RestoreHistoryEventStatus.Completed,
+                    Note = AppViewModel.L("History.Event.RestoreDetail", "Restore operation recorded as a project-history event.")
+                });
+            }
+            catch (Exception ex)
+            {
+                RuntimeLog.WriteVerbose($"[Restore] Failed to record restore history event for backupId={preparation.BackupId}: {ex.Message}");
             }
         }
 

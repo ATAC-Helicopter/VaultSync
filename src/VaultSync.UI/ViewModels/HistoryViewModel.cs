@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -150,42 +151,84 @@ public sealed class HistoryViewModel : ViewModelBase
 
         var projects = repo.GetAllProjects().ToList();
         var projectsById = projects.ToDictionary(project => project.Id);
-        var backups = repo.GetRecentBackups(60);
-        var snapshotOnly = repo.GetRecentSnapshotsWithoutBackup(20);
+        var backups = repo.GetAllBackups()
+            .OrderByDescending(backup => backup.CreatedUtc)
+            .ThenByDescending(backup => backup.Id)
+            .Take(60)
+            .ToList();
+        var backupSnapshotIds = backups.Select(backup => backup.SnapshotId).ToHashSet();
+        var snapshotOnly = repo.GetAllSnapshots()
+            .Where(snapshot => !backupSnapshotIds.Contains(snapshot.Id))
+            .OrderByDescending(snapshot => snapshot.CreatedUtc)
+            .ThenByDescending(snapshot => snapshot.Id)
+            .Take(20)
+            .ToList();
+        var restores = repo.GetRecentRestoreHistoryEvents(30);
+        var metadataBySnapshotId = repo.GetSnapshotHistoryMetadataBySnapshotIds(
+            backups.Select(backup => backup.SnapshotId)
+                .Concat(snapshotOnly.Select(snapshot => snapshot.Id))
+                .Concat(restores.Select(restore => restore.SnapshotId)));
 
         var items = backups
             .Select(backup =>
             {
-                string projectName = projectsById.TryGetValue(backup.projectId, out Project? project)
+                string projectName = projectsById.TryGetValue(backup.ProjectId, out Project? project)
                     ? project.Name
-                    : LF("History.Event.ProjectFallback", "Project #{0}", backup.projectId);
-                string type = string.IsNullOrWhiteSpace(backup.type) ? "backup" : backup.type;
+                    : LF("History.Event.ProjectFallback", "Project #{0}", backup.ProjectId);
+                string type = string.IsNullOrWhiteSpace(backup.Type) ? "backup" : backup.Type;
+                metadataBySnapshotId.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata);
                 return new HistoryTimelineItemViewModel(
-                    "Backup",
+                    L("History.Event.Kind.Backup", "Backup"),
                     projectName,
-                    backup.createdUtc,
+                    backup.CreatedUtc,
                     LF("History.Event.BackupTitle", "{0} {1} backup", projectName, type),
-                    L("History.Event.BackupDetail", "Snapshot captured and available for restore."),
-                    type.Equals("manual", StringComparison.OrdinalIgnoreCase) ? "Manual" : "Auto");
+                    BuildBackupDetail(backup, metadata),
+                    type.Equals("manual", StringComparison.OrdinalIgnoreCase)
+                        ? L("History.Lane.Manual", "Manual")
+                        : L("History.Lane.Auto", "Auto"),
+                    HistoryTimelineLane.Backup,
+                    BuildMarkerSummary(metadata));
             })
+            .Concat(restores.Select(restore =>
+            {
+                string projectName = projectsById.TryGetValue(restore.ProjectId, out Project? project)
+                    ? project.Name
+                    : LF("History.Event.ProjectFallback", "Project #{0}", restore.ProjectId);
+                metadataBySnapshotId.TryGetValue(restore.SnapshotId, out SnapshotHistoryMetadata? metadata);
+                string mode = string.Equals(restore.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
+                    ? L("History.Lane.RestoreSandbox", "Sandbox restore")
+                    : L("History.Lane.RestoreDirect", "Direct restore");
+                return new HistoryTimelineItemViewModel(
+                    L("History.Event.Kind.Restore", "Restore"),
+                    projectName,
+                    restore.CreatedUtc,
+                    LF("History.Event.RestoreTitle", "{0} restored from backup", projectName),
+                    BuildRestoreDetail(restore, metadata),
+                    mode,
+                    HistoryTimelineLane.Restore,
+                    BuildMarkerSummary(metadata));
+            }))
             .Concat(snapshotOnly.Select(snapshot =>
             {
-                string projectName = projectsById.TryGetValue(snapshot.projectId, out Project? project)
+                string projectName = projectsById.TryGetValue(snapshot.ProjectId, out Project? project)
                     ? project.Name
-                    : LF("History.Event.ProjectFallback", "Project #{0}", snapshot.projectId);
+                    : LF("History.Event.ProjectFallback", "Project #{0}", snapshot.ProjectId);
+                metadataBySnapshotId.TryGetValue(snapshot.Id, out SnapshotHistoryMetadata? metadata);
                 return new HistoryTimelineItemViewModel(
-                    "Snapshot",
+                    L("History.Event.Kind.Snapshot", "Snapshot"),
                     projectName,
-                    snapshot.createdUtc,
+                    snapshot.CreatedUtc,
                     LF("History.Event.SnapshotTitle", "{0} snapshot", projectName),
-                    L("History.Event.MetadataDetail", "Snapshot metadata exists without a linked backup record."),
-                    "Metadata");
+                    BuildSnapshotDetail(metadata),
+                    L("History.Lane.Metadata", "Metadata"),
+                    HistoryTimelineLane.Metadata,
+                    BuildMarkerSummary(metadata));
             }))
             .OrderByDescending(item => item.CreatedUtc)
             .Take(80)
             .ToList();
 
-        return new HistoryTimelineData(projects.Count, backups.Count, snapshotOnly.Count, items);
+        return new HistoryTimelineData(projects.Count, backups.Count, snapshotOnly.Count, restores.Count, items);
     }
 
     private void ApplyTimelineData(HistoryTimelineData data)
@@ -211,6 +254,53 @@ public sealed class HistoryViewModel : ViewModelBase
         OnPropertyChanged(nameof(BackupSignalLabel));
         OnPropertyChanged(nameof(MetadataSignalLabel));
         OnPropertyChanged(nameof(ProjectSignalLabel));
+    }
+
+    private static string BuildBackupDetail(Backup backup, SnapshotHistoryMetadata? metadata)
+    {
+        string detail = backup.IsImported
+            ? L("History.Event.ImportedBackupDetail", "Imported restore point is available for review.")
+            : L("History.Event.BackupDetail", "Snapshot captured and available for restore.");
+        return AppendMetadataDetail(detail, metadata);
+    }
+
+    private static string BuildRestoreDetail(RestoreHistoryEvent restore, SnapshotHistoryMetadata? metadata)
+    {
+        string detail = string.IsNullOrWhiteSpace(restore.Note)
+            ? L("History.Event.RestoreDetail", "Restore operation recorded as a project-history event.")
+            : restore.Note;
+        return AppendMetadataDetail(detail, metadata);
+    }
+
+    private static string BuildSnapshotDetail(SnapshotHistoryMetadata? metadata) =>
+        AppendMetadataDetail(
+            L("History.Event.MetadataDetail", "Snapshot metadata exists without a linked backup record."),
+            metadata);
+
+    private static string AppendMetadataDetail(string detail, SnapshotHistoryMetadata? metadata)
+    {
+        if (metadata is null || string.IsNullOrWhiteSpace(metadata.Note))
+            return detail;
+
+        return string.Concat(detail, " ", metadata.Note.Trim());
+    }
+
+    private static string BuildMarkerSummary(SnapshotHistoryMetadata? metadata)
+    {
+        if (metadata is null)
+            return string.Empty;
+
+        var markers = new List<string>();
+        if (metadata.IsKnownGood)
+            markers.Add(L("History.Marker.KnownGood", "Known good"));
+        if (metadata.IsProtected)
+            markers.Add(L("History.Marker.Protected", "Protected"));
+        if (!string.IsNullOrWhiteSpace(metadata.Tags))
+            markers.Add(metadata.Tags);
+        if (!string.IsNullOrWhiteSpace(metadata.Label))
+            markers.Insert(0, metadata.Label);
+
+        return string.Join(" - ", markers.Where(marker => !string.IsNullOrWhiteSpace(marker)));
     }
 
     private static string BuildInsight(HistoryTimelineData data)
@@ -242,7 +332,15 @@ public sealed class HistoryViewModel : ViewModelBase
         int ProjectCount,
         int BackupCount,
         int SnapshotOnlyCount,
+        int RestoreCount,
         IReadOnlyList<HistoryTimelineItemViewModel> Items);
+}
+
+public enum HistoryTimelineLane
+{
+    Metadata,
+    Backup,
+    Restore
 }
 
 public sealed class HistoryTimelineItemViewModel
@@ -259,7 +357,9 @@ public sealed class HistoryTimelineItemViewModel
         DateTime createdUtc,
         string title,
         string detail,
-        string lane)
+        string lane,
+        HistoryTimelineLane graphLane,
+        string markerSummary = "")
     {
         Kind = kind;
         ProjectName = projectName;
@@ -267,6 +367,8 @@ public sealed class HistoryTimelineItemViewModel
         Title = title;
         Detail = detail;
         Lane = lane;
+        GraphLane = graphLane;
+        MarkerSummary = markerSummary ?? string.Empty;
     }
 
     public string Kind { get; }
@@ -275,6 +377,9 @@ public sealed class HistoryTimelineItemViewModel
     public string Title { get; }
     public string Detail { get; }
     public string Lane { get; }
+    public HistoryTimelineLane GraphLane { get; }
+    public string MarkerSummary { get; }
+    public bool HasMarkerSummary => !string.IsNullOrWhiteSpace(MarkerSummary);
     public string TimeLabel => CreatedUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm", CultureInfo.CurrentCulture);
     public string RelativeLabel
     {
@@ -291,6 +396,24 @@ public sealed class HistoryTimelineItemViewModel
         }
     }
 
-    public string Accent => Kind.Equals("Backup", StringComparison.OrdinalIgnoreCase) ? "#4F8DFF" : "#8B7CFF";
-    public string GraphCode => Kind.Equals("Backup", StringComparison.OrdinalIgnoreCase) ? "BKP" : "SNP";
+    public string Accent => GraphLane switch
+    {
+        HistoryTimelineLane.Restore => "#22CC88",
+        HistoryTimelineLane.Backup => "#4F8DFF",
+        _ => "#8B7CFF"
+    };
+
+    public Thickness NodeMargin => GraphLane switch
+    {
+        HistoryTimelineLane.Metadata => new Thickness(10, 0, 0, 0),
+        HistoryTimelineLane.Backup => new Thickness(34, 0, 0, 0),
+        _ => new Thickness(58, 0, 0, 0)
+    };
+
+    public Thickness ConnectorMargin => GraphLane switch
+    {
+        HistoryTimelineLane.Metadata => new Thickness(16, 0, 0, 0),
+        HistoryTimelineLane.Backup => new Thickness(40, 0, 0, 0),
+        _ => new Thickness(64, 0, 0, 0)
+    };
 }

@@ -128,6 +128,17 @@
                 <TextBlock Text="{infra:LocalizedString Key=History.Section.RecentActivity.Detail}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" />
+                <WrapPanel ItemSpacing="8" LineSpacing="6">
+                  <Border Classes="history-pill">
+                    <TextBlock Text="{infra:LocalizedString Key=History.Lane.Metadata}" FontSize="10" FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="history-pill">
+                    <TextBlock Text="{infra:LocalizedString Key=History.Lane.Backup}" FontSize="10" FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="history-pill">
+                    <TextBlock Text="{infra:LocalizedString Key=History.Lane.Restore}" FontSize="10" FontWeight="SemiBold" />
+                  </Border>
+                </WrapPanel>
               </StackPanel>
               <Border Grid.Column="1"
                       Classes="history-pill"
@@ -157,23 +168,39 @@
                   <Border Classes="history-soft"
                           Padding="14"
                           Margin="0,0,0,10">
-                    <Grid ColumnDefinitions="Auto,*"
+                    <Grid ColumnDefinitions="92,*"
                           ColumnSpacing="12">
-                      <Grid Width="24"
+                      <Grid Width="92"
                             MinHeight="56">
                         <Border Width="2"
                                 Background="{DynamicResource DividerBrush}"
-                                HorizontalAlignment="Center" />
-                        <Ellipse Width="12"
+                                HorizontalAlignment="Left"
+                                Margin="16,0,0,0" />
+                        <Border Width="2"
+                                Background="{DynamicResource DividerBrush}"
+                                HorizontalAlignment="Left"
+                                Margin="40,0,0,0" />
+                        <Border Width="2"
+                                Background="{DynamicResource DividerBrush}"
+                                HorizontalAlignment="Left"
+                                Margin="64,0,0,0" />
+                        <Border Height="2"
+                                Width="34"
+                                Background="{Binding Accent}"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Margin="{Binding ConnectorMargin}"
+                                IsHitTestVisible="False" />
+                        <Ellipse Width="14"
                                  Height="12"
                                  Fill="{Binding Accent}"
-                                 HorizontalAlignment="Center"
+                                 HorizontalAlignment="Left"
                                  VerticalAlignment="Top"
-                                 Margin="0,4,0,0" />
+                                 Margin="{Binding NodeMargin}" />
                       </Grid>
 
                       <Grid Grid.Column="1"
-                            RowDefinitions="Auto,Auto,Auto"
+                            RowDefinitions="Auto,Auto,Auto,Auto"
                             RowSpacing="7">
                         <Grid ColumnDefinitions="*,Auto"
                               ColumnSpacing="10">
@@ -205,7 +232,17 @@
                                    TextWrapping="Wrap"
                                    MaxLines="2" />
 
-                        <WrapPanel Grid.Row="2"
+                        <Border Grid.Row="2"
+                                Classes="history-pill"
+                                IsVisible="{Binding HasMarkerSummary}"
+                                HorizontalAlignment="Left">
+                          <TextBlock Text="{Binding MarkerSummary}"
+                                     FontSize="10"
+                                     FontWeight="SemiBold"
+                                     TextWrapping="Wrap" />
+                        </Border>
+
+                        <WrapPanel Grid.Row="3"
                                    ItemSpacing="8"
                                    LineSpacing="6">
                           <Border Classes="history-pill">
