@@ -1757,7 +1757,7 @@
 - [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Tracked by #361)_
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Tracked by #363)_
-- [ ] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Tracked by #364)_
+- [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commit `e2f0a1a`, tracked by #364)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.

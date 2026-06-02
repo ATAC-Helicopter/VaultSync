@@ -35,6 +35,8 @@ public sealed class RecoveryViewModel : ViewModelBase
     private int _coverage90Days;
     private string _coverageSummary = L("Recovery.Coverage.Empty", "Recovery coverage will appear after backups are available.");
     private string _topRecommendation = L("Recovery.Recommendation.Start", "Create backups for tracked projects to start measuring recovery coverage.");
+    private int _readinessPercent;
+    private string _readinessBand = L("Recovery.Band.NotMeasured", "Not measured");
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -136,6 +138,26 @@ public sealed class RecoveryViewModel : ViewModelBase
         private set => SetField(ref _topRecommendation, value);
     }
 
+    public int ReadinessPercent
+    {
+        get => _readinessPercent;
+        private set => SetField(ref _readinessPercent, value);
+    }
+
+    public string ReadinessScoreLabel => $"{ReadinessPercent}%";
+
+    public string ReadinessBand
+    {
+        get => _readinessBand;
+        private set => SetField(ref _readinessBand, value);
+    }
+
+    public int Coverage24Percent => Percent(Coverage24Hours, ProjectCount);
+    public int Coverage7Percent => Percent(Coverage7Days, ProjectCount);
+    public int Coverage30Percent => Percent(Coverage30Days, ProjectCount);
+    public int Coverage90Percent => Percent(Coverage90Days, ProjectCount);
+    public string ProjectSummaryLabel => LF("Recovery.ProjectSummary", "{0} project(s) measured", ProjectCount);
+
     public bool HasProjects => Projects.Count > 0;
 
     public async Task RefreshAsync(bool force = false)
@@ -214,6 +236,16 @@ public sealed class RecoveryViewModel : ViewModelBase
         RiskCount = summary.RiskCount;
         UnavailableCount = summary.UnavailableCount;
         ProjectCount = summary.ProjectCount;
+        ReadinessPercent = summary.ProjectCount == 0
+            ? 0
+            : (int)Math.Round(summary.Projects.Average(project => project.Score));
+        ReadinessBand = ReadinessPercent switch
+        {
+            >= 85 => L("Recovery.Band.Ready", "Ready"),
+            >= 60 => L("Recovery.Band.Review", "Review"),
+            >= 35 => L("Recovery.Band.AtRisk", "At risk"),
+            _ => L("Recovery.Band.Unavailable", "Unavailable")
+        };
         Headline = summary.Headline;
         Detail = summary.Detail;
         Coverage24Hours = data.Coverage24Hours;
@@ -228,7 +260,16 @@ public sealed class RecoveryViewModel : ViewModelBase
             Projects.Add(new RecoveryProjectViewModel(project));
 
         OnPropertyChanged(nameof(HasProjects));
+        OnPropertyChanged(nameof(ReadinessScoreLabel));
+        OnPropertyChanged(nameof(Coverage24Percent));
+        OnPropertyChanged(nameof(Coverage7Percent));
+        OnPropertyChanged(nameof(Coverage30Percent));
+        OnPropertyChanged(nameof(Coverage90Percent));
+        OnPropertyChanged(nameof(ProjectSummaryLabel));
     }
+
+    private static int Percent(int value, int total) =>
+        total <= 0 ? 0 : (int)Math.Round(value * 100.0 / total);
 
     private sealed record RecoveryData(
         RestoreReadinessSummary Summary,
@@ -242,6 +283,9 @@ public sealed class RecoveryViewModel : ViewModelBase
 
 public sealed class RecoveryProjectViewModel
 {
+    private static string L(string key, string fallback) =>
+        LocalizationProvider.Service?.GetString(key) ?? fallback;
+
     public RecoveryProjectViewModel(ProjectRestoreReadiness project)
     {
         ProjectName = project.ProjectName;
@@ -263,4 +307,12 @@ public sealed class RecoveryProjectViewModel
     public string Reason { get; }
     public string Accent { get; }
     public string ScoreLabel => $"{Score}%";
+    public int ScoreValue => Score;
+    public string TrackLabel => Score switch
+    {
+        >= 85 => L("Recovery.Track.Clean", "Clean"),
+        >= 60 => L("Recovery.Track.Review", "Review"),
+        >= 35 => L("Recovery.Track.Risk", "Risk"),
+        _ => L("Recovery.Track.Blocked", "Blocked")
+    };
 }
