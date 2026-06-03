@@ -653,8 +653,14 @@ public class ProjectsViewModel : ViewModelBase
 
     public void EnsureLoaded()
     {
-        if (_allProjects.Count > 0 || IsLoading)
+        if (Projects.Count > 0 || IsLoading)
             return;
+
+        if (_allProjects.Count > 0)
+        {
+            ApplyFilterAndSort();
+            return;
+        }
 
         if (Interlocked.Exchange(ref _initialLoadQueued, 1) == 1)
             return;
@@ -717,6 +723,20 @@ public class ProjectsViewModel : ViewModelBase
 
     public async Task RefreshAsync(bool forceDiscovery = false)
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Task? refreshTask = null;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                refreshTask = RefreshAsync(forceDiscovery);
+            });
+
+            if (refreshTask is not null)
+                await refreshTask.ConfigureAwait(false);
+
+            return;
+        }
+
         if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
         {
             Interlocked.Exchange(ref _refreshQueued, 1);
