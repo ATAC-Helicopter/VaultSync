@@ -3,18 +3,15 @@
 ### Added
 - [VS-1802] Added 1.8 history metadata tables for snapshot labels, notes, tags, protected, known-good, and restore events.
 - [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
-- [VS-1804] Added a simple History timeline using real backup and snapshot activity from the local repository.
+- [VS-1804] Added a full-window selectable project History workspace backed by live repository activity, with reversible filters, denser paging, event details, and a Git-client-style branch graph for auto backups, manual/imported restore points, snapshots, and restores.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
 ### Changed
-- [VS-1804] Changed History into a denser activity stream with compact release signals, latest-event focus, and clearer metadata, backup, and restore entries.
-- [VS-1804] Redesigned the History teaser into a clearer activity timeline with plain-language insights.
-- [VS-1807] Redesigned Recovery into a simpler readiness overview with score, coverage, and priority-ordered projects.
-- [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`.
-- [VS-1812] Linked the repo roadmap to the 1.8 planning timeline and moved History/Recovery teaser copy behind localization keys.
+- [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`, linked the repo roadmap to the 1.8 planning timeline, and moved History/Recovery teaser copy behind localization keys.
 ### Fixed
-- [BUG-18045] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
-- [BUG-18046] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
+- [BUG-18045] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
 - [BUG-18047] Linux patch updates can now elevate through `pkexec` for protected installs instead of hiding behind the `.deb` installer fallback.
+- [BUG-18048] Projects now reload visible content on page attach and recover stale visible lists safely.
+- [BUG-18049] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
 
 ## [1.7.5] - 31.05.2026
 ### Changed
