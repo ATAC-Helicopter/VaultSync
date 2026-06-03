@@ -1799,6 +1799,10 @@
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
+- [ ] `BUG-18047` `P1` Let Linux patch updates elevate through `pkexec` before falling back to `.deb` installer flows. _(In progress, tracked by #368)_
+- [ ] `BUG-18048` `P1` Harden Projects page loading so visible project content appears reliably. _(In progress, tracked by #366)_
+  - In progress: Projects refresh now runs on the UI thread, page attach triggers loading, and stale visible lists rebuild from the backing project cache.
+- [ ] `BUG-18049` `P1` Preserve macOS `/Volumes` destination semantics when mounted paths deny access. _(In progress, tracked by #367)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
