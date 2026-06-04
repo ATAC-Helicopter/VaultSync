@@ -1789,6 +1789,7 @@
 - [ ] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(In progress, tracked by #357)_
   - In progress: core metadata persistence exists for labels, notes, tags, protected snapshots, and known-good markers.
   - In progress: History detail actions can now protect/unprotect selected snapshots and mark/clear known-good versions.
+  - In progress: backup retention and retention simulation now honor protected snapshot metadata.
   - Remaining: full label/note/tag editor flow and cross-page affordances for snapshot marker management.
 - [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(In progress, tracked by #358)_
   - In progress: Dashboard shows restore-readiness counts, headline/detail, and a review drawer for projects needing attention.

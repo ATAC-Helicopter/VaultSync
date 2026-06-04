@@ -4,7 +4,7 @@
 - [VS-1802] Added 1.8 history metadata tables for snapshot labels, notes, tags, protected, known-good, and restore events.
 - [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
 - [VS-1804] Added a full-window selectable project History workspace backed by live repository activity, with reversible time filters, denser paging, event details, and an origin-aware Git-client-style graph where snapshot notes, imports, and restores branch from their backup/snapshot source.
-- [VS-1805] Added History detail actions for marking selected snapshots as protected or known-good versions.
+- [VS-1805] Added protected and known-good snapshot markers, with retention honoring protected snapshot metadata.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
 ### Changed
 - [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`, linked the repo roadmap to the 1.8 planning timeline, and moved History/Recovery teaser copy behind localization keys.

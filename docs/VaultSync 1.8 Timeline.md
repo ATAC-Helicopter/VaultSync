@@ -398,6 +398,12 @@ Attach contextual information to snapshots.
 
 Retention ignores protected snapshots.
 
+Current implementation:
+
+- Snapshot metadata can mark a snapshot as protected.
+- Backup retention and retention simulation honor protected snapshot metadata.
+- Orphan snapshot retention skips snapshots protected by metadata.
+
 ---
 
 ### Known Good Versions

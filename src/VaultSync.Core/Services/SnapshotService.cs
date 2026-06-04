@@ -759,11 +759,18 @@ public class SnapshotService
         if (snapshots.Count <= maxSnapshotsToKeep)
             return;
 
-        // Load all backups for this project to find protected snapshot IDs
+        // Load all backups and metadata markers for this project to find protected snapshot IDs.
         IEnumerable<Backup> backups = _repo.GetBackupsForProject(project.Id);
         var protectedIds = new HashSet<int>(backups.Select(b => b.SnapshotId));
+        var metadataBySnapshotId = _repo.GetSnapshotHistoryMetadataBySnapshotIds(snapshots.Select(snapshot => snapshot.Id));
+        foreach (int snapshotId in metadataBySnapshotId
+                     .Where(static entry => entry.Value.IsProtected)
+                     .Select(static entry => entry.Key))
+        {
+            protectedIds.Add(snapshotId);
+        }
 
-        // Determine snapshots that are not referenced by any backup
+        // Determine snapshots that are not referenced by any backup or protected by metadata.
         var freeSnapshots = snapshots.Where(s => !protectedIds.Contains(s.Id)).ToList();
 
         // If free snapshots <= max, nothing to delete

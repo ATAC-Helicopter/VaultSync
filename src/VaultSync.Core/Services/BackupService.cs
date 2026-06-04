@@ -2880,8 +2880,16 @@ public sealed class BackupService(
             return;
         }
 
-        // Keep all protected backups; apply the cap only to unprotected ones.
-        var unprotected = backups.Where(b => !b.IsProtected).ToList();
+        var metadataBySnapshotId = _repo.GetSnapshotHistoryMetadataBySnapshotIds(backups.Select(backup => backup.SnapshotId));
+        var protectedSnapshotIds = metadataBySnapshotId
+            .Where(static entry => entry.Value.IsProtected)
+            .Select(static entry => entry.Key)
+            .ToHashSet();
+
+        // Keep protected backups and protected snapshots; apply the cap only to eligible restore points.
+        var unprotected = backups
+            .Where(backup => !backup.IsProtected && !protectedSnapshotIds.Contains(backup.SnapshotId))
+            .ToList();
         int deleteQuota = Math.Max(0, unprotected.Count - maxToKeep);
         // Retention candidates are oldest first.
         var candidates = unprotected

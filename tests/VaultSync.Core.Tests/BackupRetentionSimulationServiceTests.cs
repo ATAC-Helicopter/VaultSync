@@ -63,6 +63,29 @@ public sealed class BackupRetentionSimulationServiceTests : IDisposable
         Assert.Equal(1, result.BlockedProjectCount);
     }
 
+    [Fact]
+    public void Simulate_TreatsSnapshotMetadataProtectedBackupsAsKept()
+    {
+        Project project = CreateProject("Protected");
+        int protectedSnapshotId = SeedBackup(project.Id, DateTime.UtcNow.AddDays(-3), 100);
+        SeedBackup(project.Id, DateTime.UtcNow.AddDays(-2), 120);
+        SeedBackup(project.Id, DateTime.UtcNow.AddDays(-1), 140);
+        _repo.UpsertSnapshotHistoryMetadata(new SnapshotHistoryMetadata
+        {
+            SnapshotId = protectedSnapshotId,
+            IsProtected = true
+        });
+
+        var service = new BackupRetentionSimulationService(_repo);
+        BackupRetentionSimulationResult result = service.Simulate(maxSnapshotsPerProject: 1);
+
+        ProjectRetentionSimulationProjectResult projectResult = Assert.Single(result.Projects);
+        Assert.True(projectResult.CanPrune);
+        Assert.Equal(2, projectResult.UnprotectedBackupCount);
+        Assert.Equal(1, projectResult.SelectedDeleteCount);
+        Assert.Equal(120, projectResult.SelectedDeleteBytes);
+    }
+
     private Project CreateProject(string name)
     {
         TestRepository.AddProject(_repo, name, $@"C:\Projects\{name}");
