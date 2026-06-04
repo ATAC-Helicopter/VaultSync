@@ -129,20 +129,9 @@
           <Grid RowDefinitions="Auto,Auto,*,Auto">
             <Border Grid.Row="0"
                     Classes="history-toolbar">
-              <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto"
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto"
                     ColumnSpacing="10">
                 <ComboBox Classes="history-filter"
-                          ItemsSource="{CompiledBinding ActivityFilterOptions}"
-                          SelectedItem="{CompiledBinding SelectedActivityFilter, Mode=TwoWay}">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding Label}" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <ComboBox Grid.Column="1"
-                          Classes="history-filter"
                           ItemsSource="{CompiledBinding DateRangeOptions}"
                           SelectedItem="{CompiledBinding SelectedDateRange, Mode=TwoWay}">
                   <ComboBox.ItemTemplate>
@@ -152,12 +141,12 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
 
-                <Button Grid.Column="2"
+                <Button Grid.Column="1"
                         Content="Reset"
                         Command="{CompiledBinding ResetFiltersCommand}"
                         VerticalAlignment="Center" />
 
-                <TextBlock Grid.Column="4"
+                <TextBlock Grid.Column="3"
                            Text="{CompiledBinding FilterStateLabel}"
                            Classes="history-label"
                            VerticalAlignment="Center"
@@ -208,33 +197,19 @@
                     <Canvas Width="110"
                             Height="58"
                             ClipToBounds="False">
-                      <Ellipse Canvas.Left="14"
-                               Canvas.Top="26"
-                               Width="6"
-                               Height="6"
-                               Fill="{DynamicResource BorderSoft}"
-                               Opacity="0.35" />
-                      <Ellipse Canvas.Left="45"
-                               Canvas.Top="26"
-                               Width="6"
-                               Height="6"
-                               Fill="{DynamicResource BorderSoft}"
-                               Opacity="0.35" />
-                      <Ellipse Canvas.Left="69"
-                               Canvas.Top="26"
-                               Width="6"
-                               Height="6"
-                               Fill="{DynamicResource BorderSoft}"
-                               Opacity="0.35" />
-                      <Ellipse Canvas.Left="88"
-                               Canvas.Top="26"
-                               Width="6"
-                               Height="6"
-                               Fill="{DynamicResource BorderSoft}"
-                               Opacity="0.35" />
-                      <Path Data="{Binding GraphPathData}"
-                            Stroke="{Binding Accent}"
-                            StrokeThickness="3"
+                      <Path Data="{Binding BackupGraphPathData}"
+                            Stroke="#4F8DFF"
+                            StrokeThickness="2.5"
+                            StrokeLineCap="Round"
+                            StrokeJoin="Round" />
+                      <Path Data="{Binding MetadataGraphPathData}"
+                            Stroke="#8B7CFF"
+                            StrokeThickness="2.5"
+                            StrokeLineCap="Round"
+                            StrokeJoin="Round" />
+                      <Path Data="{Binding RestoreGraphPathData}"
+                            Stroke="#22CC88"
+                            StrokeThickness="2.5"
                             StrokeLineCap="Round"
                             StrokeJoin="Round" />
                       <Ellipse Canvas.Left="{Binding NodeLeft}"
@@ -252,7 +227,7 @@
                     </Canvas>
 
                     <Grid Grid.Column="1"
-                          RowDefinitions="Auto,Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto"
                           Margin="0,7,18,6"
                           RowSpacing="2">
                       <TextBlock Text="{Binding Title}"
@@ -263,6 +238,11 @@
                                  Classes="history-muted"
                                  TextTrimming="CharacterEllipsis" />
                       <TextBlock Grid.Row="2"
+                                 Text="{Binding OriginSummary}"
+                                 Classes="history-label"
+                                 TextTrimming="CharacterEllipsis"
+                                 IsVisible="{Binding HasOriginSummary}" />
+                      <TextBlock Grid.Row="3"
                                  Text="{Binding MarkerSummary}"
                                  Classes="history-label"
                                  TextTrimming="CharacterEllipsis"
@@ -358,7 +338,7 @@
               RowSpacing="14">
           <Border Classes="history-panel"
                   Padding="18">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                   RowSpacing="12">
               <Grid ColumnDefinitions="Auto,*"
                     ColumnSpacing="12">
@@ -409,13 +389,33 @@
                              TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </Grid>
-              <Border Grid.Row="3"
-                      Classes="history-kind"
-                      HorizontalAlignment="Left"
-                      IsVisible="{CompiledBinding SelectedEventHasMarkerSummary}">
-                <TextBlock Text="{CompiledBinding SelectedEventMarkerSummary}"
-                           Classes="history-label" />
-              </Border>
+              <Grid Grid.Row="3"
+                    ColumnDefinitions="Auto,*"
+                    ColumnSpacing="10">
+                <Border Classes="history-kind"
+                        HorizontalAlignment="Left"
+                        IsVisible="{CompiledBinding SelectedEventHasMarkerSummary}">
+                  <TextBlock Text="{CompiledBinding SelectedEventMarkerSummary}"
+                             Classes="history-label" />
+                </Border>
+                <TextBlock Grid.Column="1"
+                           Text="{CompiledBinding SelectedEventOriginSummary}"
+                           Classes="history-label"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"
+                           IsVisible="{CompiledBinding SelectedEventHasOriginSummary}" />
+              </Grid>
+              <StackPanel Grid.Row="4"
+                          Orientation="Horizontal"
+                          Spacing="8"
+                          IsVisible="{CompiledBinding CanEditSelectedSnapshotMetadata}">
+                <Button Content="{CompiledBinding SelectedProtectedActionLabel}"
+                        Command="{CompiledBinding ToggleSelectedProtectedCommand}"
+                        Classes="action-ghost" />
+                <Button Content="{CompiledBinding SelectedKnownGoodActionLabel}"
+                        Command="{CompiledBinding ToggleSelectedKnownGoodCommand}"
+                        Classes="action-ghost" />
+              </StackPanel>
             </Grid>
           </Border>
 
@@ -483,7 +483,7 @@
                         Background="#4F8DFF"
                         VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1"
-                           Text="Backups form the main timeline trunk"
+                           Text="Backups form the source trunk"
                            Classes="history-muted" />
                 <Border Grid.Row="1"
                         Width="10"
@@ -493,7 +493,7 @@
                         VerticalAlignment="Center" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="1"
-                           Text="Manual backups branch off the trunk"
+                           Text="Manual backups stay on the source trunk with a manual marker"
                            Classes="history-muted" />
                 <Border Grid.Row="2"
                         Width="10"
@@ -503,7 +503,7 @@
                         VerticalAlignment="Center" />
                 <TextBlock Grid.Row="2"
                            Grid.Column="1"
-                           Text="Restores and imported restore points branch far right"
+                           Text="Restores and imported restore points branch from their backup or snapshot"
                            Classes="history-muted" />
                 <Border Grid.Row="3"
                         Width="10"
@@ -513,7 +513,7 @@
                         VerticalAlignment="Center" />
                 <TextBlock Grid.Row="3"
                            Grid.Column="1"
-                           Text="Snapshots and metadata branch left"
+                           Text="Snapshot notes and orphan snapshots branch to a side lane"
                            Classes="history-muted" />
               </Grid>
               <TextBlock Text="{CompiledBinding Insight}"

@@ -1785,10 +1785,11 @@
   - Done: snapshot history metadata and restore event tables are in place with idempotent schema coverage and repository tests.
 - [x] `VS-1803` `P1` Add 1.8 shell navigation for History and Recovery. _(Done in commit `72b77b2`, tracked by #355)_
 - [x] `VS-1804` `P1` Implement History v1 project timeline. _(Done in commit `d608986`, tracked by #356)_
-  - Done: History renders a simplified lane timeline for metadata, backup, and restore events from live repository data.
+  - Done: History renders a full-window, selectable Git-client-style activity graph with persistent lanes for backups, snapshot metadata, imports, and restores.
 - [ ] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(In progress, tracked by #357)_
   - In progress: core metadata persistence exists for labels, notes, tags, protected snapshots, and known-good markers.
-  - Remaining: user-facing edit/actions flow for tagging, notes, protected markers, and known-good selection.
+  - In progress: History detail actions can now protect/unprotect selected snapshots and mark/clear known-good versions.
+  - Remaining: full label/note/tag editor flow and cross-page affordances for snapshot marker management.
 - [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(In progress, tracked by #358)_
   - In progress: Dashboard shows restore-readiness counts, headline/detail, and a review drawer for projects needing attention.
   - Remaining: final 1.8 dashboard refresh for recovery coverage, recent milestones, and workflow links.
