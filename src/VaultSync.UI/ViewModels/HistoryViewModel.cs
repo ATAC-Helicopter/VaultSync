@@ -29,6 +29,7 @@ public sealed class HistoryViewModel : ViewModelBase
     private readonly RelayCommand _toggleSelectedProtectedCommand;
     private readonly RelayCommand _toggleSelectedKnownGoodCommand;
     private readonly List<HistoryTimelineItemViewModel> _allTimelineItems = [];
+    private int _filterRevision;
     private int _refreshInFlight;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
     private string _summary = L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
@@ -43,6 +44,8 @@ public sealed class HistoryViewModel : ViewModelBase
     private string _insight = L("History.Insight.Empty", "Create a backup to start building a readable project history.");
     private HistoryActivityFilterOption? _selectedActivityFilter;
     private HistoryDateRangeOption? _selectedDateRange;
+    private HistoryProjectFilterOption? _selectedProjectFilter;
+    private HistoryLaneFilterOption? _selectedLaneFilter;
     private HistoryTimelineItemViewModel? _selectedTimelineItem;
     private int _pageIndex;
     private int _filteredEventCount;
@@ -89,6 +92,16 @@ public sealed class HistoryViewModel : ViewModelBase
         ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.Metadata, L("History.Filter.Metadata", "Metadata")));
         _selectedActivityFilter = ActivityFilterOptions[0];
 
+        ProjectFilterOptions.Add(new HistoryProjectFilterOption(null, L("History.Project.All", "All projects")));
+        _selectedProjectFilter = ProjectFilterOptions[0];
+
+        LaneFilterOptions.Add(new HistoryLaneFilterOption(null, L("History.LaneFilter.All", "All lanes")));
+        LaneFilterOptions.Add(new HistoryLaneFilterOption(HistoryTimelineLane.Backup, L("History.LaneFilter.Backup", "Backup trunk")));
+        LaneFilterOptions.Add(new HistoryLaneFilterOption(HistoryTimelineLane.Manual, L("History.LaneFilter.Manual", "Manual backups")));
+        LaneFilterOptions.Add(new HistoryLaneFilterOption(HistoryTimelineLane.Restore, L("History.LaneFilter.Restore", "Restore branches")));
+        LaneFilterOptions.Add(new HistoryLaneFilterOption(HistoryTimelineLane.Metadata, L("History.LaneFilter.Metadata", "Snapshot notes")));
+        _selectedLaneFilter = LaneFilterOptions[0];
+
         DateRangeOptions.Add(new HistoryDateRangeOption(HistoryDateRange.All, L("History.Range.All", "All time")));
         DateRangeOptions.Add(new HistoryDateRangeOption(HistoryDateRange.Last7Days, L("History.Range.7Days", "Last 7 days")));
         DateRangeOptions.Add(new HistoryDateRangeOption(HistoryDateRange.Last30Days, L("History.Range.30Days", "Last 30 days")));
@@ -98,6 +111,8 @@ public sealed class HistoryViewModel : ViewModelBase
     public ObservableCollection<HistoryTimelineItemViewModel> TimelineItems { get; } = [];
     public ObservableCollection<HistoryActivityFilterOption> ActivityFilterOptions { get; } = [];
     public ObservableCollection<HistoryDateRangeOption> DateRangeOptions { get; } = [];
+    public ObservableCollection<HistoryProjectFilterOption> ProjectFilterOptions { get; } = [];
+    public ObservableCollection<HistoryLaneFilterOption> LaneFilterOptions { get; } = [];
 
     public ICommand RefreshCommand { get; }
     public ICommand PreviousPageCommand { get; }
@@ -175,7 +190,7 @@ public sealed class HistoryViewModel : ViewModelBase
                 return;
 
             _pageIndex = 0;
-            ApplyFiltersAndPaging();
+            QueueApplyFiltersAndPaging();
         }
     }
 
@@ -188,7 +203,33 @@ public sealed class HistoryViewModel : ViewModelBase
                 return;
 
             _pageIndex = 0;
-            ApplyFiltersAndPaging();
+            QueueApplyFiltersAndPaging();
+        }
+    }
+
+    public HistoryProjectFilterOption? SelectedProjectFilter
+    {
+        get => _selectedProjectFilter;
+        set
+        {
+            if (!SetField(ref _selectedProjectFilter, value))
+                return;
+
+            _pageIndex = 0;
+            QueueApplyFiltersAndPaging();
+        }
+    }
+
+    public HistoryLaneFilterOption? SelectedLaneFilter
+    {
+        get => _selectedLaneFilter;
+        set
+        {
+            if (!SetField(ref _selectedLaneFilter, value))
+                return;
+
+            _pageIndex = 0;
+            QueueApplyFiltersAndPaging();
         }
     }
 
@@ -228,7 +269,9 @@ public sealed class HistoryViewModel : ViewModelBase
     public bool HasLoadedEvents => _allTimelineItems.Count > 0;
     public bool HasActiveFilters =>
         (SelectedActivityFilter?.Filter ?? HistoryActivityFilter.All) != HistoryActivityFilter.All ||
-        (SelectedDateRange?.Range ?? HistoryDateRange.All) != HistoryDateRange.All;
+        (SelectedDateRange?.Range ?? HistoryDateRange.All) != HistoryDateRange.All ||
+        SelectedProjectFilter?.ProjectId is not null ||
+        SelectedLaneFilter?.Lane is not null;
     public string EmptyTitle => HasLoadedEvents
         ? L("History.Filter.EmptyTitle", "No matching events")
         : L("History.Event.NoRecent", "No recent history");
@@ -357,6 +400,7 @@ public sealed class HistoryViewModel : ViewModelBase
                     ? L("History.Event.Kind.Imported", "Imported")
                     : L("History.Event.Kind.Backup", "Backup"),
                 projectName,
+                backup.ProjectId,
                 backup.CreatedUtc,
                 LF("History.Event.BackupTitle", "{0} {1} backup", projectName, type),
                 BuildBackupDetail(backup, metadata),
@@ -381,6 +425,7 @@ public sealed class HistoryViewModel : ViewModelBase
                 items.Add(new HistoryTimelineItemViewModel(
                     L("History.Event.Kind.Metadata", "Metadata"),
                     projectName,
+                    backup.ProjectId,
                     metadataUtc,
                     LF("History.Event.MetadataTitle", "{0} snapshot metadata", projectName),
                     BuildMetadataBranchDetail(metadata),
@@ -411,6 +456,7 @@ public sealed class HistoryViewModel : ViewModelBase
             items.Add(new HistoryTimelineItemViewModel(
                 L("History.Event.Kind.Restore", "Restore"),
                 projectName,
+                restore.ProjectId,
                 restore.CreatedUtc,
                 LF("History.Event.RestoreTitle", "{0} restored from backup", projectName),
                 BuildRestoreDetail(restore, metadata),
@@ -434,6 +480,7 @@ public sealed class HistoryViewModel : ViewModelBase
             items.Add(new HistoryTimelineItemViewModel(
                 L("History.Event.Kind.Snapshot", "Snapshot"),
                 projectName,
+                snapshot.ProjectId,
                 snapshot.CreatedUtc,
                 LF("History.Event.SnapshotTitle", "{0} snapshot", projectName),
                 BuildSnapshotDetail(metadata),
@@ -472,12 +519,15 @@ public sealed class HistoryViewModel : ViewModelBase
 
         _allTimelineItems.Clear();
         _allTimelineItems.AddRange(data.Items);
+        ReplaceProjectFilterOptions(data.Items);
         _pageIndex = 0;
-        ApplyFiltersAndPaging();
+        QueueApplyFiltersAndPaging();
 
         OnPropertyChanged(nameof(HasTimelineItems));
         OnPropertyChanged(nameof(HasLoadedEvents));
         OnPropertyChanged(nameof(HasActiveFilters));
+        OnPropertyChanged(nameof(SelectedProjectFilter));
+        OnPropertyChanged(nameof(SelectedLaneFilter));
         OnPropertyChanged(nameof(EmptyTitle));
         OnPropertyChanged(nameof(EmptyMessage));
         OnPropertyChanged(nameof(BackupSignalLabel));
@@ -508,11 +558,15 @@ public sealed class HistoryViewModel : ViewModelBase
     {
         _selectedActivityFilter = ActivityFilterOptions.FirstOrDefault(option => option.Filter == HistoryActivityFilter.All);
         _selectedDateRange = DateRangeOptions.FirstOrDefault(option => option.Range == HistoryDateRange.All);
+        _selectedProjectFilter = ProjectFilterOptions.FirstOrDefault(option => option.ProjectId is null);
+        _selectedLaneFilter = LaneFilterOptions.FirstOrDefault(option => option.Lane is null);
         _pageIndex = 0;
 
         OnPropertyChanged(nameof(SelectedActivityFilter));
         OnPropertyChanged(nameof(SelectedDateRange));
-        ApplyFiltersAndPaging();
+        OnPropertyChanged(nameof(SelectedProjectFilter));
+        OnPropertyChanged(nameof(SelectedLaneFilter));
+        QueueApplyFiltersAndPaging();
     }
 
     private void MovePage(int delta)
@@ -522,14 +576,39 @@ public sealed class HistoryViewModel : ViewModelBase
             return;
 
         _pageIndex = next;
-        ApplyFiltersAndPaging();
+        QueueApplyFiltersAndPaging();
     }
 
-    private void ApplyFiltersAndPaging()
+    private void QueueApplyFiltersAndPaging()
     {
-        IEnumerable<HistoryTimelineItemViewModel> query = _allTimelineItems;
+        int revision = Interlocked.Increment(ref _filterRevision);
+        var source = _allTimelineItems.ToList();
+        var filterState = new HistoryFilterState(
+            SelectedActivityFilter?.Filter ?? HistoryActivityFilter.All,
+            SelectedDateRange?.Range ?? HistoryDateRange.All,
+            SelectedProjectFilter?.ProjectId,
+            SelectedLaneFilter?.Lane,
+            _pageIndex);
 
-        query = (SelectedActivityFilter?.Filter ?? HistoryActivityFilter.All) switch
+        _ = ApplyFiltersAndPagingAsync(revision, source, filterState);
+    }
+
+    private async Task ApplyFiltersAndPagingAsync(
+        int revision,
+        IReadOnlyList<HistoryTimelineItemViewModel> source,
+        HistoryFilterState filterState)
+    {
+        HistoryPageResult result = await Task.Run(() => BuildHistoryPageResult(source, filterState)).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() => ApplyHistoryPageResult(revision, result));
+    }
+
+    private HistoryPageResult BuildHistoryPageResult(
+        IReadOnlyList<HistoryTimelineItemViewModel> source,
+        HistoryFilterState filterState)
+    {
+        IEnumerable<HistoryTimelineItemViewModel> query = source;
+
+        query = filterState.ActivityFilter switch
         {
             HistoryActivityFilter.Backups => query.Where(item =>
                 item.GraphLane is HistoryTimelineLane.Backup or HistoryTimelineLane.Manual),
@@ -538,7 +617,13 @@ public sealed class HistoryViewModel : ViewModelBase
             _ => query
         };
 
-        DateTime cutoffUtc = (SelectedDateRange?.Range ?? HistoryDateRange.All) switch
+        if (filterState.ProjectId is int projectId)
+            query = query.Where(item => item.ProjectId == projectId);
+
+        if (filterState.Lane is HistoryTimelineLane lane)
+            query = query.Where(item => item.GraphLane == lane || (lane == HistoryTimelineLane.Backup && item.GraphLane == HistoryTimelineLane.Manual));
+
+        DateTime cutoffUtc = filterState.DateRange switch
         {
             HistoryDateRange.Last7Days => DateTime.UtcNow.AddDays(-7),
             HistoryDateRange.Last30Days => DateTime.UtcNow.AddDays(-30),
@@ -549,17 +634,31 @@ public sealed class HistoryViewModel : ViewModelBase
             query = query.Where(item => item.CreatedUtc.ToUniversalTime() >= cutoffUtc);
 
         List<HistoryTimelineItemViewModel> filtered = query.ToList();
-        _filteredEventCount = filtered.Count;
-        int maxPageIndex = Math.Max(0, PageCount - 1);
-        if (_pageIndex > maxPageIndex)
-            _pageIndex = maxPageIndex;
-
-        int pageStart = _pageIndex * PageSize;
-        TimelineItems.Clear();
+        int pageCount = filtered.Count == 0 ? 0 : (int)Math.Ceiling(filtered.Count / (double)PageSize);
+        int pageIndex = Math.Clamp(filterState.PageIndex, 0, Math.Max(0, pageCount - 1));
+        int pageStart = pageIndex * PageSize;
         List<HistoryTimelineItemViewModel> pageItems = filtered.Skip(pageStart).Take(PageSize).ToList();
-        ApplyPageGraph(filtered, pageStart, pageItems.Count);
-        foreach (HistoryTimelineItemViewModel item in pageItems)
+        List<HistoryGraphPaths> graphPaths = BuildPageGraphPaths(filtered, pageStart, pageItems.Count);
+
+        return new HistoryPageResult(filtered.Count, pageIndex, pageItems, graphPaths);
+    }
+
+    private void ApplyHistoryPageResult(int revision, HistoryPageResult result)
+    {
+        if (revision != _filterRevision)
+            return;
+
+        _filteredEventCount = result.FilteredEventCount;
+        _pageIndex = result.PageIndex;
+
+        TimelineItems.Clear();
+        for (int i = 0; i < result.PageItems.Count; i++)
+        {
+            HistoryTimelineItemViewModel item = result.PageItems[i];
+            HistoryGraphPaths paths = result.GraphPaths[i];
+            item.SetPageGraphPaths(paths.BackupPath, paths.MetadataPath, paths.RestorePath);
             TimelineItems.Add(item);
+        }
 
         if (TimelineItems.Count == 0)
         {
@@ -586,6 +685,27 @@ public sealed class HistoryViewModel : ViewModelBase
         _resetFiltersCommand.RaiseCanExecuteChanged();
         _toggleSelectedProtectedCommand.RaiseCanExecuteChanged();
         _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ReplaceProjectFilterOptions(IReadOnlyList<HistoryTimelineItemViewModel> items)
+    {
+        int? previousProjectId = SelectedProjectFilter?.ProjectId;
+        var options = items
+            .Where(item => item.ProjectId > 0)
+            .GroupBy(item => item.ProjectId)
+            .Select(group => new HistoryProjectFilterOption(
+                group.Key,
+                group.OrderByDescending(item => item.CreatedUtc).First().ProjectName))
+            .OrderBy(option => option.Label, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+        ProjectFilterOptions.Clear();
+        ProjectFilterOptions.Add(new HistoryProjectFilterOption(null, L("History.Project.All", "All projects")));
+        foreach (HistoryProjectFilterOption option in options)
+            ProjectFilterOptions.Add(option);
+
+        _selectedProjectFilter = ProjectFilterOptions.FirstOrDefault(option => option.ProjectId == previousProjectId)
+            ?? ProjectFilterOptions[0];
     }
 
     private async Task ToggleSelectedSnapshotMarkerAsync(bool toggleProtected)
@@ -621,8 +741,9 @@ public sealed class HistoryViewModel : ViewModelBase
         await RefreshAsync(force: true).ConfigureAwait(false);
     }
 
-    private static void ApplyPageGraph(IReadOnlyList<HistoryTimelineItemViewModel> filtered, int pageStart, int pageCount)
+    private static List<HistoryGraphPaths> BuildPageGraphPaths(IReadOnlyList<HistoryTimelineItemViewModel> filtered, int pageStart, int pageCount)
     {
+        var paths = new List<HistoryGraphPaths>(pageCount);
         for (int pageOffset = 0; pageOffset < pageCount; pageOffset++)
         {
             int index = pageStart + pageOffset;
@@ -630,11 +751,13 @@ public sealed class HistoryViewModel : ViewModelBase
             HistoryTimelineLane? previous = index > 0 ? filtered[index - 1].GraphRailLane : null;
             HistoryTimelineLane? next = index + 1 < filtered.Count ? filtered[index + 1].GraphRailLane : null;
 
-            current.SetPageGraphPaths(
+            paths.Add(new HistoryGraphPaths(
                 BuildBackupRailPath(),
                 BuildSideRailPath(HistoryTimelineLane.Metadata, current.GraphRailLane, previous, next),
-                BuildSideRailPath(HistoryTimelineLane.Restore, current.GraphRailLane, previous, next));
+                BuildSideRailPath(HistoryTimelineLane.Restore, current.GraphRailLane, previous, next)));
         }
+
+        return paths;
     }
 
     private static string BuildBackupRailPath() => "M 28,0 L 28,58";
@@ -767,6 +890,24 @@ public sealed class HistoryViewModel : ViewModelBase
         int SnapshotOnlyCount,
         int RestoreCount,
         IReadOnlyList<HistoryTimelineItemViewModel> Items);
+
+    private sealed record HistoryFilterState(
+        HistoryActivityFilter ActivityFilter,
+        HistoryDateRange DateRange,
+        int? ProjectId,
+        HistoryTimelineLane? Lane,
+        int PageIndex);
+
+    private sealed record HistoryPageResult(
+        int FilteredEventCount,
+        int PageIndex,
+        IReadOnlyList<HistoryTimelineItemViewModel> PageItems,
+        IReadOnlyList<HistoryGraphPaths> GraphPaths);
+
+    private sealed record HistoryGraphPaths(
+        string BackupPath,
+        string MetadataPath,
+        string RestorePath);
 }
 
 public enum HistoryTimelineLane
@@ -796,6 +937,10 @@ public sealed record HistoryActivityFilterOption(HistoryActivityFilter Filter, s
 
 public sealed record HistoryDateRangeOption(HistoryDateRange Range, string Label);
 
+public sealed record HistoryProjectFilterOption(int? ProjectId, string Label);
+
+public sealed record HistoryLaneFilterOption(HistoryTimelineLane? Lane, string Label);
+
 public sealed class HistoryTimelineItemViewModel
 {
     private static string L(string key, string fallback)
@@ -812,6 +957,7 @@ public sealed class HistoryTimelineItemViewModel
     public HistoryTimelineItemViewModel(
         string kind,
         string projectName,
+        int projectId,
         DateTime createdUtc,
         string title,
         string detail,
@@ -826,6 +972,7 @@ public sealed class HistoryTimelineItemViewModel
     {
         Kind = kind;
         ProjectName = projectName;
+        ProjectId = projectId;
         CreatedUtc = createdUtc;
         Title = title;
         Detail = detail;
@@ -841,6 +988,7 @@ public sealed class HistoryTimelineItemViewModel
 
     public string Kind { get; }
     public string ProjectName { get; }
+    public int ProjectId { get; }
     public DateTime CreatedUtc { get; }
     public string Title { get; }
     public string Detail { get; }

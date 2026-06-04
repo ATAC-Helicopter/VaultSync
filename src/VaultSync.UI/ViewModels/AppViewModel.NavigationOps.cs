@@ -113,7 +113,7 @@ namespace VaultSync.UI.ViewModels
                     CurrentViewName = "Backups";
                     CurrentView = BackupsViewModel;
                     HeaderTitle = AppViewModel.L("Nav.Backups", "Backups");
-                    HeaderKicker = AppViewModel.L("Main.HeaderBackups", "Snapshots & history");
+                    HeaderKicker = AppViewModel.L("Main.HeaderBackups", "Snapshots & restore");
 
                     if (_backupsCacheProjects is not null && _backupsCacheBackups is not null)
                     {

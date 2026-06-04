@@ -1808,6 +1808,10 @@
 - [ ] `BUG-18049` `P1` Preserve macOS `/Volumes` destination semantics when mounted paths deny access. _(In progress, tracked by #367)_
 - [x] `BUG-18050` `P1` Keep Projects and Backups navigation responsive while data loads. _(Done in `release/v1.8`)_
   - Done: Projects and Backups switch views before hydration work starts, and Backups history filtering/grouping is coalesced and shaped off the UI thread.
+- [x] `VS-1813` `P1` Clarify Backups versus History responsibilities and add History view customization. _(Done in `release/v1.8`)_
+  - Done: Backups now presents its lower section as snapshot inventory for restore-point operations, while History owns project/activity/lane/time filtering for timeline exploration.
+- [x] `BUG-18051` `P1` Keep project selection and History paging responsive. _(Done in `release/v1.8`)_
+  - Done: Projects no longer reload preset files or persist refreshed DB state during selection, selected-project snapshot detail is capped to recent entries, and History filters/pages are shaped off the UI thread.
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.

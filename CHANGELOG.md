@@ -7,6 +7,7 @@
 - [VS-1805] Added protected and known-good snapshot markers, with retention honoring protected snapshot metadata.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
 ### Changed
+- [VS-1813] History now supports activity, project, lane, and time-range filtering, while the Backups page frames its lower section as a snapshot inventory for restore-point operations instead of a competing history timeline.
 - [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.
 - [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`, linked the repo roadmap to the 1.8 planning timeline, and moved History/Recovery teaser copy behind localization keys.
 ### Fixed
@@ -15,6 +16,7 @@
 - [BUG-18048] Projects now reload visible content on page attach and recover stale visible lists safely.
 - [BUG-18049] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
 - [BUG-18050] Projects and Backups navigation no longer blocks the UI while cached data and history groups load.
+- [BUG-18051] Project selection and History paging no longer run preset-file reads, redundant project persistence, or timeline page shaping directly in the UI interaction path.
 
 ## [1.7.5] - 31.05.2026
 ### Changed

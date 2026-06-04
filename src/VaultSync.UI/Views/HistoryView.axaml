@@ -129,7 +129,7 @@
           <Grid RowDefinitions="Auto,Auto,*,Auto">
             <Border Grid.Row="0"
                     Classes="history-toolbar">
-              <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+              <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto"
                     ColumnSpacing="10">
                 <ComboBox Classes="history-filter"
                           ItemsSource="{CompiledBinding DateRangeOptions}"
@@ -141,12 +141,45 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
 
-                <Button Grid.Column="1"
+                <ComboBox Grid.Column="1"
+                          Classes="history-filter"
+                          ItemsSource="{CompiledBinding ActivityFilterOptions}"
+                          SelectedItem="{CompiledBinding SelectedActivityFilter, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <ComboBox Grid.Column="2"
+                          Classes="history-filter"
+                          ItemsSource="{CompiledBinding ProjectFilterOptions}"
+                          SelectedItem="{CompiledBinding SelectedProjectFilter, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <ComboBox Grid.Column="3"
+                          Classes="history-filter"
+                          ItemsSource="{CompiledBinding LaneFilterOptions}"
+                          SelectedItem="{CompiledBinding SelectedLaneFilter, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Button Grid.Column="4"
                         Content="Reset"
                         Command="{CompiledBinding ResetFiltersCommand}"
                         VerticalAlignment="Center" />
 
-                <TextBlock Grid.Column="3"
+                <TextBlock Grid.Column="5"
                            Text="{CompiledBinding FilterStateLabel}"
                            Classes="history-label"
                            VerticalAlignment="Center"
