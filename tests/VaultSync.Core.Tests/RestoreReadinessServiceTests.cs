@@ -66,6 +66,85 @@ public sealed class RestoreReadinessServiceTests
     }
 
     [Fact]
+    public void BuildSummary_UsesSnapshotMarkers_WhenMetadataIsProvided()
+    {
+        var destination = new BackupDestinationBuilder().Build();
+        var config = new AppConfig
+        {
+            Backups = new BackupsConfig
+            {
+                UseAdvancedDestinations = true,
+                Destinations = [destination]
+            }
+        };
+        var project = new ProjectBuilder()
+            .WithPreferredDestinationId(DestinationIdentityService.GetId(destination))
+            .WithVerificationPolicy(ProjectVerificationPolicy.Always)
+            .Build();
+        var backup = new BackupBuilder()
+            .WithId(101)
+            .CreatedUtc(DateTime.UtcNow.AddHours(-2))
+            .AtDestination(destination.Path)
+            .Build();
+
+        RestoreReadinessSummary summary = new RestoreReadinessService().BuildSummary(
+            [project],
+            [backup],
+            config,
+            new BackupIndexScanSummary(),
+            new Dictionary<string, bool> { [DestinationIdentityService.GetId(destination)] = true },
+            new Dictionary<int, SnapshotHistoryMetadata>
+            {
+                [backup.SnapshotId] = new()
+                {
+                    SnapshotId = backup.SnapshotId,
+                    IsProtected = true,
+                    IsKnownGood = true
+                }
+            });
+
+        Assert.Equal(1, summary.ReadyCount);
+        Assert.Equal(RestoreReadinessState.Ready, summary.Projects[0].State);
+        Assert.DoesNotContain("known-good", summary.Projects[0].Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BuildSummary_RequestsReview_WhenMetadataHasNoProtectedOrKnownGoodPoint()
+    {
+        var destination = new BackupDestinationBuilder().Build();
+        var config = new AppConfig
+        {
+            Backups = new BackupsConfig
+            {
+                UseAdvancedDestinations = true,
+                Destinations = [destination]
+            }
+        };
+        var project = new ProjectBuilder()
+            .WithPreferredDestinationId(DestinationIdentityService.GetId(destination))
+            .WithVerificationPolicy(ProjectVerificationPolicy.Always)
+            .Build();
+        var backup = new BackupBuilder()
+            .WithId(102)
+            .CreatedUtc(DateTime.UtcNow.AddHours(-2))
+            .AtDestination(destination.Path)
+            .Build();
+
+        RestoreReadinessSummary summary = new RestoreReadinessService().BuildSummary(
+            [project],
+            [backup],
+            config,
+            new BackupIndexScanSummary(),
+            new Dictionary<string, bool> { [DestinationIdentityService.GetId(destination)] = true },
+            new Dictionary<int, SnapshotHistoryMetadata>());
+
+        Assert.Equal(1, summary.AttentionCount);
+        Assert.Equal(RestoreReadinessState.Attention, summary.Projects[0].State);
+        Assert.Contains("protected", summary.Projects[0].Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("known-good", summary.Projects[0].Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void BuildSummary_MarksProjectRisk_WhenBackupIsStale_AndDestinationUnreachable()
     {
         var destination = new BackupDestinationBuilder()

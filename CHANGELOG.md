@@ -7,6 +7,7 @@
 - [VS-1805] Added protected and known-good snapshot markers, with retention honoring protected snapshot metadata.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
 ### Changed
+- [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.
 - [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`, linked the repo roadmap to the 1.8 planning timeline, and moved History/Recovery teaser copy behind localization keys.
 ### Fixed
 - [BUG-18045] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.

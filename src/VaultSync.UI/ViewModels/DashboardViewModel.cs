@@ -610,6 +610,10 @@ namespace VaultSync.UI.ViewModels
                         activities.Add((s.projectId, s.createdUtc, "snapshot"));
                     }
 
+                    List<Backup> restoreReadinessBackups = repo.GetAllBackups().ToList();
+                    IReadOnlyDictionary<int, SnapshotHistoryMetadata> restoreReadinessMetadata =
+                        repo.GetSnapshotHistoryMetadataBySnapshotIds(restoreReadinessBackups.Select(backup => backup.SnapshotId));
+
                     var dashboardData = new DashboardData
                     {
                         Config = cfg,
@@ -628,9 +632,10 @@ namespace VaultSync.UI.ViewModels
                         ImportedCounts = importedCounts,
                         RestoreReadiness = new RestoreReadinessService().BuildSummary(
                             projects,
-                            repo.GetAllBackups().ToList(),
+                            restoreReadinessBackups,
                             cfg,
-                            cfg.Advanced.BackupIndexLastScan)
+                            cfg.Advanced.BackupIndexLastScan,
+                            snapshotMetadataById: restoreReadinessMetadata)
                     };
                     _lastDashboardData = dashboardData;
                     _lastDashboardDataUtc = DateTime.UtcNow;

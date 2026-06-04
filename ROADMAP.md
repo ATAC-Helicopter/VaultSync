@@ -1793,6 +1793,7 @@
   - Remaining: full label/note/tag editor flow and cross-page affordances for snapshot marker management.
 - [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(In progress, tracked by #358)_
   - In progress: Dashboard shows restore-readiness counts, headline/detail, and a review drawer for projects needing attention.
+  - In progress: Recovery readiness scoring now uses protected and known-good snapshot markers when metadata is available.
   - Remaining: final 1.8 dashboard refresh for recovery coverage, recent milestones, and workflow links.
 - [x] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Done in PR #365, tracked by #359)_
   - Done: Recovery page shows readiness score/band, coverage windows, project priority ordering, and actionable recommendations.

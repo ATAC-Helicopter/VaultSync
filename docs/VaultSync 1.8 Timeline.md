@@ -445,6 +445,11 @@ Potential inputs:
 - Recovery Coverage
 - Protected Versions
 
+Current implementation:
+
+- Recovery readiness uses backup recency, verification policy, destination reachability, and index health.
+- When snapshot metadata is available, missing protected and known-good recovery points lower readiness and explain the gap.
+
 ---
 
 ### Recovery Coverage

@@ -15,7 +15,8 @@ public sealed class RestoreReadinessService
         IReadOnlyList<Backup> backups,
         AppConfig config,
         BackupIndexScanSummary? scanSummary = null,
-        IReadOnlyDictionary<string, bool>? destinationReachability = null)
+        IReadOnlyDictionary<string, bool>? destinationReachability = null,
+        IReadOnlyDictionary<int, SnapshotHistoryMetadata>? snapshotMetadataById = null)
     {
         ArgumentNullException.ThrowIfNull(projects);
         ArgumentNullException.ThrowIfNull(backups);
@@ -28,7 +29,13 @@ public sealed class RestoreReadinessService
 
         var results = projects
             .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(project => EvaluateProject(project, backupsByProject.GetValueOrDefault(project.Id), config, scanSummary, reachability))
+            .Select(project => EvaluateProject(
+                project,
+                backupsByProject.GetValueOrDefault(project.Id),
+                config,
+                scanSummary,
+                reachability,
+                snapshotMetadataById))
             .ToList();
 
         int ready = results.Count(result => result.State == RestoreReadinessState.Ready);
@@ -87,7 +94,8 @@ public sealed class RestoreReadinessService
         IReadOnlyList<Backup>? backups,
         AppConfig config,
         BackupIndexScanSummary? scanSummary,
-        IReadOnlyDictionary<string, bool> destinationReachability)
+        IReadOnlyDictionary<string, bool> destinationReachability,
+        IReadOnlyDictionary<int, SnapshotHistoryMetadata>? snapshotMetadataById)
     {
         Backup? latest = backups?.FirstOrDefault();
         if (latest is null)
@@ -162,6 +170,28 @@ public sealed class RestoreReadinessService
         {
             score -= 8;
             reasons.Add("backup index warnings should be reviewed");
+        }
+
+        if (snapshotMetadataById is not null)
+        {
+            bool hasProtectedRestorePoint = backups.Any(backup =>
+                snapshotMetadataById.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata) &&
+                metadata.IsProtected);
+            bool hasKnownGoodRestorePoint = backups.Any(backup =>
+                snapshotMetadataById.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata) &&
+                metadata.IsKnownGood);
+
+            if (!hasProtectedRestorePoint)
+            {
+                score -= 8;
+                reasons.Add("no protected recovery point is marked");
+            }
+
+            if (!hasKnownGoodRestorePoint)
+            {
+                score -= 8;
+                reasons.Add("no known-good recovery point is marked");
+            }
         }
 
         score = Math.Clamp(score, 0, 100);
