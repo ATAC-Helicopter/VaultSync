@@ -14,6 +14,7 @@
 - [BUG-18047] Linux patch updates can now elevate through `pkexec` for protected installs instead of hiding behind the `.deb` installer fallback.
 - [BUG-18048] Projects now reload visible content on page attach and recover stale visible lists safely.
 - [BUG-18049] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
+- [BUG-18050] Projects and Backups navigation no longer blocks the UI while cached data and history groups load.
 
 ## [1.7.5] - 31.05.2026
 ### Changed

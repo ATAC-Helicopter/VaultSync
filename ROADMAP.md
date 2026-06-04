@@ -1806,6 +1806,8 @@
 - [ ] `BUG-18048` `P1` Harden Projects page loading so visible project content appears reliably. _(In progress, tracked by #366)_
   - In progress: Projects refresh now runs on the UI thread, page attach triggers loading, and stale visible lists rebuild from the backing project cache.
 - [ ] `BUG-18049` `P1` Preserve macOS `/Volumes` destination semantics when mounted paths deny access. _(In progress, tracked by #367)_
+- [x] `BUG-18050` `P1` Keep Projects and Backups navigation responsive while data loads. _(Done in `release/v1.8`)_
+  - Done: Projects and Backups switch views before hydration work starts, and Backups history filtering/grouping is coalesced and shaped off the UI thread.
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
