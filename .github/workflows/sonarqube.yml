@@ -90,7 +90,10 @@ jobs:
             /o:"${SONAR_ORGANIZATION}" \
             /d:sonar.host.url="${host_url}" \
             /d:sonar.token="${SONAR_TOKEN}" \
-            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
+            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
+            /d:sonar.exclusions="coverage.xml,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
+            /d:sonar.tests="tests,tests/scripts" \
+            /d:sonar.python.version="3"
 
       - name: Build
         if: steps.config.outputs.configured == 'true'

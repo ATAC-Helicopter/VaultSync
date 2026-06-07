@@ -250,10 +250,6 @@ namespace VaultSync.Core.Services
                 proc.OutputDataReceived -= OnData;
                 proc.ErrorDataReceived -= OnErr;
                 proc.Exited            -= OnExit;
-
-                // Optional: log stdout/stderr if exit > 7
-                // _log.Debug(stdout.ToString());
-                // _log.Error(stderr.ToString());
             }
         }
 

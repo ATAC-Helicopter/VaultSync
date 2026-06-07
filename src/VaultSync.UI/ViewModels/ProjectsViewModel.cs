@@ -725,15 +725,21 @@ public class ProjectsViewModel : ViewModelBase
     {
         if (!Dispatcher.UIThread.CheckAccess())
         {
-            Task? refreshTask = null;
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            Dispatcher.UIThread.Post(async () =>
             {
-                refreshTask = RefreshAsync(forceDiscovery);
+                try
+                {
+                    await RefreshAsync(forceDiscovery).ConfigureAwait(true);
+                    completion.SetResult();
+                }
+                catch (Exception ex)
+                {
+                    completion.SetException(ex);
+                }
             });
 
-            if (refreshTask is not null)
-                await refreshTask.ConfigureAwait(false);
-
+            await completion.Task.ConfigureAwait(false);
             return;
         }
 
