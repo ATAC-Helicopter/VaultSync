@@ -22,6 +22,7 @@ Use this page as the primary index for all project documentation.
 - Contributing: `CONTRIBUTING.md`
 - Security policy: `SECURITY.md`
 - Code of Conduct: `CODE_OF_CONDUCT.md`
+- SonarQube Cloud setup: `docs/SONARQUBE.md`
 
 ## User Guides (Wiki)
 - Quick start: `docs/wiki/Quick-Start.md`

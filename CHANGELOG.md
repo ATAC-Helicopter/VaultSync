@@ -1,6 +1,7 @@
 ﻿# Changelog
 ## [1.8.0] - Unreleased
 ### Added
+- [VS-1814] Added guarded SonarQube Cloud analysis workflow and setup notes for the public OSS repository.
 - [VS-1802] Added 1.8 history metadata tables for snapshot labels, notes, tags, protected, known-good, and restore events.
 - [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
 - [VS-1804] Added a full-window selectable project History workspace backed by live repository activity, with reversible filters, denser paging, event details, and a Git-client-style branch graph for auto backups, manual/imported restore points, snapshots, and restores.
