@@ -26,6 +26,7 @@ public partial class OnboardingTourOverlay : UserControl
     {
         InitializeComponent();
         CalloutPopup.PlacementTarget = this;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
 
         DataContextChanged += (_, _) =>
         {
@@ -49,6 +50,13 @@ public partial class OnboardingTourOverlay : UserControl
         };
 
         LayoutUpdated += (_, _) => UpdateLayoutForTarget();
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _scrollCts?.Cancel();
+        _scrollCts?.Dispose();
+        _scrollCts = null;
     }
 
     private void UpdateTarget()
@@ -262,7 +270,9 @@ public partial class OnboardingTourOverlay : UserControl
         _lastScrollAt = now;
         _lastScrollTarget = targetName;
         _lastScrollY = targetY;
-        _scrollCts?.Cancel();
+        CancellationTokenSource? previousScrollCts = _scrollCts;
+        previousScrollCts?.Cancel();
+        previousScrollCts?.Dispose();
         _scrollCts = new CancellationTokenSource();
         _ = AnimateScrollAsync(scrollViewer, targetY, _scrollCts.Token);
     }

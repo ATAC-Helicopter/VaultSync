@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -290,6 +291,8 @@ namespace VaultSync.Core.Repositories
     """);
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class BackupPathRow
         {
             public long Id { get; init; }
@@ -1816,6 +1819,8 @@ DELETE FROM sqlite_sequence;";
                 """);
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class BackupActivityRow
         {
             public long ProjectId { get; init; }
@@ -1854,6 +1859,8 @@ DELETE FROM sqlite_sequence;";
             return result;
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class SnapshotActivityRow
         {
             public long ProjectId { get; init; }
@@ -1964,12 +1971,16 @@ DELETE FROM sqlite_sequence;";
                 new { limit = Math.Max(0, limit) })];
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class BackupCountRow
         {
             public string Day { get; init; } = string.Empty;
             public long Count { get; init; }
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class BackupCountByTypeRow
         {
             public string Day { get; init; } = string.Empty;

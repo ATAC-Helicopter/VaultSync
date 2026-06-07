@@ -793,7 +793,7 @@ public sealed class BackupService(
         var projectCts = new CancellationTokenSource();
         _cancelMap[project.Id] = projectCts;
 
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
         CancellationToken linkedToken = linkedCts.Token;
         await using CancellationTokenRegistration cancelLog = linkedToken.Register(() =>
             RuntimeLog.WriteVerbose($"[BackupService] Cancellation observed for project '{project.Name}' (Id={project.Id})."));

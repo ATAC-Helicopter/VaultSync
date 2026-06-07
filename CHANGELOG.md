@@ -2,6 +2,7 @@
 ## [1.8.0] - Unreleased
 ### Added
 - [VS-1814] Added guarded SonarQube Cloud analysis workflow and setup notes for the public OSS repository.
+- [VS-1815] Added SonarQube analysis exclusions for vendored rsync tooling and binary/build artifacts.
 - [VS-1802] Added 1.8 history metadata tables for snapshot labels, notes, tags, protected, known-good, and restore events.
 - [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
 - [VS-1804] Added a full-window selectable project History workspace backed by live repository activity, with reversible time filters, denser paging, event details, and an origin-aware Git-client-style graph where snapshot notes, imports, and restores branch from their backup/snapshot source.
@@ -10,6 +11,7 @@
 ### Changed
 - [VS-1813] History now supports activity, project, lane, and time-range filtering, while the Backups page frames its lower section as a snapshot inventory for restore-point operations instead of a competing history timeline.
 - [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.
+- [VS-1816] Hardened release asset workflow input handling so manually supplied versions are passed through quoted environment variables instead of direct shell interpolation.
 - [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`, linked the repo roadmap to the 1.8 planning timeline, and moved History/Recovery teaser copy behind localization keys.
 ### Fixed
 - [BUG-18045] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
@@ -18,6 +20,7 @@
 - [BUG-18049] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
 - [BUG-18050] Projects and Backups navigation no longer blocks the UI while cached data and history groups load.
 - [BUG-18051] Project selection and History paging no longer run preset-file reads, redundant project persistence, or timeline page shaping directly in the UI interaction path.
+- [BUG-18052] Backup, diagnostics, and onboarding scroll cancellation resources are now disposed on completion or teardown.
 
 ## [1.7.5] - 31.05.2026
 ### Changed

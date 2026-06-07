@@ -83,6 +83,7 @@ internal static class Program
             _instanceMutex.Dispose();
             _instanceMutex = null;
             DiagnosticsLogger.Record("Process exit cleanup complete.");
+            DiagnosticsLogger.Shutdown();
         }
     }
 

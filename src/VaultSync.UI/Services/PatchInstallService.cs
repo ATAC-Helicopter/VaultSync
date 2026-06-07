@@ -569,7 +569,7 @@ namespace VaultSync.UI.Services
 
                 Directory.CreateDirectory(installDir);
                 string testPath = Path.Combine(installDir, $".vaultsync-write-test-{Guid.NewGuid():N}");
-                using (new FileStream(testPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
+                File.WriteAllBytes(testPath, []);
                 File.Delete(testPath);
                 return true;
             }

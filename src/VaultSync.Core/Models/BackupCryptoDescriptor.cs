@@ -8,6 +8,7 @@ public sealed record BackupCryptoDescriptor
 {
     public const int CurrentFormatVersion = 1;
     public const string PlainMetadataJson = "{}";
+    private const string UnknownDescriptorValue = "unknown";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -31,8 +32,8 @@ public sealed record BackupCryptoDescriptor
         return new BackupCryptoDescriptor
         {
             FormatVersion = formatVersion > 0 ? formatVersion : CurrentFormatVersion,
-            Algorithm = NormalizeOrFallback(algorithm, "unknown"),
-            KdfProfile = NormalizeOrFallback(kdfProfile, "unknown"),
+            Algorithm = NormalizeOrFallback(algorithm, UnknownDescriptorValue),
+            KdfProfile = NormalizeOrFallback(kdfProfile, UnknownDescriptorValue),
             KdfParamRef = (kdfParamRef ?? string.Empty).Trim()
         };
     }
@@ -43,29 +44,29 @@ public sealed record BackupCryptoDescriptor
             return Plain();
 
         if (string.IsNullOrWhiteSpace(descriptorJson))
-            return Encrypted("unknown", "unknown", string.Empty);
+            return Encrypted(UnknownDescriptorValue, UnknownDescriptorValue, string.Empty);
 
         string trimmed = descriptorJson.Trim();
         if (string.Equals(trimmed, PlainMetadataJson, StringComparison.Ordinal))
-            return Encrypted("unknown", "unknown", string.Empty);
+            return Encrypted(UnknownDescriptorValue, UnknownDescriptorValue, string.Empty);
 
         try
         {
             using var document = JsonDocument.Parse(trimmed);
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
-                return Encrypted("unknown", "unknown", string.Empty);
+                return Encrypted(UnknownDescriptorValue, UnknownDescriptorValue, string.Empty);
 
             int formatVersion = ReadInt(root, "formatVersion", CurrentFormatVersion);
-            string algorithm = ReadString(root, "algorithm", "unknown");
-            string kdfProfile = ReadString(root, "kdfProfile", "unknown");
+            string algorithm = ReadString(root, "algorithm", UnknownDescriptorValue);
+            string kdfProfile = ReadString(root, "kdfProfile", UnknownDescriptorValue);
             string kdfParamRef = ReadString(root, "kdfParamRef", string.Empty);
 
             // Legacy fallback keys for pre-contract payloads.
-            if (string.Equals(algorithm, "unknown", StringComparison.OrdinalIgnoreCase))
-                algorithm = ReadString(root, "cipher", "unknown");
-            if (string.Equals(kdfProfile, "unknown", StringComparison.OrdinalIgnoreCase))
-                kdfProfile = ReadString(root, "kdf", "unknown");
+            if (string.Equals(algorithm, UnknownDescriptorValue, StringComparison.OrdinalIgnoreCase))
+                algorithm = ReadString(root, "cipher", UnknownDescriptorValue);
+            if (string.Equals(kdfProfile, UnknownDescriptorValue, StringComparison.OrdinalIgnoreCase))
+                kdfProfile = ReadString(root, "kdf", UnknownDescriptorValue);
             if (string.IsNullOrWhiteSpace(kdfParamRef))
                 kdfParamRef = ReadString(root, "paramsId", string.Empty);
 
@@ -73,7 +74,7 @@ public sealed record BackupCryptoDescriptor
         }
         catch
         {
-            return Encrypted("unknown", "unknown", string.Empty);
+            return Encrypted(UnknownDescriptorValue, UnknownDescriptorValue, string.Empty);
         }
     }
 
@@ -85,8 +86,8 @@ public sealed record BackupCryptoDescriptor
         var payload = new StoragePayload
         {
             FormatVersion = FormatVersion > 0 ? FormatVersion : CurrentFormatVersion,
-            Algorithm = NormalizeOrFallback(Algorithm, "unknown"),
-            KdfProfile = NormalizeOrFallback(KdfProfile, "unknown"),
+            Algorithm = NormalizeOrFallback(Algorithm, UnknownDescriptorValue),
+            KdfProfile = NormalizeOrFallback(KdfProfile, UnknownDescriptorValue),
             KdfParamRef = (KdfParamRef ?? string.Empty).Trim()
         };
 
@@ -145,8 +146,8 @@ public sealed record BackupCryptoDescriptor
     private sealed class StoragePayload
     {
         public int FormatVersion { get; set; }
-        public string Algorithm { get; set; } = "unknown";
-        public string KdfProfile { get; set; } = "unknown";
+        public string Algorithm { get; set; } = UnknownDescriptorValue;
+        public string KdfProfile { get; set; } = UnknownDescriptorValue;
         public string KdfParamRef { get; set; } = string.Empty;
     }
 }
