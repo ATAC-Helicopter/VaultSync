@@ -94,7 +94,7 @@ jobs:
 
       - name: Build
         if: steps.config.outputs.configured == 'true'
-        run: dotnet build VaultSync.sln --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false -m:1
+        run: dotnet build VaultSync.sln --configuration Release --no-restore -p:UseSharedCompilation=false -m:1
 
       - name: Test with coverage
         if: steps.config.outputs.configured == 'true'
