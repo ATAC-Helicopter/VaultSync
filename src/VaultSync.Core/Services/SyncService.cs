@@ -27,7 +27,7 @@ namespace VaultSync.Core.Services
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                // Prefer robocopy if present; otherwise fall back to .NET copy loop (todo) or error.
+                // Prefer robocopy if present; otherwise fail with an actionable setup error.
                 if (IsOnPath("robocopy")) return new RobocopyRunner();
 
                 throw new InvalidOperationException("robocopy not found on PATH. Install it (comes with Windows) or add to PATH.");
