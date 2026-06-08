@@ -56,7 +56,10 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Directory.CreateDirectory(projectRoot);
         Directory.CreateDirectory(backupRoot);
 
-        BackupSafetyService.EnsureSafeBackupRoot(projectRoot, backupRoot);
+        var ex = Record.Exception(() =>
+            BackupSafetyService.EnsureSafeBackupRoot(projectRoot, backupRoot));
+
+        Assert.Null(ex);
     }
 
     [Fact]

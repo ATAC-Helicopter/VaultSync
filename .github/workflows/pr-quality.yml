@@ -88,7 +88,7 @@ jobs:
 
       - name: Lint GitHub YAML files
         run: |
-          npx --yes yaml-lint \
+          npx --yes --ignore-scripts yaml-lint \
             .github/workflows/*.yml \
             .github/ISSUE_TEMPLATE/*.yml \
             .github/dependabot.yml

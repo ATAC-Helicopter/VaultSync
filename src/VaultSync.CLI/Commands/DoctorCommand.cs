@@ -24,7 +24,13 @@ namespace VaultSync.CLI.Commands
         {
             bool ok = true;
             void Pass(string msg) { if (!s.Quiet) AnsiConsole.MarkupLine($"[green]+[/] {Markup.Escape(msg)}"); }
-            void Fail(string msg) { ok = false; if (!s.Quiet) AnsiConsole.MarkupLine($"[red]x[/] {Markup.Escape(msg)}"); }
+            bool Fail(string msg)
+            {
+                if (!s.Quiet)
+                    AnsiConsole.MarkupLine($"[red]x[/] {Markup.Escape(msg)}");
+
+                return false;
+            }
 
             try
             {
@@ -41,7 +47,7 @@ namespace VaultSync.CLI.Commands
                     using System.Diagnostics.Process proc = System.Diagnostics.Process.Start(p)!;
                     await proc.WaitForExitAsync(ct);
                     if (proc.ExitCode <= 16) Pass("robocopy found (Windows sync runner)");
-                    else Fail("robocopy returned unexpected exit");
+                    else ok = Fail("robocopy returned unexpected exit");
                 }
                 else
                 {
@@ -59,10 +65,10 @@ namespace VaultSync.CLI.Commands
                     if (proc.ExitCode == 0 && txt.Contains("rsync", StringComparison.OrdinalIgnoreCase))
                         Pass("rsync found (Unix sync runner)");
                     else
-                        Fail("rsync not available or returned non-zero");
+                        ok = Fail("rsync not available or returned non-zero");
                 }
             }
-            catch { Fail("Platform sync tool not found on PATH"); }
+            catch { ok = Fail("Platform sync tool not found on PATH"); }
 
             try
             {
@@ -74,7 +80,7 @@ namespace VaultSync.CLI.Commands
                 File.Delete(testFile);
                 Pass($"Database path writable: {db}");
             }
-            catch (Exception ex) { Fail($"Database path not writable: {ex.Message}"); }
+            catch (Exception ex) { ok = Fail($"Database path not writable: {ex.Message}"); }
 
             try
             {
@@ -86,10 +92,10 @@ namespace VaultSync.CLI.Commands
                 foreach (Core.Models.Project p in projects)
                 {
                     if (Directory.Exists(p.RootPath)) Pass($"Project path exists: {p.Name} -> {p.RootPath}");
-                    else Fail($"Project path missing: {p.Name} -> {p.RootPath}");
+                    else ok = Fail($"Project path missing: {p.Name} -> {p.RootPath}");
                 }
             }
-            catch (Exception ex) { Fail($"Could not inspect projects: {ex.Message}"); }
+            catch (Exception ex) { ok = Fail($"Could not inspect projects: {ex.Message}"); }
 
             if (!string.IsNullOrWhiteSpace(s.CheckDest))
             {
@@ -102,7 +108,7 @@ namespace VaultSync.CLI.Commands
                     File.Delete(test);
                     Pass($"Destination writable: {dest}");
                 }
-                catch (Exception ex) { Fail($"Destination not writable: {ex.Message}"); }
+                catch (Exception ex) { ok = Fail($"Destination not writable: {ex.Message}"); }
             }
 
             if (!s.Quiet)

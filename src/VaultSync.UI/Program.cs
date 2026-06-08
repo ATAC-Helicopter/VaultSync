@@ -403,6 +403,4 @@ internal static class Program
             .UsePlatformDetect()
             .LogToTrace(LogEventLevel.Warning);
 
-    public static AppBuilder BuildAvaloniaApp()
-        => BuildAvaloniaApp(useSoftwareFallback: false);
 }

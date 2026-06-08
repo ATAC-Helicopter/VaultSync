@@ -60,7 +60,9 @@ public sealed class BackupArchiveCryptoService
         int iterations = ResolveKdfIterations(config.KdfParamRef);
         string kdfParamRef = ResolveKdfParamRef(config.KdfParamRef, iterations);
 
-        BackupArchiveEnvelopeMetadata metadata = BuildMetadata(algorithm, kdfProfile, kdfParamRef, iterations);
+        byte[] salt = RandomNumberGenerator.GetBytes(SaltLengthBytes);
+        byte[] iv = RandomNumberGenerator.GetBytes(IvLengthBytes);
+        BackupArchiveEnvelopeMetadata metadata = BuildMetadata(algorithm, kdfProfile, kdfParamRef, iterations, salt, iv);
         var descriptor = BackupCryptoDescriptor.Encrypted(
             metadata.Algorithm,
             metadata.KdfProfile,
@@ -68,7 +70,15 @@ public sealed class BackupArchiveCryptoService
             formatVersion: metadata.FormatVersion);
 
         string encryptedArchivePath = Path.Combine(backupFolder, EncryptedArchiveFileName);
-        WriteEncryptedArchive(plainArchivePath, encryptedArchivePath, password, metadata, ct);
+        try
+        {
+            WriteEncryptedArchive(plainArchivePath, encryptedArchivePath, password, metadata, salt, iv, ct);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(salt);
+            CryptographicOperations.ZeroMemory(iv);
+        }
 
         string metadataPath = Path.Combine(backupFolder, MetadataFileName);
         File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, JsonOptions), Encoding.UTF8);
@@ -262,13 +272,10 @@ public sealed class BackupArchiveCryptoService
         string algorithm,
         string kdfProfile,
         string kdfParamRef,
-        int iterations)
+        int iterations,
+        byte[] salt,
+        byte[] iv)
     {
-        byte[] salt = new byte[SaltLengthBytes];
-        byte[] iv = new byte[IvLengthBytes];
-        RandomNumberGenerator.Fill(salt);
-        RandomNumberGenerator.Fill(iv);
-
         return new BackupArchiveEnvelopeMetadata
         {
             EnvelopeVersion = CurrentEnvelopeVersion,
@@ -289,6 +296,8 @@ public sealed class BackupArchiveCryptoService
         string encryptedArchivePath,
         string password,
         BackupArchiveEnvelopeMetadata metadata,
+        byte[] saltBytes,
+        byte[] ivBytes,
         CancellationToken ct)
     {
         string metadataJson = JsonSerializer.Serialize(metadata, JsonOptions);
@@ -297,8 +306,6 @@ public sealed class BackupArchiveCryptoService
         byte[] metadataLengthBytes = new byte[4];
         BinaryPrimitives.WriteInt32LittleEndian(metadataLengthBytes, metadataBytes.Length);
 
-        byte[] saltBytes = Convert.FromBase64String(metadata.SaltBase64);
-        byte[] ivBytes = Convert.FromBase64String(metadata.IvBase64);
         int iterations = Math.Max(10_000, metadata.KdfIterations);
 
         byte[] keyMaterial = new byte[DerivedKeyLengthBytes];
@@ -349,8 +356,6 @@ public sealed class BackupArchiveCryptoService
             CryptographicOperations.ZeroMemory(keyMaterial);
             CryptographicOperations.ZeroMemory(encryptionKey);
             CryptographicOperations.ZeroMemory(hmacKey);
-            CryptographicOperations.ZeroMemory(saltBytes);
-            CryptographicOperations.ZeroMemory(ivBytes);
         }
     }
 

@@ -497,10 +497,10 @@ public sealed class BackupService(
         {
             requiredBytes = (long)Math.Ceiling(requiredBytes * 1.05d);
         }
-        bool hasEnoughSpace = !volumeFree.HasValue || volumeFree.Value >= requiredBytes;
-        string? warning = hasEnoughSpace
-            ? null
-            : $"Backup may not fit on the target. Required={requiredBytes} bytes, Free={volumeFree ?? 0} bytes.";
+        bool hasEnoughSpace = volumeFree is not long freeBytes || freeBytes >= requiredBytes;
+        string? warning = volumeFree is long knownFreeBytes && knownFreeBytes < requiredBytes
+            ? $"Backup may not fit on the target. Required={requiredBytes} bytes, Free={knownFreeBytes} bytes."
+            : null;
 
         double fallbackThroughput = GetFallbackThroughputMbSec(backupRoot, useArchiveMode);
         double usedThroughput = throughputMbSec > 0

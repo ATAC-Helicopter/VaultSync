@@ -63,14 +63,7 @@ namespace VaultSync.UI.ViewModels
             var vm = new LogConsoleViewModel(_logConsoleService);
             var window = new LogConsoleWindow(vm);
 
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
-            {
-                window.Show();
-            }
-            else
-            {
-                window.Show();
-            }
+            window.Show();
 
             window.Closed += (_, _) =>
             {

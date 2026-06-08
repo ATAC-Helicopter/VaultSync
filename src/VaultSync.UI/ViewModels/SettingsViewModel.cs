@@ -1019,7 +1019,7 @@ namespace VaultSync.UI
                         Domain      = c.Domain,
                         KeyRef      = keyRef,
                         UseKeychain = c.UseKeychain,
-                        Password    = persistPlaintext ? secret ?? string.Empty : string.Empty // keep out of config unless we must
+                        Password    = persistPlaintext ? secret : string.Empty // keep out of config unless we must
                     });
                 }
 
@@ -2895,35 +2895,37 @@ namespace VaultSync.UI
             int removed = 0;
             int failed = 0;
 
-            void TryDeleteDir(string path)
+            bool TryDeleteDir(string path)
             {
                 if (!Directory.Exists(path))
-                    return;
+                    return false;
 
                 try
                 {
                     Directory.Delete(path, recursive: true);
-                    removed++;
+                    return true;
                 }
                 catch
                 {
                     failed++;
+                    return false;
                 }
             }
 
-            void TryDeleteFile(string path)
+            bool TryDeleteFile(string path)
             {
                 if (!File.Exists(path))
-                    return;
+                    return false;
 
                 try
                 {
                     File.Delete(path);
-                    removed++;
+                    return true;
                 }
                 catch
                 {
                     failed++;
+                    return false;
                 }
             }
 
@@ -2931,15 +2933,15 @@ namespace VaultSync.UI
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync");
 
-            TryDeleteDir(Path.Combine(localRoot, "logs"));
-            TryDeleteDir(Path.Combine(localRoot, "crash"));
-            TryDeleteFile(Path.Combine(localRoot, "avatars.json"));
-            TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json"));
+            if (TryDeleteDir(Path.Combine(localRoot, "logs"))) removed++;
+            if (TryDeleteDir(Path.Combine(localRoot, "crash"))) removed++;
+            if (TryDeleteFile(Path.Combine(localRoot, "avatars.json"))) removed++;
+            if (TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json"))) removed++;
 
             string tempRoot = Path.GetTempPath();
-            TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import"));
-            TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export"));
-            TryDeleteDir(Path.Combine(tempRoot, "VaultSync"));
+            if (TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import"))) removed++;
+            if (TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export"))) removed++;
+            if (TryDeleteDir(Path.Combine(tempRoot, "VaultSync"))) removed++;
 
             if (removed == 0 && failed == 0)
             {

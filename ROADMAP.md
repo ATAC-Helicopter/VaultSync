@@ -1802,6 +1802,18 @@
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
+- [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
+  - Done: guarded SonarQube Cloud analysis, setup docs, and 1.8 changelog coverage are in place for active release branches.
+- [x] `VS-1815` `P1` Tune SonarQube scope for vendored tooling. _(Done, tracked by #373; completed 2026-06-08)_
+  - Done: rsync vendored documentation, binary assets, build outputs, and backup artifacts are excluded from maintained-code analysis scope.
+- [x] `VS-1816` `P0` Harden release asset workflow inputs. _(Done, tracked by #374; completed 2026-06-08)_
+  - Done: manual release inputs are passed through environment variables before shell use and PR YAML lint blocks npm lifecycle scripts.
+- [x] `VS-1817` `P1` Review backup archive IV Sonar finding. _(Done, tracked by #375; completed 2026-06-08)_
+  - Done: per-archive random salt/IV generation remains intact and is now analyzer-visible before encryption.
+- [x] `BUG-18052` `P1` Dispose cancellation resources flagged by Sonar. _(Done, tracked by #376; completed 2026-06-08)_
+  - Done: linked backup CTS, diagnostics writer CTS, and onboarding scroll CTS resources are disposed on replacement or shutdown.
+- [ ] `VS-1818` `P2` Triage Stable Sonar maintainability backlog. _(In progress, tracked by #377)_
+  - In progress: first-pass reliability/unreachable-code cleanups are complete; remaining work should be split by owned complexity hotspots.
 - [ ] `BUG-18047` `P1` Let Linux patch updates elevate through `pkexec` before falling back to `.deb` installer flows. _(In progress, tracked by #368)_
 - [ ] `BUG-18048` `P1` Harden Projects page loading so visible project content appears reliably. _(In progress, tracked by #366)_
   - In progress: Projects refresh now runs on the UI thread, page attach triggers loading, and stale visible lists rebuild from the backing project cache.

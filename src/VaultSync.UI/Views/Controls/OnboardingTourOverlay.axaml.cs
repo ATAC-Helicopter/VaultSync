@@ -54,9 +54,7 @@ public partial class OnboardingTourOverlay : UserControl
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _scrollCts?.Cancel();
-        _scrollCts?.Dispose();
-        _scrollCts = null;
+        DisposeScrollCancellation();
     }
 
     private void UpdateTarget()
@@ -270,11 +268,22 @@ public partial class OnboardingTourOverlay : UserControl
         _lastScrollAt = now;
         _lastScrollTarget = targetName;
         _lastScrollY = targetY;
-        CancellationTokenSource? previousScrollCts = _scrollCts;
-        previousScrollCts?.Cancel();
-        previousScrollCts?.Dispose();
-        _scrollCts = new CancellationTokenSource();
+        ReplaceScrollCancellation();
         _ = AnimateScrollAsync(scrollViewer, targetY, _scrollCts.Token);
+    }
+
+    private void ReplaceScrollCancellation()
+    {
+        _scrollCts?.Cancel();
+        _scrollCts?.Dispose();
+        _scrollCts = new CancellationTokenSource();
+    }
+
+    private void DisposeScrollCancellation()
+    {
+        _scrollCts?.Cancel();
+        _scrollCts?.Dispose();
+        _scrollCts = null;
     }
 
     private static ScrollViewer? ResolveScrollViewerForTarget(Control target)

@@ -13,7 +13,11 @@
 - [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.
 - [VS-1816] Hardened release asset workflow input handling so manually supplied versions are passed through quoted environment variables instead of direct shell interpolation.
 - [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`, linked the repo roadmap to the 1.8 planning timeline, and moved History/Recovery teaser copy behind localization keys.
+- [VS-1815] Tuned SonarQube quality scope and dispositions for vendored rsync documentation and credential-vault identifiers.
+- [VS-1816] Hardened release asset workflow inputs and PR YAML lint installs against SonarQube security findings.
+- [VS-1817] Kept backup archive IV generation analyzer-visible while preserving the encrypted archive envelope format.
 ### Fixed
+- [BUG-18052] Disposed Sonar-flagged cancellation resources in backup runs, diagnostics logging, and onboarding tour scrolling.
 - [BUG-18045] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
 - [BUG-18047] Linux patch updates can now elevate through `pkexec` for protected installs instead of hiding behind the `.deb` installer fallback.
 - [BUG-18048] Projects now reload visible content on page attach and recover stale visible lists safely.
