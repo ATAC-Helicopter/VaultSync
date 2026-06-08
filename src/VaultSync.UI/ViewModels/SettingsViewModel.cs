@@ -2895,37 +2895,48 @@ namespace VaultSync.UI
             int removed = 0;
             int failed = 0;
 
-            bool TryDeleteDir(string path)
+            CacheDeleteResult TryDeleteDir(string path)
             {
                 if (!Directory.Exists(path))
-                    return false;
+                    return CacheDeleteResult.NotFound;
 
                 try
                 {
                     Directory.Delete(path, recursive: true);
-                    return true;
+                    return CacheDeleteResult.Removed;
                 }
                 catch
                 {
-                    failed++;
-                    return false;
+                    return CacheDeleteResult.Failed;
                 }
             }
 
-            bool TryDeleteFile(string path)
+            CacheDeleteResult TryDeleteFile(string path)
             {
                 if (!File.Exists(path))
-                    return false;
+                    return CacheDeleteResult.NotFound;
 
                 try
                 {
                     File.Delete(path);
-                    return true;
+                    return CacheDeleteResult.Removed;
                 }
                 catch
                 {
-                    failed++;
-                    return false;
+                    return CacheDeleteResult.Failed;
+                }
+            }
+
+            void Count(CacheDeleteResult result)
+            {
+                switch (result)
+                {
+                    case CacheDeleteResult.Removed:
+                        removed++;
+                        break;
+                    case CacheDeleteResult.Failed:
+                        failed++;
+                        break;
                 }
             }
 
@@ -2933,15 +2944,15 @@ namespace VaultSync.UI
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync");
 
-            if (TryDeleteDir(Path.Combine(localRoot, "logs"))) removed++;
-            if (TryDeleteDir(Path.Combine(localRoot, "crash"))) removed++;
-            if (TryDeleteFile(Path.Combine(localRoot, "avatars.json"))) removed++;
-            if (TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json"))) removed++;
+            Count(TryDeleteDir(Path.Combine(localRoot, "logs")));
+            Count(TryDeleteDir(Path.Combine(localRoot, "crash")));
+            Count(TryDeleteFile(Path.Combine(localRoot, "avatars.json")));
+            Count(TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json")));
 
             string tempRoot = Path.GetTempPath();
-            if (TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import"))) removed++;
-            if (TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export"))) removed++;
-            if (TryDeleteDir(Path.Combine(tempRoot, "VaultSync"))) removed++;
+            Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import")));
+            Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export")));
+            Count(TryDeleteDir(Path.Combine(tempRoot, "VaultSync")));
 
             if (removed == 0 && failed == 0)
             {
@@ -2955,6 +2966,13 @@ namespace VaultSync.UI
                     ? L("Settings.Status.CacheCleared", "Local cache cleared ({0} item(s)).")
                     : L("Settings.Status.CacheClearedWithErrors", "Cache cleared with {0} error(s)."),
                 failed == 0 ? removed : failed);
+        }
+
+        private enum CacheDeleteResult
+        {
+            NotFound,
+            Removed,
+            Failed
         }
 
         private void TestBackupLocation()
