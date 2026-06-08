@@ -106,6 +106,19 @@ public sealed class BackupCryptoDescriptorTests
         Assert.Equal("profile-2026", parsed.KdfParamRef);
     }
 
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("""{"formatVersion":"bad","algorithm":42,"kdfProfile":false,"kdfParamRef":{}}""")]
+    public void Descriptor_InvalidEncryptedMetadataShape_FallsBackToSafeValues(string descriptorJson)
+    {
+        var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted: true, descriptorJson: descriptorJson);
+
+        Assert.Equal(BackupCryptoDescriptor.CurrentFormatVersion, descriptor.FormatVersion);
+        Assert.Equal("unknown", descriptor.Algorithm);
+        Assert.Equal("unknown", descriptor.KdfProfile);
+        Assert.Equal(string.Empty, descriptor.KdfParamRef);
+    }
+
     [Fact]
     public void MetadataStore_UpsertBackup_StripsSecretCryptoFields()
     {
