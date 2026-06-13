@@ -115,14 +115,6 @@
         </ControlTemplate>
       </Setter>
     </Style>
-    <Style Selector="#TimelineList ListBoxItem:pointerover Border.history-station">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-    </Style>
-    <Style Selector="#TimelineList ListBoxItem:selected Border.history-station">
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="Background" Value="Transparent" />
-    </Style>
   </UserControl.Styles>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -301,10 +293,10 @@
               IsVisible="{CompiledBinding HasLoadedEvents}">
         <Grid RowDefinitions="Auto,*,Auto">
           <Grid Grid.Row="0"
-                ColumnDefinitions="112,*,160"
+                ColumnDefinitions="104,*,320,150"
                 MinHeight="42"
                 Background="{DynamicResource Surface0}">
-            <TextBlock Text="Metro graph"
+            <TextBlock Text="Lines"
                        Classes="history-kicker"
                        VerticalAlignment="Center"
                        Margin="18,0,0,0" />
@@ -358,6 +350,10 @@
               </StackPanel>
             </WrapPanel>
             <TextBlock Grid.Column="2"
+                       Text="Impact"
+                       Classes="history-kicker"
+                       VerticalAlignment="Center" />
+            <TextBlock Grid.Column="3"
                        Text="{CompiledBinding PageLabel}"
                        Classes="history-kicker"
                        HorizontalAlignment="Right"
@@ -376,7 +372,7 @@
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Grid ColumnDefinitions="104,*"
+                <Grid ColumnDefinitions="104,*,320,150"
                       MinHeight="64">
                   <Canvas Width="104"
                           Height="64"
@@ -410,13 +406,10 @@
                              Fill="{Binding Accent}" />
                   </Canvas>
 
-                  <Border Grid.Column="1"
-                          Classes="history-station"
-                          Margin="0">
-                    <Grid ColumnDefinitions="*,Auto"
-                          RowDefinitions="Auto,Auto,Auto"
-                          ColumnSpacing="14"
-                          RowSpacing="3">
+                  <Grid Grid.Column="1"
+                        RowDefinitions="Auto,Auto"
+                        RowSpacing="4"
+                        VerticalAlignment="Center">
                       <WrapPanel ItemSpacing="8"
                                  LineSpacing="6">
                         <Border Classes="history-chip"
@@ -435,21 +428,7 @@
                         </Border>
                       </WrapPanel>
 
-                      <StackPanel Grid.Column="1"
-                                  Spacing="2"
-                                  HorizontalAlignment="Right">
-                        <TextBlock Text="{Binding RelativeLabel}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Right" />
-                        <TextBlock Text="{Binding TimeLabel}"
-                                   Classes="history-kicker"
-                                   HorizontalAlignment="Right" />
-                      </StackPanel>
-
                       <Button Grid.Row="1"
-                              Grid.Column="0"
-                              Grid.ColumnSpan="2"
                               Classes="history-title-button"
                               ToolTip.Tip="{Binding HoverDetail}">
                         <Button.Flyout>
@@ -531,19 +510,34 @@
                                    Classes="history-title"
                                    TextTrimming="CharacterEllipsis" />
                       </Button>
-                      <WrapPanel Grid.Row="2"
-                                 Grid.ColumnSpan="2"
-                                 ItemSpacing="10"
-                                 LineSpacing="4">
-                        <TextBlock Text="{Binding SizeLabel}"
-                                   Classes="history-kicker" />
-                        <TextBlock Text="{Binding ChangeSummaryLabel}"
-                                   Classes="history-kicker" />
-                        <TextBlock Text="{Binding FileCountLabel}"
-                                   Classes="history-kicker" />
-                      </WrapPanel>
-                    </Grid>
-                  </Border>
+                  </Grid>
+
+                  <WrapPanel Grid.Column="2"
+                             ItemSpacing="10"
+                             LineSpacing="4"
+                             VerticalAlignment="Center"
+                             Margin="12,0,12,0">
+                    <TextBlock Text="{Binding SizeLabel}"
+                               Classes="history-kicker" />
+                    <TextBlock Text="{Binding ChangeSummaryLabel}"
+                               Classes="history-kicker" />
+                    <TextBlock Text="{Binding FileCountLabel}"
+                               Classes="history-kicker" />
+                  </WrapPanel>
+
+                  <StackPanel Grid.Column="3"
+                              Spacing="2"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"
+                              Margin="0,0,12,0">
+                    <TextBlock Text="{Binding RelativeLabel}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Right" />
+                    <TextBlock Text="{Binding TimeLabel}"
+                               Classes="history-kicker"
+                               HorizontalAlignment="Right" />
+                  </StackPanel>
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
