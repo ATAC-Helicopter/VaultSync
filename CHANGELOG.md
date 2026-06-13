@@ -9,6 +9,7 @@
 - [VS-1805] Added protected and known-good snapshot markers, with retention honoring protected snapshot metadata.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
 - [VS-1806] Added Dashboard workflow links into History, Recovery, and Backups, with restore milestones included in recent activity.
+- [VS-1804] Redesigned History as a connected Git/subway-style timeline workspace with modular expandable event stations and a persistent event inspector.
 ### Changed
 - [VS-1813] History now supports activity, project, lane, and time-range filtering, while the Backups page frames its lower section as a snapshot inventory for restore-point operations instead of a competing history timeline.
 - [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.

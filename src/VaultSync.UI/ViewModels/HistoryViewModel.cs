@@ -760,7 +760,10 @@ public sealed class HistoryViewModel : ViewModelBase
         return paths;
     }
 
-    private static string BuildBackupRailPath() => "M 28,0 L 28,58";
+    private const double GraphRowMidpoint = 51;
+    private const double GraphRowBottom = 116;
+
+    private static string BuildBackupRailPath() => FormattableString.Invariant($"M 28,0 L 28,{GraphRowBottom}");
 
     private static string BuildSideRailPath(
         HistoryTimelineLane lane,
@@ -776,11 +779,11 @@ public sealed class HistoryViewModel : ViewModelBase
         bool continuesFromPrevious = previous == lane;
         bool continuesToNext = next == lane;
         string topSegment = continuesFromPrevious
-            ? FormattableString.Invariant($"M {x},0 L {x},29")
-            : FormattableString.Invariant($"M {trunkX},0 L {trunkX},18 C {trunkX},27 {x - 14},18 {x},29");
+            ? FormattableString.Invariant($"M {x},0 L {x},{GraphRowMidpoint}")
+            : FormattableString.Invariant($"M {trunkX},0 L {trunkX},30 C {trunkX},43 {x - 14},38 {x},{GraphRowMidpoint}");
         string bottomSegment = continuesToNext
-            ? FormattableString.Invariant($" M {x},29 L {x},58")
-            : FormattableString.Invariant($" M {x},29 C {x - 14},40 {trunkX},31 {trunkX},40 L {trunkX},58");
+            ? FormattableString.Invariant($" M {x},{GraphRowMidpoint} L {x},{GraphRowBottom}")
+            : FormattableString.Invariant($" M {x},{GraphRowMidpoint} C {x - 14},66 {trunkX},62 {trunkX},76 L {trunkX},{GraphRowBottom}");
 
         return string.Concat(topSegment, bottomSegment);
     }
