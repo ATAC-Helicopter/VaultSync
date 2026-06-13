@@ -130,7 +130,7 @@ public sealed class HistoryViewModel : ViewModelBase
         private set => SetField(ref _summary, value);
     }
 
-    public string EmptyState
+    public static string EmptyState
     {
         get => L("History.Empty", "No history yet. Create a backup to start building a project timeline.");
     }
@@ -401,7 +401,7 @@ public sealed class HistoryViewModel : ViewModelBase
         IEnumerable<Backup> backups,
         IReadOnlyDictionary<int, Project> projectsById,
         IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId,
-        IReadOnlyDictionary<int, Snapshot> snapshotById)
+        Dictionary<int, Snapshot> snapshotById)
     {
         foreach (Backup backup in backups)
         {
@@ -431,8 +431,8 @@ public sealed class HistoryViewModel : ViewModelBase
         IEnumerable<RestoreHistoryEvent> restores,
         IReadOnlyDictionary<int, Project> projectsById,
         IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId,
-        IReadOnlyDictionary<int, Backup> backupBySnapshotId,
-        IReadOnlyDictionary<int, Snapshot> snapshotById)
+        Dictionary<int, Backup> backupBySnapshotId,
+        Dictionary<int, Snapshot> snapshotById)
     {
         foreach (RestoreHistoryEvent restore in restores)
         {
