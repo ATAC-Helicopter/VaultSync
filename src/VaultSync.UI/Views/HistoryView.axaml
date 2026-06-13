@@ -116,12 +116,12 @@
       </Setter>
     </Style>
     <Style Selector="#TimelineList ListBoxItem:pointerover Border.history-station">
-      <Setter Property="Background" Value="{DynamicResource Surface1}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="#TimelineList ListBoxItem:selected Border.history-station">
-      <Setter Property="BorderBrush" Value="{DynamicResource VS.Primary}" />
-      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Background" Value="Transparent" />
     </Style>
   </UserControl.Styles>
 
@@ -377,9 +377,9 @@
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Grid ColumnDefinitions="104,*"
-                      MinHeight="84">
+                      MinHeight="64">
                   <Canvas Width="104"
-                          Height="84"
+                          Height="64"
                           ClipToBounds="False">
                     <Path Data="{Binding BackupGraphPathData}"
                           Stroke="#4F8DFF"
@@ -397,14 +397,14 @@
                           StrokeLineCap="Round"
                           StrokeJoin="Round" />
                     <Ellipse Canvas.Left="{Binding NodeLeft}"
-                             Canvas.Top="32"
+                             Canvas.Top="22"
                              Width="20"
                              Height="20"
                              Fill="{DynamicResource Surface0}"
                              Stroke="{Binding Accent}"
                              StrokeThickness="3.5" />
                     <Ellipse Canvas.Left="{Binding InnerNodeLeft}"
-                             Canvas.Top="37"
+                             Canvas.Top="27"
                              Width="10"
                              Height="10"
                              Fill="{Binding Accent}" />
@@ -412,11 +412,11 @@
 
                   <Border Grid.Column="1"
                           Classes="history-station"
-                          Margin="0,6,0,6">
+                          Margin="0">
                     <Grid ColumnDefinitions="*,Auto"
-                          RowDefinitions="Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto"
                           ColumnSpacing="14"
-                          RowSpacing="7">
+                          RowSpacing="3">
                       <WrapPanel ItemSpacing="8"
                                  LineSpacing="6">
                         <Border Classes="history-chip"
@@ -451,7 +451,7 @@
                               Grid.Column="0"
                               Grid.ColumnSpan="2"
                               Classes="history-title-button"
-                              ToolTip.Tip="{Binding Detail}">
+                              ToolTip.Tip="{Binding HoverDetail}">
                         <Button.Flyout>
                           <Flyout Placement="Right">
                             <Border Classes="history-control"
@@ -475,30 +475,40 @@
                                            Text="{Binding Detail}"
                                            Classes="history-muted" />
                                 <Grid Grid.Row="2"
-                                      ColumnDefinitions="*,*"
+                                      ColumnDefinitions="*,*,*"
                                       RowDefinitions="Auto,Auto"
                                       ColumnSpacing="12"
                                       RowSpacing="8">
                                   <StackPanel Spacing="2">
-                                    <TextBlock Text="Project"
+                                    <TextBlock Text="Size"
                                                Classes="history-kicker" />
-                                    <TextBlock Text="{Binding ProjectName}"
+                                    <TextBlock Text="{Binding SizeLabel}"
                                                Classes="history-title"
                                                TextTrimming="CharacterEllipsis" />
                                   </StackPanel>
                                   <StackPanel Grid.Column="1"
                                               Spacing="2">
-                                    <TextBlock Text="Line"
+                                    <TextBlock Text="Files"
                                                Classes="history-kicker" />
-                                    <TextBlock Text="{Binding Lane}"
+                                    <TextBlock Text="{Binding FileCountLabel}"
+                                               Classes="history-title"
+                                               TextTrimming="CharacterEllipsis" />
+                                  </StackPanel>
+                                  <StackPanel Grid.Column="2"
+                                              Spacing="2">
+                                    <TextBlock Text="Diff"
+                                               Classes="history-kicker" />
+                                    <TextBlock Text="{Binding ChangeSummaryLabel}"
                                                Classes="history-title"
                                                TextTrimming="CharacterEllipsis" />
                                   </StackPanel>
                                   <StackPanel Grid.Row="1"
-                                              Grid.ColumnSpan="2"
+                                              Grid.ColumnSpan="3"
                                               Spacing="2">
-                                    <TextBlock Text="Origin"
+                                    <TextBlock Text="Project / origin"
                                                Classes="history-kicker" />
+                                    <TextBlock Text="{Binding ProjectName}"
+                                               Classes="history-muted" />
                                     <TextBlock Text="{Binding OriginSummary}"
                                                Classes="history-muted"
                                                IsVisible="{Binding HasOriginSummary}" />
@@ -521,6 +531,17 @@
                                    Classes="history-title"
                                    TextTrimming="CharacterEllipsis" />
                       </Button>
+                      <WrapPanel Grid.Row="2"
+                                 Grid.ColumnSpan="2"
+                                 ItemSpacing="10"
+                                 LineSpacing="4">
+                        <TextBlock Text="{Binding SizeLabel}"
+                                   Classes="history-kicker" />
+                        <TextBlock Text="{Binding ChangeSummaryLabel}"
+                                   Classes="history-kicker" />
+                        <TextBlock Text="{Binding FileCountLabel}"
+                                   Classes="history-kicker" />
+                      </WrapPanel>
                     </Grid>
                   </Border>
                 </Grid>

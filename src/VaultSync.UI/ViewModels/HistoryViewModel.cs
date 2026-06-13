@@ -363,7 +363,9 @@ public sealed class HistoryViewModel : ViewModelBase
             .Take(60)
             .ToList();
         var backupSnapshotIds = allBackups.Select(backup => backup.SnapshotId).ToHashSet();
-        var snapshotOnly = repo.GetAllSnapshots()
+        var allSnapshots = repo.GetAllSnapshots().ToList();
+        var snapshotById = allSnapshots.ToDictionary(snapshot => snapshot.Id);
+        var snapshotOnly = allSnapshots
             .Where(snapshot => !backupSnapshotIds.Contains(snapshot.Id))
             .OrderByDescending(snapshot => snapshot.CreatedUtc)
             .ThenByDescending(snapshot => snapshot.Id)
@@ -394,6 +396,7 @@ public sealed class HistoryViewModel : ViewModelBase
                     ? HistoryTimelineLane.Manual
                     : HistoryTimelineLane.Backup;
             string markerSummary = BuildMarkerSummary(metadata);
+            snapshotById.TryGetValue(backup.SnapshotId, out Snapshot? backupSnapshot);
 
             items.Add(new HistoryTimelineItemViewModel(
                 backup.IsImported
@@ -415,7 +418,13 @@ public sealed class HistoryViewModel : ViewModelBase
                 string.Empty,
                 metadata?.IsProtected == true,
                 metadata?.IsKnownGood == true,
-                markerSummary));
+                markerSummary,
+                backup.TotalBytes,
+                backupSnapshot?.FileCount ?? 0,
+                backupSnapshot?.DiffAdded ?? 0,
+                backupSnapshot?.DiffModified ?? 0,
+                backupSnapshot?.DiffDeleted ?? 0,
+                backupSnapshot?.DiffNetBytes ?? 0));
 
             if (metadata is not null && !string.IsNullOrWhiteSpace(markerSummary))
             {
@@ -436,7 +445,13 @@ public sealed class HistoryViewModel : ViewModelBase
                     BuildOriginSummary(backup.Id, backup.SnapshotId),
                     metadata.IsProtected,
                     metadata.IsKnownGood,
-                    markerSummary));
+                    markerSummary,
+                    backup.TotalBytes,
+                    backupSnapshot?.FileCount ?? 0,
+                    backupSnapshot?.DiffAdded ?? 0,
+                    backupSnapshot?.DiffModified ?? 0,
+                    backupSnapshot?.DiffDeleted ?? 0,
+                    backupSnapshot?.DiffNetBytes ?? 0));
             }
         }
 
@@ -452,6 +467,8 @@ public sealed class HistoryViewModel : ViewModelBase
             int originBackupId = restore.BackupId;
             if (originBackupId <= 0 && backupBySnapshotId.TryGetValue(restore.SnapshotId, out Backup? originBackup))
                 originBackupId = originBackup.Id;
+            backupBySnapshotId.TryGetValue(restore.SnapshotId, out Backup? restoreBackup);
+            snapshotById.TryGetValue(restore.SnapshotId, out Snapshot? restoreSnapshot);
 
             items.Add(new HistoryTimelineItemViewModel(
                 L("History.Event.Kind.Restore", "Restore"),
@@ -467,7 +484,13 @@ public sealed class HistoryViewModel : ViewModelBase
                 BuildOriginSummary(originBackupId, restore.SnapshotId),
                 metadata?.IsProtected == true,
                 metadata?.IsKnownGood == true,
-                BuildMarkerSummary(metadata)));
+                BuildMarkerSummary(metadata),
+                restoreBackup?.TotalBytes ?? restoreSnapshot?.TotalBytes ?? 0,
+                restoreSnapshot?.FileCount ?? 0,
+                restoreSnapshot?.DiffAdded ?? 0,
+                restoreSnapshot?.DiffModified ?? 0,
+                restoreSnapshot?.DiffDeleted ?? 0,
+                restoreSnapshot?.DiffNetBytes ?? 0));
         }
 
         foreach (Snapshot snapshot in snapshotOnly)
@@ -491,7 +514,13 @@ public sealed class HistoryViewModel : ViewModelBase
                 LF("History.Event.OriginSnapshotOnly", "snapshot #{0} has no linked backup node", snapshot.Id),
                 metadata?.IsProtected == true,
                 metadata?.IsKnownGood == true,
-                BuildMarkerSummary(metadata)));
+                BuildMarkerSummary(metadata),
+                snapshot.TotalBytes,
+                snapshot.FileCount,
+                snapshot.DiffAdded,
+                snapshot.DiffModified,
+                snapshot.DiffDeleted,
+                snapshot.DiffNetBytes));
         }
 
         items = items
@@ -760,8 +789,8 @@ public sealed class HistoryViewModel : ViewModelBase
         return paths;
     }
 
-    private const double GraphRowMidpoint = 42;
-    private const double GraphRowBottom = 84;
+    private const double GraphRowMidpoint = 32;
+    private const double GraphRowBottom = 64;
 
     private static string BuildBackupRailPath() => FormattableString.Invariant($"M 28,0 L 28,{GraphRowBottom}");
 
@@ -780,10 +809,10 @@ public sealed class HistoryViewModel : ViewModelBase
         bool continuesToNext = next == lane;
         string topSegment = continuesFromPrevious
             ? FormattableString.Invariant($"M {x},0 L {x},{GraphRowMidpoint}")
-            : FormattableString.Invariant($"M {trunkX},0 L {trunkX},24 C {trunkX},34 {x - 14},32 {x},{GraphRowMidpoint}");
+            : FormattableString.Invariant($"M {trunkX},0 L {trunkX},18 C {trunkX},26 {x - 14},24 {x},{GraphRowMidpoint}");
         string bottomSegment = continuesToNext
             ? FormattableString.Invariant($" M {x},{GraphRowMidpoint} L {x},{GraphRowBottom}")
-            : FormattableString.Invariant($" M {x},{GraphRowMidpoint} C {x - 14},52 {trunkX},52 {trunkX},62 L {trunkX},{GraphRowBottom}");
+            : FormattableString.Invariant($" M {x},{GraphRowMidpoint} C {x - 14},40 {trunkX},42 {trunkX},48 L {trunkX},{GraphRowBottom}");
 
         return string.Concat(topSegment, bottomSegment);
     }
@@ -971,7 +1000,13 @@ public sealed class HistoryTimelineItemViewModel
         string originSummary,
         bool isProtectedMarker,
         bool isKnownGoodMarker,
-        string markerSummary = "")
+        string markerSummary = "",
+        long totalBytes = 0,
+        long fileCount = 0,
+        int diffAdded = 0,
+        int diffModified = 0,
+        int diffDeleted = 0,
+        long diffNetBytes = 0)
     {
         Kind = kind;
         ProjectName = projectName;
@@ -987,6 +1022,12 @@ public sealed class HistoryTimelineItemViewModel
         IsProtectedMarker = isProtectedMarker;
         IsKnownGoodMarker = isKnownGoodMarker;
         MarkerSummary = markerSummary ?? string.Empty;
+        TotalBytes = Math.Max(0, totalBytes);
+        FileCount = Math.Max(0, fileCount);
+        DiffAdded = Math.Max(0, diffAdded);
+        DiffModified = Math.Max(0, diffModified);
+        DiffDeleted = Math.Max(0, diffDeleted);
+        DiffNetBytes = diffNetBytes;
     }
 
     public string Kind { get; }
@@ -1005,6 +1046,37 @@ public sealed class HistoryTimelineItemViewModel
     public bool IsKnownGoodMarker { get; }
     public string MarkerSummary { get; }
     public bool HasMarkerSummary => !string.IsNullOrWhiteSpace(MarkerSummary);
+    public long TotalBytes { get; }
+    public long FileCount { get; }
+    public int DiffAdded { get; }
+    public int DiffModified { get; }
+    public int DiffDeleted { get; }
+    public long DiffNetBytes { get; }
+    public string SizeLabel => TotalBytes > 0
+        ? UiFormat.FormatBytes(TotalBytes, "0.#")
+        : L("History.Detail.SizeUnknown", "Size unknown");
+    public string FileCountLabel => FileCount > 0
+        ? LF("History.Detail.FileCount", "{0:N0} files", FileCount)
+        : L("History.Detail.FileCountUnknown", "File count unknown");
+    public string DiffNetLabel => DiffNetBytes == 0
+        ? L("History.Detail.NetNoChange", "net 0 B")
+        : LF("History.Detail.NetChange", "net {0}", ByteSizeFormat.FormatSignedBytes(DiffNetBytes, "0.#"));
+    public string ChangeSummaryLabel => LF(
+        "History.Detail.ChangeSummary",
+        "+{0} / ~{1} / -{2} | {3}",
+        DiffAdded,
+        DiffModified,
+        DiffDeleted,
+        DiffNetLabel);
+    public string HoverDetail => string.Join(
+        Environment.NewLine,
+        new[]
+        {
+            Title,
+            Detail,
+            LF("History.Detail.HoverMeta", "{0} | {1} | {2}", SizeLabel, FileCountLabel, ChangeSummaryLabel),
+            TimeLabel
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
     public string BackupGraphPathData { get; private set; } = "M 28,0 L 28,58";
     public string MetadataGraphPathData { get; private set; } = string.Empty;
     public string RestoreGraphPathData { get; private set; } = string.Empty;
