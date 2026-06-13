@@ -184,8 +184,6 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.FromMilliseconds(750);
         private int _dashboardWarmLoadQueued;
         private int _backupsWarmLoadQueued;
-        private readonly GitHubUpdateService _updateService = new();
-        private readonly PatchUpdateService _patchService = new();
         private readonly LocalizationService _localizationService = new();
         private readonly Stopwatch _startupDiagnosticsStopwatch = Stopwatch.StartNew();
         private readonly object _startupDiagnosticsGate = new();

@@ -20,6 +20,10 @@ namespace VaultSync.UI.ViewModels;
 public sealed class HistoryViewModel : ViewModelBase
 {
     private static readonly TimeSpan RefreshTtl = TimeSpan.FromSeconds(20);
+    private const string EmptySummaryKey = "History.Summary.Empty";
+    private const string EmptySummaryFallback = "Project history will appear here as backups and snapshots are created.";
+    private const string NoRecentHistoryKey = "History.Event.NoRecent";
+    private const string NoRecentHistoryFallback = "No recent history";
     private const int PageSize = 30;
     private readonly IAppConfigStore _configStore;
     private readonly IRepositoryFactory _repositoryFactory;
@@ -32,15 +36,14 @@ public sealed class HistoryViewModel : ViewModelBase
     private int _filterRevision;
     private int _refreshInFlight;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
-    private string _summary = L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
-    private string _emptyState = L("History.Empty", "No history yet. Create a backup to start building a project timeline.");
+    private string _summary = L(EmptySummaryKey, EmptySummaryFallback);
     private int _projectCount;
     private int _backupCount;
     private int _snapshotOnlyCount;
     private int _totalEventCount;
-    private string _latestEventLabel = L("History.Event.NoRecent", "No recent history");
-    private string _latestEventTitle = L("History.Event.NoRecent", "No recent history");
-    private string _latestEventDetail = L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
+    private string _latestEventLabel = L(NoRecentHistoryKey, NoRecentHistoryFallback);
+    private string _latestEventTitle = L(NoRecentHistoryKey, NoRecentHistoryFallback);
+    private string _latestEventDetail = L(EmptySummaryKey, EmptySummaryFallback);
     private string _insight = L("History.Insight.Empty", "Create a backup to start building a readable project history.");
     private HistoryActivityFilterOption? _selectedActivityFilter;
     private HistoryDateRangeOption? _selectedDateRange;
@@ -129,8 +132,7 @@ public sealed class HistoryViewModel : ViewModelBase
 
     public string EmptyState
     {
-        get => _emptyState;
-        private set => SetField(ref _emptyState, value);
+        get => L("History.Empty", "No history yet. Create a backup to start building a project timeline.");
     }
 
     public int ProjectCount
@@ -382,146 +384,9 @@ public sealed class HistoryViewModel : ViewModelBase
             .ToDictionary(group => group.Key, group => group.OrderByDescending(backup => backup.CreatedUtc).First());
 
         var items = new List<HistoryTimelineItemViewModel>();
-        foreach (Backup backup in backups)
-        {
-            string projectName = projectsById.TryGetValue(backup.ProjectId, out Project? project)
-                ? project.Name
-                : LF("History.Event.ProjectFallback", "Project #{0}", backup.ProjectId);
-            string type = string.IsNullOrWhiteSpace(backup.Type) ? "backup" : backup.Type;
-            metadataBySnapshotId.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata);
-            bool isManual = type.Equals("manual", StringComparison.OrdinalIgnoreCase);
-            HistoryTimelineLane graphLane = backup.IsImported
-                ? HistoryTimelineLane.Restore
-                : isManual
-                    ? HistoryTimelineLane.Manual
-                    : HistoryTimelineLane.Backup;
-            string markerSummary = BuildMarkerSummary(metadata);
-            snapshotById.TryGetValue(backup.SnapshotId, out Snapshot? backupSnapshot);
-
-            items.Add(new HistoryTimelineItemViewModel(
-                backup.IsImported
-                    ? L("History.Event.Kind.Imported", "Imported")
-                    : L("History.Event.Kind.Backup", "Backup"),
-                projectName,
-                backup.ProjectId,
-                backup.CreatedUtc,
-                LF("History.Event.BackupTitle", "{0} {1} backup", projectName, type),
-                BuildBackupDetail(backup, metadata),
-                backup.IsImported
-                    ? L("History.Lane.Imported", "Imported")
-                    : isManual
-                    ? L("History.Lane.Manual", "Manual")
-                    : L("History.Lane.Auto", "Auto"),
-                graphLane,
-                backup.Id,
-                backup.SnapshotId,
-                string.Empty,
-                metadata?.IsProtected == true,
-                metadata?.IsKnownGood == true,
-                markerSummary,
-                backup.TotalBytes,
-                backupSnapshot?.FileCount ?? 0,
-                backupSnapshot?.DiffAdded ?? 0,
-                backupSnapshot?.DiffModified ?? 0,
-                backupSnapshot?.DiffDeleted ?? 0,
-                backupSnapshot?.DiffNetBytes ?? 0));
-
-            if (metadata is not null && !string.IsNullOrWhiteSpace(markerSummary))
-            {
-                DateTime metadataUtc = metadata.UpdatedUtc > metadata.CreatedUtc
-                    ? metadata.UpdatedUtc
-                    : metadata.CreatedUtc;
-                items.Add(new HistoryTimelineItemViewModel(
-                    L("History.Event.Kind.Metadata", "Metadata"),
-                    projectName,
-                    backup.ProjectId,
-                    metadataUtc,
-                    LF("History.Event.MetadataTitle", "{0} snapshot metadata", projectName),
-                    BuildMetadataBranchDetail(metadata),
-                    L("History.Lane.Metadata", "Snapshot notes"),
-                    HistoryTimelineLane.Metadata,
-                    backup.Id,
-                    backup.SnapshotId,
-                    BuildOriginSummary(backup.Id, backup.SnapshotId),
-                    metadata.IsProtected,
-                    metadata.IsKnownGood,
-                    markerSummary,
-                    backup.TotalBytes,
-                    backupSnapshot?.FileCount ?? 0,
-                    backupSnapshot?.DiffAdded ?? 0,
-                    backupSnapshot?.DiffModified ?? 0,
-                    backupSnapshot?.DiffDeleted ?? 0,
-                    backupSnapshot?.DiffNetBytes ?? 0));
-            }
-        }
-
-        foreach (RestoreHistoryEvent restore in restores)
-        {
-            string projectName = projectsById.TryGetValue(restore.ProjectId, out Project? project)
-                ? project.Name
-                : LF("History.Event.ProjectFallback", "Project #{0}", restore.ProjectId);
-            metadataBySnapshotId.TryGetValue(restore.SnapshotId, out SnapshotHistoryMetadata? metadata);
-            string mode = string.Equals(restore.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
-                ? L("History.Lane.RestoreSandbox", "Sandbox restore")
-                : L("History.Lane.RestoreDirect", "Direct restore");
-            int originBackupId = restore.BackupId;
-            if (originBackupId <= 0 && backupBySnapshotId.TryGetValue(restore.SnapshotId, out Backup? originBackup))
-                originBackupId = originBackup.Id;
-            backupBySnapshotId.TryGetValue(restore.SnapshotId, out Backup? restoreBackup);
-            snapshotById.TryGetValue(restore.SnapshotId, out Snapshot? restoreSnapshot);
-
-            items.Add(new HistoryTimelineItemViewModel(
-                L("History.Event.Kind.Restore", "Restore"),
-                projectName,
-                restore.ProjectId,
-                restore.CreatedUtc,
-                LF("History.Event.RestoreTitle", "{0} restored from backup", projectName),
-                BuildRestoreDetail(restore, metadata),
-                mode,
-                HistoryTimelineLane.Restore,
-                originBackupId,
-                restore.SnapshotId,
-                BuildOriginSummary(originBackupId, restore.SnapshotId),
-                metadata?.IsProtected == true,
-                metadata?.IsKnownGood == true,
-                BuildMarkerSummary(metadata),
-                restoreBackup?.TotalBytes ?? restoreSnapshot?.TotalBytes ?? 0,
-                restoreSnapshot?.FileCount ?? 0,
-                restoreSnapshot?.DiffAdded ?? 0,
-                restoreSnapshot?.DiffModified ?? 0,
-                restoreSnapshot?.DiffDeleted ?? 0,
-                restoreSnapshot?.DiffNetBytes ?? 0));
-        }
-
-        foreach (Snapshot snapshot in snapshotOnly)
-        {
-            string projectName = projectsById.TryGetValue(snapshot.ProjectId, out Project? project)
-                ? project.Name
-                : LF("History.Event.ProjectFallback", "Project #{0}", snapshot.ProjectId);
-            metadataBySnapshotId.TryGetValue(snapshot.Id, out SnapshotHistoryMetadata? metadata);
-
-            items.Add(new HistoryTimelineItemViewModel(
-                L("History.Event.Kind.Snapshot", "Snapshot"),
-                projectName,
-                snapshot.ProjectId,
-                snapshot.CreatedUtc,
-                LF("History.Event.SnapshotTitle", "{0} snapshot", projectName),
-                BuildSnapshotDetail(metadata),
-                L("History.Lane.Metadata", "Snapshot"),
-                HistoryTimelineLane.Metadata,
-                0,
-                snapshot.Id,
-                LF("History.Event.OriginSnapshotOnly", "snapshot #{0} has no linked backup node", snapshot.Id),
-                metadata?.IsProtected == true,
-                metadata?.IsKnownGood == true,
-                BuildMarkerSummary(metadata),
-                snapshot.TotalBytes,
-                snapshot.FileCount,
-                snapshot.DiffAdded,
-                snapshot.DiffModified,
-                snapshot.DiffDeleted,
-                snapshot.DiffNetBytes));
-        }
+        AddBackupTimelineItems(items, backups, projectsById, metadataBySnapshotId, snapshotById);
+        AddRestoreTimelineItems(items, restores, projectsById, metadataBySnapshotId, backupBySnapshotId, snapshotById);
+        AddSnapshotTimelineItems(items, snapshotOnly, projectsById, metadataBySnapshotId);
 
         items = items
             .OrderByDescending(item => item.CreatedUtc)
@@ -531,6 +396,101 @@ public sealed class HistoryViewModel : ViewModelBase
         return new HistoryTimelineData(projects.Count, backups.Count, snapshotOnly.Count, restores.Count, items);
     }
 
+    private static void AddBackupTimelineItems(
+        List<HistoryTimelineItemViewModel> items,
+        IEnumerable<Backup> backups,
+        IReadOnlyDictionary<int, Project> projectsById,
+        IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId,
+        IReadOnlyDictionary<int, Snapshot> snapshotById)
+    {
+        foreach (Backup backup in backups)
+        {
+            string projectName = ResolveProjectName(projectsById, backup.ProjectId);
+            string type = string.IsNullOrWhiteSpace(backup.Type) ? "backup" : backup.Type;
+            metadataBySnapshotId.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata);
+            snapshotById.TryGetValue(backup.SnapshotId, out Snapshot? backupSnapshot);
+            bool isManual = type.Equals("manual", StringComparison.OrdinalIgnoreCase);
+            string markerSummary = BuildMarkerSummary(metadata);
+
+            items.Add(new HistoryTimelineItemViewModel(CreateBackupItemData(
+                backup,
+                backupSnapshot,
+                metadata,
+                projectName,
+                type,
+                isManual,
+                markerSummary)));
+
+            if (metadata is not null && !string.IsNullOrWhiteSpace(markerSummary))
+                items.Add(new HistoryTimelineItemViewModel(CreateMetadataItemData(backup, backupSnapshot, metadata, projectName, markerSummary)));
+        }
+    }
+
+    private static void AddRestoreTimelineItems(
+        List<HistoryTimelineItemViewModel> items,
+        IEnumerable<RestoreHistoryEvent> restores,
+        IReadOnlyDictionary<int, Project> projectsById,
+        IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId,
+        IReadOnlyDictionary<int, Backup> backupBySnapshotId,
+        IReadOnlyDictionary<int, Snapshot> snapshotById)
+    {
+        foreach (RestoreHistoryEvent restore in restores)
+        {
+            string projectName = ResolveProjectName(projectsById, restore.ProjectId);
+            metadataBySnapshotId.TryGetValue(restore.SnapshotId, out SnapshotHistoryMetadata? metadata);
+            backupBySnapshotId.TryGetValue(restore.SnapshotId, out Backup? restoreBackup);
+            snapshotById.TryGetValue(restore.SnapshotId, out Snapshot? restoreSnapshot);
+
+            int originBackupId = restore.BackupId;
+            if (originBackupId <= 0 && restoreBackup is not null)
+                originBackupId = restoreBackup.Id;
+
+            items.Add(new HistoryTimelineItemViewModel(CreateRestoreItemData(
+                restore,
+                restoreBackup,
+                restoreSnapshot,
+                metadata,
+                projectName,
+                originBackupId)));
+        }
+    }
+
+    private static void AddSnapshotTimelineItems(
+        List<HistoryTimelineItemViewModel> items,
+        IEnumerable<Snapshot> snapshots,
+        IReadOnlyDictionary<int, Project> projectsById,
+        IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId)
+    {
+        foreach (Snapshot snapshot in snapshots)
+        {
+            string projectName = ResolveProjectName(projectsById, snapshot.ProjectId);
+            metadataBySnapshotId.TryGetValue(snapshot.Id, out SnapshotHistoryMetadata? metadata);
+
+            items.Add(new HistoryTimelineItemViewModel(new HistoryTimelineItemData
+            {
+                Kind = L("History.Event.Kind.Snapshot", "Snapshot"),
+                ProjectName = projectName,
+                ProjectId = snapshot.ProjectId,
+                CreatedUtc = snapshot.CreatedUtc,
+                Title = LF("History.Event.SnapshotTitle", "{0} snapshot", projectName),
+                Detail = BuildSnapshotDetail(metadata),
+                Lane = L("History.Lane.Metadata", "Snapshot"),
+                GraphLane = HistoryTimelineLane.Metadata,
+                SnapshotId = snapshot.Id,
+                OriginSummary = LF("History.Event.OriginSnapshotOnly", "snapshot #{0} has no linked backup node", snapshot.Id),
+                IsProtectedMarker = metadata?.IsProtected == true,
+                IsKnownGoodMarker = metadata?.IsKnownGood == true,
+                MarkerSummary = BuildMarkerSummary(metadata),
+                TotalBytes = snapshot.TotalBytes,
+                FileCount = snapshot.FileCount,
+                DiffAdded = snapshot.DiffAdded,
+                DiffModified = snapshot.DiffModified,
+                DiffDeleted = snapshot.DiffDeleted,
+                DiffNetBytes = snapshot.DiffNetBytes
+            }));
+        }
+    }
+
     private void ApplyTimelineData(HistoryTimelineData data)
     {
         ProjectCount = data.ProjectCount;
@@ -538,12 +498,12 @@ public sealed class HistoryViewModel : ViewModelBase
         SnapshotOnlyCount = data.SnapshotOnlyCount;
         TotalEventCount = data.Items.Count;
         Summary = data.Items.Count == 0
-            ? L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.")
+            ? L(EmptySummaryKey, EmptySummaryFallback)
             : LF("History.Summary.Events", "Showing {0} recent history events across {1} project(s).", data.Items.Count, data.ProjectCount);
-        HistoryTimelineItemViewModel? latest = data.Items.FirstOrDefault();
-        LatestEventLabel = latest?.TimeLabel ?? L("History.Event.NoRecent", "No recent history");
-        LatestEventTitle = latest?.Title ?? L("History.Event.NoRecent", "No recent history");
-        LatestEventDetail = latest?.Detail ?? L("History.Summary.Empty", "Project history will appear here as backups and snapshots are created.");
+        HistoryTimelineItemViewModel? latest = data.Items.Count > 0 ? data.Items[0] : null;
+        LatestEventLabel = latest?.TimeLabel ?? L(NoRecentHistoryKey, NoRecentHistoryFallback);
+        LatestEventTitle = latest?.Title ?? L(NoRecentHistoryKey, NoRecentHistoryFallback);
+        LatestEventDetail = latest?.Detail ?? L(EmptySummaryKey, EmptySummaryFallback);
         Insight = BuildInsight(data);
 
         _allTimelineItems.Clear();
@@ -582,6 +542,138 @@ public sealed class HistoryViewModel : ViewModelBase
         _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
         _resetFiltersCommand.RaiseCanExecuteChanged();
     }
+
+    private static string ResolveProjectName(IReadOnlyDictionary<int, Project> projectsById, int projectId) =>
+        projectsById.TryGetValue(projectId, out Project? project)
+            ? project.Name
+            : LF("History.Event.ProjectFallback", "Project #{0}", projectId);
+
+    private static HistoryTimelineItemData CreateBackupItemData(
+        Backup backup,
+        Snapshot? snapshot,
+        SnapshotHistoryMetadata? metadata,
+        string projectName,
+        string type,
+        bool isManual,
+        string markerSummary)
+    {
+        return new HistoryTimelineItemData
+        {
+            Kind = backup.IsImported
+                ? L("History.Event.Kind.Imported", "Imported")
+                : L("History.Event.Kind.Backup", "Backup"),
+            ProjectName = projectName,
+            ProjectId = backup.ProjectId,
+            CreatedUtc = backup.CreatedUtc,
+            Title = LF("History.Event.BackupTitle", "{0} {1} backup", projectName, type),
+            Detail = BuildBackupDetail(backup, metadata),
+            Lane = BuildBackupLaneLabel(backup.IsImported, isManual),
+            GraphLane = BuildBackupGraphLane(backup.IsImported, isManual),
+            BackupId = backup.Id,
+            SnapshotId = backup.SnapshotId,
+            IsProtectedMarker = metadata?.IsProtected == true,
+            IsKnownGoodMarker = metadata?.IsKnownGood == true,
+            MarkerSummary = markerSummary,
+            TotalBytes = backup.TotalBytes,
+            FileCount = snapshot?.FileCount ?? 0,
+            DiffAdded = snapshot?.DiffAdded ?? 0,
+            DiffModified = snapshot?.DiffModified ?? 0,
+            DiffDeleted = snapshot?.DiffDeleted ?? 0,
+            DiffNetBytes = snapshot?.DiffNetBytes ?? 0
+        };
+    }
+
+    private static HistoryTimelineItemData CreateMetadataItemData(
+        Backup backup,
+        Snapshot? snapshot,
+        SnapshotHistoryMetadata metadata,
+        string projectName,
+        string markerSummary)
+    {
+        DateTime metadataUtc = metadata.UpdatedUtc > metadata.CreatedUtc
+            ? metadata.UpdatedUtc
+            : metadata.CreatedUtc;
+
+        return new HistoryTimelineItemData
+        {
+            Kind = L("History.Event.Kind.Metadata", "Metadata"),
+            ProjectName = projectName,
+            ProjectId = backup.ProjectId,
+            CreatedUtc = metadataUtc,
+            Title = LF("History.Event.MetadataTitle", "{0} snapshot metadata", projectName),
+            Detail = BuildMetadataBranchDetail(metadata),
+            Lane = L("History.Lane.Metadata", "Snapshot notes"),
+            GraphLane = HistoryTimelineLane.Metadata,
+            BackupId = backup.Id,
+            SnapshotId = backup.SnapshotId,
+            OriginSummary = BuildOriginSummary(backup.Id, backup.SnapshotId),
+            IsProtectedMarker = metadata.IsProtected,
+            IsKnownGoodMarker = metadata.IsKnownGood,
+            MarkerSummary = markerSummary,
+            TotalBytes = backup.TotalBytes,
+            FileCount = snapshot?.FileCount ?? 0,
+            DiffAdded = snapshot?.DiffAdded ?? 0,
+            DiffModified = snapshot?.DiffModified ?? 0,
+            DiffDeleted = snapshot?.DiffDeleted ?? 0,
+            DiffNetBytes = snapshot?.DiffNetBytes ?? 0
+        };
+    }
+
+    private static HistoryTimelineItemData CreateRestoreItemData(
+        RestoreHistoryEvent restore,
+        Backup? backup,
+        Snapshot? snapshot,
+        SnapshotHistoryMetadata? metadata,
+        string projectName,
+        int originBackupId)
+    {
+        return new HistoryTimelineItemData
+        {
+            Kind = L("History.Event.Kind.Restore", "Restore"),
+            ProjectName = projectName,
+            ProjectId = restore.ProjectId,
+            CreatedUtc = restore.CreatedUtc,
+            Title = LF("History.Event.RestoreTitle", "{0} restored from backup", projectName),
+            Detail = BuildRestoreDetail(restore, metadata),
+            Lane = BuildRestoreLaneLabel(restore.RestoreMode),
+            GraphLane = HistoryTimelineLane.Restore,
+            BackupId = originBackupId,
+            SnapshotId = restore.SnapshotId,
+            OriginSummary = BuildOriginSummary(originBackupId, restore.SnapshotId),
+            IsProtectedMarker = metadata?.IsProtected == true,
+            IsKnownGoodMarker = metadata?.IsKnownGood == true,
+            MarkerSummary = BuildMarkerSummary(metadata),
+            TotalBytes = backup?.TotalBytes ?? snapshot?.TotalBytes ?? 0,
+            FileCount = snapshot?.FileCount ?? 0,
+            DiffAdded = snapshot?.DiffAdded ?? 0,
+            DiffModified = snapshot?.DiffModified ?? 0,
+            DiffDeleted = snapshot?.DiffDeleted ?? 0,
+            DiffNetBytes = snapshot?.DiffNetBytes ?? 0
+        };
+    }
+
+    private static HistoryTimelineLane BuildBackupGraphLane(bool isImported, bool isManual)
+    {
+        if (isImported)
+            return HistoryTimelineLane.Restore;
+
+        return isManual ? HistoryTimelineLane.Manual : HistoryTimelineLane.Backup;
+    }
+
+    private static string BuildBackupLaneLabel(bool isImported, bool isManual)
+    {
+        if (isImported)
+            return L("History.Lane.Imported", "Imported");
+
+        return isManual
+            ? L("History.Lane.Manual", "Manual")
+            : L("History.Lane.Auto", "Auto");
+    }
+
+    private static string BuildRestoreLaneLabel(string restoreMode) =>
+        string.Equals(restoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
+            ? L("History.Lane.RestoreSandbox", "Sandbox restore")
+            : L("History.Lane.RestoreDirect", "Direct restore");
 
     private void ResetFilters()
     {
@@ -631,7 +723,7 @@ public sealed class HistoryViewModel : ViewModelBase
         await Dispatcher.UIThread.InvokeAsync(() => ApplyHistoryPageResult(revision, result));
     }
 
-    private HistoryPageResult BuildHistoryPageResult(
+    private static HistoryPageResult BuildHistoryPageResult(
         IReadOnlyList<HistoryTimelineItemViewModel> source,
         HistoryFilterState filterState)
     {
@@ -770,7 +862,7 @@ public sealed class HistoryViewModel : ViewModelBase
         await RefreshAsync(force: true).ConfigureAwait(false);
     }
 
-    private static List<HistoryGraphPaths> BuildPageGraphPaths(IReadOnlyList<HistoryTimelineItemViewModel> filtered, int pageStart, int pageCount)
+    private static List<HistoryGraphPaths> BuildPageGraphPaths(List<HistoryTimelineItemViewModel> filtered, int pageStart, int pageCount)
     {
         var paths = new List<HistoryGraphPaths>(pageCount);
         for (int pageOffset = 0; pageOffset < pageCount; pageOffset++)
@@ -792,7 +884,7 @@ public sealed class HistoryViewModel : ViewModelBase
     private const double GraphRowMidpoint = 32;
     private const double GraphRowBottom = 64;
 
-    private static string BuildBackupRailPath() => FormattableString.Invariant($"M 28,0 L 28,{GraphRowBottom}");
+    private static string BuildBackupRailPath() => string.Create(CultureInfo.InvariantCulture, $"M 28,0 L 28,{GraphRowBottom}");
 
     private static string BuildSideRailPath(
         HistoryTimelineLane lane,
@@ -808,11 +900,11 @@ public sealed class HistoryViewModel : ViewModelBase
         bool continuesFromPrevious = previous == lane;
         bool continuesToNext = next == lane;
         string topSegment = continuesFromPrevious
-            ? FormattableString.Invariant($"M {x},0 L {x},{GraphRowMidpoint}")
-            : FormattableString.Invariant($"M {trunkX},0 L {trunkX},18 C {trunkX},26 {x - 14},24 {x},{GraphRowMidpoint}");
+            ? string.Create(CultureInfo.InvariantCulture, $"M {x},0 L {x},{GraphRowMidpoint}")
+            : string.Create(CultureInfo.InvariantCulture, $"M {trunkX},0 L {trunkX},18 C {trunkX},26 {x - 14},24 {x},{GraphRowMidpoint}");
         string bottomSegment = continuesToNext
-            ? FormattableString.Invariant($" M {x},{GraphRowMidpoint} L {x},{GraphRowBottom}")
-            : FormattableString.Invariant($" M {x},{GraphRowMidpoint} C {x - 14},40 {trunkX},42 {trunkX},48 L {trunkX},{GraphRowBottom}");
+            ? string.Create(CultureInfo.InvariantCulture, $" M {x},{GraphRowMidpoint} L {x},{GraphRowBottom}")
+            : string.Create(CultureInfo.InvariantCulture, $" M {x},{GraphRowMidpoint} C {x - 14},40 {trunkX},42 {trunkX},48 L {trunkX},{GraphRowBottom}");
 
         return string.Concat(topSegment, bottomSegment);
     }
@@ -973,6 +1065,30 @@ public sealed record HistoryProjectFilterOption(int? ProjectId, string Label);
 
 public sealed record HistoryLaneFilterOption(HistoryTimelineLane? Lane, string Label);
 
+internal sealed record HistoryTimelineItemData
+{
+    public string Kind { get; init; } = string.Empty;
+    public string ProjectName { get; init; } = string.Empty;
+    public int ProjectId { get; init; }
+    public DateTime CreatedUtc { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string Detail { get; init; } = string.Empty;
+    public string Lane { get; init; } = string.Empty;
+    public HistoryTimelineLane GraphLane { get; init; }
+    public int BackupId { get; init; }
+    public int SnapshotId { get; init; }
+    public string OriginSummary { get; init; } = string.Empty;
+    public bool IsProtectedMarker { get; init; }
+    public bool IsKnownGoodMarker { get; init; }
+    public string MarkerSummary { get; init; } = string.Empty;
+    public long TotalBytes { get; init; }
+    public long FileCount { get; init; }
+    public int DiffAdded { get; init; }
+    public int DiffModified { get; init; }
+    public int DiffDeleted { get; init; }
+    public long DiffNetBytes { get; init; }
+}
+
 public sealed class HistoryTimelineItemViewModel
 {
     private static string L(string key, string fallback)
@@ -986,48 +1102,28 @@ public sealed class HistoryTimelineItemViewModel
     private static string LF(string key, string fallback, params object[] args) =>
         string.Format(CultureInfo.CurrentCulture, L(key, fallback), args);
 
-    public HistoryTimelineItemViewModel(
-        string kind,
-        string projectName,
-        int projectId,
-        DateTime createdUtc,
-        string title,
-        string detail,
-        string lane,
-        HistoryTimelineLane graphLane,
-        int backupId,
-        int snapshotId,
-        string originSummary,
-        bool isProtectedMarker,
-        bool isKnownGoodMarker,
-        string markerSummary = "",
-        long totalBytes = 0,
-        long fileCount = 0,
-        int diffAdded = 0,
-        int diffModified = 0,
-        int diffDeleted = 0,
-        long diffNetBytes = 0)
+    internal HistoryTimelineItemViewModel(HistoryTimelineItemData data)
     {
-        Kind = kind;
-        ProjectName = projectName;
-        ProjectId = projectId;
-        CreatedUtc = createdUtc;
-        Title = title;
-        Detail = detail;
-        Lane = lane;
-        GraphLane = graphLane;
-        BackupId = backupId;
-        SnapshotId = snapshotId;
-        OriginSummary = originSummary ?? string.Empty;
-        IsProtectedMarker = isProtectedMarker;
-        IsKnownGoodMarker = isKnownGoodMarker;
-        MarkerSummary = markerSummary ?? string.Empty;
-        TotalBytes = Math.Max(0, totalBytes);
-        FileCount = Math.Max(0, fileCount);
-        DiffAdded = Math.Max(0, diffAdded);
-        DiffModified = Math.Max(0, diffModified);
-        DiffDeleted = Math.Max(0, diffDeleted);
-        DiffNetBytes = diffNetBytes;
+        Kind = data.Kind;
+        ProjectName = data.ProjectName;
+        ProjectId = data.ProjectId;
+        CreatedUtc = data.CreatedUtc;
+        Title = data.Title;
+        Detail = data.Detail;
+        Lane = data.Lane;
+        GraphLane = data.GraphLane;
+        BackupId = data.BackupId;
+        SnapshotId = data.SnapshotId;
+        OriginSummary = data.OriginSummary ?? string.Empty;
+        IsProtectedMarker = data.IsProtectedMarker;
+        IsKnownGoodMarker = data.IsKnownGoodMarker;
+        MarkerSummary = data.MarkerSummary ?? string.Empty;
+        TotalBytes = Math.Max(0, data.TotalBytes);
+        FileCount = Math.Max(0, data.FileCount);
+        DiffAdded = Math.Max(0, data.DiffAdded);
+        DiffModified = Math.Max(0, data.DiffModified);
+        DiffDeleted = Math.Max(0, data.DiffDeleted);
+        DiffNetBytes = data.DiffNetBytes;
     }
 
     public string Kind { get; }
@@ -1126,14 +1222,6 @@ public sealed class HistoryTimelineItemViewModel
     };
 
     public double InnerNodeLeft => NodeLeft + 5;
-
-    private static double LaneCenter(HistoryTimelineLane lane) => lane switch
-    {
-        HistoryTimelineLane.Backup => 28,
-        HistoryTimelineLane.Manual => 28,
-        HistoryTimelineLane.Metadata => 52,
-        _ => 76
-    };
 
     public Thickness NodeMargin => GraphLane switch
     {

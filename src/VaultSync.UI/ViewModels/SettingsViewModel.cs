@@ -130,7 +130,6 @@ namespace VaultSync.UI
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
-        private readonly SupportBundleService _supportBundleService = new();
         private readonly RelayCommand? _addTagColorRuleCommand;
         private readonly RelayCommand? _removeTagColorRuleCommand;
         private readonly RelayCommand? _resetTagColorRuleCommand;
@@ -1418,28 +1417,6 @@ namespace VaultSync.UI
                     Border = ProjectTagAppearance.NormalizeHex(entry.Value?.Border, defaults.Border)
                 });
             }
-        }
-
-        private Dictionary<string, TagColorConfig> BuildTagColorConfig()
-        {
-            var rules = new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (TagColorRuleViewModel rule in TagColorRules)
-            {
-                string tag = (rule.Tag ?? string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(tag))
-                    continue;
-
-                (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(tag);
-                rules[tag] = new TagColorConfig
-                {
-                    Background = ProjectTagAppearance.NormalizeHex(rule.Background, defaults.Background),
-                    Foreground = ProjectTagAppearance.NormalizeHex(rule.Foreground, defaults.Foreground),
-                    Border = ProjectTagAppearance.NormalizeHex(rule.Border, defaults.Border)
-                };
-            }
-
-            return rules;
         }
 
         public void RebindDestinationCredentials()

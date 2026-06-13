@@ -2003,18 +2003,6 @@ namespace VaultSync.UI.ViewModels
             out ulong lpTotalNumberOfBytes,
             out ulong lpTotalNumberOfFreeBytes);
 
-        private void UpdateBackupDiskUsage(AppConfig config)
-        {
-            (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string riskReason, BackupDiskUsageStatus _) =
-                ComputeBackupDiskUsageDetailed(config);
-
-            BackupDiskUsedPercent      = usedPercent;
-            BackupDiskFreeText         = freeText;
-            BackupDiskThresholdText    = thresholdText;
-            BackupDiskIsBelowThreshold = isBelowThreshold;
-            BackupDiskRiskReason       = riskReason;
-        }
-
         private void UpdateBackupSummaryPills()
         {
             using var timing = RuntimeTiming.Measure("Dashboard backup summary rebuild");
@@ -2045,21 +2033,6 @@ namespace VaultSync.UI.ViewModels
                     manualWeek,
                     importedWeek);
             }
-        }
-
-        private static double[] MovingAverage(IReadOnlyList<double> v, int window)
-        {
-            if (window <= 1) return [.. v];
-            double[] r = new double[v.Count];
-            for (int i = 0; i < v.Count; i++)
-            {
-                int start = Math.Max(0, i - (window - 1));
-                int count = i - start + 1;
-                double sum = 0;
-                for (int j = start; j <= i; j++) sum += v[j];
-                r[i] = sum / count;
-            }
-            return r;
         }
 
         private static string TrimForTooltip(string? value, int maxLength)

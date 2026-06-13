@@ -1999,15 +1999,6 @@ namespace VaultSync.UI.ViewModels
         }
 
         // ---------- Snapshot management + filtering ----------
-
-        private void AddSnapshot(BackupSnapshotItem snapshot)
-        {
-            _allSnapshots.Add(snapshot);
-            Interlocked.Increment(ref _snapshotRevision);
-            RefreshSnapshotsView(false);
-            RecalculateSummary();
-        }
-
         private void ApplyTypeFilter(string? type)
         {
             if (string.IsNullOrWhiteSpace(type) || type == "All")
@@ -2534,23 +2525,6 @@ namespace VaultSync.UI.ViewModels
             }
 
             return false;
-        }
-
-        private static bool IsNetworkHealthPath(DriveHealthResult health)
-        {
-            string id = health.DriveId ?? string.Empty;
-            if (id.StartsWith("//", StringComparison.OrdinalIgnoreCase))
-                return true;
-            if (id.Contains("://", StringComparison.OrdinalIgnoreCase))
-                return true;
-            if (!id.StartsWith("/dev/", StringComparison.OrdinalIgnoreCase) && id.Contains(':'))
-                return true;
-
-            string path = health.Path ?? string.Empty;
-            return path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("//", StringComparison.OrdinalIgnoreCase);
         }
 
         // ---------- Summary computation ----------

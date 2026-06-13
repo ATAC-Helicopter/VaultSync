@@ -2585,13 +2585,6 @@ public sealed class BackupService(
         await task;
     }
 
-    /// <summary>
-    /// Computes the total bytes that will be included in the backup, using the same
-    /// filtering rules as SnapshotService.
-    /// </summary>
-    private static long ComputeBackupSize(string sourceDir, string preset, CancellationToken ct)
-        => ComputeBackupStats(sourceDir, preset, ct).totalBytes;
-
     private static (int totalFiles, long totalBytes) ComputeBackupStats(string sourceDir, string preset, CancellationToken ct)
     {
         var dirInfo = new DirectoryInfo(sourceDir);
