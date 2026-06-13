@@ -347,13 +347,25 @@
         <Border Grid.Column="1"
                 Classes="card"
                 Padding="{DynamicResource CardPaddingSmall}">
-          <Grid RowDefinitions="Auto,*" RowSpacing="10">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
             <StackPanel Grid.Row="0" Spacing="4">
               <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.RecentActivity}" Classes="section-title"/>
               <TextBlock Text="{Binding SnapshotsSummaryLine}" Classes="metric-hint" TextWrapping="Wrap"/>
             </StackPanel>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="360">
+            <WrapPanel Grid.Row="1" ItemSpacing="8" LineSpacing="8">
+              <Button Classes="small-pill"
+                      Content="{infra:LocalizedString Key=Dashboard.Workflow.History}"
+                      Command="{Binding OpenHistoryCommand}"/>
+              <Button Classes="small-pill"
+                      Content="{infra:LocalizedString Key=Dashboard.Workflow.Recovery}"
+                      Command="{Binding OpenRecoveryCommand}"/>
+              <Button Classes="small-pill"
+                      Content="{infra:LocalizedString Key=Dashboard.Workflow.Backups}"
+                      Command="{Binding OpenBackupsCommand}"/>
+            </WrapPanel>
+
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="360">
               <ItemsControl ItemsSource="{Binding ActivityItems}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>

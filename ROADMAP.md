@@ -1794,7 +1794,8 @@
 - [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(In progress, tracked by #358)_
   - In progress: Dashboard shows restore-readiness counts, headline/detail, and a review drawer for projects needing attention.
   - In progress: Recovery readiness scoring now uses protected and known-good snapshot markers when metadata is available.
-  - Remaining: final 1.8 dashboard refresh for recovery coverage, recent milestones, and workflow links.
+  - Done: Dashboard recent activity includes restore milestones, and workflow links route directly to History, Recovery, and Backups.
+  - Remaining: final 1.8 dashboard refresh for recovery coverage.
 - [x] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Done in PR #365, tracked by #359)_
   - Done: Recovery page shows readiness score/band, coverage windows, project priority ordering, and actionable recommendations.
 - [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(Tracked by #360)_
@@ -1813,7 +1814,9 @@
 - [x] `BUG-18052` `P1` Dispose cancellation resources flagged by Sonar. _(Done, tracked by #376; completed 2026-06-08)_
   - Done: linked backup CTS, diagnostics writer CTS, and onboarding scroll CTS resources are disposed on replacement or shutdown.
 - [ ] `VS-1818` `P2` Triage Stable Sonar maintainability backlog. _(In progress, tracked by #377)_
-  - In progress: first-pass reliability/unreachable-code cleanups are complete; remaining work should be split by owned complexity hotspots.
+  - In progress: first-pass reliability/unreachable-code cleanups are complete; release/v1.8 CI triggers and restore path hardening have landed; remaining work should be split by owned complexity hotspots.
+- [x] `BUG-18053` `P1` Keep restore target paths under intended roots. _(Done in `release/v1.8`)_
+  - Done: generated restore project folders sanitize project names, and restore preview/copy paths use the existing root-bound combine guard.
 - [ ] `BUG-18047` `P1` Let Linux patch updates elevate through `pkexec` before falling back to `.deb` installer flows. _(In progress, tracked by #368)_
 - [ ] `BUG-18048` `P1` Harden Projects page loading so visible project content appears reliably. _(In progress, tracked by #366)_
   - In progress: Projects refresh now runs on the UI thread, page attach triggers loading, and stale visible lists rebuild from the backing project cache.

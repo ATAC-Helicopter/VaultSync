@@ -8,6 +8,7 @@
 - [VS-1804] Added a full-window selectable project History workspace backed by live repository activity, with reversible time filters, denser paging, event details, and an origin-aware Git-client-style graph where snapshot notes, imports, and restores branch from their backup/snapshot source.
 - [VS-1805] Added protected and known-good snapshot markers, with retention honoring protected snapshot metadata.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
+- [VS-1806] Added Dashboard workflow links into History, Recovery, and Backups, with restore milestones included in recent activity.
 ### Changed
 - [VS-1813] History now supports activity, project, lane, and time-range filtering, while the Backups page frames its lower section as a snapshot inventory for restore-point operations instead of a competing history timeline.
 - [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.
@@ -16,7 +17,9 @@
 - [VS-1815] Tuned SonarQube quality scope and dispositions for vendored rsync documentation and credential-vault identifiers.
 - [VS-1816] Hardened release asset workflow inputs and PR YAML lint installs against SonarQube security findings.
 - [VS-1817] Kept backup archive IV generation analyzer-visible while preserving the encrypted archive envelope format.
+- [VS-1818] Extended CI, PR quality gates, and CodeQL triggers to the active `release/v1.8` branch.
 ### Fixed
+- [BUG-18053] Restore target folders and sandbox apply paths now stay under their intended roots when project names or relative paths contain unsafe segments.
 - [BUG-18052] Disposed Sonar-flagged cancellation resources in backup runs, diagnostics logging, and onboarding tour scrolling.
 - [BUG-18045] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
 - [BUG-18047] Linux patch updates can now elevate through `pkexec` for protected installs instead of hiding behind the `.deb` installer fallback.

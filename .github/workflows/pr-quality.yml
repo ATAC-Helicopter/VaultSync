@@ -2,9 +2,9 @@ name: PR Quality Gates
 
 on:
   pull_request:
-    branches: [ "Dev", "Stable" ]
+    branches: [ "Dev", "Stable", "release/v1.8" ]
   push:
-    branches: [ "Dev", "Stable" ]
+    branches: [ "Dev", "Stable", "release/v1.8" ]
   workflow_dispatch:
 
 permissions:
