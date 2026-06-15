@@ -34,7 +34,6 @@ namespace VaultSync.UI.ViewModels
             Json
         }
 
-        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
 
@@ -3762,7 +3761,7 @@ namespace VaultSync.UI.ViewModels
 
             bool hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
                 string.IsNullOrWhiteSpace(item.EncryptionKeyRef) ? null : item.EncryptionKeyRef,
-                BackupEncryptionSecretUsername,
+                BackupEncryptionCredentialIdentity.AccountName,
                 preferKeychain: true,
                 fallbackPlaintext: null));
             item.HasEncryptionSecret = hasSecret;

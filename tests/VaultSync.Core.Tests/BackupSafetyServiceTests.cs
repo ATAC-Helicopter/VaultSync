@@ -76,6 +76,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
         var stagingRoot = BackupSafetyService.GetOfflineStagingRoot(project);
 
         BackupSafetyService.EnsureSafeBackupRoot(project, stagingRoot);
+        Assert.True(Path.IsPathFullyQualified(stagingRoot));
         Assert.DoesNotContain(projectRoot, stagingRoot, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -152,8 +152,6 @@ namespace VaultSync.UI
         private string _customThemeName = "VaultSync Midnight";
         private string _customThemeBase = "Dark";
         private ThemeColorSlotViewModel? _selectedThemeColorSlot;
-        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
-
         private readonly bool _isInitialized;
         private bool _isSaving;
         private bool _savePending;
@@ -690,7 +688,7 @@ namespace VaultSync.UI
             _backupEncryptionOpenUnlockTimeoutMinutes = ClampInt(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes, 1, 240, 10);
             _backupEncryptionKeyRef = cfg.Backups.Encryption.KeyRef ?? string.Empty;
             _backupEncryptionHasSecret = !string.IsNullOrWhiteSpace(
-                _backupEncryptionSecretService.GetSecret(_backupEncryptionKeyRef, BackupEncryptionSecretUsername));
+                _backupEncryptionSecretService.GetSecret(_backupEncryptionKeyRef, BackupEncryptionCredentialIdentity.AccountName));
             _backupEncryptionPasswordInput = string.Empty;
             _backupEncryptionSecretStatus = _backupEncryptionHasSecret
                 ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
@@ -2726,7 +2724,7 @@ namespace VaultSync.UI
 
                 EncryptionSecretStorageMode storageMode = _backupEncryptionSecretService.SaveSecret(
                     _backupEncryptionKeyRef,
-                    BackupEncryptionSecretUsername,
+                    BackupEncryptionCredentialIdentity.AccountName,
                     BackupEncryptionPasswordInput,
                     allowSessionFallback: BackupEncryptionAllowSessionFallback,
                     fallbackConfirmed: BackupEncryptionAllowSessionFallback);
@@ -2761,7 +2759,7 @@ namespace VaultSync.UI
 
         private void ClearBackupEncryptionPassword()
         {
-            _backupEncryptionSecretService.DeleteSecret(_backupEncryptionKeyRef, BackupEncryptionSecretUsername);
+            _backupEncryptionSecretService.DeleteSecret(_backupEncryptionKeyRef, BackupEncryptionCredentialIdentity.AccountName);
             BackupEncryptionHasSecret = false;
             BackupEncryptionPasswordInput = string.Empty;
             BackupEncryptionSecretStatus = L(

@@ -1363,7 +1363,7 @@ namespace VaultSync.UI.ViewModels
             {
                 string? secret = _credentialVault.GetSecret(
                     keyRef,
-                    BackupEncryptionSecretUsername,
+                    BackupEncryptionCredentialIdentity.AccountName,
                     preferKeychain: true,
                     fallbackPlaintext: null);
 

@@ -17,126 +17,78 @@ namespace VaultSync.UI.Services
                 "vaultsync-midnight",
                 "Default VaultSync dark palette with balanced contrast and blue accents.",
                 new ThemePaletteConfig()),
-            new(
+            Preset(
                 "studio-light",
                 "Clean light workspace with crisp surfaces and a bright accent.",
-                new ThemePaletteConfig
-                {
-                    Name = "Studio Light",
-                    BaseTheme = "Light",
-                    Background = "#F4F5F9",
-                    Surface = "#FFFFFF",
-                    SurfaceAlt = "#E6E9F2",
-                    Accent = "#2663FF",
-                    TextPrimary = "#11131A",
-                    TextSecondary = "#5C6275",
-                    Success = "#32DFA0",
-                    Warning = "#FFBF5F",
-                    Danger = "#FF6A6A"
-                }),
-            new(
+                "Studio Light",
+                "Light",
+                ["#F4F5F9", "#FFFFFF", "#E6E9F2", "#2663FF", "#11131A", "#5C6275", "#32DFA0", "#FFBF5F", "#FF6A6A"]),
+            Preset(
                 "ember",
                 "Warm dark tones with orange accents for a softer night theme.",
-                new ThemePaletteConfig
-                {
-                    Name = "Ember",
-                    BaseTheme = "Dark",
-                    Background = "#14110F",
-                    Surface = "#201A16",
-                    SurfaceAlt = "#2C241E",
-                    Accent = "#FF8B4D",
-                    TextPrimary = "#FFF4EB",
-                    TextSecondary = "#D4BBA8",
-                    Success = "#54D7A2",
-                    Warning = "#F7C66B",
-                    Danger = "#FF7B74"
-                }),
-            new(
+                "Ember",
+                "Dark",
+                ["#14110F", "#201A16", "#2C241E", "#FF8B4D", "#FFF4EB", "#D4BBA8", "#54D7A2", "#F7C66B", "#FF7B74"]),
+            Preset(
                 "fjord",
                 "Cool blue dark theme inspired by colder, calmer palettes.",
-                new ThemePaletteConfig
-                {
-                    Name = "Fjord",
-                    BaseTheme = "Dark",
-                    Background = "#0D1620",
-                    Surface = "#142131",
-                    SurfaceAlt = "#1B2B3E",
-                    Accent = "#4CC9F0",
-                    TextPrimary = "#F4FAFF",
-                    TextSecondary = "#AFC4D9",
-                    Success = "#51D5AA",
-                    Warning = "#FFCB65",
-                    Danger = "#FF7A88"
-                }),
-            new(
+                "Fjord",
+                "Dark",
+                ["#0D1620", "#142131", "#1B2B3E", "#4CC9F0", "#F4FAFF", "#AFC4D9", "#51D5AA", "#FFCB65", "#FF7A88"]),
+            Preset(
                 "deep-blue",
                 "Deeper blue night theme with stronger contrast and cooler surfaces.",
-                new ThemePaletteConfig
-                {
-                    Name = "Deep Blue",
-                    BaseTheme = "Dark",
-                    Background = "#09111B",
-                    Surface = "#0F1A29",
-                    SurfaceAlt = "#16253A",
-                    Accent = "#5D8DFF",
-                    TextPrimary = "#F4F8FF",
-                    TextSecondary = "#A9BBD6",
-                    Success = "#57D8AF",
-                    Warning = "#FFCA66",
-                    Danger = "#FF7B86"
-                }),
-            new(
+                "Deep Blue",
+                "Dark",
+                ["#09111B", "#0F1A29", "#16253A", "#5D8DFF", "#F4F8FF", "#A9BBD6", "#57D8AF", "#FFCA66", "#FF7B86"]),
+            Preset(
                 "forest",
                 "Muted green palette built for long sessions and lower visual noise.",
-                new ThemePaletteConfig
-                {
-                    Name = "Forest",
-                    BaseTheme = "Dark",
-                    Background = "#101611",
-                    Surface = "#18211A",
-                    SurfaceAlt = "#223026",
-                    Accent = "#5AC88F",
-                    TextPrimary = "#F5FFF7",
-                    TextSecondary = "#B4CDB8",
-                    Success = "#5CE2A1",
-                    Warning = "#EFC56A",
-                    Danger = "#FF7B79"
-                }),
-            new(
+                "Forest",
+                "Dark",
+                ["#101611", "#18211A", "#223026", "#5AC88F", "#F5FFF7", "#B4CDB8", "#5CE2A1", "#EFC56A", "#FF7B79"]),
+            Preset(
                 "orchid",
                 "High-contrast violet palette with a brighter accent pop.",
-                new ThemePaletteConfig
-                {
-                    Name = "Orchid",
-                    BaseTheme = "Dark",
-                    Background = "#15111C",
-                    Surface = "#21182B",
-                    SurfaceAlt = "#2B2238",
-                    Accent = "#B983FF",
-                    TextPrimary = "#FFF7FF",
-                    TextSecondary = "#CAB7DA",
-                    Success = "#5ED7B4",
-                    Warning = "#F8C86C",
-                    Danger = "#FF82A8"
-                }),
-            new(
+                "Orchid",
+                "Dark",
+                ["#15111C", "#21182B", "#2B2238", "#B983FF", "#FFF7FF", "#CAB7DA", "#5ED7B4", "#F8C86C", "#FF82A8"]),
+            Preset(
                 "oled-black",
                 "Pure black dark theme for OLED displays with bright blue highlights.",
+                "OLED Black",
+                "Dark",
+                ["#000000", "#090B10", "#111621", "#4F8DFF", "#F5F8FF", "#AAB5CB", "#4DDAA6", "#FFC766", "#FF7676"])
+        };
+
+        private static ThemePresetDefinition Preset(
+            string id,
+            string description,
+            string name,
+            string baseTheme,
+            string[] colors)
+        {
+            if (colors.Length != 9)
+                throw new ArgumentException("Theme palette presets require exactly nine colors.", nameof(colors));
+
+            return new ThemePresetDefinition(
+                id,
+                description,
                 new ThemePaletteConfig
                 {
-                    Name = "OLED Black",
-                    BaseTheme = "Dark",
-                    Background = "#000000",
-                    Surface = "#090B10",
-                    SurfaceAlt = "#111621",
-                    Accent = "#4F8DFF",
-                    TextPrimary = "#F5F8FF",
-                    TextSecondary = "#AAB5CB",
-                    Success = "#4DDAA6",
-                    Warning = "#FFC766",
-                    Danger = "#FF7676"
-                })
-        };
+                    Name = name,
+                    BaseTheme = baseTheme,
+                    Background = colors[0],
+                    Surface = colors[1],
+                    SurfaceAlt = colors[2],
+                    Accent = colors[3],
+                    TextPrimary = colors[4],
+                    TextSecondary = colors[5],
+                    Success = colors[6],
+                    Warning = colors[7],
+                    Danger = colors[8]
+                });
+        }
 
         public static IReadOnlyList<(string Id, string Description, ThemePaletteConfig Palette)> GetThemePresets()
         {

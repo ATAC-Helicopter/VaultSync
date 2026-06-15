@@ -139,7 +139,6 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan EncryptedOpenStaleRetention = TimeSpan.FromMinutes(30);
         private static readonly ConcurrentDictionary<string, CancellationTokenSource> _encryptedOpenCleanup = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<int, EncryptedOpenUnlockSession> _encryptedOpenSessions = new();
-        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
         private DateTime _lastDestinationScanUtc = DateTime.MinValue;
         private int _destinationScanInFlight;
         private int _destinationOverviewRefreshInFlight;

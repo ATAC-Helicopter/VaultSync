@@ -1085,7 +1085,7 @@ public sealed class BackupService(
 
                 string? password = _backupEncryptionSecretService.GetSecret(
                     resolvedEncryption.EffectiveKeyRef,
-                    username: "vaultsync-backup-encryption");
+                    username: BackupEncryptionCredentialIdentity.AccountName);
                 if (string.IsNullOrWhiteSpace(password))
                 {
                     throw new InvalidOperationException(

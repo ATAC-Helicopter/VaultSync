@@ -32,7 +32,6 @@ namespace VaultSync.UI.ViewModels;
 /// </summary>
 public class ProjectsViewModel : ViewModelBase
 {
-    private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
     private const string GenericPresetId = "generic";
     private const string NoPresetId = "no preset";
     private static readonly string[] DefaultReusableTags = ["Work", "Games", "Media", "Critical", "Archive"];
@@ -1139,7 +1138,7 @@ public class ProjectsViewModel : ViewModelBase
 
         var hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
             string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef,
-            BackupEncryptionSecretUsername,
+            BackupEncryptionCredentialIdentity.AccountName,
             preferKeychain: true,
             fallbackPlaintext: null));
         vm.HasEncryptionSecret = hasSecret;
