@@ -21,6 +21,7 @@
 - [VS-1817] Kept backup archive IV generation analyzer-visible while preserving the encrypted archive envelope format.
 - [VS-1818] Extended CI, PR quality gates, and CodeQL triggers to the active `release/v1.8` branch.
 ### Fixed
+- [BUG-18054] Patched .NET 10 runtime-pack servicing alerts by pinning ASP.NET Core runtime downloads and Microsoft platform packages to `10.0.9`.
 - [BUG-18053] Restore target folders and sandbox apply paths now stay under their intended roots when project names or relative paths contain unsafe segments.
 - [BUG-18052] Disposed Sonar-flagged cancellation resources in backup runs, diagnostics logging, and onboarding tour scrolling.
 - [BUG-18045] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
