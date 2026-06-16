@@ -32,6 +32,8 @@ public sealed class HistoryViewModel : ViewModelBase
     private readonly RelayCommand _resetFiltersCommand;
     private readonly RelayCommand _toggleSelectedProtectedCommand;
     private readonly RelayCommand _toggleSelectedKnownGoodCommand;
+    private readonly RelayCommand _saveSelectedSnapshotMetadataCommand;
+    private readonly RelayCommand _clearSelectedSnapshotMetadataCommand;
     private readonly List<HistoryTimelineItemViewModel> _allTimelineItems = [];
     private int _filterRevision;
     private int _refreshInFlight;
@@ -50,6 +52,9 @@ public sealed class HistoryViewModel : ViewModelBase
     private HistoryProjectFilterOption? _selectedProjectFilter;
     private HistoryLaneFilterOption? _selectedLaneFilter;
     private HistoryTimelineItemViewModel? _selectedTimelineItem;
+    private string _selectedSnapshotLabelDraft = string.Empty;
+    private string _selectedSnapshotNoteDraft = string.Empty;
+    private string _selectedSnapshotTagsDraft = string.Empty;
     private int _pageIndex;
     private int _filteredEventCount;
 
@@ -83,11 +88,19 @@ public sealed class HistoryViewModel : ViewModelBase
         _toggleSelectedKnownGoodCommand = new RelayCommand(
             async _ => await ToggleSelectedSnapshotMarkerAsync(toggleProtected: false),
             _ => CanEditSelectedSnapshotMetadata);
+        _saveSelectedSnapshotMetadataCommand = new RelayCommand(
+            async _ => await SaveSelectedSnapshotMetadataAsync(clearTextMetadata: false),
+            _ => CanEditSelectedSnapshotMetadata);
+        _clearSelectedSnapshotMetadataCommand = new RelayCommand(
+            async _ => await SaveSelectedSnapshotMetadataAsync(clearTextMetadata: true),
+            _ => CanEditSelectedSnapshotMetadata && HasSelectedSnapshotTextMetadata);
         PreviousPageCommand = _previousPageCommand;
         NextPageCommand = _nextPageCommand;
         ResetFiltersCommand = _resetFiltersCommand;
         ToggleSelectedProtectedCommand = _toggleSelectedProtectedCommand;
         ToggleSelectedKnownGoodCommand = _toggleSelectedKnownGoodCommand;
+        SaveSelectedSnapshotMetadataCommand = _saveSelectedSnapshotMetadataCommand;
+        ClearSelectedSnapshotMetadataCommand = _clearSelectedSnapshotMetadataCommand;
 
         ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.All, L("History.Filter.All", "All activity")));
         ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.Backups, L("History.Filter.Backups", "Backups")));
@@ -123,6 +136,8 @@ public sealed class HistoryViewModel : ViewModelBase
     public ICommand ResetFiltersCommand { get; }
     public ICommand ToggleSelectedProtectedCommand { get; }
     public ICommand ToggleSelectedKnownGoodCommand { get; }
+    public ICommand SaveSelectedSnapshotMetadataCommand { get; }
+    public ICommand ClearSelectedSnapshotMetadataCommand { get; }
 
     public string Summary
     {
@@ -251,15 +266,24 @@ public sealed class HistoryViewModel : ViewModelBase
             OnPropertyChanged(nameof(SelectedEventLane));
             OnPropertyChanged(nameof(SelectedEventKind));
             OnPropertyChanged(nameof(SelectedEventAccent));
+            OnPropertyChanged(nameof(SelectedEventSize));
+            OnPropertyChanged(nameof(SelectedEventFiles));
+            OnPropertyChanged(nameof(SelectedEventChangeSummary));
+            OnPropertyChanged(nameof(SelectedEventLabel));
+            OnPropertyChanged(nameof(SelectedEventNote));
+            OnPropertyChanged(nameof(SelectedEventTags));
             OnPropertyChanged(nameof(SelectedEventMarkerSummary));
             OnPropertyChanged(nameof(SelectedEventHasMarkerSummary));
             OnPropertyChanged(nameof(SelectedEventOriginSummary));
             OnPropertyChanged(nameof(SelectedEventHasOriginSummary));
             OnPropertyChanged(nameof(CanEditSelectedSnapshotMetadata));
+            LoadSelectedMetadataDrafts();
             OnPropertyChanged(nameof(SelectedProtectedActionLabel));
             OnPropertyChanged(nameof(SelectedKnownGoodActionLabel));
             _toggleSelectedProtectedCommand.RaiseCanExecuteChanged();
             _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
+            _saveSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
+            _clearSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -317,17 +341,76 @@ public sealed class HistoryViewModel : ViewModelBase
     public string SelectedEventLane => SelectedTimelineItem?.Lane ?? L("History.Detail.LaneFallback", "Timeline");
     public string SelectedEventKind => SelectedTimelineItem?.Kind ?? L("History.Detail.KindFallback", "Activity");
     public string SelectedEventAccent => SelectedTimelineItem?.Accent ?? "#4F8DFF";
+    public string SelectedEventSize => SelectedTimelineItem?.SizeLabel ?? L("History.Detail.SizeUnknown", "Size unknown");
+    public string SelectedEventFiles => SelectedTimelineItem?.FileCountLabel ?? L("History.Detail.FileCountUnknown", "File count unknown");
+    public string SelectedEventChangeSummary => SelectedTimelineItem?.ChangeSummaryLabel ?? L("History.Detail.NetNoChange", "net 0 B");
+    public string SelectedEventLabel => SelectedTimelineItem?.MetadataLabel ?? string.Empty;
+    public string SelectedEventNote => SelectedTimelineItem?.MetadataNote ?? string.Empty;
+    public string SelectedEventTags => SelectedTimelineItem?.MetadataTags ?? string.Empty;
     public string SelectedEventMarkerSummary => SelectedTimelineItem?.MarkerSummary ?? string.Empty;
     public bool SelectedEventHasMarkerSummary => SelectedTimelineItem?.HasMarkerSummary == true;
     public string SelectedEventOriginSummary => SelectedTimelineItem?.OriginSummary ?? string.Empty;
     public bool SelectedEventHasOriginSummary => SelectedTimelineItem?.HasOriginSummary == true;
     public bool CanEditSelectedSnapshotMetadata => SelectedTimelineItem?.SnapshotId > 0;
+    public bool HasSelectedSnapshotTextMetadata =>
+        !string.IsNullOrWhiteSpace(SelectedSnapshotLabelDraft) ||
+        !string.IsNullOrWhiteSpace(SelectedSnapshotNoteDraft) ||
+        !string.IsNullOrWhiteSpace(SelectedSnapshotTagsDraft);
     public string SelectedProtectedActionLabel => SelectedTimelineItem?.IsProtectedMarker == true
         ? L("History.Action.Unprotect", "Unprotect")
         : L("History.Action.Protect", "Protect");
     public string SelectedKnownGoodActionLabel => SelectedTimelineItem?.IsKnownGoodMarker == true
         ? L("History.Action.ClearKnownGood", "Clear known good")
         : L("History.Action.MarkKnownGood", "Mark known good");
+
+    public string SelectedSnapshotLabelDraft
+    {
+        get => _selectedSnapshotLabelDraft;
+        set
+        {
+            if (!SetField(ref _selectedSnapshotLabelDraft, value))
+                return;
+
+            OnSelectedMetadataDraftChanged();
+        }
+    }
+
+    public string SelectedSnapshotNoteDraft
+    {
+        get => _selectedSnapshotNoteDraft;
+        set
+        {
+            if (!SetField(ref _selectedSnapshotNoteDraft, value))
+                return;
+
+            OnSelectedMetadataDraftChanged();
+        }
+    }
+
+    public string SelectedSnapshotTagsDraft
+    {
+        get => _selectedSnapshotTagsDraft;
+        set
+        {
+            if (!SetField(ref _selectedSnapshotTagsDraft, value))
+                return;
+
+            OnSelectedMetadataDraftChanged();
+        }
+    }
+
+    private void LoadSelectedMetadataDrafts()
+    {
+        SelectedSnapshotLabelDraft = SelectedEventLabel;
+        SelectedSnapshotNoteDraft = SelectedEventNote;
+        SelectedSnapshotTagsDraft = SelectedEventTags;
+    }
+
+    private void OnSelectedMetadataDraftChanged()
+    {
+        OnPropertyChanged(nameof(HasSelectedSnapshotTextMetadata));
+        _clearSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
+    }
 
     public async Task RefreshAsync(bool force = false)
     {
@@ -480,6 +563,9 @@ public sealed class HistoryViewModel : ViewModelBase
                 OriginSummary = LF("History.Event.OriginSnapshotOnly", "snapshot #{0} has no linked backup node", snapshot.Id),
                 IsProtectedMarker = metadata?.IsProtected == true,
                 IsKnownGoodMarker = metadata?.IsKnownGood == true,
+                MetadataLabel = metadata?.Label ?? string.Empty,
+                MetadataNote = metadata?.Note ?? string.Empty,
+                MetadataTags = metadata?.Tags ?? string.Empty,
                 MarkerSummary = BuildMarkerSummary(metadata),
                 TotalBytes = snapshot.TotalBytes,
                 FileCount = snapshot.FileCount,
@@ -532,14 +618,25 @@ public sealed class HistoryViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedEventLane));
         OnPropertyChanged(nameof(SelectedEventKind));
         OnPropertyChanged(nameof(SelectedEventAccent));
+        OnPropertyChanged(nameof(SelectedEventSize));
+        OnPropertyChanged(nameof(SelectedEventFiles));
+        OnPropertyChanged(nameof(SelectedEventChangeSummary));
+        OnPropertyChanged(nameof(SelectedEventLabel));
+        OnPropertyChanged(nameof(SelectedEventNote));
+        OnPropertyChanged(nameof(SelectedEventTags));
+        OnPropertyChanged(nameof(SelectedEventMarkerSummary));
+        OnPropertyChanged(nameof(SelectedEventHasMarkerSummary));
         OnPropertyChanged(nameof(SelectedEventOriginSummary));
         OnPropertyChanged(nameof(SelectedEventHasOriginSummary));
         OnPropertyChanged(nameof(CanEditSelectedSnapshotMetadata));
+        LoadSelectedMetadataDrafts();
         OnPropertyChanged(nameof(SelectedProtectedActionLabel));
         OnPropertyChanged(nameof(SelectedKnownGoodActionLabel));
         OnPropertyChanged(nameof(FilterStateLabel));
         _toggleSelectedProtectedCommand.RaiseCanExecuteChanged();
         _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
+        _saveSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
+        _clearSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
         _resetFiltersCommand.RaiseCanExecuteChanged();
     }
 
@@ -573,6 +670,9 @@ public sealed class HistoryViewModel : ViewModelBase
             SnapshotId = backup.SnapshotId,
             IsProtectedMarker = metadata?.IsProtected == true,
             IsKnownGoodMarker = metadata?.IsKnownGood == true,
+            MetadataLabel = metadata?.Label ?? string.Empty,
+            MetadataNote = metadata?.Note ?? string.Empty,
+            MetadataTags = metadata?.Tags ?? string.Empty,
             MarkerSummary = markerSummary,
             TotalBytes = backup.TotalBytes,
             FileCount = snapshot?.FileCount ?? 0,
@@ -609,6 +709,9 @@ public sealed class HistoryViewModel : ViewModelBase
             OriginSummary = BuildOriginSummary(backup.Id, backup.SnapshotId),
             IsProtectedMarker = metadata.IsProtected,
             IsKnownGoodMarker = metadata.IsKnownGood,
+            MetadataLabel = metadata.Label,
+            MetadataNote = metadata.Note,
+            MetadataTags = metadata.Tags,
             MarkerSummary = markerSummary,
             TotalBytes = backup.TotalBytes,
             FileCount = snapshot?.FileCount ?? 0,
@@ -642,6 +745,9 @@ public sealed class HistoryViewModel : ViewModelBase
             OriginSummary = BuildOriginSummary(originBackupId, restore.SnapshotId),
             IsProtectedMarker = metadata?.IsProtected == true,
             IsKnownGoodMarker = metadata?.IsKnownGood == true,
+            MetadataLabel = metadata?.Label ?? string.Empty,
+            MetadataNote = metadata?.Note ?? string.Empty,
+            MetadataTags = metadata?.Tags ?? string.Empty,
             MarkerSummary = BuildMarkerSummary(metadata),
             TotalBytes = backup?.TotalBytes ?? snapshot?.TotalBytes ?? 0,
             FileCount = snapshot?.FileCount ?? 0,
@@ -769,6 +875,7 @@ public sealed class HistoryViewModel : ViewModelBase
         if (revision != _filterRevision)
             return;
 
+        HistoryTimelineItemViewModel? previousSelection = SelectedTimelineItem;
         _filteredEventCount = result.FilteredEventCount;
         _pageIndex = result.PageIndex;
 
@@ -785,9 +892,22 @@ public sealed class HistoryViewModel : ViewModelBase
         {
             SelectedTimelineItem = null;
         }
-        else if (SelectedTimelineItem is null || !TimelineItems.Contains(SelectedTimelineItem))
+        else if (previousSelection is null)
         {
             SelectedTimelineItem = TimelineItems[0];
+        }
+        else if (!TimelineItems.Contains(previousSelection))
+        {
+            SelectedTimelineItem =
+                TimelineItems.FirstOrDefault(item =>
+                    item.SnapshotId > 0 &&
+                    item.SnapshotId == previousSelection.SnapshotId &&
+                    item.BackupId == previousSelection.BackupId &&
+                    item.GraphLane == previousSelection.GraphLane) ??
+                TimelineItems.FirstOrDefault(item =>
+                    item.SnapshotId > 0 &&
+                    item.SnapshotId == previousSelection.SnapshotId) ??
+                TimelineItems[0];
         }
 
         OnPropertyChanged(nameof(HasTimelineItems));
@@ -860,6 +980,56 @@ public sealed class HistoryViewModel : ViewModelBase
         }).ConfigureAwait(false);
 
         await RefreshAsync(force: true).ConfigureAwait(false);
+    }
+
+    private async Task SaveSelectedSnapshotMetadataAsync(bool clearTextMetadata)
+    {
+        HistoryTimelineItemViewModel? selected = SelectedTimelineItem;
+        if (selected is null || selected.SnapshotId <= 0)
+            return;
+
+        int snapshotId = selected.SnapshotId;
+        string label = clearTextMetadata ? string.Empty : NormalizeMetadataText(SelectedSnapshotLabelDraft);
+        string note = clearTextMetadata ? string.Empty : NormalizeMetadataText(SelectedSnapshotNoteDraft);
+        string tags = clearTextMetadata ? string.Empty : NormalizeMetadataTags(SelectedSnapshotTagsDraft);
+
+        await Task.Run(() =>
+        {
+            AppConfig config = _configStore.GetSnapshot();
+            SqliteRepository repo = _repositoryFactory.Create(config);
+            repo.EnsureSchema();
+            SnapshotHistoryMetadata? existing = repo.GetSnapshotHistoryMetadata(snapshotId);
+            DateTime now = DateTime.UtcNow;
+            repo.UpsertSnapshotHistoryMetadata(new SnapshotHistoryMetadata
+            {
+                SnapshotId = snapshotId,
+                Label = label,
+                Note = note,
+                Tags = tags,
+                IsProtected = existing?.IsProtected ?? selected.IsProtectedMarker,
+                IsKnownGood = existing?.IsKnownGood ?? selected.IsKnownGoodMarker,
+                CreatedUtc = existing is null || existing.CreatedUtc == default ? now : existing.CreatedUtc,
+                UpdatedUtc = now
+            });
+        }).ConfigureAwait(false);
+
+        await RefreshAsync(force: true).ConfigureAwait(false);
+    }
+
+    private static string NormalizeMetadataText(string? value) => string.IsNullOrWhiteSpace(value)
+        ? string.Empty
+        : value.Trim();
+
+    private static string NormalizeMetadataTags(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        return string.Join(
+            ", ",
+            value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase));
     }
 
     private static List<HistoryGraphPaths> BuildPageGraphPaths(List<HistoryTimelineItemViewModel> filtered, int pageStart, int pageCount)
@@ -1080,6 +1250,9 @@ internal sealed record HistoryTimelineItemData
     public string OriginSummary { get; init; } = string.Empty;
     public bool IsProtectedMarker { get; init; }
     public bool IsKnownGoodMarker { get; init; }
+    public string MetadataLabel { get; init; } = string.Empty;
+    public string MetadataNote { get; init; } = string.Empty;
+    public string MetadataTags { get; init; } = string.Empty;
     public string MarkerSummary { get; init; } = string.Empty;
     public long TotalBytes { get; init; }
     public long FileCount { get; init; }
@@ -1117,6 +1290,9 @@ public sealed class HistoryTimelineItemViewModel
         OriginSummary = data.OriginSummary ?? string.Empty;
         IsProtectedMarker = data.IsProtectedMarker;
         IsKnownGoodMarker = data.IsKnownGoodMarker;
+        MetadataLabel = data.MetadataLabel ?? string.Empty;
+        MetadataNote = data.MetadataNote ?? string.Empty;
+        MetadataTags = data.MetadataTags ?? string.Empty;
         MarkerSummary = data.MarkerSummary ?? string.Empty;
         TotalBytes = Math.Max(0, data.TotalBytes);
         FileCount = Math.Max(0, data.FileCount);
@@ -1140,6 +1316,9 @@ public sealed class HistoryTimelineItemViewModel
     public bool HasOriginSummary => !string.IsNullOrWhiteSpace(OriginSummary);
     public bool IsProtectedMarker { get; }
     public bool IsKnownGoodMarker { get; }
+    public string MetadataLabel { get; }
+    public string MetadataNote { get; }
+    public string MetadataTags { get; }
     public string MarkerSummary { get; }
     public bool HasMarkerSummary => !string.IsNullOrWhiteSpace(MarkerSummary);
     public long TotalBytes { get; }
