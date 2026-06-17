@@ -25,6 +25,35 @@ public sealed class HistoryViewModel : ViewModelBase
     private const string NoRecentHistoryKey = "History.Event.NoRecent";
     private const string NoRecentHistoryFallback = "No recent history";
     private const int PageSize = 30;
+    private static readonly string[] SelectedEventPropertyNames =
+    [
+        nameof(HasSelectedTimelineItem),
+        nameof(SelectedEventTitle),
+        nameof(SelectedEventDetail),
+        nameof(SelectedEventProject),
+        nameof(SelectedEventWhen),
+        nameof(SelectedEventLane),
+        nameof(SelectedEventKind),
+        nameof(SelectedEventAccent),
+        nameof(SelectedEventSize),
+        nameof(SelectedEventFiles),
+        nameof(SelectedEventChangeSummary),
+        nameof(SelectedEventLabel),
+        nameof(SelectedEventNote),
+        nameof(SelectedEventTags),
+        nameof(SelectedEventMarkerSummary),
+        nameof(SelectedEventHasMarkerSummary),
+        nameof(SelectedEventOriginSummary),
+        nameof(SelectedEventHasOriginSummary),
+        nameof(SelectedRecoveryStatus),
+        nameof(SelectedRecoveryStatusDetail),
+        nameof(CanEditSelectedSnapshotMetadata),
+        nameof(CanBrowseSelectedSnapshot),
+        nameof(CanCompareSelectedSnapshot),
+        nameof(BrowseSelectedSnapshotTooltip),
+        nameof(CompareSelectedSnapshotTooltip),
+        nameof(OpenRecoveryTooltip)
+    ];
     private readonly IAppConfigStore _configStore;
     private readonly IRepositoryFactory _repositoryFactory;
     private readonly RelayCommand _previousPageCommand;
@@ -291,43 +320,10 @@ public sealed class HistoryViewModel : ViewModelBase
             if (!SetField(ref _selectedTimelineItem, value))
                 return;
 
-            OnPropertyChanged(nameof(HasSelectedTimelineItem));
-            OnPropertyChanged(nameof(SelectedEventTitle));
-            OnPropertyChanged(nameof(SelectedEventDetail));
-            OnPropertyChanged(nameof(SelectedEventProject));
-            OnPropertyChanged(nameof(SelectedEventWhen));
-            OnPropertyChanged(nameof(SelectedEventLane));
-            OnPropertyChanged(nameof(SelectedEventKind));
-            OnPropertyChanged(nameof(SelectedEventAccent));
-            OnPropertyChanged(nameof(SelectedEventSize));
-            OnPropertyChanged(nameof(SelectedEventFiles));
-            OnPropertyChanged(nameof(SelectedEventChangeSummary));
-            OnPropertyChanged(nameof(SelectedEventLabel));
-            OnPropertyChanged(nameof(SelectedEventNote));
-            OnPropertyChanged(nameof(SelectedEventTags));
-            OnPropertyChanged(nameof(SelectedEventMarkerSummary));
-            OnPropertyChanged(nameof(SelectedEventHasMarkerSummary));
-            OnPropertyChanged(nameof(SelectedEventOriginSummary));
-            OnPropertyChanged(nameof(SelectedEventHasOriginSummary));
-            OnPropertyChanged(nameof(SelectedRecoveryStatus));
-            OnPropertyChanged(nameof(SelectedRecoveryStatusDetail));
-            OnPropertyChanged(nameof(CanEditSelectedSnapshotMetadata));
-            OnPropertyChanged(nameof(CanBrowseSelectedSnapshot));
-            OnPropertyChanged(nameof(CanCompareSelectedSnapshot));
-            OnPropertyChanged(nameof(BrowseSelectedSnapshotTooltip));
-            OnPropertyChanged(nameof(CompareSelectedSnapshotTooltip));
-            OnPropertyChanged(nameof(OpenRecoveryTooltip));
+            RaiseSelectedEventPropertiesChanged();
             SelectedComparisonSummary = string.Empty;
             LoadSelectedMetadataDrafts();
-            OnPropertyChanged(nameof(SelectedProtectedActionLabel));
-            OnPropertyChanged(nameof(SelectedKnownGoodActionLabel));
-            _toggleSelectedProtectedCommand.RaiseCanExecuteChanged();
-            _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
-            _saveSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
-            _clearSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
-            _browseSelectedSnapshotCommand.RaiseCanExecuteChanged();
-            _openRecoveryCommand.RaiseCanExecuteChanged();
-            _compareSelectedSnapshotCommand.RaiseCanExecuteChanged();
+            RaiseSelectedActionStateChanged();
         }
     }
 
@@ -712,36 +708,24 @@ public sealed class HistoryViewModel : ViewModelBase
         OnPropertyChanged(nameof(LoadedSummaryLabel));
         OnPropertyChanged(nameof(ProjectSummaryLabel));
         OnPropertyChanged(nameof(RestoreSummaryLabel));
-        OnPropertyChanged(nameof(SelectedEventTitle));
-        OnPropertyChanged(nameof(SelectedEventDetail));
-        OnPropertyChanged(nameof(SelectedEventProject));
-        OnPropertyChanged(nameof(SelectedEventWhen));
-        OnPropertyChanged(nameof(SelectedEventLane));
-        OnPropertyChanged(nameof(SelectedEventKind));
-        OnPropertyChanged(nameof(SelectedEventAccent));
-        OnPropertyChanged(nameof(SelectedEventSize));
-        OnPropertyChanged(nameof(SelectedEventFiles));
-        OnPropertyChanged(nameof(SelectedEventChangeSummary));
-        OnPropertyChanged(nameof(SelectedEventLabel));
-        OnPropertyChanged(nameof(SelectedEventNote));
-        OnPropertyChanged(nameof(SelectedEventTags));
-        OnPropertyChanged(nameof(SelectedEventMarkerSummary));
-        OnPropertyChanged(nameof(SelectedEventHasMarkerSummary));
-        OnPropertyChanged(nameof(SelectedEventOriginSummary));
-        OnPropertyChanged(nameof(SelectedEventHasOriginSummary));
-        OnPropertyChanged(nameof(SelectedRecoveryStatus));
-        OnPropertyChanged(nameof(SelectedRecoveryStatusDetail));
-        OnPropertyChanged(nameof(CanEditSelectedSnapshotMetadata));
-        OnPropertyChanged(nameof(CanBrowseSelectedSnapshot));
-        OnPropertyChanged(nameof(CanCompareSelectedSnapshot));
-        OnPropertyChanged(nameof(BrowseSelectedSnapshotTooltip));
-        OnPropertyChanged(nameof(CompareSelectedSnapshotTooltip));
-        OnPropertyChanged(nameof(OpenRecoveryTooltip));
+        RaiseSelectedEventPropertiesChanged();
         SelectedComparisonSummary = string.Empty;
         LoadSelectedMetadataDrafts();
+        OnPropertyChanged(nameof(FilterStateLabel));
+        RaiseSelectedActionStateChanged();
+        _resetFiltersCommand.RaiseCanExecuteChanged();
+    }
+
+    private void RaiseSelectedEventPropertiesChanged()
+    {
+        foreach (string propertyName in SelectedEventPropertyNames)
+            OnPropertyChanged(propertyName);
+    }
+
+    private void RaiseSelectedActionStateChanged()
+    {
         OnPropertyChanged(nameof(SelectedProtectedActionLabel));
         OnPropertyChanged(nameof(SelectedKnownGoodActionLabel));
-        OnPropertyChanged(nameof(FilterStateLabel));
         _toggleSelectedProtectedCommand.RaiseCanExecuteChanged();
         _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
         _saveSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
@@ -749,7 +733,6 @@ public sealed class HistoryViewModel : ViewModelBase
         _browseSelectedSnapshotCommand.RaiseCanExecuteChanged();
         _openRecoveryCommand.RaiseCanExecuteChanged();
         _compareSelectedSnapshotCommand.RaiseCanExecuteChanged();
-        _resetFiltersCommand.RaiseCanExecuteChanged();
     }
 
     private static string ResolveProjectName(IReadOnlyDictionary<int, Project> projectsById, int projectId) =>
