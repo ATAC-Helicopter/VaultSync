@@ -34,6 +34,9 @@ public sealed class HistoryViewModel : ViewModelBase
     private readonly RelayCommand _toggleSelectedKnownGoodCommand;
     private readonly RelayCommand _saveSelectedSnapshotMetadataCommand;
     private readonly RelayCommand _clearSelectedSnapshotMetadataCommand;
+    private readonly RelayCommand _browseSelectedSnapshotCommand;
+    private readonly RelayCommand _openRecoveryCommand;
+    private readonly RelayCommand _compareSelectedSnapshotCommand;
     private readonly List<HistoryTimelineItemViewModel> _allTimelineItems = [];
     private int _filterRevision;
     private int _refreshInFlight;
@@ -51,10 +54,13 @@ public sealed class HistoryViewModel : ViewModelBase
     private HistoryDateRangeOption? _selectedDateRange;
     private HistoryProjectFilterOption? _selectedProjectFilter;
     private HistoryLaneFilterOption? _selectedLaneFilter;
+    private HistoryViewModeOption? _selectedViewMode;
+    private string _searchText = string.Empty;
     private HistoryTimelineItemViewModel? _selectedTimelineItem;
     private string _selectedSnapshotLabelDraft = string.Empty;
     private string _selectedSnapshotNoteDraft = string.Empty;
     private string _selectedSnapshotTagsDraft = string.Empty;
+    private string _selectedComparisonSummary = string.Empty;
     private int _pageIndex;
     private int _filteredEventCount;
 
@@ -94,6 +100,15 @@ public sealed class HistoryViewModel : ViewModelBase
         _clearSelectedSnapshotMetadataCommand = new RelayCommand(
             async _ => await SaveSelectedSnapshotMetadataAsync(clearTextMetadata: true),
             _ => CanEditSelectedSnapshotMetadata && HasSelectedSnapshotTextMetadata);
+        _browseSelectedSnapshotCommand = new RelayCommand(
+            _ => BrowseSelectedSnapshot(),
+            _ => CanBrowseSelectedSnapshot);
+        _openRecoveryCommand = new RelayCommand(
+            _ => OpenRecoveryRequested?.Invoke(),
+            _ => HasSelectedTimelineItem);
+        _compareSelectedSnapshotCommand = new RelayCommand(
+            _ => CompareSelectedSnapshot(),
+            _ => CanCompareSelectedSnapshot);
         PreviousPageCommand = _previousPageCommand;
         NextPageCommand = _nextPageCommand;
         ResetFiltersCommand = _resetFiltersCommand;
@@ -101,11 +116,17 @@ public sealed class HistoryViewModel : ViewModelBase
         ToggleSelectedKnownGoodCommand = _toggleSelectedKnownGoodCommand;
         SaveSelectedSnapshotMetadataCommand = _saveSelectedSnapshotMetadataCommand;
         ClearSelectedSnapshotMetadataCommand = _clearSelectedSnapshotMetadataCommand;
+        BrowseSelectedSnapshotCommand = _browseSelectedSnapshotCommand;
+        OpenRecoveryCommand = _openRecoveryCommand;
+        CompareSelectedSnapshotCommand = _compareSelectedSnapshotCommand;
 
-        ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.All, L("History.Filter.All", "All activity")));
+        ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.All, L("History.Filter.All", "All events")));
         ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.Backups, L("History.Filter.Backups", "Backups")));
         ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.Restores, L("History.Filter.Restores", "Restores")));
+        ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.Imported, L("History.Filter.Imported", "Imported")));
         ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.Metadata, L("History.Filter.Metadata", "Metadata")));
+        ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.Protected, L("History.Filter.Protected", "Protected")));
+        ActivityFilterOptions.Add(new HistoryActivityFilterOption(HistoryActivityFilter.KnownGood, L("History.Filter.KnownGood", "Known good")));
         _selectedActivityFilter = ActivityFilterOptions[0];
 
         ProjectFilterOptions.Add(new HistoryProjectFilterOption(null, L("History.Project.All", "All projects")));
@@ -119,9 +140,14 @@ public sealed class HistoryViewModel : ViewModelBase
         _selectedLaneFilter = LaneFilterOptions[0];
 
         DateRangeOptions.Add(new HistoryDateRangeOption(HistoryDateRange.All, L("History.Range.All", "All time")));
+        DateRangeOptions.Add(new HistoryDateRangeOption(HistoryDateRange.Today, L("History.Range.Today", "Today")));
         DateRangeOptions.Add(new HistoryDateRangeOption(HistoryDateRange.Last7Days, L("History.Range.7Days", "Last 7 days")));
         DateRangeOptions.Add(new HistoryDateRangeOption(HistoryDateRange.Last30Days, L("History.Range.30Days", "Last 30 days")));
         _selectedDateRange = DateRangeOptions[0];
+
+        ViewModeOptions.Add(new HistoryViewModeOption(HistoryViewMode.Timeline, L("History.ViewMode.Timeline", "Timeline")));
+        ViewModeOptions.Add(new HistoryViewModeOption(HistoryViewMode.Compact, L("History.ViewMode.Compact", "Compact")));
+        _selectedViewMode = ViewModeOptions[0];
     }
 
     public ObservableCollection<HistoryTimelineItemViewModel> TimelineItems { get; } = [];
@@ -129,6 +155,7 @@ public sealed class HistoryViewModel : ViewModelBase
     public ObservableCollection<HistoryDateRangeOption> DateRangeOptions { get; } = [];
     public ObservableCollection<HistoryProjectFilterOption> ProjectFilterOptions { get; } = [];
     public ObservableCollection<HistoryLaneFilterOption> LaneFilterOptions { get; } = [];
+    public ObservableCollection<HistoryViewModeOption> ViewModeOptions { get; } = [];
 
     public ICommand RefreshCommand { get; }
     public ICommand PreviousPageCommand { get; }
@@ -138,6 +165,12 @@ public sealed class HistoryViewModel : ViewModelBase
     public ICommand ToggleSelectedKnownGoodCommand { get; }
     public ICommand SaveSelectedSnapshotMetadataCommand { get; }
     public ICommand ClearSelectedSnapshotMetadataCommand { get; }
+    public ICommand BrowseSelectedSnapshotCommand { get; }
+    public ICommand OpenRecoveryCommand { get; }
+    public ICommand CompareSelectedSnapshotCommand { get; }
+
+    public event Action<int>? OpenBackupFolderRequested;
+    public event Action? OpenRecoveryRequested;
 
     public string Summary
     {
@@ -276,7 +309,15 @@ public sealed class HistoryViewModel : ViewModelBase
             OnPropertyChanged(nameof(SelectedEventHasMarkerSummary));
             OnPropertyChanged(nameof(SelectedEventOriginSummary));
             OnPropertyChanged(nameof(SelectedEventHasOriginSummary));
+            OnPropertyChanged(nameof(SelectedRecoveryStatus));
+            OnPropertyChanged(nameof(SelectedRecoveryStatusDetail));
             OnPropertyChanged(nameof(CanEditSelectedSnapshotMetadata));
+            OnPropertyChanged(nameof(CanBrowseSelectedSnapshot));
+            OnPropertyChanged(nameof(CanCompareSelectedSnapshot));
+            OnPropertyChanged(nameof(BrowseSelectedSnapshotTooltip));
+            OnPropertyChanged(nameof(CompareSelectedSnapshotTooltip));
+            OnPropertyChanged(nameof(OpenRecoveryTooltip));
+            SelectedComparisonSummary = string.Empty;
             LoadSelectedMetadataDrafts();
             OnPropertyChanged(nameof(SelectedProtectedActionLabel));
             OnPropertyChanged(nameof(SelectedKnownGoodActionLabel));
@@ -284,6 +325,36 @@ public sealed class HistoryViewModel : ViewModelBase
             _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
             _saveSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
             _clearSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
+            _browseSelectedSnapshotCommand.RaiseCanExecuteChanged();
+            _openRecoveryCommand.RaiseCanExecuteChanged();
+            _compareSelectedSnapshotCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public HistoryViewModeOption? SelectedViewMode
+    {
+        get => _selectedViewMode;
+        set
+        {
+            if (!SetField(ref _selectedViewMode, value))
+                return;
+
+            OnPropertyChanged(nameof(IsCompactView));
+            OnPropertyChanged(nameof(ShowTimelineCards));
+            OnPropertyChanged(nameof(ShowCompactRows));
+        }
+    }
+
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (!SetField(ref _searchText, value ?? string.Empty))
+                return;
+
+            _pageIndex = 0;
+            QueueApplyFiltersAndPaging();
         }
     }
 
@@ -297,7 +368,11 @@ public sealed class HistoryViewModel : ViewModelBase
         (SelectedActivityFilter?.Filter ?? HistoryActivityFilter.All) != HistoryActivityFilter.All ||
         (SelectedDateRange?.Range ?? HistoryDateRange.All) != HistoryDateRange.All ||
         SelectedProjectFilter?.ProjectId is not null ||
-        SelectedLaneFilter?.Lane is not null;
+        SelectedLaneFilter?.Lane is not null ||
+        !string.IsNullOrWhiteSpace(SearchText);
+    public bool IsCompactView => SelectedViewMode?.Mode == HistoryViewMode.Compact;
+    public bool ShowTimelineCards => HasTimelineItems && !IsCompactView;
+    public bool ShowCompactRows => HasTimelineItems && IsCompactView;
     public string EmptyTitle => HasLoadedEvents
         ? L("History.Filter.EmptyTitle", "No matching events")
         : L("History.Event.NoRecent", "No recent history");
@@ -351,7 +426,32 @@ public sealed class HistoryViewModel : ViewModelBase
     public bool SelectedEventHasMarkerSummary => SelectedTimelineItem?.HasMarkerSummary == true;
     public string SelectedEventOriginSummary => SelectedTimelineItem?.OriginSummary ?? string.Empty;
     public bool SelectedEventHasOriginSummary => SelectedTimelineItem?.HasOriginSummary == true;
+    public string SelectedRecoveryStatus => SelectedTimelineItem?.RecoveryStatus ?? L("History.Status.NotSelected", "Select an event");
+    public string SelectedRecoveryStatusDetail => SelectedTimelineItem?.RecoveryStatusDetail ?? L("History.Status.NotSelectedDetail", "Choose a history event to see recovery details.");
     public bool CanEditSelectedSnapshotMetadata => SelectedTimelineItem?.SnapshotId > 0;
+    public bool CanBrowseSelectedSnapshot => SelectedTimelineItem?.BackupId > 0;
+    public bool CanCompareSelectedSnapshot => SelectedTimelineItem?.SnapshotId > 0;
+    public string BrowseSelectedSnapshotTooltip => CanBrowseSelectedSnapshot
+        ? L("History.Action.OpenBackupTip", "Open this backup in the system file manager.")
+        : L("History.Action.OpenBackupUnavailableTip", "This history event does not have a linked backup folder.");
+    public string OpenRecoveryTooltip => HasSelectedTimelineItem
+        ? L("History.Action.OpenRecoveryTip", "Open Recovery to start a restore workflow for the selected project.")
+        : L("History.Action.OpenRecoveryUnavailableTip", "Select an event before opening Recovery.");
+    public string CompareSelectedSnapshotTooltip => CanCompareSelectedSnapshot
+        ? L("History.Action.CompareTip", "Show the selected snapshot's changed-file summary.")
+        : L("History.Action.CompareUnavailableTip", "Select a snapshot-backed event to compare changes.");
+    public string SelectedComparisonSummary
+    {
+        get => _selectedComparisonSummary;
+        private set
+        {
+            if (!SetField(ref _selectedComparisonSummary, value))
+                return;
+
+            OnPropertyChanged(nameof(HasSelectedComparisonSummary));
+        }
+    }
+    public bool HasSelectedComparisonSummary => !string.IsNullOrWhiteSpace(SelectedComparisonSummary);
     public bool HasSelectedSnapshotTextMetadata =>
         !string.IsNullOrWhiteSpace(SelectedSnapshotLabelDraft) ||
         !string.IsNullOrWhiteSpace(SelectedSnapshotNoteDraft) ||
@@ -559,6 +659,7 @@ public sealed class HistoryViewModel : ViewModelBase
                 Detail = BuildSnapshotDetail(metadata),
                 Lane = L("History.Lane.Metadata", "Snapshot"),
                 GraphLane = HistoryTimelineLane.Metadata,
+                IsImported = false,
                 SnapshotId = snapshot.Id,
                 OriginSummary = LF("History.Event.OriginSnapshotOnly", "snapshot #{0} has no linked backup node", snapshot.Id),
                 IsProtectedMarker = metadata?.IsProtected == true,
@@ -628,7 +729,15 @@ public sealed class HistoryViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedEventHasMarkerSummary));
         OnPropertyChanged(nameof(SelectedEventOriginSummary));
         OnPropertyChanged(nameof(SelectedEventHasOriginSummary));
+        OnPropertyChanged(nameof(SelectedRecoveryStatus));
+        OnPropertyChanged(nameof(SelectedRecoveryStatusDetail));
         OnPropertyChanged(nameof(CanEditSelectedSnapshotMetadata));
+        OnPropertyChanged(nameof(CanBrowseSelectedSnapshot));
+        OnPropertyChanged(nameof(CanCompareSelectedSnapshot));
+        OnPropertyChanged(nameof(BrowseSelectedSnapshotTooltip));
+        OnPropertyChanged(nameof(CompareSelectedSnapshotTooltip));
+        OnPropertyChanged(nameof(OpenRecoveryTooltip));
+        SelectedComparisonSummary = string.Empty;
         LoadSelectedMetadataDrafts();
         OnPropertyChanged(nameof(SelectedProtectedActionLabel));
         OnPropertyChanged(nameof(SelectedKnownGoodActionLabel));
@@ -637,6 +746,9 @@ public sealed class HistoryViewModel : ViewModelBase
         _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
         _saveSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
         _clearSelectedSnapshotMetadataCommand.RaiseCanExecuteChanged();
+        _browseSelectedSnapshotCommand.RaiseCanExecuteChanged();
+        _openRecoveryCommand.RaiseCanExecuteChanged();
+        _compareSelectedSnapshotCommand.RaiseCanExecuteChanged();
         _resetFiltersCommand.RaiseCanExecuteChanged();
     }
 
@@ -666,6 +778,7 @@ public sealed class HistoryViewModel : ViewModelBase
             Detail = BuildBackupDetail(backup, metadata),
             Lane = BuildBackupLaneLabel(backup.IsImported, isManual),
             GraphLane = BuildBackupGraphLane(backup.IsImported, isManual),
+            IsImported = backup.IsImported,
             BackupId = backup.Id,
             SnapshotId = backup.SnapshotId,
             IsProtectedMarker = metadata?.IsProtected == true,
@@ -704,6 +817,7 @@ public sealed class HistoryViewModel : ViewModelBase
             Detail = BuildMetadataBranchDetail(metadata),
             Lane = L("History.Lane.Metadata", "Snapshot notes"),
             GraphLane = HistoryTimelineLane.Metadata,
+            IsImported = false,
             BackupId = backup.Id,
             SnapshotId = backup.SnapshotId,
             OriginSummary = BuildOriginSummary(backup.Id, backup.SnapshotId),
@@ -740,6 +854,7 @@ public sealed class HistoryViewModel : ViewModelBase
             Detail = BuildRestoreDetail(restore, metadata),
             Lane = BuildRestoreLaneLabel(restore.RestoreMode),
             GraphLane = HistoryTimelineLane.Restore,
+            IsImported = false,
             BackupId = originBackupId,
             SnapshotId = restore.SnapshotId,
             OriginSummary = BuildOriginSummary(originBackupId, restore.SnapshotId),
@@ -787,12 +902,14 @@ public sealed class HistoryViewModel : ViewModelBase
         _selectedDateRange = DateRangeOptions.FirstOrDefault(option => option.Range == HistoryDateRange.All);
         _selectedProjectFilter = ProjectFilterOptions.FirstOrDefault(option => option.ProjectId is null);
         _selectedLaneFilter = LaneFilterOptions.FirstOrDefault(option => option.Lane is null);
+        SearchText = string.Empty;
         _pageIndex = 0;
 
         OnPropertyChanged(nameof(SelectedActivityFilter));
         OnPropertyChanged(nameof(SelectedDateRange));
         OnPropertyChanged(nameof(SelectedProjectFilter));
         OnPropertyChanged(nameof(SelectedLaneFilter));
+        OnPropertyChanged(nameof(SearchText));
         QueueApplyFiltersAndPaging();
     }
 
@@ -815,6 +932,7 @@ public sealed class HistoryViewModel : ViewModelBase
             SelectedDateRange?.Range ?? HistoryDateRange.All,
             SelectedProjectFilter?.ProjectId,
             SelectedLaneFilter?.Lane,
+            SearchText,
             _pageIndex);
 
         _ = ApplyFiltersAndPagingAsync(revision, source, filterState);
@@ -840,7 +958,10 @@ public sealed class HistoryViewModel : ViewModelBase
             HistoryActivityFilter.Backups => query.Where(item =>
                 item.GraphLane is HistoryTimelineLane.Backup or HistoryTimelineLane.Manual),
             HistoryActivityFilter.Restores => query.Where(item => item.GraphLane == HistoryTimelineLane.Restore),
+            HistoryActivityFilter.Imported => query.Where(item => item.IsImported),
             HistoryActivityFilter.Metadata => query.Where(item => item.GraphLane == HistoryTimelineLane.Metadata),
+            HistoryActivityFilter.Protected => query.Where(item => item.IsProtectedMarker),
+            HistoryActivityFilter.KnownGood => query.Where(item => item.IsKnownGoodMarker),
             _ => query
         };
 
@@ -850,8 +971,15 @@ public sealed class HistoryViewModel : ViewModelBase
         if (filterState.Lane is HistoryTimelineLane lane)
             query = query.Where(item => item.GraphLane == lane || (lane == HistoryTimelineLane.Backup && item.GraphLane == HistoryTimelineLane.Manual));
 
+        if (!string.IsNullOrWhiteSpace(filterState.SearchText))
+        {
+            string search = filterState.SearchText.Trim();
+            query = query.Where(item => item.MatchesSearch(search));
+        }
+
         DateTime cutoffUtc = filterState.DateRange switch
         {
+            HistoryDateRange.Today => DateTime.UtcNow.Date,
             HistoryDateRange.Last7Days => DateTime.UtcNow.AddDays(-7),
             HistoryDateRange.Last30Days => DateTime.UtcNow.AddDays(-30),
             _ => DateTime.MinValue
@@ -865,6 +993,7 @@ public sealed class HistoryViewModel : ViewModelBase
         int pageIndex = Math.Clamp(filterState.PageIndex, 0, Math.Max(0, pageCount - 1));
         int pageStart = pageIndex * PageSize;
         List<HistoryTimelineItemViewModel> pageItems = filtered.Skip(pageStart).Take(PageSize).ToList();
+        ApplyDateGroupLabels(pageItems);
         List<HistoryGraphPaths> graphPaths = BuildPageGraphPaths(filtered, pageStart, pageItems.Count);
 
         return new HistoryPageResult(filtered.Count, pageIndex, pageItems, graphPaths);
@@ -911,6 +1040,8 @@ public sealed class HistoryViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(HasTimelineItems));
+        OnPropertyChanged(nameof(ShowTimelineCards));
+        OnPropertyChanged(nameof(ShowCompactRows));
         OnPropertyChanged(nameof(HasActiveFilters));
         OnPropertyChanged(nameof(EmptyTitle));
         OnPropertyChanged(nameof(EmptyMessage));
@@ -926,6 +1057,33 @@ public sealed class HistoryViewModel : ViewModelBase
         _resetFiltersCommand.RaiseCanExecuteChanged();
         _toggleSelectedProtectedCommand.RaiseCanExecuteChanged();
         _toggleSelectedKnownGoodCommand.RaiseCanExecuteChanged();
+        _browseSelectedSnapshotCommand.RaiseCanExecuteChanged();
+        _openRecoveryCommand.RaiseCanExecuteChanged();
+        _compareSelectedSnapshotCommand.RaiseCanExecuteChanged();
+    }
+
+    private void BrowseSelectedSnapshot()
+    {
+        int backupId = SelectedTimelineItem?.BackupId ?? 0;
+        if (backupId <= 0)
+            return;
+
+        OpenBackupFolderRequested?.Invoke(backupId);
+    }
+
+    private void CompareSelectedSnapshot()
+    {
+        HistoryTimelineItemViewModel? selected = SelectedTimelineItem;
+        if (selected is null || selected.SnapshotId <= 0)
+            return;
+
+        SelectedComparisonSummary = LF(
+            "History.Compare.SelectedSummary",
+            "Snapshot #{0}: {1}. {2} in {3}.",
+            selected.SnapshotId,
+            selected.ChangeSummaryLabel,
+            selected.FileCountLabel,
+            selected.SizeLabel);
     }
 
     private void ReplaceProjectFilterOptions(IReadOnlyList<HistoryTimelineItemViewModel> items)
@@ -980,6 +1138,28 @@ public sealed class HistoryViewModel : ViewModelBase
         }).ConfigureAwait(false);
 
         await RefreshAsync(force: true).ConfigureAwait(false);
+    }
+
+    private static void ApplyDateGroupLabels(IReadOnlyList<HistoryTimelineItemViewModel> items)
+    {
+        DateTime? previousDate = null;
+        foreach (HistoryTimelineItemViewModel item in items)
+        {
+            DateTime localDate = item.CreatedUtc.ToLocalTime().Date;
+            item.SetDateGroupLabel(previousDate == localDate ? string.Empty : FormatDateGroupLabel(localDate));
+            previousDate = localDate;
+        }
+    }
+
+    private static string FormatDateGroupLabel(DateTime localDate)
+    {
+        DateTime today = DateTime.Now.Date;
+        if (localDate == today)
+            return L("History.Group.Today", "Today");
+        if (localDate == today.AddDays(-1))
+            return L("History.Group.Yesterday", "Yesterday");
+
+        return localDate.ToString("MMMM d, yyyy", CultureInfo.CurrentCulture);
     }
 
     private async Task SaveSelectedSnapshotMetadataAsync(bool clearTextMetadata)
@@ -1162,7 +1342,7 @@ public sealed class HistoryViewModel : ViewModelBase
         {
             return LF(
                 "History.Insight.MetadataHeavy",
-                "{0} snapshot-only event(s) are visible. The next 1.8 foundation will make these easier to tag, explain, and protect.",
+                "{0} snapshot-only event(s) are visible. Use labels, notes, tags, protection, and known-good markers to explain important restore points.",
                 data.SnapshotOnlyCount);
         }
 
@@ -1190,6 +1370,7 @@ public sealed class HistoryViewModel : ViewModelBase
         HistoryDateRange DateRange,
         int? ProjectId,
         HistoryTimelineLane? Lane,
+        string SearchText,
         int PageIndex);
 
     private sealed record HistoryPageResult(
@@ -1217,14 +1398,24 @@ public enum HistoryActivityFilter
     All,
     Backups,
     Restores,
-    Metadata
+    Imported,
+    Metadata,
+    Protected,
+    KnownGood
 }
 
 public enum HistoryDateRange
 {
     All,
+    Today,
     Last7Days,
     Last30Days
+}
+
+public enum HistoryViewMode
+{
+    Timeline,
+    Compact
 }
 
 public sealed record HistoryActivityFilterOption(HistoryActivityFilter Filter, string Label);
@@ -1234,6 +1425,8 @@ public sealed record HistoryDateRangeOption(HistoryDateRange Range, string Label
 public sealed record HistoryProjectFilterOption(int? ProjectId, string Label);
 
 public sealed record HistoryLaneFilterOption(HistoryTimelineLane? Lane, string Label);
+
+public sealed record HistoryViewModeOption(HistoryViewMode Mode, string Label);
 
 internal sealed record HistoryTimelineItemData
 {
@@ -1245,6 +1438,7 @@ internal sealed record HistoryTimelineItemData
     public string Detail { get; init; } = string.Empty;
     public string Lane { get; init; } = string.Empty;
     public HistoryTimelineLane GraphLane { get; init; }
+    public bool IsImported { get; init; }
     public int BackupId { get; init; }
     public int SnapshotId { get; init; }
     public string OriginSummary { get; init; } = string.Empty;
@@ -1285,6 +1479,7 @@ public sealed class HistoryTimelineItemViewModel
         Detail = data.Detail;
         Lane = data.Lane;
         GraphLane = data.GraphLane;
+        IsImported = data.IsImported;
         BackupId = data.BackupId;
         SnapshotId = data.SnapshotId;
         OriginSummary = data.OriginSummary ?? string.Empty;
@@ -1310,6 +1505,7 @@ public sealed class HistoryTimelineItemViewModel
     public string Detail { get; }
     public string Lane { get; }
     public HistoryTimelineLane GraphLane { get; }
+    public bool IsImported { get; }
     public int BackupId { get; }
     public int SnapshotId { get; }
     public string OriginSummary { get; }
@@ -1343,6 +1539,62 @@ public sealed class HistoryTimelineItemViewModel
         DiffModified,
         DiffDeleted,
         DiffNetLabel);
+    public string DateGroupLabel { get; private set; } = string.Empty;
+    public bool HasDateGroupLabel => !string.IsNullOrWhiteSpace(DateGroupLabel);
+    public bool IsRestorable => SnapshotId > 0 && GraphLane != HistoryTimelineLane.Metadata;
+    public string RecoveryStatus
+    {
+        get
+        {
+            if (IsKnownGoodMarker)
+                return L("History.Status.KnownGood", "Known good restore point");
+            if (IsProtectedMarker)
+                return L("History.Status.Protected", "Protected restore point");
+            if (IsRestorable)
+                return L("History.Status.Ready", "Ready to restore");
+            return L("History.Status.MetadataOnly", "Metadata only");
+        }
+    }
+    public string RecoveryStatusDetail
+    {
+        get
+        {
+            if (IsKnownGoodMarker)
+                return L("History.Status.KnownGoodDetail", "This snapshot is marked as a reliable recovery point.");
+            if (IsProtectedMarker)
+                return L("History.Status.ProtectedDetail", "This snapshot is protected from automatic cleanup and retention pruning.");
+            if (IsRestorable)
+                return L("History.Status.ReadyDetail", "This snapshot is indexed and available for recovery workflows.");
+            return L("History.Status.MetadataOnlyDetail", "This event helps complete project history, but may not contain restorable files by itself.");
+        }
+    }
+    public string PrimaryBadge => GraphLane switch
+    {
+        HistoryTimelineLane.Restore => L("History.Badge.Restore", "Restore"),
+        HistoryTimelineLane.Metadata => L("History.Badge.Metadata", "Metadata"),
+        _ when IsImported => L("History.Badge.Imported", "Imported"),
+        _ => L("History.Badge.Backup", "Backup")
+    };
+    public string SecondaryBadge => GraphLane switch
+    {
+        HistoryTimelineLane.Manual => L("History.Badge.Manual", "Manual"),
+        HistoryTimelineLane.Backup => L("History.Badge.Auto", "Auto"),
+        HistoryTimelineLane.Restore => L("History.Badge.Recovery", "Recovery"),
+        _ => L("History.Badge.Snapshot", "Snapshot")
+    };
+    public string SafetyBadge
+    {
+        get
+        {
+            if (IsKnownGoodMarker)
+                return L("History.Badge.KnownGood", "Known good");
+            if (IsProtectedMarker)
+                return L("History.Badge.Protected", "Protected");
+            return IsRestorable
+                ? L("History.Badge.Restorable", "Restorable")
+                : L("History.Badge.Indexed", "Indexed");
+        }
+    }
     public string HoverDetail => string.Join(
         Environment.NewLine,
         new[]
@@ -1391,6 +1643,24 @@ public sealed class HistoryTimelineItemViewModel
         MetadataGraphPathData = metadataPath;
         RestoreGraphPathData = restorePath;
     }
+
+    public void SetDateGroupLabel(string value) => DateGroupLabel = value ?? string.Empty;
+
+    public bool MatchesSearch(string search)
+    {
+        return Contains(ProjectName, search) ||
+            Contains(Title, search) ||
+            Contains(Detail, search) ||
+            Contains(Kind, search) ||
+            Contains(Lane, search) ||
+            Contains(MetadataLabel, search) ||
+            Contains(MetadataNote, search) ||
+            Contains(MetadataTags, search) ||
+            Contains(OriginSummary, search);
+    }
+
+    private static bool Contains(string value, string search) =>
+        value?.IndexOf(search, StringComparison.CurrentCultureIgnoreCase) >= 0;
 
     public double NodeLeft => GraphLane switch
     {

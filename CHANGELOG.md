@@ -11,6 +11,8 @@
 - [VS-1806] Added Dashboard workflow links into History, Recovery, and Backups, with restore milestones included in recent activity.
 - [VS-1804] Redesigned History as a connected Git/subway-style timeline workspace with modular expandable event stations and a persistent event inspector.
 ### Changed
+- [VS-1804] Reworked History into a readable recovery timeline with search, product-style event cards, compact mode, stronger selected-state details, recovery status, metrics, and snapshot notes/actions replacing the graph-heavy default view.
+- [VS-1804] Wired History detail actions for opening backup contents, jumping into Recovery, and reviewing snapshot change summaries, with cleaner accessible action buttons and marker controls.
 - [VS-1819] Refactored History timeline data shaping and removed unreachable/dead helper code flagged by SonarQube in the 1.8 PR.
 - [VS-1813] History now supports activity, project, lane, and time-range filtering, while the Backups page frames its lower section as a snapshot inventory for restore-point operations instead of a competing history timeline.
 - [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.

@@ -605,7 +605,20 @@ namespace VaultSync.UI.ViewModels
         public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
         public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(_configStore, _repositoryFactory);
-        public HistoryViewModel HistoryViewModel => _historyViewModel ??= new HistoryViewModel(_configStore, _repositoryFactory);
+        public HistoryViewModel HistoryViewModel
+        {
+            get
+            {
+                if (_historyViewModel is not null)
+                    return _historyViewModel;
+
+                var vm = new HistoryViewModel(_configStore, _repositoryFactory);
+                vm.OpenBackupFolderRequested += OpenBackupFolder;
+                vm.OpenRecoveryRequested += () => SetCurrentView("Recovery");
+                _historyViewModel = vm;
+                return vm;
+            }
+        }
         public RecoveryViewModel RecoveryViewModel => _recoveryViewModel ??= new RecoveryViewModel(_configStore, _repositoryFactory);
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
