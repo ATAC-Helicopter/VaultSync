@@ -1780,28 +1780,25 @@
 - Project board: GitHub Project 7 (`@VaultSync Roadmap`), release field `1.8.x`.
 
 ### 1.8 execution tickets
-- [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Tracked by #296)_
+- [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Deferred beyond 1.8.0; tracked by #296)_
 - [x] `VS-1802` `P0` Build 1.8 metadata foundation for history and recovery. _(Done in commit `1dcec31`, tracked by #354)_
   - Done: snapshot history metadata and restore event tables are in place with idempotent schema coverage and repository tests.
 - [x] `VS-1803` `P1` Add 1.8 shell navigation for History and Recovery. _(Done in commit `72b77b2`, tracked by #355)_
 - [x] `VS-1804` `P1` Implement History v1 project timeline. _(Done in commit `d608986`, tracked by #356)_
   - Done: History renders a full-window, selectable Git-client-style activity graph with persistent lanes for backups, snapshot metadata, imports, and restores.
-- [ ] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(In progress, tracked by #357)_
-  - In progress: core metadata persistence exists for labels, notes, tags, protected snapshots, and known-good markers.
-  - In progress: History detail actions can now protect/unprotect selected snapshots and mark/clear known-good versions.
-  - In progress: backup retention and retention simulation now honor protected snapshot metadata.
-  - Remaining: full label/note/tag editor flow and cross-page affordances for snapshot marker management.
-- [ ] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(In progress, tracked by #358)_
-  - In progress: Dashboard shows restore-readiness counts, headline/detail, and a review drawer for projects needing attention.
-  - In progress: Recovery readiness scoring now uses protected and known-good snapshot markers when metadata is available.
+- [x] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(Done in `release/v1.8`, tracked by #357)_
+  - Done: History edits labels, notes, tags, protected markers, and known-good markers.
+  - Done: History and Backups share snapshot protection state, and retention honors the shared marker.
+- [x] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(Done in `release/v1.8`, tracked by #358)_
+  - Done: Dashboard shows restore-readiness counts, headline/detail, and a review drawer for projects needing attention.
+  - Done: Recovery readiness scoring uses protected and known-good snapshot markers when metadata is available.
   - Done: Dashboard recent activity includes restore milestones, and workflow links route directly to History, Recovery, and Backups.
-  - Remaining: final 1.8 dashboard refresh for recovery coverage.
 - [x] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Done in PR #365, tracked by #359)_
   - Done: Recovery page shows readiness score/band, coverage windows, project priority ordering, and actionable recommendations.
-- [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(Tracked by #360)_
-- [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Tracked by #361)_
-- [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Tracked by #362)_
-- [ ] `VS-1811` `P2` Add project groups and group health. _(Tracked by #363)_
+- [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(Deferred to a later 1.8.x release; tracked by #360)_
+- [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Deferred to a later 1.8.x release; tracked by #361)_
+- [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
+- [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
 - [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
   - Done: guarded SonarQube Cloud analysis, setup docs, and 1.8 changelog coverage are in place for active release branches.
@@ -1813,14 +1810,14 @@
   - Done: per-archive random salt/IV generation remains intact and is now analyzer-visible before encryption.
 - [x] `BUG-18052` `P1` Dispose cancellation resources flagged by Sonar. _(Done, tracked by #376; completed 2026-06-08)_
   - Done: linked backup CTS, diagnostics writer CTS, and onboarding scroll CTS resources are disposed on replacement or shutdown.
-- [ ] `VS-1818` `P2` Triage Stable Sonar maintainability backlog. _(In progress, tracked by #377)_
-  - In progress: first-pass reliability/unreachable-code cleanups are complete; release/v1.8 CI triggers and restore path hardening have landed; remaining work should be split by owned complexity hotspots.
+- [x] `VS-1818` `P2` Triage Stable Sonar maintainability backlog. _(Done in `release/v1.8`, tracked by #377)_
+  - Done: first-pass reliability and unreachable-code cleanup landed, release/v1.8 quality triggers are active, and remaining complexity hotspots are follow-up maintenance work rather than 1.8.0 feature blockers.
 - [x] `BUG-18053` `P1` Keep restore target paths under intended roots. _(Done in `release/v1.8`)_
   - Done: generated restore project folders sanitize project names, and restore preview/copy paths use the existing root-bound combine guard.
-- [ ] `BUG-18047` `P1` Let Linux patch updates elevate through `pkexec` before falling back to `.deb` installer flows. _(In progress, tracked by #368)_
-- [ ] `BUG-18048` `P1` Harden Projects page loading so visible project content appears reliably. _(In progress, tracked by #366)_
-  - In progress: Projects refresh now runs on the UI thread, page attach triggers loading, and stale visible lists rebuild from the backing project cache.
-- [ ] `BUG-18049` `P1` Preserve macOS `/Volumes` destination semantics when mounted paths deny access. _(In progress, tracked by #367)_
+- [x] `BUG-18047` `P1` Let Linux patch updates elevate through `pkexec` before falling back to `.deb` installer flows. _(Done in `release/v1.8`, tracked by #368)_
+- [x] `BUG-18048` `P1` Harden Projects page loading so visible project content appears reliably. _(Done in `release/v1.8`, tracked by #366)_
+  - Done: Projects refresh runs on the UI thread, page attach triggers loading, and stale visible lists rebuild from the backing project cache.
+- [x] `BUG-18049` `P1` Preserve macOS `/Volumes` destination semantics when mounted paths deny access. _(Done in `release/v1.8`, tracked by #367)_
 - [x] `BUG-18050` `P1` Keep Projects and Backups navigation responsive while data loads. _(Done in `release/v1.8`)_
   - Done: Projects and Backups switch views before hydration work starts, and Backups history filtering/grouping is coalesced and shaped off the UI thread.
 - [x] `VS-1813` `P1` Clarify Backups versus History responsibilities and add History view customization. _(Done in `release/v1.8`)_

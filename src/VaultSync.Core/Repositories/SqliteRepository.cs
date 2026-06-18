@@ -928,6 +928,15 @@ DELETE FROM sqlite_sequence;";
                 },
                 tx);
 
+            c.Execute(
+                "UPDATE backups SET is_protected = @isProtected WHERE snapshot_id = @snapshotId;",
+                new
+                {
+                    snapshotId = metadata.SnapshotId,
+                    isProtected = metadata.IsProtected ? 1 : 0
+                },
+                tx);
+
             tx.Commit();
         }
 
@@ -2165,7 +2174,50 @@ DELETE FROM sqlite_sequence;";
         public void SetBackupProtection(int backupId, bool isProtected)
         {
             using SqliteConnection c = Open();
-            c.Execute("UPDATE backups SET is_protected=@p WHERE id=@id;", new { id = backupId, p = isProtected ? 1 : 0 });
+            using SqliteTransaction tx = c.BeginTransaction();
+
+            int? snapshotId = c.QueryFirstOrDefault<int?>(
+                "SELECT snapshot_id FROM backups WHERE id = @backupId;",
+                new { backupId },
+                tx);
+            if (!snapshotId.HasValue)
+                return;
+
+            int protectedValue = isProtected ? 1 : 0;
+            c.Execute(
+                "UPDATE backups SET is_protected = @protectedValue WHERE snapshot_id = @snapshotId;",
+                new { snapshotId = snapshotId.Value, protectedValue },
+                tx);
+
+            string now = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+            c.Execute(
+                """
+                INSERT INTO snapshot_history_metadata(
+                  snapshot_id,
+                  label,
+                  note,
+                  tags,
+                  is_protected,
+                  is_known_good,
+                  created_utc,
+                  updated_utc)
+                VALUES(
+                  @snapshotId,
+                  '',
+                  '',
+                  '',
+                  @protectedValue,
+                  0,
+                  @now,
+                  @now)
+                ON CONFLICT(snapshot_id) DO UPDATE SET
+                  is_protected = excluded.is_protected,
+                  updated_utc = excluded.updated_utc;
+                """,
+                new { snapshotId = snapshotId.Value, protectedValue, now },
+                tx);
+
+            tx.Commit();
         }
     }
 

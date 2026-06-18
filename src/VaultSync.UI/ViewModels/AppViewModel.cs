@@ -615,6 +615,7 @@ namespace VaultSync.UI.ViewModels
                 var vm = new HistoryViewModel(_configStore, _repositoryFactory);
                 vm.OpenBackupFolderRequested += OpenBackupFolder;
                 vm.OpenRecoveryRequested += () => SetCurrentView("Recovery");
+                vm.BackupProtectionChanged += OnBackupProtectionChanged;
                 _historyViewModel = vm;
                 return vm;
             }

@@ -814,25 +814,34 @@ namespace VaultSync.UI.ViewModels
 
         private void UpdateBackupProtectionMarker(int backupId, bool isProtected)
         {
-            try
-            {
-                string fullPath = PrepareBackupFolderOpen(backupId).BackupFolder;
-                if (string.IsNullOrWhiteSpace(fullPath))
-                    return;
+            Backup? selectedBackup = _repo.GetBackupById(backupId);
+            if (selectedBackup is null)
+                return;
 
-                string markerPath = Path.Combine(fullPath, BackupProtectionMarkerFileName);
-                if (isProtected)
-                {
-                    File.WriteAllText(markerPath, $"keep:{DateTime.UtcNow:O}");
-                }
-                else if (File.Exists(markerPath))
-                {
-                    File.Delete(markerPath);
-                }
-            }
-            catch
+            IEnumerable<Backup> matchingBackups = _repo.GetBackupsForProject(selectedBackup.ProjectId)
+                .Where(backup => backup.SnapshotId == selectedBackup.SnapshotId);
+            foreach (Backup backup in matchingBackups)
             {
-                // best-effort marker update
+                try
+                {
+                    string fullPath = PrepareBackupFolderOpen(backup.Id).BackupFolder;
+                    if (string.IsNullOrWhiteSpace(fullPath))
+                        continue;
+
+                    string markerPath = Path.Combine(fullPath, BackupProtectionMarkerFileName);
+                    if (isProtected)
+                    {
+                        File.WriteAllText(markerPath, $"keep:{DateTime.UtcNow:O}");
+                    }
+                    else if (File.Exists(markerPath))
+                    {
+                        File.Delete(markerPath);
+                    }
+                }
+                catch
+                {
+                    // Marker files are best-effort; repository state remains authoritative.
+                }
             }
         }
 
@@ -909,7 +918,7 @@ namespace VaultSync.UI.ViewModels
                 bool newValue = !backup.IsProtected;
                 _repo.SetBackupProtection(backupId, newValue);
                 UpdateBackupProtectionMarker(backupId, newValue);
-                BackupsViewModel.MarkBackupProtection(backupId, newValue);
+                BackupsViewModel.MarkSnapshotProtection(backup.SnapshotId, newValue);
                 TrayMenuRefreshRequested?.Invoke();
             }
             catch

@@ -200,6 +200,7 @@ public sealed class HistoryViewModel : ViewModelBase
 
     public event Action<int>? OpenBackupFolderRequested;
     public event Action? OpenRecoveryRequested;
+    public event Action<int, bool>? BackupProtectionChanged;
 
     public string Summary
     {
@@ -1096,6 +1097,18 @@ public sealed class HistoryViewModel : ViewModelBase
         if (selected is null || selected.SnapshotId <= 0)
             return;
 
+        await PersistSelectedSnapshotMarkerAsync(toggleProtected);
+        if (toggleProtected && selected.BackupId > 0)
+            BackupProtectionChanged?.Invoke(selected.BackupId, !selected.IsProtectedMarker);
+        await RefreshAsync(force: true).ConfigureAwait(false);
+    }
+
+    internal async Task PersistSelectedSnapshotMarkerAsync(bool toggleProtected)
+    {
+        HistoryTimelineItemViewModel? selected = SelectedTimelineItem;
+        if (selected is null || selected.SnapshotId <= 0)
+            return;
+
         int snapshotId = selected.SnapshotId;
         bool nextProtected = toggleProtected ? !selected.IsProtectedMarker : selected.IsProtectedMarker;
         bool nextKnownGood = toggleProtected ? selected.IsKnownGoodMarker : !selected.IsKnownGoodMarker;
@@ -1120,7 +1133,6 @@ public sealed class HistoryViewModel : ViewModelBase
             });
         }).ConfigureAwait(false);
 
-        await RefreshAsync(force: true).ConfigureAwait(false);
     }
 
     private static void ApplyDateGroupLabels(IReadOnlyList<HistoryTimelineItemViewModel> items)
@@ -1151,6 +1163,16 @@ public sealed class HistoryViewModel : ViewModelBase
         if (selected is null || selected.SnapshotId <= 0)
             return;
 
+        await PersistSelectedSnapshotMetadataAsync(clearTextMetadata).ConfigureAwait(false);
+        await RefreshAsync(force: true).ConfigureAwait(false);
+    }
+
+    internal async Task PersistSelectedSnapshotMetadataAsync(bool clearTextMetadata)
+    {
+        HistoryTimelineItemViewModel? selected = SelectedTimelineItem;
+        if (selected is null || selected.SnapshotId <= 0)
+            return;
+
         int snapshotId = selected.SnapshotId;
         string label = clearTextMetadata ? string.Empty : NormalizeMetadataText(SelectedSnapshotLabelDraft);
         string note = clearTextMetadata ? string.Empty : NormalizeMetadataText(SelectedSnapshotNoteDraft);
@@ -1175,15 +1197,13 @@ public sealed class HistoryViewModel : ViewModelBase
                 UpdatedUtc = now
             });
         }).ConfigureAwait(false);
-
-        await RefreshAsync(force: true).ConfigureAwait(false);
     }
 
     private static string NormalizeMetadataText(string? value) => string.IsNullOrWhiteSpace(value)
         ? string.Empty
         : value.Trim();
 
-    private static string NormalizeMetadataTags(string? value)
+    internal static string NormalizeMetadataTags(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return string.Empty;

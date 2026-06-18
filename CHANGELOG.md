@@ -13,6 +13,10 @@
 ### Changed
 - [VS-1804] Reworked History into a readable recovery timeline with search, product-style event cards, compact mode, stronger selected-state details, recovery status, metrics, and snapshot notes/actions replacing the graph-heavy default view.
 - [VS-1804] Wired History detail actions for opening backup contents, jumping into Recovery, and reviewing snapshot change summaries, with cleaner accessible action buttons and marker controls.
+- [VS-1805] Completed History editing for snapshot labels, notes, tags, protected markers, and known-good markers.
+- [VS-1805] Unified History snapshot protection with Backups “Keep” state so both pages and retention use the same protection marker.
+- [VS-1812] Localized the completed History workspace and replaced stale “coming next” metadata copy with current 1.8 behavior.
+- [VS-1818] Closed the 1.8 Sonar triage pass; remaining complexity hotspots are tracked as follow-up maintenance rather than release feature work.
 - [VS-1819] Refactored History timeline data shaping and removed unreachable/dead helper code flagged by SonarQube in the 1.8 PR.
 - [VS-1813] History now supports activity, project, lane, and time-range filtering, while the Backups page frames its lower section as a snapshot inventory for restore-point operations instead of a competing history timeline.
 - [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.
@@ -33,6 +37,7 @@
 - [BUG-18050] Projects and Backups navigation no longer blocks the UI while cached data and history groups load.
 - [BUG-18051] Project selection and History paging no longer run preset-file reads, redundant project persistence, or timeline page shaping directly in the UI interaction path.
 - [BUG-18052] Backup, diagnostics, and onboarding scroll cancellation resources are now disposed on completion or teardown.
+- [BUG-18055] History and Backups no longer show conflicting protection state for the same snapshot.
 
 ## [1.7.5] - 31.05.2026
 ### Changed

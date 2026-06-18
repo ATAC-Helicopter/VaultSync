@@ -1977,23 +1977,18 @@ namespace VaultSync.UI.ViewModels
             RemoveActiveBackup(operationId);
         }
 
-        public void MarkBackupProtection(int backupId, bool isProtected)
+        public void MarkSnapshotProtection(int snapshotId, bool isProtected)
         {
-            string idStr = backupId.ToString();
+            foreach (BackupSnapshotItem item in _allSnapshots.Where(item => item.SnapshotId == snapshotId))
+                item.IsProtected = isProtected;
 
-            BackupSnapshotItem? snapshot = Snapshots.FirstOrDefault(s => s.Id == idStr);
-            if (snapshot != null)
-                snapshot.IsProtected = isProtected;
-
-            BackupSnapshotItem? all = _allSnapshots.FirstOrDefault(s => s.Id == idStr);
-            if (all != null)
-                all.IsProtected = isProtected;
+            foreach (BackupSnapshotItem item in Snapshots.Where(item => item.SnapshotId == snapshotId))
+                item.IsProtected = isProtected;
 
             foreach (SnapshotProjectGroup group in SnapshotGroups)
             {
-                BackupSnapshotItem? gItem = group.Snapshots.FirstOrDefault(s => s.Id == idStr);
-                if (gItem != null)
-                    gItem.IsProtected = isProtected;
+                foreach (BackupSnapshotItem item in group.Snapshots.Where(item => item.SnapshotId == snapshotId))
+                    item.IsProtected = isProtected;
             }
         }
 
@@ -3409,6 +3404,7 @@ namespace VaultSync.UI.ViewModels
             var uiItem = new BackupSnapshotItem
             {
                 Id        = backup.Id.ToString(),
+                SnapshotId = backup.SnapshotId,
                 Timestamp = backup.CreatedUtc.ToLocalTime(),
                 SizeBytes = backup.TotalBytes,
                 Type      = isAutoSnapshot ? "Auto" : "Manual",

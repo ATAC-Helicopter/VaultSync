@@ -225,10 +225,10 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="18">
           <StackPanel Spacing="5">
-            <TextBlock Text="History"
+            <TextBlock Text="{infra:LocalizedString Key=History.Title}"
                        FontSize="28"
                        FontWeight="SemiBold" />
-            <TextBlock Text="Review backup activity, restore points, and project changes over time."
+            <TextBlock Text="{infra:LocalizedString Key=History.Description}"
                        Classes="history-copy"
                        MaxWidth="760" />
           </StackPanel>
@@ -258,7 +258,7 @@
           <WrapPanel ItemSpacing="8"
                      LineSpacing="8">
             <TextBox Classes="history-search"
-                     Watermark="Search projects, labels, paths, notes..."
+                     Watermark="{infra:LocalizedString Key=History.Search.Watermark}"
                      Text="{CompiledBinding SearchText, Mode=TwoWay}" />
 
             <ComboBox Classes="history-filter"
@@ -309,7 +309,7 @@
                      LineSpacing="8"
                      HorizontalAlignment="Right">
             <Button Classes="action-ghost history-button"
-                    Content="Clear filters"
+                    Content="{infra:LocalizedString Key=History.Action.ClearFilters}"
                     Command="{CompiledBinding ResetFiltersCommand}" />
             <Button Classes="action-ghost history-button"
                     Content="{infra:LocalizedString Key=Common.Refresh}"
@@ -332,7 +332,7 @@
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="12">
               <StackPanel Spacing="3">
-                <TextBlock Text="Timeline"
+                <TextBlock Text="{infra:LocalizedString Key=History.Section.Timeline}"
                            Classes="history-section-title" />
                 <TextBlock Text="{CompiledBinding FilterStateLabel}"
                            Classes="history-copy" />
@@ -502,7 +502,7 @@
                   <TextBlock Text="{CompiledBinding EmptyMessage}"
                              Classes="history-copy"
                              TextAlignment="Center" />
-                  <Button Content="Clear filters"
+                  <Button Content="{infra:LocalizedString Key=History.Action.ClearFilters}"
                           Command="{CompiledBinding ResetFiltersCommand}"
                           HorizontalAlignment="Center" />
                 </StackPanel>
@@ -513,7 +513,7 @@
                   ColumnDefinitions="Auto,*,Auto"
                   ColumnSpacing="12"
                   MinHeight="42">
-              <Button Content="Previous"
+              <Button Content="{infra:LocalizedString Key=Common.Previous}"
                       Command="{CompiledBinding PreviousPageCommand}"
                       VerticalAlignment="Center" />
               <TextBlock Grid.Column="1"
@@ -522,7 +522,7 @@
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center" />
               <Button Grid.Column="2"
-                      Content="Next"
+                      Content="{infra:LocalizedString Key=Common.Next}"
                       Command="{CompiledBinding NextPageCommand}"
                       VerticalAlignment="Center" />
             </Grid>
@@ -536,7 +536,7 @@
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="16">
               <StackPanel Spacing="9">
-                <TextBlock Text="Snapshot details"
+                <TextBlock Text="{infra:LocalizedString Key=History.Detail.Title}"
                            Classes="history-eyebrow" />
                 <TextBlock Text="{CompiledBinding SelectedEventTitle}"
                            FontSize="21"
@@ -566,7 +566,7 @@
 
               <Border Classes="history-stat">
                 <StackPanel Spacing="5">
-                  <TextBlock Text="Recovery status"
+                  <TextBlock Text="{infra:LocalizedString Key=History.Detail.RecoveryStatus}"
                              Classes="history-eyebrow" />
                   <TextBlock Text="{CompiledBinding SelectedRecoveryStatus}"
                              Classes="history-section-title" />
@@ -581,7 +581,7 @@
                     RowSpacing="10">
                 <Border Classes="history-stat">
                   <StackPanel Spacing="4">
-                    <TextBlock Text="Size"
+                    <TextBlock Text="{infra:LocalizedString Key=History.Detail.Size}"
                                Classes="history-eyebrow" />
                     <TextBlock Text="{CompiledBinding SelectedEventSize}"
                                Classes="history-metric-value" />
@@ -590,7 +590,7 @@
                 <Border Grid.Column="1"
                         Classes="history-stat">
                   <StackPanel Spacing="4">
-                    <TextBlock Text="Files"
+                    <TextBlock Text="{infra:LocalizedString Key=History.Detail.Files}"
                                Classes="history-eyebrow" />
                     <TextBlock Text="{CompiledBinding SelectedEventFiles}"
                                Classes="history-metric-value" />
@@ -600,7 +600,7 @@
                         Grid.ColumnSpan="2"
                         Classes="history-stat">
                   <StackPanel Spacing="4">
-                    <TextBlock Text="Changed"
+                    <TextBlock Text="{infra:LocalizedString Key=History.Detail.Changed}"
                                Classes="history-eyebrow" />
                     <TextBlock Text="{CompiledBinding SelectedEventChangeSummary}"
                                Classes="history-metric-value" />
@@ -610,22 +610,22 @@
 
               <Border Classes="history-stat">
                 <StackPanel Spacing="10">
-                  <TextBlock Text="Recovery actions"
+                  <TextBlock Text="{infra:LocalizedString Key=History.Action.RecoveryActions}"
                              Classes="history-eyebrow" />
-                  <Button Content="Open Recovery"
+                  <Button Content="{infra:LocalizedString Key=History.Action.OpenRecovery}"
                           Command="{CompiledBinding OpenRecoveryCommand}"
                           IsEnabled="{CompiledBinding HasSelectedTimelineItem}"
                           ToolTip.Tip="{CompiledBinding OpenRecoveryTooltip}"
                           Classes="history-action primary" />
                   <Grid ColumnDefinitions="*,*"
                         ColumnSpacing="8">
-                    <Button Content="Open backup"
+                    <Button Content="{infra:LocalizedString Key=History.Action.OpenBackup}"
                             Command="{CompiledBinding BrowseSelectedSnapshotCommand}"
                             IsEnabled="{CompiledBinding CanBrowseSelectedSnapshot}"
                             ToolTip.Tip="{CompiledBinding BrowseSelectedSnapshotTooltip}"
                             Classes="history-action" />
                     <Button Grid.Column="1"
-                            Content="Compare"
+                            Content="{infra:LocalizedString Key=History.Action.Compare}"
                             Command="{CompiledBinding CompareSelectedSnapshotCommand}"
                             IsEnabled="{CompiledBinding CanCompareSelectedSnapshot}"
                             ToolTip.Tip="{CompiledBinding CompareSelectedSnapshotTooltip}"
@@ -642,7 +642,7 @@
 
               <Border Classes="history-stat">
                 <StackPanel Spacing="10">
-                  <TextBlock Text="Snapshot markers"
+                  <TextBlock Text="{infra:LocalizedString Key=History.Marker.Title}"
                              Classes="history-eyebrow" />
                   <Grid ColumnDefinitions="*,*"
                         ColumnSpacing="8">
@@ -661,18 +661,18 @@
 
               <Border Classes="history-stat">
                 <StackPanel Spacing="9">
-                  <TextBlock Text="Snapshot notes"
+                  <TextBlock Text="{infra:LocalizedString Key=History.Editor.Title}"
                              Classes="history-eyebrow" />
                   <TextBox Text="{CompiledBinding SelectedSnapshotLabelDraft, Mode=TwoWay}"
-                           Watermark="Snapshot label"
+                           Watermark="{infra:LocalizedString Key=History.Editor.LabelWatermark}"
                            Classes="history-editor"
                            IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}" />
                   <TextBox Text="{CompiledBinding SelectedSnapshotTagsDraft, Mode=TwoWay}"
-                           Watermark="Tags, comma separated"
+                           Watermark="{infra:LocalizedString Key=History.Editor.TagsWatermark}"
                            Classes="history-editor"
                            IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}" />
                   <TextBox Text="{CompiledBinding SelectedSnapshotNoteDraft, Mode=TwoWay}"
-                           Watermark="Notes"
+                           Watermark="{infra:LocalizedString Key=History.Editor.NoteWatermark}"
                            Classes="history-editor"
                            AcceptsReturn="True"
                            TextWrapping="Wrap"
@@ -680,12 +680,12 @@
                            IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}" />
                   <Grid ColumnDefinitions="*,*"
                         ColumnSpacing="8">
-                    <Button Content="Save notes"
+                    <Button Content="{infra:LocalizedString Key=History.Action.SaveNotes}"
                             Command="{CompiledBinding SaveSelectedSnapshotMetadataCommand}"
                             IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}"
                             Classes="history-primary" />
                     <Button Grid.Column="1"
-                            Content="Clear"
+                            Content="{infra:LocalizedString Key=Common.Clear}"
                             Command="{CompiledBinding ClearSelectedSnapshotMetadataCommand}"
                             IsEnabled="{CompiledBinding HasSelectedSnapshotTextMetadata}"
                             Classes="history-button" />
@@ -695,7 +695,7 @@
 
               <Border Classes="history-stat">
                 <StackPanel Spacing="6">
-                  <TextBlock Text="What this snapshot means"
+                  <TextBlock Text="{infra:LocalizedString Key=History.Detail.Meaning}"
                              Classes="history-eyebrow" />
                   <TextBlock Text="{CompiledBinding Insight}"
                              Classes="history-copy" />
@@ -719,7 +719,7 @@
             Width="640"
             IsVisible="{CompiledBinding !HasLoadedEvents}">
       <StackPanel Spacing="12">
-        <TextBlock Text="No history yet"
+        <TextBlock Text="{infra:LocalizedString Key=History.Empty.Title}"
                    FontSize="24"
                    FontWeight="SemiBold" />
         <TextBlock Text="{CompiledBinding EmptyMessage}"

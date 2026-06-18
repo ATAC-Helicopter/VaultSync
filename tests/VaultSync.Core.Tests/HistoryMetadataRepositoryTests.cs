@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Microsoft.Data.Sqlite;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Tests.TestSupport;
@@ -36,6 +37,49 @@ public sealed class HistoryMetadataRepositoryTests : IDisposable
         Assert.NotNull(metadata);
         Assert.Equal("First milestone", metadata!.Label);
         Assert.True(metadata.IsKnownGood);
+    }
+
+    [Fact]
+    public void EnsureSchema_UpgradesExistingDatabaseWithoutLosingBackupHistory()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Upgrade Project", CreateTempDir());
+        int snapshotId = repo.CreateSnapshot(projectId, 7, 2048);
+        int backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            2048,
+            "Upgrade Project/backup.zip",
+            CreateTempDir(),
+            "Primary");
+
+        using (var connection = new SqliteConnection($"Data Source={dbPath};Pooling=False"))
+        {
+            connection.Open();
+            using SqliteCommand command = connection.CreateCommand();
+            command.CommandText =
+                """
+                PRAGMA foreign_keys = OFF;
+                DROP TABLE restore_history_events;
+                DROP TABLE snapshot_history_metadata;
+                PRAGMA foreign_keys = ON;
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        repo.EnsureSchema();
+        repo.UpsertSnapshotHistoryMetadata(new SnapshotHistoryMetadata
+        {
+            SnapshotId = snapshotId,
+            Label = "Post-upgrade milestone",
+            IsProtected = true
+        });
+
+        Assert.Equal("Upgrade Project", repo.GetProjectById(projectId)!.Name);
+        Assert.Equal(snapshotId, repo.GetBackupById(backupId)!.SnapshotId);
+        Assert.Equal("Post-upgrade milestone", repo.GetSnapshotHistoryMetadata(snapshotId)!.Label);
     }
 
     [Fact]
@@ -88,6 +132,78 @@ public sealed class HistoryMetadataRepositoryTests : IDisposable
         Assert.Single(map);
         Assert.True(map[firstSnapshot].IsProtected);
         Assert.Equal("client-demo", map[firstSnapshot].Tags);
+    }
+
+    [Fact]
+    public void UpsertSnapshotHistoryMetadata_SynchronizesBackupProtection()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(repo, "History Protection Project", CreateTempDir());
+        int snapshotId = repo.CreateSnapshot(projectId, 5, 512);
+        int backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            512,
+            "History Protection Project/backup.zip",
+            CreateTempDir(),
+            "Primary");
+
+        repo.UpsertSnapshotHistoryMetadata(new SnapshotHistoryMetadata
+        {
+            SnapshotId = snapshotId,
+            Label = "Release candidate",
+            IsProtected = true
+        });
+
+        Assert.True(repo.GetBackupById(backupId)!.IsProtected);
+
+        repo.UpsertSnapshotHistoryMetadata(new SnapshotHistoryMetadata
+        {
+            SnapshotId = snapshotId,
+            Label = "Release candidate",
+            IsProtected = false
+        });
+
+        Assert.False(repo.GetBackupById(backupId)!.IsProtected);
+    }
+
+    [Fact]
+    public void SetBackupProtection_SynchronizesSnapshotMetadataAndSiblingBackups()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Backup Protection Project", CreateTempDir());
+        int snapshotId = repo.CreateSnapshot(projectId, 5, 512);
+        int firstBackupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            512,
+            "Backup Protection Project/first.zip",
+            CreateTempDir(),
+            "Primary");
+        int secondBackupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            512,
+            "Backup Protection Project/second.zip",
+            CreateTempDir(),
+            "Secondary");
+
+        repo.SetBackupProtection(firstBackupId, true);
+
+        Assert.True(repo.GetBackupById(firstBackupId)!.IsProtected);
+        Assert.True(repo.GetBackupById(secondBackupId)!.IsProtected);
+        Assert.True(repo.GetSnapshotHistoryMetadata(snapshotId)!.IsProtected);
+
+        repo.SetBackupProtection(secondBackupId, false);
+
+        Assert.False(repo.GetBackupById(firstBackupId)!.IsProtected);
+        Assert.False(repo.GetBackupById(secondBackupId)!.IsProtected);
+        Assert.False(repo.GetSnapshotHistoryMetadata(snapshotId)!.IsProtected);
     }
 
     [Fact]

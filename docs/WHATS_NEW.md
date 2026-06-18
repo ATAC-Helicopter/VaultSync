@@ -2,21 +2,22 @@
 
 ## [1.8.0]
 
-Current `1.8.0` development builds introduce the first Project History and Recovery Intelligence surfaces.
+VaultSync `1.8.0` introduces Project History and Recovery Intelligence, with editable recovery-point context and readiness guidance.
 
 ### Project History
 - History now has a dedicated navigation entry and reads real backup, snapshot, restore, and metadata activity.
-- The History page is moving toward a graph-style lane view for metadata, backup, and restore events instead of a dashboard layout.
-- Snapshot history metadata now has a durable foundation for labels, notes, tags, protected markers, and known-good markers.
-- Successful restores are recorded as history events so future views can show restore activity alongside backup activity.
+- The History workspace provides timeline and compact views with project, activity, lane, date, and text filtering.
+- Important snapshots can be labeled, documented, tagged, protected from cleanup, and marked as known-good recovery points.
+- Protection state is shared with the Backups page, so History markers, Backups “Keep,” and retention decisions remain consistent.
+- Successful restores are recorded alongside backup and metadata activity.
 
 ### Recovery
 - Recovery now has a dedicated navigation entry and shows readiness, coverage, and project priority data from the local repository.
 - Recovery rows are ordered by attention needed so the weakest restore baseline is visible first.
+- Dashboard readiness and attention widgets link directly into History, Recovery, and Backups workflows.
 
 ### Foundation
-- The 1.8 roadmap is now tracked in the repository and mirrored into GitHub Project 7.
-- The 1.8 branch and development metadata now target `1.8.0`.
+- Snapshot Explorer, advanced compare intelligence, disaster-recovery drills, and project groups remain planned for later `1.8.x` releases.
 
 ## [1.7.5]
 
