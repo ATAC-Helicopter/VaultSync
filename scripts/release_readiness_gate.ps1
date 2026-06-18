@@ -1,6 +1,7 @@
 param(
     [string]$TargetVersion,
     [string]$ReleaseTrack,
+    [string]$TargetMilestone,
     [string]$Repository = "ATAC-Helicopter/VaultSync",
     [int]$ProjectNumber = 7,
     [ValidateSet("PrePublish", "PostPublish")]
@@ -122,6 +123,10 @@ if ([string]::IsNullOrWhiteSpace($ReleaseTrack)) {
     $ReleaseTrack = Get-ReleaseTrackFromVersion -Version $TargetVersion
 }
 
+if ([string]::IsNullOrWhiteSpace($TargetMilestone)) {
+    $TargetMilestone = $TargetVersion
+}
+
 $results = New-Object System.Collections.Generic.List[object]
 $uiVersion = Get-FileVersionValue -Path "src/VaultSync.UI/VaultSync.UI.csproj" -Pattern '<Version>([^<]+)</Version>'
 $installerVersion = Get-FileVersionValue -Path "installer/VaultSyncInstaller.iss" -Pattern '#define MyAppVersion "([^"]+)"'
@@ -168,6 +173,11 @@ Add-CheckResult -Results $results -Code "docs-release-checklist" -Condition ($re
     -PassMessage "Release guide includes the release gate and asset-upload checklist." `
     -FailMessage "Release guide is missing release gate and/or asset-upload checklist coverage." `
     -Data @{ path = "docs/RELEASING.md" }
+
+Add-CheckResult -Results $results -Code "docs-release-target" -Condition ($releasingDoc -match [regex]::Escape($TargetVersion)) `
+    -PassMessage "Release guide references target version '$TargetVersion'." `
+    -FailMessage "Release guide does not reference target version '$TargetVersion'." `
+    -Data @{ path = "docs/RELEASING.md"; expected = $TargetVersion }
 
 if ($SkipGitHubChecks) {
     $results.Add((New-Result -Code "github-checks-skipped" -Status "warn" -Message "GitHub release and project checks were skipped for PR-local validation." -Data @{
@@ -252,7 +262,16 @@ $releaseItems = @($projectItems.items | Where-Object {
     $itemRelease = if ($null -ne $releaseProperty) { $releaseProperty.Value } else { $null }
     $itemRelease -eq $ReleaseTrack
 })
-$incompleteItems = @($releaseItems | Where-Object {
+$targetItems = @($releaseItems | Where-Object {
+    $milestoneProperty = $_.PSObject.Properties["milestone"]
+    $milestoneTitle = if ($null -ne $milestoneProperty -and $null -ne $milestoneProperty.Value) {
+        $milestoneProperty.Value.title
+    } else {
+        $null
+    }
+    $_.content.type -eq "Issue" -and $milestoneTitle -eq $TargetMilestone
+})
+$incompleteItems = @($targetItems | Where-Object {
     $statusProperty = $_.PSObject.Properties["status"]
     $itemStatus = if ($null -ne $statusProperty) { $statusProperty.Value } else { $null }
     $itemStatus -ne "Done"
@@ -263,11 +282,17 @@ Add-CheckResult -Results $results -Code "project-release-items" -Condition ($rel
     -FailMessage "Project release slice '$ReleaseTrack' has no items." `
     -Data @{ release = $ReleaseTrack; count = $releaseItems.Count }
 
-Add-CheckResult -Results $results -Code "project-release-complete" -Condition ($incompleteItems.Count -eq 0) `
-    -PassMessage "Project release slice '$ReleaseTrack' is complete." `
-    -FailMessage "Project release slice '$ReleaseTrack' still has incomplete work." `
+Add-CheckResult -Results $results -Code "project-target-items" -Condition ($targetItems.Count -gt 0) `
+    -PassMessage "Target milestone '$TargetMilestone' contains $($targetItems.Count) issue(s)." `
+    -FailMessage "Target milestone '$TargetMilestone' has no project issues." `
+    -Data @{ release = $ReleaseTrack; milestone = $TargetMilestone; count = $targetItems.Count }
+
+Add-CheckResult -Results $results -Code "project-release-complete" -Condition ($targetItems.Count -gt 0 -and $incompleteItems.Count -eq 0) `
+    -PassMessage "Target milestone '$TargetMilestone' is complete." `
+    -FailMessage "Target milestone '$TargetMilestone' still has incomplete work." `
     -Data @{
         release = $ReleaseTrack
+        milestone = $TargetMilestone
         incomplete = @($incompleteItems | ForEach-Object {
             [pscustomobject]@{
                 title  = $_.title
@@ -283,6 +308,7 @@ $warnings = @($results | Where-Object { $_.status -eq "warn" })
 $summary = [pscustomobject]@{
     targetVersion = $TargetVersion
     releaseTrack  = $ReleaseTrack
+    targetMilestone = $TargetMilestone
     repository    = $Repository
     phase         = $Phase
     checkedUtc    = [DateTimeOffset]::UtcNow.ToString("O")
@@ -308,6 +334,7 @@ if ($Json) {
 
     Write-Host "Target version : $TargetVersion"
     Write-Host "Release track  : $ReleaseTrack"
+    Write-Host "Milestone      : $TargetMilestone"
     Write-Host "Phase          : $Phase"
     Write-Host "Repository     : $Repository"
     Write-Host ""

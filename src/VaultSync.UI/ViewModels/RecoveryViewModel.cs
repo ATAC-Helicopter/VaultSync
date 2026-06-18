@@ -21,6 +21,7 @@ public sealed class RecoveryViewModel : ViewModelBase
     private readonly IAppConfigStore _configStore;
     private readonly IRepositoryFactory _repositoryFactory;
     private readonly RestoreReadinessService _readinessService = new();
+    private readonly RecoveryCoverageService _coverageService = new();
     private int _refreshInFlight;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
     private string _headline = "Loading recovery readiness...";
@@ -202,26 +203,16 @@ public sealed class RecoveryViewModel : ViewModelBase
             backups,
             config,
             snapshotMetadataById: metadataBySnapshotId);
-
-        var latestBackups = backups
-            .GroupBy(backup => backup.ProjectId)
-            .Select(group => group.OrderByDescending(backup => backup.CreatedUtc).ThenByDescending(backup => backup.Id).First())
-            .ToList();
-
-        DateTime now = DateTime.UtcNow;
-        int within24Hours = latestBackups.Count(backup => now - backup.CreatedUtc <= TimeSpan.FromHours(24));
-        int within7Days = latestBackups.Count(backup => now - backup.CreatedUtc <= TimeSpan.FromDays(7));
-        int within30Days = latestBackups.Count(backup => now - backup.CreatedUtc <= TimeSpan.FromDays(30));
-        int within90Days = latestBackups.Count(backup => now - backup.CreatedUtc <= TimeSpan.FromDays(90));
+        RecoveryCoverageSummary coverage = _coverageService.BuildSummary(projects, backups);
 
         string coverageSummary = projects.Count == 0
             ? L("Recovery.NoProjects", "No tracked projects yet.")
             : LF(
                 "Recovery.Coverage.Summary",
                 "{0}/{1} project(s) have a backup from the last 24 hours; {2}/{1} are covered within 7 days.",
-                within24Hours,
-                projects.Count,
-                within7Days);
+                coverage.Within24Hours,
+                coverage.ProjectCount,
+                coverage.Within7Days);
 
         ProjectRestoreReadiness? firstIssue = summary.Projects
             .Where(project => project.State != RestoreReadinessState.Ready)
@@ -234,10 +225,7 @@ public sealed class RecoveryViewModel : ViewModelBase
 
         return new RecoveryData(
             summary,
-            within24Hours,
-            within7Days,
-            within30Days,
-            within90Days,
+            coverage,
             coverageSummary,
             topRecommendation);
     }
@@ -262,10 +250,10 @@ public sealed class RecoveryViewModel : ViewModelBase
         };
         Headline = summary.Headline;
         Detail = summary.Detail;
-        Coverage24Hours = data.Coverage24Hours;
-        Coverage7Days = data.Coverage7Days;
-        Coverage30Days = data.Coverage30Days;
-        Coverage90Days = data.Coverage90Days;
+        Coverage24Hours = data.Coverage.Within24Hours;
+        Coverage7Days = data.Coverage.Within7Days;
+        Coverage30Days = data.Coverage.Within30Days;
+        Coverage90Days = data.Coverage.Within90Days;
         CoverageSummary = data.CoverageSummary;
         TopRecommendation = data.TopRecommendation;
         Insight = BuildInsight(summary);
@@ -322,10 +310,7 @@ public sealed class RecoveryViewModel : ViewModelBase
 
     private sealed record RecoveryData(
         RestoreReadinessSummary Summary,
-        int Coverage24Hours,
-        int Coverage7Days,
-        int Coverage30Days,
-        int Coverage90Days,
+        RecoveryCoverageSummary Coverage,
         string CoverageSummary,
         string TopRecommendation);
 }

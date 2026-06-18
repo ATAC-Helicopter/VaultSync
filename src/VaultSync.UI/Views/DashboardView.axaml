@@ -108,8 +108,8 @@
           </Grid>
         </Border>
 
-        <Border Classes="card" Background="{DynamicResource Surface2}" Width="500" MinHeight="192" Padding="18">
-          <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+        <Border Classes="card" Background="{DynamicResource Surface2}" Width="500" MinHeight="224" Padding="18">
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="9">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
               <Border Width="12" Height="12" CornerRadius="6" Background="#A05CFF" VerticalAlignment="Center"/>
               <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker" VerticalAlignment="Center"/>
@@ -150,6 +150,19 @@
                 </Border>
               </WrapPanel>
             </Border>
+            <StackPanel Grid.Row="4" Spacing="7">
+              <TextBlock Text="{Binding RecoveryCoverageDetail}"
+                         FontSize="11"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap"
+                         MaxLines="2" />
+              <WrapPanel ItemSpacing="6" LineSpacing="6">
+                <Border Classes="stat-pill sm info"><TextBlock Text="{Binding RecoveryCoverage24Label}" FontSize="10"/></Border>
+                <Border Classes="stat-pill sm info"><TextBlock Text="{Binding RecoveryCoverage7Label}" FontSize="10"/></Border>
+                <Border Classes="stat-pill sm info"><TextBlock Text="{Binding RecoveryCoverage30Label}" FontSize="10"/></Border>
+                <Border Classes="stat-pill sm info"><TextBlock Text="{Binding RecoveryCoverage90Label}" FontSize="10"/></Border>
+              </WrapPanel>
+            </StackPanel>
           </Grid>
         </Border>
       </WrapPanel>

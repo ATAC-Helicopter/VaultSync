@@ -343,6 +343,7 @@
   "Dashboard.Kpi.Storage": "Storage",
   "Dashboard.Kpi.StorageLocal": "Local: {0}",
   "Dashboard.Kpi.RestoreReadiness": "Restore readiness",
+  "Dashboard.RecoveryCoverage.Window": "{0}: {1}/{2}",
   "Dashboard.KpiStorageLocal": "Local storage",
   "Dashboard.Section.BackupsThisWeek": "Backups this week",
   "Dashboard.Section.BackupStorage": "Backup storage",
